@@ -20,7 +20,7 @@
         </div>
 
         <div id="navbar" class="navbar-collapse collapse">
-        	{#{% if is_authenticated %}#}
+          {#{% if is_authenticated %}#}
             <!-- <ul class="nav navbar-nav navbar-right">
 
             </ul> -->
@@ -39,15 +39,15 @@
 
     {#
     {% block show_side_nav %}
-    	{{ parent() }}
+      {{ parent() }}
     {% endblock %}
     #}
 
     <div class="container-fluid">
       <div class="row">
-      	{% block side_nav %}
-	      	{{ parent() }}
-      	{% endblock %}
+        {% block side_nav %}
+          {{ parent() }}
+        {% endblock %}
 
         {# if is_authenticated #}
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
@@ -56,8 +56,8 @@
         {# endif #}
 
           {# if page_title is not empty and hide_page_header != true #}
-  					<h1 class="page-header">{{ page_title }}</h1>
-  			  {# endif #}
+            <h1 class="page-header">{{ page_title }}</h1>
+          {# endif #}
 
           {% for label, messages in app.flashes %}
             {% for message in messages %}
@@ -67,7 +67,7 @@
             {% endfor %}
           {% endfor %}
           
-  			  {% block content %}{% endblock %}
+          {% block content %}{% endblock %}
 
         </div> <!--/col-->
       </div> <!--/row-->
