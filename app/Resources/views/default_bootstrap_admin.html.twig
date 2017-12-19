@@ -2,7 +2,6 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
-
   {#
     {% if navbar is not empty %}
       {% include navbar %}
@@ -60,6 +59,14 @@
   					<h1 class="page-header">{{ page_title }}</h1>
   			  {# endif #}
 
+          {% for label, messages in app.flashes %}
+            {% for message in messages %}
+              <div class="alert alert-success flash-{{ label }}" role="alert">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endfor %}
+          
   			  {% block content %}{% endblock %}
 
         </div> <!--/col-->

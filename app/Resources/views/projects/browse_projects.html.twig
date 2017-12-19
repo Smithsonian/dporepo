@@ -1,4 +1,5 @@
 {% extends 'default_bootstrap_admin.html.twig' %}
+
 {% block styles_head %}
   {{ parent() }}
   <link href="//cdn.datatables.net/plug-ins/3cfcc339e89/integration/bootstrap/3/dataTables.bootstrap.css" rel="stylesheet" type="text/css" />
@@ -7,11 +8,6 @@
 {% endblock %}
 
 {% block content %}
-  {# if flash.message #}
-    <!-- <div class="alert alert-success" role="alert">
-      <p>{#{{ flash.message }}#}</p>
-    </div> -->
-  {# endif #}
 
   <ol class="breadcrumb">
     <li><a href="/dashboard">Dashboard</a></li>
@@ -40,6 +36,7 @@
       <li><strong>Dataset</strong> Elements: generated</li>
     </ul>
   </div> -->
+  
 {% endblock %}
 
 {% block js_bottom %}
