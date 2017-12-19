@@ -1,0 +1,34 @@
+.datatables_bulk_actions{
+	float:left;
+	margin: 15px 15px 0px 0px;
+  padding: 0;
+}
+.dataTables_wrapper tbody tr{
+	cursor:pointer;
+}
+.dataTables_wrapper table.dataTable tbody tr:hover td{
+	background-color: #f2f2f2; 
+}
+.datatables_bulk_actions .delete{
+	background:url('../img/trash.png');
+	width:20px;
+	height:24px;
+	cursor:pointer;
+	float:left;
+}
+.datatables_bulk_actions .clone{
+	background:url('../img/clone.png');
+	width:19px;
+	height:24px;
+	cursor:pointer;
+	float:left;
+	margin-left:8px;
+}
+.datatables_bulk_actions .modify{
+	background:url('../img/edit.png');
+	width:24px;
+	height:24px;
+	cursor:pointer;
+	float:left;
+	margin-left:8px;
+}

@@ -1,0 +1,92 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+{% block styles_head %}
+  {{ parent() }}
+  <link href="//cdnjs.cloudflare.com/ajax/libs/chosen/0.9.11/chosen.css" rel="stylesheet" type="text/css" />
+  <link href="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.css" rel="stylesheet" type="text/css">
+  <!-- <link href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/css/bootstrap-datepicker3.css" rel="stylesheet" type="text/css"> -->
+{% endblock %}
+{% block content %}
+    {# if flash.message #}
+      <!-- <div class="alert alert-success" role="alert">
+        <p>{#{{ flash.message }}#}</p>
+      </div> -->
+    {# endif #}
+
+    {% if errors %}
+      <div class="alert alert-danger">
+        <h4>Form Errors</h4>
+        {% for single_error in errors %}
+        <p>{{ single_error }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <form id="project_form" method="POST">
+      {#% include 'csrf_input.html' %#}
+      <!-- row -->
+      <div class="row">
+        <!-- status indicator -->
+        {% if project_info.projects_id %}
+        <div class="col-sm-12 col-md-12">
+          <div class="alert alert-{{ project_info.status_class|e }}" role="alert">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            {{ project_info.active|e }}
+          </div>
+        </div>
+
+        <div class="col-sm-12 col-md-12">
+          <div class="form-group">
+            <a href="/projects/subjects/{{ project_info.projects_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Project</a>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- column 1 -->
+        <div class="col-sm-6 col-md-6">
+          <div class="form-group">
+            <label class="control-label" for="projects_label"><span style="color:red;">*</span>Project Name:</label>
+            <div class="controls">
+              <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
+              <input name="projects_label" id="projects_label" type="text" required="true" value="{{ project_info.projects_label|e }}" class="form-control">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="control-label" for="stakeholder_guid"><span style="color:red;">*</span>Stakeholder GUID:</label>
+            <div class="controls">
+              <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
+              <input name="stakeholder_guid" id="stakeholder_guid" type="text" required="true" value="{{ project_info.stakeholder_guid|e }}" class="form-control">
+            </div>
+          </div>
+        </div><!-- // column 1 -->
+          
+        <!-- column 2 -->
+        <div class="col-sm-6 col-md-6">
+          
+          <!-- <div class="form-group">
+            <label class="control-label" for="date"><span style="color:red;">*</span>Date:</label>
+            <div class="controls">
+              <input name="date" id="date" type="date" placeholder="MM/DD/YYYY" required="true" value="{#{{ project_info.project_date|e }}#}" class="form-control">
+            </div>
+          </div> -->
+          <div class="form-group">
+            <label class="control-label" for="project_description"><span style="color:red;">*</span>Project Description:</label>
+            <div class="controls">
+              <textarea name="project_description" id="project_description" class="form-control" rows="8">{{ project_info.project_description|e }}</textarea>
+            </div>
+          </div>
+
+        </div><!-- // column 2 -->
+
+      </div> <!-- // row -->
+
+      <div class="field-group" style="clear:both;">
+        <input class="btn btn-primary" type="submit" value="Save Edits">
+      </div>
+    </form>
+{% endblock %}
+{% block js_bottom %}
+  {{ parent() }}
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.js"></script>
+  <!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/js/bootstrap-datepicker.min.js"></script> -->
+{% endblock %}

@@ -1,0 +1,104 @@
+{% use 'default_bootstrap_side_nav.html.twig' %}
+{% extends 'base.html.twig' %}
+
+{% block body %}
+
+  {#
+    {% if navbar is not empty %}
+      {% include navbar %}
+    {% else %}
+  #}
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="/">{#{{ site_name|e }}#}</a>
+        </div>
+
+        <div id="navbar" class="navbar-collapse collapse">
+        	{#{% if is_authenticated %}#}
+            <!-- <ul class="nav navbar-nav navbar-right">
+
+            </ul> -->
+          {#{% elseif login_url is not empty %}#}
+            <div class="dropdown">
+              <ul class="nav navbar-nav navbar-right">
+                <li>Login</li>
+              </ul>
+            </div>
+          {#{% endif %}#}
+        </div><!--/.navbar-collapse -->
+
+      </div>
+    </nav>
+    {# endif #}
+
+    {#
+    {% block show_side_nav %}
+    	{{ parent() }}
+    {% endblock %}
+    #}
+
+    <div class="container-fluid">
+      <div class="row">
+      	{% block side_nav %}
+	      	{{ parent() }}
+      	{% endblock %}
+
+        {# if is_authenticated #}
+        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+        {# else #}
+        <!-- <div class="col-sm-9 col-md-10 main"> -->
+        {# endif #}
+
+          {# if page_title is not empty and hide_page_header != true #}
+  					<h1 class="page-header">{{ page_title }}</h1>
+  			  {# endif #}
+
+  			  {% block content %}{% endblock %}
+
+        </div> <!--/col-->
+      </div> <!--/row-->
+
+      <div class="row">
+        <div class="clearfix"></div>
+        {# if is_authenticated #}
+        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 col-footer">
+        {# else #}
+        <!-- <div class="col-sm-12 col-md-12 col-footer"> -->
+        {# endif #}
+          <footer class="footer">
+            {# if site_footer is not empty #}
+              {# include site_footer #}
+            {# endif #}
+          </footer>
+        </div>
+      </div>
+
+    </div> <!--/.container-fluid-->
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.3.1/jquery.cookie.min.js"></script>
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <script src="{{ asset('lib/javascripts/ie10-viewport-bug-workaround.js') }}"></script>
+    <script src="{{ asset('lib/javascripts/vakata-jstree/dist/jstree.min.js') }}"></script>
+    <!-- <script src="{#{{ asset('lib/javascripts/treeJavascript.js') }}#}"></script> -->
+
+    {% block js_bottom %}
+      {#
+      {% for item in js_includes %}
+        <!-- <script type="text/javascript" src="{{ item }}"></script> -->
+      {% endfor %}
+      #}
+    {% endblock %}
+
+{% endblock %}

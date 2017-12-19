@@ -1,0 +1,21 @@
+{% if hide_side_nav != true and visible_module_count > 0 %}
+	<div>
+	  <label>Navigation</label>
+	    <select onchange="javascript:window.location.href=this.value">
+	    	<option>Select..</option>
+			{% for module in default_module_list if module.menu_hidden != true %}
+		      	{% if module.pages %}
+		      		{% set selected = false %}
+		    		{% if module.handle == active_module %}
+		    			{% set selected = 'selected' %}
+		    		{% endif %}
+		    		<optgroup label="{{ module.module_name }}">
+		    			{% for page in module.pages if page.display == true %}
+		    				<option value="{{ module.path_to_this_module }}{{ page.path }}">{{ page.label }}</option>
+			      		{% endfor %}
+		    		</optgroup>
+		      	{% endif %}
+	      	{% endfor %}
+	    </select>
+	</div><!--/span-->
+{% endif %}

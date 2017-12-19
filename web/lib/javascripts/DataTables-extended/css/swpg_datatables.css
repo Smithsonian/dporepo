@@ -1,0 +1,146 @@
+.datatables_bulk_actions{
+	float:left;
+	margin: 0px 15px 0px 0px;
+}
+.datatables_bulk_actions .delete{
+	background:url('../img/trash.png');
+	width:20px;
+	height:24px;
+	cursor:pointer;
+	float:left;
+}
+.datatables_bulk_actions .clone{
+	background:url('../img/clone.png');
+	width:19px;
+	height:24px;
+	cursor:pointer;
+	float:left;
+	margin-left:8px;
+}
+.datatables_bulk_actions .modify{
+	background:url('../img/edit.png');
+	width:24px;
+	height:24px;
+	cursor:pointer;
+	float:left;
+	margin-left:8px;
+}
+.dataTables_wrapper tbody tr{
+	cursor:pointer;
+}
+.dataTables_info{
+	clear:none;
+	float:left;
+	margin: 5px 0px 0px 70px;
+}
+.force_height{
+	max-height:16px;
+	white-space: nowrap;
+	overflow:hidden;
+	text-overflow:ellipsis;
+}
+.dataTables_wrapper .top{
+	height:40px;
+	margin:20px 0 0 0;
+}
+
+/* Added by halusagn 2012-06-14 */
+/* For instances with DataTables and dynamicContextMenu jQuery plugin */
+
+table.datatable {
+  font-size: 1em;
+}
+
+table.dataTable thead th:active,
+table.dataTable thead th:focus {
+  outline: none;
+}
+
+.dataTables_wrapper .top {
+  height: auto !important;
+  margin: 20px 0 20px 0 !important;
+}
+
+.th_header_text {
+  text-align: center;
+}
+
+div.filter_wrapper {
+  width: 84px;
+  margin: 0 auto;
+}
+
+div.filter_wrapper_select {
+  width: 130px;
+  margin: 0 auto;
+}
+
+div.filter_wrapper_select select {
+  width: 80px;
+}
+
+.filter_value {
+  width: 42px;
+  font-size: .8em;
+  clear: both;
+  float: left;
+}
+
+.filter_image {
+  background-image: url('../img/filter_icon.png');
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  height: 8px;
+  width: 16px;
+  float: left;
+  cursor: pointer;
+  margin: 5px 0 0 2px;
+  padding: 4px 4px 4px 4px;
+}
+table.dataTable .preview{
+	background:url('../img/search.png');
+	width:23px;
+	height:24px;
+	cursor:pointer;
+}
+
+ol.DynamicContextMenuContainer {
+  display: none;
+  position: absolute;
+  background-color: White;
+  border: 1px solid #EEE;
+  border-radius: 5px 5px 5px 5px;
+  font-size: 1em;
+  padding: 10px;
+  box-shadow: #577AA2 0 0 10px;
+  opacity: 0.9;
+  margin: 0;
+  z-index: 200 !important;
+}
+
+ol.DynamicContextMenuContainer li {
+  border: 0;
+  margin-left: 5px;
+  margin-right: 5px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-radius: 5px;
+  font-weight: bold;
+  list-style-type: none;
+  cursor: pointer;
+}
+
+ol.DynamicContextMenuContainer li:hover {
+  color: White;
+  background-color: Gray;
+}
+
+.dataTables_paginate {
+  width: 150px;
+}
+
+.dataTables_paginate .paginate_disabled_next, 
+.dataTables_paginate .paginate_enabled_next {
+  padding-right: 32px;
+  margin-left: 45px;
+}
