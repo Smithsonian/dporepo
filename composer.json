@@ -32,7 +32,8 @@
         "symfony/swiftmailer-bundle": "^2.6.4",
         "symfony/symfony": "3.4.*",
         "symfony/var-dumper": "^3.4",
-        "twig/twig": "^1.0||^2.0"
+        "twig/twig": "^1.0||^2.0",
+        "wixel/gump": "dev-master"
     },
     "require-dev": {
         "sensio/generator-bundle": "^3.0",
