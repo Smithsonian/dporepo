@@ -55,9 +55,9 @@
         <!-- <div class="col-sm-9 col-md-10 main"> -->
         {# endif #}
 
-          {# if page_title is not empty and hide_page_header != true #}
+          {% if page_title is defined %} {# and hide_page_header != true #}
             <h1 class="page-header">{{ page_title }}</h1>
-          {# endif #}
+          {% endif %}
 
           {% for label, messages in app.flashes %}
             {% for message in messages %}
