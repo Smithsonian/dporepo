@@ -2,12 +2,17 @@
 
 namespace AppBundle\Controller;
 
+use PDO;
+use GUMP;
+
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
-use PDO;
+
+// Custom utility bundles
+use AppBundle\Utils\GumpParseErrors;
 
 class ProjectsController extends Controller
 {
@@ -136,19 +141,20 @@ class ProjectsController extends Controller
     /**
      * Matches /projects/manage/*
      *
-     * @Route("/projects/manage/{projects_id}", name="projects_manage", methods="GET")
+     * @Route("/projects/manage/{projects_id}", name="projects_manage", methods={"GET","POST"})
      */
-    function show_projects_form( $projects_id, Connection $conn, Request $request )
+    function show_projects_form( $projects_id, Connection $conn, Request $request, GumpParseErrors $gump_parse_errors )
     {
 
-        $req = $request->request->all();
-        // $req['search']['value']
-        // $post = $app->request()->post();
-
         // echo '<pre>';
-        // var_dump($req);
+        // var_dump($request->request->all());
         // echo '</pre>';
         // die();
+
+        $errors = false;
+        $gump = new GUMP();
+        $post = $request->request->all();
+        $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
 
         // $subject = new \PHPSkeleton\Subjects($db_resource, $final_global_template_vars["session_key"]);
 
@@ -174,15 +180,40 @@ class ProjectsController extends Controller
                     break;
             }
         }
+        
+        // Validate posted data.
+        if(!empty($post)) {
+          // "" => "required|numeric",
+          // "" => "required|alpha_numeric",
+          // "" => "required|date",
+          // "" => "numeric|exact_len,5",
+          // "" => "required|max_len,255|alpha_numeric",
+          $rules = array(
+              "projects_label" => "required|max_len,255",
+              "stakeholder_guid" => "required|max_len,255|alpha_numeric",
+              "project_description" => "required",
+          );
+          $validated = $gump->validate($post, $rules);
 
-        return $this->render('projects/project_form.html.twig', array(
-            "page_title" => !empty($projects_id) ? 'Manage Project: ' . $project_data['projects_label'] : 'Create Project'
-            // ,"subject_data" => $subject_data
-            ,"current_project_data" => $current_project_data
-            ,"project_info" => $project_data
-            // ,"errors" => isset($env["default_validation_errors"]) ? $env["default_validation_errors"] : false
-            ,"errors" => false
-        ));
+          $errors = array();
+          if ($validated !== true) {
+            $errors = $gump_parse_errors->gump_parse_errors($validated);
+          }
+        }
+
+        if (!$errors && !empty($post)) {
+            $projects_id = $this->insert_update_project($post, $projects_id, $conn);
+            $this->addFlash('message', 'Project successfully updated.');
+            return $this->redirectToRoute('projects_browse');
+        } else {
+            return $this->render('projects/project_form.html.twig', array(
+                "page_title" => !empty($projects_id) ? 'Manage Project: ' . $project_data['projects_label'] : 'Create Project'
+                // ,"subject_data" => $subject_data
+                ,"current_project_data" => $current_project_data
+                ,"project_info" => $project_data
+                ,"errors" => $errors
+            ));
+        }
 
     }
 
@@ -220,59 +251,6 @@ class ProjectsController extends Controller
         ");
         $statement->execute();
         return $statement->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-
-
-
-
-
-
-    /**
-     * Matches /projects/manage/*
-     *
-     * @Route("/projects/manage/{projects_id}", name="projects_insert_update", methods="POST")
-     */
-    function insert_update_projects(Connection $conn, Request $request)
-    {
-        // $req = $request->request->all();
-
-        // echo '<pre>';
-        // var_dump($request->request->all());
-        // echo '</pre>';
-        // die();
-
-        $post = $request->request->all();
-        $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
-        
-        // // Validate posted data.
-        $errors = false;
-        // $gump = new GUMP();
-        // // "" => "required|numeric",
-        // // "" => "required|alpha_numeric",
-        // // "" => "required|date",
-        // // "" => "numeric|exact_len,5",
-        // // "" => "required|max_len,255|alpha_numeric",
-        // $rules = array(
-        //     "projects_label" => "required|max_len,255",
-        //     "stakeholder_guid" => "required|max_len,255|alpha_numeric",
-        //     "project_description" => "required",
-        // );
-        // $validated = $gump->validate($post, $rules);
-        // $errors = array();
-        // if ($validated !== true) {
-        //     $errors = \phpskeleton\models\utility::gump_parse_errors($validated);
-        // }
-
-        if (!$errors && !empty($post)) {
-            $projects_id = $this->insert_update_project($post, $projects_id, $conn);
-            $this->addFlash('message', 'Project successfully updated.');
-            return $this->redirectToRoute('projects_browse');
-        } else {
-            // $env = $app->environment();
-            // $env["default_validation_errors"] = $errors;
-        }
-
     }
 
 
