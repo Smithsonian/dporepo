@@ -13,9 +13,24 @@ use GUMP;
 
 // Custom utility bundles
 use AppBundle\Utils\GumpParseErrors;
+use AppBundle\Utils\AppUtilities;
 
 class ProjectsController extends Controller
 {
+    /**
+     * @var object  $dumper
+     */
+    public $dumper;
+
+    /**
+    * Constructor
+    * @param object   AppUtilities  Utility functions object
+    */
+    public function __construct(AppUtilities $u)
+    {
+        $this->u = $u;
+    }
+
     /**
      * @Route("/projects/", name="projects_browse", methods="GET")
      */
@@ -150,10 +165,7 @@ class ProjectsController extends Controller
      */
     function show_projects_form( $projects_id, Connection $conn, Request $request, GumpParseErrors $gump_parse_errors )
     {
-        // echo '<pre>';
-        // var_dump($request->request->all());
-        // echo '</pre>';
-        // die();
+        // $this->u->dumper($request->request->all());
 
         $errors = false;
         $gump = new GUMP();
@@ -373,25 +385,4 @@ class ProjectsController extends Controller
         }
 
     }
-
-    /**
-     * @Route("/number/")
-     */
-    // public function numberAction(Request $request, $max)
-    // {
-    //     $number = mt_rand(0, $max);
-
-    //     // echo '<pre>';
-    //     // var_dump($request->headers->get('host'));
-    //     // echo '</pre>';
-    //     // die();
-
-    //     return $this->render('lucky/number.html.twig', array(
-    //         'number' => $number,
-    //     ));
-
-    //     // return new Response(
-    //     //     '<html><body>Lucky number: '.$number.'</body></html>'
-    //     // );
-    // }
 }
