@@ -1,6 +1,6 @@
 {% extends 'default_bootstrap_admin.html.twig' %}
 
-{% block styles_head %}
+{% block stylesheets %}
   {{ parent() }}
   <link href="//cdn.datatables.net/plug-ins/3cfcc339e89/integration/bootstrap/3/dataTables.bootstrap.css" rel="stylesheet" type="text/css" />
   <link href="{{ asset('lib/javascripts/DataTables-extended/css/bootstrap_datatables.css') }}" rel="stylesheet" type="text/css" />
@@ -36,7 +36,7 @@
       <li><strong>Dataset</strong> Elements: generated</li>
     </ul>
   </div> -->
-  
+
 {% endblock %}
 
 {% block js_bottom %}
@@ -64,7 +64,7 @@
           // All data management will be done on the server side.
          "serverSide": true,
          // Path to the file that is going to handle the queries.
-         "ajax": "/projects/datatables_browse_projects",
+         "ajax": "/admin/projects/datatables_browse_projects",
          // Method type.
          "serverMethod": "POST",
          // Values in the length dropdown.

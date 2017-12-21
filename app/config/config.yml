@@ -30,11 +30,18 @@ framework:
     assets: ~
     php_errors:
         log: true
+    templating:
+        engines: ['twig']
+    # app:
+    #     title: DPO's 3D Repository
 
 # Twig Configuration
 twig:
     debug: '%kernel.debug%'
     strict_variables: '%kernel.debug%'
+    globals:
+        site_title: DPO's 3D Repository
+        admin_email: '%mailer_user%'
 
 # Doctrine Configuration
 doctrine:
@@ -73,3 +80,12 @@ swiftmailer:
 # Typically, you would set this to php://stderr
 #debug:
 #    dump_destination: php://stderr
+
+# FOSUserBundle Configuration
+fos_user:
+    db_driver: orm # other valid values are 'mongodb' and 'couchdb'
+    firewall_name: main
+    user_class: AppBundle\Entity\User
+    from_email:
+        address: "%mailer_user%"
+        sender_name: "%mailer_user%"

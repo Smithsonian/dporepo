@@ -32,7 +32,7 @@ class ProjectsController extends Controller
     }
 
     /**
-     * @Route("/projects/", name="projects_browse", methods="GET")
+     * @Route("/admin/projects/", name="projects_browse", methods="GET")
      */
     public function browse_projects(Connection $conn, Request $request)
     {
@@ -45,7 +45,7 @@ class ProjectsController extends Controller
     }
 
     /**
-     * @Route("/projects/datatables_browse_projects", name="projects_browse_datatables", methods="POST")
+     * @Route("/admin/projects/datatables_browse_projects", name="projects_browse_datatables", methods="POST")
      *
      * Browse Projects
      *
@@ -154,9 +154,9 @@ class ProjectsController extends Controller
     }
 
     /**
-     * Matches /projects/manage/*
+     * Matches /admin/projects/manage/*
      *
-     * @Route("/projects/manage/{projects_id}", name="projects_manage", methods={"GET","POST"})
+     * @Route("/admin/projects/manage/{projects_id}", name="projects_manage", methods={"GET","POST"})
      *
      * @param   int     $projects_id  The project ID
      * @param   object  Connection    Database connection object

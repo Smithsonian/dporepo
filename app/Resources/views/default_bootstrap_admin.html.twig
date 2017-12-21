@@ -16,48 +16,36 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="/">{#{{ site_name|e }}#}</a>
+          <a class="navbar-brand" href="/">{{ site_title|e }}</a>
         </div>
 
         <div id="navbar" class="navbar-collapse collapse">
-          {#{% if is_authenticated %}#}
-            <!-- <ul class="nav navbar-nav navbar-right">
-
-            </ul> -->
-          {#{% elseif login_url is not empty %}#}
-            <div class="dropdown">
-              <ul class="nav navbar-nav navbar-right">
-                <li>Login</li>
-              </ul>
-            </div>
-          {#{% endif %}#}
+          {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+            <ul class="nav navbar-nav navbar-right">
+              <li><a href="/logout">Logout</a></li>
+            </ul>
+          {% endif %}
         </div><!--/.navbar-collapse -->
 
       </div>
     </nav>
     {# endif #}
 
-    {#
-    {% block show_side_nav %}
-      {{ parent() }}
-    {% endblock %}
-    #}
-
     <div class="container-fluid">
       <div class="row">
-        {% block side_nav %}
-          {{ parent() }}
-        {% endblock %}
 
-        {# if is_authenticated #}
-        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-        {# else #}
-        <!-- <div class="col-sm-9 col-md-10 main"> -->
-        {# endif #}
+        {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and is_granted('ROLE_ADMIN') %}
+          {% block side_nav %}
+            {{ parent() }}
+          {% endblock %}
+          <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+        {% else %}
+          <div class="col-sm-7 col-md-6 col-lg-5 main">
+        {% endif %}
 
-          {% if page_title is defined %} {# and hide_page_header != true #}
-            <h1 class="page-header">{{ page_title }}</h1>
-          {% endif %}
+          {# {% if site_title is defined %}
+            <h1 class="page-header">{{ site_title|e }}</h1>
+          {% endif %} #}
 
           {% for label, messages in app.flashes %}
             {% for message in messages %}
@@ -74,11 +62,11 @@
 
       <div class="row">
         <div class="clearfix"></div>
-        {# if is_authenticated #}
-        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 col-footer">
-        {# else #}
-        <!-- <div class="col-sm-12 col-md-12 col-footer"> -->
-        {# endif #}
+        {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and is_granted('ROLE_ADMIN') %}
+          <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 col-footer">
+        {% else %}
+          <div class="col-sm-12 col-md-12 col-footer">
+        {% endif %}
           <footer class="footer">
             {# if site_footer is not empty #}
               {# include site_footer #}
@@ -88,7 +76,150 @@
       </div>
 
     </div> <!--/.container-fluid-->
+{% endblock %}
 
+{% block stylesheets %}
+    <!-- Bootstrap core CSS -->
+    <link href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ asset('lib/javascripts/vakata-jstree/dist/themes/proton/style.min.css') }}" rel="stylesheet" />
+    <!-- <link href="{#{ asset('lib/javascripts/vakata-jstree/dist/themes/default/style.min.css') }#}" rel="stylesheet" /> -->
+    <link href="{{ asset('lib/css/side_navigation.css') }}" rel="stylesheet" />
+
+    <!-- Custom styles for this template -->
+    <style type="text/css">
+        /*
+         * Base structure
+         */
+
+        /* Move down content because we have a fixed navbar that is 50px tall */
+        body {
+          padding-top: 50px;
+        }
+
+        /*
+         * Global add-ons
+         */
+
+        .sub-header {
+          padding-bottom: 10px;
+          border-bottom: 1px solid #eee;
+        }
+
+        /*
+         * Top navigation
+         * Hide default border to remove 1px line.
+         */
+        .navbar-fixed-top {
+          border: 0;
+        }
+
+        /*
+         * Sidebar
+         */
+
+        /* Hide for mobile, show later */
+        .sidebar {
+          display: none;
+        }
+        @media (min-width: 768px) {
+          .sidebar {
+            position: fixed;
+            top: 51px;
+            bottom: 0;
+            left: 0;
+            z-index: 900;
+            display: block;
+            padding: 20px;
+            overflow-x: hidden;
+            overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+            background-color: #f5f5f5;
+            border-right: 1px solid #eee;
+          }
+        }
+
+        /* Sidebar navigation */
+        .nav-sidebar {
+          margin-right: -21px; /* 20px padding + 1px border */
+          margin-bottom: 20px;
+          margin-left: -20px;
+        }
+        .nav-sidebar > li > a {
+          padding-right: 20px;
+          padding-left: 20px;
+        }
+        .nav-sidebar > .active > a,
+        .nav-sidebar > .active > a:hover,
+        .nav-sidebar > .active > a:focus {
+          color: #fff;
+          background-color: #428bca;
+        }
+
+        /*
+         * Main content
+         */
+
+        .main {
+          padding: 20px;
+          min-height: 600px;
+        }
+        @media (min-width: 768px) {
+          .main {
+            padding-right: 40px;
+            padding-left: 40px;
+          }
+        }
+        .main .page-header {
+          margin-top: 0;
+        }
+
+        .col-footer {
+          padding: 0;
+          border-top: 1px solid #e3e3e3;
+          background-color: #ffffff;
+        }
+
+        /*
+         * Top left navbar
+         */
+
+        .nav>li>a {
+          position: relative;
+          display: block;
+          padding: 4px 15px 4px 18px;
+        }
+
+        /*
+         * Top right navbar
+         */
+
+        .navbar-right {
+          float: right !important;
+          margin-right: 0px;
+          margin-top: 10px;
+        }
+
+        /*
+         * Sticky footer
+         */
+
+        .footer {
+          background-color: #ffffff;
+          display: block;
+          padding: 10px 40px 30px 40px;
+          margin: 10px 0 0 0;
+        }
+
+        /*
+         * jQuery Datatables
+         */
+
+        #browse tbody tr {
+          cursor: pointer;
+        }
+    </style>
+{% endblock %}
+
+{% block javascripts %}
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
@@ -99,13 +230,4 @@
     <script src="{{ asset('lib/javascripts/ie10-viewport-bug-workaround.js') }}"></script>
     <script src="{{ asset('lib/javascripts/vakata-jstree/dist/jstree.min.js') }}"></script>
     <!-- <script src="{#{{ asset('lib/javascripts/treeJavascript.js') }}#}"></script> -->
-
-    {% block js_bottom %}
-      {#
-      {% for item in js_includes %}
-        <!-- <script type="text/javascript" src="{{ item }}"></script> -->
-      {% endfor %}
-      #}
-    {% endblock %}
-
 {% endblock %}

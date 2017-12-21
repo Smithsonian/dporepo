@@ -1,0 +1,13 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block content %}
+  <div class="well well-lg">
+  	{% if not is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+    	<h2>Login</h2>
+    {% else %}
+    	<h2>Hi {{ app.user.username }}!</h2>
+    {% endif %}
+    {% block fos_user_content %}{% endblock %}
+  </div>
+  {# {{ dump() }} #}
+{% endblock %}
