@@ -2,14 +2,14 @@
 
 namespace AppBundle\Controller;
 
-use PDO;
-use GUMP;
-
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
+
+use PDO;
+use GUMP;
 
 // Custom utility bundles
 use AppBundle\Utils\GumpParseErrors;
@@ -36,13 +36,9 @@ class ProjectsController extends Controller
      *
      * Run a query to retreive all projects in the database.
      *
-     * @param   string  $sort_field     The data value
-     * @param   string  $sort_order     The data value
-     * @param   int  $start_record      The data value
-     * @param   int  $stop_record       The data value
-     * @param   string  $search         The data value
-     * @param   int  $project_id        The data value
-     * @return  array|bool              The query result
+     * @param   object  Connection  Database connection object
+     * @param   object  Request     Request object
+     * @return  array|bool          The query result
      */
     public function datatables_browse_projects(Connection $conn, Request $request)
     {
@@ -60,17 +56,17 @@ class ProjectsController extends Controller
 
         switch($req['order'][0]['column']) {
             case '0':
-              $sort_field = 'projects_label';
-              break;
+                $sort_field = 'projects_label';
+                break;
             case '1':
-              $sort_field = 'stakeholder_guid';
-              break;
+                $sort_field = 'stakeholder_guid';
+                break;
             case '2':
-              $sort_field = 'subjects_count';
-              break;
+                $sort_field = 'subjects_count';
+                break;
             case '3':
-              $sort_field = 'active';
-              break;
+                $sort_field = 'active';
+                break;
         }
 
         $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
@@ -112,22 +108,26 @@ class ProjectsController extends Controller
         $statement->execute($pdo_params);
         $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-        // Convert status to human readable words.
-        if(!empty($data['aaData'])) {
-            foreach ($data['aaData'] as $key => $value) {
-                switch($value['active']) {
-                    case '0':
-                    $data['aaData'][$key]['active'] = '<span class="label label-warning"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span> In Queue</span>';
-                    break;
-                    case '1':
-                    $data['aaData'][$key]['active'] = '<span class="label label-primary"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span> Processing</span>';
-                    break;
-                    case '2':
-                    $data['aaData'][$key]['active'] = '<span class="label label-success"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span> Processed</span>';
-                    break;
-                }
-            }
-        }
+        // // Convert status to human readable words.
+        // if(!empty($data['aaData'])) {
+        //     foreach ($data['aaData'] as $key => $value) {
+        //         switch($value['active']) {
+        //             case '0':
+        //                 $label = 'warning';
+        //                 $text = 'In Queue';
+        //                 break;
+        //             case '1':
+        //                 $label = 'primary';
+        //                 $text = 'Processing';
+        //                 break;
+        //             case '2':
+        //                 $label = 'success';
+        //                 $text = 'Processed';
+        //                 break;
+        //         }
+        //     }
+        //     $data['aaData'][$key]['active'] = '<span class="label label-' . $label . '"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span> ' . $text . '</span>';
+        // }
 
         $statement = $conn->prepare("SELECT FOUND_ROWS()");
         $statement->execute();
@@ -142,10 +142,14 @@ class ProjectsController extends Controller
      * Matches /projects/manage/*
      *
      * @Route("/projects/manage/{projects_id}", name="projects_manage", methods={"GET","POST"})
+     *
+     * @param   int     $projects_id  The project ID
+     * @param   object  Connection    Database connection object
+     * @param   object  Request       Request object
+     * @return  array|bool            The query result
      */
     function show_projects_form( $projects_id, Connection $conn, Request $request, GumpParseErrors $gump_parse_errors )
     {
-
         // echo '<pre>';
         // var_dump($request->request->all());
         // echo '</pre>';
@@ -183,22 +187,22 @@ class ProjectsController extends Controller
         
         // Validate posted data.
         if(!empty($post)) {
-          // "" => "required|numeric",
-          // "" => "required|alpha_numeric",
-          // "" => "required|date",
-          // "" => "numeric|exact_len,5",
-          // "" => "required|max_len,255|alpha_numeric",
-          $rules = array(
-              "projects_label" => "required|max_len,255",
-              "stakeholder_guid" => "required|max_len,255|alpha_numeric",
-              "project_description" => "required",
-          );
-          $validated = $gump->validate($post, $rules);
+            // "" => "required|numeric",
+            // "" => "required|alpha_numeric",
+            // "" => "required|date",
+            // "" => "numeric|exact_len,5",
+            // "" => "required|max_len,255|alpha_numeric",
+            $rules = array(
+                "projects_label" => "required|max_len,255",
+                "stakeholder_guid" => "required|max_len,255|alpha_numeric",
+                "project_description" => "required",
+            );
+            $validated = $gump->validate($post, $rules);
 
-          $errors = array();
-          if ($validated !== true) {
-            $errors = $gump_parse_errors->gump_parse_errors($validated);
-          }
+            $errors = array();
+            if ($validated !== true) {
+                $errors = $gump_parse_errors->gump_parse_errors($validated);
+            }
         }
 
         if (!$errors && !empty($post)) {
@@ -222,8 +226,8 @@ class ProjectsController extends Controller
     *
     * Run a query to retrieve one project from the database.
     *
-    * @param       int $project_id    The data value
-    * @return      array|bool              The query result
+    * @param   int $project_id  The project ID
+    * @return  array|bool       The query result
     */
     public function get_project($project_id, $conn)
     {
@@ -240,7 +244,7 @@ class ProjectsController extends Controller
     *
     * Run a query to retrieve all projects from the database.
     *
-    * @return      array|bool              The query result
+    * @return  array|bool  The query result
     */
     public function get_projects()
     {
@@ -259,57 +263,53 @@ class ProjectsController extends Controller
     *
     * Run queries to insert and update projects in the database.
     *
-    * @param       array $data                                   The array
-    * @param       int $project_id                          The data value
-    * @return      void
+    * @param   array   $data        The data array
+    * @param   int     $project_id  The project ID
+    * @param   object  $conn        Database connection object
+    * @return  int     The project ID
     */
-    public function insert_update_project(
-      $data
-      ,$projects_id = FALSE
-      ,$conn
-    ) {
-
+    public function insert_update_project($data, $projects_id = FALSE, $conn)
+    {
         // Update
         if($projects_id) {
-          $statement = $conn->prepare("
-              UPDATE projects
-              SET projects_label = :projects_label
-              ,stakeholder_guid = :stakeholder_guid
-              ,project_description = :project_description
-              ,last_modified_user_account_id = :last_modified_user_account_id
-              WHERE projects_id = :projects_id
-              ");
-          $statement->bindValue(":projects_label", $data['projects_label'], PDO::PARAM_STR);
-          $statement->bindValue(":stakeholder_guid", $data['stakeholder_guid'], PDO::PARAM_STR);
-          $statement->bindValue(":project_description", $data['project_description'], PDO::PARAM_STR);
-          // $statement->bindValue(":last_modified_user_account_id", $_SESSION[$this->session_key]['user_account_id'], PDO::PARAM_INT);
-          $statement->bindValue(":last_modified_user_account_id", 2, PDO::PARAM_INT);
-          $statement->bindValue(":projects_id", $projects_id, PDO::PARAM_INT);
-          $statement->execute();
+            $statement = $conn->prepare("
+                UPDATE projects
+                SET projects_label = :projects_label
+                ,stakeholder_guid = :stakeholder_guid
+                ,project_description = :project_description
+                ,last_modified_user_account_id = :last_modified_user_account_id
+                WHERE projects_id = :projects_id
+                ");
+            $statement->bindValue(":projects_label", $data['projects_label'], PDO::PARAM_STR);
+            $statement->bindValue(":stakeholder_guid", $data['stakeholder_guid'], PDO::PARAM_STR);
+            $statement->bindValue(":project_description", $data['project_description'], PDO::PARAM_STR);
+            // $statement->bindValue(":last_modified_user_account_id", $_SESSION[$this->session_key]['user_account_id'], PDO::PARAM_INT);
+            $statement->bindValue(":last_modified_user_account_id", 2, PDO::PARAM_INT);
+            $statement->bindValue(":projects_id", $projects_id, PDO::PARAM_INT);
+            $statement->execute();
 
-          return $projects_id;
+            return $projects_id;
         }
 
         // Insert
         if(!$projects_id) {
 
-          $statement = $conn->prepare("INSERT INTO projects
-            (projects_label, stakeholder_guid, project_description, date_created, created_by_user_account_id, last_modified_user_account_id )
-            VALUES (:projects_label, :stakeholder_guid, :project_description, NOW(), :user_account_id, :user_account_id )");
-          $statement->bindValue(":projects_label", $data['projects_label'], PDO::PARAM_STR);
-          $statement->bindValue(":stakeholder_guid", $data['stakeholder_guid'], PDO::PARAM_STR);
-          $statement->bindValue(":project_description", $data['project_description'], PDO::PARAM_STR);
-          // $statement->bindValue(":user_account_id", $_SESSION[$this->session_key]['user_account_id'], PDO::PARAM_INT);
-          $statement->bindValue(":user_account_id", 2, PDO::PARAM_INT);
-          $statement->execute();
-          $last_inserted_id = $conn->lastInsertId();
+            $statement = $conn->prepare("INSERT INTO projects
+              (projects_label, stakeholder_guid, project_description, date_created, created_by_user_account_id, last_modified_user_account_id )
+              VALUES (:projects_label, :stakeholder_guid, :project_description, NOW(), :user_account_id, :user_account_id )");
+            $statement->bindValue(":projects_label", $data['projects_label'], PDO::PARAM_STR);
+            $statement->bindValue(":stakeholder_guid", $data['stakeholder_guid'], PDO::PARAM_STR);
+            $statement->bindValue(":project_description", $data['project_description'], PDO::PARAM_STR);
+            // $statement->bindValue(":user_account_id", $_SESSION[$this->session_key]['user_account_id'], PDO::PARAM_INT);
+            $statement->bindValue(":user_account_id", 2, PDO::PARAM_INT);
+            $statement->execute();
+            $last_inserted_id = $conn->lastInsertId();
 
-          if(!$last_inserted_id) {
-            die('INSERT INTO `projects` failed.');
-          }
+            if(!$last_inserted_id) {
+              die('INSERT INTO `projects` failed.');
+            }
 
-          return $last_inserted_id;
-
+            return $last_inserted_id;
         }
 
     }
@@ -319,10 +319,11 @@ class ProjectsController extends Controller
     *
     * Run a query to delete a project from the database.
     *
-    * @param       int $project_id           The data value
-    * @return      void
+    * @param   int     $project_id  The project ID
+    * @param   object  $conn        Database connection object
+    * @return  void
     */
-    public function delete_project( $projects_id )
+    public function delete_project($projects_id, $conn)
     {
         $statement = $this->db->prepare("
             DELETE FROM projects
@@ -341,7 +342,8 @@ class ProjectsController extends Controller
     /**
      * Create Project Table
      *
-     * @return      void
+     * @param   object $conn  Database connection object
+     * @return  void
      */
     public function create_projects_table($conn)
     {
