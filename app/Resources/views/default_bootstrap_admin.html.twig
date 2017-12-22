@@ -43,9 +43,9 @@
           <div class="col-sm-7 col-md-6 col-lg-5 main">
         {% endif %}
 
-          {# {% if site_title is defined %}
-            <h1 class="page-header">{{ site_title|e }}</h1>
-          {% endif %} #}
+          {% if page_title is defined %}
+            <h1 class="page-header">{{ page_title|e }}</h1>
+          {% endif %}
 
           {% for label, messages in app.flashes %}
             {% for message in messages %}
