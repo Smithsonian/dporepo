@@ -2,7 +2,12 @@
   clear: both;
   margin-top: 50px;
 }
+
 #main_side_nav li.nav-header {
   cursor: pointer;
   margin-top: 16px;
+}
+
+dd {
+    margin-bottom: 1rem;
 }
