@@ -258,9 +258,9 @@ class ProjectsController extends Controller
     *
     * @return  array|bool  The query result
     */
-    public function get_projects()
+    public function get_projects($conn)
     {
-        $statement = $this->db->prepare("
+        $statement = $conn->prepare("
             SELECT * FROM projects
             -- LEFT JOIN `subjects` ON `subjects`.projects_id = projects.projects_id
             ORDER BY projects.projects_label ASC
