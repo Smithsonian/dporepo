@@ -14,6 +14,8 @@ use GUMP;
 // Custom utility bundles
 use AppBundle\Utils\GumpParseErrors;
 use AppBundle\Utils\AppUtilities;
+
+// Projects methods
 use AppBundle\Controller\ProjectsController;
 
 class SubjectsController extends Controller
@@ -29,6 +31,7 @@ class SubjectsController extends Controller
     */
     public function __construct(AppUtilities $u)
     {
+        // Usage: $this->u->dumper($variable);
         $this->u = $u;
     }
 
@@ -63,7 +66,6 @@ class SubjectsController extends Controller
      */
     public function datatables_browse_subjects(Connection $conn, Request $request)
     {
-
         $sort = '';
         $search_sql = '';
         $pdo_params = array();
@@ -171,20 +173,13 @@ class SubjectsController extends Controller
      */
     function show_subjects_form( Connection $conn, Request $request, GumpParseErrors $gump_parse_errors )
     {
-        // $this->u->dumper($request->request->all());
-
         $errors = false;
         $gump = new GUMP();
         $post = $request->request->all();
         $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
         $subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
-
-        // $subject = new \PHPSkeleton\Subjects($db_resource, $final_global_template_vars["session_key"]);
-
         $current_subject_data = $this->get_subject((int)$subjects_id, $conn);
         $subject_data = !empty($post) ? $post : $this->get_subject((int)$subjects_id, $conn);
-
-        // $subject_data = $subject->get_subjects((int)$projects_id);
         
         // Validate posted data.
         if(!empty($post)) {
@@ -213,7 +208,6 @@ class SubjectsController extends Controller
         } else {
             return $this->render('subjects/subject_form.html.twig', array(
                 "page_title" => !empty($subjects_id) ? 'Manage Subject: ' . $subject_data['subjects_label'] : 'Create Subject'
-                // ,"subject_data" => $subject_data
                 ,"current_subject_data" => $current_subject_data
                 ,"subject_info" => $subject_data
                 ,"errors" => $errors
@@ -253,7 +247,6 @@ class SubjectsController extends Controller
     {
         $statement = $conn->prepare("
             SELECT * FROM subjects
-            -- LEFT JOIN `subjects` ON `subjects`.projects_id = projects.projects_id
             ORDER BY subjects.subjects_label ASC
         ");
         $statement->execute();
