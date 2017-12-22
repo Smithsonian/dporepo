@@ -1,0 +1,239 @@
+{% extends layout_template_name %}
+{% block styles_head %}
+  {{ parent() }}
+  <link href="//cdnjs.cloudflare.com/ajax/libs/chosen/0.9.11/chosen.css" rel="stylesheet" type="text/css" />
+  <link href="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.css" rel="stylesheet" type="text/css">
+  <!-- <link href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/css/bootstrap-datepicker3.css" rel="stylesheet" type="text/css"> -->
+{% endblock %}
+{% block content %}
+    {% if flash.message %}
+      <div class="alert alert-info">
+        <p>{{ flash.message }}</p>
+      </div>
+    {% endif %}
+
+    {% if errors %}
+      <div class="alert alert-danger">
+        <h4>Form Errors</h4>
+        {% for single_error in errors %}
+        <p>{{ single_error }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <form id="subject_form" method="POST">
+      {% include 'csrf_input.html' %}
+      <!-- row -->
+      <div class="row">
+        <!-- status indicator -->
+        {% if project_info.projects_id %}
+        <div class="col-sm-12 col-md-12">
+          <div class="alert alert-{{ project_info.status_class|e }}" role="alert">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            {{ project_info.active|e }}
+          </div>
+        </div>
+        {% endif %}
+
+        <div id="single_subject_container" class="row">
+
+        <div class="col-sm-12 col-md-12">
+          <div class="form-group">
+            <a href="{{ path_to_this_module }}/subjects/{{ subject_data.projects_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Project</a>
+          </div>
+        </div>
+
+        <!-- Column 1 -->
+        <div class="col-sm-6 col-md-6">
+
+          <div class="form-group">
+            <label class="control-label" for="subject_name"><span style="color:red;">*</span>Subject Name:</label>
+            <div class="controls">
+              <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
+              <input name="subject_name" id="subject_name" type="text" required="true" value="{{ subject_data.subject_name|e }}" class="form-control">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="control-label" for="location_information"><span style="color:red;">*</span>Location Information:</label>
+            <div class="controls">
+              <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
+              <input name="location_information" id="location_information" type="text" required="true" value="{{ subject_data.location_information|e }}" class="form-control">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="control-label" for="holding_entity_guid"><span style="color:red;">*</span>Holding Entity GUID:</label>
+            <div class="controls">
+              <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
+              <input name="holding_entity_guid" id="holding_entity_guid" type="text" required="true" value="{{ subject_data.holding_entity_guid|e }}" class="form-control">
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Column 2 -->
+        <div class="col-sm-6 col-md-6">
+
+          <div class="form-group">
+            <label class="control-label" for="subject_type_lookup_id"><span style="color:red;">*</span>Subject Type:</label>
+            <div class="controls">
+              <select id="subject_type_lookup_id" name="subject_type_lookup_id" required="true">
+                <option value="0">Select</option>
+                {% for single_subject_type in subject_data.subject_types %}
+                  {% set selected = '' %}
+                  {% if single_subject_type.subject_types_id == subject_data.subject_type_lookup_id %}
+                    {% set selected = ' selected="selected"' %}
+                  {% endif %}
+                  <option value="{{ single_subject_type.subject_types_id }}"{{ selected }}>{{ single_subject_type.label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="control-label" for="subject_holder_subject_id"><span style="color:red;">*</span>Authoritative Subject ID:</label>
+            <div class="controls">
+              <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
+              <input name="subject_holder_subject_id" id="subject_holder_subject_id" type="text" required="true" value="{{ subject_data.subject_holder_subject_id|e }}" class="form-control">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="control-label" for="subject_description"><span style="color:red;">*</span>Subject Description:</label>
+            <div class="controls">
+              <textarea name="subject_description" id="subject_description" class="form-control" rows="8" required="true">{{ subject_data.subject_description|e }}</textarea>
+            </div>
+          </div>
+
+          <input name="projects_id" id="projects_id" type="hidden" value="{{ subject_data.projects_id|e }}" class="form-control">
+
+        </div>
+
+      </div>
+
+      <div class="field-group" style="clear:both;">
+        <input class="btn btn-primary" type="submit" value="Save Edits">
+      </div>
+    </form>
+{% endblock %}
+{% block js_bottom %}
+  {{ parent() }}
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.js"></script>
+  <!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/js/bootstrap-datepicker.min.js"></script> -->
+
+  <script type="text/javascript">
+
+    // var subject_data = JSON.parse('{{ subject_data|json_encode|raw }}');
+
+    // // Datepicker
+    // $(document).ready(function(){
+    //   var date_input = $('input[name="date"]'); //our date input has the name "date"
+    //   var container = $('form.project_form').length>0 ? $('form.project_form').parent() : 'body';
+    //   var options = {
+    //     format: 'mm/dd/yyyy',
+    //     container: container,
+    //     todayHighlight: true,
+    //     autoclose: true,
+    //   };
+    //   date_input.datepicker(options);
+    // });
+
+    // // Subject function
+    // function add_subject(values) {
+
+    //   var subject_count = parseInt( $("#subject_count").val() );
+    //   var subjects_id = subject_count + 1;
+    //   var subject_container_id = "single_subject_container_" + subjects_id;
+    //   var single_subject_template = _.template($("#single_subject_template").html());
+
+    //   if(typeof values !== 'undefined') {
+    //     var subject_markup = single_subject_template({
+    //       subjects_id: subjects_id
+    //       ,projects_id: values.projects_id
+    //       ,single_subject_container_id: subject_container_id
+    //       ,card_number: values.card_number
+    //       ,card_folder_number: values.card_folder_number
+    //       ,uploaded_to_folder: values.uploaded_to_folder
+    //       ,lens: values.lens
+    //       ,strobe: values.strobe
+    //       ,cross_polarized: values.cross_polarized
+    //       ,focus: values.focus
+    //       ,scale_bars_used: values.scale_bars_used
+    //       ,color_card_shot_at_beginning: values.color_card_shot_at_beginning
+    //       ,color_card_shot_at_end: values.color_card_shot_at_end
+    //       ,subject_description_area_of_capture: values.subject_description_area_of_capture
+    //       ,notes: values.notes
+    //       ,assigned_in_repository: values.assigned_in_repository
+    //       ,set_number: values.set_number
+    //       ,set_name: values.set_name
+    //       ,diagram_file_path: values.diagram_file_path
+    //       ,active: values.active
+    //     });
+    //   } else {
+    //     var subject_markup = single_subject_template({
+    //       subjects_id: subjects_id
+    //       ,projects_id: ''
+    //       ,single_subject_container_id: subject_container_id
+    //       ,card_number: ''
+    //       ,card_folder_number: ''
+    //       ,uploaded_to_folder: ''
+    //       ,lens: ''
+    //       ,strobe: ''
+    //       ,cross_polarized: ''
+    //       ,focus: ''
+    //       ,scale_bars_used: ''
+    //       ,color_card_shot_at_beginning: ''
+    //       ,color_card_shot_at_end: ''
+    //       ,subject_description_area_of_capture: ''
+    //       ,notes: ''
+    //       ,assigned_in_repository: ''
+    //       ,set_number: ''
+    //       ,set_name: ''
+    //       ,diagram_file_path: ''
+    //       ,active: ''
+    //     });
+    //   }
+
+    //   $("#subject_div").append(subject_markup);
+    //   $("#subject_count").attr("value", subjects_id);
+    // }
+
+    // // Populate with existing subject data
+    // if((typeof subject_data !== 'undefined') && subject_data.length > 0) {
+    //   $.each(subject_data, function(key, value){
+
+    //     console.log('value.projects_idvalue.projects_idvalue.projects_idvalue.projects_id');
+    //     console.log(value);
+
+    //     add_subject(value);
+    //   });
+    // }
+
+    // // Add a subject block
+    // $("#project_form").on("click", ".add_subject", function(event){
+    //   add_subject();
+    // });
+
+    // // Remove subject block
+    // $("#project_form").on("click", ".remove_subject", function(event){
+
+    //   var current_subject_count = parseInt( $("#subject_count").val() );
+    //   $("#subject_count").attr( "value", (current_subject_count-1) );
+    //   var this_subject_block = $(this).parent().prev().parent(".row");
+
+    //   swal({
+    //     title: "Confirm",
+    //     text: "Are you sure you want to delete the selected item(s)?",
+    //     type: "warning",
+    //     showCancelButton: true,
+    //     confirmButtonColor: "#DD6B55",
+    //     confirmButtonText: "Yes, delete the item(s).",
+    //     closeOnConfirm: true
+    //   },
+    //   function(){
+    //     this_subject_block.fadeOut(500);
+    //     setTimeout(function() {
+    //       this_subject_block.remove();
+    //     }, 1500);
+    //   });
+    // });
+  </script>
+{% endblock %}
