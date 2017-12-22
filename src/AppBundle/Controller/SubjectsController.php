@@ -228,6 +228,7 @@ class SubjectsController extends Controller
     * Run a query to retrieve one subject from the database.
     *
     * @param   int $subject_id  The subject ID
+    * @param   object  $conn    Database connection object
     * @return  array|bool       The query result
     */
     public function get_subject($subject_id, $conn)
@@ -245,6 +246,7 @@ class SubjectsController extends Controller
     *
     * Run a query to retrieve all subjects from the database.
     *
+    * @param   object  $conn    Database connection object
     * @return  array|bool  The query result
     */
     public function get_subjects($conn)
@@ -258,6 +260,16 @@ class SubjectsController extends Controller
         return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /**
+     * Get subject_types
+     * @return  array|bool  The query result
+     */
+    public function get_subject_types($conn)
+    {
+        $statement = $conn->prepare("SELECT * FROM subject_types ORDER BY label ASC");
+        $statement->execute();
+        return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
 
     /**
      * Insert/Update subject
