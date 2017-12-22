@@ -10,7 +10,7 @@
 {% block content %}
 
   <ol class="breadcrumb">
-    <li><a href="/dashboard">Dashboard</a></li>
+    <li><a href="/admin/dashboard">Dashboard</a></li>
     <li class="active">Browse Projects</li>
   </ol>
 
@@ -84,7 +84,7 @@
        });
 
      // Send to details page when clicked.
-     var details_page = "/projects/subjects/";
+     var details_page = "/admin/projects/subjects/";
       $('#browse tbody').on('click','td',function(event){
        if(!$(this).hasClass("manage_column")){
          var projects_id = $(this).closest("tr").attr('id');
