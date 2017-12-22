@@ -18,13 +18,13 @@ use AppBundle\Utils\AppUtilities;
 class ProjectsController extends Controller
 {
     /**
-     * @var object  $dumper
+     * @var object $u
      */
-    public $dumper;
+    public $u;
 
     /**
     * Constructor
-    * @param object   AppUtilities  Utility functions object
+    * @param object  $u  Utility functions object
     */
     public function __construct(AppUtilities $u)
     {
