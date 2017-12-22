@@ -3,7 +3,11 @@
 {% block content %}
   <div class="well well-lg">
   	{% if not is_granted('IS_AUTHENTICATED_REMEMBERED') %}
-    	<h2>Login</h2>
+  		{% if app.request.requestUri == '/register/' %}
+  			<h2>Register Account</h2>
+  		{% else %}
+  			<h2>Login</h2>
+  		{% endif %}
     {% else %}
     	<h2>Hi {{ app.user.username }}!</h2>
     {% endif %}

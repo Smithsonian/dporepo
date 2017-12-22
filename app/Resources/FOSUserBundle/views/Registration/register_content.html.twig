@@ -1,8 +1,32 @@
 {% trans_default_domain 'FOSUserBundle' %}
 
-{{ form_start(form, {'method': 'post', 'action': path('fos_user_registration_register'), 'attr': {'class': 'fos_user_registration_register'}}) }}
-    {{ form_widget(form) }}
-    <div>
-        <input type="submit" value="{{ 'Submit'|trans }}" class="btn btn-primary" />
+<form action="{{ path('fos_user_registration_register') }}"  method="POST">
+    <div class="form-group" id="fos_user_registration_form">
+
+        <div class="form-group">
+            <label for="fos_user_registration_form[email]">{{ 'Email'|trans }}</label>
+            {{ form_widget(form.email, { 'attr': {'class': 'form-control'} }) }}
+            {{ form_errors(form.email) }}
+        </div>
+        <div class="form-group">
+            <label for="fos_user_registration_form[username]">{{ 'Username'|trans }}</label>
+            {{ form_widget(form.username, { 'attr': {'class': 'form-control'} }) }}
+            {{ form_errors(form.username) }}
+        </div>
+        <div class="form-group">
+            <label for="fos_user_registration_form[plainPassword][first]">{{ 'Password'|trans }}</label>
+            {{ form_widget(form.plainPassword.first, { 'attr': {'class': 'form-control'} }) }}
+            {{ form_errors(form.plainPassword.first) }}
+        </div>
+        <div class="form-group">
+            <label for="fos_user_registration_form[plainPassword][second]">{{ 'Password Confirmation'|trans }}</label>
+            {{ form_widget(form.plainPassword.second, { 'attr': {'class': 'form-control'} }) }}
+            {{ form_errors(form.plainPassword.second) }}
+        </div>
+
+        {{ form_rest(form) }}
     </div>
-{{ form_end(form) }}
+    <div>
+        <input class="btn btn-primary" type="submit" value="{{ 'Submit'|trans }}">
+    </div>
+</form>
