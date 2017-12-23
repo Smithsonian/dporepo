@@ -30,6 +30,21 @@ class User extends BaseUser implements LdapUserInterface{
            $this->roles[] = 'ROLE_USER';
         }
     }
+
+    public function getId()
+    {
+        return $this->id;
+    }
+
+    public function getUsername()
+    {
+        return $this->username;
+    }
+
+    public function getEmail()
+    {
+        return $this->email;
+    }
  
     /**
      * {@inheritDoc}
