@@ -156,7 +156,7 @@ class ProjectsController extends Controller
     /**
      * Matches /admin/projects/manage/*
      *
-     * @Route("/admin/projects/manage/{projects_id}", name="projects_manage", methods={"GET","POST"})
+     * @Route("/admin/projects/manage/{projects_id}", name="projects_manage", methods={"GET","POST"}, defaults={"projects_id" = null})
      *
      * @param   int     $projects_id  The project ID
      * @param   object  Connection    Database connection object
@@ -168,16 +168,11 @@ class ProjectsController extends Controller
         // $this->u->dumper($request->request->all());
 
         $errors = false;
+        $project_data = array();
         $gump = new GUMP();
         $post = $request->request->all();
         $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
-
-        // $subject = new \PHPSkeleton\Subjects($db_resource, $final_global_template_vars["session_key"]);
-
-        $current_project_data = $this->get_project((int)$projects_id, $conn);
-        // $project_data = $post ? $post : $this->get_project((int)$projects_id, $conn);
-        $project_data = $this->get_project((int)$projects_id, $conn);
-
+        $project_data = !empty($post) ? $post : $this->get_project((int)$projects_id, $conn);
         // $subject_data = $subject->get_subjects((int)$projects_id);
 
         if(isset($project_data['active'])) {
@@ -225,7 +220,6 @@ class ProjectsController extends Controller
             return $this->render('projects/project_form.html.twig', array(
                 "page_title" => !empty($projects_id) ? 'Manage Project: ' . $project_data['projects_label'] : 'Create Project'
                 // ,"subject_data" => $subject_data
-                ,"current_project_data" => $current_project_data
                 ,"project_info" => $project_data
                 ,"errors" => $errors
             ));
@@ -295,7 +289,7 @@ class ProjectsController extends Controller
             $statement->bindValue(":projects_label", $data['projects_label'], PDO::PARAM_STR);
             $statement->bindValue(":stakeholder_guid", $data['stakeholder_guid'], PDO::PARAM_STR);
             $statement->bindValue(":project_description", $data['project_description'], PDO::PARAM_STR);
-            // $statement->bindValue(":last_modified_user_account_id", $_SESSION[$this->session_key]['user_account_id'], PDO::PARAM_INT);
+            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->bindValue(":last_modified_user_account_id", 2, PDO::PARAM_INT);
             $statement->bindValue(":projects_id", $projects_id, PDO::PARAM_INT);
             $statement->execute();
@@ -312,7 +306,7 @@ class ProjectsController extends Controller
             $statement->bindValue(":projects_label", $data['projects_label'], PDO::PARAM_STR);
             $statement->bindValue(":stakeholder_guid", $data['stakeholder_guid'], PDO::PARAM_STR);
             $statement->bindValue(":project_description", $data['project_description'], PDO::PARAM_STR);
-            // $statement->bindValue(":user_account_id", $_SESSION[$this->session_key]['user_account_id'], PDO::PARAM_INT);
+            $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->bindValue(":user_account_id", 2, PDO::PARAM_INT);
             $statement->execute();
             $last_inserted_id = $conn->lastInsertId();
