@@ -165,7 +165,7 @@ class SubjectsController extends Controller
     /**
      * Matches /admin/projects/subject/*
      *
-     * @Route("/admin/projects/subject/{projects_id}/{subjects_id}", name="subjects_manage", methods={"GET","POST"})
+     * @Route("/admin/projects/subject/{projects_id}/{subjects_id}", name="subjects_manage", methods={"GET","POST"}, requirements={"projects_id"="\d+"}, defaults={"subjects_id" = null})
      *
      * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
@@ -176,10 +176,12 @@ class SubjectsController extends Controller
         $errors = false;
         $gump = new GUMP();
         $post = $request->request->all();
-        $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
         $subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
-        $current_subject_data = $this->get_subject((int)$subjects_id, $conn);
         $subject_data = !empty($post) ? $post : $this->get_subject((int)$subjects_id, $conn);
+        $subject_data['projects_id'] = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
+
+        // Get data from lookup tables.
+        $subject_data['subject_types'] = $this->get_subject_types($conn);
         
         // Validate posted data.
         if(!empty($post)) {
@@ -189,9 +191,13 @@ class SubjectsController extends Controller
             // "" => "numeric|exact_len,5",
             // "" => "required|max_len,255|alpha_numeric",
             $rules = array(
-                "projects_label" => "required|max_len,255",
+                "subject_name" => "required|max_len,255",
+                "subject_description" => "required",
+                "subject_holder_subject_id" => "required|max_len,255|alpha_numeric",
+                "location_information" => "required|max_len,255",
+                // "holding_entity_name" => "required|max_len,255",
                 "holding_entity_guid" => "required|max_len,255|alpha_numeric",
-                "project_description" => "required",
+                "subject_type_lookup_id" => "required|numeric",
             );
             $validated = $gump->validate($post, $rules);
 
@@ -202,14 +208,13 @@ class SubjectsController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $subjects_id = $this->insert_update_subject($post, $subjects_id, $conn);
+            $subjects_id = $this->insert_update_subject($post, $subject_data['projects_id'], $subjects_id, $conn);
             $this->addFlash('message', 'Subject successfully updated.');
-            return $this->redirectToRoute('subjects_browse');
+            return $this->redirectToRoute('subjects_browse', array('projects_id' => $subject_data['projects_id']));
         } else {
             return $this->render('subjects/subject_form.html.twig', array(
-                "page_title" => !empty($subjects_id) ? 'Manage Subject: ' . $subject_data['subjects_label'] : 'Create Subject'
-                ,"current_subject_data" => $current_subject_data
-                ,"subject_info" => $subject_data
+                "page_title" => !empty($subjects_id) ? 'Manage Subject: ' . $subject_data['subject_name'] : 'Create Subject'
+                ,"subject_data" => $subject_data
                 ,"errors" => $errors
             ));
         }
@@ -275,7 +280,7 @@ class SubjectsController extends Controller
      * @param   object  $conn         Database connection object
      * @return  int     The subject ID
      */
-    public function insert_update_subjects($data, $projects_id = false, $subjects_id = FALSE, $conn)
+    public function insert_update_subject($data, $projects_id = false, $subjects_id = FALSE, $conn)
     {
         // Update
         if($subjects_id) {
@@ -296,7 +301,7 @@ class SubjectsController extends Controller
           $statement->bindValue(":subject_description", $data['subject_description'], PDO::PARAM_STR);
           $statement->bindValue(":holding_entity_guid", $data['holding_entity_guid'], PDO::PARAM_STR);
           $statement->bindValue(":subject_type_lookup_id", $data['subject_type_lookup_id'], PDO::PARAM_INT);
-          $statement->bindValue(":last_modified_user_account_id", $_SESSION[$this->session_key]['user_account_id'], PDO::PARAM_INT);
+          $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
           $statement->bindValue(":subjects_id", $subjects_id, PDO::PARAM_INT);
           $statement->execute();
 
@@ -318,7 +323,7 @@ class SubjectsController extends Controller
           $statement->bindValue(":subject_description", $data['subject_description'], PDO::PARAM_STR);
           $statement->bindValue(":holding_entity_guid", $data['holding_entity_guid'], PDO::PARAM_STR);
           $statement->bindValue(":subject_type_lookup_id", $data['subject_type_lookup_id'], PDO::PARAM_STR);
-          $statement->bindValue(":user_account_id", $_SESSION[$this->session_key]['user_account_id'], PDO::PARAM_INT);
+          $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
           $statement->execute();
           $last_inserted_id = $conn->lastInsertId();
 
