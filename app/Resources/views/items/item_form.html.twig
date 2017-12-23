@@ -1,0 +1,71 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+{% block stylesheets %}
+  {{ parent() }}
+  <link href="//cdnjs.cloudflare.com/ajax/libs/chosen/0.9.11/chosen.css" rel="stylesheet" type="text/css" />
+  <link href="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.css" rel="stylesheet" type="text/css">
+{% endblock %}
+{% block content %}
+
+    {% if errors %}
+      <div class="alert alert-danger">
+        <h4>Form Errors</h4>
+        {% for single_error in errors %}
+        <p>{{ single_error }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <form id="item_form" method="POST">
+      {#% include 'csrf_input.html' %#}
+      <!-- row -->
+      <div id="single_item_container" class="row">
+
+        <div class="col-sm-12 col-md-12">
+          <div class="form-group">
+            <a href="/admin/projects/items/{{ item_data.projects_id }}/{{ item_data.subjects_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Subject</a>
+          </div>
+        </div>
+
+        <!-- Column 1 -->
+        <div class="col-sm-6 col-md-6">
+
+          {% if item_data.item_guid is defined %}
+            <div class="form-group">
+              <label class="control-label" for="item_guid">Item GUID:</label>
+              <div class="controls">
+                <p>{{ item_data.item_guid|e }}</p>
+              </div>
+            </div>
+          {% endif %}
+          <div class="form-group">
+            <label class="control-label" for="subject_holder_item_id"><span style="color:red;">*</span>Authoritative Item ID:</label>
+            <div class="controls">
+              <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
+              <input name="subject_holder_item_id" id="subject_holder_item_id" type="text" required="true" value="{{ item_data.subject_holder_item_id|default('')|e }}" class="form-control">
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Column 2 -->
+        <div class="col-sm-6 col-md-6">
+          <div class="form-group">
+            <label class="control-label" for="item_description"><span style="color:red;">*</span>Item Description:</label>
+            <div class="controls">
+              <textarea name="item_description" id="item_description" class="form-control" rows="8" required="true">{{ item_data.item_description|default('')|e }}</textarea>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="field-group" style="clear:both;">
+        <input class="btn btn-primary" type="submit" value="Save Edits">
+      </div>
+    </form>
+{% endblock %}
+{% block js_bottom %}
+  {{ parent() }}
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.js"></script>
+{% endblock %}
