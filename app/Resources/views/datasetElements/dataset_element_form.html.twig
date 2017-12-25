@@ -1,0 +1,137 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link href="//cdnjs.cloudflare.com/ajax/libs/chosen/0.9.11/chosen.css" rel="stylesheet" type="text/css" />
+  <link href="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.css" rel="stylesheet" type="text/css">
+{% endblock %}
+
+{% block content %}
+
+    {% if errors %}
+      <div class="alert alert-danger">
+        <h4>Form Errors</h4>
+        {% for single_error in errors %}
+        <p>{{ single_error }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+  <ol class="breadcrumb">
+    <li><a href="/dashboard">Dashboard</a></li>
+    <li><a href="/projects">Browse Projects</a></li>
+    <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ projects_id }}">{{ project_data.projects_label|e }}</a></li>
+    <li><strong>Subject:</strong> <a href="/admin/projects/items/{{ projects_id }}/{{ subjects_id }}">{{ subject_data.subject_name|e }}</a></li>
+    <li><strong>Item:</strong> <a href="/admin/projects/datasets/{{ projects_id }}/{{ subjects_id }}/{{ items_id }}">{{ item_data.item_description|e }}</a></li>
+    <li><strong>Dataset:</strong> <a href="/admin/projects/dataset_elements/{{ projects_id }}/{{ subjects_id }}/{{ items_id }}/{{ datasets_id }}">{{ dataset_data.dataset_name|e }}</a></li>
+    <li class="active"><strong>Dataset Element:</strong> {{ dataset_element_data.dataset_element_guid|e }}</li>
+  </ol>
+
+  <form id="dataset_form" method="POST">
+    {#% include 'csrf_input.html' %#}
+
+    <!-- row -->
+    <div id="single_dataset_element_container" class="row">
+
+      <div class="col-sm-12 col-md-12">
+        <div class="form-group">
+          <a href="/admin/projects/dataset_elements/{{ dataset_element_data.projects_id }}/{{ dataset_element_data.subjects_id }}/{{ dataset_element_data.items_id }}/{{ dataset_element_data.datasets_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Dataset</a>
+        </div>
+      </div>
+
+      <!-- column 1 -->
+      <div class="col-sm-6 col-md-6">
+
+        {% if dataset_element_data.dataset_element_guid %}
+        <div class="form-group">
+          <label class="control-label" for="dataset_element_guid">Dataset Element GUID:</label>
+          <div class="controls">
+            <p>{{ dataset_element_data.dataset_element_guid|e }}</p>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label class="control-label" for="camera_id"><span style="color:red;">*</span>Camera ID:</label>
+          <div class="controls">
+            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Numeric, no spaces allowed</em></p>
+            <input name="camera_id" id="camera_id" type="text" required="true" value="{{ dataset_element_data.camera_id|e }}" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="control-label" for="camera_capture_position_id"><span style="color:red;">*</span>Camera Capture Position ID:</label>
+          <div class="controls">
+            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
+            <input name="camera_capture_position_id" id="camera_capture_position_id" type="text" required="true" value="{{ dataset_element_data.camera_capture_position_id|e }}" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="control-label" for="cluster_position_id"><span style="color:red;">*</span>Cluster Position ID:</label>
+          <div class="controls">
+            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
+            <input name="cluster_position_id" id="cluster_position_id" type="text" required="true" value="{{ dataset_element_data.cluster_position_id|e }}" class="form-control">
+          </div>
+        </div>
+
+      </div>
+
+      <!-- column 2 -->
+      <div class="col-sm-6 col-md-6">
+
+        <div class="form-group">
+          <label class="control-label" for="calibration_object_type_id"><span style="color:red;">*</span>Calibration Object Type:</label>
+          <div class="controls">
+            <select id="calibration_object_type_id" name="calibration_object_type_id" required="true">
+              <option value="0">Select</option>
+              {% for single_capture_method in dataset_element_data.calibration_object_types %}
+                {% set selected = '' %}
+                {% if single_capture_method.calibration_object_types_id == dataset_element_data.calibration_object_type_id %}
+                  {% set selected = ' selected="selected"' %}
+                {% endif %}
+                <option value="{{ single_capture_method.calibration_object_types_id }}"{{ selected }}>{{ single_capture_method.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="control-label" for="camera_position_in_cluster_id"><span style="color:red;">*</span>Camera Position in Cluster:</label>
+          <div class="controls">
+            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
+            <input name="camera_position_in_cluster_id" id="camera_position_in_cluster_id" type="text" required="true" value="{{ dataset_element_data.camera_position_in_cluster_id|e }}" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="control-label" for="cameras"><span style="color:red;">*</span>Cameras:</label>
+          <div class="controls">
+            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
+            <input name="cameras" id="cameras" type="text" required="true" value="{{ dataset_element_data.cameras|e }}" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="control-label" for="lenses"><span style="color:red;">*</span>Lenses:</label>
+          <div class="controls">
+            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
+            <input name="lenses" id="lenses" type="text" required="true" value="{{ dataset_element_data.lenses|e }}" class="form-control">
+          </div>
+        </div>
+        
+      </div>
+
+    </div>
+
+    <div class="field-group" style="clear:both;">
+      <input class="btn btn-primary" type="submit" value="Save Edits">
+    </div>
+  </form>
+
+{% endblock %}
+{% block js_bottom %}
+  {{ parent() }}
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.js"></script>
+{% endblock %}
