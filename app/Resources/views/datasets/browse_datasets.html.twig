@@ -1,0 +1,156 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link href="//cdn.datatables.net/plug-ins/3cfcc339e89/integration/bootstrap/3/dataTables.bootstrap.css" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/DataTables-extended/css/bootstrap_datatables.css') }}" rel="stylesheet" type="text/css" />
+  <link href="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.css" rel="stylesheet" type="text/css">
+{% endblock %}
+
+{% block content %}
+
+  <ol class="breadcrumb">
+    <li><a href="/dashboard">Dashboard</a></li>
+    <li><a href="/admin/projects">Browse Projects</a></li>
+    <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ projects_id }}">{{ project_data.projects_label|e }}</a></li>
+    <li><strong>Subject:</strong> <a href="/admin/projects/items/{{ projects_id }}/{{ subjects_id }}">{{ subject_data.subject_name|e }}</a></li>
+    <li class="active"><strong>Item:</strong> {{ item_data.item_description|e }}</li>
+  </ol>
+
+  <div class="row">
+    <div class="col-sm-6 col-md-6">
+      <dl class="dl-horizontal">
+        <dt>Item GUID</dt>
+        <dd>{{ item_data.item_guid|e }}</dd>
+      </dl>
+    </div>
+    <div class="col-sm-6 col-md-6">
+      <dl class="dl-horizontal">
+        <dt>Last Modified</dt>
+        <dd>{{ item_data.last_modified|e }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  <a href="/admin/projects/items/{{ projects_id }}/{{ subjects_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Subject</a>
+  <a href="/admin/projects/item/{{ projects_id }}/{{ subjects_id }}/{{ items_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span> Edit Item</a>
+  {% if include_directory_button %}
+    <a href="/admin/projects/create_directory_in_jobbox/{{ item_data.item_guid|e }}/{{ destination }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-folder-close" aria-hidden="true"></span> Create the Directory in JobBox</a>
+  {% else %}
+    <button class="btn btn-success" role="button" disabled="disabled"><span class="glyphicon glyphicon-folder-close" aria-hidden="true"></span> Directory Exists in JobBox</button>
+  {% endif %}
+
+  <hr>
+
+  <h2>Datasets</h2>
+  <a href="/admin/projects/dataset/{{ projects_id }}/{{ subjects_id }}/{{ items_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Dataset</a>
+
+  <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
+  <thead>
+    <tr>
+      <th class="text-center">Request Download</th>
+      <th class="text-center">Dataset Name</th>
+      <th class="text-center">Collected By</th>
+      <th class="text-center">Date of Capture</th>
+      <th class="text-center">Last Modified</th>
+    </tr>
+  </thead>
+</table>
+{% endblock %}
+{% block js_bottom %}
+  {{ parent() }}
+  <script src="//cdn.datatables.net/1.10.4/js/jquery.dataTables.min.js"></script>
+  <script src="//cdn.datatables.net/plug-ins/3cfcc339e89/integration/bootstrap/3/dataTables.bootstrap.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+      $('#browse').dataTable( {
+          "columns": [
+              { "data": "manage" },
+              { "data": "dataset_name" },
+              { "data": "collected_by" },
+              { "data": "date_of_capture" },
+              { "data": "last_modified" }
+            ],
+          "dom": '<"wrapper"fli><"col-sm-3 col-md-3 datatables_bulk_actions">pt<"bottom"ip><"clear">',
+          "pagingType": "simple_numbers",
+          "stateSave": true,
+          "order": [[1,"desc"]],
+          // Show processing throbber.
+          "processing": true,
+          "serverMethod": "POST",
+          // All data management will be done on the server side.
+          "serverSide": true,
+          // Path to the file that is going to handle the queries.
+          "ajax": "/admin/projects/datatables_browse_datasets/{{ projects_id }}/{{ subjects_id }}/{{ items_id }}",
+          // Method type.
+          "serverMethod": "POST",
+          // Values in the length dropdown.
+          "lengthMenu":[10,50,100,500],
+          // Set some widths.
+          "aoColumnDefs":[
+              {"sWidth":"100px","aTargets":[0]}
+              ,{"bSortable":false,"aTargets":[0]}
+          ],
+          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+            // Create the checkboxes.
+            $(nRow).find('td:eq(0)').html(
+              "<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
+            )
+            .addClass("manage_column");
+          }
+        });
+
+      // Send to details page when clicked.
+      var details_page = "/admin/projects/dataset_elements/";
+      $('#browse tbody').on('click','td',function(event){
+        if(!$(this).hasClass("manage_column")){
+          var projects_id = "{{ projects_id }}";
+          var subjects_id = "{{ subjects_id }}";
+          var items_id = "{{ items_id }}";
+          var datasets_id = $(this).closest("tr").attr('id');
+          window.location.href = details_page + projects_id + '/' + subjects_id + '/' + items_id + '/' + datasets_id;
+        }
+      });
+
+      var request_download_button = $("<button></button>")
+        .addClass("btn btn-default btn-sm glyphicon glyphicon-download-alt")
+        .attr('style', 'margin-bottom: 0.5rem; width: 13.5rem;')
+        .on("click", function(){
+
+          var delete_ids = new Array;
+          $('#browse [name="manage_checkbox"]:checked').each(function(){
+            delete_ids.push($(this).val());
+          });
+
+          if(delete_ids.length > 0) {
+
+            swal({
+              title: "Send Download Request",
+              text: "Send a request to download chosen assets?",
+              type: "warning",
+              showCancelButton: true,
+              confirmButtonColor: "#DD6B55",
+              confirmButtonText: "Send Request",
+              closeOnConfirm: true
+            },
+            function(){
+              // $.ajax({
+              //   type:"POST"
+              //   ,dateType:"json"
+              //   ,url: "/admin/projects/delete"
+              //   ,data: ({id: JSON.stringify(delete_ids), csrf_key: "{#{ csrf_token }#}"})
+              //   ,success: function(ajax_return){
+              //     $('#browse').dataTable().fnDraw();
+              //   }
+              // });
+            });
+
+          }
+        });
+
+      $(".datatables_bulk_actions").append(request_download_button);
+
+    });
+  </script>
+{% endblock %}

@@ -1,0 +1,233 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+{% block stylesheets %}
+  {{ parent() }}
+  <link href="//cdnjs.cloudflare.com/ajax/libs/chosen/0.9.11/chosen.css" rel="stylesheet" type="text/css" />
+  <link href="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.css" rel="stylesheet" type="text/css">
+{% endblock %}
+{% block content %}
+
+    {% if errors %}
+      <div class="alert alert-danger">
+        <h4>Form Errors</h4>
+        {% for single_error in errors %}
+        <p>{{ single_error }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+  <form id="dataset_form" method="POST">
+    {#% include 'csrf_input.html' %#}
+    <!-- row -->
+    <div id="single_dataset_container" class="row">
+
+      <div class="col-sm-12 col-md-12">
+        <div class="form-group">
+          <a href="/admin/projects/datasets/{{ dataset_data.projects_id }}/{{ dataset_data.subjects_id }}/{{ dataset_data.items_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Dataset</a>
+        </div>
+      </div>
+
+      <!-- Column 1 -->
+      <div class="col-sm-6 col-md-6">
+
+        {% if dataset_data.dataset_guid %}
+        <div class="form-group">
+          <label class="control-label" for="item_guid">Dataset GUID:</label>
+          <div class="controls">
+            <p>{{ dataset_data.dataset_guid|e }}</p>
+          </div>
+        </div>
+        {% endif %}
+        <div class="form-group">
+          <label class="control-label" for="capture_method_lookup_id"><span style="color:red;">*</span>Capture Method:</label>
+          <div class="controls">
+            <select id="capture_method_lookup_id" name="capture_method_lookup_id" required="true">
+              <option value="0">Select</option>
+              {% for single_capture_method in dataset_data.capture_methods %}
+                {% set selected = '' %}
+                {% if single_capture_method.capture_methods_id == dataset_data.capture_method_lookup_id %}
+                  {% set selected = ' selected="selected"' %}
+                {% endif %}
+                <option value="{{ single_capture_method.capture_methods_id }}"{{ selected }}>{{ single_capture_method.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="dataset_type_lookup_id"><span style="color:red;">*</span>Dataset Type:</label>
+          <div class="controls">
+            <select id="dataset_type_lookup_id" name="dataset_type_lookup_id" required="true">
+              <option value="0">Select</option>
+              {% for single_dataset_type in dataset_data.dataset_types %}
+                {% set selected = '' %}
+                {% if single_dataset_type.dataset_types_id == dataset_data.dataset_type_lookup_id %}
+                  {% set selected = ' selected="selected"' %}
+                {% endif %}
+                <option value="{{ single_dataset_type.dataset_types_id }}"{{ selected }}>{{ single_dataset_type.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="dataset_name"><span style="color:red;">*</span>Dataset Name:</label>
+          <div class="controls">
+            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
+            <input name="dataset_name" id="dataset_name" type="text" required="true" value="{{ dataset_data.dataset_name|e }}" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="collected_by"><span style="color:red;">*</span>Collected By:</label>
+          <div class="controls">
+            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
+            <input name="collected_by" id="collected_by" type="text" required="true" value="{{ dataset_data.collected_by|e }}" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="date_of_capture"><span style="color:red;">*</span>Date of Capture:</label>
+          <div class="controls">
+            <input name="date_of_capture" id="date_of_capture" type="text" required="true" value="{{ dataset_data.date_of_capture|e }}" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="dataset_description"><span style="color:red;">*</span>Dataset Description:</label>
+          <div class="controls">
+            <textarea name="dataset_description" id="dataset_description" class="form-control" rows="8" required="true">{{ dataset_data.dataset_description|e }}</textarea>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="dataset_collection_notes"><span style="color:red;">*</span>Dataset Collection Notes:</label>
+          <div class="controls">
+            <textarea name="dataset_collection_notes" id="dataset_collection_notes" class="form-control" rows="8" required="true">{{ dataset_data.dataset_collection_notes|e }}</textarea>
+          </div>
+        </div>
+
+      </div>
+      
+      <!-- Column 2 -->
+      <div class="col-sm-6 col-md-6">
+
+        <div class="form-group">
+          <label class="control-label" for="item_position_type_lookup_id"><span style="color:red;">*</span>Item Position Type:</label>
+          <div class="controls">
+            <select id="item_position_type_lookup_id" name="item_position_type_lookup_id" required="true">
+              <option value="0">Select</option>
+              {% for single_item_position_type in dataset_data.item_position_types %}
+                {% set selected = '' %}
+                {% if single_item_position_type.item_position_types_id == dataset_data.item_position_type_lookup_id %}
+                  {% set selected = ' selected="selected"' %}
+                {% endif %}
+                <option value="{{ single_item_position_type.item_position_types_id }}"{{ selected }}>{{ single_item_position_type.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="positionally_matched_sets_id"><span style="color:red;">*</span>Positionally Matched Sets ID:</label>
+          <div class="controls">
+            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
+            <input name="positionally_matched_sets_id" id="positionally_matched_sets_id" type="text" required="true" value="{{ dataset_data.positionally_matched_sets_id|e }}" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="motion_control"><span style="color:red;">*</span>Motion Control:</label>
+          <div class="controls">
+            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
+            <input name="motion_control" id="motion_control" type="text" required="true" value="{{ dataset_data.motion_control|e }}" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="focus_lookup_id"><span style="color:red;">*</span>Focus:</label>
+          <div class="controls">
+            <select id="focus_lookup_id" name="focus_lookup_id" required="true">
+              <option value="0">Select</option>
+              {% for single_focus_type in dataset_data.focus_types %}
+                {% set selected = '' %}
+                {% if single_focus_type.focus_types_id == dataset_data.focus_lookup_id %}
+                  {% set selected = ' selected="selected"' %}
+                {% endif %}
+                <option value="{{ single_focus_type.focus_types_id }}"{{ selected }}>{{ single_focus_type.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="light_source"><span style="color:red;">*</span>Light Source:</label>
+          <div class="controls">
+            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
+            <input name="light_source" id="light_source" type="text" required="true" value="{{ dataset_data.light_source|e }}" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="light_source_type_lookup_id"><span style="color:red;">*</span>Light Source Type:</label>
+          <div class="controls">
+            <select id="light_source_type_lookup_id" name="light_source_type_lookup_id" required="true">
+              <option value="0">Select</option>
+              {% for single_light_source_type in dataset_data.light_source_types %}
+                {% set selected = '' %}
+                {% if single_light_source_type.light_source_types_id == dataset_data.light_source_type_lookup_id %}
+                  {% set selected = ' selected="selected"' %}
+                {% endif %}
+                <option value="{{ single_light_source_type.light_source_types_id }}"{{ selected }}>{{ single_light_source_type.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="scale_bars_used"><span style="color:red;">*</span>Scale Bars Used:</label>
+          <div class="controls">
+            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
+            <input name="scale_bars_used" id="scale_bars_used" type="text" required="true" value="{{ dataset_data.scale_bars_used|e }}" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="background_removal_method_lookup_id"><span style="color:red;">*</span>Background Removal Method:</label>
+          <div class="controls">
+            <select id="background_removal_method_lookup_id" name="background_removal_method_lookup_id" required="true">
+              <option value="0">Select</option>
+              {% for single_background_removal_method in dataset_data.background_removal_methods %}
+                {% set selected = '' %}
+                {% if single_background_removal_method.background_removal_methods_id == dataset_data.background_removal_method_lookup_id %}
+                  {% set selected = ' selected="selected"' %}
+                {% endif %}
+                <option value="{{ single_background_removal_method.background_removal_methods_id }}"{{ selected }}>{{ single_background_removal_method.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="camera_cluster_type_lookup_id"><span style="color:red;">*</span>Camera Cluster Type:</label>
+          <div class="controls">
+            <select id="camera_cluster_type_lookup_id" name="camera_cluster_type_lookup_id" required="true">
+              <option value="0">Select</option>
+              {% for single_camera_cluster_type in dataset_data.camera_cluster_types %}
+                {% set selected = '' %}
+                {% if single_camera_cluster_type.camera_cluster_types_id == dataset_data.camera_cluster_type_lookup_id %}
+                  {% set selected = ' selected="selected"' %}
+                {% endif %}
+                <option value="{{ single_camera_cluster_type.camera_cluster_types_id }}"{{ selected }}>{{ single_camera_cluster_type.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="array_geometry_id"><span style="color:red;">*</span>Array Geometry ID:</label>
+          <div class="controls">
+            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Numeric, no spaces allowed</em></p>
+            <input name="array_geometry_id" id="array_geometry_id" type="text" required="true" value="{{ dataset_data.array_geometry_id|e }}" class="form-control">
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="field-group" style="clear:both;">
+      <input class="btn btn-primary" type="submit" value="Save Edits">
+    </div>
+  </form>
+
+{% endblock %}
+{% block js_bottom %}
+  {{ parent() }}
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.js"></script>
+{% endblock %}
