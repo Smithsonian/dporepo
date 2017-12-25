@@ -19,8 +19,8 @@ use AppBundle\Utils\AppUtilities;
 use AppBundle\Controller\ProjectsController;
 // Subjects methods
 use AppBundle\Controller\SubjectsController;
-// Subjects methods
-use AppBundle\Controller\ItemssController;
+// Items methods
+use AppBundle\Controller\ItemsController;
 
 class DatasetsController extends Controller
 {
@@ -533,7 +533,7 @@ class DatasetsController extends Controller
         $error = $conn->errorInfo();
 
         if ($error[0] !== '00000') {
-            var_dump($this->db->errorInfo());
+            var_dump($conn->errorInfo());
             die('CREATE TABLE `datasets` failed.');
         } else {
             return TRUE;
