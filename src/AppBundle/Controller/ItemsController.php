@@ -222,9 +222,9 @@ class ItemsController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $items_id = $this->insert_update_item($post, $projects_id, $items_id, $conn);
+            $items_id = $this->insert_update_item($post, $item_data['projects_id'], $items_id, $conn);
             $this->addFlash('message', 'Item successfully updated.');
-            return $this->redirectToRoute('items_browse', array('projects_id' => $projects_id));
+            return $this->redirectToRoute('items_browse', array('projects_id' => $item_data['projects_id'], 'subjects_id' => $item_data['subjects_id']));
         } else {
             return $this->render('items/item_form.html.twig', array(
                 "page_title" => ((int)$items_id && isset($item_data['item_description'])) ? $item_data['item_description'] : 'Add Item'
@@ -296,7 +296,7 @@ class ItemsController extends Controller
             ");
             $statement->bindValue(":subject_holder_item_id", $data['subject_holder_item_id'], PDO::PARAM_STR);
             $statement->bindValue(":item_description", $data['item_description'], PDO::PARAM_STR);
-            $statement->bindValue(":last_modified_user_account_id", $_SESSION[$this->session_key]['user_account_id'], PDO::PARAM_INT);
+            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->bindValue(":items_id", $items_id, PDO::PARAM_INT);
             $statement->execute();
 
@@ -314,7 +314,7 @@ class ItemsController extends Controller
             $statement->bindValue(":subjects_id", $subjects_id, PDO::PARAM_STR);
             $statement->bindValue(":subject_holder_item_id", $data['subject_holder_item_id'], PDO::PARAM_STR);
             $statement->bindValue(":item_description", $data['item_description'], PDO::PARAM_STR);
-            $statement->bindValue(":user_account_id", $_SESSION[$this->session_key]['user_account_id'], PDO::PARAM_INT);
+            $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->execute();
             $last_inserted_id = $conn->lastInsertId();
 
