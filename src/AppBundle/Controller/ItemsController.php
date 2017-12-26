@@ -28,9 +28,9 @@ class ItemsController extends Controller
     public $u;
 
     /**
-    * Constructor
-    * @param object  $u  Utility functions object
-    */
+     * Constructor
+     * @param object  $u  Utility functions object
+     */
     public function __construct(AppUtilities $u)
     {
         // Usage: $this->u->dumper($variable);
@@ -40,8 +40,7 @@ class ItemsController extends Controller
         if($_SERVER['SERVER_SOFTWARE'] === 'Microsoft-IIS/8.5') {
             define('BASE_ROOT', 'C:\\');
         } else {
-            define('CURRENT_DIRECTORY', getcwd());
-            define('BASE_ROOT', str_replace('projects', 'site/', CURRENT_DIRECTORY));
+            define('BASE_ROOT', getcwd() . '/');
         }
 
         define('JOBBOX_PATH', BASE_ROOT . 'JobBox');
@@ -188,9 +187,9 @@ class ItemsController extends Controller
      *
      * @Route("/admin/projects/item/{projects_id}/{subjects_id}/{items_id}", name="items_manage", methods={"GET","POST"}, defaults={"items_id" = null})
      *
-     * @param   object  Connection    Database connection object
-     * @param   object  Request       Request object
-     * @return  array|bool            The query result
+     * @param   object  Connection  Database connection object
+     * @param   object  Request     Request object
+     * @return  array|bool          The query result
      */
     function show_items_form( Connection $conn, Request $request, GumpParseErrors $gump_parse_errors )
     {
@@ -236,14 +235,14 @@ class ItemsController extends Controller
     }
 
     /**
-    * Get Item
-    *
-    * Run a query to retrieve one subject from the database.
-    *
-    * @param   int $item_id  The subject ID
-    * @param   object  $conn    Database connection object
-    * @return  array|bool       The query result
-    */
+     * Get Item
+     *
+     * Run a query to retrieve one subject from the database.
+     *
+     * @param   int $item_id   The subject ID
+     * @param   object  $conn  Database connection object
+     * @return  array|bool     The query result
+     */
     public function get_item($item_id, $conn)
     {
         $statement = $conn->prepare("SELECT *
@@ -255,13 +254,13 @@ class ItemsController extends Controller
     }
 
     /**
-    * Get Items
-    *
-    * Run a query to retrieve all items from the database.
-    *
-    * @param   object  $conn    Database connection object
-    * @return  array|bool  The query result
-    */
+     * Get Items
+     *
+     * Run a query to retrieve all items from the database.
+     *
+     * @param   object  $conn  Database connection object
+     * @return  array|bool     The query result
+     */
     public function get_items($conn)
     {
         $statement = $conn->prepare("
@@ -334,7 +333,7 @@ class ItemsController extends Controller
      * Run a query to delete a item from the database.
      *
      * @param   int     $items_id  The item ID
-     * @param   object  $conn         Database connection object
+     * @param   object  $conn      Database connection object
      * @return  void
      */
     public function delete_item($items_id, $conn)
@@ -364,8 +363,9 @@ class ItemsController extends Controller
     /**
      * Get Directory Statuses
      *
-     * @param bool  $itemguid  The item guid
-     * @return json  The JSON encoded data
+     * @param  bool    $itemguid  The item guid
+     * @param  object  $conn      Database connection object
+     * @return array   Array of directory statuses
      */
     public function getDirectoryStatuses($itemguid = '', $conn) {
 
@@ -395,6 +395,14 @@ class ItemsController extends Controller
       return $data;
     }
 
+    /**
+     * Process Directory Statuses
+     *
+     * @param  bool  $directoryScanType  The directory scan type
+     * @param  bool  $itemguid           The item guid
+     * @param  object  $conn             Database connection object
+     * @return json  The JSON encoded data
+     */
     public function processDirectoryStatuses($directoryScanType = '', $itemguid = '', $conn) {
 
       $data = $directoryContents = array();
@@ -409,17 +417,11 @@ class ItemsController extends Controller
                 break;
             case 'jobboxprocess':
 
-
                 $dirContents = is_dir(JOBBOXPROCESS_PATH . '/' . $itemguid) ? scandir(JOBBOXPROCESS_PATH . '/' . $itemguid) : array();
 
                 if( !empty($dirContents) && in_array('_ready.txt', scandir(JOBBOXPROCESS_PATH . '/' . $itemguid)) ) {
                     $directoryContents = scandir(JOBBOXPROCESS_PATH . '/' . $itemguid);
                 }
-
-                // if($itemguid === 'd573d9d41aecffb852d7cb6cb5b133c1') {
-                //   dump(JOBBOXPROCESS_PATH . '/' . $itemguid,0);
-                //   dump($directoryContents);
-                // }
 
                 break;
             case 'clipped':
@@ -443,7 +445,7 @@ class ItemsController extends Controller
         }
 
         // // If the directory is empty, set the status to 0.
-        // if(empty($directoryContents)) $this->updateStatus($itemguid, 0);
+        // if(empty($directoryContents)) $this->updateStatus($itemguid, 0, $conn);
 
         // If the directory is not empty, build out the status arrays.
         if(!empty($directoryContents)) {
@@ -454,28 +456,28 @@ class ItemsController extends Controller
                             if($value === $itemguid) {
                               $data['status'] = 1;
                               $data['directory'] = $value;
-                              $this->updateStatus($itemguid, 1);
+                              $this->updateStatus($itemguid, 1, $conn);
                             }
                             break;
                         case 'jobboxprocess':
                             $data['status'] = 1;
                             $data['filelist'][] = $value;
-                            $this->updateStatus($itemguid, 2);
+                            $this->updateStatus($itemguid, 2, $conn);
                             break;
                         case 'clipped':
                             $data['status'] = 1;
                             $data['filelist'][] = $value;
-                            $this->updateStatus($itemguid, 3);
+                            $this->updateStatus($itemguid, 3, $conn);
                             break;
                         case 'realitycapture':
                             $data['status'] = 1;
                             $data['filelist'][] = $value;
-                            $this->updateStatus($itemguid, 4);
+                            $this->updateStatus($itemguid, 4, $conn);
                             break;
                         case 'instantuv':
                             $data['status'] = 1;
                             $data['filelist'][] = $value;
-                            $this->updateStatus($itemguid, 5);
+                            $this->updateStatus($itemguid, 5, $conn);
                             break;
                     }
                 }
@@ -490,8 +492,10 @@ class ItemsController extends Controller
     /**
      * Update Statuses
      *
-     * @param bool  $itemguid  The data value
-     * @return json  The JSON encoded data
+     * @param  bool  $itemguid  The item guid
+     * @param  bool  $statusid  The status id
+     * @param  object  $conn    Database connection object
+     * @return bool
      */
     public function updateStatus($itemguid = FALSE, $statusid = 0, $conn) {
 
@@ -515,7 +519,7 @@ class ItemsController extends Controller
     /**
      * Create Items Table
      *
-     * @return      void
+     * @return  void
      */
     public function create_items_table($conn)
     {
