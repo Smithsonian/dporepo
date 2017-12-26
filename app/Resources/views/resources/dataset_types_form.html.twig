@@ -1,0 +1,53 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+{% block stylesheets %}
+  {{ parent() }}
+  <link href="//cdnjs.cloudflare.com/ajax/libs/chosen/0.9.11/chosen.css" rel="stylesheet" type="text/css" />
+  <link href="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.css" rel="stylesheet" type="text/css">
+{% endblock %}
+{% block content %}
+    
+    {% if errors %}
+      <div class="alert alert-danger">
+        <h4>Form Errors</h4>
+        {% for single_error in errors %}
+        <p>{{ single_error }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <ol class="breadcrumb">
+      <li><a href="/admin">Dashboard</a></li>
+      <li><a href="/admin/resources">Resources</a></li>
+      <li><a href="/admin/resources/dataset_types">Browse Dataset Types</a></li>
+      <li class="active">{{ page_title|e }}</li>
+    </ol>
+
+    <form id="lookup_form" method="POST">
+      {#% include 'csrf_input.html' %#}
+      <!-- row -->
+      <div id="single_lookup_container" class="row">
+
+        <!-- Column 1 -->
+        <div class="col-sm-12 col-md-12">
+
+          <div class="form-group">
+            <label class="control-label" for="label"><span style="color:red;">*</span>Label:</label>
+            <div class="controls">
+              <input name="label" id="label" type="text" required="true" value="{{ data.label|default('')|e }}" class="form-control">
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="field-group" style="clear:both;">
+        <input class="btn btn-primary" type="submit" value="Save Edits">
+      </div>
+    </form>
+{% endblock %}
+{% block js_bottom %}
+  {{ parent() }}
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.js"></script>
+{% endblock %}
