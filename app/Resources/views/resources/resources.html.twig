@@ -1,22 +1,126 @@
 {% extends 'default_bootstrap_admin.html.twig' %}
 
-{% block stylesheets %}
-  {{ parent() }}
-  <link href="//cdnjs.cloudflare.com/ajax/libs/chosen/0.9.11/chosen.css" rel="stylesheet" type="text/css" />
-  <link href="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.css" rel="stylesheet" type="text/css">
-{% endblock %}
-
 {% block content %}
 
   <ol class="breadcrumb">
+  	<li><a href="/admin">Dashboard</a></li>
     <li class="active">Resources</li>
   </ol>
 
-  
+  <div class="row">
+    <div class="col-sm-4 col-md-4">
+      <div class="panel panel-primary">
+        <div class="panel-body text-center">
+          <h4><a href="/admin/resources/scalebars">Scale Bars</a></h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-4 col-md-4">
+      <div class="panel panel-primary">
+        <div class="panel-body text-center">
+          <h4><a href="/admin/resources/capture_methods">Capture Methods</a></h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-4 col-md-4">
+      <div class="panel panel-primary">
+        <div class="panel-body text-center">
+          <h4><a href="/admin/resources/dataset_types">Dataset Types</a></h4>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-sm-4 col-md-4">
+      <div class="panel panel-primary">
+        <div class="panel-body text-center">
+          <h4><a href="/admin/resources/item_position_types">Item Position Types</a></h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-4 col-md-4">
+      <div class="panel panel-primary">
+        <div class="panel-body text-center">
+          <h4><a href="/admin/resources/focus_types">Focus Types</a></h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-4 col-md-4">
+      <div class="panel panel-primary text-center">
+        <div class="panel-body">
+          <h4><a href="/admin/resources/light_source_types">Light Source Types</a></h4>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-sm-4 col-md-4">
+      <div class="panel panel-primary">
+        <div class="panel-body text-center">
+          <h4><a href="/admin/resources/camera_cluster_types">Camera Cluster Types</a></h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-4 col-md-4">
+      <div class="panel panel-primary">
+        <div class="panel-body text-center">
+          <h4><a href="/admin/resources/background_removal_methods">Background Removal Methods</a></h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-4 col-md-4">
+      <div class="panel panel-primary text-center">
+        <div class="panel-body">
+          <h4><a href="/admin/resources/subject_types">Subject Types</a></h4>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-sm-4 col-md-4">
+      <div class="panel panel-primary">
+        <div class="panel-body text-center">
+          <h4><a href="/admin/resources/data_rights_restriction_types">Data Rights Restriction Types</a></h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-4 col-md-4">
+      <div class="panel panel-primary">
+        <div class="panel-body text-center">
+          <h4><a href="/admin/resources/scale_bar_barcode_types">Scale Bar Barcode Types</a></h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-4 col-md-4">
+      <div class="panel panel-primary text-center">
+        <div class="panel-body">
+          <h4><a href="/admin/resources/target_types">Target Types</a></h4>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-sm-4 col-md-4">
+      <div class="panel panel-primary">
+        <div class="panel-body text-center">
+          <h4><a href="/admin/resources/units">Units</a></h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-4 col-md-4">
+      <div class="panel panel-primary">
+        <div class="panel-body text-center">
+          <h4><a href="/admin/resources/calibration_object_types">Calibration Object Types</a></h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-4 col-md-4">
+      <div class="panel panel-primary">
+        <div class="panel-body text-center">
+          <h4><a href="/admin/resources/status_types">Status Types</a></h4>
+        </div>
+      </div>
+    </div>
+  </div>
 
-{% endblock %}
-{% block js_bottom %}
-  {{ parent() }}
-  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.js"></script>
 {% endblock %}
