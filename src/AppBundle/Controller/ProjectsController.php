@@ -123,27 +123,6 @@ class ProjectsController extends Controller
         $statement->execute($pdo_params);
         $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-        // // Convert status to human readable words.
-        // if(!empty($data['aaData'])) {
-        //     foreach ($data['aaData'] as $key => $value) {
-        //         switch($value['active']) {
-        //             case '0':
-        //                 $label = 'warning';
-        //                 $text = 'In Queue';
-        //                 break;
-        //             case '1':
-        //                 $label = 'primary';
-        //                 $text = 'Processing';
-        //                 break;
-        //             case '2':
-        //                 $label = 'success';
-        //                 $text = 'Processed';
-        //                 break;
-        //         }
-        //     }
-        //     $data['aaData'][$key]['active'] = '<span class="label label-' . $label . '"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span> ' . $text . '</span>';
-        // }
-
         $statement = $conn->prepare("SELECT FOUND_ROWS()");
         $statement->execute();
         $count = $statement->fetch();
@@ -165,15 +144,12 @@ class ProjectsController extends Controller
      */
     function show_projects_form( $projects_id, Connection $conn, Request $request, GumpParseErrors $gump_parse_errors )
     {
-        // $this->u->dumper($request->request->all());
-
         $errors = false;
         $project_data = array();
         $gump = new GUMP();
         $post = $request->request->all();
         $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
         $project_data = !empty($post) ? $post : $this->get_project((int)$projects_id, $conn);
-        // $subject_data = $subject->get_subjects((int)$projects_id);
 
         if(isset($project_data['active'])) {
             switch($project_data['active']) {
@@ -219,7 +195,6 @@ class ProjectsController extends Controller
         } else {
             return $this->render('projects/project_form.html.twig', array(
                 "page_title" => !empty($projects_id) ? 'Manage Project: ' . $project_data['projects_label'] : 'Create Project'
-                // ,"subject_data" => $subject_data
                 ,"project_info" => $project_data
                 ,"errors" => $errors
             ));
@@ -228,13 +203,13 @@ class ProjectsController extends Controller
     }
 
     /**
-    * Get Project
-    *
-    * Run a query to retrieve one project from the database.
-    *
-    * @param   int $project_id  The project ID
-    * @return  array|bool       The query result
-    */
+     * Get Project
+     *
+     * Run a query to retrieve one project from the database.
+     *
+     * @param   int $project_id  The project ID
+     * @return  array|bool       The query result
+     */
     public function get_project($project_id, $conn)
     {
         $statement = $conn->prepare("SELECT *
@@ -246,17 +221,16 @@ class ProjectsController extends Controller
     }
 
     /**
-    * Get Projects
-    *
-    * Run a query to retrieve all projects from the database.
-    *
-    * @return  array|bool  The query result
-    */
+     * Get Projects
+     *
+     * Run a query to retrieve all projects from the database.
+     *
+     * @return  array|bool  The query result
+     */
     public function get_projects($conn)
     {
         $statement = $conn->prepare("
             SELECT * FROM projects
-            -- LEFT JOIN `subjects` ON `subjects`.projects_id = projects.projects_id
             ORDER BY projects.projects_label ASC
         ");
         $statement->execute();
@@ -265,15 +239,15 @@ class ProjectsController extends Controller
 
 
     /**
-    * Insert/Update Project
-    *
-    * Run queries to insert and update projects in the database.
-    *
-    * @param   array   $data        The data array
-    * @param   int     $project_id  The project ID
-    * @param   object  $conn        Database connection object
-    * @return  int     The project ID
-    */
+     * Insert/Update Project
+     *
+     * Run queries to insert and update projects in the database.
+     *
+     * @param   array   $data        The data array
+     * @param   int     $project_id  The project ID
+     * @param   object  $conn        Database connection object
+     * @return  int     The project ID
+     */
     public function insert_update_project($data, $projects_id = FALSE, $conn)
     {
         // Update
@@ -321,14 +295,14 @@ class ProjectsController extends Controller
     }
 
     /**
-    * Delete Project
-    *
-    * Run a query to delete a project from the database.
-    *
-    * @param   int     $project_id  The project ID
-    * @param   object  $conn        Database connection object
-    * @return  void
-    */
+     * Delete Project
+     *
+     * Run a query to delete a project from the database.
+     *
+     * @param   int     $project_id  The project ID
+     * @param   object  $conn        Database connection object
+     * @return  void
+     */
     public function delete_project($projects_id, $conn)
     {
         $statement = $this->db->prepare("

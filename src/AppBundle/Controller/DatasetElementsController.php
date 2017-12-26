@@ -186,7 +186,7 @@ class DatasetElementsController extends Controller
             // "" => "numeric|exact_len,5",
             // "" => "required|max_len,255|alpha_numeric",
             $rules = array(
-                'csrf_key' => 'required',
+                // 'csrf_key' => 'required',
                 'camera_id' => 'required|numeric',
                 'camera_capture_position_id' => 'required|max_len,255|alpha_numeric',
                 'cluster_position_id' => 'required|max_len,255|alpha_numeric',
@@ -204,7 +204,7 @@ class DatasetElementsController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $dataset_elements_id = $dataset_element->insert_update_dataset_elements($post, $datasets_id, $dataset_elements_id);
+            $dataset_elements_id = $this->insert_update_dataset_elements($post, $dataset_element_data['datasets_id'], $dataset_elements_id, $conn);
             $this->addFlash('message', 'Dataset element successfully updated.');
             return $this->redirectToRoute('datasets_browse', array('projects_id' => $dataset_element_data['projects_id'], 'subjects_id' => $dataset_element_data['subjects_id'], 'items_id' => $dataset_element_data['items_id'], 'datasets_id' => $dataset_element_data['datasets_id']));
         } else {
@@ -236,7 +236,7 @@ class DatasetElementsController extends Controller
      * @param   object  $conn                 Database connection object
      * @return  int     The item ID
      */
-    public function insert_update_dataset_elements($data, $datasets_id = FALSE, $dataset_elements_id = FALSE) {
+    public function insert_update_dataset_elements($data, $datasets_id = FALSE, $dataset_elements_id = FALSE, $conn) {
 
         // Update
         if($dataset_elements_id) {

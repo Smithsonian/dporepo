@@ -182,7 +182,7 @@ class DatasetsController extends Controller
             // "" => "numeric|exact_len,5",
             // "" => "required|max_len,255|alpha_numeric",
             $rules = array(
-                "csrf_key" => "required",
+                // "csrf_key" => "required",
                 "capture_method_lookup_id" => "required|numeric",
                 "dataset_type_lookup_id" => "required|numeric",
                 "dataset_name" => "required|max_len,255",
@@ -213,12 +213,12 @@ class DatasetsController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $items_id = $this->insert_update_datasets($post, $dataset_data['items_id'], $datasets_id, $conn);
+            $items_id = $this->insert_update_datasets($post, $datasets_id, $dataset_data['items_id'], $conn);
             $this->addFlash('message', 'Dataset successfully updated.');
             return $this->redirectToRoute('datasets_browse', array('projects_id' => $dataset_data['projects_id'], 'subjects_id' => $dataset_data['subjects_id'], 'items_id' => $dataset_data['items_id']));
         } else {
             return $this->render('datasets/dataset_form.html.twig', array(
-                'page_title' => ((int)$datasets_id && isset($dataset_data['dataset_description']) && isset($dataset_data['item_description'])) ? $item_data['item_description'] . ': ' . $dataset_data['dataset_name'] : 'Add a Dataset',
+                'page_title' => ((int)$datasets_id && isset($dataset_data['dataset_description']) && isset($item_data['item_description'])) ? $item_data['item_description'] . ': ' . $dataset_data['dataset_name'] : 'Add a Dataset',
                 'dataset_data' => $dataset_data,
                 'errors' => $errors
             ));
@@ -237,8 +237,8 @@ class DatasetsController extends Controller
      * @param   object  $conn         Database connection object
      * @return  int     The item ID
      */
-    public function insert_update_datasets($data, $datasets_id = FALSE, $items_id = FALSE) {
-
+    public function insert_update_datasets($data, $datasets_id = FALSE, $items_id = FALSE, $conn)
+    {
         // Update
         if($datasets_id) {
           $statement = $conn->prepare("

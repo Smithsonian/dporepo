@@ -16,7 +16,7 @@
                   <li class="active"><a href="/">Home</a></li>
                   
                   {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
-                    <li><a href="/dashboard/">Dashboard</a></li>
+                    <li><a href="/admin">Dashboard</a></li>
                     <li><a href="/logout">Logout</a></li>
                   {% else %}
                     <li><a href="/login">Login</a></li>
