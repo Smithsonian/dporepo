@@ -2,21 +2,150 @@
 
 {% block stylesheets %}
   {{ parent() }}
-  <link href="//cdnjs.cloudflare.com/ajax/libs/chosen/0.9.11/chosen.css" rel="stylesheet" type="text/css" />
-  <link href="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.css" rel="stylesheet" type="text/css">
+  <link href="//cdn.datatables.net/plug-ins/3cfcc339e89/integration/bootstrap/3/dataTables.bootstrap.css" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/DataTables-extended/css/bootstrap_datatables.css') }}" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
 
-  <ol class="breadcrumb">
-    <li class="active">Dashboard</li>
-  </ol>
+  <h2>Favorites/Watching</h2>
+  {{ dump(favorites) }}
 
-  
+  <h2>Recent Projects</h2>
+  <table id="browse_recent_projects" class="table table-striped table-bordered" cellspacing="0" width="100%">
+    <thead>
+      <tr>
+        <th class="text-center">Project</th>
+        <th class="text-center">Unit (Stakeholder)</th>
+        <th class="text-center">Subjects Count</th>
+        <th class="text-center">Last Modified</th>
+        <th class="text-center">Creation Date</th>
+      </tr>
+    </thead>
+  </table>
+
+  <h2>Recent Subjects</h2>
+  <table id="browse_recent_subjects" class="table table-striped table-bordered" cellspacing="0" width="100%">
+    <thead>
+      <tr>
+        <th class="text-center">Request Download</th>
+        <th class="text-center">Subject Name</th>
+        <th class="text-center">Location Information</th>
+        <th class="text-center">Holding Entity GUID</th>
+        <th class="text-center">Last Modified</th>
+      </tr>
+    </thead>
+  </table>
+
+  <h2>Recently Updated</h2>
+
+  <h2>Recent Jobs</h2>
+
 
 {% endblock %}
+
 {% block js_bottom %}
   {{ parent() }}
-  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.js"></script>
+  <script src="//cdn.datatables.net/1.10.4/js/jquery.dataTables.min.js"></script>
+  <script src="//cdn.datatables.net/plug-ins/3cfcc339e89/integration/bootstrap/3/dataTables.bootstrap.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+      // Recent projects
+      $('#browse_recent_projects').dataTable( {
+         "columns": [
+             { "data": "projects_label" },
+             { "data": "stakeholder_guid" },
+             { "data": "subjects_count" },
+             { "data": "last_modified" },
+             { "data": "date_created" }
+           ],
+         "dom": '<"wrapper"fl><"col-sm-3 col-md-3 datatables_bulk_actions">t<"bottom"ip><"clear">',
+         "pagingType": "simple_numbers",
+         "stateSave": true,
+         "order": [[3,"desc"]],
+         // Show processing throbber.
+         "processing": true,
+         "serverMethod": "POST",
+          // All data management will be done on the server side.
+         "serverSide": true,
+         // Path to the file that is going to handle the queries.
+         "ajax": "/admin/datatables_browse_recent_projects/",
+         // Method type.
+         "serverMethod": "POST",
+         // Values in the length dropdown.
+         "lengthMenu":[5,10,20,50],
+         // Set some widths.
+         "aoColumnDefs":[
+            {"sWidth":"26%","aTargets":[0]}
+            // ,{"bSortable":false,"aTargets":[0]}
+         ],
+         "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+           // // Create the checkboxes.
+           // $(nRow).find('td:eq(0)').html(
+           //  "<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
+           // )
+           // .addClass("manage_column");
+          }
+       });
+
+      // Send to details page when clicked.
+      var details_page = "/admin/projects/subjects/";
+      $('#browse_recent_projects tbody').on('click','td',function(event){
+        if(!$(this).hasClass("manage_column")){
+          var projects_id = $(this).closest("tr").attr('id');
+          window.location.href = details_page + projects_id;
+        }
+      });
+
+      // Recent subjects
+      $('#browse_recent_subjects').dataTable( {
+          "columns": [
+              { "data": "manage" },
+              { "data": "subject_name" },
+              { "data": "location_information" },
+              { "data": "holding_entity_guid" },
+              { "data": "last_modified" }
+            ],
+          "dom": '<"wrapper"fl><"col-sm-3 col-md-3 datatables_bulk_actions">t<"bottom"ip><"clear">',
+          "pagingType": "simple_numbers",
+          "stateSave": true,
+          "order": [[4,"desc"]],
+          // Show processing throbber.
+          "processing": true,
+          "serverMethod": "POST",
+          // All data management will be done on the server side.
+          "serverSide": true,
+          // Path to the file that is going to handle the queries.
+          "ajax": "/admin/datatables_browse_recent_subjects/",
+          // Method type.
+          "serverMethod": "POST",
+          // Values in the length dropdown.
+          "lengthMenu":[5,10,20,50],
+          // Set some widths.
+          "aoColumnDefs":[
+            {"sWidth":"100px","aTargets":[0]}
+            ,{"bSortable":false,"aTargets":[0]}
+          ],
+          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+
+            // Create the checkboxes.
+            $(nRow).find('td:eq(0)').html(
+              "<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
+            )
+            .addClass("manage_column");
+
+            // Send to details page when clicked.
+            var details_page = "/admin/projects/items/";
+            $('#browse_recent_subjects tbody').on('click','td',function(event){
+              if(!$(this).hasClass("manage_column")){
+                var subjects_id = $(this).closest("tr").attr('id');
+                window.location.href = details_page + aData['projects_id'] + '/' + subjects_id;
+              }
+            });
+
+          }
+        });
+
+    });
+  </script>
 {% endblock %}

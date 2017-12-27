@@ -28,6 +28,7 @@ class ProjectsController extends Controller
     */
     public function __construct(AppUtilities $u)
     {
+        // Usage: $this->u->dumper($variable);
         $this->u = $u;
     }
 
@@ -36,11 +37,14 @@ class ProjectsController extends Controller
      */
     public function browse_projects(Connection $conn, Request $request)
     {
+        // $this->u->dumper($this->getUser()->favorites($request, $this->u, $conn));
+
         // Database tables are only created if not present.
         $create_projects_table = $this->create_projects_table($conn);
 
         return $this->render('projects/browse_projects.html.twig', array(
-            'page_title' => "Browse Projects",
+            'page_title' => 'Browse Projects',
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
         ));
     }
 

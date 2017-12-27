@@ -1,6 +1,11 @@
 {% use 'default_bootstrap_side_nav.html.twig' %}
 {% extends 'base.html.twig' %}
 
+{% set checked = '' %}
+{% if is_favorite is defined and is_favorite %}
+  {% set checked = ' checked="checked"' %}
+{% endif %}
+
 {% block body %}
   {#
     {% if navbar is not empty %}
@@ -44,7 +49,12 @@
         {% endif %}
 
           {% if page_title is defined %}
-            <h1 class="page-header">{{ page_title|e }}</h1>
+            <label for="id-of-input" class="custom-checkbox">
+              <h1 class="page-header">{{ page_title|e }}</h1>
+              <input type="checkbox" id="id-of-input"{{checked}} />
+              <i class="glyphicon glyphicon-star-empty"></i>
+              <i class="glyphicon glyphicon-star" title="Add/Remove from favorites"></i>
+            </label>
           {% endif %}
 
           {% for label, messages in app.flashes %}
@@ -88,6 +98,50 @@
 
     <!-- Custom styles for this template -->
     <style type="text/css">
+
+        label.custom-checkbox {
+          /* Presentation */ 
+          font-size: 24px;
+          width: 100%;
+          position: relative;
+        }
+
+        /* Required Styling */
+
+        label.custom-checkbox input[type="checkbox"] {
+          display: none;
+        }
+
+        .custom-checkbox .glyphicon-star,
+        .custom-checkbox .glyphicon-star-empty {
+          cursor: pointer;
+        }
+
+        .custom-checkbox .glyphicon {
+          color: gold;
+          position: absolute;
+          top: 0.4em;
+          left: -1.15em;
+          font-size: 0.75em;
+        }
+
+        .custom-checkbox .glyphicon-star-empty {
+          color: gray;
+        }
+
+        .custom-checkbox .glyphicon-star {
+          opacity: 0;
+          transition: opacity 0.2s ease-in-out;
+        }
+
+        .custom-checkbox:hover .glyphicon-star {
+          opacity: 0.5;
+        }
+
+        .custom-checkbox input[type="checkbox"]:checked ~ .glyphicon-star {
+          opacity: 1;
+        }
+
         /*
          * Base structure
          */
