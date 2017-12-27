@@ -1,10 +1,5 @@
 {% extends 'default_bootstrap_admin.html.twig' %}
-{% block stylesheets %}
-  {{ parent() }}
-  <link href="//cdnjs.cloudflare.com/ajax/libs/chosen/0.9.11/chosen.css" rel="stylesheet" type="text/css" />
-  <link href="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.css" rel="stylesheet" type="text/css">
-  <!-- <link href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/css/bootstrap-datepicker3.css" rel="stylesheet" type="text/css"> -->
-{% endblock %}
+
 {% block content %}
     
     {% if errors %}
@@ -81,10 +76,4 @@
         <input class="btn btn-primary" type="submit" value="Save Edits">
       </div>
     </form>
-{% endblock %}
-{% block js_bottom %}
-  {{ parent() }}
-  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.js"></script>
-  <!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/js/bootstrap-datepicker.min.js"></script> -->
 {% endblock %}
