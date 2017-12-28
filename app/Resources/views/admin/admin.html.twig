@@ -8,47 +8,78 @@
 
 {% block content %}
 
-  <h2>Favorites/Watching</h2>
-  <table id="browse_favorites" class="table table-striped table-bordered" cellspacing="0" width="100%">
-    <thead>
-      <tr>
-        <th class="text-center">Page Title</th>
-        <th class="text-center">Page Path</th>
-        <th class="text-center">Date Added</th>
-      </tr>
-    </thead>
-  </table>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3><span class="glyphicon glyphicon-heart" style="font-size: 2.0rem;" aria-hidden="true"></span> Favorites/Watching</h3>
+    </div>
+    <div class="panel-body">
+      <table id="browse_favorites" class="table table-striped table-bordered" cellspacing="0" width="100%">
+        <thead>
+          <tr>
+            <th class="text-center">Page Title</th>
+            <th class="text-center">Page Path</th>
+            <th class="text-center">Date Added</th>
+          </tr>
+        </thead>
+      </table>
+    </div>
+  </div>
 
-  <h2>Recent Projects</h2>
-  <table id="browse_recent_projects" class="table table-striped table-bordered" cellspacing="0" width="100%">
-    <thead>
-      <tr>
-        <th class="text-center">Project</th>
-        <th class="text-center">Unit (Stakeholder)</th>
-        <th class="text-center">Subjects Count</th>
-        <th class="text-center">Last Modified</th>
-        <th class="text-center">Creation Date</th>
-      </tr>
-    </thead>
-  </table>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3><span class="glyphicon glyphicon-briefcase" style="font-size: 2.0rem;" aria-hidden="true"></span> Recent Projects</h3>
+    </div>
+    <div class="panel-body">
+      <table id="browse_recent_projects" class="table table-striped table-bordered" cellspacing="0" width="100%">
+        <thead>
+          <tr>
+            <th class="text-center">Project</th>
+            <th class="text-center">Unit (Stakeholder)</th>
+            <th class="text-center">Subjects Count</th>
+            <th class="text-center">Last Modified</th>
+            <th class="text-center">Creation Date</th>
+          </tr>
+        </thead>
+      </table>
+    </div>
+  </div>
 
-  <h2>Recent Subjects</h2>
-  <table id="browse_recent_subjects" class="table table-striped table-bordered" cellspacing="0" width="100%">
-    <thead>
-      <tr>
-        <th class="text-center">Request Download</th>
-        <th class="text-center">Subject Name</th>
-        <th class="text-center">Location Information</th>
-        <th class="text-center">Holding Entity GUID</th>
-        <th class="text-center">Last Modified</th>
-      </tr>
-    </thead>
-  </table>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3><span class="glyphicon glyphicon-list-alt" style="font-size: 2.0rem;" aria-hidden="true"></span> Recent Subjects</h3>
+    </div>
+    <div class="panel-body">
+      <table id="browse_recent_subjects" class="table table-striped table-bordered" cellspacing="0" width="100%">
+        <thead>
+          <tr>
+            <th class="text-center">Request Download</th>
+            <th class="text-center">Subject Name</th>
+            <th class="text-center">Location Information</th>
+            <th class="text-center">Holding Entity GUID</th>
+            <th class="text-center">Last Modified</th>
+          </tr>
+        </thead>
+      </table>
+    </div>
+  </div>
 
-  <h2>Recently Updated</h2>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3><span class="glyphicon glyphicon-time" style="font-size: 2.0rem;" aria-hidden="true"></span> Recently Updated</h3>
+    </div>
+    <div class="panel-body">
+      <p><span class="glyphicon glyphicon-time" aria-hidden="true"></span> Coming soon...</p>
+    </div>
+  </div>
 
-  <h2>Recent Jobs</h2>
-
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3><span class="glyphicon glyphicon-cog" style="font-size: 2.0rem;" aria-hidden="true"></span> Recent Jobs</h3>
+    </div>
+    <div class="panel-body">
+      <p><span class="glyphicon glyphicon-time" aria-hidden="true"></span> Coming soon...</p>
+    </div>
+  </div>
 
 {% endblock %}
 
