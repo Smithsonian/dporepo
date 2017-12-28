@@ -49,6 +49,7 @@ class UnitsController extends Controller
 
         return $this->render('resources/browse_units.html.twig', array(
             'page_title' => "Browse Units",
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
@@ -169,6 +170,7 @@ class UnitsController extends Controller
                 "page_title" => !empty($units_id) ? 'Manage Unit: ' . $data['label'] : 'Create Unit'
                 ,"data" => $data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

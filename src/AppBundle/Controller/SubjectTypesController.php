@@ -49,6 +49,7 @@ class SubjectTypesController extends Controller
 
         return $this->render('resources/browse_subject_types.html.twig', array(
             'page_title' => "Browse Subject Types",
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
@@ -169,6 +170,7 @@ class SubjectTypesController extends Controller
                 "page_title" => !empty($subject_types_id) ? 'Manage Subject Type: ' . $data['label'] : 'Create Subject Type'
                 ,"data" => $data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

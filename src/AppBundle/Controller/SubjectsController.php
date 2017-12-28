@@ -49,7 +49,8 @@ class SubjectsController extends Controller
         return $this->render('subjects/browse_subjects.html.twig', array(
             'page_title' => $project_data['projects_label'],
             'projects_id' => $projects_id,
-            'project_data' => $project_data
+            'project_data' => $project_data,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
@@ -216,6 +217,7 @@ class SubjectsController extends Controller
                 "page_title" => !empty($subjects_id) ? 'Manage Subject: ' . $subject_data['subject_name'] : 'Create Subject'
                 ,"subject_data" => $subject_data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

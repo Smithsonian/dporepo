@@ -66,6 +66,7 @@ class DatasetsController extends Controller
             'item_data' => $item_data,
             'destination' => '|projects|datasets|' . $projects_id . '|' . $subjects_id . '|' . $items_id,
             'include_directory_button' => !in_array($item_data['item_guid'], $directoryContents) ? true : false,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
@@ -220,7 +221,8 @@ class DatasetsController extends Controller
             return $this->render('datasets/dataset_form.html.twig', array(
                 'page_title' => ((int)$datasets_id && isset($dataset_data['dataset_description']) && isset($item_data['item_description'])) ? $item_data['item_description'] . ': ' . $dataset_data['dataset_name'] : 'Add a Dataset',
                 'dataset_data' => $dataset_data,
-                'errors' => $errors
+                'errors' => $errors,
+                'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             ));
         }
 

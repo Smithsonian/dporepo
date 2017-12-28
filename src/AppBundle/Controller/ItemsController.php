@@ -66,7 +66,8 @@ class ItemsController extends Controller
             'projects_id' => $projects_id,
             'subjects_id' => $subjects_id,
             'subject_data' => $subject_data,
-            'project_data' => $project_data
+            'project_data' => $project_data,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
@@ -229,6 +230,7 @@ class ItemsController extends Controller
                 "page_title" => ((int)$items_id && isset($item_data['item_description'])) ? $item_data['item_description'] : 'Add Item'
                 ,"item_data" => $item_data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

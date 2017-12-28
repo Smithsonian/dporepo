@@ -49,6 +49,7 @@ class DataRightsRestrictionTypesController extends Controller
 
         return $this->render('resources/browse_data_rights_restriction_types.html.twig', array(
             'page_title' => "Browse Data Rights Restriction Types",
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
@@ -169,6 +170,7 @@ class DataRightsRestrictionTypesController extends Controller
                 "page_title" => !empty($data_rights_restriction_types_id) ? 'Manage Data Rights Restriction Type: ' . $data['label'] : 'Create Data Rights Restriction Type'
                 ,"data" => $data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

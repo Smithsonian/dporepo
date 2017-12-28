@@ -49,6 +49,7 @@ class TargetTypesController extends Controller
 
         return $this->render('resources/browse_target_types.html.twig', array(
             'page_title' => "Browse Target Types",
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
@@ -169,6 +170,7 @@ class TargetTypesController extends Controller
                 "page_title" => !empty($target_types_id) ? 'Manage Target Type: ' . $data['label'] : 'Create Target Type'
                 ,"data" => $data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

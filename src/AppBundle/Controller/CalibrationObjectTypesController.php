@@ -49,6 +49,7 @@ class CalibrationObjectTypesController extends Controller
 
         return $this->render('resources/browse_calibration_object_types.html.twig', array(
             'page_title' => "Browse Calibration Object Types",
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
         ));
     }
 
@@ -169,6 +170,7 @@ class CalibrationObjectTypesController extends Controller
                 "page_title" => !empty($calibration_object_types_id) ? 'Manage Calibration Object Type: ' . $data['label'] : 'Create Calibration Object Type'
                 ,"data" => $data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

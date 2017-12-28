@@ -49,6 +49,7 @@ class LightSourceTypesController extends Controller
 
         return $this->render('resources/browse_light_source_types.html.twig', array(
             'page_title' => "Browse Light Source Types",
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
@@ -169,6 +170,7 @@ class LightSourceTypesController extends Controller
                 "page_title" => !empty($light_source_types_id) ? 'Manage Light Source Type: ' . $data['label'] : 'Create Light Source Type'
                 ,"data" => $data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

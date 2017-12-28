@@ -49,6 +49,7 @@ class FocusTypesController extends Controller
 
         return $this->render('resources/browse_focus_types.html.twig', array(
             'page_title' => "Browse Focus Types",
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
@@ -169,6 +170,7 @@ class FocusTypesController extends Controller
                 "page_title" => !empty($focus_types_id) ? 'Manage Focus Type: ' . $data['label'] : 'Create Focus Type'
                 ,"data" => $data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

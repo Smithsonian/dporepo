@@ -49,6 +49,7 @@ class DatasetTypesController extends Controller
 
         return $this->render('resources/browse_dataset_types.html.twig', array(
             'page_title' => "Browse Dataset Types",
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
@@ -169,6 +170,7 @@ class DatasetTypesController extends Controller
                 "page_title" => !empty($dataset_types_id) ? 'Manage Dataset Type: ' . $data['label'] : 'Create Dataset Type'
                 ,"data" => $data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

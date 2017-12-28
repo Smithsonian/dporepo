@@ -49,6 +49,7 @@ class ScaleBarBarcodeTypesController extends Controller
 
         return $this->render('resources/browse_scale_bar_barcode_types.html.twig', array(
             'page_title' => "Browse Scale Bar Barcode Types",
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
@@ -169,6 +170,7 @@ class ScaleBarBarcodeTypesController extends Controller
                 "page_title" => !empty($scale_bar_barcode_types_id) ? 'Manage Scale Bar Barcode Type: ' . $data['label'] : 'Create Scale Bar Barcode Type'
                 ,"data" => $data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

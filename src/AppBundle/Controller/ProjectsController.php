@@ -199,6 +199,7 @@ class ProjectsController extends Controller
                 "page_title" => !empty($projects_id) ? 'Manage Project: ' . $project_data['projects_label'] : 'Create Project'
                 ,"project_info" => $project_data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

@@ -49,6 +49,7 @@ class ItemPositionTypesController extends Controller
 
         return $this->render('resources/browse_item_position_types.html.twig', array(
             'page_title' => "Browse Item Position Types",
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
         ));
     }
 
@@ -169,6 +170,7 @@ class ItemPositionTypesController extends Controller
                 "page_title" => !empty($item_position_types_id) ? 'Manage Item Position Type: ' . $data['label'] : 'Create Item Position Type'
                 ,"data" => $data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

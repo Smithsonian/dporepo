@@ -70,7 +70,8 @@ class DatasetElementsController extends Controller
             'subject_data' => $subject_data,
             'item_data' => $item_data,
             'dataset_data' => $dataset_data,
-            'dataset_element_data' => $dataset_element_data
+            'dataset_element_data' => $dataset_element_data,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
@@ -219,7 +220,8 @@ class DatasetElementsController extends Controller
                 'item_data' => $item_data,
                 'dataset_data' => $dataset_data,
                 'dataset_element_data' => $dataset_element_data,
-                'errors' => $errors
+                'errors' => $errors,
+                'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

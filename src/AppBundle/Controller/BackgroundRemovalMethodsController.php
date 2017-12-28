@@ -49,6 +49,7 @@ class BackgroundRemovalMethodsController extends Controller
 
         return $this->render('resources/browse_background_removal_methods.html.twig', array(
             'page_title' => "Browse Background Removal Methods",
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
         ));
     }
 
@@ -169,6 +170,7 @@ class BackgroundRemovalMethodsController extends Controller
                 "page_title" => !empty($background_removal_methods_id) ? 'Manage Background Removal Method: ' . $data['label'] : 'Create Background Removal Method'
                 ,"data" => $data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

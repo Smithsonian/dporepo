@@ -49,6 +49,7 @@ class CaptureMethodsController extends Controller
 
         return $this->render('resources/browse_capture_methods.html.twig', array(
             'page_title' => "Browse Capture Methods",
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
@@ -169,6 +170,7 @@ class CaptureMethodsController extends Controller
                 "page_title" => !empty($capture_methods_id) ? 'Manage Capture Method: ' . $data['label'] : 'Create Capture Method'
                 ,"data" => $data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

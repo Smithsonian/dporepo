@@ -28,6 +28,7 @@ class ResourcesController extends Controller
     */
     public function __construct(AppUtilities $u)
     {
+        // Usage: $this->u->dumper($variable);
         $this->u = $u;
     }
 
@@ -38,6 +39,7 @@ class ResourcesController extends Controller
     {
         return $this->render('resources/resources.html.twig', array(
             'page_title' => 'Resources',
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 

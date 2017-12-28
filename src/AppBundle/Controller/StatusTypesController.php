@@ -49,6 +49,7 @@ class StatusTypesController extends Controller
 
         return $this->render('resources/browse_status_types.html.twig', array(
             'page_title' => "Browse Status Types",
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
@@ -169,6 +170,7 @@ class StatusTypesController extends Controller
                 "page_title" => !empty($status_types_id) ? 'Manage Status Type: ' . $data['label'] : 'Create Status Type'
                 ,"data" => $data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 

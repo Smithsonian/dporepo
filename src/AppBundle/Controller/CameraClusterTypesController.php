@@ -49,6 +49,7 @@ class CameraClusterTypesController extends Controller
 
         return $this->render('resources/browse_camera_cluster_types.html.twig', array(
             'page_title' => "Browse Camera Cluster Types",
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
@@ -169,6 +170,7 @@ class CameraClusterTypesController extends Controller
                 "page_title" => !empty($camera_cluster_types_id) ? 'Manage Camera Cluster Type: ' . $data['label'] : 'Create Camera Cluster Type'
                 ,"data" => $data
                 ,"errors" => $errors
+                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
         }
 
