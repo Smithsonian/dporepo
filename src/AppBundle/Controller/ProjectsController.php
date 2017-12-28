@@ -37,8 +37,6 @@ class ProjectsController extends Controller
      */
     public function browse_projects(Connection $conn, Request $request)
     {
-        // $this->u->dumper($this->getUser()->favorites($request, $this->u, $conn));
-
         // Database tables are only created if not present.
         $create_projects_table = $this->create_projects_table($conn);
 
@@ -268,7 +266,6 @@ class ProjectsController extends Controller
             $statement->bindValue(":stakeholder_guid", $data['stakeholder_guid'], PDO::PARAM_STR);
             $statement->bindValue(":project_description", $data['project_description'], PDO::PARAM_STR);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->bindValue(":last_modified_user_account_id", 2, PDO::PARAM_INT);
             $statement->bindValue(":projects_id", $projects_id, PDO::PARAM_INT);
             $statement->execute();
 
@@ -285,7 +282,6 @@ class ProjectsController extends Controller
             $statement->bindValue(":stakeholder_guid", $data['stakeholder_guid'], PDO::PARAM_STR);
             $statement->bindValue(":project_description", $data['project_description'], PDO::PARAM_STR);
             $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->bindValue(":user_account_id", 2, PDO::PARAM_INT);
             $statement->execute();
             $last_inserted_id = $conn->lastInsertId();
 
@@ -309,14 +305,14 @@ class ProjectsController extends Controller
      */
     public function delete_project($projects_id, $conn)
     {
-        $statement = $this->db->prepare("
+        $statement = $conn->prepare("
             DELETE FROM projects
             WHERE projects_id = :projects_id");
         $statement->bindValue(":projects_id", $projects_id, PDO::PARAM_INT);
         $statement->execute();
 
         // First, delete all subjects.
-        $statement = $this->db->prepare("
+        $statement = $conn->prepare("
             DELETE FROM subjects
             WHERE projects_id = :projects_id");
         $statement->bindValue(":projects_id", $projects_id, PDO::PARAM_INT);
