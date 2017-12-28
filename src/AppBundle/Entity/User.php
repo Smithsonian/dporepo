@@ -25,12 +25,15 @@ class User extends BaseUser implements LdapUserInterface{
      */
     protected $dn;
  
-    public function __construct()
+    public function __construct(AppUtilities $u)
     {
         parent::__construct();
         if (empty($this->roles)) {
            $this->roles[] = 'ROLE_USER';
         }
+
+        // Usage: $this->u->dumper($variable);
+        $this->u = $u;
     }
 
     public function getId()
@@ -70,7 +73,7 @@ class User extends BaseUser implements LdapUserInterface{
 
         $data = array();
         $req = $request->request->all();
-        
+
         $statement = $conn->prepare("
             SELECT favorites.path FROM favorites
             WHERE favorites.fos_user_id = {$this->getId()}

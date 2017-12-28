@@ -38,13 +38,10 @@ class AdminController extends Controller
     public function show_admin(Connection $conn, Request $request)
     {
         $data = array();
-        $data['favorites'] = $this->get_favorites($conn);
-
-        // $this->u->dumper($data['favorites']);
 
         return $this->render('admin/admin.html.twig', array(
             'page_title' => 'Dashboard',
-            'favorites' => $data['favorites'],
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
@@ -228,21 +225,132 @@ class AdminController extends Controller
     }
 
     /**
-     * Get Favorites
+     * @Route("/admin/get_favorites/", name="get_favorites", methods="POST")
      *
-     * Get all favorited pages for one user.
+     * Get a user's favorited pages.
      *
-     * @param   object      $conn  Database connection object
-     * @return  array|bool         The query result
+     * @param   object  Connection  Database connection object
+     * @param   object  Request     Request object
+     * @return  array|bool          The query result
      */
-    public function get_favorites($conn)
+    public function datatables_get_favorites(Connection $conn, Request $request)
     {
-        $statement = $conn->prepare("
-            SELECT favorites.path, favorites.page_title FROM favorites
+        $sort = $search_sql = '';
+        $pdo_params = $data = array();
+        $req = $request->request->all();
+        $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+        $sort_order = $req['order'][0]['dir'];
+        $start_record = !empty($req['start']) ? $req['start'] : 0;
+        $stop_record = !empty($req['length']) ? $req['length'] : 20;
+
+        switch($req['order'][0]['column']) {
+            case '0':
+                $sort_field = 'page_title';
+                break;
+            case '1':
+                $sort_field = 'page_path';
+                break;
+            case '2':
+                $sort_field = 'date_created';
+                break;
+        }
+
+        $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
+
+        if (!empty($sort_field) && !empty($sort_order)) {
+            $sort = " ORDER BY {$sort_field} {$sort_order}";
+        } else {
+            $sort = " ORDER BY favorites.date_created DESC ";
+        }
+
+        if ($search) {
+            $pdo_params[] = '%'.$search.'%';
+            $pdo_params[] = '%'.$search.'%';
+            $pdo_params[] = '%'.$search.'%';
+            $search_sql = "
+                AND (
+                  favorites.page_title LIKE ?
+                  OR favorites.page_path LIKE ?
+                  OR favorites.date_created LIKE ?
+                ) ";
+        }
+
+        $statement = $conn->prepare("SELECT DISTINCT favorites.path, favorites.page_title, favorites.date_created
+            FROM favorites
             WHERE favorites.fos_user_id = {$this->getUser()->getId()}
-        ");
+            {$search_sql}
+            {$sort}
+            {$limit_sql}");
+        $statement->execute($pdo_params);
+        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        $statement = $conn->prepare("SELECT FOUND_ROWS()");
         $statement->execute();
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
+        $count = $statement->fetch();
+        $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+        $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
+        
+        return $this->json($data);
+    }
+
+    /**
+     * @Route("/admin/add_favorite/", name="add_favorite", methods="POST")
+     *
+     * Tag a page as a favorite
+     *
+     * @param   object  Connection  Database connection object
+     * @param   object  Request     Request object
+     * @return  array|bool          The query result
+     */
+    public function add_favorite(Connection $conn, Request $request)
+    {
+        $req = $request->request->all();
+        $last_inserted_id = false;
+
+        if(!empty($req) && isset($req['favoritePath'])) {
+            $statement = $conn->prepare("INSERT INTO favorites
+                (fos_user_id, path, page_title, date_created)
+                VALUES (:fos_user_id, :path, :page_title, NOW())");
+            $statement->bindValue(":fos_user_id", $this->getUser()->getId(), PDO::PARAM_INT);
+            $statement->bindValue(":path", $req['favoritePath'], PDO::PARAM_STR);
+            $statement->bindValue(":page_title", $req['pageTitle'], PDO::PARAM_STR);
+            $statement->execute();
+            $last_inserted_id = $conn->lastInsertId();
+        }
+
+        if(!$last_inserted_id) {
+            die('INSERT INTO `favorites` failed.');
+        }
+
+        return $this->json($last_inserted_id);
+    }
+
+    /**
+     * @Route("/admin/remove_favorite/", name="remove_favorite", methods="POST")
+     *
+     * Remove a page from favorites
+     *
+     * @param   object  Connection  Database connection object
+     * @param   object  Request     Request object
+     * @return  array|bool          The query result
+     */
+    public function remove_favorite(Connection $conn, Request $request)
+    {
+        $req = $request->request->all();
+
+        if(!empty($req) && isset($req['favoritePath'])) {
+            $statement = $conn->prepare("
+                DELETE FROM favorites
+                WHERE favorites.fos_user_id = :fos_user_id
+                AND favorites.path = :path");
+            $statement->bindValue(":fos_user_id", $this->getUser()->getId(), PDO::PARAM_INT);
+            $statement->bindValue(":path", $req['favoritePath'], PDO::PARAM_STR);
+            $statement->execute();
+
+            return $this->json(true);
+        }
+
+        return $this->json(false);
     }
 
 }
