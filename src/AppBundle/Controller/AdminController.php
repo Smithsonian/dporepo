@@ -235,8 +235,11 @@ class AdminController extends Controller
      */
     public function datatables_get_favorites(Connection $conn, Request $request)
     {
-        $sort = $search_sql = '';
-        $pdo_params = $data = array();
+        $sort = '';
+        $search_sql = '';
+        $pdo_params = array();
+        $data = array();
+
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_order = $req['order'][0]['dir'];
@@ -275,9 +278,14 @@ class AdminController extends Controller
                 ) ";
         }
 
-        $statement = $conn->prepare("SELECT DISTINCT favorites.path, favorites.page_title, favorites.date_created
+        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS 
+            DISTINCT favorites.path,
+            favorites.page_title,
+            favorites.date_created,
+            favorites.id AS DT_RowId
             FROM favorites
-            WHERE favorites.fos_user_id = {$this->getUser()->getId()}
+            WHERE 1 = 1
+            AND favorites.fos_user_id = {$this->getUser()->getId()}
             {$search_sql}
             {$sort}
             {$limit_sql}");

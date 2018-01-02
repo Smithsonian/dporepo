@@ -173,11 +173,11 @@
        });
 
       // Send to details page when clicked.
-      var details_page = "/admin/projects/subjects/";
+      var projects_details_page = "/admin/projects/subjects/";
       $('#browse_recent_projects tbody').on('click','td',function(event){
         if(!$(this).hasClass("manage_column")){
           var projects_id = $(this).closest("tr").attr('id');
-          window.location.href = details_page + projects_id;
+          window.location.href = projects_details_page + projects_id;
         }
       });
 
@@ -219,11 +219,11 @@
             .addClass("manage_column");
 
             // Send to details page when clicked.
-            var details_page = "/admin/projects/items/";
+            var subjects_details_page = "/admin/projects/items/";
             $('#browse_recent_subjects tbody').on('click','td',function(event){
               if(!$(this).hasClass("manage_column")){
                 var subjects_id = $(this).closest("tr").attr('id');
-                window.location.href = details_page + aData['projects_id'] + '/' + subjects_id;
+                window.location.href = subjects_details_page + aData['projects_id'] + '/' + subjects_id;
               }
             });
 

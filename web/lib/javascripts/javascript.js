@@ -34,7 +34,7 @@ $(document).ready(function(){
 
               if(result) {
                 swal({
-                  title: 'Page added!',
+                  title: 'Page Added',
                   text: 'This page has been added to your favorites.',
                   icon: 'success',
                   button: 'Close',
@@ -55,7 +55,7 @@ $(document).ready(function(){
 
               if(result) {
                 swal({
-                  title: 'Page removed!',
+                  title: 'Page Removed',
                   text: 'This page has been removed from your favorites.',
                   icon: 'success',
                   button: 'Close',
