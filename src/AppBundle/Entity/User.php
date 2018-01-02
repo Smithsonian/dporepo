@@ -7,6 +7,9 @@ use FR3D\LdapBundle\Model\LdapUserInterface;
 use Doctrine\ORM\Mapping as ORM;
 
 use PDO;
+
+// Custom utility bundles
+use AppBundle\Utils\AppUtilities;
  
 /**
  * @ORM\Entity
