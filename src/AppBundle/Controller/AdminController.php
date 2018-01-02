@@ -37,7 +37,8 @@ class AdminController extends Controller
      */
     public function show_admin(Connection $conn, Request $request)
     {
-        $data = array();
+        // Database tables are only created if not present.
+        $create_favorites_table = $this->create_favorites_table($conn);
 
         return $this->render('admin/admin.html.twig', array(
             'page_title' => 'Dashboard',
@@ -359,6 +360,35 @@ class AdminController extends Controller
         }
 
         return $this->json(false);
+    }
+
+    /**
+     * Create favorites table
+     *
+     * @param   object $conn  Database connection object
+     * @return  void
+     */
+    public function create_favorites_table($conn)
+    {
+        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `favorites` (
+          `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+          `fos_user_id` int(11) NOT NULL,
+          `path` text NOT NULL,
+          `page_title` varchar(255) NOT NULL DEFAULT '',
+          `date_created` datetime DEFAULT NULL,
+          PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8");
+
+        $statement->execute();
+        $error = $conn->errorInfo();
+
+        if ($error[0] !== '00000') {
+            var_dump($conn->errorInfo());
+            die('CREATE TABLE `projects` failed.');
+        } else {
+            return TRUE;
+        }
+
     }
 
 }
