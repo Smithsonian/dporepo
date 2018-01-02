@@ -8,8 +8,8 @@ use Doctrine\ORM\Mapping as ORM;
 
 use PDO;
 
-// Custom utility bundles
-use AppBundle\Utils\AppUtilities;
+// // Custom utility bundles
+// use AppBundle\Utils\AppUtilities;
  
 /**
  * @ORM\Entity
@@ -28,7 +28,7 @@ class User extends BaseUser implements LdapUserInterface{
      */
     protected $dn;
  
-    public function __construct(AppUtilities $u)
+    public function __construct()
     {
         parent::__construct();
         if (empty($this->roles)) {
@@ -36,7 +36,7 @@ class User extends BaseUser implements LdapUserInterface{
         }
 
         // Usage: $this->u->dumper($variable);
-        $this->u = $u;
+        // $this->u = $u;
     }
 
     public function getId()
