@@ -39,11 +39,17 @@ class AdminController extends Controller
     {
         // Database tables are only created if not present.
         $create_favorites_table = $this->create_favorites_table($conn);
+        $roles = $this->getUser()->getRoles();
 
-        return $this->render('admin/admin.html.twig', array(
-            'page_title' => 'Dashboard',
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        ));
+        // If the user has only one role of ROLE_USER, redirect to the user profile page.
+        if((count($roles) === 1) && ($roles[0] === 'ROLE_USER')) {
+            return $this->redirectToRoute('fos_user_profile_show');
+        } else {
+            return $this->render('admin/admin.html.twig', array(
+                'page_title' => 'Dashboard',
+                'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            ));
+        }
     }
 
     /**

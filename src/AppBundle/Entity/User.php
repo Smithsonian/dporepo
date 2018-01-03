@@ -53,6 +53,11 @@ class User extends BaseUser implements LdapUserInterface{
     {
         return $this->email;
     }
+
+    public function getRoles()
+    {
+        return $this->roles;
+    }
  
     /**
      * {@inheritDoc}
