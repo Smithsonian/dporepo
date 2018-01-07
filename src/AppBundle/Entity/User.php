@@ -6,10 +6,8 @@ use FOS\UserBundle\Model\User as BaseUser;
 use FR3D\LdapBundle\Model\LdapUserInterface;
 use Doctrine\ORM\Mapping as ORM;
 
+use Symfony\Component\HttpFoundation\Session\Session;
 use PDO;
-
-// // Custom utility bundles
-// use AppBundle\Utils\AppUtilities;
  
 /**
  * @ORM\Entity
@@ -32,11 +30,10 @@ class User extends BaseUser implements LdapUserInterface{
     {
         parent::__construct();
         if (empty($this->roles)) {
-           $this->roles[] = 'ROLE_USER';
+            $this->roles = array('ROLE_USER', 'ROLE_ADMIN');
+            $session = new Session();
+            $session->set('firstLogin', true);
         }
-
-        // Usage: $this->u->dumper($variable);
-        // $this->u = $u;
     }
 
     public function getId()
