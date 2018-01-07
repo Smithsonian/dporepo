@@ -1,27 +1,3 @@
-# # To get started with security, check out the documentation:
-# # https://symfony.com/doc/current/security.html
-# security:
-
-#     # https://symfony.com/doc/current/security.html#b-configuring-how-users-are-loaded
-#     providers:
-#         in_memory:
-#             memory: ~
-
-#     firewalls:
-#         # disables authentication for assets and the profiler, adapt it according to your needs
-#         dev:
-#             pattern: ^/(_(profiler|wdt)|css|images|js)/
-#             security: false
-
-#         main:
-#             anonymous: ~
-#             # activate different ways to authenticate
-
-#             # https://symfony.com/doc/current/security.html#a-configuring-how-your-users-will-authenticate
-#             #http_basic: ~
-
-#             # https://symfony.com/doc/current/security/form_login_setup.html
-#             #form_login: ~
 security:
     # Preserve plain text password in token for refresh the user.
     # Analyze the security considerations before turn off this setting.
@@ -29,7 +5,6 @@ security:
 
     encoders:
         FOS\UserBundle\Model\UserInterface: bcrypt
-        # AcmeBundle\Acme\User\LdapUser: plaintext
 
     role_hierarchy:
         ROLE_ADMIN:       ROLE_USER
@@ -54,7 +29,6 @@ security:
             pattern: ^/
             fr3d_ldap:  ~
             form_login:
-                # provider: fos_userbundle
                 provider: chain_provider
                 csrf_token_generator: security.csrf.token_manager
                 always_use_default_target_path: true

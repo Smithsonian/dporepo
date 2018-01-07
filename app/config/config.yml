@@ -92,29 +92,30 @@ fos_user:
 
 # FR3DLdapBundle Configuration
 fr3d_ldap:
-    # driver:
-    #     # host: ldap.forumsys.com
-    #     host: ***REMOVED***
-    #     port: 636
-    #     # useSsl: true
-    #     optReferrals: true
-    #     accountCanonicalForm: 3
-    #     accountDomainName: ***REMOVED***
-    #     accountDomainNameShort: US
-    # user:
-    #     # baseDn: dc=example, dc=com
-    #     baseDn: ***REMOVED***
-    #     usernameAttribute: sAMAccountName
-    #     filter: (&(ObjectClass=person))
-    #     attributes:
-    #         # - { ldap_attr: uid,  user_method: setUsername }
-    #         - { ldap_attr: samaccountname,  user_method: setUsername }
-    #         - { ldap_attr: mail,  user_method: setEmail }
     driver:
-        host: ldap.forumsys.com
+        host: ***REMOVED***
+        username: ***REMOVED***
+        password: ***REMOVED***
+        port: 636
+        useSsl: true
+        optReferrals: true
+        accountCanonicalForm: 3
+        bindRequiresDn: true
+        # baseDn: ***REMOVED***
+        accountDomainName: ***REMOVED***
+        accountDomainNameShort: US
     user:
-        baseDn: dc=example,dc=com
-        attributes:
-            - { ldap_attr: uid,  user_method: setUsername }
-            - { ldap_attr: mail,  user_method: setEmail }
+        baseDn: ***REMOVED***
+        usernameAttribute: sAMAccountName
         filter: (&(ObjectClass=person))
+        attributes:
+            - { ldap_attr: samaccountname,  user_method: setUsername }
+            - { ldap_attr: mail,  user_method: setEmail }
+    # driver:
+    #     host: ldap.forumsys.com
+    # user:
+    #     baseDn: dc=example,dc=com
+    #     attributes:
+    #         - { ldap_attr: uid,  user_method: setUsername }
+    #         - { ldap_attr: mail,  user_method: setEmail }
+    #     filter: (&(ObjectClass=person))
