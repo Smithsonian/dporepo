@@ -1,6 +1,8 @@
-{% trans_default_domain 'FOSUserBundle' %}
+{# {% trans_default_domain 'FOSUserBundle' %} #}
 
 {% block content %}
+
+  {# {{ dump(form.vars.data) }} #}
     
     {% if errors is defined %}
       <div class="alert alert-danger">
@@ -23,17 +25,17 @@
         <!-- Column 1 -->
         <div class="col-sm-4 col-md-4">
 
-          <div class="form-group">
+          {# <div class="form-group">
             <label class="control-label" for="fos_user_profile_form_username" class="required">Username</label>
             <div class="controls">
-              <input id="fos_user_profile_form_username" name="fos_user_profile_form[username]" required="required" maxlength="180" pattern=".{2,}" value="riemann" type="text" class="form-control">
+              <input id="fos_user_profile_form_username" name="fos_user_profile_form[username]" required="required" maxlength="180" pattern=".{2,}" value="{{ form.vars.data.username|e }}" type="text" class="form-control">
             </div>
           </div>
 
           <div class="form-group">
             <label class="control-label" for="fos_user_profile_form_email" class="required">Email</label>
             <div class="controls">
-              <input id="fos_user_profile_form_email" name="fos_user_profile_form[email]" required="required" value="riemann@ldap.forumsys.com" type="email" class="form-control">
+              <input id="fos_user_profile_form_email" name="fos_user_profile_form[email]" required="required" value="{{ form.vars.data.email|e }}" type="email" class="form-control">
             </div>
           </div>
 
@@ -42,13 +44,13 @@
             <div class="controls">
               <input id="fos_user_profile_form_current_password" name="fos_user_profile_form[current_password]" required="required" type="password" class="form-control">
             </div>
-          </div>
+          </div> #}
 
           {# <input id="fos_user_profile_form__token" name="fos_user_profile_form[_token]" value="hN4t9FnjKpPW5EjnB8XUJloUAQGLABw0VVGz2Cmv2kg" type="hidden"> #}
 
-          <div class="field-group" style="clear:both;">
+          {# <div class="field-group" style="clear:both;">
             <input class="btn btn-primary" type="submit" value="Save Edits">
-          </div>
+          </div> #}
 
         </div>
         <!-- // Column 1 -->
