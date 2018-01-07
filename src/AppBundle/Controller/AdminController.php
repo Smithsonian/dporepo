@@ -8,6 +8,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
+use Symfony\Component\HttpFoundation\Session\Session;
 use PDO;
 use GUMP;
 
@@ -40,9 +41,15 @@ class AdminController extends Controller
         // Database tables are only created if not present.
         $create_favorites_table = $this->create_favorites_table($conn);
         $roles = $this->getUser()->getRoles();
+        
+        // Check to see if the firstLogin session variable is set.
+        $session = new Session();
+        $firstLogin = $session->get('firstLogin');
 
-        // If the user has only one role of ROLE_USER, redirect to the user profile page.
-        if((count($roles) === 1) && ($roles[0] === 'ROLE_USER')) {
+        // If this is the first login for a user, redirect to the user profile page.
+        // Then, remove the firstLogin session variable.
+        if($firstLogin) {
+            $session->remove('firstLogin');
             return $this->redirectToRoute('fos_user_profile_show');
         } else {
             return $this->render('admin/admin.html.twig', array(
