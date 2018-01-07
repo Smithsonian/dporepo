@@ -8,10 +8,12 @@
   		{% else %}
   			<h2>Login</h2>
   		{% endif %}
+    {% elseif app.request.requestUri == '/profile/edit' %}
+      <h2>Profile and Settings</h2>
     {% else %}
     	<h2>Hi {{ app.user.username }}!</h2>
     {% endif %}
-    {% block fos_user_content %}{% endblock %}
   </div>
+  {% block fos_user_content %}{% endblock %}
   {# {{ dump() }} #}
 {% endblock %}

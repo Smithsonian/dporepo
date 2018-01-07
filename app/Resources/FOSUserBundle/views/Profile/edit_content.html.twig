@@ -1,0 +1,59 @@
+{% trans_default_domain 'FOSUserBundle' %}
+
+{% block content %}
+    
+    {% if errors is defined %}
+      <div class="alert alert-danger">
+        <h4>Form Errors</h4>
+        {% for single_error in errors %}
+        <p>{{ single_error }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <ol class="breadcrumb">
+      <li><a href="/admin">Dashboard</a></li>
+      <li class="active">Profile and Settings</li>
+    </ol>
+
+    <form name="fos_user_profile_form" method="post" action="/profile/edit" class="fos_user_profile_edit">
+
+      <div id="fos_user_profile_form" class="row">
+
+        <!-- Column 1 -->
+        <div class="col-sm-4 col-md-4">
+
+          <div class="form-group">
+            <label class="control-label" for="fos_user_profile_form_username" class="required">Username</label>
+            <div class="controls">
+              <input id="fos_user_profile_form_username" name="fos_user_profile_form[username]" required="required" maxlength="180" pattern=".{2,}" value="riemann" type="text" class="form-control">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="control-label" for="fos_user_profile_form_email" class="required">Email</label>
+            <div class="controls">
+              <input id="fos_user_profile_form_email" name="fos_user_profile_form[email]" required="required" value="riemann@ldap.forumsys.com" type="email" class="form-control">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="control-label" for="fos_user_profile_form_current_password" class="required">Current Password</label>
+            <div class="controls">
+              <input id="fos_user_profile_form_current_password" name="fos_user_profile_form[current_password]" required="required" type="password" class="form-control">
+            </div>
+          </div>
+
+          {# <input id="fos_user_profile_form__token" name="fos_user_profile_form[_token]" value="hN4t9FnjKpPW5EjnB8XUJloUAQGLABw0VVGz2Cmv2kg" type="hidden"> #}
+
+          <div class="field-group" style="clear:both;">
+            <input class="btn btn-primary" type="submit" value="Save Edits">
+          </div>
+
+        </div>
+        <!-- // Column 1 -->
+
+      </div>
+
+    </form>
+{% endblock %}
