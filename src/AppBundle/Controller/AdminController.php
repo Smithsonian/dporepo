@@ -41,7 +41,7 @@ class AdminController extends Controller
         // Database tables are only created if not present.
         $create_favorites_table = $this->create_favorites_table($conn);
         $roles = $this->getUser()->getRoles();
-        
+
         // Check to see if the firstLogin session variable is set.
         $session = new Session();
         $firstLogin = $session->get('firstLogin');
@@ -82,7 +82,7 @@ class AdminController extends Controller
         // Today's date
         $date_today = date('Y-m-d 00:00:00');
         // Date limit
-        $date_limit = date('Y-m-d 00:00:00', strtotime('-60 days'));
+        $date_limit = date('Y-m-d 00:00:00', strtotime('-120 days'));
 
         switch($req['order'][0]['column']) {
             case '0':
@@ -173,7 +173,7 @@ class AdminController extends Controller
         // Today's date
         $date_today = date('Y-m-d 00:00:00');
         // Date limit
-        $date_limit = date('Y-m-d 00:00:00', strtotime('-60 days'));
+        $date_limit = date('Y-m-d 00:00:00', strtotime('-120 days'));
 
         switch($req['order'][0]['column']) {
             case '0':
