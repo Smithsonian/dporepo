@@ -60,6 +60,10 @@ class DatasetElementsController extends Controller
         $dataset_data = $datasets->get_dataset((int)$datasets_id, $conn);
         $dataset_element_data = $this->get_dataset_element((int)$datasets_id, $conn);
 
+        // Truncate the item_description.
+        $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
+        $item_data['item_description_truncated'] = substr($item_data['item_description'], 0, 50) . $more_indicator;
+
         return $this->render('datasetElements/browse_dataset_elements.html.twig', array(
             'page_title' => $project_data['projects_label'] . ': ' .  $dataset_data['dataset_name'],
             'projects_id' => $projects_id,
@@ -176,6 +180,10 @@ class DatasetElementsController extends Controller
         $item_data = $items->get_item((int)$dataset_element_data['items_id'], $conn);
         $dataset_data = $datasets->get_dataset((int)$dataset_element_data['datasets_id'], $conn);
 
+        // Truncate the item_description.
+        $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
+        $item_data['item_description_truncated'] = substr($item_data['item_description'], 0, 50) . $more_indicator;
+
         // Get data from lookup tables.
         $dataset_element_data['calibration_object_types'] = $this->get_calibration_object_types($conn);
         
@@ -207,7 +215,7 @@ class DatasetElementsController extends Controller
         if (!$errors && !empty($post)) {
             $dataset_elements_id = $this->insert_update_dataset_elements($post, $dataset_element_data['datasets_id'], $dataset_elements_id, $conn);
             $this->addFlash('message', 'Dataset element successfully updated.');
-            return $this->redirectToRoute('datasets_browse', array('projects_id' => $dataset_element_data['projects_id'], 'subjects_id' => $dataset_element_data['subjects_id'], 'items_id' => $dataset_element_data['items_id'], 'datasets_id' => $dataset_element_data['datasets_id']));
+            return $this->redirectToRoute('dataset_elements_browse', array('projects_id' => $dataset_element_data['projects_id'], 'subjects_id' => $dataset_element_data['subjects_id'], 'items_id' => $dataset_element_data['items_id'], 'datasets_id' => $dataset_element_data['datasets_id']));
         } else {
             return $this->render('datasetElements/dataset_element_form.html.twig', array(
                 'page_title' => ((int)$dataset_elements_id && isset($dataset_element_data['dataset_element_guid'])) ? 'GUID: ' . $dataset_element_data['dataset_element_guid'] : 'Add a Dataset Element',

@@ -135,7 +135,7 @@ class ItemsController extends Controller
             ,items.subjects_id
             ,items.item_guid
             ,items.subject_holder_item_id
-            ,items.item_description
+            ,CONCAT(SUBSTRING(items.item_description,1, 50), '...') as item_description
             ,items.status_types_id
             ,items.last_modified
             ,items.items_id AS DT_RowId
@@ -201,6 +201,7 @@ class ItemsController extends Controller
         $item_data = $post ? $post : $this->get_item((int)$items_id, $conn);
         $item_data['projects_id'] = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
         $item_data['subjects_id'] = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
+        $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
         
         // Validate posted data.
         if(!empty($post)) {
@@ -222,12 +223,12 @@ class ItemsController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $items_id = $this->insert_update_item($post, $item_data['projects_id'], $items_id, $conn);
+            $items_id = $this->insert_update_item($post, $item_data['subjects_id'], $items_id, $conn);
             $this->addFlash('message', 'Item successfully updated.');
             return $this->redirectToRoute('items_browse', array('projects_id' => $item_data['projects_id'], 'subjects_id' => $item_data['subjects_id']));
         } else {
             return $this->render('items/item_form.html.twig', array(
-                "page_title" => ((int)$items_id && isset($item_data['item_description'])) ? $item_data['item_description'] : 'Add Item'
+                "page_title" => ((int)$items_id && isset($item_data['item_description'])) ? substr($item_data['item_description'], 0, 50) . $more_indicator : 'Add Item'
                 ,"item_data" => $item_data
                 ,"errors" => $errors
                 ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
@@ -247,7 +248,13 @@ class ItemsController extends Controller
      */
     public function get_item($item_id, $conn)
     {
-        $statement = $conn->prepare("SELECT *
+        $statement = $conn->prepare("SELECT
+            items.item_guid
+            ,items.subject_holder_item_id
+            ,items.item_description
+            ,items.status_types_id
+            ,items.last_modified
+            ,items.items_id
             FROM items
             WHERE items_id = :items_id");
         $statement->bindValue(":items_id", $item_id, PDO::PARAM_INT);

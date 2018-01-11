@@ -56,8 +56,12 @@ class DatasetsController extends Controller
         $item_data = $items->get_item((int)$items_id, $conn);
         $directoryContents = is_dir(JOBBOX_PATH) ? scandir(JOBBOX_PATH) : array();
 
+        // Truncate the item_description.
+        $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
+        $item_data['item_description_truncated'] = substr($item_data['item_description'], 0, 50) . $more_indicator;
+
         return $this->render('datasets/browse_datasets.html.twig', array(
-            'page_title' => $project_data['projects_label'] . ': ' .  $item_data['item_description'],
+            'page_title' => $project_data['projects_label'] . ': ' . $item_data['item_description_truncated'],
             'projects_id' => $projects_id,
             'subjects_id' => $subjects_id,
             'items_id' => $items_id,
@@ -161,7 +165,9 @@ class DatasetsController extends Controller
 
         // Get item data
         $dataset_data['items_id'] = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;
-        $item_data = $post ? $post : $item->get_item((int)$dataset_data['items_id'], $conn);
+        $item_data = $item->get_item((int)$dataset_data['items_id'], $conn);
+
+        $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
 
         $dataset_data['projects_id'] = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
         $dataset_data['subjects_id'] = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
@@ -219,7 +225,7 @@ class DatasetsController extends Controller
             return $this->redirectToRoute('datasets_browse', array('projects_id' => $dataset_data['projects_id'], 'subjects_id' => $dataset_data['subjects_id'], 'items_id' => $dataset_data['items_id']));
         } else {
             return $this->render('datasets/dataset_form.html.twig', array(
-                'page_title' => ((int)$datasets_id && isset($dataset_data['dataset_description']) && isset($item_data['item_description'])) ? $item_data['item_description'] . ': ' . $dataset_data['dataset_name'] : 'Add a Dataset',
+                'page_title' => ((int)$datasets_id && isset($dataset_data['dataset_description']) && isset($item_data['item_description'])) ? substr($item_data['item_description'], 0, 50) . $more_indicator . ': ' . $dataset_data['dataset_name'] : 'Add a Dataset',
                 'dataset_data' => $dataset_data,
                 'errors' => $errors,
                 'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
@@ -483,8 +489,8 @@ class DatasetsController extends Controller
             `collected_by` varchar(255) NOT NULL DEFAULT '',
             `collected_by_guid` varchar(255) NULL DEFAULT NULL,
             `date_of_capture` datetime NOT NULL,
-            `dataset_description` varchar(255) NOT NULL DEFAULT '',
-            `dataset_collection_notes` varchar(255) NOT NULL DEFAULT '',
+            `dataset_description` text NOT NULL,
+            `dataset_collection_notes` text NOT NULL,
             `item_position_type_lookup_id` int(11) NOT NULL,
             `positionally_matched_sets_id` varchar(255) NOT NULL DEFAULT '',
             `motion_control` varchar(255) NOT NULL DEFAULT '',

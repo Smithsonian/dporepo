@@ -21,8 +21,6 @@
         <dd>{{ project_data.projects_label|e }}</dd>
         <dt>Stakeholder GUID</dt>
         <dd>{{ project_data.stakeholder_guid|e }}</dd>
-        <dt>Project Description</dt>
-        <dd>{{ project_data.project_description|e }}</dd>
       </dl>
     </div>
     <div class="col-sm-6 col-md-6">
@@ -31,6 +29,12 @@
         <dd>{{ project_data.date_created|e }}</dd>
         <dt>Last Modified</dt>
         <dd>{{ project_data.last_modified|e }}</dd>
+      </dl>
+    </div>
+    <div class="col-sm-12 col-md-12">
+      <dl class="dl-horizontal">
+        <dt>Project Description</dt>
+        <dd>{{ project_data.project_description|e|nl2br }}</dd>
       </dl>
     </div>
   </div>
@@ -51,7 +55,6 @@
       <th class="text-center">Location Information</th>
       <th class="text-center">Holding Entity GUID</th>
       <th class="text-center">Last Modified</th>
-      <th class="text-center">Status</th>
     </tr>
   </thead>
 </table>
@@ -68,8 +71,7 @@
               { "data": "subject_name" },
               { "data": "location_information" },
               { "data": "holding_entity_guid" },
-              { "data": "last_modified" },
-              { "data": "active" }
+              { "data": "last_modified" }
             ],
           "dom": '<"wrapper"fli><"col-sm-3 col-md-3 datatables_bulk_actions">pt<"bottom"ip><"clear">',
           "pagingType": "simple_numbers",

@@ -10,7 +10,7 @@
 
   <ol class="breadcrumb">
     <li><a href="/admin">Dashboard</a></li>
-    <li><a href="/projects">Browse Projects</a></li>
+    <li><a href="/admin/projects">Browse Projects</a></li>
     <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ projects_id }}">{{ project_data.projects_label|e }}</a></li>
     <li class="active"><strong>Subject:</strong> {{ subject_data.subject_name|e }}</li>
   </ol>
@@ -30,12 +30,16 @@
     </div>
     <div class="col-sm-6 col-md-6">
       <dl class="dl-horizontal">
-        <dt>Subject Description</dt>
-        <dd>{{ subject_data.subject_description|e }}</dd>
         <dt>Subject Type Lookup ID</dt>
         <dd>{{ subject_data.subject_type_lookup_id|e }}</dd>
         <dt>Authoritative Subject ID</dt>
         <dd>{{ subject_data.subject_holder_subject_id|e }}</dd>
+      </dl>
+    </div>
+    <div class="col-sm-12 col-md-12">
+      <dl class="dl-horizontal">
+        <dt>Subject Description</dt>
+        <dd>{{ subject_data.subject_description|e|nl2br }}</dd>
       </dl>
     </div>
   </div>
