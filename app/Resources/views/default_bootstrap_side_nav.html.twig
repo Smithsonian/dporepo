@@ -1,6 +1,6 @@
 {% block side_nav %}
 
-  <div class="col-sm-3 col-md-2 sidebar sidebar-nav">
+  <div class="col-sm-3 col-md-2 sidebar sidebar-nav resizable">
       <a id="hide_side_nav" href="javascript:void(0);" class="btn btn-default btn-xs" style="position: fixed; top: 52px; left: 2px;"><i class="glyphicon glyphicon-arrow-left"></i> Hide Navigation</a>
       <ul class="nav nav-list" id="main_side_nav">
           <li class="nav-header"><a href="/admin/">Dashboard</a></li>
@@ -11,7 +11,7 @@
           <li style="display:none;" class="resources"><a href="/admin/resources/">Browse Resources</a></li>
           <li class="nav-header"><a href="/profile/edit">Profile/Settings</a></li>
       </ul>
-   </div><!--/.sidebar-nav -->
+  </div><!--/.sidebar-nav -->
 
 {% endblock %}
 {#
@@ -19,30 +19,3 @@
   <!-- <a id="show_side_nav" href="javascript:void(0);" class="btn btn-default btn-xs" style="margin: 2px 0px 2px 2px;"><i class="glyphicon glyphicon-arrow-right"></i> Show Navigation</a> -->
 {% endblock %}
 #}
-{% block js_bottom %}
-  <script type="text/javascript">
-    $(document).ready(function(){
-      $("#main_side_nav li.nav-header").on("click",function(){
-        $(this).nextUntil("li.nav-header").slideToggle('fast');
-        $(this).find("i").toggleClass("glyphicon glyphicon-chevron-down");
-        $(this).find("i").toggleClass("glyphicon glyphicon-chevron-right");
-      });
-      $("#hide_side_nav").on('click',function(){
-        var nav_bar = $(this).closest(".sidebar-nav");
-        nav_bar.removeClass("col-sm-3, col-md-2").hide();
-        var content_bar = nav_bar.next("div");
-        content_bar.removeClass("col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2");
-        content_bar.addClass("col-sm-12 col-md-12");
-        $("#show_side_nav").show();
-      });
-      $("#show_side_nav").on('click',function(){
-        var nav_bar = $("#hide_side_nav").closest(".sidebar-nav");
-        nav_bar.addClass("col-sm-3, col-md-2").show();
-        var content_bar = nav_bar.next("div");
-        content_bar.removeClass("col-sm-12 col-md-12");
-        content_bar.addClass("col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2");
-        $("#show_side_nav").hide();
-      });
-    });
-  </script>
-{% endblock %}
