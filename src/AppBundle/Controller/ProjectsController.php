@@ -33,7 +33,7 @@ class ProjectsController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/", name="projects_browse", methods="GET")
+     * @Route("/admin/workspace/", name="projects_browse", methods="GET")
      */
     public function browse_projects(Connection $conn, Request $request)
     {
