@@ -11,3 +11,11 @@
 dd {
     margin-bottom: 1rem;
 }
+
+.nav-tabs li a {
+	color: white;
+}
+
+.nav-tabs li a:hover {
+	color: black;
+}

@@ -4,16 +4,20 @@ $(document).ready(function(){
   const currentPageProjects = (urlSplit.indexOf('projects') !== -1) ? true : false;
   const currentPageResources = (urlSplit.indexOf('resources') !== -1) ? true : false;
   const currentPath = urlSplit.slice(3);
-
-  if(currentPageProjects) {
-    $("#main_side_nav li.nav-header.projects i").removeClass("glyphicon-chevron-right").addClass("glyphicon-chevron-down");
-    $("#main_side_nav li.projects").show();
-  }
-
-  if(currentPageResources) {
-    $("#main_side_nav li.nav-header.resources i").removeClass("glyphicon-chevron-right").addClass("glyphicon-chevron-down");
-    $("#main_side_nav li.resources").show();
-  }
+  
+  /**
+   * Set the Active Navigation Tab
+   */
+  $('.nav-tabs li').each(function(e) {
+    const thisItem = $(this);
+    thisItem.removeClass('active');
+    if(currentPath[1] === thisItem.attr('id')) {
+      thisItem.addClass('active');
+    }
+    if(currentPath[1].length === 0) {
+      $('.nav-tabs li#admin').addClass('active');
+    }
+  });
 
   /**
    * Set/Remove Favorites
@@ -77,13 +81,16 @@ $(document).ready(function(){
    * Resizable Columns
    */
   $(function() {
+
     var resizableEl = $('.resizable').not(':last-child'),
         columns = 12,
         fullWidth = resizableEl.parent().width(),
         columnWidth = fullWidth / columns,
         totalCol, // This is filled by start event handler.
+
     updateClass = function(el, col) {
-      el.css('width', ''); // Remove width, our class already has it.
+      // Remove width, our class already has it.
+      el.css('width', '');
       // Set the offset value.
       var offsetClassValue = '';
       if(el.hasClass('main')) {
@@ -96,15 +103,15 @@ $(document).ready(function(){
         return (className.match(/(^|\s)col-\S+/g) || []).join(' ');
       }).addClass('col-sm-' + col + offsetClassValue);
     };
+
     // jQuery UI Resizable
     resizableEl.resizable({
       handles: 'e',
       start: function(event, ui) {
-        var
-          target = ui.element,
-          next = target.next(),
-          targetCol = Math.round(target.width() / columnWidth),
-          nextCol = Math.round(next.width() / columnWidth);
+        var target = ui.element,
+            next = target.next(),
+            targetCol = Math.round(target.width() / columnWidth),
+            nextCol = Math.round(next.width() / columnWidth);
         // Set totalColumns globally.
         totalCol = targetCol + nextCol;
         target.resizable('option', 'minWidth', columnWidth);
@@ -122,31 +129,7 @@ $(document).ready(function(){
         updateClass(next, nextSet);
       },
     });
-  });
 
-  /**
-   * Left Navigation
-   */
-  $("#main_side_nav li.nav-header").on("click",function(){
-    $(this).nextUntil("li.nav-header").slideToggle('fast');
-    $(this).find("i").toggleClass("glyphicon glyphicon-chevron-down");
-    $(this).find("i").toggleClass("glyphicon glyphicon-chevron-right");
-  });
-  $("#hide_side_nav").on('click',function(){
-    var nav_bar = $(this).closest(".sidebar-nav");
-    nav_bar.removeClass("col-sm-3, col-md-2").hide();
-    var content_bar = nav_bar.next("div");
-    content_bar.removeClass("col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2");
-    content_bar.addClass("col-sm-12 col-md-12");
-    $("#show_side_nav").show();
-  });
-  $("#show_side_nav").on('click',function(){
-    var nav_bar = $("#hide_side_nav").closest(".sidebar-nav");
-    nav_bar.addClass("col-sm-3, col-md-2").show();
-    var content_bar = nav_bar.next("div");
-    content_bar.removeClass("col-sm-12 col-md-12");
-    content_bar.addClass("col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2");
-    $("#show_side_nav").hide();
   });
 
 });
