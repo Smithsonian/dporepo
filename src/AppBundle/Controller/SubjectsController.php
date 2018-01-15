@@ -4,6 +4,7 @@ namespace AppBundle\Controller;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
@@ -254,10 +255,31 @@ class SubjectsController extends Controller
     {
         $statement = $conn->prepare("
             SELECT * FROM subjects
-            ORDER BY subjects.subjects_label ASC
+            ORDER BY subjects.subject_name ASC
         ");
         $statement->execute();
         return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get Subjects (for the tree browser)
+     *
+     * @Route("/admin/projects/get_subjects/{projects_id}", name="get_subjects_tree_browser", methods="GET")
+     */
+    public function get_subjects_tree_browser(Connection $conn, Request $request)
+    {
+      $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
+      $subjects = $this->get_subjects($conn);
+
+      foreach ($subjects as $key => $value) {
+          $data[$key]['text'] = $value['subject_name'];
+          $data[$key]['a_attr']['href'] = '/admin/projects/items/' . $projects_id . '/' . $value['subjects_id'];
+      }
+
+      // dump(json_encode($data, JSON_PRETTY_PRINT));
+
+      $response = new JsonResponse($data);
+      return $response;
     }
 
     /**
