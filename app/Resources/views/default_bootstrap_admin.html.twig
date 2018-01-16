@@ -58,7 +58,11 @@
           {% block side_nav %}
             {{ parent() }}
           {% endblock %}
-          <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main resizable">
+          {% if app.request.pathInfo == '/admin/workspace/' %}
+            <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main resizable">
+          {% else %}
+            <div class="col-sm-12 main">
+          {% endif %}
         {% else %}
           <div class="col-sm-7 col-md-6 col-lg-5 main resizable">
         {% endif %}
@@ -107,7 +111,7 @@
     <!-- Bootstrap core CSS -->
     <link href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet" />
     <link href="{{ asset('lib/javascripts/vakata-jstree/dist/themes/proton/style.min.css') }}" rel="stylesheet" />
-    <!-- <link href="{#{ asset('lib/javascripts/vakata-jstree/dist/themes/default/style.min.css') }#}" rel="stylesheet" /> -->
+    <!-- <link href="{ asset('lib/javascripts/vakata-jstree/dist/themes/default/style.min.css') }" rel="stylesheet" /> -->
     <link href="//cdnjs.cloudflare.com/ajax/libs/sweetalert/0.3.2/sweet-alert.min.css" rel="stylesheet" type="text/css" />
     <link href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" rel="stylesheet" />
     <link href="{{ asset('lib/css/styles.css') }}" rel="stylesheet" />
@@ -324,5 +328,5 @@
     <script src="{{ asset('lib/javascripts/ie10-viewport-bug-workaround.js') }}"></script>
     <script src="{{ asset('lib/javascripts/javascript.js') }}"></script>
     <script src="{{ asset('lib/javascripts/vakata-jstree/dist/jstree.min.js') }}"></script>
-    <!-- <script src="{#{{ asset('lib/javascripts/treeJavascript.js') }}#}"></script> -->
+    <script src="{{ asset('lib/javascripts/treeJavascript.js') }}"></script>
 {% endblock %}
