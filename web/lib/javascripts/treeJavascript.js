@@ -4,14 +4,7 @@ jQuery(document).ready(function($) {
   const isProjectsPage = (urlParts.indexOf('projects') !== -1) ? true : false;
 
   // Only initialize jsTree for project pages.
-  if(isProjectsPage) {
-
-    // Add a list item and jsTree container div to the left navigation.
-    $('#main_side_nav').find('li a:contains("Browse Projects")').filter(function(index) {
-      const thisListItem = $(this).parent(),
-          thisStyle = thisListItem.is(':visible') ? '' : ' style="display: none;"';
-      thisListItem.after('<li style="padding: 0 0 0 18px;' + thisStyle + '"><div id="jstree"' + thisStyle + '></div></li>');
-    });
+  // if(isProjectsPage) {
 
     // Modify jsTree's default configuration.
     $.jstree.defaults.core.themes.name = 'proton';
@@ -22,7 +15,7 @@ jQuery(document).ready(function($) {
       'core' : {
         'data' : {
             'url' : function (node) {
-              return node.id === '#' ? '/projects/get_projects' : '/projects/get_subjects/' + node.id;
+              return node.id === '#' ? '/admin/projects/get_projects' : '/admin/projects/get_subjects/' + node.id;
             },
             'data' : function (node) {
               return { 'id' : node.id };
@@ -49,6 +42,6 @@ jQuery(document).ready(function($) {
       document.location.href = this.href;
     });
 
-  }
+  // }
 
 });

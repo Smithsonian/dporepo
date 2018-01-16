@@ -4,6 +4,7 @@ namespace AppBundle\Controller;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
@@ -33,7 +34,7 @@ class ProjectsController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/", name="projects_browse", methods="GET")
+     * @Route("/admin/workspace/", name="projects_browse", methods="GET")
      */
     public function browse_projects(Connection $conn, Request $request)
     {
@@ -240,6 +241,26 @@ class ProjectsController extends Controller
         return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /**
+     * Get Projects (for the tree browser)
+     *
+     * @Route("/admin/projects/get_projects", name="get_projects_tree_browser", methods="GET")
+     */
+    public function get_projects_tree_browser(Connection $conn)
+    {
+      $projects = $this->get_projects($conn);
+
+      foreach ($projects as $key => $value) {
+          $data[$key]['id'] = $value['projects_id'];
+          $data[$key]['text'] = $value['projects_label'];
+          $data[$key]['children'] = true;
+          $data[$key]['a_attr']['href'] = '/admin/projects/subjects/' . $value['projects_id'];
+      }
+
+      // dump(json_encode($data, JSON_PRETTY_PRINT));
+      $response = new JsonResponse($data);
+      return $response;
+    }
 
     /**
      * Insert/Update Project

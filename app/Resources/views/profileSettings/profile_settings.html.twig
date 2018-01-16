@@ -1,0 +1,38 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link href="//cdn.datatables.net/plug-ins/3cfcc339e89/integration/bootstrap/3/dataTables.bootstrap.css" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/DataTables-extended/css/bootstrap_datatables.css') }}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block content %}
+
+  {# {{ dump() }} #}
+    
+  {% if errors is defined %}
+    <div class="alert alert-danger">
+      <h4>Form Errors</h4>
+      {% for single_error in errors %}
+      <p>{{ single_error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <ol class="breadcrumb">
+    <li><a href="/admin">Dashboard</a></li>
+    <li class="active">Profile and Settings</li>
+  </ol>
+
+{% endblock %}
+
+{% block js_bottom %}
+  {{ parent() }}
+  <script src="//cdn.datatables.net/1.10.4/js/jquery.dataTables.min.js"></script>
+  <script src="//cdn.datatables.net/plug-ins/3cfcc339e89/integration/bootstrap/3/dataTables.bootstrap.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+      // Page-specific JavaScript goes here.
+    });
+  </script>
+{% endblock %}
