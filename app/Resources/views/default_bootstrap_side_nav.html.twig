@@ -1,7 +1,13 @@
 {% block side_nav %}
 
-  {% if app.request.pathInfo == '/admin/workspace/' %}
+  {% if (app.request.pathInfo == '/admin/workspace/') or (projects_id is defined) %}
     <div class="col-sm-3 col-md-2 sidebar sidebar-nav resizable">
+
+    	<div id="name-number-first" class="btn-group btn-group-sm" role="group" aria-label="Small button group">
+    		<button id="name-first" type="button" class="btn btn-default">Name First</button>
+    		<button id="number-first" type="button" class="btn btn-default">Number First</button>
+    	</div>
+
       <div id="jstree"></div>
     </div> <!--/.sidebar-nav -->
   {% endif %}

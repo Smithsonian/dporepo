@@ -229,26 +229,89 @@ class ProjectsController extends Controller
      *
      * Run a query to retrieve all projects from the database.
      *
-     * @return  array|bool  The query result
+     * @param   object  $conn  Database connection object
+     * @return  array|bool     The query result
      */
     public function get_projects($conn)
     {
         $statement = $conn->prepare("
             SELECT * FROM projects
-            ORDER BY projects.projects_label ASC
+            ORDER BY projects.stakeholder_guid ASC
         ");
         $statement->execute();
         return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
-     * Get Projects (for the tree browser)
+     * Get Projects By Stakeholder GUID
      *
-     * @Route("/admin/projects/get_projects", name="get_projects_tree_browser", methods="GET")
+     * Run a query to retrieve all projects by a stakeholder GUID.
+     *
+     * @param   object  $conn              Database connection object
+     * @param   string  $stakeholder_guid  Stakeholder GUID
+     * @return  array|bool                 The query result
      */
-    public function get_projects_tree_browser(Connection $conn)
+    public function get_projects_by_stakeholder_guid($conn, $stakeholder_guid)
     {
-      $projects = $this->get_projects($conn);
+        $statement = $conn->prepare("
+            SELECT * FROM projects
+            WHERE projects.stakeholder_guid = :stakeholder_guid
+            ORDER BY projects.projects_label ASC
+        ");
+        $statement->bindValue(":stakeholder_guid", $stakeholder_guid, PDO::PARAM_STR);
+        $statement->execute();
+        return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get Stakeholder GUIDs
+     *
+     * Run a query to retrieve all Stakeholder GUIDs from the database.
+     *
+     * @return  array|bool  The query result
+     */
+    public function get_stakeholder_guids($conn)
+    {
+        $statement = $conn->prepare("
+            SELECT projects.stakeholder_guid FROM projects
+            GROUP BY projects.stakeholder_guid
+            ORDER BY projects.stakeholder_guid ASC
+        ");
+        $statement->execute();
+        return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get Stakeholder GUIDs (route for the tree browser)
+     *
+     * @Route("/admin/projects/get_stakeholder_guids", name="get_stakeholder_guids_tree_browser", methods="GET")
+     */
+    public function get_stakeholder_guids_tree_browser(Connection $conn)
+    {
+      $projects = $this->get_stakeholder_guids($conn);
+
+      foreach ($projects as $key => $value) {
+          $data[$key]['id'] = $value['stakeholder_guid'];
+          $data[$key]['text'] = $value['stakeholder_guid'];
+          $data[$key]['children'] = true;
+          // $data[$key]['a_attr']['href'] = '/admin/projects/subjects/';
+      }
+
+      // dump(json_encode($data, JSON_PRETTY_PRINT));
+      $response = new JsonResponse($data);
+      return $response;
+    }
+
+    /**
+     * Get a Stakeholder's Projects' (route for the tree browser)
+     *
+     * @Route("/admin/projects/get_stakeholder_projects/{stakeholder_guid}", name="get_stakeholder_projects_tree_browser", methods="GET")
+     */
+    public function get_stakeholder_projects_tree_browser(Connection $conn, Request $request)
+    {
+      $data = array();
+      $stakeholder_guid = !empty($request->attributes->get('stakeholder_guid')) ? $request->attributes->get('stakeholder_guid') : false;
+      $projects = $this->get_projects_by_stakeholder_guid($conn, $stakeholder_guid);
 
       foreach ($projects as $key => $value) {
           $data[$key]['id'] = $value['projects_id'];
@@ -256,6 +319,8 @@ class ProjectsController extends Controller
           $data[$key]['children'] = true;
           $data[$key]['a_attr']['href'] = '/admin/projects/subjects/' . $value['projects_id'];
       }
+
+      // $this->u->dumper($data);
 
       // dump(json_encode($data, JSON_PRETTY_PRINT));
       $response = new JsonResponse($data);

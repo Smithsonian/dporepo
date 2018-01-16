@@ -19,3 +19,7 @@ dd {
 .nav-tabs li a:hover {
 	color: black;
 }
+
+#jstree {
+	margin-top: 2rem;
+}

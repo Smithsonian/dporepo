@@ -249,12 +249,16 @@ class SubjectsController extends Controller
     * Run a query to retrieve all subjects from the database.
     *
     * @param   object  $conn    Database connection object
+    * @param   int $projects_id  The project ID
     * @return  array|bool  The query result
     */
-    public function get_subjects($conn)
+    public function get_subjects($conn, $projects_id = false)
     {
+        $where = $projects_id ? 'WHERE projects_id = ' . (int)$projects_id : '';
+
         $statement = $conn->prepare("
             SELECT * FROM subjects
+            {$where}
             ORDER BY subjects.subject_name ASC
         ");
         $statement->execute();
@@ -264,15 +268,23 @@ class SubjectsController extends Controller
     /**
      * Get Subjects (for the tree browser)
      *
-     * @Route("/admin/projects/get_subjects/{projects_id}", name="get_subjects_tree_browser", methods="GET")
+     * @Route("/admin/projects/get_subjects/{projects_id}/{number_first}", name="get_subjects_tree_browser", methods="GET", defaults={"number_first" = false})
      */
     public function get_subjects_tree_browser(Connection $conn, Request $request)
-    {
+    {      
       $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
-      $subjects = $this->get_subjects($conn);
+      $subjects = $this->get_subjects($conn, $projects_id);
+
+      // $this->u->dumper($request->attributes->get('number_first'));
 
       foreach ($subjects as $key => $value) {
-          $data[$key]['text'] = $value['subject_name'];
+
+          if($request->attributes->get('number_first') === 'true') {
+              $data[$key]['text'] = $value['subject_holder_subject_id'] . ' - ' . $value['subject_name'];
+          } else {
+              $data[$key]['text'] = $value['subject_name'] . ' - ' . $value['subject_holder_subject_id'];
+          }
+          
           $data[$key]['a_attr']['href'] = '/admin/projects/items/' . $projects_id . '/' . $value['subjects_id'];
       }
 
