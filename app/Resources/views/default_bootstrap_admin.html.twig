@@ -35,18 +35,20 @@
 
       </div>
 
-      <div class="container-fluid">
-        <div class="row">
-          <div class="col-sm-12">
-            <ul class="nav nav-tabs">
-              <li role="presentation" id="admin"><a href="/admin/">Dashboard</a></li>
-              <li role="presentation" id="workspace"><a href="/admin/workspace/">Workspace</a></li>
-              <li role="presentation" id="resources"><a href="/admin/resources/">Equipment/Resources</a></li>
-              <li role="presentation" id="settings"><a href="/admin/settings/">Profile/Settings</a></li>
-            </ul>
+      {% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+        <div class="container-fluid">
+          <div class="row">
+            <div class="col-sm-12">
+              <ul class="nav nav-tabs">
+                <li role="presentation" id="admin"><a href="/admin/">Dashboard</a></li>
+                <li role="presentation" id="workspace"><a href="/admin/workspace/">Workspace</a></li>
+                <li role="presentation" id="resources"><a href="/admin/resources/">Equipment/Resources</a></li>
+                <li role="presentation" id="settings"><a href="/admin/settings/">Profile/Settings</a></li>
+              </ul>
+            </div>
           </div>
-        </div>
-      </div> <!--/.container-fluid -->
+        </div> <!--/.container-fluid -->
+      {% endif %}
 
     </nav>
     {# endif #}
