@@ -1,4 +1,4 @@
-$(document).ready(function(){
+jQuery(document).ready(function($) {
 
   const urlSplit = window.location.href.split('/');
   const currentPageProjects = (urlSplit.indexOf('projects') !== -1) ? true : false;
@@ -6,7 +6,8 @@ $(document).ready(function(){
   const currentPath = urlSplit.slice(3);
 
   /**
-   * Select Form Fields
+   * Using the Chosen jQuery plugin for Select Form Fields
+   * https://harvesthq.github.io/chosen/
    */
   $('select').chosen({
     max_selected_options: 1,
@@ -23,9 +24,10 @@ $(document).ready(function(){
     thisItem.removeClass('active');
     if(currentPath[1] === thisItem.attr('id')) {
       thisItem.addClass('active');
-    }
-    if(currentPath[1].length === 0) {
+    } else if(currentPath[1].length === 0) {
       $('.nav-tabs li#admin').addClass('active');
+    } else if (currentPath[1] === 'projects') {
+      $('.nav-tabs li#workspace').addClass('active');
     }
   });
 

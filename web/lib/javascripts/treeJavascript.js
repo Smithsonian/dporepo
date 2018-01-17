@@ -2,16 +2,6 @@ jQuery(document).ready(function($) {
 
   const urlParts = window.location.href.split('/');
 
-  if (typeof(Storage) !== 'undefined') {
-    var nameNumberFirst = localStorage.getItem('name-number-first');
-    if(!nameNumberFirst) {
-      $('#name-first').addClass('btn-primary');
-    } else {
-      $('#name-number-first').find('button').removeClass('btn-primary').addClass('btn-default');
-      $('#name-number-first').find('#' + nameNumberFirst).addClass('btn-primary');
-    }
-  }
-
   // Modify jsTree's default configuration.
   $.jstree.defaults.core.themes.name = 'proton';
   $.jstree.defaults.core.themes.dots = false;
@@ -59,6 +49,17 @@ jQuery(document).ready(function($) {
   $('#jstree').on('click', 'a', function(e) {
     document.location.href = this.href;
   });
+
+  // Name First / Number First Setup on Page Load
+  if (typeof(Storage) !== 'undefined') {
+    var nameNumberFirst = localStorage.getItem('name-number-first');
+    if(!nameNumberFirst) {
+      $('#name-first').addClass('btn-primary');
+    } else {
+      $('#name-number-first').find('button').removeClass('btn-primary').addClass('btn-default');
+      $('#name-number-first').find('#' + nameNumberFirst).addClass('btn-primary');
+    }
+  }
 
   // Name First / Number First Click Handler
   $('#name-number-first').on('click', 'button', function(e) {

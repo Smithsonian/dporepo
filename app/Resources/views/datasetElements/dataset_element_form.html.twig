@@ -91,26 +91,26 @@
         </div>
 
         <div class="form-group">
-          <label class="control-label" for="camera_position_in_cluster_id"><span style="color:red;">*</span>Camera Position in Cluster:</label>
+          <label class="control-label" for="exif_data_placeholder"><span style="color:red;">*</span>EXIF Data Placeholder:</label>
           <div class="controls">
-            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
-            <input name="camera_position_in_cluster_id" id="camera_position_in_cluster_id" type="text" required="true" value="{{ dataset_element_data.camera_position_in_cluster_id|default('')|e }}" class="form-control">
+            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
+            <input name="exif_data_placeholder" id="exif_data_placeholder" type="text" required="true" value="{{ dataset_element_data.exif_data_placeholder|default('')|e }}" class="form-control">
           </div>
         </div>
 
         <div class="form-group">
-          <label class="control-label" for="cameras"><span style="color:red;">*</span>Cameras:</label>
+          <label class="control-label" for="camera_body"><span style="color:red;">*</span>Camera Body:</label>
           <div class="controls">
             <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-            <input name="cameras" id="cameras" type="text" required="true" value="{{ dataset_element_data.cameras|default('')|e }}" class="form-control">
+            <input name="camera_body" id="camera_body" type="text" required="true" value="{{ dataset_element_data.camera_body|default('')|e }}" class="form-control">
           </div>
         </div>
 
         <div class="form-group">
-          <label class="control-label" for="lenses"><span style="color:red;">*</span>Lenses:</label>
+          <label class="control-label" for="lens"><span style="color:red;">*</span>Lens:</label>
           <div class="controls">
             <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-            <input name="lenses" id="lenses" type="text" required="true" value="{{ dataset_element_data.lenses|default('')|e }}" class="form-control">
+            <input name="lens" id="lens" type="text" required="true" value="{{ dataset_element_data.lens|default('')|e }}" class="form-control">
           </div>
         </div>
         

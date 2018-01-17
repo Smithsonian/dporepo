@@ -197,7 +197,7 @@ class ProjectsController extends Controller
             return $this->redirectToRoute('projects_browse');
         } else {
             return $this->render('projects/project_form.html.twig', array(
-                "page_title" => !empty($projects_id) ? 'Manage Project: ' . $project_data['projects_label'] : 'Create Project'
+                "page_title" => !empty($projects_id) ? 'Project: ' . $project_data['projects_label'] : 'Create Project'
                 ,"project_info" => $project_data
                 ,"errors" => $errors
                 ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)

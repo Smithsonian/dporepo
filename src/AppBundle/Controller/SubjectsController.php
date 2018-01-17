@@ -48,7 +48,7 @@ class SubjectsController extends Controller
         $project_data = $projects->get_project((int)$projects_id, $conn);
 
         return $this->render('subjects/browse_subjects.html.twig', array(
-            'page_title' => $project_data['projects_label'],
+            'page_title' => 'Project: ' . $project_data['projects_label'],
             'projects_id' => $projects_id,
             'project_data' => $project_data,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
@@ -83,16 +83,19 @@ class SubjectsController extends Controller
 
         switch($req['order'][0]['column']) {
             case '0':
-                $sort_field = 'projects_label';
+                $sort_field = 'subject_name';
                 break;
             case '1':
-                $sort_field = 'holding_entity_guid';
+                $sort_field = 'subject_description';
                 break;
             case '2':
-                $sort_field = 'subjects_count';
+                $sort_field = 'holding_entity_guid';
                 break;
             case '3':
-                $sort_field = 'active';
+                $sort_field = 'items_count';
+                break;
+            case '4':
+                $sort_field = 'last_modified';
                 break;
         }
 
@@ -108,10 +111,14 @@ class SubjectsController extends Controller
             $pdo_params[] = '%'.$search.'%';
             $pdo_params[] = '%'.$search.'%';
             $pdo_params[] = '%'.$search.'%';
+            $pdo_params[] = '%'.$search.'%';
+            $pdo_params[] = '%'.$search.'%';
             $search_sql = "
                 AND (
                   subjects.subject_name LIKE ?
-                  OR subjects.location_information LIKE ?
+                  OR subjects.subject_description LIKE ?
+                  OR subjects.holding_entity_guid LIKE ?
+                  OR subjects.items_count LIKE ?
                   OR subjects.last_modified LIKE ?
                 ) ";
         }
@@ -120,15 +127,18 @@ class SubjectsController extends Controller
               subjects.subjects_id AS manage
               ,subjects.holding_entity_guid
               ,subjects.subject_holder_subject_id
-              ,subjects.location_information
               ,subjects.subject_name
+              ,subjects.subject_description
               ,subjects.subject_type_lookup_id
               ,subjects.last_modified
               ,subjects.active
               ,subjects.subjects_id AS DT_RowId
+              ,count(distinct items.items_id) AS items_count
           FROM subjects
+          LEFT JOIN items ON items.subjects_id = subjects.subjects_id
           WHERE projects_id = " . (int)$projects_id . "
           {$search_sql}
+          GROUP BY subjects.holding_entity_guid, subjects.subject_holder_subject_id, subjects.subject_name, subjects.subject_description, subjects.subject_type_lookup_id, subjects.last_modified, subjects.active, subjects.subjects_id
           {$sort}
           {$limit_sql}");
         $statement->execute($pdo_params);
@@ -194,10 +204,8 @@ class SubjectsController extends Controller
             // "" => "required|max_len,255|alpha_numeric",
             $rules = array(
                 "subject_name" => "required|max_len,255",
-                "subject_description" => "required",
                 "subject_holder_subject_id" => "required|max_len,255|alpha_numeric",
                 "location_information" => "required|max_len,255",
-                // "holding_entity_name" => "required|max_len,255",
                 "holding_entity_guid" => "required|max_len,255|alpha_numeric",
                 "subject_type_lookup_id" => "required|numeric",
             );
@@ -215,7 +223,7 @@ class SubjectsController extends Controller
             return $this->redirectToRoute('subjects_browse', array('projects_id' => $subject_data['projects_id']));
         } else {
             return $this->render('subjects/subject_form.html.twig', array(
-                "page_title" => !empty($subjects_id) ? 'Manage Subject: ' . $subject_data['subject_name'] : 'Create Subject'
+                "page_title" => !empty($subjects_id) ? 'Subject: ' . $subject_data['subject_name'] : 'Create Subject'
                 ,"subject_data" => $subject_data
                 ,"errors" => $errors
                 ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)

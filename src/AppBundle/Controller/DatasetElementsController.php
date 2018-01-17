@@ -65,7 +65,7 @@ class DatasetElementsController extends Controller
         $item_data['item_description_truncated'] = substr($item_data['item_description'], 0, 50) . $more_indicator;
 
         return $this->render('datasetElements/browse_dataset_elements.html.twig', array(
-            'page_title' => $project_data['projects_label'] . ': ' .  $dataset_data['dataset_name'],
+            'page_title' => 'Dataset: ' .  $dataset_data['dataset_name'],
             'projects_id' => $projects_id,
             'subjects_id' => $subjects_id,
             'items_id' => $items_id,
@@ -129,10 +129,9 @@ class DatasetElementsController extends Controller
                 ,dataset_elements.camera_id
                 ,dataset_elements.camera_capture_position_id
                 ,dataset_elements.cluster_position_id
-                ,dataset_elements.camera_position_in_cluster_id
                 ,dataset_elements.calibration_object_type_id
-                ,dataset_elements.cameras
-                ,dataset_elements.lenses
+                ,dataset_elements.camera_body
+                ,dataset_elements.lens
                 ,dataset_elements.last_modified
                 ,dataset_elements.datasets_id AS DT_RowId
             FROM dataset_elements
@@ -199,10 +198,10 @@ class DatasetElementsController extends Controller
                 'camera_id' => 'required|numeric',
                 'camera_capture_position_id' => 'required|max_len,255|alpha_numeric',
                 'cluster_position_id' => 'required|max_len,255|alpha_numeric',
-                'camera_position_in_cluster_id' => 'required|max_len,255|alpha_numeric',
+                'exif_data_placeholder' => 'required|max_len,255',
                 'calibration_object_type_id' => 'required|numeric',
-                'cameras' => 'required|max_len,255',
-                'lenses' => 'required|max_len,255'        
+                'camera_body' => 'required|max_len,255',
+                'lens' => 'required|max_len,255'        
             );
             $validated = $gump->validate($post, $rules);
 
@@ -218,7 +217,7 @@ class DatasetElementsController extends Controller
             return $this->redirectToRoute('dataset_elements_browse', array('projects_id' => $dataset_element_data['projects_id'], 'subjects_id' => $dataset_element_data['subjects_id'], 'items_id' => $dataset_element_data['items_id'], 'datasets_id' => $dataset_element_data['datasets_id']));
         } else {
             return $this->render('datasetElements/dataset_element_form.html.twig', array(
-                'page_title' => ((int)$dataset_elements_id && isset($dataset_element_data['dataset_element_guid'])) ? 'GUID: ' . $dataset_element_data['dataset_element_guid'] : 'Add a Dataset Element',
+                'page_title' => ((int)$dataset_elements_id && isset($dataset_element_data['dataset_element_guid'])) ? 'Dataset Element: ' . $dataset_element_data['dataset_element_guid'] : 'Add a Dataset Element',
                 'projects_id' => $dataset_element_data['projects_id'],
                 'subjects_id' => $dataset_element_data['subjects_id'],
                 'items_id' => $dataset_element_data['items_id'],
@@ -255,20 +254,20 @@ class DatasetElementsController extends Controller
                 SET camera_id = :camera_id
                 ,camera_capture_position_id = :camera_capture_position_id
                 ,cluster_position_id = :cluster_position_id
-                ,camera_position_in_cluster_id = :camera_position_in_cluster_id
+                ,exif_data_placeholder = :exif_data_placeholder
                 ,calibration_object_type_id = :calibration_object_type_id
-                ,cameras = :cameras
-                ,lenses = :lenses
+                ,camera_body = :camera_body
+                ,lens = :lens
                 ,last_modified_user_account_id = :last_modified_user_account_id
                 WHERE dataset_elements_id = :dataset_elements_id
             ");
             $statement->bindValue(":camera_id", $data['camera_id'], PDO::PARAM_STR);
             $statement->bindValue(":camera_capture_position_id", $data['camera_capture_position_id'], PDO::PARAM_STR);
             $statement->bindValue(":cluster_position_id", $data['cluster_position_id'], PDO::PARAM_STR);
-            $statement->bindValue(":camera_position_in_cluster_id", $data['camera_position_in_cluster_id'], PDO::PARAM_STR);
+            $statement->bindValue(":exif_data_placeholder", $data['exif_data_placeholder'], PDO::PARAM_STR);
             $statement->bindValue(":calibration_object_type_id", $data['calibration_object_type_id'], PDO::PARAM_INT);
-            $statement->bindValue(":cameras", $data['cameras'], PDO::PARAM_STR);
-            $statement->bindValue(":lenses", $data['lenses'], PDO::PARAM_STR);
+            $statement->bindValue(":camera_body", $data['camera_body'], PDO::PARAM_STR);
+            $statement->bindValue(":lens", $data['lens'], PDO::PARAM_STR);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->bindValue(":dataset_elements_id", $dataset_elements_id, PDO::PARAM_INT);
             $statement->execute();
@@ -280,19 +279,19 @@ class DatasetElementsController extends Controller
         if(!$dataset_elements_id) {
             $statement = $conn->prepare("INSERT INTO dataset_elements
                 (dataset_element_guid, datasets_id, camera_id, camera_capture_position_id, 
-                cluster_position_id, camera_position_in_cluster_id, calibration_object_type_id, cameras, lenses, 
+                cluster_position_id, exif_data_placeholder, calibration_object_type_id, camera_body, lens, 
                 date_created, created_by_user_account_id, last_modified_user_account_id )
                 VALUES ((select md5(UUID())), :datasets_id, :camera_id, :camera_capture_position_id, 
-                :cluster_position_id, :camera_position_in_cluster_id, :calibration_object_type_id, :cameras, :lenses, 
+                :cluster_position_id, :exif_data_placeholder, :calibration_object_type_id, :camera_body, :lens, 
                 NOW(), :user_account_id, :user_account_id )");
             $statement->bindValue(":datasets_id", $datasets_id, PDO::PARAM_INT);
             $statement->bindValue(":camera_id", $data['camera_id'], PDO::PARAM_STR);
             $statement->bindValue(":camera_capture_position_id", $data['camera_capture_position_id'], PDO::PARAM_STR);
             $statement->bindValue(":cluster_position_id", $data['cluster_position_id'], PDO::PARAM_STR);
-            $statement->bindValue(":camera_position_in_cluster_id", $data['camera_position_in_cluster_id'], PDO::PARAM_STR);
+            $statement->bindValue(":exif_data_placeholder", $data['exif_data_placeholder'], PDO::PARAM_STR);
             $statement->bindValue(":calibration_object_type_id", $data['calibration_object_type_id'], PDO::PARAM_INT);
-            $statement->bindValue(":cameras", $data['cameras'], PDO::PARAM_STR);
-            $statement->bindValue(":lenses", $data['lenses'], PDO::PARAM_STR);
+            $statement->bindValue(":camera_body", $data['camera_body'], PDO::PARAM_STR);
+            $statement->bindValue(":lens", $data['lens'], PDO::PARAM_STR);
             $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->execute();
             $last_inserted_id = $conn->lastInsertId();
@@ -383,12 +382,11 @@ class DatasetElementsController extends Controller
       `datasets_id` int(11) NOT NULL,
       `dataset_element_guid` varchar(255) NOT NULL DEFAULT '',
       `camera_id` varchar(255) NULL DEFAULT NULL,
-      `camera_capture_position_id` varchar(255) NULL DEFAULT NULL,
+      `exif_data_placeholder` varchar(255) NULL DEFAULT NULL,
       `cluster_position_id` varchar(255) NULL DEFAULT NULL,
-      `camera_position_in_cluster_id` varchar(255) NULL DEFAULT NULL,
       `calibration_object_type_id` int(11) NOT NULL,
-      `cameras` varchar(255) NOT NULL DEFAULT '',
-      `lenses` varchar(255) NOT NULL DEFAULT '',
+      `camera_body` varchar(255) NOT NULL DEFAULT '',
+      `lens` varchar(255) NOT NULL DEFAULT '',
       `date_created` datetime NOT NULL,
       `created_by_user_account_id` int(11) NOT NULL,
       `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

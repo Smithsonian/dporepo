@@ -62,7 +62,7 @@ class ItemsController extends Controller
         $subject_data = $subjects->get_subject((int)$subjects_id, $conn);
 
         return $this->render('items/browse_items.html.twig', array(
-            'page_title' => $project_data['projects_label'] . ': ' .  $subject_data['subject_name'],
+            'page_title' => 'Subject: ' .  $subject_data['subject_name'],
             'projects_id' => $projects_id,
             'subjects_id' => $subjects_id,
             'subject_data' => $subject_data,
@@ -112,6 +112,27 @@ class ItemsController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
+        switch($req['order'][0]['column']) {
+            case '1':
+                $sort_field = 'item_name';
+                break;
+            case '2':
+                $sort_field = 'item_description';
+                break;
+            case '3':
+                $sort_field = 'subject_holder_item_id';
+                break;
+            case '4':
+                $sort_field = 'date_created';
+                break;
+            case '5':
+                $sort_field = 'last_modified';
+                break;
+            case '6':
+                $sort_field = 'status_label';
+                break;
+        }
+
         $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
 
         if (!empty($sort_field) && !empty($sort_order)) {
@@ -123,27 +144,39 @@ class ItemsController extends Controller
         if ($search) {
             $pdo_params[] = '%'.$search.'%';
             $pdo_params[] = '%'.$search.'%';
+            $pdo_params[] = '%'.$search.'%';
+            $pdo_params[] = '%'.$search.'%';
+            $pdo_params[] = '%'.$search.'%';
+            $pdo_params[] = '%'.$search.'%';
             $search_sql = "
             AND (
-                items.subject_holder_item_id LIKE ?
-                OR items.item_description LIKE ?
+                items.item_name LIKE ? 
+                OR items.item_description LIKE ? 
+                OR items.subject_holder_item_id LIKE ?
+                OR items.date_created LIKE ?
+                OR items.last_modified LIKE ?
+                OR items.status_label LIKE ?
             ) ";
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
             items.items_id AS manage
             ,items.subjects_id
-            ,items.item_guid
             ,items.subject_holder_item_id
+            ,items.item_name
             ,CONCAT(SUBSTRING(items.item_description,1, 50), '...') as item_description
             ,items.status_types_id
+            ,items.date_created
             ,items.last_modified
             ,items.items_id AS DT_RowId
             ,status_types.label AS status_label
+            ,count(distinct datasets.items_id) AS datasets_count
             FROM items
             LEFT JOIN status_types ON items.status_types_id = status_types.status_types_id
+            LEFT JOIN datasets ON datasets.items_id = items.items_id
             WHERE subjects_id = " . (int)$subjects_id . "
             {$search_sql}
+            GROUP BY items.subjects_id, items.subject_holder_item_id, item_description, items.status_types_id, items.date_created, items.last_modified, items.items_id
             {$sort}
             {$limit_sql}");
         $statement->execute($pdo_params);
@@ -201,7 +234,7 @@ class ItemsController extends Controller
         $item_data = $post ? $post : $this->get_item((int)$items_id, $conn);
         $item_data['projects_id'] = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
         $item_data['subjects_id'] = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
-        $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
+        $more_indicator = (isset($item_data['item_description']) && (strlen($item_data['item_description']) > 50)) ? '...' : '';
         
         // Validate posted data.
         if(!empty($post)) {
@@ -212,6 +245,7 @@ class ItemsController extends Controller
             // "" => "required|max_len,255|alpha_numeric",
             $rules = array(
                 "subject_holder_item_id" => "required|max_len,255|alpha_numeric",
+                "item_name" => "required|max_len,255",
                 "item_description" => "required",
             );
             $validated = $gump->validate($post, $rules);
@@ -251,6 +285,7 @@ class ItemsController extends Controller
         $statement = $conn->prepare("SELECT
             items.item_guid
             ,items.subject_holder_item_id
+            ,items.item_name
             ,items.item_description
             ,items.status_types_id
             ,items.last_modified
@@ -298,11 +333,13 @@ class ItemsController extends Controller
             $statement = $conn->prepare("
                 UPDATE items
                 SET subject_holder_item_id = :subject_holder_item_id
+                ,item_name = :item_name
                 ,item_description = :item_description
                 ,last_modified_user_account_id = :last_modified_user_account_id
                 WHERE items_id = :items_id
             ");
             $statement->bindValue(":subject_holder_item_id", $data['subject_holder_item_id'], PDO::PARAM_STR);
+            $statement->bindValue(":item_name", $data['item_name'], PDO::PARAM_STR);
             $statement->bindValue(":item_description", $data['item_description'], PDO::PARAM_STR);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->bindValue(":items_id", $items_id, PDO::PARAM_INT);
@@ -315,12 +352,13 @@ class ItemsController extends Controller
         if(!$items_id) {
 
             $statement = $conn->prepare("INSERT INTO items
-                ( subjects_id, item_guid, subject_holder_item_id, item_description, 
+                ( subjects_id, item_guid, subject_holder_item_id, item_name, item_description, 
                 date_created, created_by_user_account_id, last_modified_user_account_id )
-                VALUES (:subjects_id, (select md5(UUID())), :subject_holder_item_id, :item_description, NOW(), 
+                VALUES (:subjects_id, (select md5(UUID())), :subject_holder_item_id, :item_name, :item_description, NOW(), 
                 :user_account_id, :user_account_id )");
             $statement->bindValue(":subjects_id", $subjects_id, PDO::PARAM_STR);
             $statement->bindValue(":subject_holder_item_id", $data['subject_holder_item_id'], PDO::PARAM_STR);
+            $statement->bindValue(":item_name", $data['item_name'], PDO::PARAM_STR);
             $statement->bindValue(":item_description", $data['item_description'], PDO::PARAM_STR);
             $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->execute();
@@ -537,6 +575,7 @@ class ItemsController extends Controller
             `item_guid` varchar(255) NOT NULL DEFAULT '',
             `subjects_id` int(11) NOT NULL,
             `subject_holder_item_id` varchar(255) NOT NULL DEFAULT '',
+            `item_name` varchar(255) NOT NULL DEFAULT '',
             `item_description` mediumtext NOT NULL,
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,

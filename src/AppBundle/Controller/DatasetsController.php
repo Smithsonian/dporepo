@@ -61,7 +61,7 @@ class DatasetsController extends Controller
         $item_data['item_description_truncated'] = substr($item_data['item_description'], 0, 50) . $more_indicator;
 
         return $this->render('datasets/browse_datasets.html.twig', array(
-            'page_title' => $project_data['projects_label'] . ': ' . $item_data['item_description_truncated'],
+            'page_title' => 'Item: ' . $item_data['item_name'],
             'projects_id' => $projects_id,
             'subjects_id' => $subjects_id,
             'items_id' => $items_id,
@@ -197,17 +197,13 @@ class DatasetsController extends Controller
                 // "collected_by_guid" => "required|alpha_numeric",
                 "date_of_capture" => "required|date",
                 "dataset_description" => "required",
-                "dataset_collection_notes" => "required",
                 "item_position_type_lookup_id" => "required|numeric",
-                "positionally_matched_sets_id" => "required|alpha_numeric",
-                "motion_control" => "required",
+                "positionally_matched_sets_id" => "alpha_numeric",
                 "focus_lookup_id" => "required|numeric",
-                "light_source" => "required",
                 "light_source_type_lookup_id" => "required|numeric",
-                "scale_bars_used" => "required",
                 "background_removal_method_lookup_id" => "required|numeric",
                 "camera_cluster_type_lookup_id" => "required|numeric",
-                "array_geometry_id" => "required|numeric",
+                "array_geometry_id" => "numeric",
                 // "resource_datasets" => "required|alpha_numeric",
                 // "resource_dataset_elements" => "required|alpha_numeric"
             );
@@ -225,7 +221,7 @@ class DatasetsController extends Controller
             return $this->redirectToRoute('datasets_browse', array('projects_id' => $dataset_data['projects_id'], 'subjects_id' => $dataset_data['subjects_id'], 'items_id' => $dataset_data['items_id']));
         } else {
             return $this->render('datasets/dataset_form.html.twig', array(
-                'page_title' => ((int)$datasets_id && isset($dataset_data['dataset_description']) && isset($item_data['item_description'])) ? substr($item_data['item_description'], 0, 50) . $more_indicator . ': ' . $dataset_data['dataset_name'] : 'Add a Dataset',
+                'page_title' => (int)$datasets_id ? 'Dataset: ' . $dataset_data['dataset_name'] : 'Add a Dataset',
                 'dataset_data' => $dataset_data,
                 'errors' => $errors,
                 'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
@@ -254,6 +250,7 @@ class DatasetsController extends Controller
             SET capture_method_lookup_id = :capture_method_lookup_id
             ,dataset_name = :dataset_name
             ,collected_by = :collected_by
+            ,collected_by_guid = :collected_by_guid
             ,date_of_capture = :date_of_capture
             ,dataset_description = :dataset_description
             ,dataset_collection_notes = :dataset_collection_notes
@@ -274,6 +271,7 @@ class DatasetsController extends Controller
           $statement->bindValue(":capture_method_lookup_id", $data['capture_method_lookup_id'], PDO::PARAM_INT);
           $statement->bindValue(":dataset_name", $data['dataset_name'], PDO::PARAM_STR);
           $statement->bindValue(":collected_by", $data['collected_by'], PDO::PARAM_STR);
+          $statement->bindValue(":collected_by_guid", $data['collected_by_guid'], PDO::PARAM_STR);
           $statement->bindValue(":date_of_capture", $data['date_of_capture'], PDO::PARAM_STR);
           $statement->bindValue(":dataset_description", $data['dataset_description'], PDO::PARAM_STR);
           $statement->bindValue(":dataset_collection_notes", $data['dataset_collection_notes'], PDO::PARAM_STR);
@@ -300,11 +298,11 @@ class DatasetsController extends Controller
 
           $statement = $conn->prepare("INSERT INTO datasets
             (dataset_guid, items_id, capture_method_lookup_id, 
-            dataset_name, collected_by, date_of_capture, dataset_description, dataset_collection_notes, item_position_type_lookup_id, positionally_matched_sets_id, 
+            dataset_name, collected_by, collected_by_guid, date_of_capture, dataset_description, dataset_collection_notes, item_position_type_lookup_id, positionally_matched_sets_id, 
             motion_control, focus_lookup_id, light_source, light_source_type_lookup_id, scale_bars_used, background_removal_method_lookup_id, camera_cluster_type_lookup_id, array_geometry_id, dataset_type_lookup_id,  
             date_created, created_by_user_account_id, last_modified_user_account_id )
           VALUES ((select md5(UUID())), :items_id, 
-            :capture_method_lookup_id, :dataset_name, :collected_by, :date_of_capture, :dataset_description, 
+            :capture_method_lookup_id, :dataset_name, :collected_by, :collected_by_guid, :date_of_capture, :dataset_description, 
             :dataset_collection_notes, :item_position_type_lookup_id, :positionally_matched_sets_id, :motion_control, :focus_lookup_id, :light_source, :light_source_type_lookup_id, :scale_bars_used, 
             :background_removal_method_lookup_id, :camera_cluster_type_lookup_id, :array_geometry_id, :dataset_type_lookup_id, 
             NOW(), :user_account_id, :user_account_id )");
@@ -313,7 +311,7 @@ class DatasetsController extends Controller
           $statement->bindValue(":dataset_type_lookup_id", $data['dataset_type_lookup_id'], PDO::PARAM_INT);
           $statement->bindValue(":dataset_name", $data['dataset_name'], PDO::PARAM_STR);
           $statement->bindValue(":collected_by", $data['collected_by'], PDO::PARAM_STR);
-          // $statement->bindValue(":collected_by_guid", $data['collected_by_guid'], PDO::PARAM_STR);
+          $statement->bindValue(":collected_by_guid", $data['collected_by_guid'], PDO::PARAM_STR);
           $statement->bindValue(":date_of_capture", $data['date_of_capture'], PDO::PARAM_STR);
           $statement->bindValue(":dataset_description", $data['dataset_description'], PDO::PARAM_STR);
           $statement->bindValue(":dataset_collection_notes", $data['dataset_collection_notes'], PDO::PARAM_STR);

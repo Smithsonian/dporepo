@@ -34,13 +34,20 @@
             </div>
           {% endif %}
           <div class="form-group">
-            <label class="control-label" for="subject_holder_item_id"><span style="color:red;">*</span>Authoritative Item ID:</label>
+            <label class="control-label" for="item_name"><span style="color:red;">*</span>Item Name:</label>
+            <div class="controls">
+              <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
+              <input name="item_name" id="item_name" type="text" required="true" value="{{ item_data.item_name|default('')|e }}" class="form-control">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="control-label" for="subject_holder_item_id"><span style="color:red;">*</span>Subject Holder Item ID:</label>
             <div class="controls">
               <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
               <input name="subject_holder_item_id" id="subject_holder_item_id" type="text" required="true" value="{{ item_data.subject_holder_item_id|default('')|e }}" class="form-control">
             </div>
           </div>
-
+          
         </div>
 
         <!-- Column 2 -->

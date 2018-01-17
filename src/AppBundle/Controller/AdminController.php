@@ -265,7 +265,7 @@ class AdminController extends Controller
                 $sort_field = 'page_title';
                 break;
             case '1':
-                $sort_field = 'page_path';
+                $sort_field = 'path';
                 break;
             case '2':
                 $sort_field = 'date_created';
@@ -287,7 +287,7 @@ class AdminController extends Controller
             $search_sql = "
                 AND (
                   favorites.page_title LIKE ?
-                  OR favorites.page_path LIKE ?
+                  OR favorites.path LIKE ?
                   OR favorites.date_created LIKE ?
                 ) ";
         }

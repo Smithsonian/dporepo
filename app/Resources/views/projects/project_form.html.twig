@@ -15,24 +15,16 @@
       {#% include 'csrf_input.html' %#}
       <!-- row -->
       <div class="row">
-        <!-- status indicator -->
-        {% if project_info and project_info.projects_id %}
-          
-          {# 
-          <div class="col-sm-12 col-md-12">
-            <div class="alert alert-{{ project_info.status_class|e }}" role="alert">
-              <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-              {{ project_info.active|e }}
-            </div>
+        
+        <div class="col-sm-12 col-md-12">
+          <div class="form-group">
+          {% if project_info and project_info.projects_id %}
+            <a href="/admin/projects/subjects/{{ project_info.projects_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Project</a>
+          {% else %}
+            <a href="/admin/workspace/" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Browse Projects</a>
+          {% endif %}
           </div>
-          #}
-
-          <div class="col-sm-12 col-md-12">
-            <div class="form-group">
-              <a href="/admin/projects/subjects/{{ project_info.projects_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Project</a>
-            </div>
-          </div>
-        {% endif %}
+        </div>
 
         <!-- column 1 -->
         <div class="col-sm-6 col-md-6">
