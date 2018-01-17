@@ -4,6 +4,16 @@ $(document).ready(function(){
   const currentPageProjects = (urlSplit.indexOf('projects') !== -1) ? true : false;
   const currentPageResources = (urlSplit.indexOf('resources') !== -1) ? true : false;
   const currentPath = urlSplit.slice(3);
+
+  /**
+   * Select Form Fields
+   */
+  $('select').chosen({
+    max_selected_options: 1,
+    width: '35%',
+    allow_single_deselect: true,
+    no_results_text: 'Oops, nothing found!'
+  });
   
   /**
    * Set the Active Navigation Tab
