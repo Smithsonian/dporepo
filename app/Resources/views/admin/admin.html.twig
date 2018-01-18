@@ -52,10 +52,12 @@
       <table id="browse_recent_subjects" class="table table-striped table-bordered" cellspacing="0" width="100%">
         <thead>
           <tr>
-            <th class="text-center">Request Download</th>
             <th class="text-center">Subject Name</th>
-            <th class="text-center">Location Information</th>
-            <th class="text-center">Holding Entity GUID</th>
+            <th class="text-center">Subject Description</th>
+            <th class="text-center">Holding Unit Name</th>
+            {# <th class="text-center">Location Information</th> #}
+            <th class="text-center">Items Count</th>
+            {# <th class="text-center">Processed items</th> #}
             <th class="text-center">Last Modified</th>
           </tr>
         </thead>
@@ -183,11 +185,13 @@
 
       // Recent subjects
       $('#browse_recent_subjects').dataTable( {
-          "columns": [
-              { "data": "manage" },
+         "columns": [
               { "data": "subject_name" },
-              { "data": "location_information" },
+              { "data": "subject_description" },
               { "data": "holding_entity_guid" },
+              // { "data": "location_information" },
+              { "data": "items_count" },
+              // { "data": "manage" },
               { "data": "last_modified" }
             ],
           "dom": '<"wrapper"fl><"col-sm-3 col-md-3 datatables_bulk_actions">t<"bottom"ip><"clear">',
@@ -207,8 +211,8 @@
           "lengthMenu":[5,10,20,50],
           // Set some widths.
           "aoColumnDefs":[
-            {"sWidth":"100px","aTargets":[0]}
-            ,{"bSortable":false,"aTargets":[0]}
+            {"sWidth":"250px","aTargets":[0]},
+            // {"bSortable":false,"aTargets":[0]}
           ],
           "fnRowCallback":function(nRow, aData, iDisplayIndex) {
 

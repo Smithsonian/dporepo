@@ -177,16 +177,19 @@ class AdminController extends Controller
 
         switch($req['order'][0]['column']) {
             case '0':
-                $sort_field = 'projects_label';
+                $sort_field = 'subject_name';
                 break;
             case '1':
-                $sort_field = 'holding_entity_guid';
+                $sort_field = 'subject_description';
                 break;
             case '2':
-                $sort_field = 'subjects_count';
+                $sort_field = 'holding_entity_guid';
                 break;
             case '3':
-                $sort_field = 'active';
+                $sort_field = 'items_count';
+                break;
+            case '4':
+                $sort_field = 'last_modified';
                 break;
         }
 
@@ -202,28 +205,53 @@ class AdminController extends Controller
             $pdo_params[] = '%'.$search.'%';
             $pdo_params[] = '%'.$search.'%';
             $pdo_params[] = '%'.$search.'%';
+            $pdo_params[] = '%'.$search.'%';
+            $pdo_params[] = '%'.$search.'%';
             $search_sql = "
                 AND (
                   subjects.subject_name LIKE ?
-                  OR subjects.location_information LIKE ?
+                  OR subjects.subject_description LIKE ?
+                  OR subjects.holding_entity_guid LIKE ?
+                  OR subjects.items_count LIKE ?
                   OR subjects.last_modified LIKE ?
                 ) ";
         }
 
+        // $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
+        //       subjects.subjects_id AS manage
+        //       ,subjects.projects_id
+        //       ,subjects.holding_entity_guid
+        //       ,subjects.subject_holder_subject_id
+        //       ,subjects.location_information
+        //       ,subjects.subject_name
+        //       ,subjects.subject_type_lookup_id
+        //       ,subjects.last_modified
+        //       ,subjects.active
+        //       ,subjects.subjects_id AS DT_RowId
+        //   FROM subjects
+        //   WHERE 1 = 1
+        //   {$search_sql}
+        //   {$sort}
+        //   {$limit_sql}");
+        // $statement->execute($pdo_params);
+        // $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
               subjects.subjects_id AS manage
-              ,subjects.projects_id
               ,subjects.holding_entity_guid
               ,subjects.subject_holder_subject_id
-              ,subjects.location_information
               ,subjects.subject_name
+              ,subjects.subject_description
               ,subjects.subject_type_lookup_id
               ,subjects.last_modified
               ,subjects.active
               ,subjects.subjects_id AS DT_RowId
+              ,count(distinct items.items_id) AS items_count
           FROM subjects
+          LEFT JOIN items ON items.subjects_id = subjects.subjects_id
           WHERE 1 = 1
           {$search_sql}
+          GROUP BY subjects.holding_entity_guid, subjects.subject_holder_subject_id, subjects.subject_name, subjects.subject_description, subjects.subject_type_lookup_id, subjects.last_modified, subjects.active, subjects.subjects_id
           {$sort}
           {$limit_sql}");
         $statement->execute($pdo_params);
