@@ -238,6 +238,7 @@ class AdminController extends Controller
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
               subjects.subjects_id AS manage
+              ,subjects.projects_id
               ,subjects.holding_entity_guid
               ,subjects.subject_holder_subject_id
               ,subjects.subject_name
