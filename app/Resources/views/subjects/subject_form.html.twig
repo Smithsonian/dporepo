@@ -18,12 +18,7 @@
 
         <div class="col-sm-12 col-md-12">
           <div class="form-group">
-
-            {% if subject_data.subjects_id is defined %}
-              <a href="/admin/projects/items/{{ subject_data.projects_id }}/{{ subject_data.subjects_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Project</a>
-            {% else %}
-              <a href="/admin/projects/subjects/{{ subject_data.projects_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Project</a>
-            {% endif %}
+              <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
           </div>
         </div>
 

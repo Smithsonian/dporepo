@@ -262,7 +262,7 @@ class ItemsController extends Controller
             return $this->redirectToRoute('items_browse', array('projects_id' => $item_data['projects_id'], 'subjects_id' => $item_data['subjects_id']));
         } else {
             return $this->render('items/item_form.html.twig', array(
-                "page_title" => ((int)$items_id && isset($item_data['item_description'])) ? substr($item_data['item_description'], 0, 50) . $more_indicator : 'Add Item'
+                "page_title" => ((int)$items_id && isset($item_data['item_name'])) ? 'Item: ' . $item_data['item_name'] : 'Add Item'
                 ,"item_data" => $item_data
                 ,"errors" => $errors
                 ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)

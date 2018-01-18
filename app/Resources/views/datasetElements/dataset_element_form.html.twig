@@ -29,7 +29,7 @@
 
       <div class="col-sm-12 col-md-12">
         <div class="form-group">
-          <a href="/admin/projects/dataset_elements/{{ dataset_element_data.projects_id }}/{{ dataset_element_data.subjects_id }}/{{ dataset_element_data.items_id }}/{{ dataset_element_data.datasets_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Dataset</a>
+          <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
         </div>
       </div>
 
