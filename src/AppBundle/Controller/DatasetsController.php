@@ -112,19 +112,70 @@ class DatasetsController extends Controller
           $pdo_params[] = '%'.$search.'%';
           $pdo_params[] = '%'.$search.'%';
           $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
           $search_sql = "
               AND (
+                OR datasets.dataset_guid LIKE ?
+                OR datasets.capture_method_lookup_id LIKE ?
+                OR datasets.dataset_type_lookup_id LIKE ?
                 OR datasets.dataset_name LIKE ?
                 OR datasets.collected_by LIKE ?
+                OR datasets.collected_by_guid LIKE ?
                 OR datasets.date_of_capture LIKE ?
+                OR datasets.dataset_description LIKE ?
+                OR datasets.dataset_collection_notes LIKE ?
+                OR datasets.item_position_type_lookup_id LIKE ?
+                OR datasets.positionally_matched_sets_id LIKE ?
+                OR datasets.motion_control LIKE ?
+                OR datasets.focus_lookup_id LIKE ?
+                OR datasets.light_source LIKE ?
+                OR datasets.light_source_type_lookup_id LIKE ?
+                OR datasets.scale_bars_used LIKE ?
+                OR datasets.background_removal_method_lookup_id LIKE ?
+                OR datasets.camera_cluster_type_lookup_id LIKE ?
+                OR datasets.array_geometry_id LIKE ?
+                OR datasets.date_created LIKE ?
               ) ";
-      }
+        }
 
-      $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
+        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
               datasets.datasets_id AS manage
+              ,datasets.dataset_guid
+              ,datasets.capture_method_lookup_id
+              ,datasets.dataset_type_lookup_id
               ,datasets.dataset_name
               ,datasets.collected_by
+              ,datasets.collected_by_guid
               ,datasets.date_of_capture
+              ,datasets.dataset_description
+              ,datasets.dataset_collection_notes
+              ,datasets.item_position_type_lookup_id
+              ,datasets.positionally_matched_sets_id
+              ,datasets.motion_control
+              ,datasets.focus_lookup_id
+              ,datasets.light_source
+              ,datasets.light_source_type_lookup_id
+              ,datasets.scale_bars_used
+              ,datasets.background_removal_method_lookup_id
+              ,datasets.camera_cluster_type_lookup_id
+              ,datasets.array_geometry_id
+              ,datasets.date_created
               ,datasets.last_modified
               ,datasets.datasets_id AS DT_RowId
           FROM datasets
@@ -132,8 +183,8 @@ class DatasetsController extends Controller
           {$search_sql}
           {$sort}
           {$limit_sql}");
-      $statement->execute($pdo_params);
-      $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+        $statement->execute($pdo_params);
+        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
 
         $statement = $conn->prepare("SELECT FOUND_ROWS()");
         $statement->execute();

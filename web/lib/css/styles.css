@@ -31,3 +31,11 @@ dd {
 .child-data {
 	margin-top: 2rem;
 }
+
+#browse_wrapper {
+	margin-top: 1rem;
+}
+
+#browse_paginate {
+	margin-bottom: 0.5rem;
+}

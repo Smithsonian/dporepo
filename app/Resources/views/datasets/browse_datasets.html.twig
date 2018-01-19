@@ -2,8 +2,8 @@
 
 {% block stylesheets %}
   {{ parent() }}
-  <link href="//cdn.datatables.net/plug-ins/3cfcc339e89/integration/bootstrap/3/dataTables.bootstrap.css" rel="stylesheet" type="text/css" />
-  <link href="{{ asset('lib/javascripts/DataTables-extended/css/bootstrap_datatables.css') }}" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.dataTables.min.css" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -56,9 +56,26 @@
             <thead>
               <tr>
                 <th class="text-center">Request Download</th>
+                <th class="text-center">Dataset Guid</th>
+                <th class="text-center">Capture Method Lookup ID</th>
+                <th class="text-center">Dataset Type Lookup ID</th>
                 <th class="text-center">Dataset Name</th>
                 <th class="text-center">Collected By</th>
-                <th class="text-center">Date of Capture</th>
+                <th class="text-center">Collected By Guid</th>
+                <th class="text-center">Date Of Capture</th>
+                <th class="text-center">Dataset Description</th>
+                <th class="text-center">Dataset Collection Notes</th>
+                <th class="text-center">Item Position Type Lookup ID</th>
+                <th class="text-center">Positionally Matched Sets ID</th>
+                <th class="text-center">Motion Control</th>
+                <th class="text-center">Focus Lookup ID</th>
+                <th class="text-center">Light Source</th>
+                <th class="text-center">Light Source Type Lookup ID</th>
+                <th class="text-center">Scale Bars Used</th>
+                <th class="text-center">Background Removal Method Lookup ID</th>
+                <th class="text-center">Camera Cluster Type Lookup ID</th>
+                <th class="text-center">Array Geometry ID</th>
+                <th class="text-center">Date Created</th>
                 <th class="text-center">Last Modified</th>
               </tr>
             </thead>
@@ -72,19 +89,37 @@
 {% endblock %}
 {% block js_bottom %}
   {{ parent() }}
-  <script src="//cdn.datatables.net/1.10.4/js/jquery.dataTables.min.js"></script>
-  <script src="//cdn.datatables.net/plug-ins/3cfcc339e89/integration/bootstrap/3/dataTables.bootstrap.js"></script>
+  <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
   <script type="text/javascript">
     $(document).ready(function() {
-      $('#browse').dataTable( {
+      $('#browse').dataTable({
           "columns": [
-              { "data": "manage" },
-              { "data": "dataset_name" },
-              { "data": "collected_by" },
-              { "data": "date_of_capture" },
-              { "data": "last_modified" }
-            ],
-          "dom": '<"wrapper"fli><"col-sm-3 col-md-3 datatables_bulk_actions">pt<"bottom"ip><"clear">',
+            { "data": "manage" },
+            { "data": "dataset_guid" },
+            { "data": "capture_method_lookup_id" },
+            { "data": "dataset_type_lookup_id" },
+            { "data": "dataset_name" },
+            { "data": "collected_by" },
+            { "data": "collected_by_guid" },
+            { "data": "date_of_capture" },
+            { "data": "dataset_description" },
+            { "data": "dataset_collection_notes" },
+            { "data": "item_position_type_lookup_id" },
+            { "data": "positionally_matched_sets_id" },
+            { "data": "motion_control" },
+            { "data": "focus_lookup_id" },
+            { "data": "light_source" },
+            { "data": "light_source_type_lookup_id" },
+            { "data": "scale_bars_used" },
+            { "data": "background_removal_method_lookup_id" },
+            { "data": "camera_cluster_type_lookup_id" },
+            { "data": "array_geometry_id" },
+            { "data": "date_created" },
+            { "data": "last_modified" }
+          ],
+          "dom": 'Bfrtipt',
           "pagingType": "simple_numbers",
           "stateSave": true,
           "order": [[1,"desc"]],
@@ -100,9 +135,25 @@
           // Values in the length dropdown.
           "lengthMenu":[10,50,100,500],
           // Set some widths.
-          "aoColumnDefs":[
-              {"sWidth":"100px","aTargets":[0]}
-              ,{"bSortable":false,"aTargets":[0]}
+          "columnDefs":[
+            {"sWidth": "100px", "aTargets": [0]},
+            {"bSortable": false, "aTargets": [0]},
+            {
+              "targets": [ 0, 1, 2, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 ],
+              "visible": false,
+              "searchable": true
+            },
+            {
+              "targets": -1,
+              "visible": false
+            }
+          ],
+          buttons: [
+            {
+              extend: 'colvis',
+              collectionLayout: 'fixed four-column',
+              postfixButtons: [ 'colvisRestore' ]
+            }
           ],
           "fnRowCallback":function(nRow, aData, iDisplayIndex) {
             // Create the checkboxes.
@@ -125,10 +176,10 @@
         }
       });
 
-      var request_download_button = $("<button></button>")
-        .addClass("btn btn-default btn-sm glyphicon glyphicon-download-alt")
+      var request_download_button = $('<button></button>')
+        .addClass('btn btn-default btn-sm glyphicon glyphicon-download-alt')
         .attr('style', 'margin-bottom: 0.5rem; width: 13.5rem;')
-        .on("click", function(){
+        .on('click', function(){
 
           var delete_ids = new Array;
           $('#browse [name="manage_checkbox"]:checked').each(function(){
@@ -147,21 +198,16 @@
               closeOnConfirm: true
             },
             function(){
-              // $.ajax({
-              //   type:"POST"
-              //   ,dateType:"json"
-              //   ,url: "/admin/projects/delete"
-              //   ,data: ({id: JSON.stringify(delete_ids), csrf_key: "{#{ csrf_token }#}"})
-              //   ,success: function(ajax_return){
-              //     $('#browse').dataTable().fnDraw();
-              //   }
-              // });
+              // Placeholder
             });
 
           }
         });
 
-      $(".datatables_bulk_actions").append(request_download_button);
+      var buttonDiv = $('<div />').attr('style', 'clear: both;');
+      buttonDiv.append(request_download_button);
+
+      $("#browse").before(buttonDiv);
 
     });
   </script>
