@@ -4,6 +4,14 @@ jQuery(document).ready(function($) {
   const currentPageProjects = (urlSplit.indexOf('projects') !== -1) ? true : false;
   const currentPageResources = (urlSplit.indexOf('resources') !== -1) ? true : false;
   const currentPath = urlSplit.slice(3);
+  const formErrors = $('body').data('errors');
+
+  /**
+   * Highlight form fields with validation errors.
+   */
+  for (var key in formErrors) {
+    $('#' + key).attr('style', 'border-color: red;');
+  }
 
   /**
    * Using the Chosen jQuery plugin for Select Form Fields
