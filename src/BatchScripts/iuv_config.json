@@ -1,0 +1,10 @@
+{
+  "ao:enabled" : true,
+  "baking:baseColorMapResolution" : 4096,
+  "baking:normalMapResolution" : 4096,
+  "baking:occlusionMapResolution" : 4096,
+  "baking:tangentSpaceNormals" : false,
+  "decimation:defaultTargetParameter": "f:10000",
+  "segmentation:chartAngleDeg" : 360,
+  "segmentation:maxPrimitivesPerChart": 10000
+}
