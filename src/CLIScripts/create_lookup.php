@@ -18,6 +18,7 @@
  * php create_lookup.php slug=units
  * php create_lookup.php slug=calibration_object_types
  * php create_lookup.php slug=status_types
+ * php create_lookup.php slug=unit_stakeholder
  */
 
 // Set the time limit to no limit.
