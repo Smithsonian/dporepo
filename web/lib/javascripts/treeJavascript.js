@@ -21,7 +21,7 @@ jQuery(document).ready(function($) {
                 return '/admin/projects/get_subjects/' + node.id + '/' + numberFirst;
                 break;
               default:
-                return '/admin/projects/get_stakeholder_projects/' + node.id;
+                return '/admin/projects/get_stakeholder_projects/' + node.id.replace('stakeholderGuid-', '');
             }
 
           },

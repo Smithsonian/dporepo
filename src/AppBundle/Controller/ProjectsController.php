@@ -83,7 +83,10 @@ class ProjectsController extends Controller
                 $sort_field = 'subjects_count';
                 break;
             case '3':
-                $sort_field = 'active';
+                $sort_field = 'date_created';
+                break;
+            case '4':
+                $sort_field = 'last_modified';
                 break;
         }
 
@@ -115,10 +118,13 @@ class ProjectsController extends Controller
                 ,projects.date_created
                 ,projects.last_modified
                 ,projects.active
+                ,unit_stakeholder.label
+                ,unit_stakeholder.full_name
                 ,projects.projects_id AS DT_RowId
                 ,count(distinct subjects.subjects_id) AS subjects_count
             FROM projects
             LEFT JOIN subjects ON subjects.projects_id = projects.projects_id
+            LEFT JOIN unit_stakeholder ON unit_stakeholder.unit_stakeholder_id = projects.stakeholder_guid
             {$search_sql}
             GROUP BY projects.projects_label, projects.stakeholder_guid, projects.date_created, projects.last_modified, projects.active, projects.projects_id
             {$sort}
@@ -154,6 +160,10 @@ class ProjectsController extends Controller
         $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
         $project_data = !empty($post) ? $post : $this->get_project((int)$projects_id, $conn);
 
+        // Get data from lookup tables.
+        $project_data['units_stakeholders'] = $this->get_units_stakeholders($conn);
+
+        // Processing statuses.
         if(isset($project_data['active'])) {
             switch($project_data['active']) {
                 case '0':
@@ -180,7 +190,7 @@ class ProjectsController extends Controller
             // "" => "required|max_len,255|alpha_numeric",
             $rules = array(
                 "projects_label" => "required|max_len,255",
-                "stakeholder_guid" => "required|max_len,255|alpha_numeric",
+                "stakeholder_guid" => "required|max_len,255",
                 "project_description" => "required",
             );
             $validated = $gump->validate($post, $rules);
@@ -217,7 +227,10 @@ class ProjectsController extends Controller
     public function get_project($project_id, $conn)
     {
         $statement = $conn->prepare("SELECT *
+            ,unit_stakeholder.label
+            ,unit_stakeholder.full_name
             FROM projects
+            LEFT JOIN unit_stakeholder ON unit_stakeholder.unit_stakeholder_id = projects.stakeholder_guid
             WHERE projects_id = :projects_id");
         $statement->bindValue(":projects_id", $project_id, PDO::PARAM_INT);
         $statement->execute();
@@ -272,10 +285,19 @@ class ProjectsController extends Controller
      */
     public function get_stakeholder_guids($conn)
     {
+        // $statement_fgb = $conn->prepare("
+        //     SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));
+        // ");
+        // $statement_fgb->execute();
+
         $statement = $conn->prepare("
-            SELECT projects.stakeholder_guid FROM projects
-            GROUP BY projects.stakeholder_guid
-            ORDER BY projects.stakeholder_guid ASC
+            SELECT projects.projects_id
+                ,projects.stakeholder_guid
+                ,unit_stakeholder.label
+            FROM projects
+            INNER JOIN unit_stakeholder ON unit_stakeholder.unit_stakeholder_id = projects.stakeholder_guid
+            GROUP BY unit_stakeholder.label
+            ORDER BY unit_stakeholder.label ASC
         ");
         $statement->execute();
         return $statement->fetchAll(PDO::FETCH_ASSOC);
@@ -291,8 +313,8 @@ class ProjectsController extends Controller
       $projects = $this->get_stakeholder_guids($conn);
 
       foreach ($projects as $key => $value) {
-          $data[$key]['id'] = $value['stakeholder_guid'];
-          $data[$key]['text'] = $value['stakeholder_guid'];
+          $data[$key]['id'] = 'stakeholderGuid-' . $value['stakeholder_guid'];
+          $data[$key]['text'] = $value['label'];
           $data[$key]['children'] = true;
           // $data[$key]['a_attr']['href'] = '/admin/projects/subjects/';
       }
@@ -379,6 +401,17 @@ class ProjectsController extends Controller
             return $last_inserted_id;
         }
 
+    }
+
+    /**
+     * Get unit_stakeholder
+     * @return  array|bool  The query result
+     */
+    public function get_units_stakeholders($conn)
+    {
+      $statement = $conn->prepare("SELECT * FROM unit_stakeholder ORDER BY label ASC");
+      $statement->execute();
+      return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**

@@ -140,7 +140,7 @@
       $('#browse_recent_projects').dataTable( {
          "columns": [
              { "data": "projects_label" },
-             { "data": "stakeholder_guid" },
+             { "data": "label" },
              { "data": "subjects_count" },
              { "data": "last_modified" },
              { "data": "date_created" }
@@ -216,11 +216,11 @@
           ],
           "fnRowCallback":function(nRow, aData, iDisplayIndex) {
 
-            // Create the checkboxes.
-            $(nRow).find('td:eq(0)').html(
-              "<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
-            )
-            .addClass("manage_column");
+            // // Create the checkboxes.
+            // $(nRow).find('td:eq(0)').html(
+            //   "<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
+            // )
+            // .addClass("manage_column");
 
             // Send to details page when clicked.
             var subjects_details_page = "/admin/projects/items/";

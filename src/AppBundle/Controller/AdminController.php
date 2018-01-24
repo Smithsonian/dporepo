@@ -80,9 +80,9 @@ class AdminController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
         // Today's date
-        $date_today = date('Y-m-d 00:00:00');
+        $date_today = date('Y-m-d H:i:s');
         // Date limit
-        $date_limit = date('Y-m-d 00:00:00', strtotime('-120 days'));
+        $date_limit = date('Y-m-d H:i:s', strtotime('-240 days'));
 
         switch($req['order'][0]['column']) {
             case '0':
@@ -127,10 +127,13 @@ class AdminController extends Controller
                 ,projects.date_created
                 ,projects.last_modified
                 ,projects.active
+                ,unit_stakeholder.label
+                ,unit_stakeholder.full_name
                 ,projects.projects_id AS DT_RowId
                 ,count(distinct subjects.subjects_id) AS subjects_count
             FROM projects
             LEFT JOIN subjects ON subjects.projects_id = projects.projects_id
+            LEFT JOIN unit_stakeholder ON unit_stakeholder.unit_stakeholder_id = projects.stakeholder_guid
             WHERE 1 = 1
             AND projects.last_modified < '{$date_today}'
             AND projects.last_modified > '{$date_limit}'
@@ -171,9 +174,9 @@ class AdminController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
         // Today's date
-        $date_today = date('Y-m-d 00:00:00');
+        $date_today = date('Y-m-d H:i:s');
         // Date limit
-        $date_limit = date('Y-m-d 00:00:00', strtotime('-120 days'));
+        $date_limit = date('Y-m-d H:i:s', strtotime('-240 days'));
 
         switch($req['order'][0]['column']) {
             case '0':

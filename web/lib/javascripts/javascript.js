@@ -19,7 +19,7 @@ jQuery(document).ready(function($) {
    */
   $('select').chosen({
     max_selected_options: 1,
-    width: '35%',
+    width: '60%',
     allow_single_deselect: true,
     no_results_text: 'Oops, nothing found!'
   });
