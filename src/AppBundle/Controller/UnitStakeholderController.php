@@ -295,6 +295,7 @@ class UnitStakeholderController extends Controller
             `" . $this->id_field_name_raw . "` int(11) NOT NULL AUTO_INCREMENT,
             `" . $this->label_field_name_raw . "` varchar(255) NOT NULL DEFAULT '',
             `" . $this->full_name_field_name_raw . "` varchar(255) NOT NULL DEFAULT '',
+            `department_code` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
