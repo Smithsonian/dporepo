@@ -101,10 +101,12 @@ class UnitStakeholderController extends Controller
         if ($search) {
             $pdo_params[] = '%' . $search . '%';
             $pdo_params[] = '%' . $search . '%';
+            $pdo_params[] = '%' . $search . '%';
             $search_sql = "
                 AND (
                   " . $this->label_field_name . " LIKE ?
-                  " . $this->full_name_field_name . " LIKE ?
+                  OR " . $this->full_name_field_name . " LIKE ?
+                  OR " . $this->table_name . ".last_modified LIKE ?
                 ) ";
         }
 
