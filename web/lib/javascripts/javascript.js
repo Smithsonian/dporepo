@@ -14,6 +14,41 @@ jQuery(document).ready(function($) {
   }
 
   /**
+   * Checkbox toggle for records removal functionality within DataTables.
+   */
+  $('#remove-records-checkbox').click(function() {
+    $('input[name=manage_checkbox]').click();
+  });
+
+  /**
+   * Checkbox toggle for records removal functionality within DataTables.
+   */
+  $('.main').on('click', '#remove-records-button', function() {
+
+    swal({
+      title: "Remove Records",
+      text: "Are you sure you want to remove these records?",
+      type: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#DD6B55",
+      confirmButtonText: "Yes, Remove",
+      closeOnConfirm: true
+    },
+    function(){
+      var recordIds = [],
+          allCheckedCheckboxes = $('.main').find('input[name=manage_checkbox]:checkbox:checked');
+
+      allCheckedCheckboxes.each(function(e) {
+        var thisCheckbox = $(this);
+        recordIds.push(thisCheckbox.val());
+      });
+
+      document.location.href = '/admin/resources/unit_stakeholder/delete?ids=' + JSON.stringify(recordIds).replace('[','').replace(']','').replace(/"/g,'');
+    });
+
+  });
+
+  /**
    * Using the Chosen jQuery plugin for Select Form Fields
    * https://harvesthq.github.io/chosen/
    */

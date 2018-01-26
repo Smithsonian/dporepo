@@ -18,7 +18,7 @@
   <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
     <thead>
       <tr>
-        <th class="text-center">Remove?</th>
+        <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox" style="margin-right: 8px;"> Remove?</th>
         <th class="text-center">Label</th>
         <th class="text-center">Full Name</th>
         <th class="text-center">Last Modified</th>
@@ -78,13 +78,21 @@
         }
       });
 
+      var remove_button = $('<a />')
+        .addClass('btn btn-default btn-sm')
+        .attr('id', 'remove-records-button')
+        .attr('href', 'javascript:void(0);')
+        .attr('style', 'margin-bottom: 1.5rem; margin-right: 0.5rem;')
+        .html('<span class="glyphicon glyphicon-trash"></span> Remove Records');
+
       var add_button = $('<a />')
         .addClass('btn btn-default btn-sm')
         .attr('href', '/admin/resources/unit_stakeholder/manage')
         .attr('style', 'margin-bottom: 1.5rem;')
         .html('<span class="glyphicon glyphicon-plus"></span> Add a New Unit/Stakeholder');
 
-      $('.datatables_bulk_actions').append(add_button);
+
+      $('.datatables_bulk_actions').append(remove_button, add_button);
 
     });
   </script>
