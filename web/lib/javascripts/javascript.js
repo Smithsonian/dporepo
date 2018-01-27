@@ -25,18 +25,24 @@ jQuery(document).ready(function($) {
    */
   $('.main').on('click', '#remove-records-button', function() {
 
+    var allCheckedCheckboxes = $('.main').find('input[name=manage_checkbox]:checkbox:checked');
+
+    if(!allCheckedCheckboxes.length) {
+      swal('No Records Selected', 'Please choose at least one record.');
+      return;
+    }
+
     swal({
-      title: "Remove Records",
-      text: "Are you sure you want to remove these records?",
-      type: "warning",
+      title: 'Remove Records',
+      text: 'Are you sure you want to remove these records?',
+      type: 'warning',
       showCancelButton: true,
-      confirmButtonColor: "#DD6B55",
-      confirmButtonText: "Yes, Remove",
+      confirmButtonColor: '#DD6B55',
+      confirmButtonText: 'Yes, Remove',
       closeOnConfirm: true
     },
     function(){
-      var recordIds = [],
-          allCheckedCheckboxes = $('.main').find('input[name=manage_checkbox]:checkbox:checked');
+      var recordIds = [];
 
       allCheckedCheckboxes.each(function(e) {
         var thisCheckbox = $(this);
