@@ -104,7 +104,7 @@ class ProjectsController extends Controller
             $pdo_params[] = '%' . $search . '%';
             $pdo_params[] = '%' . $search . '%';
             $search_sql = "
-            WHERE (
+            AND (
                 projects.projects_label LIKE ?
                 OR projects.stakeholder_guid LIKE ?
                 OR projects.date_created LIKE ?
@@ -113,7 +113,8 @@ class ProjectsController extends Controller
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-                projects.projects_label
+                projects.projects_id as manage
+                ,projects.projects_label
                 ,projects.stakeholder_guid
                 ,projects.date_created
                 ,projects.last_modified
@@ -125,6 +126,7 @@ class ProjectsController extends Controller
             FROM projects
             LEFT JOIN subjects ON subjects.projects_id = projects.projects_id
             LEFT JOIN unit_stakeholder ON unit_stakeholder.unit_stakeholder_id = projects.stakeholder_guid
+            WHERE projects.active = 1
             {$search_sql}
             GROUP BY projects.projects_label, projects.stakeholder_guid, projects.date_created, projects.last_modified, projects.active, projects.projects_id
             {$sort}
@@ -412,6 +414,49 @@ class ProjectsController extends Controller
       $statement = $conn->prepare("SELECT * FROM unit_stakeholder ORDER BY label ASC");
       $statement->execute();
       return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Delete Multiple Projects
+     *
+     * Matches /admin/workspace/delete
+     *
+     * @Route("/admin/workspace/delete", name="projects_remove_records", methods={"GET"})
+     * Run a query to delete multiple records.
+     *
+     * @param   int     $ids      The record ids
+     * @param   object  $conn     Database connection object
+     * @param   object  $request  Request object
+     * @return  void
+     */
+    public function delete_multiple_projects(Connection $conn, Request $request)
+    {
+        $ids = $request->query->get('ids');
+
+        if(!empty($ids)) {
+
+          $ids_array = explode(',', $ids);
+
+          foreach ($ids_array as $key => $id) {
+
+            $statement = $conn->prepare("
+                UPDATE projects
+                SET active = 0, last_modified_user_account_id = :last_modified_user_account_id
+                WHERE projects_id = :id
+            ");
+            $statement->bindValue(":id", $id, PDO::PARAM_INT);
+            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
+            $statement->execute();
+
+          }
+
+          $this->addFlash('message', 'Records successfully removed.');
+
+        } else {
+          $this->addFlash('message', 'Missing data. No records removed.');
+        }
+
+        return $this->redirectToRoute('projects_browse');
     }
 
     /**
