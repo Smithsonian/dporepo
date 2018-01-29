@@ -21,7 +21,7 @@ jQuery(document).ready(function($) {
   });
 
   /**
-   * Checkbox toggle for records removal functionality within DataTables.
+   * Remove records button click handler.
    */
   $('.main').on('click', '#remove-records-button', function() {
 
@@ -49,7 +49,7 @@ jQuery(document).ready(function($) {
         recordIds.push(thisCheckbox.val());
       });
 
-      document.location.href = '/admin/resources/unit_stakeholder/delete?ids=' + JSON.stringify(recordIds).replace('[','').replace(']','').replace(/"/g,'');
+      document.location.href = window.location.href + 'delete?ids=' + JSON.stringify(recordIds).replace('[','').replace(']','').replace(/"/g,'');
     });
 
   });
