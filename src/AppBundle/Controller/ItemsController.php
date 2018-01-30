@@ -174,7 +174,8 @@ class ItemsController extends Controller
             FROM items
             LEFT JOIN status_types ON items.status_types_id = status_types.status_types_id
             LEFT JOIN datasets ON datasets.items_id = items.items_id
-            WHERE subjects_id = " . (int)$subjects_id . "
+            WHERE items.active = 1
+            AND subjects_id = " . (int)$subjects_id . "
             {$search_sql}
             GROUP BY items.subjects_id, items.subject_holder_item_id, item_description, items.status_types_id, items.date_created, items.last_modified, items.items_id
             {$sort}
@@ -372,6 +373,49 @@ class ItemsController extends Controller
 
         }
 
+    }
+
+    /**
+     * Delete Multiple Items
+     *
+     * @Route("/admin/projects/items/{projects_id}/{subjects_id}/delete", name="items_remove_records", methods={"GET"})
+     * Run a query to delete multiple records.
+     *
+     * @param   int     $ids      The record ids
+     * @param   object  $conn     Database connection object
+     * @param   object  $request  Request object
+     * @return  void
+     */
+    public function delete_multiple_items(Connection $conn, Request $request)
+    {
+        $ids = $request->query->get('ids');
+        $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
+        $subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
+
+        if(!empty($ids) && $projects_id && $subjects_id) {
+
+          $ids_array = explode(',', $ids);
+
+          foreach ($ids_array as $key => $id) {
+
+            $statement = $conn->prepare("
+                UPDATE items
+                SET active = 0, last_modified_user_account_id = :last_modified_user_account_id
+                WHERE items_id = :id
+            ");
+            $statement->bindValue(":id", $id, PDO::PARAM_INT);
+            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
+            $statement->execute();
+
+          }
+
+          $this->addFlash('message', 'Records successfully removed.');
+
+        } else {
+          $this->addFlash('message', 'Missing data. No records removed.');
+        }
+
+        return $this->redirectToRoute('items_browse', array('projects_id' => $projects_id, 'subjects_id' => $subjects_id));
     }
 
     /**

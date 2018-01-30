@@ -55,6 +55,7 @@
           <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
               <tr>
+                <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
                 <th class="text-center">Request Download</th>
                 <th class="text-center">Item Name</th>
                 <th class="text-center">Item Description</th>
@@ -82,6 +83,7 @@
       $('#browse').dataTable( {
           "columns": [
               { "data": "manage" },
+              { "data": "manage" },
               { "data": "item_name" },
               { "data": "item_description" },
               { "data": "subject_holder_item_id" },
@@ -90,7 +92,8 @@
               { "data": "last_modified" },
               { "data": "status_label" }
             ],
-          "dom": '<"wrapper"fli><"col-sm-3 col-md-3 datatables_bulk_actions">pt<"bottom"ip><"clear">',
+          // "dom": '<"wrapper"fli><"col-sm-3 col-md-3 datatables_bulk_actions">pt<"bottom"ip><"clear">',
+          "dom": '<"wrapper"fli>p<"datatables_bulk_actions">t<"bottom"ip><"clear">',
           "pagingType": "simple_numbers",
           "stateSave": true,
           "order": [[1,"desc"]],
@@ -107,15 +110,18 @@
           "lengthMenu":[10,50,100,500],
           // Set some widths.
           "aoColumnDefs":[
-              {"sWidth":"100px", "aTargets":[0]}
-              ,{"bSortable":false, "aTargets":[0]}
+              {"sWidth":"112px","aTargets":[0]},
+              {"bSortable":false,"aTargets":[0]}
           ],
           "fnRowCallback":function(nRow, aData, iDisplayIndex) {
-            // Create the checkboxes.
-            $(nRow).find('td:eq(0)').html(
-              "<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
-            )
-            .addClass("manage_column");
+            // Create the delete record checkboxes.
+            $(nRow).find('td:eq(0)')
+              .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+              .addClass("manage_column");
+            // Create the download checkboxes.
+            $(nRow).find('td:eq(1)')
+              .html("<input type='checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
+              .addClass("manage_column");
           }
         });
 
@@ -130,13 +136,13 @@
         }
       });
 
-      var delete_button = $("<button></button>")
+      var downloadButton = $("<button></button>")
         .addClass("btn btn-default btn-sm glyphicon glyphicon-download-alt")
-        .attr('style', 'margin-bottom: 0.5rem; width: 13.5rem;')
+        .attr('style', 'margin-bottom: 0.5rem; width: 12.8rem;')
         .on("click", function(){
 
           var download_ids = new Array;
-          $('#browse [name="manage_checkbox"]:checked').each(function(){
+          $('#browse [name="download_checkbox"]:checked').each(function(){
             download_ids.push($(this).val());
           });
 
@@ -166,7 +172,7 @@
           }
         });
 
-      $(".datatables_bulk_actions").append(delete_button);
+      $(".datatables_bulk_actions").append(downloadButton);
 
     });
   </script>
