@@ -42,6 +42,7 @@ jQuery(document).ready(function($) {
       closeOnConfirm: true
     },
     function(){
+
       var recordIds = [];
 
       allCheckedCheckboxes.each(function(e) {
@@ -49,7 +50,11 @@ jQuery(document).ready(function($) {
         recordIds.push(thisCheckbox.val());
       });
 
-      document.location.href = window.location.href + 'delete?ids=' + JSON.stringify(recordIds).replace('[','').replace(']','').replace(/"/g,'');
+      var recordIdsString = JSON.stringify(recordIds).replace('[','').replace(']','').replace(/"/g,''),
+          urlSlash = (currentPath.join('/') !== 'admin/workspace/') ? '/' : '';
+
+      // console.log(window.location.origin + '/' + currentPath.join('/') + urlSlash + 'delete?ids=' + recordIdsString);
+      document.location.href = window.location.origin + '/' + currentPath.join('/') + urlSlash + 'delete?ids=' + recordIdsString;
     });
 
   });

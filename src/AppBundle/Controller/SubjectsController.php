@@ -37,7 +37,7 @@ class SubjectsController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/subjects/{projects_id}", name="subjects_browse", methods="GET")
+     * @Route("/admin/projects/subjects/{projects_id}", name="subjects_browse", methods="GET", requirements={"projects_id"="\d+"})
      */
     public function browse_subjects(Connection $conn, Request $request, ProjectsController $projects)
     {
@@ -136,7 +136,8 @@ class SubjectsController extends Controller
               ,count(distinct items.items_id) AS items_count
           FROM subjects
           LEFT JOIN items ON items.subjects_id = subjects.subjects_id
-          WHERE projects_id = " . (int)$projects_id . "
+          WHERE subjects.active = 1
+          AND projects_id = " . (int)$projects_id . "
           {$search_sql}
           GROUP BY subjects.holding_entity_guid, subjects.subject_holder_subject_id, subjects.subject_name, subjects.subject_description, subjects.subject_type_lookup_id, subjects.last_modified, subjects.active, subjects.subjects_id
           {$sort}
@@ -379,6 +380,48 @@ class SubjectsController extends Controller
 
         }
 
+    }
+
+    /**
+     * Delete Multiple Subjects
+     *
+     * @Route("/admin/projects/subjects/{projects_id}/delete", name="subjects_remove_records", methods={"GET"})
+     * Run a query to delete multiple records.
+     *
+     * @param   int     $ids      The record ids
+     * @param   object  $conn     Database connection object
+     * @param   object  $request  Request object
+     * @return  void
+     */
+    public function delete_multiple_subjects(Connection $conn, Request $request)
+    {
+        $ids = $request->query->get('ids');
+        $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
+
+        if(!empty($ids) && $projects_id) {
+
+          $ids_array = explode(',', $ids);
+
+          foreach ($ids_array as $key => $id) {
+
+            $statement = $conn->prepare("
+                UPDATE subjects
+                SET active = 0, last_modified_user_account_id = :last_modified_user_account_id
+                WHERE subjects_id = :id
+            ");
+            $statement->bindValue(":id", $id, PDO::PARAM_INT);
+            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
+            $statement->execute();
+
+          }
+
+          $this->addFlash('message', 'Records successfully removed.');
+
+        } else {
+          $this->addFlash('message', 'Missing data. No records removed.');
+        }
+
+        return $this->redirectToRoute('subjects_browse', array('projects_id' => $projects_id));
     }
 
     /**
