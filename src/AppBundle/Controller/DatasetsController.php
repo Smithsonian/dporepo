@@ -530,8 +530,12 @@ class DatasetsController extends Controller
 
             $statement = $conn->prepare("
                 UPDATE datasets
-                SET active = 0, last_modified_user_account_id = :last_modified_user_account_id
-                WHERE datasets_id = :id
+                LEFT JOIN dataset_elements ON dataset_elements.datasets_id = datasets.datasets_id
+                SET datasets.active = 0,
+                    datasets.last_modified_user_account_id = :last_modified_user_account_id,
+                    dataset_elements.active = 0,
+                    dataset_elements.last_modified_user_account_id = :last_modified_user_account_id
+                WHERE datasets.datasets_id = :id
             ");
             $statement->bindValue(":id", $id, PDO::PARAM_INT);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);

@@ -441,8 +441,21 @@ class ProjectsController extends Controller
 
             $statement = $conn->prepare("
                 UPDATE projects
-                SET active = 0, last_modified_user_account_id = :last_modified_user_account_id
-                WHERE projects_id = :id
+                LEFT JOIN subjects ON subjects.projects_id = projects.projects_id
+                LEFT JOIN items ON items.subjects_id = subjects.subjects_id
+                LEFT JOIN datasets ON datasets.items_id = items.items_id
+                LEFT JOIN dataset_elements ON dataset_elements.datasets_id = datasets.datasets_id
+                SET projects.active = 0,
+                    projects.last_modified_user_account_id = :last_modified_user_account_id,
+                    subjects.active = 0,
+                    subjects.last_modified_user_account_id = :last_modified_user_account_id,
+                    items.active = 0,
+                    items.last_modified_user_account_id = :last_modified_user_account_id,
+                    datasets.active = 0,
+                    datasets.last_modified_user_account_id = :last_modified_user_account_id,
+                    dataset_elements.active = 0,
+                    dataset_elements.last_modified_user_account_id = :last_modified_user_account_id
+                WHERE projects.projects_id = :id
             ");
             $statement->bindValue(":id", $id, PDO::PARAM_INT);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
