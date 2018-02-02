@@ -135,7 +135,8 @@ class DatasetElementsController extends Controller
                 ,dataset_elements.last_modified
                 ,dataset_elements.datasets_id AS DT_RowId
             FROM dataset_elements
-            WHERE datasets_id = " . (int)$datasets_id . "
+            WHERE dataset_elements.active = 1
+            AND datasets_id = " . (int)$datasets_id . "
             {$search_sql}
             {$sort}
             {$limit_sql}");
@@ -350,6 +351,51 @@ class DatasetElementsController extends Controller
         $statement = $conn->prepare("SELECT * FROM calibration_object_types ORDER BY label ASC");
         $statement->execute();
         return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Delete Multiple Dataset Elements
+     *
+     * @Route("/admin/projects/dataset_elements/{projects_id}/{subjects_id}/{items_id}/{datasets_id}/delete", name="dataset_elements_remove_records", methods={"GET"})
+     * Run a query to delete multiple records.
+     *
+     * @param   int     $ids      The record ids
+     * @param   object  $conn     Database connection object
+     * @param   object  $request  Request object
+     * @return  void
+     */
+    public function delete_multiple_datasets(Connection $conn, Request $request)
+    {
+        $ids = $request->query->get('ids');
+        $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
+        $subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
+        $items_id = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;
+        $datasets_id = !empty($request->attributes->get('datasets_id')) ? $request->attributes->get('datasets_id') : false;
+
+        if(!empty($ids) && $projects_id && $subjects_id && $items_id && $datasets_id) {
+
+          $ids_array = explode(',', $ids);
+
+          foreach ($ids_array as $key => $id) {
+
+            $statement = $conn->prepare("
+                UPDATE dataset_elements
+                SET active = 0, last_modified_user_account_id = :last_modified_user_account_id
+                WHERE dataset_elements_id = :id
+            ");
+            $statement->bindValue(":id", $id, PDO::PARAM_INT);
+            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
+            $statement->execute();
+
+          }
+
+          $this->addFlash('message', 'Records successfully removed.');
+
+        } else {
+          $this->addFlash('message', 'Missing data. No records removed.');
+        }
+
+        return $this->redirectToRoute('dataset_elements_browse', array('projects_id' => $projects_id, 'subjects_id' => $subjects_id, 'items_id' => $items_id, 'datasets_id' => $datasets_id));
     }
 
     /**
