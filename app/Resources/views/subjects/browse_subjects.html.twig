@@ -2,8 +2,8 @@
 
 {% block stylesheets %}
   {{ parent() }}
-  <link href="//cdn.datatables.net/plug-ins/3cfcc339e89/integration/bootstrap/3/dataTables.bootstrap.css" rel="stylesheet" type="text/css" />
-  <link href="{{ asset('lib/javascripts/DataTables-extended/css/bootstrap_datatables.css') }}" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.dataTables.min.css" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -71,8 +71,9 @@
 {% endblock %}
 {% block js_bottom %}
   {{ parent() }}
-  <script src="//cdn.datatables.net/1.10.4/js/jquery.dataTables.min.js"></script>
-  <script src="//cdn.datatables.net/plug-ins/3cfcc339e89/integration/bootstrap/3/dataTables.bootstrap.js"></script>
+  <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
   <script type="text/javascript">
     $(document).ready(function() {
       $('#browse').dataTable( {
@@ -81,12 +82,9 @@
               { "data": "subject_name" },
               { "data": "subject_description" },
               { "data": "holding_entity_guid" },
-              // { "data": "location_information" },
               { "data": "items_count" },
-              // { "data": "manage" },
               { "data": "last_modified" }
             ],
-          // "dom": '<"wrapper"fli><"col-sm-3 col-md-3 datatables_bulk_actions">pt<"bottom"ip><"clear">',
           "dom": '<"wrapper"fli>p<"datatables_bulk_actions">t<"bottom"ip><"clear">',
           "pagingType": "simple_numbers",
           "stateSave": true,
@@ -104,9 +102,7 @@
           "lengthMenu":[10,50,100,500],
           // Set some widths.
           "aoColumnDefs":[
-              // {"sWidth":"250px","aTargets":[0]},
-              // {"bSortable":false,"aTargets":[0]}
-              {"sWidth":"112px","aTargets":[0]},
+              {"sWidth":"105px","aTargets":[0]},
               {"bSortable":false,"aTargets":[0]}
           ],
           "fnRowCallback":function(nRow, aData, iDisplayIndex) {

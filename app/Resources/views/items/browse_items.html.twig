@@ -2,8 +2,8 @@
 
 {% block stylesheets %}
   {{ parent() }}
-  <link href="//cdn.datatables.net/plug-ins/3cfcc339e89/integration/bootstrap/3/dataTables.bootstrap.css" rel="stylesheet" type="text/css" />
-  <link href="{{ asset('lib/javascripts/DataTables-extended/css/bootstrap_datatables.css') }}" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.dataTables.min.css" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -56,7 +56,7 @@
             <thead>
               <tr>
                 <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
-                <th class="text-center">Request Download</th>
+                <th class="text-center">Download</th>
                 <th class="text-center">Item Name</th>
                 <th class="text-center">Item Description</th>
                 <th class="text-center">Authoritative Item ID</th>
@@ -76,67 +76,80 @@
 {% endblock %}
 {% block js_bottom %}
   {{ parent() }}
-  <script src="//cdn.datatables.net/1.10.4/js/jquery.dataTables.min.js"></script>
-  <script src="//cdn.datatables.net/plug-ins/3cfcc339e89/integration/bootstrap/3/dataTables.bootstrap.js"></script>
+  <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
   <script type="text/javascript">
     $(document).ready(function() {
-      $('#browse').dataTable( {
-          "columns": [
-              { "data": "manage" },
-              { "data": "manage" },
-              { "data": "item_name" },
-              { "data": "item_description" },
-              { "data": "subject_holder_item_id" },
-              { "data": "datasets_count" },
-              { "data": "date_created" },
-              { "data": "last_modified" },
-              { "data": "status_label" }
-            ],
-          // "dom": '<"wrapper"fli><"col-sm-3 col-md-3 datatables_bulk_actions">pt<"bottom"ip><"clear">',
-          "dom": '<"wrapper"fli>p<"datatables_bulk_actions">t<"bottom"ip><"clear">',
-          "pagingType": "simple_numbers",
-          "stateSave": true,
-          "order": [[1,"desc"]],
-          // Show processing throbber.
-          "processing": true,
-          "serverMethod": "POST",
-          // All data management will be done on the server side.
-          "serverSide": true,
-          // Path to the file that is going to handle the queries.
-          "ajax": "/admin/projects/datatables_browse_items/{{ projects_id }}/{{ subjects_id }}",
-          // Method type.
-          "serverMethod": "POST",
-          // Values in the length dropdown.
-          "lengthMenu":[10,50,100,500],
-          // Set some widths.
-          "aoColumnDefs":[
-              {"sWidth":"112px","aTargets":[0]},
-              {"bSortable":false,"aTargets":[0]}
-          ],
-          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
-            // Create the delete record checkboxes.
-            $(nRow).find('td:eq(0)')
-              .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
-              .addClass("manage_column");
-            // Create the download checkboxes.
-            $(nRow).find('td:eq(1)')
-              .html("<input type='checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
-              .addClass("manage_column");
-          }
-        });
 
-      // Send to details page when clicked.
-      var details_page = "/admin/projects/datasets/";
-      $('#browse tbody').on('click','td',function(event){
-        if(!$(this).hasClass("manage_column")){
-          var items_id = $(this).closest("tr").attr('id');
-          var projects_id = "{{ projects_id }}";
-          var subjects_id = "{{ subjects_id }}";
-          window.location.href = details_page + projects_id + '/' + subjects_id + '/' + items_id;
+      var projects_id = "{{ projects_id }}",
+          subjects_id = "{{ subjects_id }}",
+          details_page = "/admin/projects/datasets/";
+
+      $('#browse').dataTable( {
+        "columns": [
+            { "data": "manage" },
+            { "data": "manage" },
+            { "data": "item_name" },
+            { "data": "item_description" },
+            { "data": "subject_holder_item_id" },
+            { "data": "datasets_count" },
+            { "data": "date_created" },
+            { "data": "last_modified" },
+            { "data": "status_label" }
+          ],
+        // "dom": '<"wrapper"fli><"col-sm-3 col-md-3 datatables_bulk_actions">pt<"bottom"ip><"clear">',
+        "dom": '<"wrapper"fli>p<"datatables_bulk_actions">t<"bottom"ip><"clear">',
+        "pagingType": "simple_numbers",
+        "stateSave": true,
+        "order": [[1,"desc"]],
+        // Show processing throbber.
+        "processing": true,
+        "serverMethod": "POST",
+        // All data management will be done on the server side.
+        "serverSide": true,
+        // Path to the file that is going to handle the queries.
+        "ajax": "/admin/projects/datatables_browse_items/{{ projects_id }}/{{ subjects_id }}",
+        // Method type.
+        "serverMethod": "POST",
+        // Values in the length dropdown.
+        "lengthMenu":[10,50,100,500],
+        // Set some widths.
+        "aoColumnDefs":[
+            {"sWidth":"105px","aTargets":[0]},
+            {"sWidth":"92px","aTargets":[1]},
+            {"bSortable":false,"aTargets":[0]}
+        ],
+        "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+
+          // This table row.
+          var thisTableRow = $(nRow);
+
+          // Create the delete record checkboxes.
+          thisTableRow.find('td:eq(0)')
+            .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+            .addClass("manage_column");
+
+          // Create the download checkboxes.
+          thisTableRow.find('td:eq(1)')
+            .html("<input type='checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
+            .addClass("manage_column");
+
+          // Send to details page when clicked.
+          thisTableRow.find('td').click(function() {
+            // This table cell.
+            var thisTableCell = $(this);
+            // Don't do anything if the table cell has the 'manage_column' CSS class.
+            if(thisTableCell.hasClass('manage_column')) return;
+            // Send to the details page.
+            var items_id = thisTableCell.closest("tr").attr('id');
+            window.location.href = details_page + projects_id + '/' + subjects_id + '/' + items_id;
+          });
+
         }
       });
 
-      var downloadButton = $("<button></button>")
+      var request_download_button = $("<button></button>")
         .addClass("btn btn-default btn-sm glyphicon glyphicon-download-alt")
         .attr('style', 'margin-bottom: 0.5rem; width: 12.8rem;')
         .on("click", function(){
@@ -172,7 +185,7 @@
           }
         });
 
-      $(".datatables_bulk_actions").append(downloadButton);
+      $(".datatables_bulk_actions").append(request_download_button);
 
     });
   </script>

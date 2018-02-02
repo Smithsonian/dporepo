@@ -3,6 +3,7 @@
 {% block stylesheets %}
   {{ parent() }}
   <link href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.dataTables.min.css" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -32,6 +33,8 @@
 {% block js_bottom %}
   {{ parent() }}
   <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
   <script type="text/javascript">
     $(document).ready(function() {
       $('#browse').dataTable({
@@ -60,7 +63,7 @@
           "lengthMenu":[10,50,100,500],
           // Set some widths.
           "columnDefs":[
-            {"sWidth":"112px","aTargets":[0]},
+            {"sWidth":"105px","aTargets":[0]},
             {"bSortable":false,"aTargets":[0]}
           ],
           "fnRowCallback":function(nRow, aData, iDisplayIndex) {
