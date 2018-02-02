@@ -55,7 +55,8 @@
           <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
               <tr>
-                <th class="text-center">Request Download</th>
+                <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
+                <th class="text-center">Download</th>
                 <th class="text-center">Dataset Guid</th>
                 <th class="text-center">Capture Method Lookup ID</th>
                 <th class="text-center">Dataset Type Lookup ID</th>
@@ -94,99 +95,115 @@
   <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
   <script type="text/javascript">
     $(document).ready(function() {
-      $('#browse').dataTable({
-          "columns": [
-            { "data": "manage" },
-            { "data": "dataset_guid" },
-            { "data": "capture_method_lookup_id" },
-            { "data": "dataset_type_lookup_id" },
-            { "data": "dataset_name" },
-            { "data": "collected_by" },
-            { "data": "collected_by_guid" },
-            { "data": "date_of_capture" },
-            { "data": "dataset_description" },
-            { "data": "dataset_collection_notes" },
-            { "data": "item_position_type_lookup_id" },
-            { "data": "positionally_matched_sets_id" },
-            { "data": "motion_control" },
-            { "data": "focus_lookup_id" },
-            { "data": "light_source" },
-            { "data": "light_source_type_lookup_id" },
-            { "data": "scale_bars_used" },
-            { "data": "background_removal_method_lookup_id" },
-            { "data": "camera_cluster_type_lookup_id" },
-            { "data": "array_geometry_id" },
-            { "data": "date_created" },
-            { "data": "last_modified" }
-          ],
-          "dom": 'Bfrtipt',
-          "pagingType": "simple_numbers",
-          "stateSave": true,
-          "order": [[1,"desc"]],
-          // Show processing throbber.
-          "processing": true,
-          "serverMethod": "POST",
-          // All data management will be done on the server side.
-          "serverSide": true,
-          // Path to the file that is going to handle the queries.
-          "ajax": "/admin/projects/datatables_browse_datasets/{{ projects_id }}/{{ subjects_id }}/{{ items_id }}",
-          // Method type.
-          "serverMethod": "POST",
-          // Values in the length dropdown.
-          "lengthMenu":[10,50,100,500],
-          // Set some widths.
-          "columnDefs":[
-            {"sWidth": "100px", "aTargets": [0]},
-            {"bSortable": false, "aTargets": [0]},
-            {
-              "targets": [ 1, 2, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 ],
-              "visible": false,
-              "searchable": true
-            },
-            {
-              "targets": [ -1 ],
-              "visible": false
-            }
-          ],
-          buttons: [
-            {
-              extend: 'colvis',
-              collectionLayout: 'fixed four-column',
-              postfixButtons: [ 'colvisRestore' ]
-            }
-          ],
-          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
-            // Create the checkboxes.
-            $(nRow).find('td:eq(0)').html(
-              "<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
-            )
-            .addClass("manage_column");
-          }
-        });
 
-      // Send to details page when clicked.
-      var details_page = "/admin/projects/dataset_elements/";
-      $('#browse tbody').on('click','td',function(event){
-        if(!$(this).hasClass("manage_column")){
-          var projects_id = "{{ projects_id }}";
-          var subjects_id = "{{ subjects_id }}";
-          var items_id = "{{ items_id }}";
-          var datasets_id = $(this).closest("tr").attr('id');
-          window.location.href = details_page + projects_id + '/' + subjects_id + '/' + items_id + '/' + datasets_id;
+      var projects_id = "{{ projects_id }}",
+          subjects_id = "{{ subjects_id }}",
+          items_id = "{{ items_id }}",
+          details_page = "/admin/projects/dataset_elements/";
+
+      $("#browse").dataTable({
+        "columns": [
+          { "data": "manage" },
+          { "data": "manage" },
+          { "data": "dataset_guid" },
+          { "data": "capture_method_lookup_id" },
+          { "data": "dataset_type_lookup_id" },
+          { "data": "dataset_name" },
+          { "data": "collected_by" },
+          { "data": "collected_by_guid" },
+          { "data": "date_of_capture" },
+          { "data": "dataset_description" },
+          { "data": "dataset_collection_notes" },
+          { "data": "item_position_type_lookup_id" },
+          { "data": "positionally_matched_sets_id" },
+          { "data": "motion_control" },
+          { "data": "focus_lookup_id" },
+          { "data": "light_source" },
+          { "data": "light_source_type_lookup_id" },
+          { "data": "scale_bars_used" },
+          { "data": "background_removal_method_lookup_id" },
+          { "data": "camera_cluster_type_lookup_id" },
+          { "data": "array_geometry_id" },
+          { "data": "date_created" },
+          { "data": "last_modified" }
+        ],
+        // "dom": 'Bfrtipt',
+        "dom": '<"wrapper"Bfli>p<"datatables_bulk_actions">t<"bottom"ip><"clear">',
+        "pagingType": "simple_numbers",
+        "stateSave": true,
+        "order": [[1,"desc"]],
+        // Show processing throbber.
+        "processing": true,
+        "serverMethod": "POST",
+        // All data management will be done on the server side.
+        "serverSide": true,
+        // Path to the file that is going to handle the queries.
+        "ajax": "/admin/projects/datatables_browse_datasets/{{ projects_id }}/{{ subjects_id }}/{{ items_id }}",
+        // Method type.
+        "serverMethod": "POST",
+        // Values in the length dropdown.
+        "lengthMenu":[10,50,100,500],
+        // Set some widths.
+        "columnDefs":[
+          {"sWidth":"106px","aTargets":[0,1]},
+          {"bSortable":false,"aTargets":[0]},
+          {
+            "targets": [ 1, 2, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 ],
+            "visible": false,
+            "searchable": true
+          },
+          {
+            "targets": [ -1 ],
+            "visible": false
+          }
+        ],
+        buttons: [
+          {
+            extend: 'colvis',
+            collectionLayout: 'fixed four-column',
+            postfixButtons: [ 'colvisRestore' ]
+          }
+        ],
+        "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+
+          // This table row.
+          var thisTableRow = $(nRow);
+
+          // Create the delete record checkboxes.
+          thisTableRow.find('td:eq(0)')
+            .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+            .addClass("manage_column");
+
+          // Create the download checkboxes.
+          thisTableRow.find('td:eq(1)')
+            .html("<input type='checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
+            .addClass("manage_column");
+
+          // Send to details page when clicked.
+          thisTableRow.find('td').click(function() {
+            // This table cell.
+            var thisTableCell = $(this);
+            // Don't do anything if the table cell has the 'manage_column' CSS class.
+            if(thisTableCell.hasClass('manage_column')) return;
+            // Send to the details page.
+            var datasets_id = thisTableCell.closest("tr").attr('id');
+            window.location.href = details_page + projects_id + '/' + subjects_id + '/' + items_id + '/' + datasets_id;
+          });
+
         }
       });
 
       var request_download_button = $('<button></button>')
         .addClass('btn btn-default btn-sm glyphicon glyphicon-download-alt')
-        .attr('style', 'margin-bottom: 0.5rem; width: 13.5rem;')
+        .attr('style', 'margin-bottom: 0.5rem; width: 14.3rem;')
         .on('click', function(){
 
-          var delete_ids = new Array;
-          $('#browse [name="manage_checkbox"]:checked').each(function(){
-            delete_ids.push($(this).val());
+          var download_ids = new Array;
+          $('#browse [name="download_checkbox"]:checked').each(function(){
+            download_ids.push($(this).val());
           });
 
-          if(delete_ids.length > 0) {
+          if(download_ids.length > 0) {
 
             swal({
               title: "Send Download Request",
@@ -202,12 +219,9 @@
             });
 
           }
-        });
+      });
 
-      var buttonDiv = $('<div />').attr('style', 'clear: both;');
-      buttonDiv.append(request_download_button);
-
-      $("#browse").before(buttonDiv);
+      $(".datatables_bulk_actions").append(request_download_button);
 
     });
   </script>

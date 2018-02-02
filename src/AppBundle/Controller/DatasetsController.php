@@ -179,7 +179,8 @@ class DatasetsController extends Controller
               ,datasets.last_modified
               ,datasets.datasets_id AS DT_RowId
           FROM datasets
-          WHERE items_id = " . (int)$items_id . "
+          WHERE datasets.active = 1
+          AND items_id = " . (int)$items_id . "
           {$search_sql}
           {$sort}
           {$limit_sql}");
@@ -501,6 +502,50 @@ class DatasetsController extends Controller
       $statement = $conn->prepare("SELECT * FROM camera_cluster_types ORDER BY label ASC");
       $statement->execute();
       return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Delete Multiple Datasets
+     *
+     * @Route("/admin/projects/datasets/{projects_id}/{subjects_id}/{items_id}/delete", name="datasets_remove_records", methods={"GET"})
+     * Run a query to delete multiple records.
+     *
+     * @param   int     $ids      The record ids
+     * @param   object  $conn     Database connection object
+     * @param   object  $request  Request object
+     * @return  void
+     */
+    public function delete_multiple_datasets(Connection $conn, Request $request)
+    {
+        $ids = $request->query->get('ids');
+        $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
+        $subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
+        $items_id = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;
+
+        if(!empty($ids) && $projects_id && $subjects_id && $items_id) {
+
+          $ids_array = explode(',', $ids);
+
+          foreach ($ids_array as $key => $id) {
+
+            $statement = $conn->prepare("
+                UPDATE datasets
+                SET active = 0, last_modified_user_account_id = :last_modified_user_account_id
+                WHERE datasets_id = :id
+            ");
+            $statement->bindValue(":id", $id, PDO::PARAM_INT);
+            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
+            $statement->execute();
+
+          }
+
+          $this->addFlash('message', 'Records successfully removed.');
+
+        } else {
+          $this->addFlash('message', 'Missing data. No records removed.');
+        }
+
+        return $this->redirectToRoute('datasets_browse', array('projects_id' => $projects_id, 'subjects_id' => $subjects_id, 'items_id' => $items_id));
     }
 
     /**
