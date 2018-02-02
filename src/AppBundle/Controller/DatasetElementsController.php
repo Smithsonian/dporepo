@@ -124,7 +124,7 @@ class DatasetElementsController extends Controller
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-                dataset_elements.datasets_id AS manage
+                dataset_elements.dataset_elements_id AS manage
                 ,dataset_elements.dataset_element_guid
                 ,dataset_elements.camera_id
                 ,dataset_elements.camera_capture_position_id
@@ -133,7 +133,7 @@ class DatasetElementsController extends Controller
                 ,dataset_elements.camera_body
                 ,dataset_elements.lens
                 ,dataset_elements.last_modified
-                ,dataset_elements.datasets_id AS DT_RowId
+                ,dataset_elements.dataset_elements_id AS DT_RowId
             FROM dataset_elements
             WHERE dataset_elements.active = 1
             AND datasets_id = " . (int)$datasets_id . "
