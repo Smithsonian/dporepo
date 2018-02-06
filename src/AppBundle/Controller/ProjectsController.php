@@ -16,6 +16,9 @@ use GUMP;
 use AppBundle\Utils\GumpParseErrors;
 use AppBundle\Utils\AppUtilities;
 
+// Subjects methods
+use AppBundle\Controller\SubjectsController;
+
 class ProjectsController extends Controller
 {
     /**
@@ -331,24 +334,28 @@ class ProjectsController extends Controller
      *
      * @Route("/admin/projects/get_stakeholder_projects/{stakeholder_guid}", name="get_stakeholder_projects_tree_browser", methods="GET")
      */
-    public function get_stakeholder_projects_tree_browser(Connection $conn, Request $request)
+    public function get_stakeholder_projects_tree_browser(Connection $conn, Request $request, SubjectsController $subjects)
     {
-      $data = array();
-      $stakeholder_guid = !empty($request->attributes->get('stakeholder_guid')) ? $request->attributes->get('stakeholder_guid') : false;
-      $projects = $this->get_projects_by_stakeholder_guid($conn, $stakeholder_guid);
+        $data = array();
+        $stakeholder_guid = !empty($request->attributes->get('stakeholder_guid')) ? $request->attributes->get('stakeholder_guid') : false;
+        $projects = $this->get_projects_by_stakeholder_guid($conn, $stakeholder_guid);
 
-      foreach ($projects as $key => $value) {
-          $data[$key]['id'] = $value['projects_id'];
-          $data[$key]['text'] = $value['projects_label'];
-          $data[$key]['children'] = true;
-          $data[$key]['a_attr']['href'] = '/admin/projects/subjects/' . $value['projects_id'];
-      }
+        foreach ($projects as $key => $value) {
 
-      // $this->u->dumper($data);
+            // Check for child dataset records so the 'children' key can be set accordingly.
+            $subject_data = $subjects->get_subjects($conn, (int)$value['projects_id']);
 
-      // dump(json_encode($data, JSON_PRETTY_PRINT));
-      $response = new JsonResponse($data);
-      return $response;
+            $data[$key] = array(
+                'id' => 'projectId-' . $value['projects_id'],
+                'text' => $value['projects_label'],
+                'children' => count($subject_data) ? true : false,
+                'a_attr' => array('href' => '/admin/projects/subjects/' . $value['projects_id']),
+            );
+            
+        }
+
+        $response = new JsonResponse($data);
+        return $response;
     }
 
     /**

@@ -18,6 +18,8 @@ use AppBundle\Utils\AppUtilities;
 
 // Projects methods
 use AppBundle\Controller\ProjectsController;
+// Items methods
+use AppBundle\Controller\ItemsController;
 
 class SubjectsController extends Controller
 {
@@ -279,25 +281,28 @@ class SubjectsController extends Controller
      *
      * @Route("/admin/projects/get_subjects/{projects_id}/{number_first}", name="get_subjects_tree_browser", methods="GET", defaults={"number_first" = false})
      */
-    public function get_subjects_tree_browser(Connection $conn, Request $request)
+    public function get_subjects_tree_browser(Connection $conn, Request $request, ItemsController $items)
     {      
       $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
       $subjects = $this->get_subjects($conn, $projects_id);
 
-      // $this->u->dumper($request->attributes->get('number_first'));
-
       foreach ($subjects as $key => $value) {
 
+          // Check for child dataset records so the 'children' key can be set accordingly.
+          $item_data = $items->get_items($conn, (int)$value['subjects_id']);
+
+          $data[$key] = array(
+            'id' => 'subjectId-' . $value['subjects_id'],
+            'children' => count($item_data) ? true : false,
+            'a_attr' => array('href' => '/admin/projects/items/' . $projects_id . '/' . $value['subjects_id']),
+          );
+          
           if($request->attributes->get('number_first') === 'true') {
               $data[$key]['text'] = $value['subject_holder_subject_id'] . ' - ' . $value['subject_name'];
           } else {
               $data[$key]['text'] = $value['subject_name'] . ' - ' . $value['subject_holder_subject_id'];
           }
-          
-          $data[$key]['a_attr']['href'] = '/admin/projects/items/' . $projects_id . '/' . $value['subjects_id'];
       }
-
-      // dump(json_encode($data, JSON_PRETTY_PRINT));
 
       $response = new JsonResponse($data);
       return $response;

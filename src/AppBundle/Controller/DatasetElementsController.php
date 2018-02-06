@@ -4,6 +4,7 @@ namespace AppBundle\Controller;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
@@ -316,12 +317,65 @@ class DatasetElementsController extends Controller
      */
     public function get_dataset_elements($datasets_id = false, $conn)
     {
-      $statement = $conn->prepare("SELECT *
-          FROM dataset_elements
-          WHERE datasets_id = :datasets_id");
-      $statement->bindValue(":datasets_id", $datasets_id, PDO::PARAM_INT);
-      $statement->execute();
-      return $statement->fetchAll(PDO::FETCH_ASSOC);
+        $statement = $conn->prepare("
+            SELECT
+                projects.projects_id,
+                subjects.subjects_id,
+                items.items_id,
+                dataset_elements.datasets_id,
+                dataset_elements.dataset_elements_id,
+                dataset_elements.dataset_element_guid,
+                dataset_elements.camera_id,
+                dataset_elements.camera_capture_position_id,
+                dataset_elements.cluster_position_id,
+                dataset_elements.exif_data_placeholder,
+                dataset_elements.calibration_object_type_id,
+                dataset_elements.camera_body,
+                dataset_elements.lens,
+                dataset_elements.date_created,
+                dataset_elements.created_by_user_account_id,
+                dataset_elements.last_modified,
+                dataset_elements.last_modified_user_account_id,
+                dataset_elements.active
+            FROM dataset_elements
+            LEFT JOIN datasets ON datasets.datasets_id = dataset_elements.datasets_id
+            LEFT JOIN items ON items.items_id = datasets.items_id
+            LEFT JOIN subjects ON subjects.subjects_id = items.subjects_id
+            LEFT JOIN projects ON projects.projects_id = subjects.projects_id
+            WHERE dataset_elements.datasets_id = :datasets_id");
+        $statement->bindValue(":datasets_id", $datasets_id, PDO::PARAM_INT);
+        $statement->execute();
+        return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get Dataset Elements (for the tree browser)
+     *
+     * @Route("/admin/projects/get_dataset_elements/{datasets_id}/{number_first}", name="get_dataset_elements_tree_browser", methods="GET", defaults={"number_first" = false})
+     */
+    public function get_dataset_elements_tree_browser(Connection $conn, Request $request)
+    {      
+        $datasets_id = !empty($request->attributes->get('datasets_id')) ? $request->attributes->get('datasets_id') : false;        
+        $dataset_elements = $this->get_dataset_elements($datasets_id, $conn);
+
+        foreach ($dataset_elements as $key => $value) {
+
+            $data[$key] = array(
+                'id' => 'datasetElementId-' . $value['dataset_elements_id'],
+                'children' => false,
+                'text' => $value['dataset_element_guid'],
+                'a_attr' => array('href' => '/admin/projects/dataset_element/' . $value['projects_id'] . '/' . $value['subjects_id'] . '/' . $value['items_id'] . '/' . $value['datasets_id'] . '/' . $value['dataset_elements_id']),
+            );
+
+            // if($request->attributes->get('number_first') === 'true') {
+            //     $data[$key]['text'] = $value['subject_holder_subject_id'] . ' - ' . $value['subject_name'];
+            // } else {
+            //     $data[$key]['text'] = $value['subject_name'] . ' - ' . $value['subject_holder_subject_id'];
+            // }
+        }
+
+        $response = new JsonResponse($data);
+        return $response;
     }
 
     /**

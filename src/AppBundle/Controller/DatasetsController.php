@@ -4,6 +4,7 @@ namespace AppBundle\Controller;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
@@ -21,6 +22,8 @@ use AppBundle\Controller\ProjectsController;
 use AppBundle\Controller\SubjectsController;
 // Items methods
 use AppBundle\Controller\ItemsController;
+// Dataset Elements methods
+use AppBundle\Controller\DatasetElementsController;
 
 class DatasetsController extends Controller
 {
@@ -399,14 +402,81 @@ class DatasetsController extends Controller
      * @param       int $items_id    The item ID
      * @return      array|bool       The query result
      */
-    public function get_datasets($items_id = false, $conn)
+    public function get_datasets($conn, $items_id = false)
     {
-      $statement = $conn->prepare("SELECT *
+      $statement = $conn->prepare("
+          SELECT
+              projects.projects_id,
+              subjects.subjects_id,
+              datasets.items_id,
+              datasets.datasets_id,
+              datasets.dataset_guid,
+              datasets.capture_method_lookup_id,
+              datasets.dataset_type_lookup_id,
+              datasets.dataset_name,
+              datasets.collected_by,
+              datasets.collected_by_guid,
+              datasets.date_of_capture,
+              datasets.dataset_description,
+              datasets.dataset_collection_notes,
+              datasets.item_position_type_lookup_id,
+              datasets.positionally_matched_sets_id,
+              datasets.motion_control,
+              datasets.focus_lookup_id,
+              datasets.light_source,
+              datasets.light_source_type_lookup_id,
+              datasets.scale_bars_used,
+              datasets.background_removal_method_lookup_id,
+              datasets.camera_cluster_type_lookup_id,
+              datasets.array_geometry_id,
+              datasets.resource_datasets,
+              datasets.resource_dataset_elements,
+              datasets.date_created,
+              datasets.created_by_user_account_id,
+              datasets.last_modified,
+              datasets.last_modified_user_account_id,
+              datasets.active
           FROM datasets
-          WHERE items_id = :items_id");
+          LEFT JOIN items ON items.items_id = datasets.items_id
+          LEFT JOIN subjects ON subjects.subjects_id = items.subjects_id
+          LEFT JOIN projects ON projects.projects_id = subjects.projects_id
+          WHERE datasets.items_id = :items_id");
       $statement->bindValue(":items_id", $items_id, PDO::PARAM_INT);
       $statement->execute();
       return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get Datasets (for the tree browser)
+     *
+     * @Route("/admin/projects/get_datasets/{items_id}/{number_first}", name="get_datasets_tree_browser", methods="GET", defaults={"number_first" = false})
+     */
+    public function get_datasets_tree_browser(Connection $conn, Request $request, DatasetElementsController $dataset_elements)
+    {      
+        $items_id = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;        
+        $datasets = $this->get_datasets($conn, $items_id);
+
+        foreach ($datasets as $key => $value) {
+
+            // Check for child dataset records so the 'children' key can be set accordingly.
+            $dataset_elements_data = $dataset_elements->get_dataset_elements((int)$value['datasets_id'], $conn);
+
+            $data[$key] = array(
+                'id' => 'datasetId-' . $value['datasets_id'],
+                'children' => count($dataset_elements_data) ? true : false,
+                'text' => $value['dataset_name'],
+                'a_attr' => array('href' => '/admin/projects/dataset_elements/' . $value['projects_id'] . '/' . $value['subjects_id'] . '/' . $value['items_id'] . '/' . $value['datasets_id']),
+            );
+
+            // if($request->attributes->get('number_first') === 'true') {
+            //     $data[$key]['text'] = $value['subject_holder_subject_id'] . ' - ' . $value['subject_name'];
+            // } else {
+            //     $data[$key]['text'] = $value['subject_name'] . ' - ' . $value['subject_holder_subject_id'];
+            // }
+        }
+
+        $response = new JsonResponse($data);
+        return $response;
     }
 
     /**

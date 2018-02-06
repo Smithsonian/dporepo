@@ -4,6 +4,7 @@ namespace AppBundle\Controller;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
@@ -19,6 +20,8 @@ use AppBundle\Utils\AppUtilities;
 use AppBundle\Controller\ProjectsController;
 // Subjects methods
 use AppBundle\Controller\SubjectsController;
+// Datasets methods
+use AppBundle\Controller\DatasetsController;
 
 class ItemsController extends Controller
 {
@@ -304,16 +307,69 @@ class ItemsController extends Controller
      * Run a query to retrieve all items from the database.
      *
      * @param   object  $conn  Database connection object
+     * @param   int $subjects_id  The subject ID
      * @return  array|bool     The query result
      */
-    public function get_items($conn)
+    public function get_items($conn, $subjects_id = false)
     {
         $statement = $conn->prepare("
-            SELECT * FROM items
-            ORDER BY items.items_label ASC
+            SELECT
+                projects.projects_id,
+                subjects.subjects_id,
+                items.items_id,
+                items.item_guid,
+                items.subjects_id,
+                items.subject_holder_item_id,
+                items.item_name,
+                items.item_description,
+                items.date_created,
+                items.created_by_user_account_id,
+                items.last_modified,
+                items.last_modified_user_account_id,
+                items.active,
+                items.status_types_id
+            FROM items
+            LEFT JOIN subjects ON subjects.subjects_id = items.subjects_id
+            LEFT JOIN projects ON projects.projects_id = subjects.projects_id
+            WHERE items.subjects_id = :subjects_id
+            ORDER BY items.item_name ASC
         ");
+        $statement->bindValue(":subjects_id", (int)$subjects_id, PDO::PARAM_INT);
         $statement->execute();
         return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get Items (for the tree browser)
+     *
+     * @Route("/admin/projects/get_items/{subjects_id}/{number_first}", name="get_items_tree_browser", methods="GET", defaults={"number_first" = false})
+     */
+    public function get_items_tree_browser(Connection $conn, Request $request, DatasetsController $datasets)
+    {      
+        $subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
+        $items = $this->get_items($conn, $subjects_id);
+
+        foreach ($items as $key => $value) {
+
+            // Check for child dataset records so the 'children' key can be set accordingly.
+            $dataset_data = $datasets->get_datasets($conn, (int)$value['items_id']);
+
+            $data[$key] = array(
+                'id' => 'itemId-' . $value['items_id'],
+                'children' => count($dataset_data) ? true : false,
+                'text' => $value['item_name'],
+                'a_attr' => array('href' => '/admin/projects/datasets/' . $value['projects_id'] . '/' . $value['subjects_id'] . '/' . $value['items_id']),
+            );
+
+            // if($request->attributes->get('number_first') === 'true') {
+            //     $data[$key]['text'] = $value['subject_holder_subject_id'] . ' - ' . $value['subject_name'];
+            // } else {
+            //     $data[$key]['text'] = $value['subject_name'] . ' - ' . $value['subject_holder_subject_id'];
+            // }
+        }
+
+        $response = new JsonResponse($data);
+        return $response;
     }
 
     /**
