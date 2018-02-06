@@ -25,9 +25,11 @@
         <input type="submit" id="_submit" name="_submit" value="{{ 'Login'|trans }}" class="btn btn-primary" />
     </form>
 
-    <!-- <div style="margin-top: 2rem;">
-        <p><a href="mailto:{# {{ admin_email }} #}">Need help? Contact the administrator.</a></p>
-    </div> -->
+    {% if app.request.server.get("REMOTE_ADDR") == '172.16.26.11' or '127.0.0.1' %}
+        <div style="margin-top: 2rem;">
+            <p><a href="/register">Register for an Account</a></p>
+        </div>
+    {% endif %}
 
 {% else %}
     <p>You are logged in. <a href="/logout">Logout?</a></p>
