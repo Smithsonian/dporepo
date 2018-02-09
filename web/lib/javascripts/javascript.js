@@ -51,7 +51,7 @@ jQuery(document).ready(function($) {
       });
 
       var recordIdsString = JSON.stringify(recordIds).replace('[','').replace(']','').replace(/"/g,''),
-          urlSlash = (currentPath.join('/') !== 'admin/workspace/') ? '/' : '';
+          urlSlash = ((currentPath.join('/') !== 'admin/workspace/') && (currentPath.indexOf('resources') !== 1)) ? '/' : '';
 
       // console.log(window.location.origin + '/' + currentPath.join('/') + urlSlash + 'delete?ids=' + recordIdsString);
       document.location.href = window.location.origin + '/' + currentPath.join('/') + urlSlash + 'delete?ids=' + recordIdsString;
