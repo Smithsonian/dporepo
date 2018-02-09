@@ -324,10 +324,8 @@ class ProjectsController extends Controller
           $data[$key]['id'] = 'stakeholderGuid-' . $value['stakeholder_guid'];
           $data[$key]['text'] = $value['label'];
           $data[$key]['children'] = true;
-          // $data[$key]['a_attr']['href'] = '/admin/projects/subjects/';
       }
 
-      // dump(json_encode($data, JSON_PRETTY_PRINT));
       $response = new JsonResponse($data);
       return $response;
     }

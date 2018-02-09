@@ -355,7 +355,7 @@ class DatasetElementsController extends Controller
     /**
      * Get Dataset Elements (for the tree browser)
      *
-     * @Route("/admin/projects/get_dataset_elements/{datasets_id}/{number_first}", name="get_dataset_elements_tree_browser", methods="GET", defaults={"number_first" = false})
+     * @Route("/admin/projects/get_dataset_elements/{datasets_id}", name="get_dataset_elements_tree_browser", methods="GET")
      */
     public function get_dataset_elements_tree_browser(Connection $conn, Request $request)
     {      
@@ -363,19 +363,12 @@ class DatasetElementsController extends Controller
         $dataset_elements = $this->get_dataset_elements($datasets_id, $conn);
 
         foreach ($dataset_elements as $key => $value) {
-
             $data[$key] = array(
                 'id' => 'datasetElementId-' . $value['dataset_elements_id'],
                 'children' => false,
                 'text' => $value['dataset_element_guid'],
                 'a_attr' => array('href' => '/admin/projects/dataset_element/' . $value['projects_id'] . '/' . $value['subjects_id'] . '/' . $value['items_id'] . '/' . $value['datasets_id'] . '/' . $value['dataset_elements_id']),
             );
-
-            // if($request->attributes->get('number_first') === 'true') {
-            //     $data[$key]['text'] = $value['subject_holder_subject_id'] . ' - ' . $value['subject_name'];
-            // } else {
-            //     $data[$key]['text'] = $value['subject_name'] . ' - ' . $value['subject_holder_subject_id'];
-            // }
         }
 
         $response = new JsonResponse($data);

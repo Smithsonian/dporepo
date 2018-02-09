@@ -347,7 +347,7 @@ class ItemsController extends Controller
     /**
      * Get Items (for the tree browser)
      *
-     * @Route("/admin/projects/get_items/{subjects_id}/{number_first}", name="get_items_tree_browser", methods="GET", defaults={"number_first" = false})
+     * @Route("/admin/projects/get_items/{subjects_id}", name="get_items_tree_browser", methods="GET")
      */
     public function get_items_tree_browser(Connection $conn, Request $request, DatasetsController $datasets)
     {      
@@ -355,22 +355,14 @@ class ItemsController extends Controller
         $items = $this->get_items($conn, $subjects_id);
 
         foreach ($items as $key => $value) {
-
             // Check for child dataset records so the 'children' key can be set accordingly.
             $dataset_data = $datasets->get_datasets($conn, (int)$value['items_id']);
-
             $data[$key] = array(
                 'id' => 'itemId-' . $value['items_id'],
                 'children' => count($dataset_data) ? true : false,
                 'text' => $value['item_name'],
                 'a_attr' => array('href' => '/admin/projects/datasets/' . $value['projects_id'] . '/' . $value['subjects_id'] . '/' . $value['items_id']),
             );
-
-            // if($request->attributes->get('number_first') === 'true') {
-            //     $data[$key]['text'] = $value['subject_holder_subject_id'] . ' - ' . $value['subject_name'];
-            // } else {
-            //     $data[$key]['text'] = $value['subject_name'] . ' - ' . $value['subject_holder_subject_id'];
-            // }
         }
 
         $response = new JsonResponse($data);

@@ -35,19 +35,19 @@ jQuery(document).ready(function($) {
               case (node.id.indexOf('subjectId-') !== -1):
                 var subjectId = node.id.replace('subjectId-', ''),
                     numberFirst = $('#name-number-first').find('button.btn-primary').attr('id') === 'number-first' ? true : false;
-                return '/admin/projects/get_items/' + subjectId + '/' + numberFirst;
+                return '/admin/projects/get_items/' + subjectId;
                 break;
               // Datasets
               case (node.id.indexOf('itemId-') !== -1):
                 var itemId = node.id.replace('itemId-', ''),
                     numberFirst = $('#name-number-first').find('button.btn-primary').attr('id') === 'number-first' ? true : false;
-                return '/admin/projects/get_datasets/' + itemId + '/' + numberFirst;
+                return '/admin/projects/get_datasets/' + itemId;
                 break;
               // Dataset Elements
               case (node.id.indexOf('datasetId-') !== -1):
                 var datasetId = node.id.replace('datasetId-', ''),
                     numberFirst = $('#name-number-first').find('button.btn-primary').attr('id') === 'number-first' ? true : false;
-                return '/admin/projects/get_dataset_elements/' + datasetId + '/' + numberFirst;
+                return '/admin/projects/get_dataset_elements/' + datasetId;
                 break;
               // Tree Root
               default:
