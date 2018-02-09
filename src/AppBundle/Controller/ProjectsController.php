@@ -236,7 +236,8 @@ class ProjectsController extends Controller
             ,unit_stakeholder.full_name
             FROM projects
             LEFT JOIN unit_stakeholder ON unit_stakeholder.unit_stakeholder_id = projects.stakeholder_guid
-            WHERE projects_id = :projects_id");
+            WHERE projects.active = 1
+            AND projects_id = :projects_id");
         $statement->bindValue(":projects_id", $project_id, PDO::PARAM_INT);
         $statement->execute();
         return $statement->fetch(PDO::FETCH_ASSOC);
@@ -274,6 +275,7 @@ class ProjectsController extends Controller
         $statement = $conn->prepare("
             SELECT * FROM projects
             WHERE projects.stakeholder_guid = :stakeholder_guid
+            AND projects.active = 1
             ORDER BY projects.projects_label ASC
         ");
         $statement->bindValue(":stakeholder_guid", $stakeholder_guid, PDO::PARAM_STR);
@@ -301,6 +303,7 @@ class ProjectsController extends Controller
                 ,unit_stakeholder.label
             FROM projects
             INNER JOIN unit_stakeholder ON unit_stakeholder.unit_stakeholder_id = projects.stakeholder_guid
+            WHERE projects.active = 1
             GROUP BY unit_stakeholder.label
             ORDER BY unit_stakeholder.label ASC
         ");

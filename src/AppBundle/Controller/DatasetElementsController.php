@@ -54,11 +54,14 @@ class DatasetElementsController extends Controller
         $subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
         $items_id = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;
         $datasets_id = !empty($request->attributes->get('datasets_id')) ? $request->attributes->get('datasets_id') : false;
+
+        // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
+        $dataset_data = $datasets->get_dataset((int)$datasets_id, $conn);
+        if(!$dataset_data) throw $this->createNotFoundException('The record does not exist');
         
         $project_data = $projects->get_project((int)$projects_id, $conn);
         $subject_data = $subjects->get_subject((int)$subjects_id, $conn);
         $item_data = $items->get_item((int)$items_id, $conn);
-        $dataset_data = $datasets->get_dataset((int)$datasets_id, $conn);
         $dataset_element_data = $this->get_dataset_element((int)$datasets_id, $conn);
 
         // Truncate the item_description.
@@ -342,7 +345,8 @@ class DatasetElementsController extends Controller
             LEFT JOIN items ON items.items_id = datasets.items_id
             LEFT JOIN subjects ON subjects.subjects_id = items.subjects_id
             LEFT JOIN projects ON projects.projects_id = subjects.projects_id
-            WHERE dataset_elements.datasets_id = :datasets_id");
+            WHERE dataset_elements.active = 1
+            AND dataset_elements.datasets_id = :datasets_id");
         $statement->bindValue(":datasets_id", $datasets_id, PDO::PARAM_INT);
         $statement->execute();
         return $statement->fetchAll(PDO::FETCH_ASSOC);

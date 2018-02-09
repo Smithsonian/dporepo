@@ -53,10 +53,13 @@ class DatasetsController extends Controller
         $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
         $subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
         $items_id = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;
+
+        // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
+        $item_data = $items->get_item((int)$items_id, $conn);
+        if(!$item_data) throw $this->createNotFoundException('The record does not exist');
         
         $project_data = $projects->get_project((int)$projects_id, $conn);
         $subject_data = $subjects->get_subject((int)$subjects_id, $conn);
-        $item_data = $items->get_item((int)$items_id, $conn);
         $directoryContents = is_dir(JOBBOX_PATH) ? scandir(JOBBOX_PATH) : array();
 
         // Truncate the item_description.
@@ -440,7 +443,8 @@ class DatasetsController extends Controller
           LEFT JOIN items ON items.items_id = datasets.items_id
           LEFT JOIN subjects ON subjects.subjects_id = items.subjects_id
           LEFT JOIN projects ON projects.projects_id = subjects.projects_id
-          WHERE datasets.items_id = :items_id");
+          WHERE datasets.active = 1
+          AND datasets.items_id = :items_id");
       $statement->bindValue(":items_id", $items_id, PDO::PARAM_INT);
       $statement->execute();
       return $statement->fetchAll(PDO::FETCH_ASSOC);
@@ -491,7 +495,8 @@ class DatasetsController extends Controller
     {
       $statement = $conn->prepare("SELECT *
           FROM datasets
-          WHERE datasets_id = :datasets_id");
+          WHERE datasets.active = 1
+          AND datasets.datasets_id = :datasets_id");
       $statement->bindValue(":datasets_id", $datasets_id, PDO::PARAM_INT);
       $statement->execute();
       return $statement->fetch(PDO::FETCH_ASSOC);

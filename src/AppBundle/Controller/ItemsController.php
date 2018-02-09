@@ -60,9 +60,12 @@ class ItemsController extends Controller
 
         $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
         $subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
+
+        // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
+        $subject_data = $subjects->get_subject((int)$subjects_id, $conn);
+        if(!$subject_data) throw $this->createNotFoundException('The record does not exist');
         
         $project_data = $projects->get_project((int)$projects_id, $conn);
-        $subject_data = $subjects->get_subject((int)$subjects_id, $conn);
 
         return $this->render('items/browse_items.html.twig', array(
             'page_title' => 'Subject: ' .  $subject_data['subject_name'],
@@ -295,7 +298,8 @@ class ItemsController extends Controller
             ,items.last_modified
             ,items.items_id
             FROM items
-            WHERE items_id = :items_id");
+            WHERE items.active = 1
+            AND items_id = :items_id");
         $statement->bindValue(":items_id", $item_id, PDO::PARAM_INT);
         $statement->execute();
         return $statement->fetch(PDO::FETCH_ASSOC);
@@ -331,7 +335,8 @@ class ItemsController extends Controller
             FROM items
             LEFT JOIN subjects ON subjects.subjects_id = items.subjects_id
             LEFT JOIN projects ON projects.projects_id = subjects.projects_id
-            WHERE items.subjects_id = :subjects_id
+            WHERE items.active = 1
+            AND items.subjects_id = :subjects_id
             ORDER BY items.item_name ASC
         ");
         $statement->bindValue(":subjects_id", (int)$subjects_id, PDO::PARAM_INT);

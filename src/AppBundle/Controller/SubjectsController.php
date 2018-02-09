@@ -47,7 +47,10 @@ class SubjectsController extends Controller
         $create_db_table = $this->create_subjects_table($conn);
 
         $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
+
+        // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
         $project_data = $projects->get_project((int)$projects_id, $conn);
+        if(!$project_data) throw $this->createNotFoundException('The record does not exist');
 
         return $this->render('subjects/browse_subjects.html.twig', array(
             'page_title' => 'Project: ' . $project_data['projects_label'],
@@ -248,7 +251,8 @@ class SubjectsController extends Controller
     {
         $statement = $conn->prepare("SELECT *
             FROM subjects
-            WHERE subjects_id = :subjects_id");
+            WHERE subjects.active = 1
+            AND subjects_id = :subjects_id");
         $statement->bindValue(":subjects_id", $subject_id, PDO::PARAM_INT);
         $statement->execute();
         return $statement->fetch(PDO::FETCH_ASSOC);
@@ -265,13 +269,13 @@ class SubjectsController extends Controller
     */
     public function get_subjects($conn, $projects_id = false)
     {
-        $where = $projects_id ? 'WHERE projects_id = ' . (int)$projects_id : '';
-
         $statement = $conn->prepare("
             SELECT * FROM subjects
-            {$where}
+            WHERE subjects.active = 1
+            AND subjects.projects_id = :projects_id
             ORDER BY subjects.subject_name ASC
         ");
+        $statement->bindValue(":projects_id", (int)$projects_id, PDO::PARAM_INT);
         $statement->execute();
         return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
