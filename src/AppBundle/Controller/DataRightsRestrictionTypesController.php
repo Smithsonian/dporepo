@@ -97,7 +97,7 @@ class DataRightsRestrictionTypesController extends Controller
         if ($search) {
             $pdo_params[] = '%' . $search . '%';
             $search_sql = "
-                WHERE (
+                AND (
                   " . $this->label_field_name . " LIKE ?
                 ) ";
         }
@@ -109,6 +109,7 @@ class DataRightsRestrictionTypesController extends Controller
             " . $this->table_name . ".last_modified,
             " . $this->id_field_name . " AS DT_RowId
             FROM " . $this->table_name . "
+            WHERE " . $this->table_name . ".active = 1
             {$search_sql}
             {$sort}
             {$limit_sql}");
@@ -255,6 +256,47 @@ class DataRightsRestrictionTypesController extends Controller
             return $last_inserted_id;
         }
 
+    }
+
+    /**
+     * Delete Multiple Data Rights Restriction Types
+     *
+     * @Route("/admin/resources/data_rights_restriction_types/delete", name="data_rights_restriction_types_remove_records", methods={"GET"})
+     * Run a query to delete multiple records.
+     *
+     * @param   int     $ids      The record ids
+     * @param   object  $conn     Database connection object
+     * @param   object  $request  Request object
+     * @return  void
+     */
+    public function delete_multiple(Connection $conn, Request $request)
+    {
+      $ids = $request->query->get('ids');
+
+      if(!empty($ids)) {
+
+        $ids_array = explode(',', $ids);
+
+        foreach ($ids_array as $key => $id) {
+
+          $statement = $conn->prepare("
+              UPDATE " . $this->table_name . "
+              SET active = 0, last_modified_user_account_id = :last_modified_user_account_id
+              WHERE " . $this->id_field_name . " = :id
+          ");
+          $statement->bindValue(":id", $id, PDO::PARAM_INT);
+          $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
+          $statement->execute();
+
+        }
+
+        $this->addFlash('message', 'Records successfully removed.');
+
+      } else {
+        $this->addFlash('message', 'Missing data. No records removed.');
+      }
+
+      return $this->redirectToRoute($this->table_name . '_browse');
     }
 
     /**
