@@ -56,7 +56,7 @@
             {{ parent() }}
           {% endblock %}
           {% if (app.request.pathInfo == '/admin/workspace/') or (projects_id is defined) %}
-            <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main resizable">
+            <div class="col-sm-9 col-sm-offset-3 col-md-9 col-md-offset-3 main resizable">
           {% else %}
             <div class="col-sm-12 main">
           {% endif %}
@@ -89,7 +89,7 @@
       <div class="row">
         <div class="clearfix"></div>
         {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and is_granted('ROLE_ADMIN') %}
-          <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 col-footer">
+          <div class="col-sm-9 col-sm-offset-3 col-md-9 col-md-offset-3 col-footer">
         {% else %}
           <div class="col-sm-12 col-md-12 col-footer">
         {% endif %}
