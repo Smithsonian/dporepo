@@ -36,7 +36,7 @@
               { "data": "label" },
               { "data": "last_modified" }
             ],
-          "dom": '<"wrapper"fli><"col-sm-3 col-md-3 datatables_bulk_actions">pt<"bottom"ip><"clear">',
+          "dom": '<"wrapper"fli><"col-sm-4 col-md-4 datatables_bulk_actions">pt<"bottom"ip><"clear">',
           "pagingType": "simple_numbers",
           "stateSave": true,
           "order": [[1,"desc"]],
@@ -75,9 +75,8 @@
       });
 
       var add_button = $('<a />')
-        .addClass('btn btn-default btn-sm')
+        .addClass('btn btn-default btn-sm add-record-button')
         .attr('href', '/admin/resources/focus_types/manage')
-        .attr('style', 'margin-bottom: 1.5rem;')
         .html('<span class="glyphicon glyphicon-plus"></span> Add a New Focus Type');
 
       $('.datatables_bulk_actions').append(add_button);

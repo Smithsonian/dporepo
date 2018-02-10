@@ -245,3 +245,7 @@ dd {
 #remove-records-checkbox {
 	margin-right: 8px;
 }
+
+.add-record-button {
+  margin-bottom: 0.5rem;
+}
