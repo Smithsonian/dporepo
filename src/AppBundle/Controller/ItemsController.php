@@ -693,23 +693,35 @@ class ItemsController extends Controller
         $itemguid = !empty($request->attributes->get('item_guid')) ? $request->attributes->get('item_guid') : false;
         $destination = !empty($request->attributes->get('destination')) ? $request->attributes->get('destination') : false;
         $ids = explode('|', $destination);
+        $message = 'The directory could not be created (' . $itemguid . '). If this persists, please contact the administrator.';
  
         if($itemguid && !empty($itemguid)) {
 
             $directoryContents = is_dir(JOBBOX_PATH) ? scandir(JOBBOX_PATH) : array();
 
             if(!in_array($itemguid, $directoryContents)) {
+                // Create the directory.
                 mkdir(JOBBOX_PATH . '/' . $itemguid, 0775);
-                $this->addFlash('message', 'The directory has been created (' . $itemguid . ').');
+                // Check to see if the directory was created.
+                if(is_dir(JOBBOX_PATH . '/' . $itemguid)) {
+                    $message = 'The directory has been created (' . $itemguid . ').';
+                }
+                
             } else {
-                $this->addFlash('message', 'The directory already exists (' . $itemguid . ').');
+                // The directory already exists, so don't overwrite it. Just send a mesaage.
+                $message = 'The directory already exists (' . $itemguid . ').';
             }
 
-        } else {
-            $this->addFlash('message', 'Could not create the directory. The Item guid is missing.');
         }
 
-        return $this->redirectToRoute('datasets_browse', array('projects_id' => $ids[0], 'subjects_id' => $ids[1], 'items_id' => $ids[2]));
+        // If the endpoint is accessed from within the application, redirect to the destination.
+        // If there is no destination, return a message in JSON format.
+        if($destination) {
+            $this->addFlash('message', $message);
+            return $this->redirectToRoute('datasets_browse', array('projects_id' => $ids[0], 'subjects_id' => $ids[1], 'items_id' => $ids[2]));
+        } else {
+            return $this->json(array('message' => $message));
+        }
     }
 
     /**
