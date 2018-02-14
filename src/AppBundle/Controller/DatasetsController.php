@@ -74,7 +74,7 @@ class DatasetsController extends Controller
             'project_data' => $project_data,
             'subject_data' => $subject_data,
             'item_data' => $item_data,
-            'destination' => '|projects|datasets|' . $projects_id . '|' . $subjects_id . '|' . $items_id,
+            'destination' => $projects_id . '|' . $subjects_id . '|' . $items_id,
             'include_directory_button' => !in_array($item_data['item_guid'], $directoryContents) ? true : false,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
