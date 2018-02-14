@@ -210,6 +210,9 @@ class ItemsController extends Controller
                     case '5': // Web Ready Model Processed via InstantUV
                         $data['aaData'][$key]['status_label'] = '<span class="label label-success">' . $value['status_label'] . '</span>';
                         break;
+                    case '6': // Target directory exists in JobBox
+                        $data['aaData'][$key]['status_label'] = '<span class="label label-default">' . $value['status_label'] . '</span>';
+                        break;
                 }
             }
         }
@@ -557,6 +560,7 @@ class ItemsController extends Controller
     public function processDirectoryStatuses($directoryScanType = '', $itemguid = '', $conn) {
 
       $data = $directoryContents = array();
+      $jobBoxDirectoryExists = false;
       $data['status'] = 0;
 
       if(!empty($directoryScanType) && !empty($itemguid)) {
@@ -564,7 +568,10 @@ class ItemsController extends Controller
         // Get the contents of each directory.
         switch($directoryScanType) {
             case 'jobbox':
-                $directoryContents = is_dir(JOBBOX_PATH) ? scandir(JOBBOX_PATH) : array();
+
+                $jobBoxDirectoryExists = is_dir(JOBBOX_PATH . '/' . $itemguid);
+                $directoryContents = is_dir(JOBBOX_PATH . '/' . $itemguid) ? scandir(JOBBOX_PATH . '/' . $itemguid) : array();
+
                 break;
             case 'jobboxprocess':
 
@@ -595,19 +602,23 @@ class ItemsController extends Controller
             break;
         }
 
-        // // If the directory is empty, set the status to 0.
-        // if(empty($directoryContents)) $this->updateStatus($itemguid, 0, $conn);
-
         // If the directory is not empty, build out the status arrays.
         if(!empty($directoryContents)) {
             foreach ($directoryContents as $key => $value) {
+
+                // Set the status if the direcory exists within JobBox.
+                if($jobBoxDirectoryExists) $this->updateStatus($itemguid, 6, $conn);
+                // If the directory doesn't exist, set the status to 0.
+                if(!$jobBoxDirectoryExists) $this->updateStatus($itemguid, 0, $conn);
+
                 if(($value !== '.') && ($value !== '..') && ($value !== '.DS_Store')) {
                     switch($directoryScanType) {
                         case 'jobbox':
-                            if($value === $itemguid) {
-                              $data['status'] = 1;
-                              $data['directory'] = $value;
-                              $this->updateStatus($itemguid, 1, $conn);
+                            // Next, check to see if the '_ready.txt' file exists within the target directory.
+                            if($value === '_ready.txt') {
+                                $data['status'] = 1;
+                                $data['directory'] = $value;
+                                $this->updateStatus($itemguid, 1, $conn);
                             }
                             break;
                         case 'jobboxprocess':

@@ -60,7 +60,8 @@ class DatasetsController extends Controller
         
         $project_data = $projects->get_project((int)$projects_id, $conn);
         $subject_data = $subjects->get_subject((int)$subjects_id, $conn);
-        $directoryContents = is_dir(JOBBOX_PATH) ? scandir(JOBBOX_PATH) : array();
+        $jobBoxDirectoryContents = is_dir(JOBBOX_PATH) ? scandir(JOBBOX_PATH) : array();
+        $jobBoxProcessedDirectoryContents = is_dir(JOBBOXPROCESS_PATH) ? scandir(JOBBOXPROCESS_PATH) : array();
 
         // Truncate the item_description.
         $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
@@ -75,7 +76,7 @@ class DatasetsController extends Controller
             'subject_data' => $subject_data,
             'item_data' => $item_data,
             'destination' => $projects_id . '|' . $subjects_id . '|' . $items_id,
-            'include_directory_button' => !in_array($item_data['item_guid'], $directoryContents) ? true : false,
+            'include_directory_button' => !in_array($item_data['item_guid'], $jobBoxDirectoryContents) && !in_array($item_data['item_guid'], $jobBoxProcessedDirectoryContents) ? true : false,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
