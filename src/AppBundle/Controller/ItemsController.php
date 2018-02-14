@@ -668,6 +668,40 @@ class ItemsController extends Controller
     }
 
     /**
+     * @Route("/admin/projects/create_directory_in_jobbox/{item_guid}/{destination}", name="create_directory_in_jobbox", methods={"GET"}, defaults={"item_guid" = false, "destination" = false})
+     *
+     * Create Direcory in JobBox
+     *
+     * @param   object  Request  Request object
+     * @return  void
+     */
+    function create_directory_in_jobbox(Request $request)
+    {
+        $data = false;
+        $directoryContents = array();
+        $itemguid = !empty($request->attributes->get('item_guid')) ? $request->attributes->get('item_guid') : false;
+        $destination = !empty($request->attributes->get('destination')) ? $request->attributes->get('destination') : false;
+        $ids = explode('|', $destination);
+ 
+        if($itemguid && !empty($itemguid)) {
+
+            $directoryContents = is_dir(JOBBOX_PATH) ? scandir(JOBBOX_PATH) : array();
+
+            if(!in_array($itemguid, $directoryContents)) {
+                mkdir(JOBBOX_PATH . '/' . $itemguid, 0775);
+                $this->addFlash('message', 'The directory has been created (' . $itemguid . ').');
+            } else {
+                $this->addFlash('message', 'The directory already exists (' . $itemguid . ').');
+            }
+
+        } else {
+            $this->addFlash('message', 'Could not create the directory. The Item guid is missing.');
+        }
+
+        return $this->redirectToRoute('datasets_browse', array('projects_id' => $ids[0], 'subjects_id' => $ids[1], 'items_id' => $ids[2]));
+    }
+
+    /**
      * Create Items Table
      *
      * @return  void
