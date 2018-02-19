@@ -22,19 +22,72 @@
       <dl class="dl-horizontal">
         <dt>Dataset Name</dt>
         <dd>{{ dataset_data.dataset_name|e }}</dd>
+        <dt>Date Of Capture</dt>
+        <dd>{{ dataset_data.date_of_capture|e }}</dd>
+        <dt>Dataset Type</dt>
+        <dd>{{ dataset_data.dataset_type|e }}</dd>
+        <dt>Collected By</dt>
+        <dd>{{ dataset_data.collected_by|e }}</dd>
       </dl>
     </div>
     <div class="col-sm-6 col-md-6">
       <dl class="dl-horizontal">
+        <dt>Capture Method</dt>
+        <dd>{{ dataset_data.capture_method|e }}</dd>
+        <dt>Date Created</dt>
+        <dd>{{ dataset_data.date_created|e }}</dd>
         <dt>Last Modified</dt>
         <dd>{{ dataset_data.last_modified|e }}</dd>
+        <dt>Collected By Guid</dt>
+        <dd>{{ dataset_data.collected_by_guid|e }}</dd>
       </dl>
     </div>
-    <div class="col-sm-12 col-md-12">
+
+    <div class="col-sm-6 col-md-6 col-hidden-toggle">
+      <dl class="dl-horizontal">
+        <dt>Positionally Matched Sets ID</dt>
+        <dd>{{ dataset_data.positionally_matched_sets_id|e }}</dd>
+        <dt>Motion Control</dt>
+        <dd>{{ dataset_data.motion_control|e }}</dd>
+        <dt>Light Source</dt>
+        <dd>{{ dataset_data.light_source|e }}</dd>
+        <dt>Scale Bars Used</dt>
+        <dd>{{ dataset_data.scale_bars_used|e }}</dd>
+        <dt>Array Geometry ID</dt>
+        <dd>{{ dataset_data.array_geometry_id|e }}</dd>
+        <dt>Dataset Guid</dt>
+        <dd>{{ dataset_data.dataset_guid|e }}</dd>
+      </dl>
+    </div>
+    <div class="col-sm-6 col-md-6 col-hidden-toggle">
+      <dl class="dl-horizontal">
+        <dt>Item Position Type</dt>
+        <dd>{{ dataset_data.item_position_type|e }}</dd>
+        <dt>Focus Type</dt>
+        <dd>{{ dataset_data.focus_type|e }}</dd>
+        <dt>Light Source Type</dt>
+        <dd>{{ dataset_data.light_source_type|e }}</dd>
+        <dt>Background Removal Method</dt>
+        <dd>{{ dataset_data.background_removal_method|e }}</dd>
+        <dt>Camera Cluster Type</dt>
+        <dd>{{ dataset_data.camera_cluster_type|e }}</dd>
+      </dl>
+    </div>
+    <div class="col-sm-12 col-md-12 col-hidden-toggle">
       <dl class="dl-horizontal">
         <dt>Dataset Description</dt>
         <dd>{{ dataset_data.dataset_description|e|nl2br }}</dd>
+        <dt>Dataset Collection Notes</dt>
+        <dd>{{ dataset_data.dataset_collection_notes|e|nl2br }}</dd>
       </dl>
+    </div>
+
+    <div class="col-sm-12 col-md-12">
+      <a href="javascript:void(0);" class="view-hidden-content" role="button"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span> <span class="view-hidden-content-text">Expand</span></a>
+      <hr>
+    </div>
+
+    <div class="col-sm-12 col-md-12">
       <a href="/admin/projects/datasets/{{ projects_id }}/{{ subjects_id }}/{{ items_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Item</a>
       <a href="/admin/projects/dataset/{{ projects_id }}/{{ subjects_id }}/{{ items_id }}/{{ datasets_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span> Edit Dataset</a>
     </div>

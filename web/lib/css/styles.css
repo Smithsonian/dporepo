@@ -249,3 +249,18 @@ dd {
 .add-record-button {
   margin-bottom: 0.5rem;
 }
+
+/*
+ * Toggle-able Hidden Content
+ */
+
+.col-hidden-toggle {
+  display: none;
+}
+
+.view-hidden-content:hover,
+.view-hidden-content:active,
+.view-hidden-content:focus {
+  text-decoration: none;
+  outline: 0;
+}

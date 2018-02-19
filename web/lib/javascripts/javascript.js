@@ -144,6 +144,34 @@ jQuery(document).ready(function($) {
   });
 
   /**
+   * Toggle-able Hidden Content
+   */
+  $('.view-hidden-content').on('click', function(e) {
+
+    var viewHiddenContentButton = $(this),
+        toggleableContainers = $('.col-hidden-toggle');
+
+    toggleableContainers.slideToggle('fast');
+
+    setTimeout(function(){
+
+      if(toggleableContainers.is(':visible')) {
+        viewHiddenContentButton.find('.view-hidden-content-text').text('Hide');
+        viewHiddenContentButton.find('.glyphicon')
+          .removeClass('glyphicon-chevron-down')
+          .addClass('glyphicon-chevron-up');
+      } else {
+        viewHiddenContentButton.find('.view-hidden-content-text').text('Expand');
+        viewHiddenContentButton.find('.glyphicon')
+          .removeClass('glyphicon-chevron-up')
+          .addClass('glyphicon-chevron-down');
+      }
+
+    }, 250);
+
+  });
+
+  /**
    * Resizable Columns
    */
   $(function() {
