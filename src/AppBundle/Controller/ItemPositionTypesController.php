@@ -82,6 +82,9 @@ class ItemPositionTypesController extends Controller
                 $sort_field = 'label';
                 break;
             case '2':
+                $sort_field = 'label_alias';
+                break;
+            case '3':
                 $sort_field = 'last_modified';
                 break;
         }
@@ -105,6 +108,7 @@ class ItemPositionTypesController extends Controller
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
             " . $this->id_field_name . " AS manage,
             " . $this->label_field_name . ",
+            " . $this->label_field_name . "_alias,
             " . $this->table_name . ".active,
             " . $this->table_name . ".last_modified,
             " . $this->id_field_name . " AS DT_RowId
@@ -153,6 +157,7 @@ class ItemPositionTypesController extends Controller
             // "" => "required|max_len,255|alpha_numeric",
             $rules = array(
                 "label" => "required|max_len,255",
+                "label_alias" => "required|max_len,255",
             );
             $validated = $gump->validate($post, $rules);
 
@@ -228,10 +233,12 @@ class ItemPositionTypesController extends Controller
             $statement = $conn->prepare("
                 UPDATE " . $this->table_name . "
                 SET " . $this->label_field_name . " = :" . $this->label_field_name_raw . "
+                ," . $this->label_field_name . "_alias = :" . $this->label_field_name_raw . "_alias
                 ,last_modified_user_account_id = :last_modified_user_account_id
                 WHERE " . $this->id_field_name . " = :id
             ");
           $statement->bindValue(":" . $this->label_field_name_raw, $data[$this->label_field_name_raw], PDO::PARAM_STR);
+          $statement->bindValue(":" . $this->label_field_name_raw . '_alias', $data[$this->label_field_name_raw . '_alias'], PDO::PARAM_STR);
           $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
           $statement->bindValue(":id", $id, PDO::PARAM_INT);
           $statement->execute();
@@ -242,9 +249,10 @@ class ItemPositionTypesController extends Controller
         // Insert
         if(!$id) {
             $statement = $conn->prepare("INSERT INTO " . $this->table_name . "
-                (" . $this->label_field_name_raw . ", date_created, created_by_user_account_id, last_modified_user_account_id)
-                VALUES (:" . $this->label_field_name_raw . ", NOW(), :user_account_id, :user_account_id)");
+                (" . $this->label_field_name_raw . ", " . $this->label_field_name_raw . "_alias, date_created, created_by_user_account_id, last_modified_user_account_id)
+                VALUES (:" . $this->label_field_name_raw . ", :" . $this->label_field_name_raw . "_alias, NOW(), :user_account_id, :user_account_id)");
             $statement->bindValue(":" . $this->label_field_name_raw . "", $data[$this->label_field_name_raw], PDO::PARAM_STR);
+            $statement->bindValue(":" . $this->label_field_name_raw . '_alias', $data[$this->label_field_name_raw . '_alias'], PDO::PARAM_STR);
             $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->execute();
             $last_inserted_id = $conn->lastInsertId();
@@ -326,6 +334,7 @@ class ItemPositionTypesController extends Controller
         $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `" . $this->table_name . "` (
             `" . $this->id_field_name_raw . "` int(11) NOT NULL AUTO_INCREMENT,
             `" . $this->label_field_name_raw . "` varchar(255) NOT NULL DEFAULT '',
+            `" . $this->label_field_name_raw . "_alias` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

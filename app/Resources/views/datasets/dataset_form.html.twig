@@ -123,7 +123,7 @@
                 {% if dataset_data.item_position_type_lookup_id is defined and single_item_position_type.item_position_types_id == dataset_data.item_position_type_lookup_id %}
                   {% set selected = ' selected="selected"' %}
                 {% endif %}
-                <option value="{{ single_item_position_type.item_position_types_id }}"{{ selected }}>{{ single_item_position_type.label }}</option>
+                <option value="{{ single_item_position_type.item_position_types_id }}"{{ selected }}>{{ single_item_position_type.label_alias }}</option>
               {% endfor %}
             </select>
           </div>
