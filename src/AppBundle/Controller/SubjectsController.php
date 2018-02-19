@@ -210,7 +210,7 @@ class SubjectsController extends Controller
             // "" => "required|max_len,255|alpha_numeric",
             $rules = array(
                 "subject_name" => "required|max_len,255",
-                "subject_holder_subject_id" => "required|max_len,255|alpha_numeric",
+                "subject_holder_subject_id" => "required|max_len,255",
                 "location_information" => "required|max_len,255",
                 "holding_entity_guid" => "required|max_len,255|alpha_numeric",
                 "subject_type_lookup_id" => "required|numeric",
