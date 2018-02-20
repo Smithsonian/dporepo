@@ -31,8 +31,9 @@ security:
             form_login:
                 provider: chain_provider
                 csrf_token_generator: security.csrf.token_manager
-                always_use_default_target_path: true
+                always_use_default_target_path: false
                 default_target_path: admin_home
+                use_referer: true
 
             logout:
                 target: /login
