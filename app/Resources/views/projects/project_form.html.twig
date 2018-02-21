@@ -36,18 +36,16 @@
             </div>
           </div>
           <div class="form-group">
-            <label class="control-label" for="stakeholder_guid"><span style="color:red;">*</span>Stakeholder GUID:</label>
             <div class="controls">
-              <select id="stakeholder_guid" name="stakeholder_guid" required="true">
-                <option value="0">Select</option>
-                {% for single_units_stakeholders in project_info.units_stakeholders %}
-                  {% set selected = '' %}
-                  {% if project_info.stakeholder_guid is defined and single_units_stakeholders.unit_stakeholder_id == project_info.stakeholder_guid %}
-                    {% set selected = ' selected="selected"' %}
-                  {% endif %}
-                  <option value="{{ single_units_stakeholders.unit_stakeholder_id }}"{{ selected }}>{{ single_units_stakeholders.label }} - {{ single_units_stakeholders.full_name }}</option>
-                {% endfor %}
-              </select>
+              <h4>Stakeholder GUID</h4>
+              {% if project_info.label is defined %}
+                <p>{{ project_info.label }} - {{ project_info.full_name }}</p>
+              {% else %}
+                <p>Search ISNI choose a stakeholder</p>
+              {% endif %}
+              <button type="button" class="btn btn-sm" data-toggle="modal" data-target="#isniSearchModal">
+                Search ISNI
+              </button>
             </div>
           </div>
         </div><!-- // column 1 -->
@@ -55,12 +53,6 @@
         <!-- column 2 -->
         <div class="col-sm-6 col-md-6">
           
-          <!-- <div class="form-group">
-            <label class="control-label" for="date"><span style="color:red;">*</span>Date:</label>
-            <div class="controls">
-              <input name="date" id="date" type="date" placeholder="MM/DD/YYYY" required="true" value="{#{{ project_info.project_date|e }}#}" class="form-control">
-            </div>
-          </div> -->
           <div class="form-group">
             <label class="control-label" for="project_description"><span style="color:red;">*</span>Project Description:</label>
             <div class="controls">
@@ -76,4 +68,69 @@
         <input class="btn btn-primary" type="submit" value="Save Edits">
       </div>
     </form>
+
+    <!-- Modal -->
+    <div class="modal fade" id="isniSearchModal" tabindex="-1" role="dialog" aria-labelledby="isniSearchLabel">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title" id="isniSearchLabel">Coose a Stakeholder</h4>
+          </div>
+          <div class="modal-body">
+
+            <div class="row">
+
+              <div class="col-sm-6 col-md-6">
+                <h4>Search ISNI</h4>
+                <div class="form-group panel panel-default">
+                  <div class="panel-body">
+                    <label class="control-label hidden" for="searchQuery">Search</label>
+                    <div class="controls">
+                      <input name="searchQuery" id="searchQuery" type="text" value="" class="form-control">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-sm-6 col-md-6">
+                <h4>Choose SI Unit Code</h4>
+                <div class="form-group panel panel-default">
+                  <div class="panel-body">
+                    <label class="control-label hidden" for="stakeholder_guid"><span style="color:red;">*</span>Stakeholder GUID:</label>
+                    <div class="controls">
+                      <select class="stakeholder-chosen-select" id="stakeholder_guid" name="stakeholder_guid" required="true">
+                        <option value="0">Select</option>
+                        {% for single_units_stakeholders in project_info.units_stakeholders %}
+                          {% set selected = '' %}
+                          {% if project_info.stakeholder_guid is defined and single_units_stakeholders.unit_stakeholder_id == project_info.stakeholder_guid %}
+                            {% set selected = ' selected="selected"' %}
+                          {% endif %}
+                          <option value="{{ single_units_stakeholders.unit_stakeholder_id }}"{{ selected }}>{{ single_units_stakeholders.label }} - {{ single_units_stakeholders.full_name }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary">Save changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+{% endblock %}
+
+{% block js_bottom %}
+  {{ parent() }}
+  <script type="text/javascript">
+    jQuery(document).ready(function($) {
+      // 
+    });
+  </script>
 {% endblock %}
