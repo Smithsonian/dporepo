@@ -511,6 +511,12 @@ class DatasetsController extends Controller
           ,datasets.array_geometry_id
           ,datasets.date_created
           ,datasets.last_modified
+          ,datasets.capture_method_lookup_id
+          ,datasets.item_position_type_lookup_id
+          ,datasets.focus_lookup_id
+          ,datasets.light_source_type_lookup_id
+          ,datasets.background_removal_method_lookup_id
+          ,datasets.camera_cluster_type_lookup_id
           ,capture_methods.label AS capture_method
           ,dataset_types.label AS dataset_type
           ,item_position_types.label_alias AS item_position_type
