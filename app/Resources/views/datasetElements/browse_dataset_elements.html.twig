@@ -192,12 +192,17 @@
         .attr('style', 'width: 13.8rem;')
         .on("click", function(){
 
-          var delete_ids = new Array;
-          $('#browse [name="manage_checkbox"]:checked').each(function(){
-            delete_ids.push($(this).val());
+          var download_ids = new Array;
+          $('#browse [name="download_checkbox"]:checked').each(function(){
+            download_ids.push($(this).val());
           });
 
-          if(delete_ids.length > 0) {
+          if(!download_ids.length) {
+            swal('No Records Selected', 'Please choose at least one record.');
+            return;
+          }
+
+          if(download_ids.length > 0) {
 
             swal({
               title: "Send Download Request",
@@ -209,15 +214,7 @@
               closeOnConfirm: true
             },
             function(){
-              // $.ajax({
-              //   type:"POST"
-              //   ,dateType:"json"
-              //   ,url: "/admin/projects/delete"
-              //   ,data: ({id: JSON.stringify(delete_ids), csrf_key: "{#{ csrf_token }#}"})
-              //   ,success: function(ajax_return){
-              //     $('#browse').dataTable().fnDraw();
-              //   }
-              // });
+              // Placeholder
             });
 
           }

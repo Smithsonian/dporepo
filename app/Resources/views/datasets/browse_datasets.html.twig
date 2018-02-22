@@ -202,6 +202,11 @@
             download_ids.push($(this).val());
           });
 
+          if(!download_ids.length) {
+            swal('No Records Selected', 'Please choose at least one record.');
+            return;
+          }
+
           if(download_ids.length > 0) {
 
             swal({
