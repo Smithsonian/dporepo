@@ -2,8 +2,8 @@
 
 {% block stylesheets %}
   {{ parent() }}
-  <link href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet" type="text/css" />
-  <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.dataTables.min.css" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -92,6 +92,8 @@
   {{ parent() }}
   <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
   <script type="text/javascript">
     $(document).ready(function() {
@@ -128,7 +130,7 @@
           { "data": "last_modified" }
         ],
         // "dom": 'Bfrtipt',
-        "dom": '<"wrapper"Bfli>p<"datatables_bulk_actions">t<"bottom"ip><"clear">',
+        "dom": 'lfip<"datatables_bulk_actions"B>tip',
         "pagingType": "simple_numbers",
         "stateSave": true,
         "order": [[22,"desc"]],
@@ -156,7 +158,7 @@
         buttons: [
           {
             extend: 'colvis',
-            collectionLayout: 'fixed four-column',
+            // collectionLayout: 'fixed two-column',
             postfixButtons: [ 'colvisRestore' ]
           }
         ],
@@ -190,8 +192,9 @@
       });
 
       var request_download_button = $('<button></button>')
-        .addClass('btn btn-default btn-sm glyphicon glyphicon-download-alt')
-        .attr('style', 'margin-bottom: 0.5rem; width: 14.3rem;')
+        .addClass('btn btn-default glyphicon glyphicon-download-alt')
+        .attr('style', 'width: 13.8rem;')
+        .attr('id', 'request-download-button')
         .on('click', function(){
 
           var download_ids = new Array;
@@ -217,7 +220,7 @@
           }
       });
 
-      $(".datatables_bulk_actions").append(request_download_button);
+      $(".datatables_bulk_actions").prepend(request_download_button);
 
     });
   </script>
