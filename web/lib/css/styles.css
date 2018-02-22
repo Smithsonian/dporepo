@@ -237,9 +237,9 @@ dd {
 	clear: both;
 }
 
-#remove-records-button {
-	margin-bottom: 0.5rem;
-	margin-right: 0.5rem;
+#remove-records-button,
+#request-download-button {
+	margin-right: 0.4rem;
 }
 
 #remove-records-checkbox {
@@ -248,6 +248,11 @@ dd {
 
 .add-record-button {
   margin-bottom: 0.5rem;
+}
+
+#browse_info,
+#browse_length {
+  float: left;
 }
 
 /*
