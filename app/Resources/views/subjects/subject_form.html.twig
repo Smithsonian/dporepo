@@ -64,7 +64,7 @@
           <div class="form-group">
             <label class="control-label" for="subject_type_lookup_id"><span style="color:red;">*</span>Subject Type:</label>
             <div class="controls">
-              <select id="subject_type_lookup_id" name="subject_type_lookup_id" required="true">
+              <select class="default-chosen-select" id="subject_type_lookup_id" name="subject_type_lookup_id" required="true">
                 <option value="0">Select</option>
                 {% for single_subject_type in subject_data.subject_types %}
                   {% set selected = '' %}

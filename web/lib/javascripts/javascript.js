@@ -63,9 +63,16 @@ jQuery(document).ready(function($) {
    * Using the Chosen jQuery plugin for Select Form Fields
    * https://harvesthq.github.io/chosen/
    */
-  $('select').chosen({
+  $('select.default-chosen-select').chosen({
     max_selected_options: 1,
     width: '60%',
+    allow_single_deselect: true,
+    no_results_text: 'Oops, nothing found!'
+  });
+
+  $('select.stakeholder-chosen-select').chosen({
+    max_selected_options: 1,
+    width: '100%',
     allow_single_deselect: true,
     no_results_text: 'Oops, nothing found!'
   });

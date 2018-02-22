@@ -77,7 +77,7 @@
         <div class="form-group">
           <label class="control-label" for="calibration_object_type_id"><span style="color:red;">*</span>Calibration Object Type:</label>
           <div class="controls">
-            <select id="calibration_object_type_id" name="calibration_object_type_id" required="true">
+            <select class="default-chosen-select" id="calibration_object_type_id" name="calibration_object_type_id" required="true">
               <option value="0">Select</option>
               {% for single_capture_method in dataset_element_data.calibration_object_types %}
                 {% set selected = '' %}

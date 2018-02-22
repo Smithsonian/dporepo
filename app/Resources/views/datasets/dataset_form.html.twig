@@ -41,7 +41,7 @@
         <div class="form-group">
           <label class="control-label" for="capture_method_lookup_id"><span style="color:red;">*</span>Capture Method:</label>
           <div class="controls">
-            <select id="capture_method_lookup_id" name="capture_method_lookup_id" required="true">
+            <select class="default-chosen-select" id="capture_method_lookup_id" name="capture_method_lookup_id" required="true">
               <option value="0">Select</option>
               {% for single_capture_method in dataset_data.capture_methods %}
                 {% set selected = '' %}
@@ -56,7 +56,7 @@
         <div class="form-group">
           <label class="control-label" for="dataset_type_lookup_id"><span style="color:red;">*</span>Dataset Type:</label>
           <div class="controls">
-            <select id="dataset_type_lookup_id" name="dataset_type_lookup_id" required="true">
+            <select class="default-chosen-select" id="dataset_type_lookup_id" name="dataset_type_lookup_id" required="true">
               <option value="0">Select</option>
               {% for single_dataset_type in dataset_data.dataset_types %}
                 {% set selected = '' %}
@@ -116,7 +116,7 @@
         <div class="form-group">
           <label class="control-label" for="item_position_type_lookup_id"><span style="color:red;">*</span>Item Position Type:</label>
           <div class="controls">
-            <select id="item_position_type_lookup_id" name="item_position_type_lookup_id" required="true">
+            <select class="default-chosen-select" id="item_position_type_lookup_id" name="item_position_type_lookup_id" required="true">
               <option value="0">Select</option>
               {% for single_item_position_type in dataset_data.item_position_types %}
                 {% set selected = '' %}
@@ -145,7 +145,7 @@
         <div class="form-group">
           <label class="control-label" for="focus_lookup_id"><span style="color:red;">*</span>Focus:</label>
           <div class="controls">
-            <select id="focus_lookup_id" name="focus_lookup_id" required="true">
+            <select class="default-chosen-select" id="focus_lookup_id" name="focus_lookup_id" required="true">
               <option value="0">Select</option>
               {% for single_focus_type in dataset_data.focus_types %}
                 {% set selected = '' %}
@@ -167,7 +167,7 @@
         <div class="form-group">
           <label class="control-label" for="light_source_type_lookup_id"><span style="color:red;">*</span>Light Source Type:</label>
           <div class="controls">
-            <select id="light_source_type_lookup_id" name="light_source_type_lookup_id" required="true">
+            <select class="default-chosen-select" id="light_source_type_lookup_id" name="light_source_type_lookup_id" required="true">
               <option value="0">Select</option>
               {% for single_light_source_type in dataset_data.light_source_types %}
                 {% set selected = '' %}
@@ -189,7 +189,7 @@
         <div class="form-group">
           <label class="control-label" for="background_removal_method_lookup_id"><span style="color:red;">*</span>Background Removal Method:</label>
           <div class="controls">
-            <select id="background_removal_method_lookup_id" name="background_removal_method_lookup_id" required="true">
+            <select class="default-chosen-select" id="background_removal_method_lookup_id" name="background_removal_method_lookup_id" required="true">
               <option value="0">Select</option>
               {% for single_background_removal_method in dataset_data.background_removal_methods %}
                 {% set selected = '' %}
@@ -204,7 +204,7 @@
         <div class="form-group">
           <label class="control-label" for="camera_cluster_type_lookup_id"><span style="color:red;">*</span>Camera Cluster Type:</label>
           <div class="controls">
-            <select id="camera_cluster_type_lookup_id" name="camera_cluster_type_lookup_id" required="true">
+            <select class="default-chosen-select" id="camera_cluster_type_lookup_id" name="camera_cluster_type_lookup_id" required="true">
               <option value="0">Select</option>
               {% for single_camera_cluster_type in dataset_data.camera_cluster_types %}
                 {% set selected = '' %}

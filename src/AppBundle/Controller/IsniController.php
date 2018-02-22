@@ -28,12 +28,12 @@ class IsniController extends Controller
     }
 
      /**
-     * @Route("/admin/isni/{isni_query}", name="query_isni", methods="GET", defaults={"isni_query" = false})
+     * @Route("/admin/isni/{isniQuery}/{startRecord}/{maximumRecords}", name="query_isni", methods="GET", defaults={"isniQuery" = false, "startRecord" = 1, "maximumRecords" = 20})
      *
      * Query ISNI
      *
      * Run a query against ISNI's API
-     * Example: http://isni.oclc.nl/sru/?query=pica.nw+%3D+%22NASM%22&operation=searchRetrieve&recordSchema=isni-b
+     * Example: http://isni.oclc.nl/sru/?query=pica.nw+%3D+%22NASM%22&operation=searchRetrieve&recordSchema=isni-b&startRecord=1&maximumRecords=20
      *
      * @param   object  $request     Request object
      * @return  array|bool          The query result
@@ -41,7 +41,9 @@ class IsniController extends Controller
     public function queryIsni(Request $request)
     {
         $data = array();
-        $query = $request->attributes->get('isni_query');
+        $query = $request->attributes->get('isniQuery');
+        $startRecord = $request->attributes->get('startRecord');
+        $maximumRecords = $request->attributes->get('maximumRecords');
 
         if($query) {
 
@@ -50,11 +52,11 @@ class IsniController extends Controller
                 'query' => 'pica.nw = "' . $query . '"',
                 'operation' => 'searchRetrieve',
                 'recordSchema' => 'isni-b',
+                'startRecord' => $startRecord,
+                'maximumRecords' => $maximumRecords,
             );
 
-            // $this->u->dumper(http_build_query($params));
             $results = $this->callApi($url, $params);
-            // $this->u->dumper($results);
             $xml = simplexml_load_string($results);
             $xml->registerXPathNamespace('srw', 'http://www.loc.gov/zing/srw/');
 
@@ -72,7 +74,7 @@ class IsniController extends Controller
 
                     $isniRecord = $r->responseRecord->ISNIAssigned->ISNIMetadata->identity->organisation;
                     $isniRecordArray = json_decode(json_encode($isniRecord), true);
-                    $data[$i]["organisationType"] = $isniRecordArray["organisationType"];
+                    $data[$i]["organisationType"] = isset($isniRecordArray["organisationType"]) ? $isniRecordArray["organisationType"] : array();
 
                     if(isset($isniRecordArray["organisationName"])) {
                         foreach ($isniRecordArray["organisationName"] as $key => $value) {
