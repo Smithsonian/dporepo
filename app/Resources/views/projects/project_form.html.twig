@@ -1,5 +1,10 @@
 {% extends 'default_bootstrap_admin.html.twig' %}
 
+{% block stylesheets %}
+  {{ parent() }}
+  <!-- <link href="{{ asset('lib/javascripts/EasyAutocomplete/easy-autocomplete.min.css') }}" rel="stylesheet" type="text/css" /> -->
+{% endblock %}
+
 {% block content %}
     
     {% if errors %}
@@ -85,10 +90,21 @@
                 <h4>Search ISNI</h4>
                 <div class="form-group panel panel-default">
                   <div class="panel-body">
-                    <label class="control-label hidden" for="searchQuery">Search</label>
-                    <div class="controls">
-                      <input name="searchQuery" id="searchQuery" type="text" value="" class="form-control">
+
+                    <div class="row">
+                      <div class="col-sm-9 col-md-9">
+                        <label class="control-label hidden" for="searchQuery">Search</label>
+                        <div class="controls">
+                          <input name="searchQuery" id="search-query" type="text" value="" class="form-control">
+                        </div>
+                      </div>
+                      <div class="col-sm-3 col-md-3">
+                        <div class="controls">
+                          <button type="button" id="search-query-button" class="btn btn-default">Search</button>
+                        </div>
+                      </div>
                     </div>
+
                   </div>
                 </div>
               </div>
@@ -115,10 +131,16 @@
               </div>
             </div>
 
+            <div class="row">
+              <div id="search-results" class="col-sm-6 col-md-6">
+
+              </div>
+            </div>
+
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-            <button type="button" class="btn btn-primary">Save changes</button>
+            <button type="button" class="btn btn-primary" id="save-changes">Save changes</button>
           </div>
         </div>
       </div>
@@ -128,9 +150,82 @@
 
 {% block js_bottom %}
   {{ parent() }}
+  <!-- <script src="{{ asset('lib/javascripts/EasyAutocomplete/jquery.easy-autocomplete.js') }}"></script> -->
   <script type="text/javascript">
     jQuery(document).ready(function($) {
-      // 
+
+      var resultsContainer = $('#search-results')
+          loadingGif = $('<img />').attr('src', '/lib/images/spinner.gif').attr('alt', 'loading animation').attr('style', 'width: 140px;'),
+          loadingGifContainer = $('<div />').addClass('center-block').attr('style', 'width: 140px;').append(loadingGif);
+
+      $('#search-query-button').on('click', function(e) {
+
+        var searchQuery = $('#search-query').val();
+
+        if(!searchQuery.length) {
+          swal('Search Term is Empty', 'Please enter a search term.');
+          return;
+        }
+
+        resultsContainer.empty();
+        resultsContainer.append(loadingGifContainer);
+
+        $.ajax({
+          type: 'GET'
+          ,dataType: 'json'
+          ,url: '/admin/isni/' + searchQuery + '/1/50'
+          ,success: function(result) {
+
+            if(result) {
+
+              loadingGifContainer.remove();
+
+              for (var key in result) {
+                var header = $('<h4 />').text('Result #' + (parseInt(key)+1)),
+                    isniId = $('<p />').html('<strong>ISNI ID: </strong>' + '<a href="http://www.isni.org/' + result[key].isniId + '" title="View full record (opens in a new tab/window)" target="_blank">' + result[key].isniId + '</a>'),
+                    organisationType = $('<p />').html('<strong>Organization Type: </strong>' + result[key].organisationType),
+                    organisationName = $('<p />').html('<strong>Organization Name: </strong>' + JSON.stringify(result[key].organisationName)),
+                    organisationNameVariant = $('<p />').html('<strong>Organization Name Variant: </strong>' + JSON.stringify(result[key].organisationNameVariant)),
+                    containerDivLeft = $('<div />')
+                        .attr('id', result[key].isniId)
+                        .addClass('col-sm-10 col-md-10 well')
+                        .append(isniId, organisationType, organisationName, organisationNameVariant),
+                    radioButton = $('<input name="isni_chosen" type="radio" value="' + result[key].isniId + '">')
+                        .on('click', function() {
+                            $('.well').removeAttr('style');
+                            $(this).parent().parent().find('.well').attr('style', 'border-color: #337ab7;');
+                      }),
+                    containerDivRight = $('<div />').addClass('col-sm-2 col-md-2').append(radioButton),
+                    containerDivRow = $('<div />').addClass('row').append(containerDivLeft, containerDivRight);
+
+                resultsContainer.append(containerDivRow);
+              }
+            
+            }
+
+          }
+        });
+
+      });
+
+      $('#save-changes').on('click', function(){
+        resultsContainer.empty();
+        $('#search-query').val('');
+        $('#isniSearchModal').modal('hide');
+      });
+
+      // var options = {
+
+      //   url: function(phrase) {
+      //     return "/admin/isni/" + phrase + "/1/50";
+      //   },
+      //   getValue: "organisationName[0]",
+      //   requestDelay: 400
+
+      // };
+
+      // $("#searchQuery").easyAutocomplete(options);
+
     });
   </script>
 {% endblock %}

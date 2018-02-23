@@ -3,7 +3,7 @@ jQuery(document).ready(function($) {
 	var urlSplit = window.location.href.split('/');
 	var currentPath = urlSplit.slice(3);
 
-	if(currentPath[1].length) {
+	if((typeof currentPath[1] !== 'undefined') && currentPath[1].length) {
 
 	  var remove_button = $('<button></button>')
 	        .addClass('btn btn-default glyphicon glyphicon-trash')
