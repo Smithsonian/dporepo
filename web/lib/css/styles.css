@@ -275,3 +275,25 @@ dd {
 #stakeholder-display {
   margin-bottom: 1rem;
 }
+
+#isniSearchModal.modal {
+    overflow: hidden;
+}
+
+#isniSearchModal.modal .modal-body {
+    height: 500px;
+    overflow: auto;
+}
+
+/*#isniSearchModal.modal .si-unit-picker {
+    position: fixed;
+    width: 46%;
+}*/
+
+.isni-chosen {
+  display: none;
+}
+
+.isni-picker i {
+  color: #4b4b4b;
+}

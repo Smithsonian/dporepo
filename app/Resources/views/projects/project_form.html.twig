@@ -114,21 +114,23 @@
               </div>
 
               <div class="col-sm-6 col-md-6">
-                <h4>Choose SI Unit Code</h4>
-                <div class="form-group panel panel-default">
-                  <div class="panel-body">
-                    <label class="control-label hidden" for="stakeholder_guid_picker"><span style="color:red;">*</span>Stakeholder GUID:</label>
-                    <div class="controls">
-                      <select class="stakeholder-chosen-select" id="stakeholder_guid_picker" name="stakeholder_guid_picker" required="true">
-                        <option value="0">Select</option>
-                        {% for single_units_stakeholders in project_info.units_stakeholders %}
-                          {% set selected = '' %}
-                          {# {% if project_info.stakeholder_guid is defined and single_units_stakeholders.unit_stakeholder_id == project_info.stakeholder_guid %}
-                            {% set selected = ' selected="selected"' %}
-                          {% endif %} #}
-                          <option value="{{ single_units_stakeholders.unit_stakeholder_id }}"{{ selected }}>{{ single_units_stakeholders.unit_stakeholder_label }} - {{ single_units_stakeholders.unit_stakeholder_full_name }}</option>
-                        {% endfor %}
-                      </select>
+                <div class="si-unit-picker">
+                  <h4>Choose SI Unit Code</h4>
+                  <div class="form-group panel panel-default">
+                    <div class="panel-body">
+                      <label class="control-label hidden" for="stakeholder_guid_picker"><span style="color:red;">*</span>Stakeholder GUID:</label>
+                      <div class="controls">
+                        <select class="stakeholder-chosen-select" id="stakeholder_guid_picker" name="stakeholder_guid_picker" required="true">
+                          <option value="0">Select</option>
+                          {% for single_units_stakeholders in project_info.units_stakeholders %}
+                            {% set selected = '' %}
+                            {# {% if project_info.stakeholder_guid is defined and single_units_stakeholders.unit_stakeholder_id == project_info.stakeholder_guid %}
+                              {% set selected = ' selected="selected"' %}
+                            {% endif %} #}
+                            <option value="{{ single_units_stakeholders.unit_stakeholder_id }}"{{ selected }}>{{ single_units_stakeholders.unit_stakeholder_label }} - {{ single_units_stakeholders.unit_stakeholder_full_name }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -205,18 +207,24 @@
                     isniOrgTypeContainer = $('<div />').text(result[key].organisationType),
                     isniLabelsHeader = $('<h4 />').text('Organization Names'),
                     isniLabelsContainer = buildLabelRadioButtons(result[key].isniId, result[key].organisationName),
-                    isniOrgNameVariantHeader = $('<h4 />').text('Organization Name Variants'),
-                    isniOrgNameVariant = $('<div />').text(JSON.stringify(result[key].organisationNameVariant).replace('[','').replace(']','')),
+                    // isniOrgNameVariantHeader = $('<h4 />').text('Organization Name Variants'),
+                    // isniOrgNameVariant = (typeof result[key].organisationNameVariant !== 'undefined') ? $('<div />').text(JSON.stringify(result[key].organisationNameVariant).replace('[','').replace(']','')) : 'N/A',
                     containerDivLeft = $('<div />')
                         .attr('id', result[key].isniId)
                         .addClass('col-sm-10 col-md-10 well')
                         .append(isniLabelsHeader, isniLabelsContainer, isniOrgTypeHeader, isniOrgTypeContainer, isniIdHeader, isniId),
-                    radioButton = $('<input name="isni_chosen" type="radio" value="' + result[key].isniId + '">')
+                    radioButton = $('<input class="isni-chosen" name="isni_chosen" type="radio" value="' + result[key].isniId + '">'),
+                    radioButtonIcon = $('<i />').addClass('glyphicon glyphicon-unchecked')
                         .on('click', function() {
+                            var thisCheckboxIcon = $(this);
+                            $('.isni-picker i').removeClass('glyphicon-check').addClass('glyphicon-unchecked');
+                            thisCheckboxIcon.removeClass('glyphicon-unchecked').addClass('glyphicon-check');
                             $('.well').removeAttr('style');
-                            $(this).parent().parent().find('.well').attr('style', 'border-color: #337ab7;');
+                            thisCheckboxIcon.parent().parent().parent().find('.well').attr('style', 'border-color: #337ab7;');
+                            thisCheckboxIcon.parent().parent().find('.isni-chosen').trigger('click');
                       }),
-                    containerDivRight = $('<div />').addClass('col-sm-2 col-md-2').append(radioButton),
+                    radioButtonIconHeader = $('<h3 />').addClass('isni-picker').append(radioButtonIcon),
+                    containerDivRight = $('<div />').addClass('col-sm-2 col-md-2').append(radioButton, radioButtonIconHeader),
                     containerDivRow = $('<div />').addClass('row').append(containerDivLeft, containerDivRight);
 
                 resultsContainer.append(containerDivRow);
@@ -307,7 +315,7 @@
             // var checked = (parseInt(key) === 0) ? true : false;
             var radioButtonLabel = $('<label />').attr('for', isniId).attr('style', 'font-weight: normal;').text(array[key]),
                 radioButtonLabelDiv = $('<div />').addClass('col-sm-10 col-md-10').append(radioButtonLabel),
-                radioButton = $('<input />').attr('name', isniId).attr('type', 'radio').attr('value', array[key]).text(array[key]),
+                radioButton = $('<input />').attr('name', isniId).attr('type', 'radio').attr('value', array[key]),
                 radioButtonDiv = $('<div />').addClass('col-sm-2 col-md-2').append(radioButton),
                 radioButtonContainer = $('<div />').append(radioButtonLabelDiv, radioButtonDiv).html();
             // Populate the ISNI labels container.

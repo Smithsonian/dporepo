@@ -8,6 +8,8 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 
+use PDO;
+
 use AppBundle\Utils\AppUtilities;
 
 class IsniController extends Controller
@@ -127,6 +129,89 @@ class IsniController extends Controller
         }
 
         return $result;
+    }
+
+    /**
+     * Get ISNI Record
+     *
+     * Run a query to retrieve one ISNI record from the database.
+     *
+     * @param   int $isni_id  The ISNI ID
+     * @return  array|bool       The query result
+     */
+    public function get_isni_data_from_database($isni_id, $conn)
+    {
+        $statement = $conn->prepare("SELECT *
+            FROM isni_data
+            WHERE isni_data.active = 1
+            AND isni_id = :isni_id");
+        $statement->bindValue(":isni_id", $isni_id, PDO::PARAM_INT);
+        $statement->execute();
+        return $statement->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Insert/Update ISNI Data
+     *
+     * Run queries to insert and update ISNI data in the database.
+     *
+     * @param   array   $data        The data array
+     * @param   int     $isni_id     The project ID
+     * @param   string  $isni_label  The ISNI label
+     * @param   object  $conn        Database connection object
+     * @return  int     The project ID
+     */
+    public function insert_isni_data($isni_id = FALSE, $isni_label = FALSE, $user_id, $conn)
+    {
+        if($isni_id && $isni_label) {
+            $statement = $conn->prepare("INSERT INTO isni_data
+                    (isni_id, isni_label, date_created, created_by_user_account_id, last_modified_user_account_id)
+                    VALUES (:isni_id, :isni_label, NOW(), :user_account_id, :user_account_id)");
+            $statement->bindValue(":isni_id", $isni_id, PDO::PARAM_INT);
+            $statement->bindValue(":isni_label", $isni_label, PDO::PARAM_STR);
+            $statement->bindValue(":user_account_id", $user_id, PDO::PARAM_INT);
+            $statement->execute();
+            $last_inserted_id = $conn->lastInsertId();
+
+            if(!$last_inserted_id) {
+              die('INSERT INTO `isni_data` failed.');
+            }
+
+            return $last_inserted_id;
+        }
+    }
+
+    /**
+     * Create ISNI Table
+     *
+     * @param   object $conn  Database connection object
+     * @return  void
+     */
+    public function create_isni_table($conn)
+    {
+        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `isni_data` (
+          `isni_id` int(11) NOT NULL AUTO_INCREMENT,
+          `isni_label` varchar(255) NOT NULL DEFAULT '',
+          `date_created` datetime NOT NULL,
+          `created_by_user_account_id` int(11) NOT NULL,
+          `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          `last_modified_user_account_id` int(11) NOT NULL,
+          `active` tinyint(1) NOT NULL DEFAULT '1',
+          PRIMARY KEY (`isni_id`),
+          KEY `created_by_user_account_id` (`created_by_user_account_id`),
+          KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='This table stores ISNI metadata'");
+
+        $statement->execute();
+        $error = $conn->errorInfo();
+
+        if ($error[0] !== '00000') {
+            var_dump($conn->errorInfo());
+            die('CREATE TABLE `projects` failed.');
+        } else {
+            return TRUE;
+        }
+
     }
 
 }

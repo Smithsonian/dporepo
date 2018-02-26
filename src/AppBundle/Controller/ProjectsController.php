@@ -18,6 +18,7 @@ use AppBundle\Utils\AppUtilities;
 
 // Subjects methods
 use AppBundle\Controller\SubjectsController;
+use AppBundle\Controller\IsniController;
 
 class ProjectsController extends Controller
 {
@@ -39,10 +40,11 @@ class ProjectsController extends Controller
     /**
      * @Route("/admin/workspace/", name="projects_browse", methods="GET")
      */
-    public function browse_projects(Connection $conn, Request $request)
+    public function browse_projects(Connection $conn, Request $request, IsniController $isni)
     {
         // Database tables are only created if not present.
         $create_projects_table = $this->create_projects_table($conn);
+        $create_isni_table = $isni->create_isni_table($conn);
 
         return $this->render('projects/browse_projects.html.twig', array(
             'page_title' => 'Browse Projects',
@@ -122,10 +124,11 @@ class ProjectsController extends Controller
                 ,projects.date_created
                 ,projects.last_modified
                 ,projects.active
-                ,projects.stakeholder_label
                 ,projects.projects_id AS DT_RowId
                 ,count(distinct subjects.subjects_id) AS subjects_count
+                ,isni_data.isni_label AS stakeholder_label
             FROM projects
+            LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
             LEFT JOIN subjects ON subjects.projects_id = projects.projects_id
             WHERE projects.active = 1
             {$search_sql}
@@ -154,7 +157,7 @@ class ProjectsController extends Controller
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_projects_form( $projects_id, Connection $conn, Request $request, GumpParseErrors $gump_parse_errors )
+    function show_projects_form( $projects_id, Connection $conn, Request $request, GumpParseErrors $gump_parse_errors, IsniController $isni )
     {
         $errors = false;
         $project_data = array();
@@ -162,6 +165,8 @@ class ProjectsController extends Controller
         $post = $request->request->all();
         $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
         $project_data = !empty($post) ? $post : $this->get_project((int)$projects_id, $conn);
+
+        // $this->u->dumper($project_data);
 
         // Get data from lookup tables.
         $project_data['units_stakeholders'] = $this->get_units_stakeholders($conn);
@@ -213,7 +218,7 @@ class ProjectsController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $projects_id = $this->insert_update_project($post, $projects_id, $conn);
+            $projects_id = $this->insert_update_project($post, $projects_id, $conn, $isni);
             $this->addFlash('message', 'Project successfully updated.');
             return $this->redirectToRoute('projects_browse');
         } else {
@@ -237,8 +242,19 @@ class ProjectsController extends Controller
      */
     public function get_project($project_id, $conn)
     {
-        $statement = $conn->prepare("SELECT *
+        $statement = $conn->prepare("SELECT 
+            projects.projects_id,
+            projects.projects_label,
+            projects.stakeholder_guid,
+            projects.stakeholder_si_guid,
+            projects.project_description,
+            projects.date_created,
+            projects.created_by_user_account_id,
+            projects.last_modified,
+            projects.last_modified_user_account_id,
+            isni_data.isni_label AS stakeholder_label
             FROM projects
+            LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
             WHERE projects.active = 1
             AND projects_id = :projects_id");
         $statement->bindValue(":projects_id", $project_id, PDO::PARAM_INT);
@@ -303,11 +319,12 @@ class ProjectsController extends Controller
         $statement = $conn->prepare("
             SELECT projects.projects_id
                 ,projects.stakeholder_guid
-                ,projects.stakeholder_label
+                ,isni_data.isni_label AS stakeholder_label
             FROM projects
+            LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
             WHERE projects.active = 1
-            GROUP BY projects.stakeholder_label
-            ORDER BY projects.stakeholder_label ASC
+            GROUP BY isni_data.isni_label
+            ORDER BY isni_data.isni_label ASC
         ");
         $statement->execute();
         return $statement->fetchAll(PDO::FETCH_ASSOC);
@@ -371,20 +388,28 @@ class ProjectsController extends Controller
      * @param   object  $conn        Database connection object
      * @return  int     The project ID
      */
-    public function insert_update_project($data, $projects_id = FALSE, $conn)
+    public function insert_update_project($data, $projects_id = FALSE, $conn, $isni)
     {
         // $this->u->dumper($data);
         // stakeholder_guid
         // stakeholder_label
         // stakeholder_si_guid
 
+        // Query the isni_data table to see if there's an entry.
+        $isni_data = $isni->get_isni_data_from_database($data['stakeholder_guid'], $conn);
+
+        // If there is no entry, then perform an insert.
+        if(!$isni_data) {
+          $isni_inserted = $isni->insert_isni_data($data['stakeholder_guid'], $data['stakeholder_label'], $this->getUser()->getId(), $conn);
+        }
+
         // Update
         if($projects_id) {
+
             $statement = $conn->prepare("
                 UPDATE projects
                 SET projects_label = :projects_label
                 ,stakeholder_guid = :stakeholder_guid
-                ,stakeholder_label = :stakeholder_label
                 ,stakeholder_si_guid = :stakeholder_si_guid
                 ,project_description = :project_description
                 ,last_modified_user_account_id = :last_modified_user_account_id
@@ -392,7 +417,6 @@ class ProjectsController extends Controller
                 ");
             $statement->bindValue(":projects_label", $data['projects_label'], PDO::PARAM_STR);
             $statement->bindValue(":stakeholder_guid", $data['stakeholder_guid'], PDO::PARAM_STR);
-            $statement->bindValue(":stakeholder_label", $data['stakeholder_label'], PDO::PARAM_STR);
             $statement->bindValue(":stakeholder_si_guid", $data['stakeholder_si_guid'], PDO::PARAM_STR);
             $statement->bindValue(":project_description", $data['project_description'], PDO::PARAM_STR);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
@@ -406,11 +430,10 @@ class ProjectsController extends Controller
         if(!$projects_id) {
 
             $statement = $conn->prepare("INSERT INTO projects
-              (projects_label, stakeholder_guid, stakeholder_label, stakeholder_si_guid, project_description, date_created, created_by_user_account_id, last_modified_user_account_id )
-              VALUES (:projects_label, :stakeholder_guid, :stakeholder_label, :stakeholder_si_guid, :project_description, NOW(), :user_account_id, :user_account_id )");
+              (projects_label, stakeholder_guid, stakeholder_si_guid, project_description, date_created, created_by_user_account_id, last_modified_user_account_id )
+              VALUES (:projects_label, :stakeholder_guid, :stakeholder_si_guid, :project_description, NOW(), :user_account_id, :user_account_id )");
             $statement->bindValue(":projects_label", $data['projects_label'], PDO::PARAM_STR);
             $statement->bindValue(":stakeholder_guid", $data['stakeholder_guid'], PDO::PARAM_STR);
-            $statement->bindValue(":stakeholder_label", $data['stakeholder_label'], PDO::PARAM_STR);
             $statement->bindValue(":stakeholder_si_guid", $data['stakeholder_si_guid'], PDO::PARAM_STR);
             $statement->bindValue(":project_description", $data['project_description'], PDO::PARAM_STR);
             $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
@@ -552,4 +575,5 @@ class ProjectsController extends Controller
         }
 
     }
+
 }
