@@ -80,7 +80,7 @@ class ProjectsController extends Controller
                 $sort_field = 'projects_label';
                 break;
             case '1':
-                $sort_field = 'stakeholder_guid';
+                $sort_field = 'stakeholder_label';
                 break;
             case '2':
                 $sort_field = 'subjects_count';
@@ -109,7 +109,7 @@ class ProjectsController extends Controller
             $search_sql = "
             AND (
                 projects.projects_label LIKE ?
-                OR projects.stakeholder_guid LIKE ?
+                OR projects.stakeholder_label LIKE ?
                 OR projects.date_created LIKE ?
                 OR projects.last_modified LIKE ?
             ) ";
@@ -122,13 +122,11 @@ class ProjectsController extends Controller
                 ,projects.date_created
                 ,projects.last_modified
                 ,projects.active
-                ,unit_stakeholder.label
-                ,unit_stakeholder.full_name
+                ,projects.stakeholder_label
                 ,projects.projects_id AS DT_RowId
                 ,count(distinct subjects.subjects_id) AS subjects_count
             FROM projects
             LEFT JOIN subjects ON subjects.projects_id = projects.projects_id
-            LEFT JOIN unit_stakeholder ON unit_stakeholder.unit_stakeholder_id = projects.stakeholder_guid
             WHERE projects.active = 1
             {$search_sql}
             GROUP BY projects.projects_label, projects.stakeholder_guid, projects.date_created, projects.last_modified, projects.active, projects.projects_id
@@ -168,6 +166,8 @@ class ProjectsController extends Controller
         // Get data from lookup tables.
         $project_data['units_stakeholders'] = $this->get_units_stakeholders($conn);
 
+        // $this->u->dumper($project_data['units_stakeholders']);
+
         // Processing statuses.
         if(isset($project_data['active'])) {
             switch($project_data['active']) {
@@ -195,10 +195,16 @@ class ProjectsController extends Controller
             // "" => "required|max_len,255|alpha_numeric",
             $rules = array(
                 "projects_label" => "required|max_len,255",
+                "stakeholder_label" => "required|max_len,255",
                 "stakeholder_guid" => "required|max_len,255",
+                "stakeholder_si_guid" => "required|max_len,255",
                 "project_description" => "required",
             );
             $validated = $gump->validate($post, $rules);
+
+            // <input name="isni_label" id="isni_label" value="National Air and Space Museum" type="hidden">
+            // <input name="isni_guid" id="isni_guid" value="0000000122858065" type="hidden">
+            // <input name="si_guid" id="si_suid" value="200" type="hidden">
 
             $errors = array();
             if ($validated !== true) {
@@ -232,10 +238,7 @@ class ProjectsController extends Controller
     public function get_project($project_id, $conn)
     {
         $statement = $conn->prepare("SELECT *
-            ,unit_stakeholder.label
-            ,unit_stakeholder.full_name
             FROM projects
-            LEFT JOIN unit_stakeholder ON unit_stakeholder.unit_stakeholder_id = projects.stakeholder_guid
             WHERE projects.active = 1
             AND projects_id = :projects_id");
         $statement->bindValue(":projects_id", $project_id, PDO::PARAM_INT);
@@ -300,12 +303,11 @@ class ProjectsController extends Controller
         $statement = $conn->prepare("
             SELECT projects.projects_id
                 ,projects.stakeholder_guid
-                ,unit_stakeholder.label
+                ,projects.stakeholder_label
             FROM projects
-            INNER JOIN unit_stakeholder ON unit_stakeholder.unit_stakeholder_id = projects.stakeholder_guid
             WHERE projects.active = 1
-            GROUP BY unit_stakeholder.label
-            ORDER BY unit_stakeholder.label ASC
+            GROUP BY projects.stakeholder_label
+            ORDER BY projects.stakeholder_label ASC
         ");
         $statement->execute();
         return $statement->fetchAll(PDO::FETCH_ASSOC);
@@ -322,7 +324,7 @@ class ProjectsController extends Controller
 
       foreach ($projects as $key => $value) {
           $data[$key]['id'] = 'stakeholderGuid-' . $value['stakeholder_guid'];
-          $data[$key]['text'] = $value['label'];
+          $data[$key]['text'] = $value['stakeholder_label'];
           $data[$key]['children'] = true;
       }
 
@@ -371,18 +373,27 @@ class ProjectsController extends Controller
      */
     public function insert_update_project($data, $projects_id = FALSE, $conn)
     {
+        // $this->u->dumper($data);
+        // stakeholder_guid
+        // stakeholder_label
+        // stakeholder_si_guid
+
         // Update
         if($projects_id) {
             $statement = $conn->prepare("
                 UPDATE projects
                 SET projects_label = :projects_label
                 ,stakeholder_guid = :stakeholder_guid
+                ,stakeholder_label = :stakeholder_label
+                ,stakeholder_si_guid = :stakeholder_si_guid
                 ,project_description = :project_description
                 ,last_modified_user_account_id = :last_modified_user_account_id
                 WHERE projects_id = :projects_id
                 ");
             $statement->bindValue(":projects_label", $data['projects_label'], PDO::PARAM_STR);
             $statement->bindValue(":stakeholder_guid", $data['stakeholder_guid'], PDO::PARAM_STR);
+            $statement->bindValue(":stakeholder_label", $data['stakeholder_label'], PDO::PARAM_STR);
+            $statement->bindValue(":stakeholder_si_guid", $data['stakeholder_si_guid'], PDO::PARAM_STR);
             $statement->bindValue(":project_description", $data['project_description'], PDO::PARAM_STR);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->bindValue(":projects_id", $projects_id, PDO::PARAM_INT);
@@ -395,10 +406,12 @@ class ProjectsController extends Controller
         if(!$projects_id) {
 
             $statement = $conn->prepare("INSERT INTO projects
-              (projects_label, stakeholder_guid, project_description, date_created, created_by_user_account_id, last_modified_user_account_id )
-              VALUES (:projects_label, :stakeholder_guid, :project_description, NOW(), :user_account_id, :user_account_id )");
+              (projects_label, stakeholder_guid, stakeholder_label, stakeholder_si_guid, project_description, date_created, created_by_user_account_id, last_modified_user_account_id )
+              VALUES (:projects_label, :stakeholder_guid, :stakeholder_label, :stakeholder_si_guid, :project_description, NOW(), :user_account_id, :user_account_id )");
             $statement->bindValue(":projects_label", $data['projects_label'], PDO::PARAM_STR);
             $statement->bindValue(":stakeholder_guid", $data['stakeholder_guid'], PDO::PARAM_STR);
+            $statement->bindValue(":stakeholder_label", $data['stakeholder_label'], PDO::PARAM_STR);
+            $statement->bindValue(":stakeholder_si_guid", $data['stakeholder_si_guid'], PDO::PARAM_STR);
             $statement->bindValue(":project_description", $data['project_description'], PDO::PARAM_STR);
             $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->execute();
@@ -419,7 +432,7 @@ class ProjectsController extends Controller
      */
     public function get_units_stakeholders($conn)
     {
-      $statement = $conn->prepare("SELECT * FROM unit_stakeholder ORDER BY label ASC");
+      $statement = $conn->prepare("SELECT * FROM unit_stakeholder ORDER BY unit_stakeholder_label ASC");
       $statement->execute();
       return $statement->fetchAll(PDO::FETCH_ASSOC);
     }

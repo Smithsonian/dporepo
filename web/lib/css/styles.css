@@ -264,3 +264,14 @@ dd {
   text-decoration: none;
   outline: 0;
 }
+
+/*
+ * Stakeholders/Units Modal
+ */
+#search-results {
+  margin-left: 1.5rem;
+}
+
+#stakeholder-display {
+  margin-bottom: 1rem;
+}
