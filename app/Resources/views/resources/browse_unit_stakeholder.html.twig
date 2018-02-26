@@ -39,8 +39,8 @@
       $('#browse').dataTable( {
           "columns": [
               { "data": "manage" },
-              { "data": "label" },
-              { "data": "full_name" },
+              { "data": "unit_stakeholder_label" },
+              { "data": "unit_stakeholder_full_name" },
               { "data": "last_modified" }
             ],
           "dom": 'lfip<"datatables_bulk_actions">tip',
@@ -84,7 +84,6 @@
       var add_button = $('<a />')
         .addClass('btn btn-default add-record-button')
         .attr('href', '/admin/resources/unit_stakeholder/manage')
-        .attr('style', 'margin-bottom: 0.5rem;')
         .html('<span class="glyphicon glyphicon-plus"></span> Add a New Unit/Stakeholder');
 
       $('.datatables_bulk_actions').append(add_button);

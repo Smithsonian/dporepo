@@ -41,13 +41,17 @@
             </div>
           </div>
           <div class="form-group">
-            <div class="controls">
-              <h4>Stakeholder GUID</h4>
-              {% if project_info.label is defined %}
-                <p>{{ project_info.label }} - {{ project_info.full_name }}</p>
-              {% else %}
-                <p>Search ISNI choose a stakeholder</p>
-              {% endif %}
+            <div class="controls stakeholder-container">
+              <h4>Stakeholder</h4>
+              <div id="stakeholder-display">
+                {% if project_info.stakeholder_label is defined %}
+                  {{ project_info.stakeholder_label }}<br>
+                  ISNI ID: <a href="http://www.isni.org/{{ project_info.stakeholder_guid }}" title="View full record (opens in a new tab/window)" target="_blank">{{ project_info.stakeholder_guid }}</a>, SI UNIT ID: {{ project_info.stakeholder_si_guid }}
+                {% endif %}
+              </div>
+              <input name="stakeholder_label" id="stakeholder_label" type="hidden" value="{{ project_info.stakeholder_label|default('')|e }}">
+              <input name="stakeholder_guid" id="stakeholder_guid" type="hidden" value="{{ project_info.stakeholder_guid|default('')|e }}">
+              <input name="stakeholder_si_guid" id="stakeholder_si_guid" type="hidden" value="{{ project_info.stakeholder_si_guid|default('')|e }}">
               <button type="button" class="btn btn-sm" data-toggle="modal" data-target="#isniSearchModal">
                 Choose a Stakeholder
               </button>
@@ -110,21 +114,23 @@
               </div>
 
               <div class="col-sm-6 col-md-6">
-                <h4>Choose SI Unit Code</h4>
-                <div class="form-group panel panel-default">
-                  <div class="panel-body">
-                    <label class="control-label hidden" for="stakeholder_guid"><span style="color:red;">*</span>Stakeholder GUID:</label>
-                    <div class="controls">
-                      <select class="stakeholder-chosen-select" id="stakeholder_guid" name="stakeholder_guid" required="true">
-                        <option value="0">Select</option>
-                        {% for single_units_stakeholders in project_info.units_stakeholders %}
-                          {% set selected = '' %}
-                          {% if project_info.stakeholder_guid is defined and single_units_stakeholders.unit_stakeholder_id == project_info.stakeholder_guid %}
-                            {% set selected = ' selected="selected"' %}
-                          {% endif %}
-                          <option value="{{ single_units_stakeholders.unit_stakeholder_id }}"{{ selected }}>{{ single_units_stakeholders.label }} - {{ single_units_stakeholders.full_name }}</option>
-                        {% endfor %}
-                      </select>
+                <div class="si-unit-picker">
+                  <h4>Choose SI Unit Code</h4>
+                  <div class="form-group panel panel-default">
+                    <div class="panel-body">
+                      <label class="control-label hidden" for="stakeholder_guid_picker"><span style="color:red;">*</span>Stakeholder GUID:</label>
+                      <div class="controls">
+                        <select class="stakeholder-chosen-select" id="stakeholder_guid_picker" name="stakeholder_guid_picker" required="true">
+                          <option value="0">Select</option>
+                          {% for single_units_stakeholders in project_info.units_stakeholders %}
+                            {% set selected = '' %}
+                            {# {% if project_info.stakeholder_guid is defined and single_units_stakeholders.unit_stakeholder_id == project_info.stakeholder_guid %}
+                              {% set selected = ' selected="selected"' %}
+                            {% endif %} #}
+                            <option value="{{ single_units_stakeholders.unit_stakeholder_id }}"{{ selected }}>{{ single_units_stakeholders.unit_stakeholder_label }} - {{ single_units_stakeholders.unit_stakeholder_full_name }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -154,22 +160,29 @@
   <script type="text/javascript">
     jQuery(document).ready(function($) {
 
+      // Set variables.
       var resultsContainer = $('#search-results')
           loadingGif = $('<img />').attr('src', '/lib/images/spinner.gif').attr('alt', 'loading animation').attr('style', 'width: 140px;'),
           loadingGifContainer = $('<div />').addClass('center-block').attr('style', 'width: 140px;').append(loadingGif);
 
+      // Search ISNI button click handler.
       $('#search-query-button').on('click', function(e) {
 
         var searchQuery = $('#search-query').val();
 
+        // Validate - search query.
         if(!searchQuery.length) {
           swal('Search Term is Empty', 'Please enter a search term.');
           return;
         }
 
+        // Remove previous search results and search value, if present.
         resultsContainer.empty();
+        // Add the loading gif.
         resultsContainer.append(loadingGifContainer);
 
+        // Make an AJAX request to the ISNI endpoint.
+        // Example: http://127.0.0.1:8000/admin/isni/NASM/1/50
         $.ajax({
           type: 'GET'
           ,dataType: 'json'
@@ -178,27 +191,44 @@
 
             if(result) {
 
+              // Remove the loading gif.
               loadingGifContainer.remove();
 
+              // Populate the search results.
               for (var key in result) {
-                var header = $('<h4 />').text('Result #' + (parseInt(key)+1)),
-                    isniId = $('<p />').html('<strong>ISNI ID: </strong>' + '<a href="http://www.isni.org/' + result[key].isniId + '" title="View full record (opens in a new tab/window)" target="_blank">' + result[key].isniId + '</a>'),
-                    organisationType = $('<p />').html('<strong>Organization Type: </strong>' + result[key].organisationType),
-                    organisationName = $('<p />').html('<strong>Organization Name: </strong>' + JSON.stringify(result[key].organisationName)),
-                    organisationNameVariant = $('<p />').html('<strong>Organization Name Variant: </strong>' + JSON.stringify(result[key].organisationNameVariant)),
+
+                var isniIdHeader = $('<h4 />').text('ISNI ID'),
+                    isniId = $('<a />')
+                        .attr('href','http://www.isni.org/' + result[key].isniId)
+                        .attr('title','View full record (opens in a new tab/window)')
+                        .attr('target','_blank')
+                        .text(result[key].isniId),
+                    isniOrgTypeHeader = $('<h4 />').text('Organization Type'),
+                    isniOrgTypeContainer = $('<div />').text(result[key].organisationType),
+                    isniLabelsHeader = $('<h4 />').text('Organization Names'),
+                    isniLabelsContainer = buildLabelRadioButtons(result[key].isniId, result[key].organisationName),
+                    // isniOrgNameVariantHeader = $('<h4 />').text('Organization Name Variants'),
+                    // isniOrgNameVariant = (typeof result[key].organisationNameVariant !== 'undefined') ? $('<div />').text(JSON.stringify(result[key].organisationNameVariant).replace('[','').replace(']','')) : 'N/A',
                     containerDivLeft = $('<div />')
                         .attr('id', result[key].isniId)
                         .addClass('col-sm-10 col-md-10 well')
-                        .append(isniId, organisationType, organisationName, organisationNameVariant),
-                    radioButton = $('<input name="isni_chosen" type="radio" value="' + result[key].isniId + '">')
+                        .append(isniLabelsHeader, isniLabelsContainer, isniOrgTypeHeader, isniOrgTypeContainer, isniIdHeader, isniId),
+                    radioButton = $('<input class="isni-chosen" name="isni_chosen" type="radio" value="' + result[key].isniId + '">'),
+                    radioButtonIcon = $('<i />').addClass('glyphicon glyphicon-unchecked')
                         .on('click', function() {
+                            var thisCheckboxIcon = $(this);
+                            $('.isni-picker i').removeClass('glyphicon-check').addClass('glyphicon-unchecked');
+                            thisCheckboxIcon.removeClass('glyphicon-unchecked').addClass('glyphicon-check');
                             $('.well').removeAttr('style');
-                            $(this).parent().parent().find('.well').attr('style', 'border-color: #337ab7;');
+                            thisCheckboxIcon.parent().parent().parent().find('.well').attr('style', 'border-color: #337ab7;');
+                            thisCheckboxIcon.parent().parent().find('.isni-chosen').trigger('click');
                       }),
-                    containerDivRight = $('<div />').addClass('col-sm-2 col-md-2').append(radioButton),
+                    radioButtonIconHeader = $('<h3 />').addClass('isni-picker').append(radioButtonIcon),
+                    containerDivRight = $('<div />').addClass('col-sm-2 col-md-2').append(radioButton, radioButtonIconHeader),
                     containerDivRow = $('<div />').addClass('row').append(containerDivLeft, containerDivRight);
 
                 resultsContainer.append(containerDivRow);
+
               }
             
             }
@@ -208,11 +238,92 @@
 
       });
 
+      // Save the stakeholder data (populate the display area and hidden fields in the parent form).
       $('#save-changes').on('click', function(){
+
+        // Set all of the variables.
+        var chosenIsniGuid = $("input:radio[name='isni_chosen']:checked").val(),
+            chosenIsniLabel = $("input:radio[name='" + chosenIsniGuid + "']:checked").val(),
+            chosenSiGuid = $('#stakeholder_guid_picker').val(),
+            isniValuePresent = (typeof chosenIsniGuid !== 'undefined') ? true : false,
+            isniLabelPresent = (typeof chosenIsniLabel !== 'undefined') ? true : false,
+            siValuePresent = ((chosenSiGuid !== 'undefined') && (parseInt(chosenSiGuid) !== 0)) ? true : false,
+            isniInfo = 'ISNI ID: <a href="http://www.isni.org/' + chosenIsniGuid + '" title="View full record (opens in a new tab/window)" target="_blank">' + chosenIsniGuid + '</a>',
+            siUnitInfo = ', SI UNIT ID: ' + chosenSiGuid,
+            displayText = chosenIsniLabel + '<br> ' + isniInfo + siUnitInfo;
+
+        // Validation - ISNI record
+        if(!isniValuePresent) {
+          swal('ISNI Choice is Empty', 'Please choose an ISNI record.');
+          return;
+        }
+        // Validation - ISNI label
+        if(!isniLabelPresent) {
+          swal('ISNI Organization Name Label is Empty', 'Even though an ISNI record has been chosen, a name label must also be chosen.');
+          return;
+        }
+        // Validation - SI unit code
+        if(!siValuePresent) {
+          swal('SI Choice is Empty', 'Please choose an SI Unit record.');
+          return;
+        }
+
+        // Populate the display area and hidden fields in the parent form.
+        if(isniValuePresent && siValuePresent) {
+          $('#stakeholder_label').val(chosenIsniLabel);
+          $('#stakeholder_guid').val(chosenIsniGuid);
+          $('#stakeholder_si_guid').val(chosenSiGuid);
+          $('#stakeholder-display').empty().append(displayText);
+          $('#isniSearchModal').modal('hide');
+        }
+
+      });
+
+      // When the modal is shown...
+      $('#isniSearchModal').on('show.bs.modal', function (e){
+        // Remove previous search results and search value, if present.
         resultsContainer.empty();
         $('#search-query').val('');
-        $('#isniSearchModal').modal('hide');
+        // Set focus on the search input.
+        setTimeout(function(){
+          $('#isniSearchModal input#search-query').focus();
+        }, 500);
+        // Enable keyboard enter/return capability on search query submit.
+        $(document).keypress(function(e) {
+          if(e.which === 13) {
+            if($('#search-query:focus').length) {
+              $('#search-query-button').trigger('click');
+            }
+          }
+        });
+
       });
+
+      // When the modal is hidden...
+      $('#isniSearchModal').on('hidden.bs.modal', function (e){
+        // Remove previous search results and search value, if present.
+        resultsContainer.empty();
+        $('#search-query').val('');
+      });
+
+      function buildLabelRadioButtons(isniId, array) {
+        // Declare the isniLabelsContainer variable.
+        var isniLabelsContainer = '';
+        // Loop through the ISNI names array.
+        for (var key in array) {
+          if(array[key].length) {
+            // var checked = (parseInt(key) === 0) ? true : false;
+            var radioButtonLabel = $('<label />').attr('for', isniId).attr('style', 'font-weight: normal;').text(array[key]),
+                radioButtonLabelDiv = $('<div />').addClass('col-sm-10 col-md-10').append(radioButtonLabel),
+                radioButton = $('<input />').attr('name', isniId).attr('type', 'radio').attr('value', array[key]),
+                radioButtonDiv = $('<div />').addClass('col-sm-2 col-md-2').append(radioButton),
+                radioButtonContainer = $('<div />').append(radioButtonLabelDiv, radioButtonDiv).html();
+            // Populate the ISNI labels container.
+            isniLabelsContainer += '<div class="row isni-labels">' + radioButtonContainer + '</div>';
+          }
+        }
+        return isniLabelsContainer;
+      }
 
       // var options = {
 

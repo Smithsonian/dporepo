@@ -35,9 +35,9 @@ class UnitStakeholderController extends Controller
         $this->table_name = 'unit_stakeholder';
         $this->id_field_name_raw = 'unit_stakeholder_id';
         $this->id_field_name = 'unit_stakeholder.' . $this->id_field_name_raw;
-        $this->label_field_name_raw = 'label';
+        $this->label_field_name_raw = 'unit_stakeholder_label';
         $this->label_field_name = 'unit_stakeholder.' . $this->label_field_name_raw;
-        $this->full_name_field_name_raw = 'full_name';
+        $this->full_name_field_name_raw = 'unit_stakeholder_full_name';
         $this->full_name_field_name = 'unit_stakeholder.' . $this->full_name_field_name_raw;
     }
 
@@ -80,10 +80,10 @@ class UnitStakeholderController extends Controller
 
         switch($req['order'][0]['column']) {
             case '1':
-                $sort_field = 'label';
+                $sort_field = 'unit_stakeholder_label';
                 break;
             case '2':
-                $sort_field = 'full_name';
+                $sort_field = 'unit_stakeholder_full_name';
                 break;
             case '3':
                 $sort_field = 'last_modified';
@@ -341,7 +341,7 @@ class UnitStakeholderController extends Controller
             `" . $this->id_field_name_raw . "` int(11) NOT NULL AUTO_INCREMENT,
             `" . $this->label_field_name_raw . "` varchar(255) NOT NULL DEFAULT '',
             `" . $this->full_name_field_name_raw . "` varchar(255) NOT NULL DEFAULT '',
-            `department_code` varchar(255) NOT NULL DEFAULT '',
+            `unit_stakeholder_guid` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

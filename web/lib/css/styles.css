@@ -237,9 +237,9 @@ dd {
 	clear: both;
 }
 
-#remove-records-button,
-#request-download-button {
-	margin-right: 0.4rem;
+#remove-records-button {
+	margin-bottom: 0.5rem;
+	margin-right: 0.5rem;
 }
 
 #remove-records-checkbox {
@@ -247,12 +247,7 @@ dd {
 }
 
 .add-record-button {
-  margin-top: 2px;
-}
-
-#browse_info,
-#browse_length {
-  float: left;
+  margin-bottom: 0.5rem;
 }
 
 /*
@@ -275,4 +270,30 @@ dd {
  */
 #search-results {
   margin-left: 1.5rem;
+}
+
+#stakeholder-display {
+  margin-bottom: 1rem;
+}
+
+#isniSearchModal.modal {
+    overflow: hidden;
+}
+
+#isniSearchModal.modal .modal-body {
+    height: 500px;
+    overflow: auto;
+}
+
+/*#isniSearchModal.modal .si-unit-picker {
+    position: fixed;
+    width: 46%;
+}*/
+
+.isni-chosen {
+  display: none;
+}
+
+.isni-picker i {
+  color: #4b4b4b;
 }
