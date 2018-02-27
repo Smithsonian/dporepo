@@ -134,6 +134,7 @@ class AdminController extends Controller
             LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
             LEFT JOIN subjects ON subjects.projects_id = projects.projects_id
             WHERE 1 = 1
+            AND projects.active = 1
             AND projects.last_modified < '{$date_today}'
             AND projects.last_modified > '{$date_limit}'
             {$search_sql}
@@ -253,6 +254,7 @@ class AdminController extends Controller
           FROM subjects
           LEFT JOIN items ON items.subjects_id = subjects.subjects_id
           WHERE 1 = 1
+          AND subjects.active = 1
           {$search_sql}
           GROUP BY subjects.holding_entity_guid, subjects.subject_holder_subject_id, subjects.subject_name, subjects.subject_description, subjects.subject_type_lookup_id, subjects.last_modified, subjects.active, subjects.subjects_id
           {$sort}
