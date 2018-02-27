@@ -294,6 +294,10 @@ dd {
   display: none;
 }
 
-.isni-picker i {
-  color: #4b4b4b;
+.isni-picker i.glyphicon-unchecked {
+  color: #8f8f8f;
+}
+
+.isni-picker i.glyphicon-check {
+  color: #3797fc;
 }
