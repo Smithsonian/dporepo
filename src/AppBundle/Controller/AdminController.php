@@ -127,13 +127,12 @@ class AdminController extends Controller
                 ,projects.date_created
                 ,projects.last_modified
                 ,projects.active
-                ,unit_stakeholder.label
-                ,unit_stakeholder.full_name
                 ,projects.projects_id AS DT_RowId
                 ,count(distinct subjects.subjects_id) AS subjects_count
+                ,isni_data.isni_label AS stakeholder_label
             FROM projects
+            LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
             LEFT JOIN subjects ON subjects.projects_id = projects.projects_id
-            LEFT JOIN unit_stakeholder ON unit_stakeholder.unit_stakeholder_id = projects.stakeholder_guid
             WHERE 1 = 1
             AND projects.last_modified < '{$date_today}'
             AND projects.last_modified > '{$date_limit}'
