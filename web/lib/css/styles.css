@@ -301,3 +301,15 @@ dd {
 .isni-picker i.glyphicon-check {
   color: #3797fc;
 }
+
+.si-unit-picker .panel-body {
+  height: 6.5rem;
+}
+
+.si-unit-picker .panel-body .controls {
+  margin-top: 0.5rem;
+}
+
+.isni-labels {
+  margin-top: 1rem;
+}
