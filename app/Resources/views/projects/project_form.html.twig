@@ -279,6 +279,17 @@
 
       });
 
+      // ISNI radio buttons click handler
+      $('#isniSearchModal').on('click', '.isni-label', function(){
+        var thisCheckboxContainer = $(this).parent().parent().parent().parent().find('.isni-picker');
+            thisCheckboxIcon = thisCheckboxContainer.find('i');
+        $('.isni-picker i').removeClass('glyphicon-check').addClass('glyphicon-unchecked');
+        thisCheckboxIcon.removeClass('glyphicon-unchecked').addClass('glyphicon-check');
+        $('.well').removeAttr('style');
+        thisCheckboxIcon.parent().parent().parent().find('.well').attr('style', 'border-color: #337ab7;');
+        thisCheckboxIcon.parent().parent().find('.isni-chosen').trigger('click');
+      });
+
       // When the modal is shown...
       $('#isniSearchModal').on('show.bs.modal', function (e){
         // Remove previous search results and search value, if present.
@@ -315,7 +326,7 @@
             // var checked = (parseInt(key) === 0) ? true : false;
             var radioButtonLabel = $('<label />').attr('for', isniId).attr('style', 'font-weight: normal;').text(array[key]),
                 radioButtonLabelDiv = $('<div />').addClass('col-sm-10 col-md-10').append(radioButtonLabel),
-                radioButton = $('<input />').attr('name', isniId).attr('type', 'radio').attr('value', array[key]),
+                radioButton = $('<input />').attr('name', isniId).attr('type', 'radio').attr('value', array[key]).addClass('isni-label'),
                 radioButtonDiv = $('<div />').addClass('col-sm-2 col-md-2').append(radioButton),
                 radioButtonContainer = $('<div />').append(radioButtonLabelDiv, radioButtonDiv).html();
             // Populate the ISNI labels container.
