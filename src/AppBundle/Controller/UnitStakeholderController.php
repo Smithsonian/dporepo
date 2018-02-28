@@ -161,8 +161,8 @@ class UnitStakeholderController extends Controller
             // "" => "numeric|exact_len,5",
             // "" => "required|max_len,255|alpha_numeric",
             $rules = array(
-                "label" => "required|max_len,255",
-                "full_name" => "required|max_len,255",
+                "unit_stakeholder_label" => "required|max_len,255",
+                "unit_stakeholder_full_name" => "required|max_len,255",
             );
             $validated = $gump->validate($post, $rules);
 
@@ -178,7 +178,7 @@ class UnitStakeholderController extends Controller
             return $this->redirectToRoute('unit_stakeholder_browse');
         } else {
             return $this->render('resources/unit_stakeholder_form.html.twig', array(
-                "page_title" => !empty($unit_stakeholder_id) ? 'Manage Unit/Stakeholder: ' . $data['label'] : 'Create Unit/Stakeholder'
+                "page_title" => !empty($unit_stakeholder_id) ? 'Manage Unit/Stakeholder: ' . $data['unit_stakeholder_label'] : 'Create Unit/Stakeholder'
                 ,"data" => $data
                 ,"errors" => $errors
             ));
