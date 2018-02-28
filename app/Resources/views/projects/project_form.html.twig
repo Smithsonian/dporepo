@@ -217,13 +217,13 @@
                         .addClass('col-sm-10 col-md-10 well')
                         .append(isniLabelsHeader, isniLabelsContainer, isniOrgTypeHeader, isniOrgTypeContainer, isniIdHeader, isniId),
                     radioButton = $('<input class="isni-chosen" name="isni_chosen" type="radio" value="' + result[key].isniId + '">'),
-                    radioButtonIcon = $('<i />').addClass('glyphicon glyphicon-unchecked')
+                    radioButtonIcon = $('<i />').addClass('glyphicon hidden')
                         .on('click', function() {
                             var thisCheckboxIcon = $(this);
-                            $('.isni-picker i').removeClass('glyphicon-check').addClass('glyphicon-unchecked');
-                            thisCheckboxIcon.removeClass('glyphicon-unchecked').addClass('glyphicon-check');
+                            $('.isni-picker i').removeClass('glyphicon-check').addClass('hidden');
+                            thisCheckboxIcon.removeClass('hidden').addClass('glyphicon-check');
                             $('.well').removeAttr('style');
-                            thisCheckboxIcon.parent().parent().parent().find('.well').attr('style', 'border-color: #337ab7;');
+                            thisCheckboxIcon.parent().parent().parent().find('.well').attr('style', 'border-color: #3797fc;');
                             thisCheckboxIcon.parent().parent().find('.isni-chosen').trigger('click');
                       }),
                     radioButtonIconHeader = $('<h3 />').addClass('isni-picker').append(radioButtonIcon),
@@ -288,10 +288,10 @@
             thisCheckboxIcon = thisCheckboxContainer.find('i');
         $('.isni-label').prop('checked', false);
         $(this).prop('checked', true);
-        $('.isni-picker i').removeClass('glyphicon-check').addClass('glyphicon-unchecked');
-        thisCheckboxIcon.removeClass('glyphicon-unchecked').addClass('glyphicon-check');
+        $('.isni-picker i').removeClass('glyphicon-check').addClass('hidden');
+        thisCheckboxIcon.removeClass('hidden').addClass('glyphicon-check');
         $('.well').removeAttr('style');
-        thisCheckboxIcon.parent().parent().parent().find('.well').attr('style', 'border-color: #337ab7;');
+        thisCheckboxIcon.parent().parent().parent().find('.well').attr('style', 'border-color: #3797fc;');
         thisCheckboxIcon.parent().parent().find('.isni-chosen').trigger('click');
       });
 
