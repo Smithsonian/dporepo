@@ -175,7 +175,10 @@
 
         // Validate - search query.
         if(!searchQuery.length) {
-          swal('Search Term is Empty', 'Please enter a search term.');
+          swal({
+            title: "Search Term is Empty",
+            text: "Please enter a search term.",
+          });
           return;
         }
 
