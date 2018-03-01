@@ -93,19 +93,18 @@ fos_user:
 # FR3DLdapBundle Configuration
 fr3d_ldap:
     driver:
-        host: ***REMOVED***
-        username: ***REMOVED***
-        password: ***REMOVED***
+        host: '%si_ldap_host%'
+        username: '%si_ldap_username%'
+        password: '%si_ldap_password%'
         port: 636
         useSsl: true
         optReferrals: true
         accountCanonicalForm: 3
         bindRequiresDn: true
-        # baseDn: ***REMOVED***
-        accountDomainName: ***REMOVED***
+        accountDomainName: '%si_ldap_account_domain_name%'
         accountDomainNameShort: US
     user:
-        baseDn: ***REMOVED***
+        baseDn: '%si_ldap_base_dn%'
         usernameAttribute: sAMAccountName
         filter: (&(ObjectClass=person))
         attributes:
