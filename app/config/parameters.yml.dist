@@ -17,3 +17,16 @@ parameters:
 
     # A secret key that's used to generate certain security-related tokens
     secret: ThisTokenIsNotSoSecretChangeIt
+
+    # EDAN Connection Settings
+    edan_settings_url: ~
+    edan_settings_app_id: ~
+    edan_settings_auth_token: ~
+    edan_settings_version: ~
+
+    # SI Active Directory Settings
+    si_ldap_host: ~
+    si_ldap_username: ~
+    si_ldap_password: ~
+    si_ldap_account_domain_name: ~
+    si_ldap_base_dn: ~
