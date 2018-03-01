@@ -493,7 +493,7 @@ class ProjectsController extends Controller
      */
     public function get_units_stakeholders($conn)
     {
-      $statement = $conn->prepare("SELECT * FROM unit_stakeholder ORDER BY unit_stakeholder_label ASC");
+      $statement = $conn->prepare("SELECT * FROM unit_stakeholder WHERE unit_stakeholder.active = 1 ORDER BY unit_stakeholder_label ASC");
       $statement->execute();
       return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
