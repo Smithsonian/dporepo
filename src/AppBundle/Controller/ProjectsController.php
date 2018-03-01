@@ -20,21 +20,56 @@ use AppBundle\Utils\AppUtilities;
 use AppBundle\Controller\SubjectsController;
 use AppBundle\Controller\IsniController;
 
+use Smithsonian\EdanClient\EdanClient;
+// use Smithsonian\EdanClient\JSend\Response;
+use Smithsonian\EdanClient\Util\Settings;
+use Smithsonian\EdanClient\Util\Facets;
+
+
 class ProjectsController extends Controller
 {
     /**
      * @var object $u
      */
     public $u;
+    /**
+     * @var string 
+     */
+    private $edan_settings_url;
+    /**
+     * @var string 
+     */
+    private $edan_settings_app_id;
+    /**
+     * @var string 
+     */
+    private $edan_settings_auth_token;
+    /**
+     * @var string 
+     */
+    private $edan_settings_version;
 
     /**
     * Constructor
     * @param object  $u  Utility functions object
     */
-    public function __construct(AppUtilities $u)
+    public function __construct(AppUtilities $u, string $edan_settings_url, string $edan_settings_app_id, string $edan_settings_auth_token, string $edan_settings_version)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
+
+        // EDAN Client Settings
+        $this->edanSettings = new Settings(
+          $edan_settings_url,
+          $edan_settings_app_id,
+          $edan_settings_auth_token,
+          $edan_settings_version,
+          Settings::REQUEST_SIGNED,
+          TRUE
+        );
+
+        // Edan Client
+        $this->edanClient = new EdanClient($this->edanSettings);
     }
 
     /**
@@ -42,6 +77,9 @@ class ProjectsController extends Controller
      */
     public function browse_projects(Connection $conn, Request $request, IsniController $isni)
     {
+        
+        // $this->u->dumper($this->edanClient);
+
         // Database tables are only created if not present.
         $create_projects_table = $this->create_projects_table($conn);
         $create_isni_table = $isni->create_isni_table($conn);
