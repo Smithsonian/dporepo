@@ -27,3 +27,7 @@ composer install
 ```
 
 ### Start the Server (if running locally during development)
+
+```
+php bin/console server:start
+```
