@@ -27,9 +27,8 @@ security:
 
         main:
             pattern: ^/
-            fr3d_ldap:  ~
+            fr3d_ldap: ~
             form_login:
-                provider: chain_provider
                 csrf_token_generator: security.csrf.token_manager
                 always_use_default_target_path: false
                 default_target_path: admin_home
@@ -38,6 +37,8 @@ security:
             logout:
                 target: /login
             anonymous:    true
+            logout_on_user_change: true
+            provider: chain_provider
 
     access_control:
         - { path: ^/login$, role: IS_AUTHENTICATED_ANONYMOUSLY }

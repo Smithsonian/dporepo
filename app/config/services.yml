@@ -14,10 +14,11 @@ services:
         # if you need to do this, you can override this setting on individual services
         public: false
         bind:
-            $edan_settings_url: '%edan_settings_url%'
-            $edan_settings_app_id: '%edan_settings_app_id%'
-            $edan_settings_auth_token: '%edan_settings_auth_token%'
-            $edan_settings_version: '%edan_settings_version%'
+            $edan_url: '%edan_url%'
+            $edan_app_id: '%edan_app_id%'
+            $edan_auth_token: '%edan_auth_token%'
+            $edan_version: '%edan_version%'
+            $edan_search_endpoint: '%edan_search_endpoint%'
 
     # makes classes in src/AppBundle available to be used as services
     # this creates a service per class whose id is the fully-qualified class name

@@ -19,21 +19,31 @@
         <div class="col-sm-12 col-md-12">
           <div class="form-group">
               <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
+              <button type="button" class="btn btn-default" data-toggle="modal" data-target="#edanSearchModal">
+                <i class="glyphicon glyphicon-search"></i> Search EDAN to Auto-populate Form
+              </button>
           </div>
         </div>
 
         <!-- Column 1 -->
         <div class="col-sm-6 col-md-6">
 
-          {% if subject_data.subject_guid is defined %}
+        {#  {% if subject_data.subject_guid is defined %}
             <div class="form-group">
               <label class="control-label" for="subject_guid">Subject GUID:</label>
               <div class="controls">
                 <p>{{ subject_data.subject_guid|e }}</p>
               </div>
             </div>
-          {% endif %}
+          {% endif %} #}
 
+          <div class="form-group">
+            <label class="control-label" for="subject_guid"><span style="color:red;">*</span>Subject GUID:</label>
+            <div class="controls">
+              <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
+              <input name="subject_guid" id="subject_guid" type="text" required="true" value="{{ subject_data.subject_guid|default('')|e }}" class="form-control">
+            </div>
+          </div>
           <div class="form-group">
             <label class="control-label" for="subject_name"><span style="color:red;">*</span>Subject Name:</label>
             <div class="controls">
@@ -99,4 +109,242 @@
         <input class="btn btn-primary" type="submit" value="Save Edits">
       </div>
     </form>
+
+    <!-- Modal -->
+    <div class="modal fade" id="edanSearchModal" tabindex="-1" role="dialog" aria-labelledby="edanSearchLabel">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title" id="edanSearchLabel">Search EDAN</h4>
+          </div>
+          <div class="modal-body">
+
+            <div class="row">
+
+              <div class="col-sm-12 col-md-12">
+                <h3>Enter a Search Term</h3>
+                <div class="form-group panel panel-default">
+                  <div class="panel-body">
+
+                    <div class="row">
+                      <div class="col-sm-10 col-md-10">
+                        <label class="control-label hidden" for="searchQuery">Search</label>
+                        <div class="controls">
+                          <input name="searchQuery" id="search-query" type="text" value="" class="form-control" placeholder="example: space shuttle">
+                        </div>
+                      </div>
+                      <div class="col-sm-2 col-md-2">
+                        <div class="controls">
+                          <button type="button" id="search-query-button" class="btn btn-default"><i class="glyphicon glyphicon-search"></i> Search</button>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="row">
+              <div id="search-results" class="col-sm-12 col-md-12 center-block" style="margin-left: auto; float: none;">
+
+              </div>
+            </div>
+
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+{% endblock %}
+
+{% block js_bottom %}
+  {{ parent() }}
+  <script type="text/javascript">
+    jQuery(document).ready(function($) {
+
+      // Set variables.
+      var resultsContainer = $('#search-results')
+          loadingGif = $('<img />').attr('src', '/lib/images/spinner.gif').attr('alt', 'loading animation').attr('style', 'width: 140px;'),
+          loadingGifContainer = $('<div />').addClass('center-block').attr('style', 'width: 140px;').append(loadingGif);
+
+      /**
+       * Search button click handler
+       */
+      $('#search-query-button').on('click', function(e) {
+
+        var searchQuery = $('#search-query').val();
+
+        // Validate - search query.
+        if(!searchQuery.length) {
+          swal({
+            title: "Search Term is Empty",
+            text: "Please enter a search term.",
+          });
+          return;
+        }
+
+        // Remove previous search results and search value, if present.
+        resultsContainer.empty();
+        // Add the loading gif.
+        resultsContainer.append(loadingGifContainer);
+
+        // Make an AJAX request to EDAN.
+        // Example: http://127.0.0.1:8000/admin/edan/calder/html/2
+        $.ajax({
+          type: 'GET'
+          ,dataType: 'html'
+          ,url: '/admin/edan/' + searchQuery + '/html/1/1/10'
+          ,success: function(result) {
+
+            if(result) {
+              // Remove the loading gif.
+              loadingGifContainer.remove();
+              // Append the results to the DOM.
+              resultsContainer.append(result);            
+            }
+
+          }
+        });
+
+      });
+
+      /**
+       * Paging button click handler (Previous Page, Next Page)
+       */
+      $('#search-results').on('click', '.pager-button', function(e){
+
+        var thisButton = $(this),
+            targetPage = (typeof thisButton.data('page') !== 'undefined') ? (thisButton.data('page') + 1) : 1,
+            searchQuery = $('#search-query').val();
+
+        // Validate - search query.
+        if(!searchQuery.length) {
+          swal({
+            title: "Search Term is Empty",
+            text: "Please enter a search term.",
+          });
+          return;
+        }
+
+        // Remove previous search results and search value, if present.
+        resultsContainer.empty();
+        // Add the loading gif.
+        resultsContainer.append(loadingGifContainer);
+
+        // Make an AJAX request to EDAN.
+        // Example: http://127.0.0.1:8000/admin/edan/calder/html/2
+        $.ajax({
+          type: 'GET'
+          ,dataType: 'html'
+          ,url: '/admin/edan/' + searchQuery + '/html/' + thisButton.data('page')
+          ,success: function(result) {
+
+            if(result) {
+              // Remove the loading gif.
+              loadingGifContainer.remove();
+              // Append the results to the DOM.
+              resultsContainer.append(result);            
+            }
+
+          }
+        });
+
+      });
+
+      /**
+       * Choose This Record button click handler
+       * Transfer the chosen record's desired information to hidden fields in the parent form.
+       */
+      resultsContainer.on('click', '.choosen-record', function(e) {
+
+        // Are aliases for unit acronyms necessary?
+        // Case in point:
+        // In EDAN, AAA also has the id AAADCD. This is not exclusive to AAA. Similar scenarios exist with other units.
+        // This will lend itself to creating a solid data relation to the ISNI/Unit Stakeholder data, for the holding_entity_guid and holding_entity_name fields. Actually, we won't even need the holding_entity_name field if this relation is present. The holding_entity_guid would be mapped to both ISNI and SI Unit IDs, which when queried, would then also return the holding_entity_name.
+
+        // Maintaining a mapping for ALL ISNI records IS necessary. The sole reason for this is that ISNI's data contains name derivatives, which, by nature, forces us to choose one accepted/appropriate name.
+
+        // The unit_stakeholder table may need to be renamed to remove the 'unit' reference - maybe rename it to stakeholder_mappings?
+        // Need to add the isni_id field to this table
+
+        // subject_guid (row.id or row.record_ID???)
+        // subject_name (row.title)
+        // subject_holder_subject_id (row.content.freetext.identifier.0.content) (subject_id_from_holding_entity)
+        // !!! PROBLEM !!!
+        // holding_entity_guid (row.unitCode) - HIDDEN
+        // holding_entity_name (row.content.descriptiveNonRepeating.data_source) - DISPLAY
+
+        var  thisElement = $(this),
+             index = thisElement.attr('id').replace('loop-index-','');
+
+        // Validate that this is really the record.
+        swal({
+          title: "Choose This Record?",
+          text: "If yes, the appropriate fields will be auto filled, and this window will be dismissed.",
+          type: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#DD6B55',
+          confirmButtonText: 'Go!',
+          closeOnConfirm: true,
+        },
+        function(){
+
+            // Set all of the variables.
+            var subject_guid = $('#subject_guid_chosen_' + index).val(),
+                subject_name = $('#subject_name_chosen_' + index).val(),
+                subject_holder_subject_id = $('#subject_holder_subject_id_chosen_' + index).val(),
+                holding_entity_guid = $('#holding_entity_guid_chosen_' + index).val(),
+                holding_entity_name = $('#holding_entity_name_chosen_' + index).val();
+
+            // Populate the fields in the parent form and close the modal.
+            $('#subject_guid').val(subject_guid);
+            $('#subject_name').val(subject_name);
+            $('#subject_holder_subject_id').val(subject_holder_subject_id);
+            $('#holding_entity_guid').val(holding_entity_guid);
+            $('#holding_entity_name').val(holding_entity_name);
+            $('#edanSearchModal').modal('hide');
+
+        });
+
+      });
+
+      /**
+       * Actions for when the modal is shown
+       */
+      $('#edanSearchModal').on('show.bs.modal', function (e){
+        // Remove previous search results and search value, if present.
+        resultsContainer.empty();
+        $('#search-query').val('');
+        // Set focus on the search input.
+        setTimeout(function(){
+          $('#edanSearchModal input#search-query').focus();
+        }, 500);
+        // Enable keyboard enter/return capability on search query submit.
+        $(document).keypress(function(e) {
+          if(e.which === 13) {
+            if($('#search-query:focus').length) {
+              $('#search-query-button').trigger('click');
+            }
+          }
+        });
+
+      });
+
+      /**
+       * Actions for when the modal is hidden
+       */
+      $('#edanSearchModal').on('hidden.bs.modal', function (e){
+        // Remove previous search results and search value, if present.
+        resultsContainer.empty();
+        $('#search-query').val('');
+      });
+
+    });
+  </script>
 {% endblock %}

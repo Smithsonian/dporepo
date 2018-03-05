@@ -153,22 +153,24 @@ jQuery(document).ready(function($) {
   /**
    * Toggle-able Hidden Content
    */
-  $('.view-hidden-content').on('click', function(e) {
+  $('body').on('click', '.view-hidden-content', function(e) {
 
     var viewHiddenContentButton = $(this),
-        toggleableContainers = $('.col-hidden-toggle');
+        toggleableContainers = viewHiddenContentButton.parent().find('.col-hidden-toggle');
+
+    if(!toggleableContainers.length) toggleableContainers = $('.col-hidden-toggle');
 
     toggleableContainers.slideToggle('fast');
 
     setTimeout(function(){
 
       if(toggleableContainers.is(':visible')) {
-        viewHiddenContentButton.find('.view-hidden-content-text').text('Hide');
+        viewHiddenContentButton.find('.view-hidden-content-text').text('Hide Details');
         viewHiddenContentButton.find('.glyphicon')
           .removeClass('glyphicon-chevron-down')
           .addClass('glyphicon-chevron-up');
       } else {
-        viewHiddenContentButton.find('.view-hidden-content-text').text('Expand');
+        viewHiddenContentButton.find('.view-hidden-content-text').text('Expand Details');
         viewHiddenContentButton.find('.glyphicon')
           .removeClass('glyphicon-chevron-up')
           .addClass('glyphicon-chevron-down');
