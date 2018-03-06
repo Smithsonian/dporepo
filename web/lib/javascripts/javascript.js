@@ -76,6 +76,10 @@ jQuery(document).ready(function($) {
     allow_single_deselect: true,
     no_results_text: 'Oops, nothing found!'
   });
+
+  $('select.stakeholder-chosen-select').on('change', function(evt, params) {
+    $('#stakeholder_guid_picker').val(params.selected);
+  });
   
   /**
    * Set the Active Navigation Tab
