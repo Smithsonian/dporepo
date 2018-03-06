@@ -388,6 +388,8 @@ class ProjectsController extends Controller
 
         if($unit_record && !empty($unit_record['isni_id'])) {
           $data['stakeholder_guid'] = $unit_record['isni_id'];
+        } else {
+          $data['stakeholder_guid'] = $data['stakeholder_guid_picker'];
         }
 
         // Query the isni_data table to see if there's an entry.

@@ -39,7 +39,7 @@
           <div class="form-group">
             <label class="control-label" for="stakeholder_guid">Stakeholder</label>
             <div class="controls">
-              <select class="stakeholder-chosen-select" id="stakeholder_guid_picker" name="stakeholder_guid_picker" required="true">
+              <select class="stakeholder-chosen-select" id="stakeholder_guid_chosen" name="stakeholder_guid_chosen" required="true">
                 <option value="0">Select</option>
                   {% for single_units_stakeholders in project_info.units_stakeholders %}
                     {% set selected = '' %}
@@ -56,13 +56,13 @@
             <div class="controls stakeholder-container">
               <label class="control-label hidden" for="external_stakeholder">External Stakeholder</label>
               <div id="stakeholder-display">
-                {% if project_info.stakeholder_label is defined %}
+                {% if project_info.stakeholder_label is not empty %}
                   {{ project_info.stakeholder_label }}<br>
                   ISNI ID: <a href="http://www.isni.org/{{ project_info.stakeholder_guid }}" title="View full record (opens in a new tab/window)" target="_blank">{{ project_info.stakeholder_guid }}</a>
                 {% endif %}
               </div>
               <input name="stakeholder_label" id="stakeholder_label" type="hidden" value="{{ project_info.stakeholder_label|default('')|e }}">
-              <input name="stakeholder_guid" id="stakeholder_guid" type="hidden" value="{{ project_info.stakeholder_guid|default('')|e }}">
+              <input name="stakeholder_guid_picker" id="stakeholder_guid_picker" type="hidden" value="{{ project_info.stakeholder_guid|default('')|e }}">
               <button type="button" class="btn btn-default btn-sm" data-toggle="modal" data-target="#isniSearchModal">
                 Choose a Stakeholder from ISNI
               </button>
@@ -255,7 +255,7 @@
         // Populate the display area and hidden fields in the parent form.
         if(isniValuePresent) {
           $('#stakeholder_label').val(chosenIsniLabel);
-          $('#stakeholder_guid').val(chosenIsniGuid);
+          $('#stakeholder_guid_picker').val(chosenIsniGuid);
           $('#stakeholder-display').empty().append(displayText);
           $('#isniSearchModal').modal('hide');
         }
