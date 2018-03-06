@@ -72,7 +72,7 @@ jQuery(document).ready(function($) {
 
   $('select.stakeholder-chosen-select').chosen({
     max_selected_options: 1,
-    width: '100%',
+    // width: '100%',
     allow_single_deselect: true,
     no_results_text: 'Oops, nothing found!'
   });

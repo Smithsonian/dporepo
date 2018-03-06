@@ -1,10 +1,5 @@
 {% extends 'default_bootstrap_admin.html.twig' %}
 
-{% block stylesheets %}
-  {{ parent() }}
-  <!-- <link href="{{ asset('lib/javascripts/EasyAutocomplete/easy-autocomplete.min.css') }}" rel="stylesheet" type="text/css" /> -->
-{% endblock %}
-
 {% block content %}
     
     {% if errors %}
@@ -40,20 +35,36 @@
               <input name="projects_label" id="projects_label" type="text" required="true" value="{{ project_info.projects_label|default('')|e }}" class="form-control">
             </div>
           </div>
+
+          <div class="form-group">
+            <label class="control-label" for="stakeholder_guid">Stakeholder</label>
+            <div class="controls">
+              <select class="stakeholder-chosen-select" id="stakeholder_guid_picker" name="stakeholder_guid_picker" required="true">
+                <option value="0">Select</option>
+                  {% for single_units_stakeholders in project_info.units_stakeholders %}
+                    {% set selected = '' %}
+                    {% if project_info.stakeholder_si_guid is defined and single_units_stakeholders.unit_stakeholder_id == project_info.stakeholder_si_guid %}
+                      {% set selected = ' selected="selected"' %}
+                    {% endif %}
+                    <option value="{{ single_units_stakeholders.unit_stakeholder_id }}"{{ selected }}>{{ single_units_stakeholders.unit_stakeholder_label }} - {{ single_units_stakeholders.unit_stakeholder_full_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
           <div class="form-group">
             <div class="controls stakeholder-container">
-              <h4>Stakeholder</h4>
+              <label class="control-label hidden" for="external_stakeholder">External Stakeholder</label>
               <div id="stakeholder-display">
                 {% if project_info.stakeholder_label is defined %}
                   {{ project_info.stakeholder_label }}<br>
-                  ISNI ID: <a href="http://www.isni.org/{{ project_info.stakeholder_guid }}" title="View full record (opens in a new tab/window)" target="_blank">{{ project_info.stakeholder_guid }}</a>, SI UNIT ID: {{ project_info.stakeholder_si_guid }}
+                  ISNI ID: <a href="http://www.isni.org/{{ project_info.stakeholder_guid }}" title="View full record (opens in a new tab/window)" target="_blank">{{ project_info.stakeholder_guid }}</a>
                 {% endif %}
               </div>
               <input name="stakeholder_label" id="stakeholder_label" type="hidden" value="{{ project_info.stakeholder_label|default('')|e }}">
               <input name="stakeholder_guid" id="stakeholder_guid" type="hidden" value="{{ project_info.stakeholder_guid|default('')|e }}">
-              <input name="stakeholder_si_guid" id="stakeholder_si_guid" type="hidden" value="{{ project_info.stakeholder_si_guid|default('')|e }}">
-              <button type="button" class="btn btn-sm" data-toggle="modal" data-target="#isniSearchModal">
-                Choose a Stakeholder
+              <button type="button" class="btn btn-default btn-sm" data-toggle="modal" data-target="#isniSearchModal">
+                Choose a Stakeholder from ISNI
               </button>
             </div>
           </div>
@@ -88,10 +99,10 @@
           </div>
           <div class="modal-body">
 
-            <div class="row">
+            <div class="row" style="margin-right: 0; margin-left: 0;">
 
-              <div class="col-sm-6 col-md-6">
-                <h4>Step 1: Search ISNI</h4>
+              <div class="col-sm-12 col-md-12">
+                <h4>Search ISNI</h4>
                 <div class="form-group panel panel-default">
                   <div class="panel-body">
 
@@ -115,33 +126,10 @@
                   ISNI record, it will become the associated label from this point forward.</p>
               </div>
 
-              <div class="col-sm-6 col-md-6">
-                <div class="si-unit-picker">
-                  <h4>Step 2: Choose an SI Unit</h4>
-                  <div class="form-group panel panel-default">
-                    <div class="panel-body">
-                      <label class="control-label hidden" for="stakeholder_guid_picker"><span style="color:red;">*</span>Stakeholder GUID:</label>
-                      <div class="controls">
-                        <select class="stakeholder-chosen-select" id="stakeholder_guid_picker" name="stakeholder_guid_picker" required="true">
-                          <option value="0">Select</option>
-                          {% for single_units_stakeholders in project_info.units_stakeholders %}
-                            {% set selected = '' %}
-                            {# {% if project_info.stakeholder_guid is defined and single_units_stakeholders.unit_stakeholder_id == project_info.stakeholder_guid %}
-                              {% set selected = ' selected="selected"' %}
-                            {% endif %} #}
-                            <option value="{{ single_units_stakeholders.unit_stakeholder_id }}"{{ selected }}>{{ single_units_stakeholders.unit_stakeholder_label }} - {{ single_units_stakeholders.unit_stakeholder_full_name }}</option>
-                          {% endfor %}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <p>Choose an SI Unit from the list to associate to the ISNI record chosen in Step 1.</p>
-              </div>
             </div>
 
             <div class="row">
-              <div id="search-results" class="col-sm-6 col-md-6">
+              <div id="search-results" class="col-sm-12 col-md-12">
 
               </div>
             </div>
@@ -159,7 +147,6 @@
 
 {% block js_bottom %}
   {{ parent() }}
-  <!-- <script src="{{ asset('lib/javascripts/EasyAutocomplete/jquery.easy-autocomplete.js') }}"></script> -->
   <script type="text/javascript">
     jQuery(document).ready(function($) {
 
@@ -213,8 +200,6 @@
                     isniOrgTypeContainer = $('<div />').text(result[key].organisationType),
                     isniLabelsHeader = $('<h4 />').text('Organization Names'),
                     isniLabelsContainer = buildLabelRadioButtons(result[key].isniId, result[key].organisationName),
-                    // isniOrgNameVariantHeader = $('<h4 />').text('Organization Name Variants'),
-                    // isniOrgNameVariant = (typeof result[key].organisationNameVariant !== 'undefined') ? $('<div />').text(JSON.stringify(result[key].organisationNameVariant).replace('[','').replace(']','')) : 'N/A',
                     containerDivLeft = $('<div />')
                         .attr('id', result[key].isniId)
                         .addClass('col-sm-10 col-md-10 well')
@@ -253,10 +238,8 @@
             chosenSiGuid = $('#stakeholder_guid_picker').val(),
             isniValuePresent = (typeof chosenIsniGuid !== 'undefined') ? true : false,
             isniLabelPresent = (typeof chosenIsniLabel !== 'undefined') ? true : false,
-            siValuePresent = ((chosenSiGuid !== 'undefined') && (parseInt(chosenSiGuid) !== 0)) ? true : false,
             isniInfo = 'ISNI ID: <a href="http://www.isni.org/' + chosenIsniGuid + '" title="View full record (opens in a new tab/window)" target="_blank">' + chosenIsniGuid + '</a>',
-            siUnitInfo = ', SI UNIT ID: ' + chosenSiGuid,
-            displayText = chosenIsniLabel + '<br> ' + isniInfo + siUnitInfo;
+            displayText = chosenIsniLabel + '<br> ' + isniInfo;
 
         // Validation - ISNI record
         if(!isniValuePresent) {
@@ -268,17 +251,11 @@
           swal('ISNI Organization Name Label is Empty', 'Even though an ISNI record has been chosen, a name label must also be chosen.');
           return;
         }
-        // Validation - SI unit code
-        if(!siValuePresent) {
-          swal('SI Choice is Empty', 'Please choose an SI Unit record.');
-          return;
-        }
 
         // Populate the display area and hidden fields in the parent form.
-        if(isniValuePresent && siValuePresent) {
+        if(isniValuePresent) {
           $('#stakeholder_label').val(chosenIsniLabel);
           $('#stakeholder_guid').val(chosenIsniGuid);
-          $('#stakeholder_si_guid').val(chosenSiGuid);
           $('#stakeholder-display').empty().append(displayText);
           $('#isniSearchModal').modal('hide');
         }
@@ -343,18 +320,6 @@
         }
         return isniLabelsContainer;
       }
-
-      // var options = {
-
-      //   url: function(phrase) {
-      //     return "/admin/isni/" + phrase + "/1/50";
-      //   },
-      //   getValue: "organisationName[0]",
-      //   requestDelay: 400
-
-      // };
-
-      // $("#searchQuery").easyAutocomplete(options);
 
     });
   </script>
