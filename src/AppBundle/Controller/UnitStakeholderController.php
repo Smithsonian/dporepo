@@ -15,6 +15,8 @@ use GUMP;
 use AppBundle\Utils\GumpParseErrors;
 use AppBundle\Utils\AppUtilities;
 
+use AppBundle\Controller\ProjectsController;
+
 class UnitStakeholderController extends Controller
 {
     /**
@@ -144,7 +146,7 @@ class UnitStakeholderController extends Controller
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_unit_stakeholder_form(Connection $conn, Request $request, GumpParseErrors $gump_parse_errors)
+    function show_unit_stakeholder_form(Connection $conn, Request $request, GumpParseErrors $gump_parse_errors, ProjectsController $projects, IsniController $isni)
     {
         $errors = false;
         $data = array();
@@ -152,7 +154,12 @@ class UnitStakeholderController extends Controller
         $post = $request->request->all();
         $unit_stakeholder_id = !empty($request->attributes->get('unit_stakeholder_id')) ? $request->attributes->get('unit_stakeholder_id') : false;
         $data = !empty($post) ? $post : $this->get_one((int)$unit_stakeholder_id, $conn);
-        
+
+        // $this->u->dumper($data);
+
+        // Get data from lookup tables.
+        $data['units_stakeholders'] = $projects->get_units_stakeholders($conn);
+
         // Validate posted data.
         if(!empty($post)) {
             // "" => "required|numeric",
@@ -173,7 +180,7 @@ class UnitStakeholderController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $unit_stakeholder_id = $this->insert_update($post, $unit_stakeholder_id, $conn);
+            $unit_stakeholder_id = $this->insert_update($post, $unit_stakeholder_id, $conn, $isni);
             $this->addFlash('message', 'Unit/Stakeholder successfully updated.');
             return $this->redirectToRoute('unit_stakeholder_browse');
         } else {
@@ -196,9 +203,16 @@ class UnitStakeholderController extends Controller
      */
     public function get_one($id = false, $conn)
     {
-        $statement = $conn->prepare("SELECT *
-            FROM " . $this->table_name . "
-            WHERE " . $this->id_field_name . " = :id");
+        $statement = $conn->prepare("SELECT unit_stakeholder.unit_stakeholder_id,
+            unit_stakeholder.isni_id,
+            unit_stakeholder.unit_stakeholder_label,
+            unit_stakeholder.unit_stakeholder_label_aliases,
+            unit_stakeholder.unit_stakeholder_full_name,
+            unit_stakeholder.unit_stakeholder_guid,
+            isni_data.isni_label AS stakeholder_label
+            FROM unit_stakeholder
+            LEFT JOIN isni_data ON isni_data.isni_id = unit_stakeholder.isni_id
+            WHERE unit_stakeholder.unit_stakeholder_id = :id");
         $statement->bindValue(":id", $id, PDO::PARAM_INT);
         $statement->execute();
         return $statement->fetch(PDO::FETCH_ASSOC);
@@ -230,19 +244,33 @@ class UnitStakeholderController extends Controller
      * @param   int $id      The id value
      * @return  void
      */
-    public function insert_update($data, $id = false, $conn)
+    public function insert_update($data, $id = false, $conn, $isni)
     {
+        // $this->u->dumper($isni_data);
+
+        // Query the isni_data table to see if there's an entry.
+        $isni_data = $isni->get_isni_data_from_database($data['isni_id'], $conn);
+
+        // If there is no entry, then perform an insert.
+        if(!$isni_data) {
+          $isni_inserted = $isni->insert_isni_data($data['isni_id'], $data['stakeholder_label'], $this->getUser()->getId(), $conn);
+        }
+
         // Update
         if($id) {
             $statement = $conn->prepare("
                 UPDATE " . $this->table_name . "
                 SET " . $this->label_field_name . " = :" . $this->label_field_name_raw . ", 
-                    " . $this->full_name_field_name . " = :" . $this->full_name_field_name_raw . "
-                ,last_modified_user_account_id = :last_modified_user_account_id
+                    " . $this->full_name_field_name . " = :" . $this->full_name_field_name_raw . ",
+                    isni_id = :isni_id,
+                    unit_stakeholder_label_aliases = :unit_stakeholder_label_aliases,
+                    last_modified_user_account_id = :last_modified_user_account_id
                 WHERE " . $this->id_field_name . " = :id
             ");
           $statement->bindValue(":" . $this->label_field_name_raw, $data[$this->label_field_name_raw], PDO::PARAM_STR);
           $statement->bindValue(":" . $this->full_name_field_name_raw, $data[$this->full_name_field_name_raw], PDO::PARAM_STR);
+          $statement->bindValue(":unit_stakeholder_label_aliases", $data['unit_stakeholder_label_aliases'], PDO::PARAM_STR);
+          $statement->bindValue(":isni_id", $data['isni_id'], PDO::PARAM_INT);
           $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
           $statement->bindValue(":id", $id, PDO::PARAM_INT);
           $statement->execute();
@@ -253,10 +281,12 @@ class UnitStakeholderController extends Controller
         // Insert
         if(!$id) {
             $statement = $conn->prepare("INSERT INTO " . $this->table_name . "
-                (" . $this->label_field_name_raw . ", " . $this->full_name_field_name_raw . ", date_created, created_by_user_account_id, last_modified_user_account_id)
-                VALUES (:" . $this->label_field_name_raw . ", :" . $this->full_name_field_name_raw . ", NOW(), :user_account_id, :user_account_id)");
+                (" . $this->label_field_name_raw . ", " . $this->full_name_field_name_raw . ", unit_stakeholder_label_aliases, isni_id, date_created, created_by_user_account_id, last_modified_user_account_id)
+                VALUES (:" . $this->label_field_name_raw . ", :" . $this->full_name_field_name_raw . ", :unit_stakeholder_label_aliases, :isni_id, NOW(), :user_account_id, :user_account_id)");
             $statement->bindValue(":" . $this->label_field_name_raw, $data[$this->label_field_name_raw], PDO::PARAM_STR);
             $statement->bindValue(":" . $this->full_name_field_name_raw, $data[$this->full_name_field_name_raw], PDO::PARAM_STR);
+            $statement->bindValue(":unit_stakeholder_label_aliases", $data['unit_stakeholder_label_aliases'], PDO::PARAM_STR);
+            $statement->bindValue(":isni_id", $data['isni_id'], PDO::PARAM_INT);
             $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->execute();
             $last_inserted_id = $conn->lastInsertId();
@@ -339,7 +369,9 @@ class UnitStakeholderController extends Controller
     {
         $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `" . $this->table_name . "` (
             `" . $this->id_field_name_raw . "` int(11) NOT NULL AUTO_INCREMENT,
+            `isni_id` varchar(255) DEFAULT NULL,
             `" . $this->label_field_name_raw . "` varchar(255) NOT NULL DEFAULT '',
+            `unit_stakeholder_label_aliases` text DEFAULT NULL,
             `" . $this->full_name_field_name_raw . "` varchar(255) NOT NULL DEFAULT '',
             `unit_stakeholder_guid` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
