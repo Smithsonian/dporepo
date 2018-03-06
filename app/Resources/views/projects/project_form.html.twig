@@ -40,7 +40,7 @@
             <label class="control-label" for="stakeholder_guid">Stakeholder</label>
             <div class="controls">
               <select class="stakeholder-chosen-select" id="stakeholder_guid_chosen" name="stakeholder_guid_chosen" required="true">
-                <option value="0">Select</option>
+                <option value="0">Select SI Unit</option>
                   {% for single_units_stakeholders in project_info.units_stakeholders %}
                     {% set selected = '' %}
                     {% if project_info.stakeholder_si_guid is defined and single_units_stakeholders.unit_stakeholder_id == project_info.stakeholder_si_guid %}
