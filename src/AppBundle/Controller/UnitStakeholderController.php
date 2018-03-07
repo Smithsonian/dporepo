@@ -270,7 +270,7 @@ class UnitStakeholderController extends Controller
           $statement->bindValue(":" . $this->label_field_name_raw, $data[$this->label_field_name_raw], PDO::PARAM_STR);
           $statement->bindValue(":" . $this->full_name_field_name_raw, $data[$this->full_name_field_name_raw], PDO::PARAM_STR);
           $statement->bindValue(":unit_stakeholder_label_aliases", $data['unit_stakeholder_label_aliases'], PDO::PARAM_STR);
-          $statement->bindValue(":isni_id", $data['isni_id'], PDO::PARAM_INT);
+          $statement->bindValue(":isni_id", $data['isni_id'], PDO::PARAM_STR);
           $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
           $statement->bindValue(":id", $id, PDO::PARAM_INT);
           $statement->execute();
@@ -286,7 +286,7 @@ class UnitStakeholderController extends Controller
             $statement->bindValue(":" . $this->label_field_name_raw, $data[$this->label_field_name_raw], PDO::PARAM_STR);
             $statement->bindValue(":" . $this->full_name_field_name_raw, $data[$this->full_name_field_name_raw], PDO::PARAM_STR);
             $statement->bindValue(":unit_stakeholder_label_aliases", $data['unit_stakeholder_label_aliases'], PDO::PARAM_STR);
-            $statement->bindValue(":isni_id", $data['isni_id'], PDO::PARAM_INT);
+            $statement->bindValue(":isni_id", $data['isni_id'], PDO::PARAM_STR);
             $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->execute();
             $last_inserted_id = $conn->lastInsertId();
