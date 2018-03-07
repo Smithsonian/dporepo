@@ -213,7 +213,7 @@ class ProjectsController extends Controller
         if (!$errors && !empty($post)) {
             $projects_id = $this->insert_update_project($post, $projects_id, $conn, $isni, $unit);
             $this->addFlash('message', 'Project successfully updated.');
-            return $this->redirectToRoute('projects_browse');
+            return $this->redirect('/admin/projects/subjects/' . $projects_id);
         } else {
             return $this->render('projects/project_form.html.twig', array(
                 "page_title" => !empty($projects_id) ? 'Project: ' . $project_data['projects_label'] : 'Create Project'
