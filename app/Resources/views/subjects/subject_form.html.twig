@@ -41,28 +41,28 @@
             <label class="control-label" for="subject_guid"><span style="color:red;">*</span>Subject GUID:</label>
             <div class="controls">
               <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-              <input name="subject_guid" id="subject_guid" type="text" required="true" value="{{ subject_data.subject_guid|default('')|e }}" class="form-control">
+              <input name="subject_guid" id="subject_guid" type="text" value="{{ subject_data.subject_guid|default('')|e }}" class="form-control">
             </div>
           </div>
           <div class="form-group">
             <label class="control-label" for="subject_name"><span style="color:red;">*</span>Subject Name:</label>
             <div class="controls">
               <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-              <input name="subject_name" id="subject_name" type="text" required="true" value="{{ subject_data.subject_name|default('')|e }}" class="form-control">
+              <input name="subject_name" id="subject_name" type="text" value="{{ subject_data.subject_name|default('')|e }}" class="form-control">
             </div>
           </div>
           <div class="form-group">
             <label class="control-label" for="location_information"><span style="color:red;">*</span>Location Information:</label>
             <div class="controls">
               <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-              <input name="location_information" id="location_information" type="text" required="true" value="{{ subject_data.location_information|default('')|e }}" class="form-control">
+              <input name="location_information" id="location_information" type="text" value="{{ subject_data.location_information|default('')|e }}" class="form-control">
             </div>
           </div>
           <div class="form-group">
             <label class="control-label" for="holding_entity_guid"><span style="color:red;">*</span>Holding Entity GUID:</label>
             <div class="controls">
               <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
-              <input name="holding_entity_guid" id="holding_entity_guid" type="text" required="true" value="{{ subject_data.holding_entity_guid|default('')|e }}" class="form-control">
+              <input name="holding_entity_guid" id="holding_entity_guid" type="text" value="{{ subject_data.holding_entity_guid|default('')|e }}" class="form-control">
             </div>
           </div>
 
@@ -74,7 +74,7 @@
           <div class="form-group">
             <label class="control-label" for="subject_type_lookup_id"><span style="color:red;">*</span>Subject Type:</label>
             <div class="controls">
-              <select class="default-chosen-select" id="subject_type_lookup_id" name="subject_type_lookup_id" required="true">
+              <select class="default-chosen-select" id="subject_type_lookup_id" name="subject_type_lookup_id">
                 <option value="0">Select</option>
                 {% for single_subject_type in subject_data.subject_types %}
                   {% set selected = '' %}
@@ -89,7 +89,7 @@
           <div class="form-group">
             <label class="control-label" for="subject_holder_subject_id"><span style="color:red;">*</span>Subject Holder Subject ID:</label>
             <div class="controls">
-              <input name="subject_holder_subject_id" id="subject_holder_subject_id" type="text" required="true" value="{{ subject_data.subject_holder_subject_id|default('')|e }}" class="form-control">
+              <input name="subject_holder_subject_id" id="subject_holder_subject_id" type="text" value="{{ subject_data.subject_holder_subject_id|default('')|e }}" class="form-control">
             </div>
           </div>
           <div class="form-group">

@@ -159,7 +159,7 @@ class ItemPositionTypesController extends Controller
                 "label" => "required|max_len,255",
                 "label_alias" => "required|max_len,255",
             );
-            $validated = $gump->validate($post, $rules);
+            // $validated = $gump->validate($post, $rules);
 
             $errors = array();
             if ($validated !== true) {

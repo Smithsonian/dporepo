@@ -37,14 +37,14 @@
             <label class="control-label" for="item_name"><span style="color:red;">*</span>Item Name:</label>
             <div class="controls">
               <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-              <input name="item_name" id="item_name" type="text" required="true" value="{{ item_data.item_name|default('')|e }}" class="form-control">
+              <input name="item_name" id="item_name" type="text" value="{{ item_data.item_name|default('')|e }}" class="form-control">
             </div>
           </div>
           <div class="form-group">
             <label class="control-label" for="subject_holder_item_id"><span style="color:red;">*</span>Subject Holder Item ID:</label>
             <div class="controls">
               <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
-              <input name="subject_holder_item_id" id="subject_holder_item_id" type="text" required="true" value="{{ item_data.subject_holder_item_id|default('')|e }}" class="form-control">
+              <input name="subject_holder_item_id" id="subject_holder_item_id" type="text" value="{{ item_data.subject_holder_item_id|default('')|e }}" class="form-control">
             </div>
           </div>
           
@@ -55,7 +55,7 @@
           <div class="form-group">
             <label class="control-label" for="item_description"><span style="color:red;">*</span>Item Description:</label>
             <div class="controls">
-              <textarea name="item_description" id="item_description" class="form-control" rows="8" required="true">{{ item_data.item_description|default('')|e }}</textarea>
+              <textarea name="item_description" id="item_description" class="form-control" rows="8">{{ item_data.item_description|default('')|e }}</textarea>
             </div>
           </div>
         </div>

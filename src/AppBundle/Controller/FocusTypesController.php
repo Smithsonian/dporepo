@@ -154,7 +154,7 @@ class FocusTypesController extends Controller
             $rules = array(
                 "label" => "required|max_len,255",
             );
-            $validated = $gump->validate($post, $rules);
+            // $validated = $gump->validate($post, $rules);
 
             $errors = array();
             if ($validated !== true) {

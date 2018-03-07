@@ -49,7 +49,7 @@
           <label class="control-label" for="camera_id"><span style="color:red;">*</span>Camera ID:</label>
           <div class="controls">
             <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Numeric, no spaces allowed</em></p>
-            <input name="camera_id" id="camera_id" type="text" required="true" value="{{ dataset_element_data.camera_id|default('')|e }}" class="form-control">
+            <input name="camera_id" id="camera_id" type="text" value="{{ dataset_element_data.camera_id|default('')|e }}" class="form-control">
           </div>
         </div>
 
@@ -57,7 +57,7 @@
           <label class="control-label" for="camera_capture_position_id"><span style="color:red;">*</span>Camera Capture Position ID:</label>
           <div class="controls">
             <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
-            <input name="camera_capture_position_id" id="camera_capture_position_id" type="text" required="true" value="{{ dataset_element_data.camera_capture_position_id|default('')|e }}" class="form-control">
+            <input name="camera_capture_position_id" id="camera_capture_position_id" type="text" value="{{ dataset_element_data.camera_capture_position_id|default('')|e }}" class="form-control">
           </div>
         </div>
 
@@ -65,7 +65,7 @@
           <label class="control-label" for="cluster_position_id"><span style="color:red;">*</span>Cluster Position ID:</label>
           <div class="controls">
             <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
-            <input name="cluster_position_id" id="cluster_position_id" type="text" required="true" value="{{ dataset_element_data.cluster_position_id|default('')|e }}" class="form-control">
+            <input name="cluster_position_id" id="cluster_position_id" type="text" value="{{ dataset_element_data.cluster_position_id|default('')|e }}" class="form-control">
           </div>
         </div>
 
@@ -77,7 +77,7 @@
         <div class="form-group">
           <label class="control-label" for="calibration_object_type_id"><span style="color:red;">*</span>Calibration Object Type:</label>
           <div class="controls">
-            <select class="default-chosen-select" id="calibration_object_type_id" name="calibration_object_type_id" required="true">
+            <select class="default-chosen-select" id="calibration_object_type_id" name="calibration_object_type_id">
               <option value="0">Select</option>
               {% for single_capture_method in dataset_element_data.calibration_object_types %}
                 {% set selected = '' %}
@@ -94,7 +94,7 @@
           <label class="control-label" for="exif_data_placeholder"><span style="color:red;">*</span>EXIF Data Placeholder:</label>
           <div class="controls">
             <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-            <input name="exif_data_placeholder" id="exif_data_placeholder" type="text" required="true" value="{{ dataset_element_data.exif_data_placeholder|default('')|e }}" class="form-control">
+            <input name="exif_data_placeholder" id="exif_data_placeholder" type="text" value="{{ dataset_element_data.exif_data_placeholder|default('')|e }}" class="form-control">
           </div>
         </div>
 
@@ -102,7 +102,7 @@
           <label class="control-label" for="camera_body"><span style="color:red;">*</span>Camera Body:</label>
           <div class="controls">
             <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-            <input name="camera_body" id="camera_body" type="text" required="true" value="{{ dataset_element_data.camera_body|default('')|e }}" class="form-control">
+            <input name="camera_body" id="camera_body" type="text" value="{{ dataset_element_data.camera_body|default('')|e }}" class="form-control">
           </div>
         </div>
 
@@ -110,7 +110,7 @@
           <label class="control-label" for="lens"><span style="color:red;">*</span>Lens:</label>
           <div class="controls">
             <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-            <input name="lens" id="lens" type="text" required="true" value="{{ dataset_element_data.lens|default('')|e }}" class="form-control">
+            <input name="lens" id="lens" type="text" value="{{ dataset_element_data.lens|default('')|e }}" class="form-control">
           </div>
         </div>
         

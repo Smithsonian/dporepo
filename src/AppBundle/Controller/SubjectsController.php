@@ -215,7 +215,7 @@ class SubjectsController extends Controller
                 "holding_entity_guid" => "required|max_len,255|alpha_numeric",
                 "subject_type_lookup_id" => "required|numeric",
             );
-            $validated = $gump->validate($post, $rules);
+            // $validated = $gump->validate($post, $rules);
 
             $errors = array();
             if ($validated !== true) {

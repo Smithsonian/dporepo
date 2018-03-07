@@ -208,7 +208,7 @@ class DatasetElementsController extends Controller
                 'camera_body' => 'required|max_len,255',
                 'lens' => 'required|max_len,255'        
             );
-            $validated = $gump->validate($post, $rules);
+            // $validated = $gump->validate($post, $rules);
 
             $errors = array();
             if ($validated !== true) {

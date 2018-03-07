@@ -274,7 +274,7 @@ class DatasetsController extends Controller
                 // "resource_datasets" => "required|alpha_numeric",
                 // "resource_dataset_elements" => "required|alpha_numeric"
             );
-            $validated = $gump->validate($post, $rules);
+            // $validated = $gump->validate($post, $rules);
 
             $errors = array();
             if ($validated !== true) {

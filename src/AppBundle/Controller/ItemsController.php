@@ -258,7 +258,7 @@ class ItemsController extends Controller
                 "item_name" => "required|max_len,255",
                 "item_description" => "required",
             );
-            $validated = $gump->validate($post, $rules);
+            // $validated = $gump->validate($post, $rules);
 
             $errors = array();
             if ($validated !== true) {

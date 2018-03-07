@@ -41,7 +41,7 @@
         <div class="form-group">
           <label class="control-label" for="capture_method_lookup_id"><span style="color:red;">*</span>Capture Method:</label>
           <div class="controls">
-            <select class="default-chosen-select" id="capture_method_lookup_id" name="capture_method_lookup_id" required="true">
+            <select class="default-chosen-select" id="capture_method_lookup_id" name="capture_method_lookup_id">
               <option value="0">Select</option>
               {% for single_capture_method in dataset_data.capture_methods %}
                 {% set selected = '' %}
@@ -56,7 +56,7 @@
         <div class="form-group">
           <label class="control-label" for="dataset_type_lookup_id"><span style="color:red;">*</span>Dataset Type:</label>
           <div class="controls">
-            <select class="default-chosen-select" id="dataset_type_lookup_id" name="dataset_type_lookup_id" required="true">
+            <select class="default-chosen-select" id="dataset_type_lookup_id" name="dataset_type_lookup_id">
               <option value="0">Select</option>
               {% for single_dataset_type in dataset_data.dataset_types %}
                 {% set selected = '' %}
@@ -72,14 +72,14 @@
           <label class="control-label" for="dataset_name"><span style="color:red;">*</span>Dataset Name:</label>
           <div class="controls">
             <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-            <input name="dataset_name" id="dataset_name" type="text" required="true" value="{{ dataset_data.dataset_name|default('')|e }}" class="form-control">
+            <input name="dataset_name" id="dataset_name" type="text" value="{{ dataset_data.dataset_name|default('')|e }}" class="form-control">
           </div>
         </div>
         <div class="form-group">
           <label class="control-label" for="collected_by"><span style="color:red;">*</span>Collected By:</label>
           <div class="controls">
             <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-            <input name="collected_by" id="collected_by" type="text" required="true" value="{{ dataset_data.collected_by|default('')|e }}" class="form-control">
+            <input name="collected_by" id="collected_by" type="text" value="{{ dataset_data.collected_by|default('')|e }}" class="form-control">
           </div>
         </div>
         <div class="form-group">
@@ -92,13 +92,13 @@
         <div class="form-group">
           <label class="control-label" for="date_of_capture"><span style="color:red;">*</span>Date of Capture:</label>
           <div class="controls">
-            <input name="date_of_capture" id="date_of_capture" type="text" required="true" value="{{ dataset_data.date_of_capture|default('')|e }}" class="form-control">
+            <input name="date_of_capture" id="date_of_capture" type="text" value="{{ dataset_data.date_of_capture|default('')|e }}" class="form-control">
           </div>
         </div>
         <div class="form-group">
           <label class="control-label" for="dataset_description"><span style="color:red;">*</span>Dataset Description:</label>
           <div class="controls">
-            <textarea name="dataset_description" id="dataset_description" class="form-control" rows="8" required="true">{{ dataset_data.dataset_description|default('')|e }}</textarea>
+            <textarea name="dataset_description" id="dataset_description" class="form-control" rows="8">{{ dataset_data.dataset_description|default('')|e }}</textarea>
           </div>
         </div>
         <div class="form-group">
@@ -116,7 +116,7 @@
         <div class="form-group">
           <label class="control-label" for="item_position_type_lookup_id"><span style="color:red;">*</span>Item Position Type:</label>
           <div class="controls">
-            <select class="default-chosen-select" id="item_position_type_lookup_id" name="item_position_type_lookup_id" required="true">
+            <select class="default-chosen-select" id="item_position_type_lookup_id" name="item_position_type_lookup_id">
               <option value="0">Select</option>
               {% for single_item_position_type in dataset_data.item_position_types %}
                 {% set selected = '' %}
@@ -145,7 +145,7 @@
         <div class="form-group">
           <label class="control-label" for="focus_lookup_id"><span style="color:red;">*</span>Focus:</label>
           <div class="controls">
-            <select class="default-chosen-select" id="focus_lookup_id" name="focus_lookup_id" required="true">
+            <select class="default-chosen-select" id="focus_lookup_id" name="focus_lookup_id">
               <option value="0">Select</option>
               {% for single_focus_type in dataset_data.focus_types %}
                 {% set selected = '' %}
@@ -167,7 +167,7 @@
         <div class="form-group">
           <label class="control-label" for="light_source_type_lookup_id"><span style="color:red;">*</span>Light Source Type:</label>
           <div class="controls">
-            <select class="default-chosen-select" id="light_source_type_lookup_id" name="light_source_type_lookup_id" required="true">
+            <select class="default-chosen-select" id="light_source_type_lookup_id" name="light_source_type_lookup_id">
               <option value="0">Select</option>
               {% for single_light_source_type in dataset_data.light_source_types %}
                 {% set selected = '' %}
@@ -189,7 +189,7 @@
         <div class="form-group">
           <label class="control-label" for="background_removal_method_lookup_id"><span style="color:red;">*</span>Background Removal Method:</label>
           <div class="controls">
-            <select class="default-chosen-select" id="background_removal_method_lookup_id" name="background_removal_method_lookup_id" required="true">
+            <select class="default-chosen-select" id="background_removal_method_lookup_id" name="background_removal_method_lookup_id">
               <option value="0">Select</option>
               {% for single_background_removal_method in dataset_data.background_removal_methods %}
                 {% set selected = '' %}
@@ -204,7 +204,7 @@
         <div class="form-group">
           <label class="control-label" for="camera_cluster_type_lookup_id"><span style="color:red;">*</span>Camera Cluster Type:</label>
           <div class="controls">
-            <select class="default-chosen-select" id="camera_cluster_type_lookup_id" name="camera_cluster_type_lookup_id" required="true">
+            <select class="default-chosen-select" id="camera_cluster_type_lookup_id" name="camera_cluster_type_lookup_id">
               <option value="0">Select</option>
               {% for single_camera_cluster_type in dataset_data.camera_cluster_types %}
                 {% set selected = '' %}

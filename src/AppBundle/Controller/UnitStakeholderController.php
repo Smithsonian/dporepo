@@ -171,7 +171,7 @@ class UnitStakeholderController extends Controller
                 "unit_stakeholder_label" => "required|max_len,255",
                 "unit_stakeholder_full_name" => "required|max_len,255",
             );
-            $validated = $gump->validate($post, $rules);
+            // $validated = $gump->validate($post, $rules);
 
             $errors = array();
             if ($validated !== true) {
