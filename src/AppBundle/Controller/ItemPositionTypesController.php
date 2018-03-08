@@ -162,7 +162,7 @@ class ItemPositionTypesController extends Controller
             // $validated = $gump->validate($post, $rules);
 
             $errors = array();
-            if ($validated !== true) {
+            if (isset($validated) && ($validated !== true)) {
                 $errors = $gump_parse_errors->gump_parse_errors($validated);
             }
         }
