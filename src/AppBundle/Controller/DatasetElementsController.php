@@ -10,10 +10,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
 use PDO;
-use GUMP;
 
 // Custom utility bundles
-use AppBundle\Utils\GumpParseErrors;
 use AppBundle\Utils\AppUtilities;
 
 // Projects methods
@@ -24,6 +22,9 @@ use AppBundle\Controller\SubjectsController;
 use AppBundle\Controller\ItemsController;
 // Datasets methods
 use AppBundle\Controller\DatasetsController;
+
+use AppBundle\Form\DatasetElement;
+use AppBundle\Entity\DatasetElements;
 
 class DatasetElementsController extends Controller
 {
@@ -165,77 +166,64 @@ class DatasetElementsController extends Controller
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_datasets_form( Connection $conn, Request $request, GumpParseErrors $gump_parse_errors, ProjectsController $projects, SubjectsController $subjects, ItemsController $items, DatasetsController $datasets )
+    function show_dataset_elements_form( Connection $conn, Request $request, ProjectsController $projects, SubjectsController $subjects, ItemsController $items, DatasetsController $datasets )
     {
-        $errors = false;
-        $gump = new GUMP();
+        $dataset_element = new DatasetElements();
         $post = $request->request->all();
-
         $dataset_elements_id = !empty($request->attributes->get('dataset_elements_id')) ? $request->attributes->get('dataset_elements_id') : false;
-        $dataset_element_data = $post ? $post : $this->get_dataset_element((int)$dataset_elements_id, $conn);
+        
+        // Retrieve data from the database.
+        $dataset_element = (!empty($dataset_elements_id) && empty($post)) ? $dataset_element->getDatasetElement((int)$dataset_elements_id, $conn) : $dataset_element;
 
-        $dataset_element_data['projects_id'] = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
-        $dataset_element_data['subjects_id'] = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
-        $dataset_element_data['items_id'] = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;
-        $dataset_element_data['datasets_id'] = !empty($request->attributes->get('datasets_id')) ? $request->attributes->get('datasets_id') : false;
-
-        $project_data = $projects->get_project((int)$dataset_element_data['projects_id'], $conn);
-        $subject_data = $subjects->get_subject((int)$dataset_element_data['subjects_id'], $conn);
-        $item_data = $items->get_item((int)$dataset_element_data['items_id'], $conn);
-        $dataset_data = $datasets->get_dataset((int)$dataset_element_data['datasets_id'], $conn);
-
-        // Truncate the item_description.
+        $dataset_element->projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
+        $dataset_element->subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
+        $dataset_element->items_id = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;
+        $dataset_element->datasets_id = !empty($request->attributes->get('datasets_id')) ? $request->attributes->get('datasets_id') : false;
+        
+        // Get data for the breadcumbs.
+        // TODO: find a better way?
+        $project_data = $projects->get_project((int)$dataset_element->projects_id, $conn);
+        $subject_data = $subjects->get_subject((int)$dataset_element->subjects_id, $conn);
+        $item_data = $items->get_item((int)$dataset_element->items_id, $conn);
+        $dataset_data = $datasets->get_dataset((int)$dataset_element->datasets_id, $conn);
+        
+        // Truncate the item_description so the breadcrumb don't blow up.
         $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
         $item_data['item_description_truncated'] = substr($item_data['item_description'], 0, 50) . $more_indicator;
 
         // Get data from lookup tables.
-        $dataset_element_data['calibration_object_types'] = $this->get_calibration_object_types($conn);
-        
-        // Validate posted data.
-        if(!empty($post)) {
-            // "" => "required|numeric",
-            // "" => "required|alpha_numeric",
-            // "" => "required|date",
-            // "" => "numeric|exact_len,5",
-            // "" => "required|max_len,255|alpha_numeric",
-            $rules = array(
-                // 'csrf_key' => 'required',
-                'camera_id' => 'required|numeric',
-                'camera_capture_position_id' => 'required|max_len,255|alpha_numeric',
-                'cluster_position_id' => 'required|max_len,255|alpha_numeric',
-                'exif_data_placeholder' => 'required|max_len,255',
-                'calibration_object_type_id' => 'required|numeric',
-                'camera_body' => 'required|max_len,255',
-                'lens' => 'required|max_len,255'        
-            );
-            // $validated = $gump->validate($post, $rules);
+        $dataset_element->calibration_object_type_options = $this->get_calibration_object_types($conn);
 
-            $errors = array();
-            if (isset($validated) && ($validated !== true)) {
-                $errors = $gump_parse_errors->gump_parse_errors($validated);
-            }
+        // Create the form
+        $form = $this->createForm(DatasetElement::class, $dataset_element);
+        // Handle the request
+        $form->handleRequest($request);
+
+        // If form is submitted and passes validation, insert/update the database record.
+        if ($form->isSubmitted() && $form->isValid()) {
+
+            $dataset_element = $form->getData();
+            $dataset_elements_id = $this->insert_update_dataset_elements($dataset_element, $dataset_element->datasets_id, $dataset_elements_id, $conn);
+
+            $this->addFlash('message', 'Dataset Element successfully updated.');
+            return $this->redirectToRoute('dataset_elements_browse', array('projects_id' => $dataset_element->projects_id, 'subjects_id' => $dataset_element->subjects_id, 'items_id' => $dataset_element->items_id, 'datasets_id' => $dataset_element->datasets_id));
+
         }
 
-        if (!$errors && !empty($post)) {
-            $dataset_elements_id = $this->insert_update_dataset_elements($post, $dataset_element_data['datasets_id'], $dataset_elements_id, $conn);
-            $this->addFlash('message', 'Dataset element successfully updated.');
-            return $this->redirectToRoute('dataset_elements_browse', array('projects_id' => $dataset_element_data['projects_id'], 'subjects_id' => $dataset_element_data['subjects_id'], 'items_id' => $dataset_element_data['items_id'], 'datasets_id' => $dataset_element_data['datasets_id']));
-        } else {
-            return $this->render('datasetElements/dataset_element_form.html.twig', array(
-                'page_title' => ((int)$dataset_elements_id && isset($dataset_element_data['dataset_element_guid'])) ? 'Dataset Element: ' . $dataset_element_data['dataset_element_guid'] : 'Add a Dataset Element',
-                'projects_id' => $dataset_element_data['projects_id'],
-                'subjects_id' => $dataset_element_data['subjects_id'],
-                'items_id' => $dataset_element_data['items_id'],
-                'datasets_id' => $dataset_element_data['datasets_id'],
-                'project_data' => $project_data,
-                'subject_data' => $subject_data,
-                'item_data' => $item_data,
-                'dataset_data' => $dataset_data,
-                'dataset_element_data' => $dataset_element_data,
-                'errors' => $errors,
-                'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
-        }
+        return $this->render('datasetElements/dataset_element_form.html.twig', array(
+            'page_title' => ((int)$dataset_elements_id && isset($dataset_element->dataset_element_guid)) ? 'Dataset Element: ' . $dataset_element->dataset_element_guid : 'Add a Dataset Element',
+            'projects_id' => $dataset_element->projects_id,
+            'subjects_id' => $dataset_element->subjects_id,
+            'items_id' => $dataset_element->items_id,
+            'datasets_id' => $dataset_element->datasets_id,
+            'project_data' => $project_data,
+            'subject_data' => $subject_data,
+            'item_data' => $item_data,
+            'dataset_data' => $dataset_data,
+            'dataset_element_data' => $dataset_element,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'form' => $form->createView(),
+        ));
 
     }
 
@@ -250,7 +238,8 @@ class DatasetElementsController extends Controller
      * @param   object  $conn                 Database connection object
      * @return  int     The item ID
      */
-    public function insert_update_dataset_elements($data, $datasets_id = FALSE, $dataset_elements_id = FALSE, $conn) {
+    public function insert_update_dataset_elements($data, $datasets_id = FALSE, $dataset_elements_id = FALSE, $conn)
+    {
 
         // Update
         if($dataset_elements_id) {
@@ -266,13 +255,13 @@ class DatasetElementsController extends Controller
                 ,last_modified_user_account_id = :last_modified_user_account_id
                 WHERE dataset_elements_id = :dataset_elements_id
             ");
-            $statement->bindValue(":camera_id", $data['camera_id'], PDO::PARAM_STR);
-            $statement->bindValue(":camera_capture_position_id", $data['camera_capture_position_id'], PDO::PARAM_STR);
-            $statement->bindValue(":cluster_position_id", $data['cluster_position_id'], PDO::PARAM_STR);
-            $statement->bindValue(":exif_data_placeholder", $data['exif_data_placeholder'], PDO::PARAM_STR);
-            $statement->bindValue(":calibration_object_type_id", $data['calibration_object_type_id'], PDO::PARAM_INT);
-            $statement->bindValue(":camera_body", $data['camera_body'], PDO::PARAM_STR);
-            $statement->bindValue(":lens", $data['lens'], PDO::PARAM_STR);
+            $statement->bindValue(":camera_id", $data->camera_id, PDO::PARAM_STR);
+            $statement->bindValue(":camera_capture_position_id", $data->camera_capture_position_id, PDO::PARAM_STR);
+            $statement->bindValue(":cluster_position_id", $data->cluster_position_id, PDO::PARAM_STR);
+            $statement->bindValue(":exif_data_placeholder", $data->exif_data_placeholder, PDO::PARAM_STR);
+            $statement->bindValue(":calibration_object_type_id", $data->calibration_object_type_id, PDO::PARAM_INT);
+            $statement->bindValue(":camera_body", $data->camera_body, PDO::PARAM_STR);
+            $statement->bindValue(":lens", $data->lens, PDO::PARAM_STR);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->bindValue(":dataset_elements_id", $dataset_elements_id, PDO::PARAM_INT);
             $statement->execute();
@@ -290,13 +279,13 @@ class DatasetElementsController extends Controller
                 :cluster_position_id, :exif_data_placeholder, :calibration_object_type_id, :camera_body, :lens, 
                 NOW(), :user_account_id, :user_account_id )");
             $statement->bindValue(":datasets_id", $datasets_id, PDO::PARAM_INT);
-            $statement->bindValue(":camera_id", $data['camera_id'], PDO::PARAM_STR);
-            $statement->bindValue(":camera_capture_position_id", $data['camera_capture_position_id'], PDO::PARAM_STR);
-            $statement->bindValue(":cluster_position_id", $data['cluster_position_id'], PDO::PARAM_STR);
-            $statement->bindValue(":exif_data_placeholder", $data['exif_data_placeholder'], PDO::PARAM_STR);
-            $statement->bindValue(":calibration_object_type_id", $data['calibration_object_type_id'], PDO::PARAM_INT);
-            $statement->bindValue(":camera_body", $data['camera_body'], PDO::PARAM_STR);
-            $statement->bindValue(":lens", $data['lens'], PDO::PARAM_STR);
+            $statement->bindValue(":camera_id", $data->camera_id, PDO::PARAM_STR);
+            $statement->bindValue(":camera_capture_position_id", $data->camera_capture_position_id, PDO::PARAM_STR);
+            $statement->bindValue(":cluster_position_id", $data->cluster_position_id, PDO::PARAM_STR);
+            $statement->bindValue(":exif_data_placeholder", $data->exif_data_placeholder, PDO::PARAM_STR);
+            $statement->bindValue(":calibration_object_type_id", $data->calibration_object_type_id, PDO::PARAM_INT);
+            $statement->bindValue(":camera_body", $data->camera_body, PDO::PARAM_STR);
+            $statement->bindValue(":lens", $data->lens, PDO::PARAM_STR);
             $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->execute();
             $last_inserted_id = $conn->lastInsertId();
@@ -399,9 +388,17 @@ class DatasetElementsController extends Controller
      */
     public function get_calibration_object_types($conn)
     {
+        $data = array();
+
         $statement = $conn->prepare("SELECT * FROM calibration_object_types ORDER BY label ASC");
         $statement->execute();
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
+        
+        foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
+            $label = $this->u->removeUnderscoresTitleCase($value['label']);
+            $data[$label] = $value['calibration_object_types_id'];
+        }
+
+        return $data;
     }
 
     /**

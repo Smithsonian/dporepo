@@ -10,16 +10,17 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
 use PDO;
-use GUMP;
 
 // Custom utility bundles
-use AppBundle\Utils\GumpParseErrors;
 use AppBundle\Utils\AppUtilities;
 
 // Projects methods
 use AppBundle\Controller\ProjectsController;
 // Items methods
 use AppBundle\Controller\ItemsController;
+
+use AppBundle\Form\Subject;
+use AppBundle\Entity\Subjects;
 
 class SubjectsController extends Controller
 {
@@ -185,68 +186,58 @@ class SubjectsController extends Controller
      *
      * @Route("/admin/projects/subject/{projects_id}/{subjects_id}", name="subjects_manage", methods={"GET","POST"}, requirements={"projects_id"="\d+"}, defaults={"subjects_id" = null})
      *
+     * @param   int     $subjects_id  The subject ID
      * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
-     * @return  array|bool            The query result
+     * @return  array                 Redirect or render
      */
-    function show_subjects_form( Connection $conn, Request $request, GumpParseErrors $gump_parse_errors )
+    function show_subjects_form( $subjects_id, Connection $conn, Request $request )
     {
-        $errors = false;
-        $gump = new GUMP();
+        $subject = new Subjects();
         $post = $request->request->all();
         $subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
-        $subject_data = !empty($post) ? $post : $this->get_subject((int)$subjects_id, $conn);
-        $subject_data['projects_id'] = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
+        $subject->projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
 
-        // Get data from lookup tables.
-        $subject_data['subject_types'] = $this->get_subject_types($conn);
+        // Retrieve data from the database.
+        $subject = (!empty($subjects_id) && empty($post)) ? $subject->getSubject((int)$subjects_id, $conn) : $subject;
         
-        // Validate posted data.
-        if(!empty($post)) {
-            // "" => "required|numeric",
-            // "" => "required|alpha_numeric",
-            // "" => "required|date",
-            // "" => "numeric|exact_len,5",
-            // "" => "required|max_len,255|alpha_numeric",
-            $rules = array(
-                "subject_name" => "required|max_len,255",
-                "subject_holder_subject_id" => "required|max_len,255",
-                "location_information" => "required|max_len,255",
-                "holding_entity_guid" => "required|max_len,255|alpha_numeric",
-                "subject_type_lookup_id" => "required|numeric",
-            );
-            // $validated = $gump->validate($post, $rules);
+        // Get data from lookup tables.
+        $subject->subject_type_lookup_options = $this->get_subject_types($conn);
 
-            $errors = array();
-            if (isset($validated) && ($validated !== true)) {
-                $errors = $gump_parse_errors->gump_parse_errors($validated);
-            }
-        }
+        // Create the form
+        $form = $this->createForm(Subject::class, $subject);
+        // Handle the request
+        $form->handleRequest($request);
 
-        if (!$errors && !empty($post)) {
-            $subjects_id = $this->insert_update_subject($post, $subject_data['projects_id'], $subjects_id, $conn);
+        // If form is submitted and passes validation, insert/update the database record.
+        if ($form->isSubmitted() && $form->isValid()) {
+
+            $subject = $form->getData();
+            $subjects_id = $this->insert_update_subject($subject, $subject->projects_id, $subjects_id, $conn);
+
             $this->addFlash('message', 'Subject successfully updated.');
-            return $this->redirectToRoute('subjects_browse', array('projects_id' => $subject_data['projects_id']));
-        } else {
-            return $this->render('subjects/subject_form.html.twig', array(
-                "page_title" => !empty($subjects_id) ? 'Subject: ' . $subject_data['subject_name'] : 'Create Subject'
-                ,"subject_data" => $subject_data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
+            return $this->redirect('/admin/projects/items/' . $subject->projects_id . '/' . $subjects_id);
+
         }
+
+        return $this->render('subjects/subject_form.html.twig', array(
+            'page_title' => !empty($subjects_id) ? 'Subject: ' . $subject->subject_name : 'Create Subject',
+            'subject_data' => $subject,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'form' => $form->createView(),
+        ));
 
     }
 
     /**
-    * Get Subject
-    *
-    * Run a query to retrieve one subject from the database.
-    *
-    * @param   int $subject_id  The subject ID
-    * @param   object  $conn    Database connection object
-    * @return  array|bool       The query result
-    */
+     * Get Subject
+     *
+     * Run a query to retrieve one subject from the database.
+     *
+     * @param   int $subject_id  The subject ID
+     * @param   object  $conn    Database connection object
+     * @return  array|bool       The query result
+     */
     public function get_subject($subject_id, $conn)
     {
         $statement = $conn->prepare("SELECT *
@@ -259,14 +250,14 @@ class SubjectsController extends Controller
     }
 
     /**
-    * Get Subjects
-    *
-    * Run a query to retrieve all subjects from the database.
-    *
-    * @param   object  $conn    Database connection object
-    * @param   int $projects_id  The project ID
-    * @return  array|bool  The query result
-    */
+     * Get Subjects
+     *
+     * Run a query to retrieve all subjects from the database.
+     *
+     * @param   object  $conn    Database connection object
+     * @param   int $projects_id  The project ID
+     * @return  array|bool  The query result
+     */
     public function get_subjects($conn, $projects_id = false)
     {
         $statement = $conn->prepare("
@@ -318,9 +309,17 @@ class SubjectsController extends Controller
      */
     public function get_subject_types($conn)
     {
+        $data = array();
+
         $statement = $conn->prepare("SELECT * FROM subject_types ORDER BY label ASC");
         $statement->execute();
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
+            $label = $this->u->removeUnderscoresTitleCase($value['label']);
+            $data[$label] = $value['subject_types_id'];
+        }
+
+        return $data;
     }
 
     /**
@@ -336,6 +335,8 @@ class SubjectsController extends Controller
      */
     public function insert_update_subject($data, $projects_id = false, $subjects_id = FALSE, $conn)
     {
+        // $this->u->dumper($data);
+
         // Update
         if($subjects_id) {
           $statement = $conn->prepare("
@@ -343,18 +344,20 @@ class SubjectsController extends Controller
             SET subject_holder_subject_id = :subject_holder_subject_id
             ,location_information = :location_information
             ,subject_name = :subject_name
+            ,subject_guid = :subject_guid
             ,subject_description = :subject_description
             ,holding_entity_guid = :holding_entity_guid
             ,subject_type_lookup_id = :subject_type_lookup_id
             ,last_modified_user_account_id = :last_modified_user_account_id
             WHERE subjects_id = :subjects_id
           ");
-          $statement->bindValue(":subject_holder_subject_id", $data['subject_holder_subject_id'], PDO::PARAM_STR);
-          $statement->bindValue(":location_information", $data['location_information'], PDO::PARAM_STR);
-          $statement->bindValue(":subject_name", $data['subject_name'], PDO::PARAM_STR);
-          $statement->bindValue(":subject_description", $data['subject_description'], PDO::PARAM_STR);
-          $statement->bindValue(":holding_entity_guid", $data['holding_entity_guid'], PDO::PARAM_STR);
-          $statement->bindValue(":subject_type_lookup_id", $data['subject_type_lookup_id'], PDO::PARAM_INT);
+          $statement->bindValue(":subject_holder_subject_id", $data->subject_holder_subject_id, PDO::PARAM_STR);
+          $statement->bindValue(":location_information", $data->location_information, PDO::PARAM_STR);
+          $statement->bindValue(":subject_name", $data->subject_name, PDO::PARAM_STR);
+          $statement->bindValue(":subject_guid", $data->subject_guid, PDO::PARAM_STR);
+          $statement->bindValue(":subject_description", $data->subject_description, PDO::PARAM_STR);
+          $statement->bindValue(":holding_entity_guid", $data->holding_entity_guid, PDO::PARAM_STR);
+          $statement->bindValue(":subject_type_lookup_id", $data->subject_type_lookup_id, PDO::PARAM_INT);
           $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
           $statement->bindValue(":subjects_id", $subjects_id, PDO::PARAM_INT);
           $statement->execute();
@@ -371,12 +374,12 @@ class SubjectsController extends Controller
           VALUES ((select md5(UUID())), :projects_id, :subject_holder_subject_id, :location_information, :subject_name, :subject_description, :holding_entity_guid, :subject_type_lookup_id,
              NOW(), :user_account_id, :user_account_id )");
           $statement->bindValue(":projects_id", $projects_id, PDO::PARAM_INT);
-          $statement->bindValue(":subject_holder_subject_id", $data['subject_holder_subject_id'], PDO::PARAM_STR);
-          $statement->bindValue(":location_information", $data['location_information'], PDO::PARAM_STR);
-          $statement->bindValue(":subject_name", $data['subject_name'], PDO::PARAM_STR);
-          $statement->bindValue(":subject_description", $data['subject_description'], PDO::PARAM_STR);
-          $statement->bindValue(":holding_entity_guid", $data['holding_entity_guid'], PDO::PARAM_STR);
-          $statement->bindValue(":subject_type_lookup_id", $data['subject_type_lookup_id'], PDO::PARAM_STR);
+          $statement->bindValue(":subject_holder_subject_id", $data->subject_holder_subject_id, PDO::PARAM_STR);
+          $statement->bindValue(":location_information", $data->location_information, PDO::PARAM_STR);
+          $statement->bindValue(":subject_name", $data->subject_name, PDO::PARAM_STR);
+          $statement->bindValue(":subject_description", $data->subject_description, PDO::PARAM_STR);
+          $statement->bindValue(":holding_entity_guid", $data->holding_entity_guid, PDO::PARAM_STR);
+          $statement->bindValue(":subject_type_lookup_id", $data->subject_type_lookup_id, PDO::PARAM_STR);
           $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
           $statement->execute();
           $last_inserted_id = $conn->lastInsertId();

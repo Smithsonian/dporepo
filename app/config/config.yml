@@ -42,6 +42,8 @@ twig:
     globals:
         site_title: DPO's 3D Repository
         admin_email: '%mailer_user%'
+    form_themes:
+        - 'bootstrap_3_layout.html.twig'
 
 # Doctrine Configuration
 doctrine:

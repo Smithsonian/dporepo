@@ -2,113 +2,35 @@
 
 {% block content %}
 
-    {% if errors %}
-      <div class="alert alert-danger">
-        <h4>Form Errors</h4>
-        {% for single_error in errors %}
-        <p>{{ single_error }}</p>
-        {% endfor %}
-      </div>
-    {% endif %}
-
-    <form id="subject_form" method="POST">
-      {#% include 'csrf_input.html' %#}
-      <!-- row -->
-      <div id="single_subject_container" class="row">
-
-        <div class="col-sm-12 col-md-12">
-          <div class="form-group">
-              <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
-              <button type="button" class="btn btn-default" data-toggle="modal" data-target="#edanSearchModal">
-                <i class="glyphicon glyphicon-search"></i> Search EDAN to Auto-populate Form
-              </button>
-          </div>
+    <div class="row">
+      <div class="col-sm-12 col-md-12">
+        <div class="form-group">
+            <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
+            <button type="button" class="btn btn-default" data-toggle="modal" data-target="#edanSearchModal">
+              <i class="glyphicon glyphicon-search"></i> Search EDAN to Auto-populate Form
+            </button>
         </div>
+      </div>
+    </div>
 
-        <!-- Column 1 -->
+    {{ form_start(form) }}
+
+      <div class="row">
         <div class="col-sm-6 col-md-6">
-
-        {#  {% if subject_data.subject_guid is defined %}
-            <div class="form-group">
-              <label class="control-label" for="subject_guid">Subject GUID:</label>
-              <div class="controls">
-                <p>{{ subject_data.subject_guid|e }}</p>
-              </div>
-            </div>
-          {% endif %} #}
-
-          <div class="form-group">
-            <label class="control-label" for="subject_guid"><span style="color:red;">*</span>Subject GUID:</label>
-            <div class="controls">
-              <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-              <input name="subject_guid" id="subject_guid" type="text" value="{{ subject_data.subject_guid|default('')|e }}" class="form-control">
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="control-label" for="subject_name"><span style="color:red;">*</span>Subject Name:</label>
-            <div class="controls">
-              <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-              <input name="subject_name" id="subject_name" type="text" value="{{ subject_data.subject_name|default('')|e }}" class="form-control">
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="control-label" for="location_information"><span style="color:red;">*</span>Location Information:</label>
-            <div class="controls">
-              <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-              <input name="location_information" id="location_information" type="text" value="{{ subject_data.location_information|default('')|e }}" class="form-control">
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="control-label" for="holding_entity_guid"><span style="color:red;">*</span>Holding Entity GUID:</label>
-            <div class="controls">
-              <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
-              <input name="holding_entity_guid" id="holding_entity_guid" type="text" value="{{ subject_data.holding_entity_guid|default('')|e }}" class="form-control">
-            </div>
-          </div>
-
+          {{ form_row(form.subject_guid) }}
+          {{ form_row(form.subject_name) }}
+          {{ form_row(form.location_information) }}
+          {{ form_row(form.holding_entity_guid) }}
+          {{ form_row(form.save) }}
         </div>
-
-        <!-- Column 2 -->
         <div class="col-sm-6 col-md-6">
-
-          <div class="form-group">
-            <label class="control-label" for="subject_type_lookup_id"><span style="color:red;">*</span>Subject Type:</label>
-            <div class="controls">
-              <select class="default-chosen-select" id="subject_type_lookup_id" name="subject_type_lookup_id">
-                <option value="0">Select</option>
-                {% for single_subject_type in subject_data.subject_types %}
-                  {% set selected = '' %}
-                  {% if subject_data.subject_type_lookup_id is defined and single_subject_type.subject_types_id == subject_data.subject_type_lookup_id %}
-                    {% set selected = ' selected="selected"' %}
-                  {% endif %}
-                  <option value="{{ single_subject_type.subject_types_id }}"{{ selected }}>{{ single_subject_type.label }}</option>
-                {% endfor %}
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="control-label" for="subject_holder_subject_id"><span style="color:red;">*</span>Subject Holder Subject ID:</label>
-            <div class="controls">
-              <input name="subject_holder_subject_id" id="subject_holder_subject_id" type="text" value="{{ subject_data.subject_holder_subject_id|default('')|e }}" class="form-control">
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="control-label" for="subject_description">Subject Description:</label>
-            <div class="controls">
-              <textarea name="subject_description" id="subject_description" class="form-control" rows="8">{{ subject_data.subject_description|default('')|e }}</textarea>
-            </div>
-          </div>
-
-          <input name="projects_id" id="projects_id" type="hidden" value="{{ subject_data.projects_id|default('')|e }}" class="form-control">
-
+          {{ form_row(form.subject_type_lookup_id) }}
+          {{ form_row(form.subject_holder_subject_id) }}
+          {{ form_row(form.subject_description) }}
         </div>
-
       </div>
 
-      <div class="field-group" style="clear:both;">
-        <input class="btn btn-primary" type="submit" value="Save Edits">
-      </div>
-    </form>
+    {{ form_end(form) }}
 
     <!-- Modal -->
     <div class="modal fade" id="edanSearchModal" tabindex="-1" role="dialog" aria-labelledby="edanSearchLabel">
@@ -303,11 +225,11 @@
                 holding_entity_name = $('#holding_entity_name_chosen_' + index).val();
 
             // Populate the fields in the parent form and close the modal.
-            $('#subject_guid').val(subject_guid);
-            $('#subject_name').val(subject_name);
-            $('#subject_holder_subject_id').val(subject_holder_subject_id);
-            $('#holding_entity_guid').val(holding_entity_guid);
-            $('#holding_entity_name').val(holding_entity_name);
+            $('#subject_subject_guid').val(subject_guid);
+            $('#subject_subject_name').val(subject_name);
+            $('#subject_subject_holder_subject_id').val(subject_holder_subject_id);
+            $('#subject_holding_entity_guid').val(holding_entity_guid);
+            // $('#subject_holding_entity_name').val(holding_entity_name);
             $('#edanSearchModal').modal('hide');
 
         });

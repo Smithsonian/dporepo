@@ -2,15 +2,6 @@
 
 {% block content %}
 
-    {% if errors %}
-      <div class="alert alert-danger">
-        <h4>Form Errors</h4>
-        {% for single_error in errors %}
-        <p>{{ single_error }}</p>
-        {% endfor %}
-      </div>
-    {% endif %}
-
   <ol class="breadcrumb">
     <li><a href="/admin">Dashboard</a></li>
     <li><a href="/admin/workspace">Browse Projects</a></li>
@@ -21,106 +12,38 @@
     <li class="active">{% if dataset_element_data.dataset_element_guid is defined %}<strong>Dataset Element:</strong> {{ dataset_element_data.dataset_element_guid|e }}{% else %}Add a New Dataset Element{% endif %}</li>
   </ol>
 
-  <form id="dataset_form" method="POST">
-    {#% include 'csrf_input.html' %#}
-
-    <!-- row -->
-    <div id="single_dataset_element_container" class="row">
-
-      <div class="col-sm-12 col-md-12">
-        <div class="form-group">
-          <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
-        </div>
+  <div class="row">
+    <div class="col-sm-12 col-md-12">
+      <div class="form-group">
+        <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
       </div>
+    </div>
+  </div>
 
-      <!-- column 1 -->
+  {{ form_start(form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
+
+    <div class="row">
       <div class="col-sm-6 col-md-6">
-
-        {% if dataset_element_data.dataset_element_guid is defined %}
         <div class="form-group">
-          <label class="control-label" for="dataset_element_guid">Dataset Element GUID:</label>
-          <div class="controls">
-            <p>{{ dataset_element_data.dataset_element_guid|e }}</p>
-          </div>
+          <label class="control-label" for="dataset_element_guid">Dataset Element GUID</label>
+          <p>{{ dataset_element_data.dataset_element_guid }}</p>
         </div>
-        {% endif %}
-
-        <div class="form-group">
-          <label class="control-label" for="camera_id"><span style="color:red;">*</span>Camera ID:</label>
-          <div class="controls">
-            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Numeric, no spaces allowed</em></p>
-            <input name="camera_id" id="camera_id" type="text" value="{{ dataset_element_data.camera_id|default('')|e }}" class="form-control">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="control-label" for="camera_capture_position_id"><span style="color:red;">*</span>Camera Capture Position ID:</label>
-          <div class="controls">
-            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
-            <input name="camera_capture_position_id" id="camera_capture_position_id" type="text" value="{{ dataset_element_data.camera_capture_position_id|default('')|e }}" class="form-control">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="control-label" for="cluster_position_id"><span style="color:red;">*</span>Cluster Position ID:</label>
-          <div class="controls">
-            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
-            <input name="cluster_position_id" id="cluster_position_id" type="text" value="{{ dataset_element_data.cluster_position_id|default('')|e }}" class="form-control">
-          </div>
-        </div>
-
+        {{ form_row(form.camera_id) }}
+        {{ form_row(form.camera_capture_position_id) }}
+        {{ form_row(form.cluster_position_id) }}
       </div>
-
-      <!-- column 2 -->
       <div class="col-sm-6 col-md-6">
-
-        <div class="form-group">
-          <label class="control-label" for="calibration_object_type_id"><span style="color:red;">*</span>Calibration Object Type:</label>
-          <div class="controls">
-            <select class="default-chosen-select" id="calibration_object_type_id" name="calibration_object_type_id">
-              <option value="0">Select</option>
-              {% for single_capture_method in dataset_element_data.calibration_object_types %}
-                {% set selected = '' %}
-                {% if dataset_element_data.calibration_object_type_id is defined and single_capture_method.calibration_object_types_id == dataset_element_data.calibration_object_type_id %}
-                  {% set selected = ' selected="selected"' %}
-                {% endif %}
-                <option value="{{ single_capture_method.calibration_object_types_id }}"{{ selected }}>{{ single_capture_method.label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="control-label" for="exif_data_placeholder"><span style="color:red;">*</span>EXIF Data Placeholder:</label>
-          <div class="controls">
-            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-            <input name="exif_data_placeholder" id="exif_data_placeholder" type="text" value="{{ dataset_element_data.exif_data_placeholder|default('')|e }}" class="form-control">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="control-label" for="camera_body"><span style="color:red;">*</span>Camera Body:</label>
-          <div class="controls">
-            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-            <input name="camera_body" id="camera_body" type="text" value="{{ dataset_element_data.camera_body|default('')|e }}" class="form-control">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="control-label" for="lens"><span style="color:red;">*</span>Lens:</label>
-          <div class="controls">
-            <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-            <input name="lens" id="lens" type="text" value="{{ dataset_element_data.lens|default('')|e }}" class="form-control">
-          </div>
-        </div>
-        
+        {{ form_row(form.calibration_object_type_id) }}
+        {{ form_row(form.exif_data_placeholder) }}
+        {{ form_row(form.camera_body) }}
+        {{ form_row(form.lens) }}
       </div>
-
     </div>
 
     <div class="field-group" style="clear:both;">
-      <input class="btn btn-primary" type="submit" value="Save Edits">
+      {{ form_row(form.save) }}
     </div>
-  </form>
+
+  {{ form_end(form) }}
 
 {% endblock %}

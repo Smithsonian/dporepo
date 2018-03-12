@@ -2,68 +2,31 @@
 
 {% block content %}
 
-    {% if errors %}
-      <div class="alert alert-danger">
-        <h4>Form Errors</h4>
-        {% for single_error in errors %}
-        <p>{{ single_error }}</p>
-        {% endfor %}
+  <div class="row">
+    <div class="col-sm-12 col-md-12">
+      <div class="form-group">
+        <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
       </div>
-    {% endif %}
+    </div>
+  </div>
 
-    <form id="item_form" method="POST">
-      {#% include 'csrf_input.html' %#}
-      <!-- row -->
-      <div id="single_item_container" class="row">
+  {{ form_start(form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
 
-        <div class="col-sm-12 col-md-12">
-          <div class="form-group">
-            <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
-          </div>
-        </div>
-
-        <!-- Column 1 -->
-        <div class="col-sm-6 col-md-6">
-
-          {% if item_data.item_guid is defined %}
-            <div class="form-group">
-              <label class="control-label" for="item_guid">Item GUID:</label>
-              <div class="controls">
-                <p>{{ item_data.item_guid|e }}</p>
-              </div>
-            </div>
-          {% endif %}
-          <div class="form-group">
-            <label class="control-label" for="item_name"><span style="color:red;">*</span>Item Name:</label>
-            <div class="controls">
-              <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-              <input name="item_name" id="item_name" type="text" value="{{ item_data.item_name|default('')|e }}" class="form-control">
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="control-label" for="subject_holder_item_id"><span style="color:red;">*</span>Subject Holder Item ID:</label>
-            <div class="controls">
-              <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>Alphanumeric, no spaces allowed</em></p>
-              <input name="subject_holder_item_id" id="subject_holder_item_id" type="text" value="{{ item_data.subject_holder_item_id|default('')|e }}" class="form-control">
-            </div>
-          </div>
-          
-        </div>
-
-        <!-- Column 2 -->
-        <div class="col-sm-6 col-md-6">
-          <div class="form-group">
-            <label class="control-label" for="item_description"><span style="color:red;">*</span>Item Description:</label>
-            <div class="controls">
-              <textarea name="item_description" id="item_description" class="form-control" rows="8">{{ item_data.item_description|default('')|e }}</textarea>
-            </div>
-          </div>
-        </div>
-
+    <div class="row">
+      <div class="col-sm-6 col-md-6">
+        {# {{ form_row(form.item_guid) }} #}
+        {{ form_row(form.item_name) }}
+        {{ form_row(form.subject_holder_item_id) }}
       </div>
-
-      <div class="field-group" style="clear:both;">
-        <input class="btn btn-primary" type="submit" value="Save Edits">
+      <div class="col-sm-6 col-md-6">
+        {{ form_row(form.item_description) }}
       </div>
-    </form>
+    </div>
+
+    <div class="field-group" style="clear:both;">
+      {{ form_row(form.save) }}
+    </div>
+
+  {{ form_end(form) }}
+
 {% endblock %}

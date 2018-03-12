@@ -10,16 +10,17 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
 use PDO;
-use GUMP;
 
 // Custom utility bundles
-use AppBundle\Utils\GumpParseErrors;
 use AppBundle\Utils\AppUtilities;
 
 // Subjects methods
 use AppBundle\Controller\SubjectsController;
 use AppBundle\Controller\UnitStakeholderController;
 use AppBundle\Controller\IsniController;
+
+use AppBundle\Form\Project;
+use AppBundle\Entity\Projects;
 
 class ProjectsController extends Controller
 {
@@ -156,72 +157,43 @@ class ProjectsController extends Controller
      * @param   int     $projects_id  The project ID
      * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
-     * @return  array|bool            The query result
+     * @return  array                 Redirect or render
      */
-    function show_projects_form( $projects_id, Connection $conn, Request $request, GumpParseErrors $gump_parse_errors, IsniController $isni, UnitStakeholderController $unit )
+    function show_projects_form( $projects_id, Connection $conn, Request $request, IsniController $isni, UnitStakeholderController $unit )
     {
-        $errors = false;
-        $project_data = array();
-        $gump = new GUMP();
+
+        $project = new Projects();
         $post = $request->request->all();
         $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
-        $project_data = !empty($post) ? $post : $this->get_project((int)$projects_id, $conn);
 
-        // Get data from lookup tables.
-        $project_data['units_stakeholders'] = $this->get_units_stakeholders($conn);
-
-        // Processing statuses.
-        if(isset($project_data['active'])) {
-            switch($project_data['active']) {
-                case '0':
-                    $project_data['status_class'] = 'warning';
-                    $project_data['active'] = 'In Queue';
-                    break;
-                case '1':
-                    $project_data['status_class'] = 'info';
-                    $project_data['active'] = 'Processing';
-                    break;
-                case '2':
-                    $project_data['status_class'] = 'success';
-                    $project_data['active'] = 'Processed';
-                    break;
-            }
-        }
+        // Retrieve data from the database.
+        $project = (!empty($projects_id) && empty($post)) ? $project->getProject((int)$projects_id, $conn) : $project;
         
-        // Validate posted data.
-        if(!empty($post)) {
-            // "" => "required|numeric",
-            // "" => "required|alpha_numeric",
-            // "" => "required|date",
-            // "" => "numeric|exact_len,5",
-            // "" => "required|max_len,255|alpha_numeric",
-            $rules = array(
-                "projects_label" => "required|max_len,255",
-                // "stakeholder_label" => "required|max_len,255",
-                // "stakeholder_guid" => "required|max_len,255",
-                // "stakeholder_si_guid" => "required|max_len,255",
-                "project_description" => "required",
-            );
-            // $validated = $gump->validate($post, $rules);
+        // Get data from lookup tables.
+        $project->stakeholder_guid_options = $this->get_units_stakeholders($conn);
 
-            $errors = array();
-            if (isset($validated) && ($validated !== true)) {
-                $errors = $gump_parse_errors->gump_parse_errors($validated);
-            }
-        }
+        // Create the form
+        $form = $this->createForm(Project::class, $project);
+        // Handle the request
+        $form->handleRequest($request);
+        
+        // If form is submitted and passes validation, insert/update the database record.
+        if ($form->isSubmitted() && $form->isValid()) {
 
-        if (!$errors && !empty($post)) {
-            $projects_id = $this->insert_update_project($post, $projects_id, $conn, $isni, $unit);
+            $project = $form->getData();
+            $projects_id = $this->insert_update_project($project, $projects_id, $conn, $isni, $unit);
+
             $this->addFlash('message', 'Project successfully updated.');
             return $this->redirect('/admin/projects/subjects/' . $projects_id);
-        } else {
-            return $this->render('projects/project_form.html.twig', array(
-                "page_title" => !empty($projects_id) ? 'Project: ' . $project_data['projects_label'] : 'Create Project'
-                ,"project_info" => $project_data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
+
         }
+
+        return $this->render('projects/project_form.html.twig', array(
+            'page_title' => !empty($projects_id) ? 'Project: ' . $project->projects_label : 'Create Project',
+            'project_data' => $project,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'form' => $form->createView(),
+        ));
 
     }
 
@@ -384,20 +356,22 @@ class ProjectsController extends Controller
      */
     public function insert_update_project($data, $projects_id = FALSE, $conn, $isni, $unit)
     {
-        $unit_record = $unit->get_one($data['stakeholder_guid_picker'], $conn);
+        // $this->u->dumper($data);
+
+        $unit_record = $unit->get_one($data->stakeholder_guid_picker, $conn);
 
         if($unit_record && !empty($unit_record['isni_id'])) {
-          $data['stakeholder_guid'] = $unit_record['isni_id'];
+          $data->stakeholder_guid = $unit_record['isni_id'];
         } else {
-          $data['stakeholder_guid'] = $data['stakeholder_guid_picker'];
+          $data->stakeholder_guid = $data->stakeholder_guid_picker;
         }
 
         // Query the isni_data table to see if there's an entry.
-        $isni_data = $isni->get_isni_data_from_database($data['stakeholder_guid'], $conn);
+        $isni_data = $isni->get_isni_data_from_database($data->stakeholder_guid, $conn);
 
         // If there is no entry, then perform an insert.
         if(!$isni_data) {
-          $isni_inserted = $isni->insert_isni_data($data['stakeholder_guid'], $data['stakeholder_label'], $this->getUser()->getId(), $conn);
+          $isni_inserted = $isni->insert_isni_data($data->stakeholder_guid, $data->stakeholder_label, $this->getUser()->getId(), $conn);
         }
 
         // Update
@@ -411,9 +385,9 @@ class ProjectsController extends Controller
                 ,last_modified_user_account_id = :last_modified_user_account_id
                 WHERE projects_id = :projects_id
                 ");
-            $statement->bindValue(":projects_label", $data['projects_label'], PDO::PARAM_STR);
-            $statement->bindValue(":stakeholder_guid", $data['stakeholder_guid'], PDO::PARAM_STR);
-            $statement->bindValue(":project_description", $data['project_description'], PDO::PARAM_STR);
+            $statement->bindValue(":projects_label", $data->projects_label, PDO::PARAM_STR);
+            $statement->bindValue(":stakeholder_guid", $data->stakeholder_guid, PDO::PARAM_STR);
+            $statement->bindValue(":project_description", $data->project_description, PDO::PARAM_STR);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->bindValue(":projects_id", $projects_id, PDO::PARAM_INT);
             $statement->execute();
@@ -427,9 +401,9 @@ class ProjectsController extends Controller
             $statement = $conn->prepare("INSERT INTO projects
               (projects_label, stakeholder_guid, project_description, date_created, created_by_user_account_id, last_modified_user_account_id )
               VALUES (:projects_label, :stakeholder_guid, :project_description, NOW(), :user_account_id, :user_account_id )");
-            $statement->bindValue(":projects_label", $data['projects_label'], PDO::PARAM_STR);
-            $statement->bindValue(":stakeholder_guid", $data['stakeholder_guid'], PDO::PARAM_STR);
-            $statement->bindValue(":project_description", $data['project_description'], PDO::PARAM_STR);
+            $statement->bindValue(":projects_label", $data->projects_label, PDO::PARAM_STR);
+            $statement->bindValue(":stakeholder_guid", $data->stakeholder_guid, PDO::PARAM_STR);
+            $statement->bindValue(":project_description", $data->project_description, PDO::PARAM_STR);
             $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->execute();
             $last_inserted_id = $conn->lastInsertId();
@@ -449,9 +423,18 @@ class ProjectsController extends Controller
      */
     public function get_units_stakeholders($conn)
     {
-      $statement = $conn->prepare("SELECT * FROM unit_stakeholder WHERE unit_stakeholder.active = 1 ORDER BY unit_stakeholder_label ASC");
+      $data = array();
+
+      $statement = $conn->prepare("SELECT * FROM unit_stakeholder
+        WHERE unit_stakeholder.active = 1
+        ORDER BY unit_stakeholder_label ASC");
       $statement->execute();
-      return $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
+        $data[$value['unit_stakeholder_label'] . ' - ' . $value['unit_stakeholder_full_name']] = $value['unit_stakeholder_id'];
+      }
+
+      return $data;
     }
 
     /**

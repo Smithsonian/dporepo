@@ -10,10 +10,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
 use PDO;
-use GUMP;
 
 // Custom utility bundles
-use AppBundle\Utils\GumpParseErrors;
 use AppBundle\Utils\AppUtilities;
 
 // Projects methods
@@ -22,6 +20,9 @@ use AppBundle\Controller\ProjectsController;
 use AppBundle\Controller\SubjectsController;
 // Datasets methods
 use AppBundle\Controller\DatasetsController;
+
+use AppBundle\Form\Item;
+use AppBundle\Entity\Items;
 
 class ItemsController extends Controller
 {
@@ -235,49 +236,39 @@ class ItemsController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    function show_items_form( Connection $conn, Request $request, GumpParseErrors $gump_parse_errors )
+    function show_items_form( Connection $conn, Request $request )
     {
-        $errors = false;
-        $gump = new GUMP();
+        $item = new Items();
         $post = $request->request->all();
         $items_id = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;
-        $item_data = $post ? $post : $this->get_item((int)$items_id, $conn);
-        $item_data['projects_id'] = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
-        $item_data['subjects_id'] = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
-        $more_indicator = (isset($item_data['item_description']) && (strlen($item_data['item_description']) > 50)) ? '...' : '';
-        
-        // Validate posted data.
-        if(!empty($post)) {
-            // "" => "required|numeric",
-            // "" => "required|alpha_numeric",
-            // "" => "required|date",
-            // "" => "numeric|exact_len,5",
-            // "" => "required|max_len,255|alpha_numeric",
-            $rules = array(
-                "subject_holder_item_id" => "required|max_len,255|alpha_numeric",
-                "item_name" => "required|max_len,255",
-                "item_description" => "required",
-            );
-            // $validated = $gump->validate($post, $rules);
+        $item->projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
+        $item->subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
 
-            $errors = array();
-            if (isset($validated) && ($validated !== true)) {
-                $errors = $gump_parse_errors->gump_parse_errors($validated);
-            }
-        }
+        // Retrieve data from the database.
+        $item = (!empty($items_id) && empty($post)) ? $item->getItem((int)$items_id, $conn) : $item;
 
-        if (!$errors && !empty($post)) {
-            $items_id = $this->insert_update_item($post, $item_data['subjects_id'], $items_id, $conn);
+        // Create the form
+        $form = $this->createForm(Item::class, $item);
+        // Handle the request
+        $form->handleRequest($request);
+
+        // If form is submitted and passes validation, insert/update the database record.
+        if ($form->isSubmitted() && $form->isValid()) {
+
+            $subject = $form->getData();
+            $items_id = $this->insert_update_item($item, $item->subjects_id, $items_id, $conn);
+
             $this->addFlash('message', 'Item successfully updated.');
-            return $this->redirectToRoute('items_browse', array('projects_id' => $item_data['projects_id'], 'subjects_id' => $item_data['subjects_id']));
-        } else {
-            return $this->render('items/item_form.html.twig', array(
-                "page_title" => ((int)$items_id && isset($item_data['item_name'])) ? 'Item: ' . $item_data['item_name'] : 'Add Item'
-                ,"item_data" => $item_data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
+            return $this->redirect('/admin/projects/datasets/' . $subject->projects_id . '/' . $item->subjects_id . '/' . $items_id);
+
         }
+
+        return $this->render('items/item_form.html.twig', array(
+            'page_title' => ((int)$items_id && isset($item->item_name)) ? 'Item: ' . $item->item_name : 'Add Item',
+            'item_data' => $item,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'form' => $form->createView(),
+        ));
 
     }
 
@@ -385,6 +376,8 @@ class ItemsController extends Controller
      */
     public function insert_update_item($data, $subjects_id = false, $items_id = FALSE, $conn)
     {
+        // $this->u->dumper($data);
+
         // Update
         if($items_id) {
             $statement = $conn->prepare("
@@ -395,9 +388,9 @@ class ItemsController extends Controller
                 ,last_modified_user_account_id = :last_modified_user_account_id
                 WHERE items_id = :items_id
             ");
-            $statement->bindValue(":subject_holder_item_id", $data['subject_holder_item_id'], PDO::PARAM_STR);
-            $statement->bindValue(":item_name", $data['item_name'], PDO::PARAM_STR);
-            $statement->bindValue(":item_description", $data['item_description'], PDO::PARAM_STR);
+            $statement->bindValue(":subject_holder_item_id", $data->subject_holder_item_id, PDO::PARAM_STR);
+            $statement->bindValue(":item_name", $data->item_name, PDO::PARAM_STR);
+            $statement->bindValue(":item_description", $data->item_description, PDO::PARAM_STR);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->bindValue(":items_id", $items_id, PDO::PARAM_INT);
             $statement->execute();
@@ -414,9 +407,9 @@ class ItemsController extends Controller
                 VALUES (:subjects_id, (select md5(UUID())), :subject_holder_item_id, :item_name, :item_description, NOW(), 
                 :user_account_id, :user_account_id )");
             $statement->bindValue(":subjects_id", $subjects_id, PDO::PARAM_STR);
-            $statement->bindValue(":subject_holder_item_id", $data['subject_holder_item_id'], PDO::PARAM_STR);
-            $statement->bindValue(":item_name", $data['item_name'], PDO::PARAM_STR);
-            $statement->bindValue(":item_description", $data['item_description'], PDO::PARAM_STR);
+            $statement->bindValue(":subject_holder_item_id", $data->subject_holder_item_id, PDO::PARAM_STR);
+            $statement->bindValue(":item_name", $data->item_name, PDO::PARAM_STR);
+            $statement->bindValue(":item_description", $data->item_description, PDO::PARAM_STR);
             $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->execute();
             $last_inserted_id = $conn->lastInsertId();

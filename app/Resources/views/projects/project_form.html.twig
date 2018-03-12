@@ -1,93 +1,52 @@
 {% extends 'default_bootstrap_admin.html.twig' %}
 
 {% block content %}
-    
-    {% if errors %}
-      <div class="alert alert-danger">
-        <h4>Form Errors</h4>
-        {% for single_error in errors %}
-        <p>{{ single_error }}</p>
-        {% endfor %}
-      </div>
-    {% endif %}
 
-    <form id="project_form" method="POST">
-      {#% include 'csrf_input.html' %#}
-      <!-- row -->
-      <div class="row">
-        
-        <div class="col-sm-12 col-md-12">
-          <div class="form-group">
-          {% if project_info is defined and project_info.projects_id is defined %}
-            <a href="/admin/projects/subjects/{{ project_info.projects_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
-          {% else %}
-            <a href="/admin/workspace/" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
-          {% endif %}
+    <div class="row">
+      <div class="col-sm-12 col-md-12">
+        <div class="form-group">
+        {% if project_data is defined and project_data.projects_id is defined %}
+          <a href="/admin/projects/subjects/{{ project_data.projects_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
+        {% else %}
+          <a href="/admin/workspace/" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
+        {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {{ form_start(form) }}
+
+    <div class="row">
+      <div class="col-sm-6 col-md-6">
+        {{ form_row(form.projects_label) }}
+        {{ form_row(form.stakeholder_guid_picker) }}
+
+        <div class="form-group">
+          <div class="controls stakeholder-container">
+            <label class="control-label hidden" for="external_stakeholder">External Stakeholder</label>
+            <div id="stakeholder-display">
+              {% if project_data.stakeholder_label is not empty %}
+                {{ project_data.stakeholder_label }}<br>
+                ISNI ID: <a href="http://www.isni.org/{{ project_data.stakeholder_guid }}" title="View full record (opens in a new tab/window)" target="_blank">{{ project_data.stakeholder_guid }}</a>
+              {% endif %}
+            </div>
+            <input name="stakeholder_label" id="stakeholder_label" type="hidden" value="{{ project_data.stakeholder_label|default('')|e }}">
+            <input name="stakeholder_guid_picker" id="stakeholder_guid_picker" type="hidden" value="{{ project_data.stakeholder_guid|default('')|e }}">
+            <button type="button" class="btn btn-default btn-sm" data-toggle="modal" data-target="#isniSearchModal">
+              Choose a Stakeholder from ISNI
+            </button>
           </div>
         </div>
 
-        <!-- column 1 -->
-        <div class="col-sm-6 col-md-6">
-          <div class="form-group">
-            <label class="control-label" for="projects_label"><span style="color:red;">*</span>Project Name:</label>
-            <div class="controls">
-              <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> <em>255 character limit</em></p>
-              <input name="projects_label" id="projects_label" type="text" required="true" value="{{ project_info.projects_label|default('')|e }}" class="form-control">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="control-label" for="stakeholder_guid">Stakeholder</label>
-            <div class="controls">
-              <select class="stakeholder-chosen-select" id="stakeholder_guid_chosen" name="stakeholder_guid_chosen" required="true">
-                <option value="0">Select SI Unit</option>
-                  {% for single_units_stakeholders in project_info.units_stakeholders %}
-                    {% set selected = '' %}
-                    {% if project_info.stakeholder_si_guid is defined and single_units_stakeholders.unit_stakeholder_id == project_info.stakeholder_si_guid %}
-                      {% set selected = ' selected="selected"' %}
-                    {% endif %}
-                    <option value="{{ single_units_stakeholders.unit_stakeholder_id }}"{{ selected }}>{{ single_units_stakeholders.unit_stakeholder_label }} - {{ single_units_stakeholders.unit_stakeholder_full_name }}</option>
-                {% endfor %}
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <div class="controls stakeholder-container">
-              <label class="control-label hidden" for="external_stakeholder">External Stakeholder</label>
-              <div id="stakeholder-display">
-                {% if project_info.stakeholder_label is not empty %}
-                  {{ project_info.stakeholder_label }}<br>
-                  ISNI ID: <a href="http://www.isni.org/{{ project_info.stakeholder_guid }}" title="View full record (opens in a new tab/window)" target="_blank">{{ project_info.stakeholder_guid }}</a>
-                {% endif %}
-              </div>
-              <input name="stakeholder_label" id="stakeholder_label" type="hidden" value="{{ project_info.stakeholder_label|default('')|e }}">
-              <input name="stakeholder_guid_picker" id="stakeholder_guid_picker" type="hidden" value="{{ project_info.stakeholder_guid|default('')|e }}">
-              <button type="button" class="btn btn-default btn-sm" data-toggle="modal" data-target="#isniSearchModal">
-                Choose a Stakeholder from ISNI
-              </button>
-            </div>
-          </div>
-        </div><!-- // column 1 -->
-          
-        <!-- column 2 -->
-        <div class="col-sm-6 col-md-6">
-          
-          <div class="form-group">
-            <label class="control-label" for="project_description"><span style="color:red;">*</span>Project Description:</label>
-            <div class="controls">
-              <textarea name="project_description" id="project_description" class="form-control" rows="8">{{ project_info.project_description|default('')|e }}</textarea>
-            </div>
-          </div>
-
-        </div><!-- // column 2 -->
-
-      </div> <!-- // row -->
-
-      <div class="field-group" style="clear:both;">
-        <input class="btn btn-primary" type="submit" value="Save Edits">
+        {{ form_row(form.save) }}
       </div>
-    </form>
+
+      <div class="col-sm-6 col-md-6">
+        {{ form_row(form.project_description) }}
+      </div>
+    </div>
+
+    {{ form_end(form) }}
 
     <!-- Modal -->
     <div class="modal fade" id="isniSearchModal" tabindex="-1" role="dialog" aria-labelledby="isniSearchLabel">

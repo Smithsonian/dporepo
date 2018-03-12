@@ -40,4 +40,14 @@ class AppUtilities
     $property->setAccessible(true);
     return $property->getValue($obj);
   }
+
+  /**
+   * Remove Underscores and Convert to Title Case
+   *
+   * @param   string  $str  The string to modify
+   * @return  string         The modified string
+   */
+  public function removeUnderscoresTitleCase($str) {
+    return ucwords(str_replace('_', ' ', $str));
+  }
 }

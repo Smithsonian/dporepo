@@ -25,6 +25,9 @@ use AppBundle\Controller\ItemsController;
 // Dataset Elements methods
 use AppBundle\Controller\DatasetElementsController;
 
+use AppBundle\Form\Dataset;
+use AppBundle\Entity\Datasets;
+
 class DatasetsController extends Controller
 {
     /**
@@ -220,80 +223,49 @@ class DatasetsController extends Controller
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_datasets_form( Connection $conn, Request $request, GumpParseErrors $gump_parse_errors, ItemsController $item )
+    function show_datasets_form( $datasets_id, Connection $conn, Request $request )
     {
-        $errors = false;
-        $gump = new GUMP();
+        $dataset = new Datasets();
         $post = $request->request->all();
-
-        // Get dataset data
         $datasets_id = !empty($request->attributes->get('datasets_id')) ? $request->attributes->get('datasets_id') : false;
-        $dataset_data = $post ? $post : $this->get_dataset((int)$datasets_id, $conn);
+        $dataset->projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
+        $dataset->subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
+        $dataset->items_id = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;
 
-        // Get item data
-        $dataset_data['items_id'] = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;
-        $item_data = $item->get_item((int)$dataset_data['items_id'], $conn);
-
-        $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
-
-        $dataset_data['projects_id'] = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
-        $dataset_data['subjects_id'] = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
-
-        // Get data from lookup tables.
-        $dataset_data['capture_methods'] = $this->get_capture_methods($conn);
-        $dataset_data['dataset_types'] = $this->get_dataset_types($conn);
-        $dataset_data['item_position_types'] = $this->get_item_position_types($conn);
-        $dataset_data['focus_types'] = $this->get_focus_types($conn);
-        $dataset_data['light_source_types'] = $this->get_light_source_types($conn);
-        $dataset_data['background_removal_methods'] = $this->get_background_removal_methods($conn);
-        $dataset_data['camera_cluster_types'] = $this->get_camera_cluster_types($conn);
+        // Retrieve data from the database.
+        $dataset = (!empty($datasets_id) && empty($post)) ? $dataset->getDataset((int)$datasets_id, $conn) : $dataset;
         
-        // Validate posted data.
-        if(!empty($post)) {
-            // "" => "required|numeric",
-            // "" => "required|alpha_numeric",
-            // "" => "required|date",
-            // "" => "numeric|exact_len,5",
-            // "" => "required|max_len,255|alpha_numeric",
-            $rules = array(
-                // "csrf_key" => "required",
-                "capture_method_lookup_id" => "required|numeric",
-                "dataset_type_lookup_id" => "required|numeric",
-                "dataset_name" => "required|max_len,255",
-                "collected_by" => "required|max_len,255",
-                // "collected_by_guid" => "required|alpha_numeric",
-                "date_of_capture" => "required|date",
-                "dataset_description" => "required",
-                "item_position_type_lookup_id" => "required|numeric",
-                "positionally_matched_sets_id" => "alpha_numeric",
-                "focus_lookup_id" => "required|numeric",
-                "light_source_type_lookup_id" => "required|numeric",
-                "background_removal_method_lookup_id" => "required|numeric",
-                "camera_cluster_type_lookup_id" => "required|numeric",
-                "array_geometry_id" => "numeric",
-                // "resource_datasets" => "required|alpha_numeric",
-                // "resource_dataset_elements" => "required|alpha_numeric"
-            );
-            // $validated = $gump->validate($post, $rules);
+        // Get data from lookup tables.
+        $dataset->capture_methods_lookup_options = $this->get_capture_methods($conn);
+        $dataset->dataset_types_lookup_options = $this->get_dataset_types($conn);
+        $dataset->item_position_types_lookup_options = $this->get_item_position_types($conn);
+        $dataset->focus_types_lookup_options = $this->get_focus_types($conn);
+        $dataset->light_source_types_lookup_options = $this->get_light_source_types($conn);
+        $dataset->background_removal_methods_lookup_options = $this->get_background_removal_methods($conn);
+        $dataset->camera_cluster_types_lookup_options = $this->get_camera_cluster_types($conn);
 
-            $errors = array();
-            if (isset($validated) && ($validated !== true)) {
-                $errors = $gump_parse_errors->gump_parse_errors($validated);
-            }
-        }
+        // Create the form
+        $form = $this->createForm(Dataset::class, $dataset);
+        // Handle the request
+        $form->handleRequest($request);
 
-        if (!$errors && !empty($post)) {
-            $items_id = $this->insert_update_datasets($post, $datasets_id, $dataset_data['items_id'], $conn);
+        // If form is submitted and passes validation, insert/update the database record.
+        if ($form->isSubmitted() && $form->isValid()) {
+
+            $dataset = $form->getData();
+            $datasets_id = $this->insert_update_datasets($dataset, $datasets_id, $dataset->items_id, $conn);
+
             $this->addFlash('message', 'Dataset successfully updated.');
-            return $this->redirectToRoute('datasets_browse', array('projects_id' => $dataset_data['projects_id'], 'subjects_id' => $dataset_data['subjects_id'], 'items_id' => $dataset_data['items_id']));
-        } else {
-            return $this->render('datasets/dataset_form.html.twig', array(
-                'page_title' => (int)$datasets_id ? 'Dataset: ' . $dataset_data['dataset_name'] : 'Add a Dataset',
-                'dataset_data' => $dataset_data,
-                'errors' => $errors,
-                'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-            ));
+            return $this->redirect('/admin/projects/dataset_elements/' . $dataset->projects_id . '/' . $dataset->subjects_id . '/' . $dataset->items_id . '/' . $datasets_id);
+
         }
+
+        return $this->render('datasets/dataset_form.html.twig', array(
+            'page_title' => !empty($datasets_id) ? 'Dataset: ' . $dataset->dataset_name : 'Create Dataset',
+            'dataset_data' => $dataset,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'form' => $form->createView(),
+        ));
 
     }
 
@@ -310,6 +282,9 @@ class DatasetsController extends Controller
      */
     public function insert_update_datasets($data, $datasets_id = FALSE, $items_id = FALSE, $conn)
     {
+
+        // $this->u->dumper($data);
+
         // Update
         if($datasets_id) {
           $statement = $conn->prepare("
@@ -335,24 +310,24 @@ class DatasetsController extends Controller
             ,last_modified_user_account_id = :last_modified_user_account_id
             WHERE datasets_id = :datasets_id
           ");
-          $statement->bindValue(":capture_method_lookup_id", $data['capture_method_lookup_id'], PDO::PARAM_INT);
-          $statement->bindValue(":dataset_name", $data['dataset_name'], PDO::PARAM_STR);
-          $statement->bindValue(":collected_by", $data['collected_by'], PDO::PARAM_STR);
-          $statement->bindValue(":collected_by_guid", $data['collected_by_guid'], PDO::PARAM_STR);
-          $statement->bindValue(":date_of_capture", $data['date_of_capture'], PDO::PARAM_STR);
-          $statement->bindValue(":dataset_description", $data['dataset_description'], PDO::PARAM_STR);
-          $statement->bindValue(":dataset_collection_notes", $data['dataset_collection_notes'], PDO::PARAM_STR);
-          $statement->bindValue(":item_position_type_lookup_id", $data['item_position_type_lookup_id'], PDO::PARAM_INT);
-          $statement->bindValue(":positionally_matched_sets_id", $data['positionally_matched_sets_id'], PDO::PARAM_STR);
-          $statement->bindValue(":motion_control", $data['motion_control'], PDO::PARAM_STR);
-          $statement->bindValue(":focus_lookup_id", $data['focus_lookup_id'], PDO::PARAM_INT);
-          $statement->bindValue(":light_source", $data['light_source'], PDO::PARAM_STR);
-          $statement->bindValue(":light_source_type_lookup_id", $data['light_source_type_lookup_id'], PDO::PARAM_INT);
-          $statement->bindValue(":scale_bars_used", $data['scale_bars_used'], PDO::PARAM_STR);
-          $statement->bindValue(":background_removal_method_lookup_id", $data['background_removal_method_lookup_id'], PDO::PARAM_INT);
-          $statement->bindValue(":camera_cluster_type_lookup_id", $data['camera_cluster_type_lookup_id'], PDO::PARAM_INT);
-          $statement->bindValue(":array_geometry_id", $data['array_geometry_id'], PDO::PARAM_INT);
-          $statement->bindValue(":dataset_type_lookup_id", $data['dataset_type_lookup_id'], PDO::PARAM_INT);
+          $statement->bindValue(":capture_method_lookup_id", $data->capture_method_lookup_id, PDO::PARAM_INT);
+          $statement->bindValue(":dataset_name", $data->dataset_name, PDO::PARAM_STR);
+          $statement->bindValue(":collected_by", $data->collected_by, PDO::PARAM_STR);
+          $statement->bindValue(":collected_by_guid", $data->collected_by_guid, PDO::PARAM_STR);
+          $statement->bindValue(":date_of_capture", $data->date_of_capture, PDO::PARAM_STR);
+          $statement->bindValue(":dataset_description", $data->dataset_description, PDO::PARAM_STR);
+          $statement->bindValue(":dataset_collection_notes", $data->dataset_collection_notes, PDO::PARAM_STR);
+          $statement->bindValue(":item_position_type_lookup_id", $data->item_position_type_lookup_id, PDO::PARAM_INT);
+          $statement->bindValue(":positionally_matched_sets_id", $data->positionally_matched_sets_id, PDO::PARAM_STR);
+          $statement->bindValue(":motion_control", $data->motion_control, PDO::PARAM_STR);
+          $statement->bindValue(":focus_lookup_id", $data->focus_lookup_id, PDO::PARAM_INT);
+          $statement->bindValue(":light_source", $data->light_source, PDO::PARAM_STR);
+          $statement->bindValue(":light_source_type_lookup_id", $data->light_source_type_lookup_id, PDO::PARAM_INT);
+          $statement->bindValue(":scale_bars_used", $data->scale_bars_used, PDO::PARAM_STR);
+          $statement->bindValue(":background_removal_method_lookup_id", $data->background_removal_method_lookup_id, PDO::PARAM_INT);
+          $statement->bindValue(":camera_cluster_type_lookup_id", $data->camera_cluster_type_lookup_id, PDO::PARAM_INT);
+          $statement->bindValue(":array_geometry_id", $data->array_geometry_id, PDO::PARAM_INT);
+          $statement->bindValue(":dataset_type_lookup_id", $data->dataset_type_lookup_id, PDO::PARAM_INT);
           $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
           $statement->bindValue(":datasets_id", $datasets_id, PDO::PARAM_INT);
           $statement->execute();
@@ -374,24 +349,24 @@ class DatasetsController extends Controller
             :background_removal_method_lookup_id, :camera_cluster_type_lookup_id, :array_geometry_id, :dataset_type_lookup_id, 
             NOW(), :user_account_id, :user_account_id )");
           $statement->bindValue(":items_id", $items_id, PDO::PARAM_INT);
-          $statement->bindValue(":capture_method_lookup_id", $data['capture_method_lookup_id'], PDO::PARAM_INT);
-          $statement->bindValue(":dataset_type_lookup_id", $data['dataset_type_lookup_id'], PDO::PARAM_INT);
-          $statement->bindValue(":dataset_name", $data['dataset_name'], PDO::PARAM_STR);
-          $statement->bindValue(":collected_by", $data['collected_by'], PDO::PARAM_STR);
-          $statement->bindValue(":collected_by_guid", $data['collected_by_guid'], PDO::PARAM_STR);
-          $statement->bindValue(":date_of_capture", $data['date_of_capture'], PDO::PARAM_STR);
-          $statement->bindValue(":dataset_description", $data['dataset_description'], PDO::PARAM_STR);
-          $statement->bindValue(":dataset_collection_notes", $data['dataset_collection_notes'], PDO::PARAM_STR);
-          $statement->bindValue(":item_position_type_lookup_id", $data['item_position_type_lookup_id'], PDO::PARAM_INT);
-          $statement->bindValue(":positionally_matched_sets_id", $data['positionally_matched_sets_id'], PDO::PARAM_STR);
-          $statement->bindValue(":motion_control", $data['motion_control'], PDO::PARAM_STR);
-          $statement->bindValue(":focus_lookup_id", $data['focus_lookup_id'], PDO::PARAM_INT);
-          $statement->bindValue(":light_source", $data['light_source'], PDO::PARAM_STR);
-          $statement->bindValue(":light_source_type_lookup_id", $data['light_source_type_lookup_id'], PDO::PARAM_INT);
-          $statement->bindValue(":scale_bars_used", $data['scale_bars_used'], PDO::PARAM_STR);
-          $statement->bindValue(":background_removal_method_lookup_id", $data['background_removal_method_lookup_id'], PDO::PARAM_INT);
-          $statement->bindValue(":camera_cluster_type_lookup_id", $data['camera_cluster_type_lookup_id'], PDO::PARAM_INT);
-          $statement->bindValue(":array_geometry_id", $data['array_geometry_id'], PDO::PARAM_STR);
+          $statement->bindValue(":capture_method_lookup_id", $data->capture_method_lookup_id, PDO::PARAM_INT);
+          $statement->bindValue(":dataset_type_lookup_id", $data->dataset_type_lookup_id, PDO::PARAM_INT);
+          $statement->bindValue(":dataset_name", $data->dataset_name, PDO::PARAM_STR);
+          $statement->bindValue(":collected_by", $data->collected_by, PDO::PARAM_STR);
+          $statement->bindValue(":collected_by_guid", $data->collected_by_guid, PDO::PARAM_STR);
+          $statement->bindValue(":date_of_capture", $data->date_of_capture, PDO::PARAM_STR);
+          $statement->bindValue(":dataset_description", $data->dataset_description, PDO::PARAM_STR);
+          $statement->bindValue(":dataset_collection_notes", $data->dataset_collection_notes, PDO::PARAM_STR);
+          $statement->bindValue(":item_position_type_lookup_id", $data->item_position_type_lookup_id, PDO::PARAM_INT);
+          $statement->bindValue(":positionally_matched_sets_id", $data->positionally_matched_sets_id, PDO::PARAM_STR);
+          $statement->bindValue(":motion_control", $data->motion_control, PDO::PARAM_STR);
+          $statement->bindValue(":focus_lookup_id", $data->focus_lookup_id, PDO::PARAM_INT);
+          $statement->bindValue(":light_source", $data->light_source, PDO::PARAM_STR);
+          $statement->bindValue(":light_source_type_lookup_id", $data->light_source_type_lookup_id, PDO::PARAM_INT);
+          $statement->bindValue(":scale_bars_used", $data->scale_bars_used, PDO::PARAM_STR);
+          $statement->bindValue(":background_removal_method_lookup_id", $data->background_removal_method_lookup_id, PDO::PARAM_INT);
+          $statement->bindValue(":camera_cluster_type_lookup_id", $data->camera_cluster_type_lookup_id, PDO::PARAM_INT);
+          $statement->bindValue(":array_geometry_id", $data->array_geometry_id, PDO::PARAM_STR);
           $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
           $statement->execute();
           $last_inserted_id = $conn->lastInsertId();
@@ -545,9 +520,17 @@ class DatasetsController extends Controller
      */
     public function get_capture_methods($conn)
     {
+      $data = array();
+
       $statement = $conn->prepare("SELECT * FROM capture_methods ORDER BY label ASC");
       $statement->execute();
-      return $statement->fetchAll(PDO::FETCH_ASSOC);
+      
+      foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
+        $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        $data[$label] = $value['capture_methods_id'];
+      }
+
+      return $data;
     }
 
     /**
@@ -556,9 +539,17 @@ class DatasetsController extends Controller
      */
     public function get_dataset_types($conn)
     {
+      $data = array();
+
       $statement = $conn->prepare("SELECT * FROM dataset_types ORDER BY label ASC");
       $statement->execute();
-      return $statement->fetchAll(PDO::FETCH_ASSOC);
+      
+      foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
+        $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        $data[$label] = $value['dataset_types_id'];
+      }
+
+      return $data;
     }
 
     /**
@@ -567,9 +558,17 @@ class DatasetsController extends Controller
      */
     public function get_item_position_types($conn)
     {
+      $data = array();
+
       $statement = $conn->prepare("SELECT * FROM item_position_types ORDER BY label ASC");
       $statement->execute();
-      return $statement->fetchAll(PDO::FETCH_ASSOC);
+      
+      foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
+        $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        $data[$label] = $value['item_position_types_id'];
+      }
+
+      return $data;
     }
 
     /**
@@ -578,9 +577,17 @@ class DatasetsController extends Controller
      */
     public function get_focus_types($conn)
     {
+      $data = array();
+
       $statement = $conn->prepare("SELECT * FROM focus_types ORDER BY label ASC");
       $statement->execute();
-      return $statement->fetchAll(PDO::FETCH_ASSOC);
+      
+      foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
+        $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        $data[$label] = $value['focus_types_id'];
+      }
+
+      return $data;
     }
 
     /**
@@ -589,9 +596,17 @@ class DatasetsController extends Controller
      */
     public function get_light_source_types($conn)
     {
+      $data = array();
+
       $statement = $conn->prepare("SELECT * FROM light_source_types ORDER BY label ASC");
       $statement->execute();
-      return $statement->fetchAll(PDO::FETCH_ASSOC);
+      
+      foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
+        $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        $data[$label] = $value['light_source_types_id'];
+      }
+
+      return $data;
     }
 
     /**
@@ -600,9 +615,17 @@ class DatasetsController extends Controller
      */
     public function get_background_removal_methods($conn)
     {
+      $data = array();
+
       $statement = $conn->prepare("SELECT * FROM background_removal_methods ORDER BY label ASC");
       $statement->execute();
-      return $statement->fetchAll(PDO::FETCH_ASSOC);
+      
+      foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
+        $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        $data[$label] = $value['background_removal_methods_id'];
+      }
+
+      return $data;
     }
 
     /**
@@ -611,9 +634,17 @@ class DatasetsController extends Controller
      */
     public function get_camera_cluster_types($conn)
     {
+      $data = array();
+
       $statement = $conn->prepare("SELECT * FROM camera_cluster_types ORDER BY label ASC");
       $statement->execute();
-      return $statement->fetchAll(PDO::FETCH_ASSOC);
+      
+      foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
+        $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        $data[$label] = $value['camera_cluster_types_id'];
+      }
+
+      return $data;
     }
 
     /**
