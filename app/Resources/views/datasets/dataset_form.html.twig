@@ -58,7 +58,7 @@
   <script type="text/javascript">
     // Datepicker
     $(document).ready(function(){
-      var date_input = $('input[name="date_of_capture"]'); //our date input has the name "date_of_capture"
+      var date_input = $('input[name="dataset[date_of_capture]"]');
       var container = $('form.dataset_form').length>0 ? $('form.dataset_form').parent() : 'body';
       var options = {
         format: 'yyyy-mm-dd 00:00:00',
