@@ -109,6 +109,12 @@
   <script type="text/javascript">
     jQuery(document).ready(function($) {
 
+      // TODO: Convert the unit ID in the unit options to the ISNI id?
+      // Right now, can't change over to ISNI once a unit ID has been chosen and recorded in the database.
+      $('select.stakeholder-chosen-select').chosen().change(function(evt, params){
+        // console.log(params.selected);
+      });
+
       // Set variables.
       var resultsContainer = $('#search-results')
           loadingGif = $('<img />').attr('src', '/lib/images/spinner.gif').attr('alt', 'loading animation').attr('style', 'width: 140px;'),
