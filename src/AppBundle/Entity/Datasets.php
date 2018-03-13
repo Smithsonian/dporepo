@@ -3,9 +3,7 @@
 namespace AppBundle\Entity;
 
 use Symfony\Component\Validator\Constraints as Assert;
-
 use Doctrine\DBAL\Driver\Connection;
-use PDO;
 
 class Datasets
 {
@@ -158,9 +156,9 @@ class Datasets
             LEFT JOIN camera_cluster_types ON camera_cluster_types.camera_cluster_types_id = datasets.camera_cluster_type_lookup_id
             WHERE datasets.active = 1
             AND datasets.datasets_id = :datasets_id");
-        $statement->bindValue(":datasets_id", $datasets_id, PDO::PARAM_INT);
+        $statement->bindValue(":datasets_id", $datasets_id, "integer");
         $statement->execute();
-        $result = $statement->fetch(PDO::FETCH_ASSOC);
+        $result = $statement->fetch();
 
         return (object)$result;
     }

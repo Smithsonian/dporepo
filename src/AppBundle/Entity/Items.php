@@ -3,9 +3,7 @@
 namespace AppBundle\Entity;
 
 use Symfony\Component\Validator\Constraints as Assert;
-
 use Doctrine\DBAL\Driver\Connection;
-use PDO;
 
 class Items
 {
@@ -54,9 +52,9 @@ class Items
             FROM items
             WHERE items.active = 1
             AND items_id = :items_id");
-        $statement->bindValue(":items_id", $item_id, PDO::PARAM_INT);
+        $statement->bindValue(":items_id", $item_id, "integer");
         $statement->execute();
-        $result = $statement->fetch(PDO::FETCH_ASSOC);
+        $result = $statement->fetch();
 
         return (object)$result;
     }

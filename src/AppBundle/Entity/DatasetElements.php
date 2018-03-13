@@ -3,9 +3,7 @@
 namespace AppBundle\Entity;
 
 use Symfony\Component\Validator\Constraints as Assert;
-
 use Doctrine\DBAL\Driver\Connection;
-use PDO;
 
 class DatasetElements
 {
@@ -65,9 +63,9 @@ class DatasetElements
             FROM dataset_elements
             WHERE dataset_elements.active = 1
             AND dataset_elements_id = :dataset_elements_id");
-        $statement->bindValue(":dataset_elements_id", $dataset_elements_id, PDO::PARAM_INT);
+        $statement->bindValue(":dataset_elements_id", $dataset_elements_id, "integer");
         $statement->execute();
-        $result = $statement->fetch(PDO::FETCH_ASSOC);
+        $result = $statement->fetch();
 
         return (object)$result;
     }

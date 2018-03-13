@@ -3,9 +3,7 @@
 namespace AppBundle\Entity;
 
 use Symfony\Component\Validator\Constraints as Assert;
-
 use Doctrine\DBAL\Driver\Connection;
-use PDO;
 
 class Projects
 {
@@ -113,9 +111,9 @@ class Projects
             LEFT JOIN unit_stakeholder ON unit_stakeholder.isni_id = projects.stakeholder_guid
             WHERE projects.active = 1
             AND projects_id = :projects_id");
-        $statement->bindValue(":projects_id", $project_id, PDO::PARAM_INT);
+        $statement->bindValue(":projects_id", $project_id, "integer");
         $statement->execute();
-        $result = $statement->fetch(PDO::FETCH_ASSOC);
+        $result = $statement->fetch();
 
         return (object)$result;
     }

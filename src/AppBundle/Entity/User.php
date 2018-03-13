@@ -7,7 +7,6 @@ use FR3D\LdapBundle\Model\LdapUserInterface;
 use Doctrine\ORM\Mapping as ORM;
 
 use Symfony\Component\HttpFoundation\Session\Session;
-use PDO;
  
 /**
  * @ORM\Entity
@@ -84,7 +83,7 @@ class User extends BaseUser implements LdapUserInterface{
             WHERE favorites.fos_user_id = {$this->getId()}
         ");
         $statement->execute();
-        $results = $statement->fetchAll(PDO::FETCH_ASSOC);
+        $results = $statement->fetchAll();
 
         foreach ($results as $key => $value) {
             if ($value['path'] === $request->getRequestUri()) {
