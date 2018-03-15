@@ -17,7 +17,7 @@ class Project extends AbstractType
         $data = (array)$options['data'];
 
         $builder
-            ->add('projects_label', null, array(
+            ->add('project_name', null, array(
                 'label' => 'Project Name',
                 'required' => true,
               ))

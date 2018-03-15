@@ -9,13 +9,6 @@ class Items
 {
 
     /**
-     * @Assert\NotBlank()
-     * @Assert\Length(min="1", max="255")
-     * @var string
-     */
-    public $item_name;
-
-    /**
      * @var string
      */
     public $item_guid;
@@ -23,12 +16,17 @@ class Items
     /**
      * @var string
      */
-    public $subject_holder_item_id;
+    public $local_item_id;
 
     /**
      * @var string
      */
     public $item_description;
+
+    /**
+     * @var string
+     */
+    public $item_type;
 
     /**
      * Get Item
@@ -43,9 +41,9 @@ class Items
     {
         $statement = $conn->prepare("SELECT
             items.item_guid
-            ,items.subject_holder_item_id
-            ,items.item_name
+            ,items.local_item_id
             ,items.item_description
+            ,items.item_type
             ,items.status_types_id
             ,items.last_modified
             ,items.items_id

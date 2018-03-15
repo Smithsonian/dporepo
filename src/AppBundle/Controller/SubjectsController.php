@@ -54,7 +54,7 @@ class SubjectsController extends Controller
         if(!$project_data) throw $this->createNotFoundException('The record does not exist');
 
         return $this->render('subjects/browse_subjects.html.twig', array(
-            'page_title' => 'Project: ' . $project_data['projects_label'],
+            'page_title' => 'Project: ' . $project_data['project_name'],
             'projects_id' => $projects_id,
             'project_data' => $project_data,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
@@ -92,15 +92,12 @@ class SubjectsController extends Controller
                 $sort_field = 'subject_name';
                 break;
             case '1':
-                $sort_field = 'subject_description';
-                break;
-            case '2':
                 $sort_field = 'holding_entity_guid';
                 break;
-            case '3':
+            case '2':
                 $sort_field = 'items_count';
                 break;
-            case '4':
+            case '3':
                 $sort_field = 'last_modified';
                 break;
         }
@@ -118,11 +115,9 @@ class SubjectsController extends Controller
             $pdo_params[] = '%'.$search.'%';
             $pdo_params[] = '%'.$search.'%';
             $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
             $search_sql = "
                 AND (
                   subjects.subject_name LIKE ?
-                  OR subjects.subject_description LIKE ?
                   OR subjects.holding_entity_guid LIKE ?
                   OR subjects.items_count LIKE ?
                   OR subjects.last_modified LIKE ?
@@ -132,10 +127,9 @@ class SubjectsController extends Controller
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
               subjects.subjects_id AS manage
               ,subjects.holding_entity_guid
-              ,subjects.subject_holder_subject_id
+              ,subjects.local_subject_id
+              ,subjects.subject_guid
               ,subjects.subject_name
-              ,subjects.subject_description
-              ,subjects.subject_type_lookup_id
               ,subjects.last_modified
               ,subjects.active
               ,subjects.subjects_id AS DT_RowId
@@ -145,7 +139,7 @@ class SubjectsController extends Controller
           WHERE subjects.active = 1
           AND projects_id = " . (int)$projects_id . "
           {$search_sql}
-          GROUP BY subjects.holding_entity_guid, subjects.subject_holder_subject_id, subjects.subject_name, subjects.subject_description, subjects.subject_type_lookup_id, subjects.last_modified, subjects.active, subjects.subjects_id
+          GROUP BY subjects.holding_entity_guid, subjects.local_subject_id, subjects.subject_guid, subjects.subject_name, subjects.last_modified, subjects.active, subjects.subjects_id
           {$sort}
           {$limit_sql}");
         $statement->execute($pdo_params);
@@ -200,9 +194,6 @@ class SubjectsController extends Controller
 
         // Retrieve data from the database.
         $subject = (!empty($subjects_id) && empty($post)) ? $subject->getSubject((int)$subjects_id, $conn) : $subject;
-        
-        // Get data from lookup tables.
-        $subject->subject_type_lookup_options = $this->get_subject_types($conn);
 
         // Create the form
         $form = $this->createForm(Subject::class, $subject);
@@ -293,33 +284,14 @@ class SubjectsController extends Controller
           );
           
           if($request->attributes->get('number_first') === 'true') {
-              $data[$key]['text'] = $value['subject_holder_subject_id'] . ' - ' . $value['subject_name'];
+              $data[$key]['text'] = $value['local_subject_id'] . ' - ' . $value['subject_name'];
           } else {
-              $data[$key]['text'] = $value['subject_name'] . ' - ' . $value['subject_holder_subject_id'];
+              $data[$key]['text'] = $value['subject_name'] . ' - ' . $value['local_subject_id'];
           }
       }
 
       $response = new JsonResponse($data);
       return $response;
-    }
-
-    /**
-     * Get subject_types
-     * @return  array|bool  The query result
-     */
-    public function get_subject_types($conn)
-    {
-        $data = array();
-
-        $statement = $conn->prepare("SELECT * FROM subject_types ORDER BY label ASC");
-        $statement->execute();
-
-        foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
-            $label = $this->u->removeUnderscoresTitleCase($value['label']);
-            $data[$label] = $value['subject_types_id'];
-        }
-
-        return $data;
     }
 
     /**
@@ -341,23 +313,17 @@ class SubjectsController extends Controller
         if($subjects_id) {
           $statement = $conn->prepare("
             UPDATE subjects
-            SET subject_holder_subject_id = :subject_holder_subject_id
-            ,location_information = :location_information
+            SET local_subject_id = :local_subject_id
             ,subject_name = :subject_name
             ,subject_guid = :subject_guid
-            ,subject_description = :subject_description
             ,holding_entity_guid = :holding_entity_guid
-            ,subject_type_lookup_id = :subject_type_lookup_id
             ,last_modified_user_account_id = :last_modified_user_account_id
             WHERE subjects_id = :subjects_id
           ");
-          $statement->bindValue(":subject_holder_subject_id", $data->subject_holder_subject_id, PDO::PARAM_STR);
-          $statement->bindValue(":location_information", $data->location_information, PDO::PARAM_STR);
+          $statement->bindValue(":local_subject_id", $data->local_subject_id, PDO::PARAM_STR);
           $statement->bindValue(":subject_name", $data->subject_name, PDO::PARAM_STR);
           $statement->bindValue(":subject_guid", $data->subject_guid, PDO::PARAM_STR);
-          $statement->bindValue(":subject_description", $data->subject_description, PDO::PARAM_STR);
           $statement->bindValue(":holding_entity_guid", $data->holding_entity_guid, PDO::PARAM_STR);
-          $statement->bindValue(":subject_type_lookup_id", $data->subject_type_lookup_id, PDO::PARAM_INT);
           $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
           $statement->bindValue(":subjects_id", $subjects_id, PDO::PARAM_INT);
           $statement->execute();
@@ -369,17 +335,14 @@ class SubjectsController extends Controller
         if(!$subjects_id) {
 
           $statement = $conn->prepare("INSERT INTO subjects
-            (subject_guid, projects_id, subject_holder_subject_id, location_information, subject_name, subject_description, holding_entity_guid, subject_type_lookup_id, 
+            (subject_guid, projects_id, local_subject_id, subject_name, holding_entity_guid, 
             date_created, created_by_user_account_id, last_modified_user_account_id )
-          VALUES ((select md5(UUID())), :projects_id, :subject_holder_subject_id, :location_information, :subject_name, :subject_description, :holding_entity_guid, :subject_type_lookup_id,
+          VALUES ((select md5(UUID())), :projects_id, :local_subject_id, :subject_name, :holding_entity_guid,
              NOW(), :user_account_id, :user_account_id )");
           $statement->bindValue(":projects_id", $projects_id, PDO::PARAM_INT);
-          $statement->bindValue(":subject_holder_subject_id", $data->subject_holder_subject_id, PDO::PARAM_STR);
-          $statement->bindValue(":location_information", $data->location_information, PDO::PARAM_STR);
+          $statement->bindValue(":local_subject_id", $data->local_subject_id, PDO::PARAM_STR);
           $statement->bindValue(":subject_name", $data->subject_name, PDO::PARAM_STR);
-          $statement->bindValue(":subject_description", $data->subject_description, PDO::PARAM_STR);
           $statement->bindValue(":holding_entity_guid", $data->holding_entity_guid, PDO::PARAM_STR);
-          $statement->bindValue(":subject_type_lookup_id", $data->subject_type_lookup_id, PDO::PARAM_STR);
           $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
           $statement->execute();
           $last_inserted_id = $conn->lastInsertId();
@@ -477,11 +440,8 @@ class SubjectsController extends Controller
             `projects_id` int(11) NOT NULL,
             `subject_name` varchar(255) NOT NULL DEFAULT '',
             `subject_guid` int(11) NOT NULL,
-            `location_information` varchar(255) NOT NULL DEFAULT '',
             `holding_entity_guid` varchar(255) NOT NULL DEFAULT '',
-            `subject_type_lookup_id` int(11) NOT NULL,
-            `subject_holder_subject_id` varchar(255) NOT NULL DEFAULT '',        
-            `subject_description` text NOT NULL,        
+            `local_subject_id` varchar(255) NOT NULL DEFAULT '',        
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

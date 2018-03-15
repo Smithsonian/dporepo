@@ -33,17 +33,7 @@ class Subjects
     /**
      * @var string
      */
-    public $subject_type_lookup_id;
-
-    /**
-     * @var string
-     */
     public $subject_holder_subject_id;
-
-    /**
-     * @var string
-     */
-    public $subject_description;
     
     /**
      * Get Subject

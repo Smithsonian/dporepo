@@ -11,7 +11,7 @@
   <ol class="breadcrumb">
     <li><a href="/admin">Dashboard</a></li>
     <li><a href="/admin/workspace">Browse Projects</a></li>
-    <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ projects_id }}">{{ project_data.projects_label|e }}</a></li>
+    <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ projects_id }}">{{ project_data.project_name|e }}</a></li>
     <li><strong>Subject:</strong> <a href="/admin/projects/items/{{ projects_id }}/{{ subjects_id }}">{{ subject_data.subject_name|e }}</a></li>
     <li class="active"><strong>Item:</strong> {{ item_data.item_description_truncated|e }}</li>
   </ol>
@@ -31,8 +31,8 @@
     </div>
     <div class="col-sm-12 col-md-12">
       <dl class="dl-horizontal">
-        <dt>Item Name</dt>
-        <dd>{{ item_data.item_name|e|nl2br }}</dd>
+        <dt>Local Item ID</dt>
+        <dd>{{ item_data.local_item_id|e|nl2br }}</dd>
         <dt>Item Description</dt>
         <dd>{{ item_data.item_description|e|nl2br }}</dd>
       </dl>

@@ -121,21 +121,18 @@ class ItemsController extends Controller
 
         switch($req['order'][0]['column']) {
             case '1':
-                $sort_field = 'item_name';
-                break;
-            case '2':
                 $sort_field = 'item_description';
                 break;
-            case '3':
-                $sort_field = 'subject_holder_item_id';
+            case '2':
+                $sort_field = 'local_item_id';
                 break;
-            case '4':
+            case '3':
                 $sort_field = 'date_created';
                 break;
-            case '5':
+            case '4':
                 $sort_field = 'last_modified';
                 break;
-            case '6':
+            case '5':
                 $sort_field = 'status_label';
                 break;
         }
@@ -154,12 +151,10 @@ class ItemsController extends Controller
             $pdo_params[] = '%'.$search.'%';
             $pdo_params[] = '%'.$search.'%';
             $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
             $search_sql = "
             AND (
-                items.item_name LIKE ? 
                 OR items.item_description LIKE ? 
-                OR items.subject_holder_item_id LIKE ?
+                OR items.local_item_id LIKE ?
                 OR items.date_created LIKE ?
                 OR items.last_modified LIKE ?
                 OR items.status_label LIKE ?
@@ -169,22 +164,21 @@ class ItemsController extends Controller
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
             items.items_id AS manage
             ,items.subjects_id
-            ,items.subject_holder_item_id
-            ,items.item_name
+            ,items.local_item_id
             ,CONCAT(SUBSTRING(items.item_description,1, 50), '...') as item_description
             ,items.status_types_id
             ,items.date_created
             ,items.last_modified
             ,items.items_id AS DT_RowId
             ,status_types.label AS status_label
-            ,count(distinct datasets.items_id) AS datasets_count
+            ,count(distinct capture_datasets.items_id) AS datasets_count
             FROM items
             LEFT JOIN status_types ON items.status_types_id = status_types.status_types_id
-            LEFT JOIN datasets ON datasets.items_id = items.items_id
+            LEFT JOIN capture_datasets ON capture_datasets.items_id = items.items_id
             WHERE items.active = 1
             AND subjects_id = " . (int)$subjects_id . "
             {$search_sql}
-            GROUP BY items.subjects_id, items.subject_holder_item_id, item_description, items.status_types_id, items.date_created, items.last_modified, items.items_id
+            GROUP BY items.subjects_id, items.local_item_id, item_description, items.status_types_id, items.date_created, items.last_modified, items.items_id
             {$sort}
             {$limit_sql}");
         $statement->execute($pdo_params);
@@ -247,6 +241,11 @@ class ItemsController extends Controller
         // Retrieve data from the database.
         $item = (!empty($items_id) && empty($post)) ? $item->getItem((int)$items_id, $conn) : $item;
 
+        // Get data from lookup tables.
+        $item->item_type_lookup_options = $this->get_item_types($conn);
+
+        // $this->u->dumper($item);
+
         // Create the form
         $form = $this->createForm(Item::class, $item);
         // Handle the request
@@ -264,7 +263,7 @@ class ItemsController extends Controller
         }
 
         return $this->render('items/item_form.html.twig', array(
-            'page_title' => ((int)$items_id && isset($item->item_name)) ? 'Item: ' . $item->item_name : 'Add Item',
+            'page_title' => ((int)$items_id && isset($item->local_item_id)) ? 'Item: ' . $item->local_item_id : 'Add Item',
             'item_data' => $item,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
@@ -285,8 +284,7 @@ class ItemsController extends Controller
     {
         $statement = $conn->prepare("SELECT
             items.item_guid
-            ,items.subject_holder_item_id
-            ,items.item_name
+            ,items.local_item_id
             ,items.item_description
             ,items.status_types_id
             ,items.last_modified
@@ -317,8 +315,7 @@ class ItemsController extends Controller
                 items.items_id,
                 items.item_guid,
                 items.subjects_id,
-                items.subject_holder_item_id,
-                items.item_name,
+                items.local_item_id,
                 items.item_description,
                 items.date_created,
                 items.created_by_user_account_id,
@@ -331,7 +328,7 @@ class ItemsController extends Controller
             LEFT JOIN projects ON projects.projects_id = subjects.projects_id
             WHERE items.active = 1
             AND items.subjects_id = :subjects_id
-            ORDER BY items.item_name ASC
+            ORDER BY items.local_item_id ASC
         ");
         $statement->bindValue(":subjects_id", (int)$subjects_id, PDO::PARAM_INT);
         $statement->execute();
@@ -354,13 +351,32 @@ class ItemsController extends Controller
             $data[$key] = array(
                 'id' => 'itemId-' . $value['items_id'],
                 'children' => count($dataset_data) ? true : false,
-                'text' => $value['item_name'],
+                'text' => $value['local_item_id'],
                 'a_attr' => array('href' => '/admin/projects/datasets/' . $value['projects_id'] . '/' . $value['subjects_id'] . '/' . $value['items_id']),
             );
         }
 
         $response = new JsonResponse($data);
         return $response;
+    }
+
+    /**
+     * Get item_types
+     * @return  array|bool  The query result
+     */
+    public function get_item_types($conn)
+    {
+        $data = array();
+
+        $statement = $conn->prepare("SELECT * FROM subject_types ORDER BY label ASC");
+        $statement->execute();
+
+        foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
+            $label = $this->u->removeUnderscoresTitleCase($value['label']);
+            $data[$label] = $value['subject_types_id'];
+        }
+
+        return $data;
     }
 
     /**
@@ -382,14 +398,12 @@ class ItemsController extends Controller
         if($items_id) {
             $statement = $conn->prepare("
                 UPDATE items
-                SET subject_holder_item_id = :subject_holder_item_id
-                ,item_name = :item_name
+                SET local_item_id = :local_item_id
                 ,item_description = :item_description
                 ,last_modified_user_account_id = :last_modified_user_account_id
                 WHERE items_id = :items_id
             ");
-            $statement->bindValue(":subject_holder_item_id", $data->subject_holder_item_id, PDO::PARAM_STR);
-            $statement->bindValue(":item_name", $data->item_name, PDO::PARAM_STR);
+            $statement->bindValue(":local_item_id", $data->local_item_id, PDO::PARAM_STR);
             $statement->bindValue(":item_description", $data->item_description, PDO::PARAM_STR);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->bindValue(":items_id", $items_id, PDO::PARAM_INT);
@@ -402,13 +416,12 @@ class ItemsController extends Controller
         if(!$items_id) {
 
             $statement = $conn->prepare("INSERT INTO items
-                ( subjects_id, item_guid, subject_holder_item_id, item_name, item_description, 
+                ( subjects_id, item_guid, local_item_id, item_description, 
                 date_created, created_by_user_account_id, last_modified_user_account_id )
-                VALUES (:subjects_id, (select md5(UUID())), :subject_holder_item_id, :item_name, :item_description, NOW(), 
+                VALUES (:subjects_id, (select md5(UUID())), :local_item_id, :item_description, NOW(), 
                 :user_account_id, :user_account_id )");
             $statement->bindValue(":subjects_id", $subjects_id, PDO::PARAM_STR);
-            $statement->bindValue(":subject_holder_item_id", $data->subject_holder_item_id, PDO::PARAM_STR);
-            $statement->bindValue(":item_name", $data->item_name, PDO::PARAM_STR);
+            $statement->bindValue(":local_item_id", $data->local_item_id, PDO::PARAM_STR);
             $statement->bindValue(":item_description", $data->item_description, PDO::PARAM_STR);
             $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->execute();
@@ -728,8 +741,7 @@ class ItemsController extends Controller
             `items_id` int(11) NOT NULL AUTO_INCREMENT,
             `item_guid` varchar(255) NOT NULL DEFAULT '',
             `subjects_id` int(11) NOT NULL,
-            `subject_holder_item_id` varchar(255) NOT NULL DEFAULT '',
-            `item_name` varchar(255) NOT NULL DEFAULT '',
+            `local_item_id` varchar(255) NOT NULL DEFAULT '',
             `item_description` mediumtext NOT NULL,
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,

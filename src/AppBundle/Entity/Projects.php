@@ -13,7 +13,7 @@ class Projects
      * @Assert\Length(min="1", max="255")
      * @var string
      */
-    public $projects_label;
+    public $project_name;
 
     /**
      * @Assert\Length(min="1", max="255")
@@ -37,25 +37,14 @@ class Projects
      */
     public $stakeholder_label;
 
-    // private $conn;
-
-    /**
-     * Constructor
-     * @param object  $conn  Utility functions object
-     */
-    // public function __construct()
-    // {
-    //     $this->conn = new Connection;
-    // }
-
     // public function getProjectsLabel()
     // {
-    //     return $this->projects_label;
+    //     return $this->project_name;
     // }
 
-    // public function setProjectsLabel($projects_label)
+    // public function setProjectsLabel($project_name)
     // {
-    //     $this->projects_label = $projects_label;
+    //     $this->project_name = $project_name;
     // }
 
     // public function getStakeholderGuid()
@@ -100,7 +89,7 @@ class Projects
     {
         $statement = $conn->prepare("SELECT 
             projects.projects_id,
-            projects.projects_label,
+            projects.project_name,
             projects.stakeholder_guid,
             projects.project_description,
             isni_data.isni_label AS stakeholder_label,

@@ -81,7 +81,7 @@ class ProjectsController extends Controller
 
         switch($req['order'][0]['column']) {
             case '0':
-                $sort_field = 'projects_label';
+                $sort_field = 'project_name';
                 break;
             case '1':
                 $sort_field = 'stakeholder_label';
@@ -112,7 +112,7 @@ class ProjectsController extends Controller
             $pdo_params[] = '%' . $search . '%';
             $search_sql = "
             AND (
-                projects.projects_label LIKE ?
+                projects.project_name LIKE ?
                 OR projects.stakeholder_label LIKE ?
                 OR projects.date_created LIKE ?
                 OR projects.last_modified LIKE ?
@@ -121,7 +121,7 @@ class ProjectsController extends Controller
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
                 projects.projects_id as manage
-                ,projects.projects_label
+                ,projects.project_name
                 ,projects.stakeholder_guid
                 ,projects.date_created
                 ,projects.last_modified
@@ -134,7 +134,7 @@ class ProjectsController extends Controller
             LEFT JOIN subjects ON subjects.projects_id = projects.projects_id
             WHERE projects.active = 1
             {$search_sql}
-            GROUP BY projects.projects_label, projects.stakeholder_guid, projects.date_created, projects.last_modified, projects.active, projects.projects_id
+            GROUP BY projects.project_name, projects.stakeholder_guid, projects.date_created, projects.last_modified, projects.active, projects.projects_id
             {$sort}
             {$limit_sql}");
         $statement->execute($pdo_params);
@@ -189,7 +189,7 @@ class ProjectsController extends Controller
         }
 
         return $this->render('projects/project_form.html.twig', array(
-            'page_title' => !empty($projects_id) ? 'Project: ' . $project->projects_label : 'Create Project',
+            'page_title' => !empty($projects_id) ? 'Project: ' . $project->project_name : 'Create Project',
             'project_data' => $project,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
@@ -209,7 +209,7 @@ class ProjectsController extends Controller
     {
         $statement = $conn->prepare("SELECT 
             projects.projects_id,
-            projects.projects_label,
+            projects.project_name,
             projects.stakeholder_guid,
             projects.project_description,
             projects.date_created,
@@ -261,7 +261,7 @@ class ProjectsController extends Controller
             SELECT * FROM projects
             WHERE projects.stakeholder_guid = :stakeholder_guid
             AND projects.active = 1
-            ORDER BY projects.projects_label ASC
+            ORDER BY projects.project_name ASC
         ");
         $statement->bindValue(":stakeholder_guid", $stakeholder_guid, PDO::PARAM_STR);
         $statement->execute();
@@ -333,7 +333,7 @@ class ProjectsController extends Controller
 
             $data[$key] = array(
                 'id' => 'projectId-' . $value['projects_id'],
-                'text' => $value['projects_label'],
+                'text' => $value['project_name'],
                 'children' => count($subject_data) ? true : false,
                 'a_attr' => array('href' => '/admin/projects/subjects/' . $value['projects_id']),
             );
@@ -379,13 +379,13 @@ class ProjectsController extends Controller
 
             $statement = $conn->prepare("
                 UPDATE projects
-                SET projects_label = :projects_label
+                SET project_name = :project_name
                 ,stakeholder_guid = :stakeholder_guid
                 ,project_description = :project_description
                 ,last_modified_user_account_id = :last_modified_user_account_id
                 WHERE projects_id = :projects_id
                 ");
-            $statement->bindValue(":projects_label", $data->projects_label, PDO::PARAM_STR);
+            $statement->bindValue(":project_name", $data->project_name, PDO::PARAM_STR);
             $statement->bindValue(":stakeholder_guid", $data->stakeholder_guid, PDO::PARAM_STR);
             $statement->bindValue(":project_description", $data->project_description, PDO::PARAM_STR);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
@@ -399,9 +399,9 @@ class ProjectsController extends Controller
         if(!$projects_id) {
 
             $statement = $conn->prepare("INSERT INTO projects
-              (projects_label, stakeholder_guid, project_description, date_created, created_by_user_account_id, last_modified_user_account_id )
-              VALUES (:projects_label, :stakeholder_guid, :project_description, NOW(), :user_account_id, :user_account_id )");
-            $statement->bindValue(":projects_label", $data->projects_label, PDO::PARAM_STR);
+              (project_name, stakeholder_guid, project_description, date_created, created_by_user_account_id, last_modified_user_account_id )
+              VALUES (:project_name, :stakeholder_guid, :project_description, NOW(), :user_account_id, :user_account_id )");
+            $statement->bindValue(":project_name", $data->project_name, PDO::PARAM_STR);
             $statement->bindValue(":stakeholder_guid", $data->stakeholder_guid, PDO::PARAM_STR);
             $statement->bindValue(":project_description", $data->project_description, PDO::PARAM_STR);
             $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
@@ -528,7 +528,7 @@ class ProjectsController extends Controller
     {
         $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `projects` (
           `projects_id` int(11) NOT NULL AUTO_INCREMENT,
-          `projects_label` varchar(255) NOT NULL DEFAULT '',
+          `project_name` varchar(255) NOT NULL DEFAULT '',
           `stakeholder_guid` varchar(255) NOT NULL DEFAULT '',
           `project_description` mediumtext NOT NULL,
           `date_created` datetime NOT NULL,

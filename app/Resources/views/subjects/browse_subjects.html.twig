@@ -11,7 +11,7 @@
   <ol class="breadcrumb">
     <li><a href="/admin">Dashboard</a></li>
     <li><a href="/admin/workspace">Browse Projects</a></li>
-    <li class="active"><strong>Project:</strong> {{ project_data.projects_label|e }}</li>
+    <li class="active"><strong>Project:</strong> {{ project_data.project_name|e }}</li>
   </ol>
 
   <div class="row">
@@ -19,7 +19,7 @@
     <div class="col-sm-6 col-md-6">
       <dl class="dl-horizontal">
         <dt>Project Name</dt>
-        <dd>{{ project_data.projects_label|e }}</dd>
+        <dd>{{ project_data.project_name|e }}</dd>
         <dt>Stakeholder</dt>
         <dd>{{ project_data.stakeholder_label|e }}</dd>
       </dl>
@@ -53,7 +53,6 @@
               <tr>
                 <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
                 <th class="text-center">Subject Name</th>
-                <th class="text-center">Subject Description</th>
                 <th class="text-center">Holding Unit Name</th>
                 <th class="text-center">Items Count</th>
                 <th class="text-center">Last Modified</th>
@@ -84,7 +83,6 @@
         "columns": [
             { "data": "manage" },
             { "data": "subject_name" },
-            { "data": "subject_description" },
             { "data": "holding_entity_guid" },
             { "data": "items_count" },
             { "data": "last_modified" }
@@ -92,7 +90,7 @@
         "dom": 'lfip<"datatables_bulk_actions">tip',
         "pagingType": "simple_numbers",
         "stateSave": true,
-        "order": [[5,"desc"]],
+        "order": [[4,"desc"]],
         // Show processing throbber.
         "processing": true,
         "serverMethod": "POST",
