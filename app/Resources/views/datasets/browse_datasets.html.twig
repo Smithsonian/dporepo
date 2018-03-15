@@ -27,6 +27,8 @@
       <dl class="dl-horizontal">
         <dt>Last Modified</dt>
         <dd>{{ item_data.last_modified|e }}</dd>
+        <dt>Item Type</dt>
+        <dd>{{ item_data.item_type|e }}</dd>
       </dl>
     </div>
     <div class="col-sm-12 col-md-12">
@@ -57,25 +59,27 @@
               <tr>
                 <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
                 <th class="text-center">Download</th>
-                <th class="text-center">Dataset Guid</th>
+                <th class="text-center">Capture Dataset Guid</th>
+                <th class="text-center">Capture Dataset Field ID</th>
                 <th class="text-center">Capture Method</th>
-                <th class="text-center">Dataset Type</th>
-                <th class="text-center">Dataset Name</th>
+                <th class="text-center">Capture Dataset Type</th>
+                <th class="text-center">Capture Dataset Name</th>
                 <th class="text-center">Collected By</th>
-                <th class="text-center">Collected By Guid</th>
-                <th class="text-center">Date Of Capture</th>
-                <th class="text-center">Dataset Description</th>
-                <th class="text-center">Dataset Collection Notes</th>
+                <th class="text-center">Date of Capture</th>
+                <th class="text-center">Capture Dataset Description</th>
+                <th class="text-center">Collection Notes</th>
+                <th class="text-center">Support Equipment</th>
                 <th class="text-center">Item Position Type</th>
-                <th class="text-center">Positionally Matched Sets ID</th>
-                <th class="text-center">Motion Control</th>
+                <th class="text-center">Item Position Field ID</th>
+                <th class="text-center">Item Arrangement Field ID</th>
+                <th class="text-center">Positionally Matched Capture Datasets</th>
                 <th class="text-center">Focus Type</th>
-                <th class="text-center">Light Source</th>
                 <th class="text-center">Light Source Type</th>
-                <th class="text-center">Scale Bars Used</th>
                 <th class="text-center">Background Removal Method</th>
-                <th class="text-center">Camera Cluster Type</th>
-                <th class="text-center">Array Geometry ID</th>
+                <th class="text-center">Cluster Type</th>
+                <th class="text-center">Cluster Geometry Field ID</th>
+                <th class="text-center">Resource Capture Datasets</th>
+                <th class="text-center">Calibration Object Used</th>
                 <th class="text-center">Date Created</th>
                 <th class="text-center">Last Modified</th>
               </tr>
@@ -107,27 +111,29 @@
         "columns": [
           { "data": "manage" },
           { "data": "manage" },
-          { "data": "dataset_guid" },
+          { "data": "capture_dataset_guid" },
+          { "data": "capture_dataset_field_id" },
           { "data": "capture_method" },
-          { "data": "dataset_type" },
-          { "data": "dataset_name" },
+          { "data": "capture_dataset_type" },
+          { "data": "capture_dataset_name" },
           { "data": "collected_by" },
-          { "data": "collected_by_guid" },
           { "data": "date_of_capture" },
-          { "data": "dataset_description" },
-          { "data": "dataset_collection_notes" },
+          { "data": "capture_dataset_description" },
+          { "data": "collection_notes" },
+          { "data": "support_equipment" },
           { "data": "item_position_type" },
-          { "data": "positionally_matched_sets_id" },
-          { "data": "motion_control" },
+          { "data": "item_position_field_id" },
+          { "data": "item_arrangement_field_id" },
+          { "data": "positionally_matched_capture_datasets" },
           { "data": "focus_type" },
-          { "data": "light_source" },
           { "data": "light_source_type" },
-          { "data": "scale_bars_used" },
           { "data": "background_removal_method" },
-          { "data": "camera_cluster_type" },
-          { "data": "array_geometry_id" },
+          { "data": "cluster_type" },
+          { "data": "cluster_geometry_field_id" },
+          { "data": "resource_capture_datasets" },
+          { "data": "calibration_object_used" },
           { "data": "date_created" },
-          { "data": "last_modified" }
+          { "data": "last_modified" },
         ],
         // "dom": 'Bfrtipt',
         "dom": 'lfip<"datatables_bulk_actions"B>tip',

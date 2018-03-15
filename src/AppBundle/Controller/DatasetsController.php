@@ -51,7 +51,7 @@ class DatasetsController extends Controller
     public function browse_datasets(Connection $conn, Request $request, ProjectsController $projects, SubjectsController $subjects, ItemsController $items)
     {
         // Database tables are only created if not present.
-        $create_datasets_table = $this->create_datasets_table($conn);
+        $create_datasets_table = $this->create_capture_datasets_table($conn);
 
         $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
         $subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
@@ -60,6 +60,8 @@ class DatasetsController extends Controller
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
         $item_data = $items->get_item((int)$items_id, $conn);
         if(!$item_data) throw $this->createNotFoundException('The record does not exist');
+
+        // $this->u->dumper($item_data);
         
         $project_data = $projects->get_project((int)$projects_id, $conn);
         $subject_data = $subjects->get_subject((int)$subjects_id, $conn);
@@ -115,7 +117,7 @@ class DatasetsController extends Controller
         if (!empty($sort_field) && !empty($sort_order)) {
             $sort = " ORDER BY {$sort_field} {$sort_order}";
         } else {
-            $sort = " ORDER BY datasets.last_modified DESC ";
+            $sort = " ORDER BY capture_datasets.last_modified DESC ";
         }
 
         if ($search) {
@@ -139,49 +141,69 @@ class DatasetsController extends Controller
           $pdo_params[] = '%'.$search.'%';
           $pdo_params[] = '%'.$search.'%';
           $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
+          $pdo_params[] = '%'.$search.'%';
           $search_sql = "
               AND (
-                OR datasets.dataset_guid LIKE ?
-                OR datasets.capture_method_lookup_id LIKE ?
-                OR datasets.dataset_type_lookup_id LIKE ?
-                OR datasets.dataset_name LIKE ?
-                OR datasets.collected_by LIKE ?
-                OR datasets.collected_by_guid LIKE ?
-                OR datasets.date_of_capture LIKE ?
-                OR datasets.dataset_description LIKE ?
-                OR datasets.dataset_collection_notes LIKE ?
-                OR datasets.item_position_type_lookup_id LIKE ?
-                OR datasets.positionally_matched_sets_id LIKE ?
-                OR datasets.motion_control LIKE ?
-                OR datasets.focus_lookup_id LIKE ?
-                OR datasets.light_source LIKE ?
-                OR datasets.light_source_type_lookup_id LIKE ?
-                OR datasets.scale_bars_used LIKE ?
-                OR datasets.background_removal_method_lookup_id LIKE ?
-                OR datasets.camera_cluster_type_lookup_id LIKE ?
-                OR datasets.array_geometry_id LIKE ?
-                OR datasets.date_created LIKE ?
+                OR capture_datasets.capture_dataset_guid LIKE ?
+                OR capture_datasets.capture_dataset_field_id LIKE ?
+                OR capture_datasets.capture_method LIKE ?
+                OR capture_datasets.capture_dataset_type LIKE ?
+                OR capture_datasets.capture_dataset_name LIKE ?
+                OR capture_datasets.collected_by LIKE ?
+                OR capture_datasets.date_of_capture LIKE ?
+                OR capture_datasets.capture_dataset_description LIKE ?
+                OR capture_datasets.collection_notes LIKE ?
+                OR capture_datasets.support_equipment LIKE ?
+                OR capture_datasets.item_position_type LIKE ?
+                OR capture_datasets.item_position_field_id LIKE ?
+                OR capture_datasets.item_arrangement_field_id LIKE ?
+                OR capture_datasets.positionally_matched_capture_datasets LIKE ?
+                OR capture_datasets.focus_type LIKE ?
+                OR capture_datasets.light_source_type LIKE ?
+                OR capture_datasets.background_removal_method LIKE ?
+                OR capture_datasets.cluster_type LIKE ?
+                OR capture_datasets.cluster_geometry_field_id LIKE ?
+                OR capture_datasets.resource_capture_datasets LIKE ?
+                OR capture_datasets.calibration_object_used LIKE ?
+                OR capture_datasets.date_created LIKE ?
+                OR capture_datasets.created_by_user_account_id LIKE ?
+                OR capture_datasets.last_modified LIKE ?
+                OR capture_datasets.last_modified_user_account_id LIKE ?
               ) ";
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-              datasets.datasets_id AS manage
-              ,datasets.dataset_guid
-              ,datasets.dataset_type_lookup_id
-              ,datasets.dataset_name
-              ,datasets.collected_by
-              ,datasets.collected_by_guid
-              ,datasets.date_of_capture
-              ,datasets.dataset_description
-              ,datasets.dataset_collection_notes
-              ,datasets.positionally_matched_sets_id
-              ,datasets.motion_control
-              ,datasets.light_source
-              ,datasets.scale_bars_used
-              ,datasets.array_geometry_id
-              ,datasets.date_created
-              ,datasets.last_modified
-              ,datasets.datasets_id AS DT_RowId
+              capture_datasets.capture_datasets_id AS manage
+              ,capture_datasets.capture_dataset_guid
+              ,capture_datasets.capture_dataset_field_id
+              ,capture_datasets.capture_method
+              ,capture_datasets.capture_dataset_type
+              ,capture_datasets.capture_dataset_name
+              ,capture_datasets.collected_by
+              ,capture_datasets.date_of_capture
+              ,capture_datasets.capture_dataset_description
+              ,capture_datasets.collection_notes
+              ,capture_datasets.support_equipment
+              ,capture_datasets.item_position_type
+              ,capture_datasets.item_position_field_id
+              ,capture_datasets.item_arrangement_field_id
+              ,capture_datasets.positionally_matched_capture_datasets
+              ,capture_datasets.focus_type
+              ,capture_datasets.light_source_type
+              ,capture_datasets.background_removal_method
+              ,capture_datasets.cluster_type
+              ,capture_datasets.cluster_geometry_field_id
+              ,capture_datasets.resource_capture_datasets
+              ,capture_datasets.calibration_object_used
+              ,capture_datasets.date_created
+              ,capture_datasets.created_by_user_account_id
+              ,capture_datasets.last_modified
+              ,capture_datasets.last_modified_user_account_id
+              ,capture_datasets.capture_datasets_id AS DT_RowId
               ,capture_methods.label AS capture_method
               ,dataset_types.label AS dataset_type
               ,item_position_types.label_alias AS item_position_type
@@ -189,21 +211,23 @@ class DatasetsController extends Controller
               ,light_source_types.label AS light_source_type
               ,background_removal_methods.label AS background_removal_method
               ,camera_cluster_types.label AS camera_cluster_type
-          FROM datasets
-          LEFT JOIN capture_methods ON capture_methods.capture_methods_id = datasets.capture_method_lookup_id
-          LEFT JOIN dataset_types ON dataset_types.dataset_types_id = datasets.dataset_type_lookup_id
-          LEFT JOIN item_position_types ON item_position_types.item_position_types_id = datasets.item_position_type_lookup_id
-          LEFT JOIN focus_types ON focus_types.focus_types_id = datasets.focus_lookup_id
-          LEFT JOIN light_source_types ON light_source_types.light_source_types_id = datasets.light_source_type_lookup_id
-          LEFT JOIN background_removal_methods ON background_removal_methods.background_removal_methods_id = datasets.background_removal_method_lookup_id
-          LEFT JOIN camera_cluster_types ON camera_cluster_types.camera_cluster_types_id = datasets.camera_cluster_type_lookup_id
-          WHERE datasets.active = 1
-          AND items_id = " . (int)$items_id . "
+          FROM capture_datasets
+          LEFT JOIN capture_methods ON capture_methods.capture_methods_id = capture_datasets.capture_method
+          LEFT JOIN dataset_types ON dataset_types.dataset_types_id = capture_datasets.capture_dataset_type
+          LEFT JOIN item_position_types ON item_position_types.item_position_types_id = capture_datasets.item_position_type
+          LEFT JOIN focus_types ON focus_types.focus_types_id = capture_datasets.focus_type
+          LEFT JOIN light_source_types ON light_source_types.light_source_types_id = capture_datasets.light_source_type
+          LEFT JOIN background_removal_methods ON background_removal_methods.background_removal_methods_id = capture_datasets.background_removal_method
+          LEFT JOIN camera_cluster_types ON camera_cluster_types.camera_cluster_types_id = capture_datasets.cluster_type
+          WHERE capture_datasets.active = 1
+          AND capture_datasets.parent_item_repository_id = " . (int)$items_id . "
           {$search_sql}
           {$sort}
           {$limit_sql}");
         $statement->execute($pdo_params);
         $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        // $this->u->dumper($data['aaData']);
 
         $statement = $conn->prepare("SELECT FOUND_ROWS()");
         $statement->execute();
@@ -261,7 +285,7 @@ class DatasetsController extends Controller
         }
 
         return $this->render('datasets/dataset_form.html.twig', array(
-            'page_title' => !empty($datasets_id) ? 'Dataset: ' . $dataset->dataset_name : 'Create Dataset',
+            'page_title' => !empty($datasets_id) ? 'Dataset: ' . $dataset->capture_dataset_name : 'Create Dataset',
             'dataset_data' => $dataset,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
@@ -275,104 +299,107 @@ class DatasetsController extends Controller
      * Run queries to insert and update a dataset in the database.
      *
      * @param   array   $data         The data array
-     * @param   int     $datasets_id  The dataset ID
+     * @param   int     $capture_datasets_id  The dataset ID
      * @param   int     $items_id     The item ID
      * @param   object  $conn         Database connection object
      * @return  int     The item ID
      */
-    public function insert_update_datasets($data, $datasets_id = FALSE, $items_id = FALSE, $conn)
+    public function insert_update_datasets($data, $capture_datasets_id = FALSE, $items_id = FALSE, $conn)
     {
 
-        // $this->u->dumper($data);
-
         // Update
-        if($datasets_id) {
+        if($capture_datasets_id) {
           $statement = $conn->prepare("
-            UPDATE datasets
-            SET capture_method_lookup_id = :capture_method_lookup_id
-            ,dataset_name = :dataset_name
+            UPDATE capture_datasets
+            SET 
+            capture_method = :capture_method
+            ,capture_dataset_type = :capture_dataset_type
+            ,capture_dataset_name = :capture_dataset_name
             ,collected_by = :collected_by
-            ,collected_by_guid = :collected_by_guid
             ,date_of_capture = :date_of_capture
-            ,dataset_description = :dataset_description
-            ,dataset_collection_notes = :dataset_collection_notes
-            ,item_position_type_lookup_id = :item_position_type_lookup_id
-            ,positionally_matched_sets_id = :positionally_matched_sets_id
-            ,motion_control = :motion_control
-            ,focus_lookup_id = :focus_lookup_id
-            ,light_source = :light_source
-            ,light_source_type_lookup_id = :light_source_type_lookup_id
-            ,scale_bars_used = :scale_bars_used
-            ,background_removal_method_lookup_id = :background_removal_method_lookup_id
-            ,camera_cluster_type_lookup_id = :camera_cluster_type_lookup_id
-            ,array_geometry_id = :array_geometry_id
-            ,dataset_type_lookup_id = :dataset_type_lookup_id
+            ,capture_dataset_description = :capture_dataset_description
+            ,collection_notes = :collection_notes
+            ,item_position_type = :item_position_type
+            ,positionally_matched_capture_datasets = :positionally_matched_capture_datasets
+            ,focus_type = :focus_type
+            ,light_source_type = :light_source_type
+            ,background_removal_method = :background_removal_method
+            ,cluster_type = :cluster_type
+            ,cluster_geometry_field_id = :cluster_geometry_field_id
+            ,capture_dataset_guid = :capture_dataset_guid
+            ,capture_dataset_field_id = :capture_dataset_field_id
+            ,support_equipment = :support_equipment
+            ,item_position_field_id = :item_position_field_id
+            ,item_arrangement_field_id = :item_arrangement_field_id
+            ,resource_capture_datasets = :resource_capture_datasets
+            ,calibration_object_used = :calibration_object_used
             ,last_modified_user_account_id = :last_modified_user_account_id
-            WHERE datasets_id = :datasets_id
+            WHERE capture_datasets_id = :capture_datasets_id
           ");
-          $statement->bindValue(":capture_method_lookup_id", $data->capture_method_lookup_id, PDO::PARAM_INT);
-          $statement->bindValue(":dataset_name", $data->dataset_name, PDO::PARAM_STR);
-          $statement->bindValue(":collected_by", $data->collected_by, PDO::PARAM_STR);
-          $statement->bindValue(":collected_by_guid", $data->collected_by_guid, PDO::PARAM_STR);
-          $statement->bindValue(":date_of_capture", $data->date_of_capture, PDO::PARAM_STR);
-          $statement->bindValue(":dataset_description", $data->dataset_description, PDO::PARAM_STR);
-          $statement->bindValue(":dataset_collection_notes", $data->dataset_collection_notes, PDO::PARAM_STR);
-          $statement->bindValue(":item_position_type_lookup_id", $data->item_position_type_lookup_id, PDO::PARAM_INT);
-          $statement->bindValue(":positionally_matched_sets_id", $data->positionally_matched_sets_id, PDO::PARAM_STR);
-          $statement->bindValue(":motion_control", $data->motion_control, PDO::PARAM_STR);
-          $statement->bindValue(":focus_lookup_id", $data->focus_lookup_id, PDO::PARAM_INT);
-          $statement->bindValue(":light_source", $data->light_source, PDO::PARAM_STR);
-          $statement->bindValue(":light_source_type_lookup_id", $data->light_source_type_lookup_id, PDO::PARAM_INT);
-          $statement->bindValue(":scale_bars_used", $data->scale_bars_used, PDO::PARAM_STR);
-          $statement->bindValue(":background_removal_method_lookup_id", $data->background_removal_method_lookup_id, PDO::PARAM_INT);
-          $statement->bindValue(":camera_cluster_type_lookup_id", $data->camera_cluster_type_lookup_id, PDO::PARAM_INT);
-          $statement->bindValue(":array_geometry_id", $data->array_geometry_id, PDO::PARAM_INT);
-          $statement->bindValue(":dataset_type_lookup_id", $data->dataset_type_lookup_id, PDO::PARAM_INT);
+          $statement->bindValue(":capture_method", $data->capture_method);
+          $statement->bindValue(":capture_dataset_type", $data->capture_dataset_type);
+          $statement->bindValue(":capture_dataset_name", $data->capture_dataset_name);
+          $statement->bindValue(":collected_by", $data->collected_by);
+          $statement->bindValue(":date_of_capture", $data->date_of_capture);
+          $statement->bindValue(":capture_dataset_description", $data->capture_dataset_description);
+          $statement->bindValue(":collection_notes", $data->collection_notes);
+          $statement->bindValue(":item_position_type", $data->item_position_type);
+          $statement->bindValue(":positionally_matched_capture_datasets", $data->positionally_matched_capture_datasets);
+          $statement->bindValue(":focus_type", $data->focus_type);
+          $statement->bindValue(":light_source_type", $data->light_source_type);
+          $statement->bindValue(":background_removal_method", $data->background_removal_method);
+          $statement->bindValue(":cluster_type", $data->cluster_type);
+          $statement->bindValue(":cluster_geometry_field_id", $data->cluster_geometry_field_id);
+          $statement->bindValue(":capture_dataset_guid", $data->capture_dataset_guid);
+          $statement->bindValue(":capture_dataset_field_id", $data->capture_dataset_field_id);
+          $statement->bindValue(":support_equipment", $data->support_equipment);
+          $statement->bindValue(":item_position_field_id", $data->item_position_field_id);
+          $statement->bindValue(":item_arrangement_field_id", $data->item_arrangement_field_id);
+          $statement->bindValue(":resource_capture_datasets", $data->resource_capture_datasets);
+          $statement->bindValue(":calibration_object_used", $data->calibration_object_used);
           $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-          $statement->bindValue(":datasets_id", $datasets_id, PDO::PARAM_INT);
+          $statement->bindValue(":capture_datasets_id", $capture_datasets_id, PDO::PARAM_INT);
           $statement->execute();
 
-          return $datasets_id;
+          return $capture_datasets_id;
         }
 
         // Insert
         if(!$datasets_id) {
 
-          $statement = $conn->prepare("INSERT INTO datasets
-            (dataset_guid, items_id, capture_method_lookup_id, 
-            dataset_name, collected_by, collected_by_guid, date_of_capture, dataset_description, dataset_collection_notes, item_position_type_lookup_id, positionally_matched_sets_id, 
-            motion_control, focus_lookup_id, light_source, light_source_type_lookup_id, scale_bars_used, background_removal_method_lookup_id, camera_cluster_type_lookup_id, array_geometry_id, dataset_type_lookup_id,  
+          $statement = $conn->prepare("INSERT INTO capture_datasets
+            (dataset_guid, items_id, capture_method, capture_dataset_type, capture_dataset_name, collected_by, date_of_capture, capture_dataset_description, collection_notes, item_position_type, positionally_matched_capture_datasets, focus_type, light_source_type, background_removal_method, cluster_type, cluster_geometry_field_id, capture_dataset_guid, capture_dataset_field_id, support_equipment, item_position_field_id, item_arrangement_field_id, resource_capture_datasets, calibration_object_used  
             date_created, created_by_user_account_id, last_modified_user_account_id )
-          VALUES ((select md5(UUID())), :items_id, 
-            :capture_method_lookup_id, :dataset_name, :collected_by, :collected_by_guid, :date_of_capture, :dataset_description, 
-            :dataset_collection_notes, :item_position_type_lookup_id, :positionally_matched_sets_id, :motion_control, :focus_lookup_id, :light_source, :light_source_type_lookup_id, :scale_bars_used, 
-            :background_removal_method_lookup_id, :camera_cluster_type_lookup_id, :array_geometry_id, :dataset_type_lookup_id, 
+          VALUES ((select md5(UUID())), :items_id, :capture_method, :capture_dataset_type, :capture_dataset_name, :collected_by, :date_of_capture, :capture_dataset_description, :collection_notes, :item_position_type, :positionally_matched_capture_datasets, :focus_type, :light_source_type, :background_removal_method, :cluster_type, :cluster_geometry_field_id, :capture_dataset_guid, :capture_dataset_field_id, :support_equipment, :item_position_field_id, :item_arrangement_field_id, :resource_capture_datasets, :calibration_object_used, 
             NOW(), :user_account_id, :user_account_id )");
           $statement->bindValue(":items_id", $items_id, PDO::PARAM_INT);
-          $statement->bindValue(":capture_method_lookup_id", $data->capture_method_lookup_id, PDO::PARAM_INT);
-          $statement->bindValue(":dataset_type_lookup_id", $data->dataset_type_lookup_id, PDO::PARAM_INT);
-          $statement->bindValue(":dataset_name", $data->dataset_name, PDO::PARAM_STR);
-          $statement->bindValue(":collected_by", $data->collected_by, PDO::PARAM_STR);
-          $statement->bindValue(":collected_by_guid", $data->collected_by_guid, PDO::PARAM_STR);
-          $statement->bindValue(":date_of_capture", $data->date_of_capture, PDO::PARAM_STR);
-          $statement->bindValue(":dataset_description", $data->dataset_description, PDO::PARAM_STR);
-          $statement->bindValue(":dataset_collection_notes", $data->dataset_collection_notes, PDO::PARAM_STR);
-          $statement->bindValue(":item_position_type_lookup_id", $data->item_position_type_lookup_id, PDO::PARAM_INT);
-          $statement->bindValue(":positionally_matched_sets_id", $data->positionally_matched_sets_id, PDO::PARAM_STR);
-          $statement->bindValue(":motion_control", $data->motion_control, PDO::PARAM_STR);
-          $statement->bindValue(":focus_lookup_id", $data->focus_lookup_id, PDO::PARAM_INT);
-          $statement->bindValue(":light_source", $data->light_source, PDO::PARAM_STR);
-          $statement->bindValue(":light_source_type_lookup_id", $data->light_source_type_lookup_id, PDO::PARAM_INT);
-          $statement->bindValue(":scale_bars_used", $data->scale_bars_used, PDO::PARAM_STR);
-          $statement->bindValue(":background_removal_method_lookup_id", $data->background_removal_method_lookup_id, PDO::PARAM_INT);
-          $statement->bindValue(":camera_cluster_type_lookup_id", $data->camera_cluster_type_lookup_id, PDO::PARAM_INT);
-          $statement->bindValue(":array_geometry_id", $data->array_geometry_id, PDO::PARAM_STR);
+          $statement->bindValue(":capture_method", $data->capture_method);
+          $statement->bindValue(":capture_dataset_type", $data->capture_dataset_type);
+          $statement->bindValue(":capture_dataset_name", $data->capture_dataset_name);
+          $statement->bindValue(":collected_by", $data->collected_by);
+          $statement->bindValue(":date_of_capture", $data->date_of_capture);
+          $statement->bindValue(":capture_dataset_description", $data->capture_dataset_description);
+          $statement->bindValue(":collection_notes", $data->collection_notes);
+          $statement->bindValue(":item_position_type", $data->item_position_type);
+          $statement->bindValue(":positionally_matched_capture_datasets", $data->positionally_matched_capture_datasets);
+          $statement->bindValue(":focus_type", $data->focus_type);
+          $statement->bindValue(":light_source_type", $data->light_source_type);
+          $statement->bindValue(":background_removal_method", $data->background_removal_method);
+          $statement->bindValue(":cluster_type", $data->cluster_type);
+          $statement->bindValue(":cluster_geometry_field_id", $data->cluster_geometry_field_id);
+          $statement->bindValue(":capture_dataset_guid", $data->capture_dataset_guid);
+          $statement->bindValue(":capture_dataset_field_id", $data->capture_dataset_field_id);
+          $statement->bindValue(":support_equipment", $data->support_equipment);
+          $statement->bindValue(":item_position_field_id", $data->item_position_field_id);
+          $statement->bindValue(":item_arrangement_field_id", $data->item_arrangement_field_id);
+          $statement->bindValue(":resource_capture_datasets", $data->resource_capture_datasets);
+          $statement->bindValue(":calibration_object_used", $data->calibration_object_used);
           $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
           $statement->execute();
           $last_inserted_id = $conn->lastInsertId();
 
           if(!$last_inserted_id) {
-            die('INSERT INTO `datasets` failed.');
+            die('INSERT INTO `capture_datasets` failed.');
           }
 
           return $last_inserted_id;
@@ -389,47 +416,47 @@ class DatasetsController extends Controller
      * @param       int $items_id    The item ID
      * @return      array|bool       The query result
      */
-    public function get_datasets($conn, $items_id = false)
+    public function get_datasets($conn, $parent_item_repository_id = false)
     {
       $statement = $conn->prepare("
           SELECT
-              projects.projects_id,
-              subjects.subjects_id,
-              datasets.items_id,
-              datasets.datasets_id,
-              datasets.dataset_guid,
-              datasets.capture_method_lookup_id,
-              datasets.dataset_type_lookup_id,
-              datasets.dataset_name,
-              datasets.collected_by,
-              datasets.collected_by_guid,
-              datasets.date_of_capture,
-              datasets.dataset_description,
-              datasets.dataset_collection_notes,
-              datasets.item_position_type_lookup_id,
-              datasets.positionally_matched_sets_id,
-              datasets.motion_control,
-              datasets.focus_lookup_id,
-              datasets.light_source,
-              datasets.light_source_type_lookup_id,
-              datasets.scale_bars_used,
-              datasets.background_removal_method_lookup_id,
-              datasets.camera_cluster_type_lookup_id,
-              datasets.array_geometry_id,
-              datasets.resource_datasets,
-              datasets.resource_dataset_elements,
-              datasets.date_created,
-              datasets.created_by_user_account_id,
-              datasets.last_modified,
-              datasets.last_modified_user_account_id,
-              datasets.active
-          FROM datasets
-          LEFT JOIN items ON items.items_id = datasets.items_id
+              projects.projects_id
+              ,subjects.subjects_id
+              ,capture_datasets.parent_item_repository_id
+              ,capture_datasets.capture_datasets_id
+              ,capture_datasets.capture_dataset_guid
+              ,capture_datasets.capture_dataset_field_id
+              ,capture_datasets.capture_method
+              ,capture_datasets.capture_dataset_type
+              ,capture_datasets.capture_dataset_name
+              ,capture_datasets.collected_by
+              ,capture_datasets.date_of_capture
+              ,capture_datasets.capture_dataset_description
+              ,capture_datasets.collection_notes
+              ,capture_datasets.support_equipment
+              ,capture_datasets.item_position_type
+              ,capture_datasets.item_position_field_id
+              ,capture_datasets.item_arrangement_field_id
+              ,capture_datasets.positionally_matched_capture_datasets
+              ,capture_datasets.focus_type
+              ,capture_datasets.light_source_type
+              ,capture_datasets.background_removal_method
+              ,capture_datasets.cluster_type
+              ,capture_datasets.cluster_geometry_field_id
+              ,capture_datasets.resource_capture_datasets
+              ,capture_datasets.calibration_object_used
+              ,capture_datasets.date_created
+              ,capture_datasets.created_by_user_account_id
+              ,capture_datasets.last_modified
+              ,capture_datasets.last_modified_user_account_id
+              ,capture_datasets.active
+          FROM capture_datasets
+          LEFT JOIN items ON items.items_id = capture_datasets.parent_item_repository_id
           LEFT JOIN subjects ON subjects.subjects_id = items.subjects_id
           LEFT JOIN projects ON projects.projects_id = subjects.projects_id
-          WHERE datasets.active = 1
-          AND datasets.items_id = :items_id");
-      $statement->bindValue(":items_id", $items_id, PDO::PARAM_INT);
+          WHERE capture_datasets.active = 1
+          AND capture_datasets.parent_item_repository_id = :parent_item_repository_id");
+      $statement->bindValue(":parent_item_repository_id", $parent_item_repository_id, PDO::PARAM_INT);
       $statement->execute();
       return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -445,13 +472,14 @@ class DatasetsController extends Controller
         $datasets = $this->get_datasets($conn, $items_id);
 
         foreach ($datasets as $key => $value) {
+
             // Check for child dataset records so the 'children' key can be set accordingly.
-            $dataset_elements_data = $dataset_elements->get_dataset_elements((int)$value['datasets_id'], $conn);
+            $dataset_elements_data = $dataset_elements->get_dataset_elements((int)$value['capture_datasets_id'], $conn);
             $data[$key] = array(
-                'id' => 'datasetId-' . $value['datasets_id'],
+                'id' => 'datasetId-' . $value['capture_datasets_id'],
                 'children' => count($dataset_elements_data) ? true : false,
-                'text' => $value['dataset_name'],
-                'a_attr' => array('href' => '/admin/projects/dataset_elements/' . $value['projects_id'] . '/' . $value['subjects_id'] . '/' . $value['items_id'] . '/' . $value['datasets_id']),
+                'text' => $value['capture_dataset_name'],
+                'a_attr' => array('href' => '/admin/projects/dataset_elements/' . $value['projects_id'] . '/' . $value['subjects_id'] . '/' . $value['parent_item_repository_id'] . '/' . $value['capture_datasets_id']),
             );
         }
 
@@ -464,34 +492,37 @@ class DatasetsController extends Controller
      *
      * Get one dataset from the database.
      *
-     * @param       int $datasets_id    The data value
+     * @param       int $capture_datasets_id    The data value
      * @return      array|bool              The query result
      */
-    public function get_dataset($datasets_id = false, $conn)
+    public function get_dataset($capture_datasets_id = false, $conn)
     {
       $statement = $conn->prepare("SELECT
-          datasets.datasets_id
-          ,datasets.dataset_guid
-          ,datasets.dataset_type_lookup_id
-          ,datasets.dataset_name
-          ,datasets.collected_by
-          ,datasets.collected_by_guid
-          ,datasets.date_of_capture
-          ,datasets.dataset_description
-          ,datasets.dataset_collection_notes
-          ,datasets.positionally_matched_sets_id
-          ,datasets.motion_control
-          ,datasets.light_source
-          ,datasets.scale_bars_used
-          ,datasets.array_geometry_id
-          ,datasets.date_created
-          ,datasets.last_modified
-          ,datasets.capture_method_lookup_id
-          ,datasets.item_position_type_lookup_id
-          ,datasets.focus_lookup_id
-          ,datasets.light_source_type_lookup_id
-          ,datasets.background_removal_method_lookup_id
-          ,datasets.camera_cluster_type_lookup_id
+          capture_datasets.capture_dataset_guid
+          ,capture_datasets.capture_dataset_field_id
+          ,capture_datasets.capture_method
+          ,capture_datasets.capture_dataset_type
+          ,capture_datasets.capture_dataset_name
+          ,capture_datasets.collected_by
+          ,capture_datasets.date_of_capture
+          ,capture_datasets.capture_dataset_description
+          ,capture_datasets.collection_notes
+          ,capture_datasets.support_equipment
+          ,capture_datasets.item_position_type
+          ,capture_datasets.item_position_field_id
+          ,capture_datasets.item_arrangement_field_id
+          ,capture_datasets.positionally_matched_capture_datasets
+          ,capture_datasets.focus_type
+          ,capture_datasets.light_source_type
+          ,capture_datasets.background_removal_method
+          ,capture_datasets.cluster_type
+          ,capture_datasets.cluster_geometry_field_id
+          ,capture_datasets.resource_capture_datasets
+          ,capture_datasets.calibration_object_used
+          ,capture_datasets.date_created
+          ,capture_datasets.created_by_user_account_id
+          ,capture_datasets.last_modified
+          ,capture_datasets.last_modified_user_account_id
           ,capture_methods.label AS capture_method
           ,dataset_types.label AS dataset_type
           ,item_position_types.label_alias AS item_position_type
@@ -499,17 +530,17 @@ class DatasetsController extends Controller
           ,light_source_types.label AS light_source_type
           ,background_removal_methods.label AS background_removal_method
           ,camera_cluster_types.label AS camera_cluster_type
-        FROM datasets
-        LEFT JOIN capture_methods ON capture_methods.capture_methods_id = datasets.capture_method_lookup_id
-        LEFT JOIN dataset_types ON dataset_types.dataset_types_id = datasets.dataset_type_lookup_id
-        LEFT JOIN item_position_types ON item_position_types.item_position_types_id = datasets.item_position_type_lookup_id
-        LEFT JOIN focus_types ON focus_types.focus_types_id = datasets.focus_lookup_id
-        LEFT JOIN light_source_types ON light_source_types.light_source_types_id = datasets.light_source_type_lookup_id
-        LEFT JOIN background_removal_methods ON background_removal_methods.background_removal_methods_id = datasets.background_removal_method_lookup_id
-        LEFT JOIN camera_cluster_types ON camera_cluster_types.camera_cluster_types_id = datasets.camera_cluster_type_lookup_id
-        WHERE datasets.active = 1
-        AND datasets.datasets_id = :datasets_id");
-      $statement->bindValue(":datasets_id", $datasets_id, PDO::PARAM_INT);
+        FROM capture_datasets
+        LEFT JOIN capture_methods ON capture_methods.capture_methods_id = capture_datasets.capture_method
+        LEFT JOIN dataset_types ON dataset_types.dataset_types_id = capture_datasets.capture_dataset_type
+        LEFT JOIN item_position_types ON item_position_types.item_position_types_id = capture_datasets.item_position_type
+        LEFT JOIN focus_types ON focus_types.focus_types_id = capture_datasets.focus_type
+        LEFT JOIN light_source_types ON light_source_types.light_source_types_id = capture_datasets.light_source_type
+        LEFT JOIN background_removal_methods ON background_removal_methods.background_removal_methods_id = capture_datasets.background_removal_method
+        LEFT JOIN camera_cluster_types ON camera_cluster_types.camera_cluster_types_id = capture_datasets.cluster_type
+        WHERE capture_datasets.active = 1
+        AND capture_datasets.capture_datasets_id = :capture_datasets_id");
+      $statement->bindValue(":capture_datasets_id", $capture_datasets_id, PDO::PARAM_INT);
       $statement->execute();
       return $statement->fetch(PDO::FETCH_ASSOC);
     }
@@ -718,66 +749,42 @@ class DatasetsController extends Controller
      *
      * @return      void
      */
-    public function create_datasets_table($conn)
+    public function create_capture_datasets_table($conn)
     {
-        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `datasets` (
-            `datasets_id` int(11) NOT NULL AUTO_INCREMENT,
-            `dataset_guid` varchar(255) NOT NULL DEFAULT '',
-            `items_id` int(11) NOT NULL,
-            `capture_method_lookup_id` int(11) NOT NULL,
-            `dataset_type_lookup_id` int(11) NOT NULL,
-            `dataset_name` varchar(255) NOT NULL DEFAULT '',
+        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `capture_datasets` (
+            `capture_datasets_id` int(11) NOT NULL AUTO_INCREMENT,
+            `capture_dataset_guid` varchar(255) NOT NULL DEFAULT '',
+            `parent_project_repository_id` int(255) DEFAULT NULL,
+            `parent_item_repository_id` int(11) NOT NULL,
+            `capture_dataset_field_id` int(11) NOT NULL,
+            `capture_method` int(11) NOT NULL,
+            `capture_dataset_type` int(11) DEFAULT NULL,
+            `capture_dataset_name` varchar(255) NOT NULL DEFAULT '',
             `collected_by` varchar(255) NOT NULL DEFAULT '',
-            `collected_by_guid` varchar(255) NULL DEFAULT NULL,
             `date_of_capture` datetime NOT NULL,
-            `dataset_description` text NOT NULL,
-            `dataset_collection_notes` text NOT NULL,
-            `item_position_type_lookup_id` int(11) NOT NULL,
-            `positionally_matched_sets_id` varchar(255) NOT NULL DEFAULT '',
-            `motion_control` varchar(255) NOT NULL DEFAULT '',
-            `focus_lookup_id` varchar(255) NOT NULL DEFAULT '',
-            `light_source` varchar(255) NOT NULL DEFAULT '',
-            `light_source_type_lookup_id` int(11) NOT NULL,
-            `scale_bars_used` varchar(255) NOT NULL DEFAULT '',
-            `background_removal_method_lookup_id` varchar(255) NOT NULL DEFAULT '',
-            `camera_cluster_type_lookup_id` int(11) NOT NULL,
-            `array_geometry_id` varchar(255) NOT NULL DEFAULT '',
-            `resource_datasets` varchar(255) NOT NULL DEFAULT '',
-            `resource_dataset_elements` varchar(255) NOT NULL DEFAULT '',
+            `capture_dataset_description` text,
+            `collection_notes` text,
+            `support_equipment` varchar(255) DEFAULT NULL,
+            `item_position_type` int(11) NOT NULL,
+            `item_position_field_id` int(11) NOT NULL,
+            `item_arrangement_field_id` int(11) NOT NULL,
+            `positionally_matched_capture_datasets` varchar(255) NOT NULL DEFAULT '',
+            `focus_type` int(11) NOT NULL,
+            `light_source_type` int(11) NOT NULL,
+            `background_removal_method` int(11) NOT NULL,
+            `cluster_type` int(11) NOT NULL,
+            `cluster_geometry_field_id` int(11) DEFAULT NULL,
+            `resource_capture_datasets` varchar(255) DEFAULT '',
+            `calibration_object_used` varchar(255) DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`datasets_id`),
+            PRIMARY KEY (`capture_datasets_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='This table stores dataset metadata'");
-
-        // datasets_id
-        // dataset_guid
-        // items_id -+++-
-        // capture_method_lookup_id ----
-        // dataset_type_lookup_id
-        // dataset_name
-        // collected_by
-        // collected_by_guid (???????????????)
-        // date_of_capture
-        // dataset_description
-        // dataset_collection_notes
-        // item_position_type_lookup_id
-        // positionally_matched_sets_id
-        // motion_control
-        // focus_lookup_id
-        // light_source
-        // light_source_type_lookup_id
-        // scale_bars_used
-        // background_removal_method_lookup_id
-        // camera_cluster_type_lookup_id
-        // array_geometry_id
-        // resource_datasets (???????????)
-        // resource_dataset_elements (???????????)
-
+          ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COMMENT='This table stores dataset metadata'");
         $statement->execute();
         $error = $conn->errorInfo();
 

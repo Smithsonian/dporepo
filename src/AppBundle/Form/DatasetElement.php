@@ -16,33 +16,21 @@ class DatasetElement extends AbstractType
         $data = (array)$options['data'];
 
         $builder
-            ->add('camera_id', null, array(
-                'label' => 'Camera ID',
+            ->add('capture_device_configuration_id', null, array(
+                'label' => 'Capture Device Configuration ID',
                 'required' => true,
               ))
-            ->add('camera_capture_position_id', null, array(
-                'label' => 'Camera Capture Position',
+            ->add('capture_device_field_id', null, array(
+                'label' => 'Capture Device Field ID',
               ))
-            ->add('cluster_position_id', null, array(
-                'label' => 'Cluster Position',
+            ->add('capture_sequence_number', null, array(
+                'label' => 'Capture Sequence Number',
               ))
-            ->add('calibration_object_type_id', ChoiceType::class, array(
-                'label' => 'Calibration Object Type',
-                'placeholder' => 'Select',
-                // All options
-                'choices' => $data['calibration_object_type_options'],
-                // Selected option
-                'data' => $data['calibration_object_type_id'],
-                'attr' => array('class' => 'default-chosen-select'),
+            ->add('cluster_position_field_id', null, array(
+                'label' => 'Cluster Position Field ID',
               ))
-            ->add('exif_data_placeholder', null, array(
-                'label' => 'Exif Data Placeholder',
-              ))
-            ->add('camera_body', null, array(
-                'label' => 'Camera Body',
-              ))
-            ->add('lens', null, array(
-                'label' => 'Lens',
+            ->add('position_in_cluster_field_id', null, array(
+                'label' => 'Position In Cluster Field ID',
               ))
             ->add('save', SubmitType::class, array(
                 'label' => 'Save Edits',

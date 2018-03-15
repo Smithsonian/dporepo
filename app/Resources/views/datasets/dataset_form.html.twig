@@ -19,26 +19,29 @@
 
     <div class="row">
       <div class="col-sm-6 col-md-6">
-        {{ form_row(form.capture_method_lookup_id) }}
-        {{ form_row(form.dataset_type_lookup_id) }}
-        {{ form_row(form.dataset_name) }}
+        {{ form_row(form.capture_method) }}
+        {{ form_row(form.capture_dataset_type) }}
+        {{ form_row(form.capture_dataset_name) }}
         {{ form_row(form.collected_by) }}
-        {{ form_row(form.collected_by_guid) }}
         {{ form_row(form.date_of_capture) }}
-        {{ form_row(form.dataset_description) }}
-        {{ form_row(form.dataset_collection_notes) }}
+        {{ form_row(form.capture_dataset_description) }}
+        {{ form_row(form.collection_notes) }}
+        {{ form_row(form.item_position_type) }}
       </div>
       <div class="col-sm-6 col-md-6">
-        {{ form_row(form.item_position_type_lookup_id) }}
-        {{ form_row(form.positionally_matched_sets_id) }}
-        {{ form_row(form.motion_control) }}
-        {{ form_row(form.focus_lookup_id) }}
-        {{ form_row(form.light_source) }}
-        {{ form_row(form.light_source_type_lookup_id) }}
-        {{ form_row(form.scale_bars_used) }}
-        {{ form_row(form.background_removal_method_lookup_id) }}
-        {{ form_row(form.camera_cluster_type_lookup_id) }}
-        {{ form_row(form.array_geometry_id) }}
+        {{ form_row(form.positionally_matched_capture_datasets) }}
+        {{ form_row(form.focus_type) }}
+        {{ form_row(form.light_source_type) }}
+        {{ form_row(form.background_removal_method) }}
+        {{ form_row(form.cluster_type) }}
+        {{ form_row(form.cluster_geometry_field_id) }}
+        {{ form_row(form.capture_dataset_guid) }}
+        {{ form_row(form.capture_dataset_field_id) }}
+        {{ form_row(form.support_equipment) }}
+        {{ form_row(form.item_position_field_id) }}
+        {{ form_row(form.item_arrangement_field_id) }}
+        {{ form_row(form.resource_capture_datasets) }}
+        {{ form_row(form.calibration_object_used) }}
       </div>
     </div>
 

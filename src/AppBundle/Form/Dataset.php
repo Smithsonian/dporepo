@@ -17,104 +17,120 @@ class Dataset extends AbstractType
         $data = (array)$options['data'];
 
         $builder
-            ->add('capture_method_lookup_id', ChoiceType::class, array(
+            ->add('capture_method', ChoiceType::class, array(
                 'label' => 'Capture Method',
+                'required' => false,
                 'placeholder' => 'Select',
                 // All options
                 'choices' => $data['capture_methods_lookup_options'],
                 // Selected option
-                'data' => $data['capture_method_lookup_id'],
+                'data' => $data['capture_method'],
                 'attr' => array('class' => 'default-chosen-select'),
               ))
-            ->add('dataset_type_lookup_id', ChoiceType::class, array(
-                'label' => 'Dataset Type',
+            ->add('capture_dataset_type', ChoiceType::class, array(
+                'label' => 'Capture Dataset Type',
+                'required' => false,
                 'placeholder' => 'Select',
                 // All options
                 'choices' => $data['dataset_types_lookup_options'],
                 // Selected option
-                'data' => $data['dataset_type_lookup_id'],
+                'data' => $data['capture_dataset_type'],
                 'attr' => array('class' => 'default-chosen-select'),
               ))
-            ->add('dataset_name', null, array(
-                'label' => 'Dataset Name',
+            ->add('capture_dataset_name', null, array(
+                'label' => 'Capture Dataset Name',
                 'required' => true,
               ))
             ->add('collected_by', null, array(
                 'label' => 'Collected By',
               ))
-            ->add('collected_by_guid', null, array(
-                'label' => 'Collected by Guid',
-              ))
             ->add('date_of_capture', null, array(
                 'label' => 'Date of Capture',
               ))
-            ->add('dataset_description', TextareaType::class, array(
-                'label' => 'Dataset Description',
+            ->add('capture_dataset_description', TextareaType::class, array(
+                'label' => 'Capture Dataset Description',
                 'attr' => array('rows' => '10'),
               ))
-            ->add('dataset_collection_notes', TextareaType::class, array(
-                'label' => 'Dataset Collection Notes',
+            ->add('collection_notes', TextareaType::class, array(
+                'label' => 'Collection Notes',
                 'attr' => array('rows' => '10'),
               ))
-            ->add('item_position_type_lookup_id', ChoiceType::class, array(
+            ->add('item_position_type', ChoiceType::class, array(
                 'label' => 'Item Position Type',
+                'required' => false,
                 'placeholder' => 'Select',
                 // All options
                 'choices' => $data['item_position_types_lookup_options'],
                 // Selected option
-                'data' => $data['item_position_type_lookup_id'],
+                'data' => $data['item_position_type'],
                 'attr' => array('class' => 'default-chosen-select'),
               ))
-            ->add('positionally_matched_sets_id', null, array(
+            ->add('positionally_matched_capture_datasets', null, array(
                 'label' => 'Positionally Matched Sets',
               ))
-            ->add('motion_control', null, array(
-                'label' => 'Motion Control',
-              ))
-            ->add('focus_lookup_id', ChoiceType::class, array(
+            ->add('focus_type', ChoiceType::class, array(
                 'label' => 'Focus Type',
+                'required' => false,
                 'placeholder' => 'Select',
                 // All options
                 'choices' => $data['focus_types_lookup_options'],
                 // Selected option
-                'data' => $data['focus_lookup_id'],
+                'data' => $data['focus_type'],
                 'attr' => array('class' => 'default-chosen-select'),
               ))
-            ->add('light_source', null, array(
-                'label' => 'Light Source',
-              ))
-            ->add('light_source_type_lookup_id', ChoiceType::class, array(
+            ->add('light_source_type', ChoiceType::class, array(
                 'label' => 'Light Source Type',
+                'required' => false,
                 'placeholder' => 'Select',
                 // All options
                 'choices' => $data['light_source_types_lookup_options'],
                 // Selected option
-                'data' => $data['light_source_type_lookup_id'],
+                'data' => $data['light_source_type'],
                 'attr' => array('class' => 'default-chosen-select'),
               ))
-            ->add('scale_bars_used', null, array(
-                'label' => 'Scale Bars Used',
-              ))
-            ->add('background_removal_method_lookup_id', ChoiceType::class, array(
+            ->add('background_removal_method', ChoiceType::class, array(
                 'label' => 'Background Removal Method',
+                'required' => false,
                 'placeholder' => 'Select',
                 // All options
                 'choices' => $data['background_removal_methods_lookup_options'],
                 // Selected option
-                'data' => $data['background_removal_method_lookup_id'],
+                'data' => $data['background_removal_method'],
                 'attr' => array('class' => 'default-chosen-select'),
               ))
-            ->add('camera_cluster_type_lookup_id', ChoiceType::class, array(
+            ->add('cluster_type', ChoiceType::class, array(
                 'label' => 'Camera Cluster Type',
+                'required' => false,
                 'placeholder' => 'Select',
                 // All options
                 'choices' => $data['camera_cluster_types_lookup_options'],
                 // Selected option
-                'data' => $data['camera_cluster_type_lookup_id'],
+                'data' => $data['cluster_type'],
                 'attr' => array('class' => 'default-chosen-select'),
               ))
-            ->add('array_geometry_id', null, array(
-                'label' => 'Array Geometry ID',
+            ->add('cluster_geometry_field_id', null, array(
+                'label' => 'Cluster Geometry Field ID',
+              ))
+            ->add('capture_dataset_guid', null, array(
+                'label' => 'Capture Dataset GUID',
+              ))
+            ->add('capture_dataset_field_id', null, array(
+                'label' => 'Capture Dataset Field ID',
+              ))
+            ->add('support_equipment', null, array(
+                'label' => 'Support Equipment',
+              ))
+            ->add('item_position_field_id', null, array(
+                'label' => 'Item Position Field ID',
+              ))
+            ->add('item_arrangement_field_id', null, array(
+                'label' => 'Item Arrangement Field ID',
+              ))
+            ->add('resource_capture_datasets', null, array(
+                'label' => 'Resource Capture Datasets',
+              ))
+            ->add('calibration_object_used', null, array(
+                'label' => 'Calibration Object Used',
               ))
             
             ->add('save', SubmitType::class, array(

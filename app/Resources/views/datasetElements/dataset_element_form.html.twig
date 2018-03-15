@@ -5,11 +5,11 @@
   <ol class="breadcrumb">
     <li><a href="/admin">Dashboard</a></li>
     <li><a href="/admin/workspace">Browse Projects</a></li>
-    <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ projects_id }}">{{ project_data.projects_label|e }}</a></li>
+    <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ projects_id }}">{{ project_data.project_name|e }}</a></li>
     <li><strong>Subject:</strong> <a href="/admin/projects/items/{{ projects_id }}/{{ subjects_id }}">{{ subject_data.subject_name|e }}</a></li>
     <li><strong>Item:</strong> <a href="/admin/projects/datasets/{{ projects_id }}/{{ subjects_id }}/{{ items_id }}">{{ item_data.item_description_truncated|e }}</a></li>
-    <li><strong>Dataset:</strong> <a href="/admin/projects/dataset_elements/{{ projects_id }}/{{ subjects_id }}/{{ items_id }}/{{ datasets_id }}">{{ dataset_data.dataset_name|e }}</a></li>
-    <li class="active">{% if dataset_element_data.dataset_element_guid is defined %}<strong>Dataset Element:</strong> {{ dataset_element_data.dataset_element_guid|e }}{% else %}Add a New Dataset Element{% endif %}</li>
+    <li><strong>Dataset:</strong> <a href="/admin/projects/dataset_elements/{{ projects_id }}/{{ subjects_id }}/{{ items_id }}/{{ datasets_id }}">{{ dataset_data.capture_dataset_name|e }}</a></li>
+    <li class="active">{% if dataset_element_data.capture_sequence_number is defined %}<strong>Dataset Element:</strong> {{ dataset_element_data.capture_sequence_number|e }}{% else %}Add a New Dataset Element{% endif %}</li>
   </ol>
 
   <div class="row">
@@ -24,19 +24,13 @@
 
     <div class="row">
       <div class="col-sm-6 col-md-6">
-        <div class="form-group">
-          <label class="control-label" for="dataset_element_guid">Dataset Element GUID</label>
-          <p>{{ dataset_element_data.dataset_element_guid }}</p>
-        </div>
-        {{ form_row(form.camera_id) }}
-        {{ form_row(form.camera_capture_position_id) }}
-        {{ form_row(form.cluster_position_id) }}
+        {{ form_row(form.capture_device_configuration_id) }}
+        {{ form_row(form.capture_device_field_id) }}
+        {{ form_row(form.capture_sequence_number) }}
       </div>
       <div class="col-sm-6 col-md-6">
-        {{ form_row(form.calibration_object_type_id) }}
-        {{ form_row(form.exif_data_placeholder) }}
-        {{ form_row(form.camera_body) }}
-        {{ form_row(form.lens) }}
+        {{ form_row(form.cluster_position_field_id) }}
+        {{ form_row(form.position_in_cluster_field_id) }}
       </div>
     </div>
 

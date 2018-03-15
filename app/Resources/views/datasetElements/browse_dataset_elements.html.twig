@@ -11,21 +11,21 @@
   <ol class="breadcrumb">
     <li><a href="/admin">Dashboard</a></li>
     <li><a href="/admin/workspace">Browse Projects</a></li>
-    <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ projects_id }}">{{ project_data.projects_label|e }}</a></li>
+    <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ projects_id }}">{{ project_data.project_name|e }}</a></li>
     <li><strong>Subject:</strong> <a href="/admin/projects/items/{{ projects_id }}/{{ subjects_id }}">{{ subject_data.subject_name|e }}</a></li>
     <li><strong>Item:</strong> <a href="/admin/projects/datasets/{{ projects_id }}/{{ subjects_id }}/{{ items_id }}">{{ item_data.item_description_truncated|e }}</a></li>
-    <li class="active"><strong>Dataset:</strong> {{ dataset_data.dataset_name|e }}</li>
+    <li class="active"><strong>Capture Dataset:</strong> {{ dataset_data.capture_dataset_name|e }}</li>
   </ol>
 
   <div class="row">
     <div class="col-sm-6 col-md-6">
       <dl class="dl-horizontal">
-        <dt>Dataset Name</dt>
-        <dd>{{ dataset_data.dataset_name|e }}</dd>
+        <dt>Capture Dataset Name</dt>
+        <dd>{{ dataset_data.capture_dataset_name|e }}</dd>
         <dt>Date Of Capture</dt>
         <dd>{{ dataset_data.date_of_capture|e }}</dd>
-        <dt>Dataset Type</dt>
-        <dd>{{ dataset_data.dataset_type|e }}</dd>
+        <dt>Capture Dataset Type</dt>
+        <dd>{{ dataset_data.capture_dataset_type|e }}</dd>
         <dt>Collected By</dt>
         <dd>{{ dataset_data.collected_by|e }}</dd>
       </dl>
@@ -38,25 +38,21 @@
         <dd>{{ dataset_data.date_created|e }}</dd>
         <dt>Last Modified</dt>
         <dd>{{ dataset_data.last_modified|e }}</dd>
-        <dt>Collected By Guid</dt>
-        <dd>{{ dataset_data.collected_by_guid|e }}</dd>
       </dl>
     </div>
+  </div>
 
-    <div class="col-sm-6 col-md-6 col-hidden-toggle">
+  <div class="row">
+    <div class="col-sm-6 col-md-6 col-hidden-toggle clearfix">
       <dl class="dl-horizontal">
         <dt>Positionally Matched Sets ID</dt>
-        <dd>{{ dataset_data.positionally_matched_sets_id|e }}</dd>
-        <dt>Motion Control</dt>
-        <dd>{{ dataset_data.motion_control|e }}</dd>
+        <dd>{{ dataset_data.positionally_matched_capture_datasets|e }}</dd>
         <dt>Light Source</dt>
-        <dd>{{ dataset_data.light_source|e }}</dd>
-        <dt>Scale Bars Used</dt>
-        <dd>{{ dataset_data.scale_bars_used|e }}</dd>
-        <dt>Array Geometry ID</dt>
-        <dd>{{ dataset_data.array_geometry_id|e }}</dd>
+        <dd>{{ dataset_data.light_source_type|e }}</dd>
+        <dt>Cluster Geometry Geometry ID</dt>
+        <dd>{{ dataset_data.cluster_geometry_field_id|e }}</dd>
         <dt>Dataset Guid</dt>
-        <dd>{{ dataset_data.dataset_guid|e }}</dd>
+        <dd>{{ dataset_data.capture_dataset_guid|e }}</dd>
       </dl>
     </div>
     <div class="col-sm-6 col-md-6 col-hidden-toggle">
@@ -76,9 +72,9 @@
     <div class="col-sm-12 col-md-12 col-hidden-toggle">
       <dl class="dl-horizontal">
         <dt>Dataset Description</dt>
-        <dd>{{ dataset_data.dataset_description|e|nl2br }}</dd>
+        <dd>{{ dataset_data.capture_dataset_description|e|nl2br }}</dd>
         <dt>Dataset Collection Notes</dt>
-        <dd>{{ dataset_data.dataset_collection_notes|e|nl2br }}</dd>
+        <dd>{{ dataset_data.collection_notes|e|nl2br }}</dd>
       </dl>
     </div>
 
@@ -104,7 +100,11 @@
               <tr>
                 <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
                 <th class="text-center">Download</th>
-                <th class="text-center">Dataset Element GUID</th>
+                <th class="text-center">Capture Device Configuration ID</th>
+                <th class="text-center">Capture Device Field ID</th>
+                <th class="text-center">Capture Sequence Number</th>
+                <th class="text-center">Cluster Position Field ID</th>
+                <th class="text-center">Position In Cluster Field ID</th>
                 <th class="text-center">Last Modified</th>
               </tr>
             </thead>
@@ -135,13 +135,17 @@
         "columns": [
             { "data": "manage" },
             { "data": "manage" },
-            { "data": "dataset_element_guid" },
+            { "data": "capture_device_configuration_id" },
+            { "data": "capture_device_field_id" },
+            { "data": "capture_sequence_number" },
+            { "data": "cluster_position_field_id" },
+            { "data": "position_in_cluster_field_id" },
             { "data": "last_modified" }
           ],
         "dom": 'lfip<"datatables_bulk_actions">tip',
         "pagingType": "simple_numbers",
         "stateSave": true,
-        "order": [[3,"desc"]],
+        "order": [[7,"desc"]],
         // Show processing throbber.
         "processing": true,
         "serverMethod": "POST",

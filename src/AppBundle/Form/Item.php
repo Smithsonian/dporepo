@@ -16,8 +16,6 @@ class Item extends AbstractType
 
         $data = (array)$options['data'];
 
-
-
         $builder
             ->add('item_guid', null, array(
                 'label' => 'Item GUID',
@@ -31,7 +29,8 @@ class Item extends AbstractType
                 'attr' => array('rows' => '10'),
               ))
             ->add('item_type', ChoiceType::class, array(
-                'label' => 'Subject Type',
+                'label' => 'Item Type',
+                'required' => false,
                 'placeholder' => 'Select',
                 // All options
                 'choices' => $data['item_type_lookup_options'],

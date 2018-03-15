@@ -171,10 +171,10 @@ class ItemsController extends Controller
             ,items.last_modified
             ,items.items_id AS DT_RowId
             ,status_types.label AS status_label
-            ,count(distinct capture_datasets.items_id) AS datasets_count
+            ,count(distinct capture_datasets.parent_item_repository_id) AS datasets_count
             FROM items
             LEFT JOIN status_types ON items.status_types_id = status_types.status_types_id
-            LEFT JOIN capture_datasets ON capture_datasets.items_id = items.items_id
+            LEFT JOIN capture_datasets ON capture_datasets.parent_item_repository_id = items.items_id
             WHERE items.active = 1
             AND subjects_id = " . (int)$subjects_id . "
             {$search_sql}
@@ -286,6 +286,7 @@ class ItemsController extends Controller
             items.item_guid
             ,items.local_item_id
             ,items.item_description
+            ,items.item_type
             ,items.status_types_id
             ,items.last_modified
             ,items.items_id
@@ -400,11 +401,13 @@ class ItemsController extends Controller
                 UPDATE items
                 SET local_item_id = :local_item_id
                 ,item_description = :item_description
+                ,item_type = :item_type
                 ,last_modified_user_account_id = :last_modified_user_account_id
                 WHERE items_id = :items_id
             ");
             $statement->bindValue(":local_item_id", $data->local_item_id, PDO::PARAM_STR);
             $statement->bindValue(":item_description", $data->item_description, PDO::PARAM_STR);
+            $statement->bindValue(":item_type", $data->item_type, PDO::PARAM_STR);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->bindValue(":items_id", $items_id, PDO::PARAM_INT);
             $statement->execute();
@@ -416,13 +419,14 @@ class ItemsController extends Controller
         if(!$items_id) {
 
             $statement = $conn->prepare("INSERT INTO items
-                ( subjects_id, item_guid, local_item_id, item_description, 
+                ( subjects_id, item_guid, local_item_id, item_description, item_type, 
                 date_created, created_by_user_account_id, last_modified_user_account_id )
-                VALUES (:subjects_id, (select md5(UUID())), :local_item_id, :item_description, NOW(), 
+                VALUES (:subjects_id, (select md5(UUID())), :local_item_id, :item_description, :item_type, NOW(), 
                 :user_account_id, :user_account_id )");
             $statement->bindValue(":subjects_id", $subjects_id, PDO::PARAM_STR);
             $statement->bindValue(":local_item_id", $data->local_item_id, PDO::PARAM_STR);
             $statement->bindValue(":item_description", $data->item_description, PDO::PARAM_STR);
+            $statement->bindValue(":item_type", $data->item_type, PDO::PARAM_STR);
             $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->execute();
             $last_inserted_id = $conn->lastInsertId();
