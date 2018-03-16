@@ -107,11 +107,13 @@ class DatasetsController extends Controller
         $req = $request->request->all();
         $items_id = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;
 
+        // $this->u->dumper($req);
+
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+        $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
-
         $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
 
         if (!empty($sort_field) && !empty($sort_order)) {
@@ -180,22 +182,15 @@ class DatasetsController extends Controller
               capture_datasets.capture_datasets_id AS manage
               ,capture_datasets.capture_dataset_guid
               ,capture_datasets.capture_dataset_field_id
-              ,capture_datasets.capture_method
-              ,capture_datasets.capture_dataset_type
               ,capture_datasets.capture_dataset_name
               ,capture_datasets.collected_by
               ,capture_datasets.date_of_capture
               ,capture_datasets.capture_dataset_description
               ,capture_datasets.collection_notes
               ,capture_datasets.support_equipment
-              ,capture_datasets.item_position_type
               ,capture_datasets.item_position_field_id
               ,capture_datasets.item_arrangement_field_id
               ,capture_datasets.positionally_matched_capture_datasets
-              ,capture_datasets.focus_type
-              ,capture_datasets.light_source_type
-              ,capture_datasets.background_removal_method
-              ,capture_datasets.cluster_type
               ,capture_datasets.cluster_geometry_field_id
               ,capture_datasets.resource_capture_datasets
               ,capture_datasets.calibration_object_used
@@ -205,12 +200,12 @@ class DatasetsController extends Controller
               ,capture_datasets.last_modified_user_account_id
               ,capture_datasets.capture_datasets_id AS DT_RowId
               ,capture_methods.label AS capture_method
-              ,dataset_types.label AS dataset_type
+              ,dataset_types.label AS capture_dataset_type
               ,item_position_types.label_alias AS item_position_type
               ,focus_types.label AS focus_type
               ,light_source_types.label AS light_source_type
               ,background_removal_methods.label AS background_removal_method
-              ,camera_cluster_types.label AS camera_cluster_type
+              ,camera_cluster_types.label AS cluster_type
           FROM capture_datasets
           LEFT JOIN capture_methods ON capture_methods.capture_methods_id = capture_datasets.capture_method
           LEFT JOIN dataset_types ON dataset_types.dataset_types_id = capture_datasets.capture_dataset_type
@@ -226,8 +221,6 @@ class DatasetsController extends Controller
           {$limit_sql}");
         $statement->execute($pdo_params);
         $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
-
-        // $this->u->dumper($data['aaData']);
 
         $statement = $conn->prepare("SELECT FOUND_ROWS()");
         $statement->execute();
@@ -258,6 +251,8 @@ class DatasetsController extends Controller
 
         // Retrieve data from the database.
         $dataset = (!empty($datasets_id) && empty($post)) ? $dataset->getDataset((int)$datasets_id, $conn) : $dataset;
+
+        // dump($dataset);
         
         // Get data from lookup tables.
         $dataset->capture_methods_lookup_options = $this->get_capture_methods($conn);
@@ -298,13 +293,13 @@ class DatasetsController extends Controller
      *
      * Run queries to insert and update a dataset in the database.
      *
-     * @param   array   $data         The data array
-     * @param   int     $capture_datasets_id  The dataset ID
-     * @param   int     $items_id     The item ID
-     * @param   object  $conn         Database connection object
+     * @param   array   $data                       The data array
+     * @param   int     $capture_datasets_id        The dataset ID
+     * @param   int     $parent_item_repository_id  The item ID
+     * @param   object  $conn                       Database connection object
      * @return  int     The item ID
      */
-    public function insert_update_datasets($data, $capture_datasets_id = FALSE, $items_id = FALSE, $conn)
+    public function insert_update_datasets($data, $capture_datasets_id = FALSE, $parent_item_repository_id = FALSE, $conn)
     {
 
         // Update
@@ -365,14 +360,17 @@ class DatasetsController extends Controller
         }
 
         // Insert
-        if(!$datasets_id) {
+        if(!$capture_datasets_id) {
 
           $statement = $conn->prepare("INSERT INTO capture_datasets
-            (dataset_guid, items_id, capture_method, capture_dataset_type, capture_dataset_name, collected_by, date_of_capture, capture_dataset_description, collection_notes, item_position_type, positionally_matched_capture_datasets, focus_type, light_source_type, background_removal_method, cluster_type, cluster_geometry_field_id, capture_dataset_guid, capture_dataset_field_id, support_equipment, item_position_field_id, item_arrangement_field_id, resource_capture_datasets, calibration_object_used  
-            date_created, created_by_user_account_id, last_modified_user_account_id )
-          VALUES ((select md5(UUID())), :items_id, :capture_method, :capture_dataset_type, :capture_dataset_name, :collected_by, :date_of_capture, :capture_dataset_description, :collection_notes, :item_position_type, :positionally_matched_capture_datasets, :focus_type, :light_source_type, :background_removal_method, :cluster_type, :cluster_geometry_field_id, :capture_dataset_guid, :capture_dataset_field_id, :support_equipment, :item_position_field_id, :item_arrangement_field_id, :resource_capture_datasets, :calibration_object_used, 
-            NOW(), :user_account_id, :user_account_id )");
-          $statement->bindValue(":items_id", $items_id, PDO::PARAM_INT);
+            (capture_dataset_guid, parent_item_repository_id, capture_method, capture_dataset_type, capture_dataset_name, collected_by, date_of_capture, 
+            capture_dataset_description, collection_notes, item_position_type, positionally_matched_capture_datasets, focus_type, 
+            light_source_type, background_removal_method, cluster_type, cluster_geometry_field_id, capture_dataset_field_id, support_equipment, item_position_field_id, item_arrangement_field_id, resource_capture_datasets, calibration_object_used, date_created, created_by_user_account_id, last_modified_user_account_id )
+          VALUES ((select md5(UUID())), :parent_item_repository_id, :capture_method, :capture_dataset_type, :capture_dataset_name, :collected_by, :date_of_capture, 
+          :capture_dataset_description, :collection_notes, :item_position_type, :positionally_matched_capture_datasets, :focus_type, 
+          :light_source_type, :background_removal_method, :cluster_type, :cluster_geometry_field_id, :capture_dataset_field_id, :support_equipment, :item_position_field_id, :item_arrangement_field_id, :resource_capture_datasets, :calibration_object_used, NOW(), :user_account_id, :user_account_id )");
+          $statement->bindValue(":capture_dataset_guid", $data->capture_dataset_guid);
+          $statement->bindValue(":parent_item_repository_id", $parent_item_repository_id, PDO::PARAM_INT);
           $statement->bindValue(":capture_method", $data->capture_method);
           $statement->bindValue(":capture_dataset_type", $data->capture_dataset_type);
           $statement->bindValue(":capture_dataset_name", $data->capture_dataset_name);
@@ -387,7 +385,6 @@ class DatasetsController extends Controller
           $statement->bindValue(":background_removal_method", $data->background_removal_method);
           $statement->bindValue(":cluster_type", $data->cluster_type);
           $statement->bindValue(":cluster_geometry_field_id", $data->cluster_geometry_field_id);
-          $statement->bindValue(":capture_dataset_guid", $data->capture_dataset_guid);
           $statement->bindValue(":capture_dataset_field_id", $data->capture_dataset_field_id);
           $statement->bindValue(":support_equipment", $data->support_equipment);
           $statement->bindValue(":item_position_field_id", $data->item_position_field_id);
@@ -524,7 +521,7 @@ class DatasetsController extends Controller
           ,capture_datasets.last_modified
           ,capture_datasets.last_modified_user_account_id
           ,capture_methods.label AS capture_method
-          ,dataset_types.label AS dataset_type
+          ,dataset_types.label AS capture_dataset_type
           ,item_position_types.label_alias AS item_position_type
           ,focus_types.label AS focus_type
           ,light_source_types.label AS light_source_type
@@ -752,45 +749,45 @@ class DatasetsController extends Controller
     public function create_capture_datasets_table($conn)
     {
         $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `capture_datasets` (
-            `capture_datasets_id` int(11) NOT NULL AUTO_INCREMENT,
-            `capture_dataset_guid` varchar(255) NOT NULL DEFAULT '',
-            `parent_project_repository_id` int(255) DEFAULT NULL,
-            `parent_item_repository_id` int(11) NOT NULL,
-            `capture_dataset_field_id` int(11) NOT NULL,
-            `capture_method` int(11) NOT NULL,
-            `capture_dataset_type` int(11) DEFAULT NULL,
-            `capture_dataset_name` varchar(255) NOT NULL DEFAULT '',
-            `collected_by` varchar(255) NOT NULL DEFAULT '',
-            `date_of_capture` datetime NOT NULL,
-            `capture_dataset_description` text,
-            `collection_notes` text,
-            `support_equipment` varchar(255) DEFAULT NULL,
-            `item_position_type` int(11) NOT NULL,
-            `item_position_field_id` int(11) NOT NULL,
-            `item_arrangement_field_id` int(11) NOT NULL,
-            `positionally_matched_capture_datasets` varchar(255) NOT NULL DEFAULT '',
-            `focus_type` int(11) NOT NULL,
-            `light_source_type` int(11) NOT NULL,
-            `background_removal_method` int(11) NOT NULL,
-            `cluster_type` int(11) NOT NULL,
-            `cluster_geometry_field_id` int(11) DEFAULT NULL,
-            `resource_capture_datasets` varchar(255) DEFAULT '',
-            `calibration_object_used` varchar(255) DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`capture_datasets_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-          ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COMMENT='This table stores dataset metadata'");
+          `capture_datasets_id` int(11) NOT NULL AUTO_INCREMENT,
+          `capture_dataset_guid` varchar(255) NOT NULL DEFAULT '',
+          `parent_project_repository_id` int(255) DEFAULT NULL,
+          `parent_item_repository_id` int(11) NOT NULL,
+          `capture_dataset_field_id` int(11) NOT NULL,
+          `capture_method` int(11) DEFAULT NULL,
+          `capture_dataset_type` int(11) DEFAULT NULL,
+          `capture_dataset_name` varchar(255) NOT NULL DEFAULT '',
+          `collected_by` varchar(255) NOT NULL DEFAULT '',
+          `date_of_capture` datetime NOT NULL,
+          `capture_dataset_description` text,
+          `collection_notes` text,
+          `support_equipment` varchar(255) DEFAULT NULL,
+          `item_position_type` int(11) DEFAULT NULL,
+          `item_position_field_id` int(11) NOT NULL,
+          `item_arrangement_field_id` int(11) NOT NULL,
+          `positionally_matched_capture_datasets` varchar(255) DEFAULT '',
+          `focus_type` int(11) DEFAULT NULL,
+          `light_source_type` int(11) DEFAULT NULL,
+          `background_removal_method` int(11) DEFAULT NULL,
+          `cluster_type` int(11) DEFAULT NULL,
+          `cluster_geometry_field_id` int(11) DEFAULT NULL,
+          `resource_capture_datasets` varchar(255) DEFAULT '',
+          `calibration_object_used` varchar(255) DEFAULT '',
+          `date_created` datetime NOT NULL,
+          `created_by_user_account_id` int(11) NOT NULL,
+          `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          `last_modified_user_account_id` int(11) NOT NULL,
+          `active` tinyint(1) NOT NULL DEFAULT '1',
+          PRIMARY KEY (`capture_datasets_id`),
+          KEY `created_by_user_account_id` (`created_by_user_account_id`),
+          KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
+        ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8 COMMENT='This table stores capture_datasets metadata'");
         $statement->execute();
         $error = $conn->errorInfo();
 
         if ($error[0] !== '00000') {
             var_dump($conn->errorInfo());
-            die('CREATE TABLE `datasets` failed.');
+            die('CREATE TABLE `capture_datasets` failed.');
         } else {
             return TRUE;
         }

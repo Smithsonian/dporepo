@@ -115,28 +115,10 @@ class ItemsController extends Controller
         }
 
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+        $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
-
-        switch($req['order'][0]['column']) {
-            case '1':
-                $sort_field = 'item_description';
-                break;
-            case '2':
-                $sort_field = 'local_item_id';
-                break;
-            case '3':
-                $sort_field = 'date_created';
-                break;
-            case '4':
-                $sort_field = 'last_modified';
-                break;
-            case '5':
-                $sort_field = 'status_label';
-                break;
-        }
-
         $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
 
         if (!empty($sort_field) && !empty($sort_order)) {
@@ -742,21 +724,23 @@ class ItemsController extends Controller
     public function create_items_table($conn)
     {
         $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `items` (
-            `items_id` int(11) NOT NULL AUTO_INCREMENT,
-            `item_guid` varchar(255) NOT NULL DEFAULT '',
-            `subjects_id` int(11) NOT NULL,
-            `local_item_id` varchar(255) NOT NULL DEFAULT '',
-            `item_description` mediumtext NOT NULL,
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            `status_types_id` int(11) NOT NULL DEFAULT '0',
-            PRIMARY KEY (`items_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='This table stores item metadata'");
+          `items_id` int(11) NOT NULL AUTO_INCREMENT,
+          `subjects_id` int(11) NOT NULL,
+          `local_item_id` varchar(255) DEFAULT '',
+          `item_guid` varchar(255) DEFAULT '',
+          `item_description` mediumtext,
+          `item_type` varchar(255) DEFAULT NULL,
+          `date_created` datetime NOT NULL,
+          `created_by_user_account_id` int(11) NOT NULL,
+          `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          `last_modified_user_account_id` int(11) NOT NULL,
+          `active` tinyint(1) NOT NULL DEFAULT '1',
+          `status_types_id` int(11) NOT NULL DEFAULT '0',
+          PRIMARY KEY (`items_id`),
+          KEY `created_by_user_account_id` (`created_by_user_account_id`),
+          KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
+          KEY `item_guid` (`item_guid`,`subjects_id`)
+        ) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8 COMMENT='This table stores item metadata'");
 
         $statement->execute();
         $error = $conn->errorInfo();

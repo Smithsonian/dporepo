@@ -23,10 +23,12 @@ class Project extends AbstractType
               ))
             ->add('project_description', TextareaType::class, array(
                 'label' => 'Project Description',
+                'required' => false,
                 'attr' => array('rows' => '10'),
               ))
             ->add('stakeholder_guid_picker', ChoiceType::class, array(
                 'label' => 'Stakeholder',
+                'required' => false,
                 'placeholder' => 'Select SI Unit',
                 // All options
                 'choices' => $data['stakeholder_guid_options'],

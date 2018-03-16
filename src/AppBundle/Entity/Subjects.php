@@ -23,17 +23,12 @@ class Subjects
     /**
      * @var string
      */
-    public $location_information;
+    public $holding_entity_guid;
 
     /**
      * @var int
      */
-    public $holding_entity_guid;
-
-    /**
-     * @var string
-     */
-    public $subject_holder_subject_id;
+    public $local_subject_id;
     
     /**
      * Get Subject

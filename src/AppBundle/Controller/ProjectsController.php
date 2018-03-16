@@ -65,7 +65,7 @@ class ProjectsController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_projects(Connection $conn, Request $request)
+    public function datatables_browse_projects(Connection $conn, Request $request, SubjectsController $subjects)
     {
 
         $sort = '';
@@ -75,28 +75,10 @@ class ProjectsController extends Controller
 
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+        $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
-
-        switch($req['order'][0]['column']) {
-            case '0':
-                $sort_field = 'project_name';
-                break;
-            case '1':
-                $sort_field = 'stakeholder_label';
-                break;
-            case '2':
-                $sort_field = 'subjects_count';
-                break;
-            case '3':
-                $sort_field = 'date_created';
-                break;
-            case '4':
-                $sort_field = 'last_modified';
-                break;
-        }
-
         $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
 
         if (!empty($sort_field) && !empty($sort_order)) {
@@ -121,13 +103,13 @@ class ProjectsController extends Controller
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
                 projects.projects_id as manage
+                ,projects.projects_id
                 ,projects.project_name
                 ,projects.stakeholder_guid
                 ,projects.date_created
                 ,projects.last_modified
                 ,projects.active
                 ,projects.projects_id AS DT_RowId
-                ,count(distinct subjects.subjects_id) AS subjects_count
                 ,isni_data.isni_label AS stakeholder_label
             FROM projects
             LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
@@ -139,6 +121,14 @@ class ProjectsController extends Controller
             {$limit_sql}");
         $statement->execute($pdo_params);
         $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get the subjects count
+        if(!empty($data['aaData'])) {
+            foreach ($data['aaData'] as $key => $value) {
+                $project_subjects = $subjects->get_subjects($conn, $value['projects_id']);
+                $data['aaData'][$key]['subjects_count'] = count($project_subjects);
+            }
+        }
 
         $statement = $conn->prepare("SELECT FOUND_ROWS()");
         $statement->execute();
@@ -528,9 +518,9 @@ class ProjectsController extends Controller
     {
         $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `projects` (
           `projects_id` int(11) NOT NULL AUTO_INCREMENT,
-          `project_name` varchar(255) NOT NULL DEFAULT '',
-          `stakeholder_guid` varchar(255) NOT NULL DEFAULT '',
-          `project_description` mediumtext NOT NULL,
+          `project_name` varchar(255) DEFAULT '',
+          `stakeholder_guid` varchar(255) DEFAULT '',
+          `project_description` text,
           `date_created` datetime NOT NULL,
           `created_by_user_account_id` int(11) NOT NULL,
           `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -538,8 +528,9 @@ class ProjectsController extends Controller
           `active` tinyint(1) NOT NULL DEFAULT '1',
           PRIMARY KEY (`projects_id`),
           KEY `created_by_user_account_id` (`created_by_user_account_id`),
-          KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='This table stores project metadata'");
+          KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
+          KEY `projects_label` (`project_name`,`stakeholder_guid`)
+        ) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8 COMMENT='This table stores projects metadata'");
 
         $statement->execute();
         $error = $conn->errorInfo();

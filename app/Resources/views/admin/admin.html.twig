@@ -34,10 +34,10 @@
         <thead>
           <tr>
             <th class="text-center">Project</th>
-            <th class="text-center">Unit (Stakeholder)</th>
+            <th class="text-center">Stakeholder</th>
             <th class="text-center">Subjects Count</th>
-            <th class="text-center">Last Modified</th>
-            <th class="text-center">Creation Date</th>
+            <th class="text-center">Created</th>
+            <th class="text-center">Modified</th>
           </tr>
         </thead>
       </table>
@@ -53,11 +53,8 @@
         <thead>
           <tr>
             <th class="text-center">Subject Name</th>
-            <th class="text-center">Subject Description</th>
             <th class="text-center">Holding Unit Name</th>
-            {# <th class="text-center">Location Information</th> #}
             <th class="text-center">Items Count</th>
-            {# <th class="text-center">Processed items</th> #}
             <th class="text-center">Last Modified</th>
           </tr>
         </thead>
@@ -119,7 +116,7 @@
          "lengthMenu":[5,10,20,50],
          // Set some widths.
          "aoColumnDefs":[
-            {"sWidth":"33%","aTargets":[1,2]}
+            {"sWidth":"15%","aTargets":[2]}
             // ,{"bSortable":false,"aTargets":[0]}
          ],
          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
@@ -141,40 +138,36 @@
 
       // Recent projects
       $('#browse_recent_projects').dataTable( {
-         "columns": [
-             { "data": "projects_label" },
-             { "data": "stakeholder_label" },
-             { "data": "subjects_count" },
-             { "data": "last_modified" },
-             { "data": "date_created" }
-           ],
-         "dom": 'lfip<"datatables_bulk_actions">tip',
-         "pagingType": "simple_numbers",
-         "stateSave": true,
-         "order": [[3,"desc"]],
-         // Show processing throbber.
-         "processing": true,
-         "serverMethod": "POST",
-          // All data management will be done on the server side.
-         "serverSide": true,
-         // Path to the file that is going to handle the queries.
-         "ajax": "/admin/datatables_browse_recent_projects/",
-         // Method type.
-         "serverMethod": "POST",
-         // Values in the length dropdown.
-         "lengthMenu":[5,10,20,50],
-         // Set some widths.
-         "aoColumnDefs":[
-            {"sWidth":"26%","aTargets":[0]}
-            // ,{"bSortable":false,"aTargets":[0]}
-         ],
-         "fnRowCallback":function(nRow, aData, iDisplayIndex) {
-           // // Create the checkboxes.
-           // $(nRow).find('td:eq(0)').html(
-           //  "<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
-           // )
-           // .addClass("manage_column");
-          }
+        "columns": [
+          { "data": "project_name" },
+          { "data": "stakeholder_label" },
+          { "data": "subjects_count" },
+          { "data": "date_created" },
+          { "data": "last_modified" }
+        ],
+        "dom": 'lfip<"datatables_bulk_actions">tip',
+        "pagingType": "simple_numbers",
+        "stateSave": true,
+        "order": [[4,"desc"]],
+        // Show processing throbber.
+        "processing": true,
+        "serverMethod": "POST",
+        // All data management will be done on the server side.
+        "serverSide": true,
+        // Path to the file that is going to handle the queries.
+        "ajax": "/admin/datatables_browse_recent_projects/",
+        // Method type.
+        "serverMethod": "POST",
+        // Values in the length dropdown.
+        "lengthMenu":[5,10,20,50],
+        // Set some widths.
+        "aoColumnDefs":[
+          {"sWidth":"10%","aTargets":[2]},
+          {"bSortable":false,"aTargets":[2]}
+        ],
+        "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+          // Placeholder
+        }
        });
 
       // Send to details page when clicked.
@@ -190,17 +183,14 @@
       $('#browse_recent_subjects').dataTable( {
          "columns": [
               { "data": "subject_name" },
-              { "data": "subject_description" },
               { "data": "holding_entity_guid" },
-              // { "data": "location_information" },
               { "data": "items_count" },
-              // { "data": "manage" },
               { "data": "last_modified" }
             ],
           "dom": 'lfip<"datatables_bulk_actions">tip',
           "pagingType": "simple_numbers",
           "stateSave": true,
-          "order": [[4,"desc"]],
+          "order": [[3,"desc"]],
           // Show processing throbber.
           "processing": true,
           "serverMethod": "POST",
@@ -214,8 +204,8 @@
           "lengthMenu":[5,10,20,50],
           // Set some widths.
           "aoColumnDefs":[
-            {"sWidth":"250px","aTargets":[0]},
-            // {"bSortable":false,"aTargets":[0]}
+            {"sWidth":"10%","aTargets":[2]},
+            {"bSortable":false,"aTargets":[2]}
           ],
           "fnRowCallback":function(nRow, aData, iDisplayIndex) {
 

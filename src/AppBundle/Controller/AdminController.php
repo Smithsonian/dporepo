@@ -10,11 +10,14 @@ use Doctrine\DBAL\Driver\Connection;
 
 use Symfony\Component\HttpFoundation\Session\Session;
 use PDO;
-use GUMP;
 
 // Custom utility bundles
-use AppBundle\Utils\GumpParseErrors;
 use AppBundle\Utils\AppUtilities;
+
+// Subjects methods
+use AppBundle\Controller\SubjectsController;
+// Items methods
+use AppBundle\Controller\ItemsController;
 
 class AdminController extends Controller
 {
@@ -70,12 +73,13 @@ class AdminController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_recent_projects(Connection $conn, Request $request)
+    public function datatables_browse_recent_projects(Connection $conn, Request $request, SubjectsController $subjects)
     {
         $sort = $search_sql = '';
         $pdo_params = $data = array();
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+        $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
@@ -83,22 +87,6 @@ class AdminController extends Controller
         $date_today = date('Y-m-d H:i:s');
         // Date limit
         $date_limit = date('Y-m-d H:i:s', strtotime('-240 days'));
-
-        switch($req['order'][0]['column']) {
-            case '0':
-                $sort_field = 'projects_label';
-                break;
-            case '1':
-                $sort_field = 'stakeholder_guid';
-                break;
-            case '2':
-                $sort_field = 'subjects_count';
-                break;
-            case '3':
-                $sort_field = 'active';
-                break;
-        }
-
         $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
 
         if (!empty($sort_field) && !empty($sort_order)) {
@@ -114,35 +102,43 @@ class AdminController extends Controller
             $pdo_params[] = '%' . $search . '%';
             $search_sql = "
             AND (
-                projects.projects_label LIKE ?
-                OR projects.stakeholder_guid LIKE ?
+                projects.project_name LIKE ?
+                OR projects.stakeholder_label LIKE ?
                 OR projects.date_created LIKE ?
                 OR projects.last_modified LIKE ?
             ) ";
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-                projects.projects_label
+                projects.projects_id as manage
+                ,projects.projects_id
+                ,projects.project_name
                 ,projects.stakeholder_guid
                 ,projects.date_created
                 ,projects.last_modified
                 ,projects.active
                 ,projects.projects_id AS DT_RowId
-                ,count(distinct subjects.subjects_id) AS subjects_count
                 ,isni_data.isni_label AS stakeholder_label
             FROM projects
             LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
             LEFT JOIN subjects ON subjects.projects_id = projects.projects_id
-            WHERE 1 = 1
-            AND projects.active = 1
+            WHERE projects.active = 1
             AND projects.last_modified < '{$date_today}'
             AND projects.last_modified > '{$date_limit}'
             {$search_sql}
-            GROUP BY projects.projects_label, projects.stakeholder_guid, projects.date_created, projects.last_modified, projects.active, projects.projects_id
+            GROUP BY projects.project_name, projects.stakeholder_guid, projects.date_created, projects.last_modified, projects.active, projects.projects_id
             {$sort}
             {$limit_sql}");
         $statement->execute($pdo_params);
         $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get the subjects count
+        if(!empty($data['aaData'])) {
+            foreach ($data['aaData'] as $key => $value) {
+                $project_subjects = $subjects->get_subjects($conn, $value['projects_id']);
+                $data['aaData'][$key]['subjects_count'] = count($project_subjects);
+            }
+        }
 
         $statement = $conn->prepare("SELECT FOUND_ROWS()");
         $statement->execute();
@@ -164,12 +160,13 @@ class AdminController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_recent_subjects(Connection $conn, Request $request)
+    public function datatables_browse_recent_subjects(Connection $conn, Request $request, ItemsController $items)
     {
         $sort = $search_sql = '';
         $pdo_params = $data = array();
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+        $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
@@ -177,25 +174,6 @@ class AdminController extends Controller
         $date_today = date('Y-m-d H:i:s');
         // Date limit
         $date_limit = date('Y-m-d H:i:s', strtotime('-240 days'));
-
-        switch($req['order'][0]['column']) {
-            case '0':
-                $sort_field = 'subject_name';
-                break;
-            case '1':
-                $sort_field = 'subject_description';
-                break;
-            case '2':
-                $sort_field = 'holding_entity_guid';
-                break;
-            case '3':
-                $sort_field = 'items_count';
-                break;
-            case '4':
-                $sort_field = 'last_modified';
-                break;
-        }
-
         $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
 
         if (!empty($sort_field) && !empty($sort_order)) {
@@ -208,59 +186,41 @@ class AdminController extends Controller
             $pdo_params[] = '%'.$search.'%';
             $pdo_params[] = '%'.$search.'%';
             $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
             $search_sql = "
                 AND (
                   subjects.subject_name LIKE ?
-                  OR subjects.subject_description LIKE ?
                   OR subjects.holding_entity_guid LIKE ?
-                  OR subjects.items_count LIKE ?
                   OR subjects.last_modified LIKE ?
                 ) ";
         }
 
-        // $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-        //       subjects.subjects_id AS manage
-        //       ,subjects.projects_id
-        //       ,subjects.holding_entity_guid
-        //       ,subjects.subject_holder_subject_id
-        //       ,subjects.location_information
-        //       ,subjects.subject_name
-        //       ,subjects.subject_type_lookup_id
-        //       ,subjects.last_modified
-        //       ,subjects.active
-        //       ,subjects.subjects_id AS DT_RowId
-        //   FROM subjects
-        //   WHERE 1 = 1
-        //   {$search_sql}
-        //   {$sort}
-        //   {$limit_sql}");
-        // $statement->execute($pdo_params);
-        // $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
-
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
               subjects.subjects_id AS manage
-              ,subjects.projects_id
+              ,subjects.subjects_id
               ,subjects.holding_entity_guid
-              ,subjects.subject_holder_subject_id
+              ,subjects.local_subject_id
+              ,subjects.subject_guid
               ,subjects.subject_name
-              ,subjects.subject_description
-              ,subjects.subject_type_lookup_id
               ,subjects.last_modified
               ,subjects.active
               ,subjects.subjects_id AS DT_RowId
-              ,count(distinct items.items_id) AS items_count
           FROM subjects
           LEFT JOIN items ON items.subjects_id = subjects.subjects_id
-          WHERE 1 = 1
-          AND subjects.active = 1
+          WHERE subjects.active = 1
           {$search_sql}
-          GROUP BY subjects.holding_entity_guid, subjects.subject_holder_subject_id, subjects.subject_name, subjects.subject_description, subjects.subject_type_lookup_id, subjects.last_modified, subjects.active, subjects.subjects_id
+          GROUP BY subjects.holding_entity_guid, subjects.local_subject_id, subjects.subject_guid, subjects.subject_name, subjects.last_modified, subjects.active, subjects.subjects_id
           {$sort}
           {$limit_sql}");
         $statement->execute($pdo_params);
         $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get the items count
+        if(!empty($data['aaData'])) {
+            foreach ($data['aaData'] as $key => $value) {
+                $subject_items = $items->get_items($conn, $value['subjects_id']);
+                $data['aaData'][$key]['items_count'] = count($subject_items);
+            }
+        }
 
         $statement = $conn->prepare("SELECT FOUND_ROWS()");
         $statement->execute();

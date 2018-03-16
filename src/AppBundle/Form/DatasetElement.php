@@ -18,13 +18,13 @@ class DatasetElement extends AbstractType
         $builder
             ->add('capture_device_configuration_id', null, array(
                 'label' => 'Capture Device Configuration ID',
-                'required' => true,
               ))
             ->add('capture_device_field_id', null, array(
                 'label' => 'Capture Device Field ID',
               ))
             ->add('capture_sequence_number', null, array(
                 'label' => 'Capture Sequence Number',
+                'required' => true,
               ))
             ->add('cluster_position_field_id', null, array(
                 'label' => 'Cluster Position Field ID',

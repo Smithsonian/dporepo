@@ -43,13 +43,16 @@ class Dataset extends AbstractType
               ))
             ->add('collected_by', null, array(
                 'label' => 'Collected By',
+                'required' => true,
               ))
             ->add('date_of_capture', null, array(
                 'label' => 'Date of Capture',
+                'required' => true,
               ))
             ->add('capture_dataset_description', TextareaType::class, array(
                 'label' => 'Capture Dataset Description',
                 'attr' => array('rows' => '10'),
+                'required' => true,
               ))
             ->add('collection_notes', TextareaType::class, array(
                 'label' => 'Collection Notes',
@@ -110,27 +113,35 @@ class Dataset extends AbstractType
               ))
             ->add('cluster_geometry_field_id', null, array(
                 'label' => 'Cluster Geometry Field ID',
+                'required' => true,
               ))
             ->add('capture_dataset_guid', null, array(
                 'label' => 'Capture Dataset GUID',
+                'required' => true,
               ))
             ->add('capture_dataset_field_id', null, array(
                 'label' => 'Capture Dataset Field ID',
+                'required' => true,
               ))
             ->add('support_equipment', null, array(
                 'label' => 'Support Equipment',
+                'required' => true,
               ))
             ->add('item_position_field_id', null, array(
                 'label' => 'Item Position Field ID',
+                'required' => true,
               ))
             ->add('item_arrangement_field_id', null, array(
                 'label' => 'Item Arrangement Field ID',
+                'required' => true,
               ))
             ->add('resource_capture_datasets', null, array(
                 'label' => 'Resource Capture Datasets',
+                'required' => true,
               ))
             ->add('calibration_object_used', null, array(
                 'label' => 'Calibration Object Used',
+                'required' => true,
               ))
             
             ->add('save', SubmitType::class, array(

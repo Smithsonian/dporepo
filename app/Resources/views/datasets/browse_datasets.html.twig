@@ -59,29 +59,29 @@
               <tr>
                 <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
                 <th class="text-center">Download</th>
-                <th class="text-center">Capture Dataset Guid</th>
-                <th class="text-center">Capture Dataset Field ID</th>
-                <th class="text-center">Capture Method</th>
-                <th class="text-center">Capture Dataset Type</th>
-                <th class="text-center">Capture Dataset Name</th>
-                <th class="text-center">Collected By</th>
-                <th class="text-center">Date of Capture</th>
-                <th class="text-center">Capture Dataset Description</th>
-                <th class="text-center">Collection Notes</th>
-                <th class="text-center">Support Equipment</th>
-                <th class="text-center">Item Position Type</th>
-                <th class="text-center">Item Position Field ID</th>
-                <th class="text-center">Item Arrangement Field ID</th>
-                <th class="text-center">Positionally Matched Capture Datasets</th>
-                <th class="text-center">Focus Type</th>
-                <th class="text-center">Light Source Type</th>
-                <th class="text-center">Background Removal Method</th>
-                <th class="text-center">Cluster Type</th>
-                <th class="text-center">Cluster Geometry Field ID</th>
-                <th class="text-center">Resource Capture Datasets</th>
-                <th class="text-center">Calibration Object Used</th>
-                <th class="text-center">Date Created</th>
-                <th class="text-center">Last Modified</th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
               </tr>
             </thead>
           </table>
@@ -111,35 +111,35 @@
         "columns": [
           { "data": "manage" },
           { "data": "manage" },
-          { "data": "capture_dataset_guid" },
-          { "data": "capture_dataset_field_id" },
-          { "data": "capture_method" },
-          { "data": "capture_dataset_type" },
-          { "data": "capture_dataset_name" },
-          { "data": "collected_by" },
-          { "data": "date_of_capture" },
-          { "data": "capture_dataset_description" },
-          { "data": "collection_notes" },
-          { "data": "support_equipment" },
-          { "data": "item_position_type" },
-          { "data": "item_position_field_id" },
-          { "data": "item_arrangement_field_id" },
-          { "data": "positionally_matched_capture_datasets" },
-          { "data": "focus_type" },
-          { "data": "light_source_type" },
-          { "data": "background_removal_method" },
-          { "data": "cluster_type" },
-          { "data": "cluster_geometry_field_id" },
-          { "data": "resource_capture_datasets" },
-          { "data": "calibration_object_used" },
-          { "data": "date_created" },
-          { "data": "last_modified" },
+          { "data": "capture_dataset_guid", "title": "Capture Dataset Guid" },
+          { "data": "capture_dataset_field_id", "title": "Capture Dataset Field ID" },
+          { "data": "capture_method", "title": "Capture Method" },
+          { "data": "capture_dataset_type", "title": "Capture Dataset Type" },
+          { "data": "capture_dataset_name", "title": "Capture Dataset Name" },
+          { "data": "collected_by", "title": "Collected By" },
+          { "data": "date_of_capture", "title": "Date of Capture" },
+          { "data": "capture_dataset_description", "title": "Capture Dataset Descriptio" },
+          { "data": "collection_notes", "title": "Collection Notes" },
+          { "data": "support_equipment", "title": "Support Equipment" },
+          { "data": "item_position_type", "title": "Item Position Type" },
+          { "data": "item_position_field_id", "title": "Item Position Field ID" },
+          { "data": "item_arrangement_field_id", "title": "Item Arrangement Field ID" },
+          { "data": "positionally_matched_capture_datasets", "title": "Positionally Matched Capture Datasets" },
+          { "data": "focus_type", "title": "Focus Type" },
+          { "data": "light_source_type", "title": "Light Source Type" },
+          { "data": "background_removal_method", "title": "Background Removal Method" },
+          { "data": "cluster_type", "title": "Cluster Type" },
+          { "data": "cluster_geometry_field_id", "title": "Cluster Geometry Field ID" },
+          { "data": "resource_capture_datasets", "title": "Resource Capture Datasets" },
+          { "data": "calibration_object_used", "title": "Calibration Object Used" },
+          { "data": "date_created", "title": "Date Created" },
+          { "data": "last_modified", "title": "Last Modified" },
         ],
         // "dom": 'Bfrtipt',
         "dom": 'lfip<"datatables_bulk_actions"B>tip',
         "pagingType": "simple_numbers",
         "stateSave": true,
-        "order": [[22,"desc"]],
+        "order": [[24,"desc"]],
         // Show processing throbber.
         "processing": true,
         "serverMethod": "POST",
@@ -156,7 +156,7 @@
           {"sWidth":"106px","aTargets":[0,1]},
           {"bSortable":false,"aTargets":[0]},
           {
-            "targets": [ 2, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 ],
+            "targets": [ 2, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 ],
             "visible": false,
             "searchable": true
           }

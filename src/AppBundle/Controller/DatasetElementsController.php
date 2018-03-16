@@ -59,6 +59,8 @@ class DatasetElementsController extends Controller
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
         $dataset_data = $datasets->get_dataset((int)$datasets_id, $conn);
         if(!$dataset_data) throw $this->createNotFoundException('The record does not exist');
+
+        // dump($dataset_data);
         
         $project_data = $projects->get_project((int)$projects_id, $conn);
         $subject_data = $subjects->get_subject((int)$subjects_id, $conn);
@@ -106,10 +108,10 @@ class DatasetElementsController extends Controller
         $datasets_id = !empty($request->attributes->get('datasets_id')) ? $request->attributes->get('datasets_id') : false;
 
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+        $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
-
         $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
 
         if (!empty($sort_field) && !empty($sort_order)) {
@@ -143,7 +145,7 @@ class DatasetElementsController extends Controller
                 ,capture_data_elements.capture_data_elements_id AS DT_RowId
             FROM capture_data_elements
             WHERE capture_data_elements.active = 1
-            AND capture_data_elements_id = " . (int)$datasets_id . "
+            AND capture_datasets_id = " . (int)$datasets_id . "
             {$search_sql}
             {$sort}
             {$limit_sql}");
@@ -213,7 +215,7 @@ class DatasetElementsController extends Controller
         }
 
         return $this->render('datasetElements/dataset_element_form.html.twig', array(
-            'page_title' => ((int)$dataset_elements_id && isset($dataset_element->dataset_element_guid)) ? 'Dataset Element: ' . $dataset_element->dataset_element_guid : 'Add a Dataset Element',
+            'page_title' => ((int)$dataset_elements_id && isset($dataset_element->capture_sequence_number)) ? 'Dataset Element: ' . $dataset_element->capture_sequence_number : 'Add a Dataset Element',
             'projects_id' => $dataset_element->projects_id,
             'subjects_id' => $dataset_element->subjects_id,
             'items_id' => $dataset_element->items_id,
@@ -235,12 +237,12 @@ class DatasetElementsController extends Controller
      * Run queries to insert and update a capture_data_element in the database.
      *
      * @param   array   $data                 The data array
-     * @param   int     $datasets_id          The dataset ID
+     * @param   int     $capture_datasets_id          The dataset ID
      * @param   int     $capture_data_elements_id  The dataset elements ID
      * @param   object  $conn                 Database connection object
      * @return  int     The item ID
      */
-    public function insert_update_dataset_elements($data, $datasets_id = FALSE, $capture_data_elements_id = FALSE, $conn)
+    public function insert_update_dataset_elements($data, $capture_datasets_id = FALSE, $capture_data_elements_id = FALSE, $conn)
     {
 
         // Update
@@ -270,13 +272,13 @@ class DatasetElementsController extends Controller
         // Insert
         if(!$capture_data_elements_id) {
             $statement = $conn->prepare("INSERT INTO capture_data_elements
-                (datasets_id, capture_device_configuration_id, capture_device_field_id, 
+                (capture_datasets_id, capture_device_configuration_id, capture_device_field_id, 
                 capture_sequence_number, cluster_position_field_id, position_in_cluster_field_id,  
                 date_created, created_by_user_account_id, last_modified_user_account_id )
-                VALUES (:datasets_id, :capture_device_configuration_id, :capture_device_field_id, 
+                VALUES (:capture_datasets_id, :capture_device_configuration_id, :capture_device_field_id, 
                 :capture_sequence_number, :cluster_position_field_id, :position_in_cluster_field_id, 
                 NOW(), :user_account_id, :user_account_id )");
-            $statement->bindValue(":datasets_id", $datasets_id, PDO::PARAM_INT);
+            $statement->bindValue(":capture_datasets_id", $capture_datasets_id, PDO::PARAM_INT);
             $statement->bindValue(":capture_device_configuration_id", $data->capture_device_configuration_id, PDO::PARAM_INT);
             $statement->bindValue(":capture_device_field_id", $data->capture_device_field_id, PDO::PARAM_INT);
             $statement->bindValue(":capture_sequence_number", $data->capture_sequence_number, PDO::PARAM_INT);
@@ -465,30 +467,29 @@ class DatasetElementsController extends Controller
   public function create_capture_dataset_elements_table($conn)
   {
     $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `capture_data_elements` (
-          `capture_data_elements_id` int(11) NOT NULL AUTO_INCREMENT,
-          `capture_datasets_id` int(11) NOT NULL,
-          `capture_device_configuration_id` varchar(255) NOT NULL DEFAULT '',
-          `capture_device_field_id` int(11) NOT NULL,
-          `capture_sequence_number` int(11) NOT NULL,
-          `cluster_position_field_id` int(11) DEFAULT NULL,
-          `position_in_cluster_field_id` int(11) DEFAULT NULL,
-          `date_created` datetime NOT NULL,
-          `created_by_user_account_id` int(11) NOT NULL,
-          `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          `last_modified_user_account_id` int(11) NOT NULL,
-          `active` tinyint(1) NOT NULL DEFAULT '1',
-          PRIMARY KEY (`capture_data_elements_id`),
-          KEY `created_by_user_account_id` (`created_by_user_account_id`),
-          KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
-          KEY `dataset_element_guid` (`capture_device_configuration_id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8 COMMENT='This table stores dataset metadata'");
-
+      `capture_data_elements_id` int(11) NOT NULL AUTO_INCREMENT,
+      `capture_datasets_id` int(11) NOT NULL,
+      `capture_device_configuration_id` varchar(255) DEFAULT '',
+      `capture_device_field_id` int(11) DEFAULT NULL,
+      `capture_sequence_number` int(11) DEFAULT NULL,
+      `cluster_position_field_id` int(11) DEFAULT NULL,
+      `position_in_cluster_field_id` int(11) DEFAULT NULL,
+      `date_created` datetime NOT NULL,
+      `created_by_user_account_id` int(11) NOT NULL,
+      `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      `last_modified_user_account_id` int(11) NOT NULL,
+      `active` tinyint(1) NOT NULL DEFAULT '1',
+      PRIMARY KEY (`capture_data_elements_id`),
+      KEY `created_by_user_account_id` (`created_by_user_account_id`),
+      KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
+      KEY `dataset_element_guid` (`capture_device_configuration_id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8 COMMENT='This table stores capture_data_elements metadata'");
     $statement->execute();
     $error = $conn->errorInfo();
 
     if ($error[0] !== '00000') {
         var_dump($conn->errorInfo());
-        die('CREATE TABLE `datasets` failed.');
+        die('CREATE TABLE `capture_data_elements` failed.');
     } else {
       return TRUE;
     }

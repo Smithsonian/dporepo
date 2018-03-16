@@ -9,14 +9,11 @@ class Projects
 {
 
     /**
-     * @Assert\NotBlank()
-     * @Assert\Length(min="1", max="255")
      * @var string
      */
     public $project_name;
 
     /**
-     * @Assert\Length(min="1", max="255")
      * @var string
      */
     public $stakeholder_guid;
@@ -27,7 +24,6 @@ class Projects
     public $project_description;
 
     /**
-     * @Assert\Length(min="1", max="255")
      * @var int
      */
     public $stakeholder_guid_picker;

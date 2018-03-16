@@ -72,7 +72,7 @@ class SubjectsController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_subjects(Connection $conn, Request $request)
+    public function datatables_browse_subjects(Connection $conn, Request $request, ItemsController $items)
     {
         $sort = '';
         $search_sql = '';
@@ -83,25 +83,10 @@ class SubjectsController extends Controller
         $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
 
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+        $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
-
-        switch($req['order'][0]['column']) {
-            case '0':
-                $sort_field = 'subject_name';
-                break;
-            case '1':
-                $sort_field = 'holding_entity_guid';
-                break;
-            case '2':
-                $sort_field = 'items_count';
-                break;
-            case '3':
-                $sort_field = 'last_modified';
-                break;
-        }
-
         $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
 
         if (!empty($sort_field) && !empty($sort_order)) {
@@ -114,18 +99,17 @@ class SubjectsController extends Controller
             $pdo_params[] = '%'.$search.'%';
             $pdo_params[] = '%'.$search.'%';
             $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
             $search_sql = "
                 AND (
                   subjects.subject_name LIKE ?
                   OR subjects.holding_entity_guid LIKE ?
-                  OR subjects.items_count LIKE ?
                   OR subjects.last_modified LIKE ?
                 ) ";
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
               subjects.subjects_id AS manage
+              ,subjects.subjects_id
               ,subjects.holding_entity_guid
               ,subjects.local_subject_id
               ,subjects.subject_guid
@@ -133,7 +117,6 @@ class SubjectsController extends Controller
               ,subjects.last_modified
               ,subjects.active
               ,subjects.subjects_id AS DT_RowId
-              ,count(distinct items.items_id) AS items_count
           FROM subjects
           LEFT JOIN items ON items.subjects_id = subjects.subjects_id
           WHERE subjects.active = 1
@@ -163,6 +146,10 @@ class SubjectsController extends Controller
                         break;
                 }
                 $data['aaData'][$key]['active'] = '<span class="label label-' . $label . '"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span> ' . $text . '</span>';
+
+                // Get the items count
+                $subject_items = $items->get_items($conn, $value['subjects_id']);
+                $data['aaData'][$key]['items_count'] = count($subject_items);
             }
         }
 
@@ -307,23 +294,22 @@ class SubjectsController extends Controller
      */
     public function insert_update_subject($data, $projects_id = false, $subjects_id = FALSE, $conn)
     {
-        // $this->u->dumper($data);
 
         // Update
         if($subjects_id) {
           $statement = $conn->prepare("
             UPDATE subjects
-            SET local_subject_id = :local_subject_id
+            SET subject_guid = :subject_guid
             ,subject_name = :subject_name
-            ,subject_guid = :subject_guid
             ,holding_entity_guid = :holding_entity_guid
+            ,local_subject_id = :local_subject_id
             ,last_modified_user_account_id = :last_modified_user_account_id
             WHERE subjects_id = :subjects_id
           ");
-          $statement->bindValue(":local_subject_id", $data->local_subject_id, PDO::PARAM_STR);
-          $statement->bindValue(":subject_name", $data->subject_name, PDO::PARAM_STR);
           $statement->bindValue(":subject_guid", $data->subject_guid, PDO::PARAM_STR);
+          $statement->bindValue(":subject_name", $data->subject_name, PDO::PARAM_STR);
           $statement->bindValue(":holding_entity_guid", $data->holding_entity_guid, PDO::PARAM_STR);
+          $statement->bindValue(":local_subject_id", $data->local_subject_id, PDO::PARAM_STR);
           $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
           $statement->bindValue(":subjects_id", $subjects_id, PDO::PARAM_INT);
           $statement->execute();
@@ -335,14 +321,15 @@ class SubjectsController extends Controller
         if(!$subjects_id) {
 
           $statement = $conn->prepare("INSERT INTO subjects
-            (subject_guid, projects_id, local_subject_id, subject_name, holding_entity_guid, 
+            (subject_guid, projects_id, subject_name, holding_entity_guid, local_subject_id, 
             date_created, created_by_user_account_id, last_modified_user_account_id )
-          VALUES ((select md5(UUID())), :projects_id, :local_subject_id, :subject_name, :holding_entity_guid,
+          VALUES (:subject_guid, :projects_id, :subject_name, :holding_entity_guid, :local_subject_id,
              NOW(), :user_account_id, :user_account_id )");
+          $statement->bindValue(":subject_guid", $data->subject_guid, PDO::PARAM_STR);
           $statement->bindValue(":projects_id", $projects_id, PDO::PARAM_INT);
-          $statement->bindValue(":local_subject_id", $data->local_subject_id, PDO::PARAM_STR);
           $statement->bindValue(":subject_name", $data->subject_name, PDO::PARAM_STR);
           $statement->bindValue(":holding_entity_guid", $data->holding_entity_guid, PDO::PARAM_STR);
+          $statement->bindValue(":local_subject_id", $data->local_subject_id, PDO::PARAM_STR);
           $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
           $statement->execute();
           $last_inserted_id = $conn->lastInsertId();
@@ -436,21 +423,23 @@ class SubjectsController extends Controller
     public function create_subjects_table($conn)
     {
         $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `subjects` (
-            `subjects_id` int(11) NOT NULL AUTO_INCREMENT,
-            `projects_id` int(11) NOT NULL,
-            `subject_name` varchar(255) NOT NULL DEFAULT '',
-            `subject_guid` int(11) NOT NULL,
-            `holding_entity_guid` varchar(255) NOT NULL DEFAULT '',
-            `local_subject_id` varchar(255) NOT NULL DEFAULT '',        
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
+          `subjects_id` int(11) NOT NULL AUTO_INCREMENT,
+          `projects_id` int(11) NOT NULL,
+          `local_subject_id` varchar(255) DEFAULT '',
+          `subject_guid` varchar(255) DEFAULT '',
+          `subject_name` varchar(255) DEFAULT '',
+          `holding_entity_name` varchar(255) DEFAULT '',
+          `holding_entity_guid` varchar(255) DEFAULT '',
+          `date_created` varchar(255) NOT NULL DEFAULT '',
+          `created_by_user_account_id` int(11) NOT NULL,
+          `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          `last_modified_user_account_id` int(11) NOT NULL,
+          `active` tinyint(1) NOT NULL DEFAULT '1',
           PRIMARY KEY (`subjects_id`),
           KEY `created_by_user_account_id` (`created_by_user_account_id`),
-          KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='This table stores subject metadata'");
+          KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
+          KEY `projects_id` (`projects_id`,`subject_name`)
+        ) ENGINE=InnoDB AUTO_INCREMENT=45 DEFAULT CHARSET=utf8 COMMENT='This table stores subjects metadata'");
 
         $statement->execute();
         $error = $conn->errorInfo();

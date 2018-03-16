@@ -52,7 +52,7 @@
                 <th class="text-center">Item Description</th>
                 <th class="text-center">Local Item ID</th>
                 <th class="text-center">Datasets Count</th>
-                <th class="text-center">Created</th>
+                {# <th class="text-center">Created</th> #}
                 <th class="text-center">Last Modified</th>
                 <th class="text-center">Status</th>
               </tr>
@@ -86,14 +86,14 @@
             { "data": "item_description" },
             { "data": "local_item_id" },
             { "data": "datasets_count" },
-            { "data": "date_created" },
+            // { "data": "date_created" },
             { "data": "last_modified" },
             { "data": "status_label" }
           ],
         "dom": 'lfip<"datatables_bulk_actions">tip',
         "pagingType": "simple_numbers",
         "stateSave": true,
-        "order": [[7,"desc"]],
+        "order": [[5,"desc"]],
         // Show processing throbber.
         "processing": true,
         "serverMethod": "POST",
@@ -149,6 +149,11 @@
           $('#browse [name="download_checkbox"]:checked').each(function(){
             download_ids.push($(this).val());
           });
+
+          if(!download_ids.length) {
+            swal('No Records Selected', 'Please choose at least one record.');
+            return;
+          }
 
           if(download_ids.length > 0) {
 

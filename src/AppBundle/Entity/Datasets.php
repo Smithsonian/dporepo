@@ -152,21 +152,21 @@ class Datasets
               ,capture_datasets.created_by_user_account_id
               ,capture_datasets.last_modified
               ,capture_datasets.last_modified_user_account_id
-              ,capture_methods.label AS capture_method
-              ,dataset_types.label AS dataset_type
-              ,item_position_types.label_alias AS item_position_type
-              ,focus_types.label AS focus_type
-              ,light_source_types.label AS light_source_type
-              ,background_removal_methods.label AS background_removal_method
-              ,camera_cluster_types.label AS camera_cluster_type
+              -- ,capture_methods.label AS capture_method
+              -- ,dataset_types.label AS capture_dataset_type
+              -- ,item_position_types.label_alias AS item_position_type
+              -- ,focus_types.label AS focus_type
+              -- ,light_source_types.label AS light_source_type
+              -- ,background_removal_methods.label AS background_removal_method
+              -- ,camera_cluster_types.label AS camera_cluster_type
             FROM capture_datasets
-            LEFT JOIN capture_methods ON capture_methods.capture_methods_id = capture_datasets.capture_method
-            LEFT JOIN dataset_types ON dataset_types.dataset_types_id = capture_datasets.capture_dataset_type
-            LEFT JOIN item_position_types ON item_position_types.item_position_types_id = capture_datasets.item_position_type
-            LEFT JOIN focus_types ON focus_types.focus_types_id = capture_datasets.focus_type
-            LEFT JOIN light_source_types ON light_source_types.light_source_types_id = capture_datasets.light_source_type
-            LEFT JOIN background_removal_methods ON background_removal_methods.background_removal_methods_id = capture_datasets.background_removal_method
-            LEFT JOIN camera_cluster_types ON camera_cluster_types.camera_cluster_types_id = capture_datasets.cluster_type
+            -- LEFT JOIN capture_methods ON capture_methods.capture_methods_id = capture_datasets.capture_method
+            -- LEFT JOIN dataset_types ON dataset_types.dataset_types_id = capture_datasets.capture_dataset_type
+            -- LEFT JOIN item_position_types ON item_position_types.item_position_types_id = capture_datasets.item_position_type
+            -- LEFT JOIN focus_types ON focus_types.focus_types_id = capture_datasets.focus_type
+            -- LEFT JOIN light_source_types ON light_source_types.light_source_types_id = capture_datasets.light_source_type
+            -- LEFT JOIN background_removal_methods ON background_removal_methods.background_removal_methods_id = capture_datasets.background_removal_method
+            -- LEFT JOIN camera_cluster_types ON camera_cluster_types.camera_cluster_types_id = capture_datasets.cluster_type
             WHERE capture_datasets.active = 1
             AND capture_datasets.capture_datasets_id = :capture_datasets_id");
             $statement->bindValue(":capture_datasets_id", $capture_datasets_id, "integer");
