@@ -9,6 +9,7 @@ class CaptureDevice
 {
     
     /**
+     * @Assert\NotBlank()
      * @var int
      */
     private $parent_capture_data_element_repository_id;
@@ -19,6 +20,8 @@ class CaptureDevice
     private $capture_device_component_ids;
 
     /**
+     * @Assert\NotBlank()
+     * @Assert\Length(min="1", max="255")
      * @var string
      */
     private $capture_device_component;
@@ -26,11 +29,11 @@ class CaptureDevice
     /**
      * Get One Record
      *
-     * @param   int  $capture_device_repository_id  The ID
-     * @param   object  $conn  Database connection object
-     * @return  array|bool  The query result
+     * @param int $id
+     * @param Connection $conn
+     * @return object|bool
      */
-    public function getOne($capture_device_repository_id, Connection $conn)
+    public function getOne($id, Connection $conn)
     {
         $statement = $conn->prepare("SELECT
               capture_device.capture_device_repository_id,
@@ -40,7 +43,7 @@ class CaptureDevice
             FROM capture_device
             WHERE capture_device.active = 1
             AND capture_device.capture_device_repository_id = :capture_device_repository_id");
-        $statement->bindValue(":capture_device_repository_id", $capture_device_repository_id, "integer");
+        $statement->bindValue(":capture_device_repository_id", $id, "integer");
         $statement->execute();
         $result = $statement->fetch();
 
@@ -50,17 +53,17 @@ class CaptureDevice
     /**
      * Get All Records
      *
-     * @param   int  $parent_capture_data_element_repository_id  The parent record ID
-     * @param   object  $conn  Database connection object
-     * @return  array|bool  The query result
+     * @param int $id The parent record ID
+     * @param Connection $conn
+     * @return array|bool
      */
-    public function getAll($parent_capture_data_element_repository_id, Connection $conn)
+    public function getAll($id, Connection $conn)
     {
         $statement = $conn->prepare("
             SELECT * FROM capture_device
             WHERE capture_device.parent_capture_data_element_repository_id = :parent_capture_data_element_repository_id
         ");
-        $statement->bindValue(":parent_capture_data_element_repository_id", $parent_capture_data_element_repository_id, "integer");
+        $statement->bindValue(":parent_capture_data_element_repository_id", $id, "integer");
         $statement->execute();
         return $statement->fetchAll(PDO::FETCH_ASSOC);
     }

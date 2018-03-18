@@ -9,11 +9,14 @@ class PhotogrammetryScaleBarTargetPair
 {
 
     /**
+     * @Assert\NotBlank()
      * @var int
      */
     private $parent_photogrammetry_scale_bar_repository_id;
 
     /**
+     * @Assert\NotBlank()
+     * @Assert\Length(min="1", max="255")
      * @var string
      */
     private $target_type;
@@ -41,11 +44,11 @@ class PhotogrammetryScaleBarTargetPair
     /**
      * Get One Record
      *
-     * @param   int  $photogrammetry_scale_bar_target_pair_repository_id  The ID
-     * @param   object  $conn  Database connection object
-     * @return  array|bool  The query result
+     * @param int $id
+     * @param Connection $conn
+     * @return object|bool
      */
-    public function getOne($photogrammetry_scale_bar_target_pair_repository_id, Connection $conn)
+    public function getOne($id, Connection $conn)
     {
         $statement = $conn->prepare("SELECT
               photogrammetry_scale_bar_target_pair.photogrammetry_scale_bar_target_pair_repository_id,
@@ -58,7 +61,7 @@ class PhotogrammetryScaleBarTargetPair
             FROM photogrammetry_scale_bar_target_pair
             WHERE photogrammetry_scale_bar_target_pair.active = 1
             AND photogrammetry_scale_bar_target_pair.photogrammetry_scale_bar_target_pair_repository_id = :photogrammetry_scale_bar_target_pair_repository_id");
-        $statement->bindValue(":photogrammetry_scale_bar_target_pair_repository_id", $photogrammetry_scale_bar_target_pair_repository_id, "integer");
+        $statement->bindValue(":photogrammetry_scale_bar_target_pair_repository_id", $id, "integer");
         $statement->execute();
         $result = $statement->fetch();
 
@@ -68,17 +71,17 @@ class PhotogrammetryScaleBarTargetPair
     /**
      * Get All Records
      *
-     * @param   int  $parent_photogrammetry_scale_bar_repository_id  The parent record ID
-     * @param   object  $conn  Database connection object
-     * @return  array|bool  The query result
+     * @param int $id The parent record ID
+     * @param Connection $conn
+     * @return array|bool
      */
-    public function getAll($parent_photogrammetry_scale_bar_repository_id, Connection $conn)
+    public function getAll($id, Connection $conn)
     {
         $statement = $conn->prepare("
             SELECT * FROM photogrammetry_scale_bar_target_pair
             WHERE photogrammetry_scale_bar_target_pair.parent_photogrammetry_scale_bar_repository_id = :parent_photogrammetry_scale_bar_repository_id
         ");
-        $statement->bindValue(":parent_photogrammetry_scale_bar_repository_id", $parent_photogrammetry_scale_bar_repository_id, "integer");
+        $statement->bindValue(":parent_photogrammetry_scale_bar_repository_id", $id, "integer");
         $statement->execute();
         return $statement->fetchAll(PDO::FETCH_ASSOC);
     }

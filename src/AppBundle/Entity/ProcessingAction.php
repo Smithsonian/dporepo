@@ -9,33 +9,46 @@ class ProcessingAction
 {
     
     /**
+     * @Assert\NotBlank()
      * @var int
      */
-    private $parent_capture_dataset_repository_id;
+    private $target_model_repository_id;
+
+    /**
+     * @Assert\NotBlank()
+     * @Assert\Length(min="1", max="255")
+     * @var string
+     */
+    private $preceding_processing_action_repository_id;
 
     /**
      * @var string
      */
-    private $map_type;
+    private $date_of_action;
 
     /**
      * @var string
      */
-    private $map_file_type;
+    private $action_method;
 
     /**
      * @var string
      */
-    private $map_size;
+    private $software_used;
+
+    /**
+     * @var string
+     */
+    private $action_description;
     
     /**
      * Get One Record
      *
-     * @param   int  $processing_action_repository_id  The ID
-     * @param   object  $conn  Database connection object
-     * @return  array|bool  The query result
+     * @param int $id
+     * @param Connection $conn
+     * @return object|bool
      */
-    public function getOne($processing_action_repository_id, Connection $conn)
+    public function getOne($id, Connection $conn)
     {
         $statement = $conn->prepare("SELECT
               processing_action.processing_action_repository_id,
@@ -48,7 +61,7 @@ class ProcessingAction
             FROM processing_action
             WHERE processing_action.active = 1
             AND processing_action.processing_action_repository_id = :processing_action_repository_id");
-        $statement->bindValue(":processing_action_repository_id", $processing_action_repository_id, "integer");
+        $statement->bindValue(":processing_action_repository_id", $id, "integer");
         $statement->execute();
         $result = $statement->fetch();
 
@@ -58,17 +71,17 @@ class ProcessingAction
     /**
      * Get All Records
      *
-     * @param   int  $target_model_repository_id  The parent record ID
-     * @param   object  $conn  Database connection object
-     * @return  array|bool  The query result
+     * @param int $id The parent record ID
+     * @param Connection $conn
+     * @return array|bool
      */
-    public function getAll($target_model_repository_id, Connection $conn)
+    public function getAll($id, Connection $conn)
     {
         $statement = $conn->prepare("
             SELECT * FROM processing_action
             WHERE processing_action.target_model_repository_id = :target_model_repository_id
         ");
-        $statement->bindValue(":target_model_repository_id", $target_model_repository_id, "integer");
+        $statement->bindValue(":target_model_repository_id", $id, "integer");
         $statement->execute();
         return $statement->fetchAll(PDO::FETCH_ASSOC);
     }

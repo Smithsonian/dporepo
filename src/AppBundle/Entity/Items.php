@@ -9,6 +9,8 @@ class Items
 {
 
     /**
+     * @Assert\NotBlank()
+     * @Assert\Length(min="1", max="255")
      * @var string
      */
     public $item_guid;
