@@ -13,6 +13,7 @@ use PDO;
 
 use AppBundle\Form\Dataset;
 use AppBundle\Entity\Datasets;
+use AppBundle\Entity\Items;
 
 // Custom utility bundle
 use AppBundle\Utils\AppUtilities;
@@ -37,7 +38,7 @@ class DatasetsController extends Controller
     /**
      * @Route("/admin/projects/datasets/{project_repository_id}/{subject_repository_id}/{item_repository_id}", name="datasets_browse", methods="GET")
      */
-    public function browse_datasets(Connection $conn, Request $request, ProjectsController $projects, SubjectsController $subjects, ItemsController $items)
+    public function browse_datasets(Connection $conn, Request $request, ProjectsController $projects, SubjectsController $subjects)
     {
         // Database tables are only created if not present.
         $create_datasets_table = $this->create_capture_datasets_table($conn);
@@ -47,8 +48,9 @@ class DatasetsController extends Controller
         $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $item_data = $items->get_item((int)$item_repository_id, $conn);
-        if(!$item_data) throw $this->createNotFoundException('The record does not exist');
+        $item = new Items();
+        $item->item_data = $item->getItem((int)$item_repository_id, $conn);
+        if(!$item->item_data) throw $this->createNotFoundException('The record does not exist');
         
         $project_data = $projects->get_project((int)$project_repository_id, $conn);
         $subject_data = $subjects->get_subject((int)$subject_repository_id, $conn);
@@ -56,19 +58,19 @@ class DatasetsController extends Controller
         $jobBoxProcessedDirectoryContents = is_dir(JOBBOXPROCESS_PATH) ? scandir(JOBBOXPROCESS_PATH) : array();
 
         // Truncate the item_description.
-        $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
-        $item_data['item_description_truncated'] = substr($item_data['item_description'], 0, 50) . $more_indicator;
+        $more_indicator = (strlen($item->item_data->item_description) > 50) ? '...' : '';
+        $item->item_data->item_description_truncated = substr($item->item_data->item_description, 0, 50) . $more_indicator;
 
         return $this->render('datasets/browse_datasets.html.twig', array(
-            'page_title' => 'Item: ' . $item_data['local_item_id'],
+            'page_title' => 'Item: ' . $item->item_data->local_item_id,
             'project_repository_id' => $project_repository_id,
             'subject_repository_id' => $subject_repository_id,
             'item_repository_id' => $item_repository_id,
             'project_data' => $project_data,
             'subject_data' => $subject_data,
-            'item_data' => $item_data,
+            'item_data' => $item->item_data,
             'destination' => $project_repository_id . '|' . $subject_repository_id . '|' . $item_repository_id,
-            'include_directory_button' => !in_array($item_data['item_guid'], $jobBoxDirectoryContents) && !in_array($item_data['item_guid'], $jobBoxProcessedDirectoryContents) ? true : false,
+            'include_directory_button' => !in_array($item->item_data->item_guid, $jobBoxDirectoryContents) && !in_array($item->item_data->item_guid, $jobBoxProcessedDirectoryContents) ? true : false,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }

@@ -70,7 +70,9 @@ class Items
             ,items.status_types_id
             ,items.last_modified
             ,items.item_repository_id
+            ,item_types.label as item_type_label
             FROM items
+            LEFT JOIN item_types ON item_types.item_types_id = items.item_type
             WHERE items.active = 1
             AND item_repository_id = :item_repository_id");
         $statement->bindValue(":item_repository_id", $item_id, "integer");

@@ -21,6 +21,8 @@
       <dl class="dl-horizontal">
         <dt>Item GUID</dt>
         <dd>{{ item_data.item_guid|e }}</dd>
+        <dt>Local Item ID</dt>
+        <dd>{{ item_data.local_item_id|e|nl2br }}</dd>
       </dl>
     </div>
     <div class="col-sm-6 col-md-6">
@@ -28,13 +30,11 @@
         <dt>Last Modified</dt>
         <dd>{{ item_data.last_modified|e }}</dd>
         <dt>Item Type</dt>
-        <dd>{{ item_data.item_type|e }}</dd>
+        <dd>{{ item_data.item_type_label|e }}</dd>
       </dl>
     </div>
     <div class="col-sm-12 col-md-12">
       <dl class="dl-horizontal">
-        <dt>Local Item ID</dt>
-        <dd>{{ item_data.local_item_id|e|nl2br }}</dd>
         <dt>Item Description</dt>
         <dd>{{ item_data.item_description|e|nl2br }}</dd>
       </dl>
