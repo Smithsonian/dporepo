@@ -15,7 +15,7 @@ use GUMP;
 use AppBundle\Utils\GumpParseErrors;
 use AppBundle\Utils\AppUtilities;
 
-class SubjectTypesController extends Controller
+class ItemTypesController extends Controller
 {
     /**
      * @var object $u
@@ -32,39 +32,39 @@ class SubjectTypesController extends Controller
         $this->u = $u;
 
         // Table name and field names.
-        $this->table_name = 'subject_types';
-        $this->id_field_name_raw = 'subject_types_id';
-        $this->id_field_name = 'subject_types.' . $this->id_field_name_raw;
+        $this->table_name = 'item_types';
+        $this->id_field_name_raw = 'item_types_id';
+        $this->id_field_name = 'item_types.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
-        $this->label_field_name = 'subject_types.' . $this->label_field_name_raw;
+        $this->label_field_name = 'item_types.' . $this->label_field_name_raw;
     }
 
     /**
-     * @Route("/admin/resources/subject_types/", name="subject_types_browse", methods="GET")
+     * @Route("/admin/resources/item_types/", name="item_types_browse", methods="GET")
      */
     public function browse(Connection $conn, Request $request)
     {
         // Database tables are only created if not present.
         $create_table = $this->create_table($conn);
 
-        return $this->render('resources/browse_subject_types.html.twig', array(
-            'page_title' => "Browse Subject Types",
+        return $this->render('resources/browse_item_types.html.twig', array(
+            'page_title' => "Browse Item Types",
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
     /**
-     * @Route("/admin/resources/subject_types/datatables_browse_subject_types", name="subject_types_browse_datatables", methods="POST")
+     * @Route("/admin/resources/item_types/datatables_browse_item_types", name="item_types_browse_datatables", methods="POST")
      *
-     * Browse Subject Types
+     * Browse item Types
      *
-     * Run a query to retreive all Subject Types in the database.
+     * Run a query to retreive all item Types in the database.
      *
      * @param   object  Connection  Database connection object
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_subject_types(Connection $conn, Request $request)
+    public function datatables_browse_item_types(Connection $conn, Request $request)
     {
         $sort = '';
         $search_sql = '';
@@ -126,23 +126,23 @@ class SubjectTypesController extends Controller
     }
 
     /**
-     * Matches /admin/resources/subject_types/manage/*
+     * Matches /admin/resources/item_types/manage/*
      *
-     * @Route("/admin/resources/subject_types/manage/{subject_types_id}", name="subject_types_manage", methods={"GET","POST"}, defaults={"subject_types_id" = null})
+     * @Route("/admin/resources/item_types/manage/{item_types_id}", name="item_types_manage", methods={"GET","POST"}, defaults={"item_types_id" = null})
      *
-     * @param   int     $id           The subject_type ID
+     * @param   int     $id           The item_type ID
      * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_subject_types_form(Connection $conn, Request $request, GumpParseErrors $gump_parse_errors)
+    function show_item_types_form(Connection $conn, Request $request, GumpParseErrors $gump_parse_errors)
     {
         $errors = false;
         $data = array();
         $gump = new GUMP();
         $post = $request->request->all();
-        $subject_types_id = !empty($request->attributes->get('subject_types_id')) ? $request->attributes->get('subject_types_id') : false;
-        $data = !empty($post) ? $post : $this->get_one((int)$subject_types_id, $conn);
+        $item_types_id = !empty($request->attributes->get('item_types_id')) ? $request->attributes->get('item_types_id') : false;
+        $data = !empty($post) ? $post : $this->get_one((int)$item_types_id, $conn);
         
         // Validate posted data.
         if(!empty($post)) {
@@ -163,12 +163,12 @@ class SubjectTypesController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $subject_types_id = $this->insert_update($post, $subject_types_id, $conn);
-            $this->addFlash('message', 'Subject Type successfully updated.');
-            return $this->redirectToRoute('subject_types_browse');
+            $item_types_id = $this->insert_update($post, $item_types_id, $conn);
+            $this->addFlash('message', 'Item Type successfully updated.');
+            return $this->redirectToRoute('item_types_browse');
         } else {
-            return $this->render('resources/subject_types_form.html.twig', array(
-                "page_title" => !empty($subject_types_id) ? 'Manage Subject Type: ' . $data['label'] : 'Create Subject Type'
+            return $this->render('resources/item_types_form.html.twig', array(
+                "page_title" => !empty($item_types_id) ? 'Manage Item Type: ' . $data['label'] : 'Create Item Type'
                 ,"data" => $data
                 ,"errors" => $errors
                 ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
@@ -259,9 +259,9 @@ class SubjectTypesController extends Controller
     }
 
     /**
-     * Delete Multiple Subject Types
+     * Delete Multiple Item Types
      *
-     * @Route("/admin/resources/subject_types/delete", name="subject_types_remove_records", methods={"GET"})
+     * @Route("/admin/resources/item_types/delete", name="item_types_remove_records", methods={"GET"})
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
@@ -302,7 +302,7 @@ class SubjectTypesController extends Controller
     /**
      * Delete Record
      *
-     * Run a query to delete a Subject Type record.
+     * Run a query to delete a Item Type record.
      *
      * @param       int $id           The data value
      * @return      void

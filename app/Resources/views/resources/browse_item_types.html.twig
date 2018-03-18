@@ -49,7 +49,7 @@
           // All data management will be done on the server side.
           "serverSide": true,
           // Path to the file that is going to handle the queries.
-          "ajax": "/admin/resources/subject_types/datatables_browse_subject_types",
+          "ajax": "/admin/resources/item_types/datatables_browse_item_types",
           // Method type.
           "serverMethod": "POST",
           // Values in the length dropdown.
@@ -69,7 +69,7 @@
         });
 
       // Send to details page when clicked.
-      var details_page = "/admin/resources/subject_types/manage/";
+      var details_page = "/admin/resources/item_types/manage/";
       $('#browse tbody').on('click','td',function(event){
         if(!$(this).hasClass("manage_column")){
           var record_id = $(this).closest("tr").attr('id');
@@ -79,8 +79,8 @@
 
       var add_button = $('<a />')
         .addClass('btn btn-default add-record-button')
-        .attr('href', '/admin/resources/subject_types/manage')
-        .html('<span class="glyphicon glyphicon-plus"></span> Add a New Subject Type');
+        .attr('href', '/admin/resources/item_types/manage')
+        .html('<span class="glyphicon glyphicon-plus"></span> Add a New Item Type');
 
       $('.datatables_bulk_actions').append(add_button);
 

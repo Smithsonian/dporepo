@@ -332,12 +332,12 @@ class ItemsController extends Controller
     {
         $data = array();
 
-        $statement = $conn->prepare("SELECT * FROM subject_types ORDER BY label ASC");
+        $statement = $conn->prepare("SELECT * FROM item_types WHERE item_types.active = 1 ORDER BY label ASC");
         $statement->execute();
 
         foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
             $label = $this->u->removeUnderscoresTitleCase($value['label']);
-            $data[$label] = $value['subject_types_id'];
+            $data[$label] = $value['item_types_id'];
         }
 
         return $data;
