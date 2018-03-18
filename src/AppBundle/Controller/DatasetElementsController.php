@@ -50,8 +50,6 @@ class DatasetElementsController extends Controller
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
         $dataset_data = $datasets->get_dataset((int)$capture_dataset_repository_id, $conn);
         if(!$dataset_data) throw $this->createNotFoundException('The record does not exist');
-
-        // dump($dataset_data);
         
         $project_data = $projects->get_project((int)$project_repository_id, $conn);
         $subject_data = $subjects->get_subject((int)$subject_repository_id, $conn);

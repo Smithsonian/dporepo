@@ -155,8 +155,6 @@ class UnitStakeholderController extends Controller
         $unit_stakeholder_id = !empty($request->attributes->get('unit_stakeholder_id')) ? $request->attributes->get('unit_stakeholder_id') : false;
         $data = !empty($post) ? $post : $this->get_one((int)$unit_stakeholder_id, $conn);
 
-        // $this->u->dumper($data);
-
         // Get data from lookup tables.
         $data['units_stakeholders'] = $projects->get_units_stakeholders($conn);
 
@@ -246,8 +244,6 @@ class UnitStakeholderController extends Controller
      */
     public function insert_update($data, $id = false, $conn, $isni)
     {
-        // $this->u->dumper($isni_data);
-
         // Query the isni_data table to see if there's an entry.
         $isni_data = $isni->get_isni_data_from_database($data['isni_id'], $conn);
 

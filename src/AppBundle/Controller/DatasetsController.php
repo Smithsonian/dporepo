@@ -49,8 +49,6 @@ class DatasetsController extends Controller
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
         $item_data = $items->get_item((int)$item_repository_id, $conn);
         if(!$item_data) throw $this->createNotFoundException('The record does not exist');
-
-        // $this->u->dumper($item_data);
         
         $project_data = $projects->get_project((int)$project_repository_id, $conn);
         $subject_data = $subjects->get_subject((int)$subject_repository_id, $conn);
@@ -95,8 +93,6 @@ class DatasetsController extends Controller
 
         $req = $request->request->all();
         $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
-
-        // $this->u->dumper($req);
 
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
@@ -240,8 +236,6 @@ class DatasetsController extends Controller
 
         // Retrieve data from the database.
         $dataset = (!empty($capture_dataset_repository_id) && empty($post)) ? $dataset->getDataset((int)$capture_dataset_repository_id, $conn) : $dataset;
-
-        // dump($dataset);
         
         // Get data from lookup tables.
         $dataset->capture_methods_lookup_options = $this->get_capture_methods($conn);

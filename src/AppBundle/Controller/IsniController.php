@@ -110,7 +110,6 @@ class IsniController extends Controller
                 }
                 
             }
-            // $this->u->dumper($data);
 
         }
 

@@ -341,7 +341,6 @@ class ProjectsController extends Controller
      */
     public function insert_update_project($data, $project_repository_id = FALSE, $conn, $isni, $unit)
     {
-        // $this->u->dumper($data);
 
         $unit_record = $unit->get_one($data->stakeholder_guid_picker, $conn);
 

@@ -219,8 +219,6 @@ class ItemsController extends Controller
         // Get data from lookup tables.
         $item->item_type_lookup_options = $this->get_item_types($conn);
 
-        // $this->u->dumper($item);
-
         // Create the form
         $form = $this->createForm(Item::class, $item);
         // Handle the request
@@ -368,7 +366,6 @@ class ItemsController extends Controller
      */
     public function insert_update_item($data, $subject_repository_id = false, $item_repository_id = FALSE, $conn)
     {
-        // $this->u->dumper($data);
 
         // Update
         if($item_repository_id) {

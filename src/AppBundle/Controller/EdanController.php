@@ -138,7 +138,6 @@ class EdanController extends Controller
                     }
                 }
             }
-            // $this->u->dumper($data['rows']);
         }
 
         // Return HTML
