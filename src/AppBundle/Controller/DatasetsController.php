@@ -46,25 +46,25 @@ class DatasetsController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/datasets/{projects_id}/{subjects_id}/{items_id}", name="datasets_browse", methods="GET")
+     * @Route("/admin/projects/datasets/{project_repository_id}/{subject_repository_id}/{item_repository_id}", name="datasets_browse", methods="GET")
      */
     public function browse_datasets(Connection $conn, Request $request, ProjectsController $projects, SubjectsController $subjects, ItemsController $items)
     {
         // Database tables are only created if not present.
         $create_datasets_table = $this->create_capture_datasets_table($conn);
 
-        $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
-        $subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
-        $items_id = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;
+        $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
+        $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
+        $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $item_data = $items->get_item((int)$items_id, $conn);
+        $item_data = $items->get_item((int)$item_repository_id, $conn);
         if(!$item_data) throw $this->createNotFoundException('The record does not exist');
 
         // $this->u->dumper($item_data);
         
-        $project_data = $projects->get_project((int)$projects_id, $conn);
-        $subject_data = $subjects->get_subject((int)$subjects_id, $conn);
+        $project_data = $projects->get_project((int)$project_repository_id, $conn);
+        $subject_data = $subjects->get_subject((int)$subject_repository_id, $conn);
         $jobBoxDirectoryContents = is_dir(JOBBOX_PATH) ? scandir(JOBBOX_PATH) : array();
         $jobBoxProcessedDirectoryContents = is_dir(JOBBOXPROCESS_PATH) ? scandir(JOBBOXPROCESS_PATH) : array();
 
@@ -74,20 +74,20 @@ class DatasetsController extends Controller
 
         return $this->render('datasets/browse_datasets.html.twig', array(
             'page_title' => 'Item: ' . $item_data['local_item_id'],
-            'projects_id' => $projects_id,
-            'subjects_id' => $subjects_id,
-            'items_id' => $items_id,
+            'project_repository_id' => $project_repository_id,
+            'subject_repository_id' => $subject_repository_id,
+            'item_repository_id' => $item_repository_id,
             'project_data' => $project_data,
             'subject_data' => $subject_data,
             'item_data' => $item_data,
-            'destination' => $projects_id . '|' . $subjects_id . '|' . $items_id,
+            'destination' => $project_repository_id . '|' . $subject_repository_id . '|' . $item_repository_id,
             'include_directory_button' => !in_array($item_data['item_guid'], $jobBoxDirectoryContents) && !in_array($item_data['item_guid'], $jobBoxProcessedDirectoryContents) ? true : false,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 
     /**
-     * @Route("/admin/projects/datatables_browse_datasets/{projects_id}/{subjects_id}/{items_id}", name="datasets_browse_datatables", methods="POST")
+     * @Route("/admin/projects/datatables_browse_datasets/{project_repository_id}/{subject_repository_id}/{item_repository_id}", name="datasets_browse_datatables", methods="POST")
      *
      * Browse datasets
      *
@@ -105,7 +105,7 @@ class DatasetsController extends Controller
         $data = array();
 
         $req = $request->request->all();
-        $items_id = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;
+        $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
 
         // $this->u->dumper($req);
 
@@ -179,7 +179,7 @@ class DatasetsController extends Controller
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-              capture_datasets.capture_datasets_id AS manage
+              capture_datasets.capture_dataset_repository_id AS manage
               ,capture_datasets.capture_dataset_guid
               ,capture_datasets.capture_dataset_field_id
               ,capture_datasets.capture_dataset_name
@@ -198,7 +198,7 @@ class DatasetsController extends Controller
               ,capture_datasets.created_by_user_account_id
               ,capture_datasets.last_modified
               ,capture_datasets.last_modified_user_account_id
-              ,capture_datasets.capture_datasets_id AS DT_RowId
+              ,capture_datasets.capture_dataset_repository_id AS DT_RowId
               ,capture_methods.label AS capture_method
               ,dataset_types.label AS capture_dataset_type
               ,item_position_types.label_alias AS item_position_type
@@ -215,7 +215,7 @@ class DatasetsController extends Controller
           LEFT JOIN background_removal_methods ON background_removal_methods.background_removal_methods_id = capture_datasets.background_removal_method
           LEFT JOIN camera_cluster_types ON camera_cluster_types.camera_cluster_types_id = capture_datasets.cluster_type
           WHERE capture_datasets.active = 1
-          AND capture_datasets.parent_item_repository_id = " . (int)$items_id . "
+          AND capture_datasets.parent_item_repository_id = " . (int)$item_repository_id . "
           {$search_sql}
           {$sort}
           {$limit_sql}");
@@ -234,23 +234,23 @@ class DatasetsController extends Controller
     /**
      * Matches /admin/projects/dataset/*
      *
-     * @Route("/admin/projects/dataset/{projects_id}/{subjects_id}/{items_id}/{datasets_id}", name="datasets_manage", methods={"GET","POST"}, defaults={"datasets_id" = null})
+     * @Route("/admin/projects/dataset/{project_repository_id}/{subject_repository_id}/{item_repository_id}/{capture_dataset_repository_id}", name="datasets_manage", methods={"GET","POST"}, defaults={"capture_dataset_repository_id" = null})
      *
      * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_datasets_form( $datasets_id, Connection $conn, Request $request )
+    function show_datasets_form( $capture_dataset_repository_id, Connection $conn, Request $request )
     {
         $dataset = new Datasets();
         $post = $request->request->all();
-        $datasets_id = !empty($request->attributes->get('datasets_id')) ? $request->attributes->get('datasets_id') : false;
-        $dataset->projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
-        $dataset->subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
-        $dataset->items_id = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;
+        $capture_dataset_repository_id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
+        $dataset->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
+        $dataset->subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
+        $dataset->item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
 
         // Retrieve data from the database.
-        $dataset = (!empty($datasets_id) && empty($post)) ? $dataset->getDataset((int)$datasets_id, $conn) : $dataset;
+        $dataset = (!empty($capture_dataset_repository_id) && empty($post)) ? $dataset->getDataset((int)$capture_dataset_repository_id, $conn) : $dataset;
 
         // dump($dataset);
         
@@ -272,15 +272,15 @@ class DatasetsController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $dataset = $form->getData();
-            $datasets_id = $this->insert_update_datasets($dataset, $datasets_id, $dataset->items_id, $conn);
+            $capture_dataset_repository_id = $this->insert_update_datasets($dataset, $capture_dataset_repository_id, $dataset->item_repository_id, $conn);
 
             $this->addFlash('message', 'Dataset successfully updated.');
-            return $this->redirect('/admin/projects/dataset_elements/' . $dataset->projects_id . '/' . $dataset->subjects_id . '/' . $dataset->items_id . '/' . $datasets_id);
+            return $this->redirect('/admin/projects/dataset_elements/' . $dataset->project_repository_id . '/' . $dataset->subject_repository_id . '/' . $dataset->item_repository_id . '/' . $capture_dataset_repository_id);
 
         }
 
         return $this->render('datasets/dataset_form.html.twig', array(
-            'page_title' => !empty($datasets_id) ? 'Dataset: ' . $dataset->capture_dataset_name : 'Create Dataset',
+            'page_title' => !empty($capture_dataset_repository_id) ? 'Dataset: ' . $dataset->capture_dataset_name : 'Create Dataset',
             'dataset_data' => $dataset,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
@@ -294,16 +294,16 @@ class DatasetsController extends Controller
      * Run queries to insert and update a dataset in the database.
      *
      * @param   array   $data                       The data array
-     * @param   int     $capture_datasets_id        The dataset ID
+     * @param   int     $capture_dataset_repository_id        The dataset ID
      * @param   int     $parent_item_repository_id  The item ID
      * @param   object  $conn                       Database connection object
      * @return  int     The item ID
      */
-    public function insert_update_datasets($data, $capture_datasets_id = FALSE, $parent_item_repository_id = FALSE, $conn)
+    public function insert_update_datasets($data, $capture_dataset_repository_id = FALSE, $parent_item_repository_id = FALSE, $conn)
     {
 
         // Update
-        if($capture_datasets_id) {
+        if($capture_dataset_repository_id) {
           $statement = $conn->prepare("
             UPDATE capture_datasets
             SET 
@@ -329,7 +329,7 @@ class DatasetsController extends Controller
             ,resource_capture_datasets = :resource_capture_datasets
             ,calibration_object_used = :calibration_object_used
             ,last_modified_user_account_id = :last_modified_user_account_id
-            WHERE capture_datasets_id = :capture_datasets_id
+            WHERE capture_dataset_repository_id = :capture_dataset_repository_id
           ");
           $statement->bindValue(":capture_method", $data->capture_method);
           $statement->bindValue(":capture_dataset_type", $data->capture_dataset_type);
@@ -353,14 +353,14 @@ class DatasetsController extends Controller
           $statement->bindValue(":resource_capture_datasets", $data->resource_capture_datasets);
           $statement->bindValue(":calibration_object_used", $data->calibration_object_used);
           $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-          $statement->bindValue(":capture_datasets_id", $capture_datasets_id, PDO::PARAM_INT);
+          $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, PDO::PARAM_INT);
           $statement->execute();
 
-          return $capture_datasets_id;
+          return $capture_dataset_repository_id;
         }
 
         // Insert
-        if(!$capture_datasets_id) {
+        if(!$capture_dataset_repository_id) {
 
           $statement = $conn->prepare("INSERT INTO capture_datasets
             (capture_dataset_guid, parent_item_repository_id, capture_method, capture_dataset_type, capture_dataset_name, collected_by, date_of_capture, 
@@ -410,17 +410,17 @@ class DatasetsController extends Controller
      *
      * Get datasets from the database.
      *
-     * @param       int $items_id    The item ID
+     * @param       int $item_repository_id    The item ID
      * @return      array|bool       The query result
      */
     public function get_datasets($conn, $parent_item_repository_id = false)
     {
       $statement = $conn->prepare("
           SELECT
-              projects.projects_id
-              ,subjects.subjects_id
+              projects.project_repository_id
+              ,subjects.subject_repository_id
               ,capture_datasets.parent_item_repository_id
-              ,capture_datasets.capture_datasets_id
+              ,capture_datasets.capture_dataset_repository_id
               ,capture_datasets.capture_dataset_guid
               ,capture_datasets.capture_dataset_field_id
               ,capture_datasets.capture_method
@@ -448,9 +448,9 @@ class DatasetsController extends Controller
               ,capture_datasets.last_modified_user_account_id
               ,capture_datasets.active
           FROM capture_datasets
-          LEFT JOIN items ON items.items_id = capture_datasets.parent_item_repository_id
-          LEFT JOIN subjects ON subjects.subjects_id = items.subjects_id
-          LEFT JOIN projects ON projects.projects_id = subjects.projects_id
+          LEFT JOIN items ON items.item_repository_id = capture_datasets.parent_item_repository_id
+          LEFT JOIN subjects ON subjects.subject_repository_id = items.subject_repository_id
+          LEFT JOIN projects ON projects.project_repository_id = subjects.project_repository_id
           WHERE capture_datasets.active = 1
           AND capture_datasets.parent_item_repository_id = :parent_item_repository_id");
       $statement->bindValue(":parent_item_repository_id", $parent_item_repository_id, PDO::PARAM_INT);
@@ -461,22 +461,22 @@ class DatasetsController extends Controller
     /**
      * Get Datasets (for the tree browser)
      *
-     * @Route("/admin/projects/get_datasets/{items_id}", name="get_datasets_tree_browser", methods="GET")
+     * @Route("/admin/projects/get_datasets/{item_repository_id}", name="get_datasets_tree_browser", methods="GET")
      */
     public function get_datasets_tree_browser(Connection $conn, Request $request, DatasetElementsController $dataset_elements)
     {      
-        $items_id = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;        
-        $datasets = $this->get_datasets($conn, $items_id);
+        $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;        
+        $datasets = $this->get_datasets($conn, $item_repository_id);
 
         foreach ($datasets as $key => $value) {
 
             // Check for child dataset records so the 'children' key can be set accordingly.
-            $dataset_elements_data = $dataset_elements->get_dataset_elements((int)$value['capture_datasets_id'], $conn);
+            $dataset_elements_data = $dataset_elements->get_dataset_elements((int)$value['capture_dataset_repository_id'], $conn);
             $data[$key] = array(
-                'id' => 'datasetId-' . $value['capture_datasets_id'],
+                'id' => 'datasetId-' . $value['capture_dataset_repository_id'],
                 'children' => count($dataset_elements_data) ? true : false,
                 'text' => $value['capture_dataset_name'],
-                'a_attr' => array('href' => '/admin/projects/dataset_elements/' . $value['projects_id'] . '/' . $value['subjects_id'] . '/' . $value['parent_item_repository_id'] . '/' . $value['capture_datasets_id']),
+                'a_attr' => array('href' => '/admin/projects/dataset_elements/' . $value['project_repository_id'] . '/' . $value['subject_repository_id'] . '/' . $value['parent_item_repository_id'] . '/' . $value['capture_dataset_repository_id']),
             );
         }
 
@@ -489,10 +489,10 @@ class DatasetsController extends Controller
      *
      * Get one dataset from the database.
      *
-     * @param       int $capture_datasets_id    The data value
+     * @param       int $capture_dataset_repository_id    The data value
      * @return      array|bool              The query result
      */
-    public function get_dataset($capture_datasets_id = false, $conn)
+    public function get_dataset($capture_dataset_repository_id = false, $conn)
     {
       $statement = $conn->prepare("SELECT
           capture_datasets.capture_dataset_guid
@@ -536,8 +536,8 @@ class DatasetsController extends Controller
         LEFT JOIN background_removal_methods ON background_removal_methods.background_removal_methods_id = capture_datasets.background_removal_method
         LEFT JOIN camera_cluster_types ON camera_cluster_types.camera_cluster_types_id = capture_datasets.cluster_type
         WHERE capture_datasets.active = 1
-        AND capture_datasets.capture_datasets_id = :capture_datasets_id");
-      $statement->bindValue(":capture_datasets_id", $capture_datasets_id, PDO::PARAM_INT);
+        AND capture_datasets.capture_dataset_repository_id = :capture_dataset_repository_id");
+      $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, PDO::PARAM_INT);
       $statement->execute();
       return $statement->fetch(PDO::FETCH_ASSOC);
     }
@@ -678,7 +678,7 @@ class DatasetsController extends Controller
     /**
      * Delete Multiple Datasets
      *
-     * @Route("/admin/projects/datasets/{projects_id}/{subjects_id}/{items_id}/delete", name="datasets_remove_records", methods={"GET"})
+     * @Route("/admin/projects/datasets/{project_repository_id}/{subject_repository_id}/{item_repository_id}/delete", name="datasets_remove_records", methods={"GET"})
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
@@ -689,24 +689,24 @@ class DatasetsController extends Controller
     public function delete_multiple_datasets(Connection $conn, Request $request)
     {
         $ids = $request->query->get('ids');
-        $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
-        $subjects_id = !empty($request->attributes->get('subjects_id')) ? $request->attributes->get('subjects_id') : false;
-        $items_id = !empty($request->attributes->get('items_id')) ? $request->attributes->get('items_id') : false;
+        $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
+        $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
+        $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
 
-        if(!empty($ids) && $projects_id && $subjects_id && $items_id) {
+        if(!empty($ids) && $project_repository_id && $subject_repository_id && $item_repository_id) {
 
           $ids_array = explode(',', $ids);
 
           foreach ($ids_array as $key => $id) {
 
             $statement = $conn->prepare("
-                UPDATE datasets
-                LEFT JOIN dataset_elements ON dataset_elements.datasets_id = datasets.datasets_id
-                SET datasets.active = 0,
-                    datasets.last_modified_user_account_id = :last_modified_user_account_id,
-                    dataset_elements.active = 0,
-                    dataset_elements.last_modified_user_account_id = :last_modified_user_account_id
-                WHERE datasets.datasets_id = :id
+                UPDATE capture_datasets
+                LEFT JOIN capture_data_elements ON capture_data_elements.capture_data_element_repository_id = capture_datasets.capture_dataset_repository_id
+                SET capture_datasets.active = 0,
+                    capture_datasets.last_modified_user_account_id = :last_modified_user_account_id,
+                    capture_data_elements.active = 0,
+                    capture_data_elements.last_modified_user_account_id = :last_modified_user_account_id
+                WHERE capture_datasets.capture_dataset_repository_id = :id
             ");
             $statement->bindValue(":id", $id, PDO::PARAM_INT);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
@@ -720,7 +720,7 @@ class DatasetsController extends Controller
           $this->addFlash('message', 'Missing data. No records removed.');
         }
 
-        return $this->redirectToRoute('datasets_browse', array('projects_id' => $projects_id, 'subjects_id' => $subjects_id, 'items_id' => $items_id));
+        return $this->redirectToRoute('datasets_browse', array('project_repository_id' => $project_repository_id, 'subject_repository_id' => $subject_repository_id, 'item_repository_id' => $item_repository_id));
     }
 
     /**
@@ -728,16 +728,16 @@ class DatasetsController extends Controller
      *
      * Run a query to delete a dataset from the database.
      *
-     * @param   int     $datasets_id  The dataset ID
+     * @param   int     $capture_dataset_repository_id  The dataset ID
      * @param   object  $conn         Database connection object
      * @return  void
      */
-    public function delete_dataset($datasets_id, $conn)
+    public function delete_dataset($capture_dataset_repository_id, $conn)
     {
         $statement = $conn->prepare("
-            DELETE FROM datasets
-            WHERE datasets_id = :datasets_id");
-        $statement->bindValue(":datasets_id", $datasets_id, PDO::PARAM_INT);
+            DELETE FROM capture_datasets
+            WHERE capture_dataset_repository_id = :capture_dataset_repository_id");
+        $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, PDO::PARAM_INT);
         $statement->execute();
     }
 
@@ -749,7 +749,7 @@ class DatasetsController extends Controller
     public function create_capture_datasets_table($conn)
     {
         $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `capture_datasets` (
-          `capture_datasets_id` int(11) NOT NULL AUTO_INCREMENT,
+          `capture_dataset_repository_id` int(11) NOT NULL AUTO_INCREMENT,
           `capture_dataset_guid` varchar(255) NOT NULL DEFAULT '',
           `parent_project_repository_id` int(255) DEFAULT NULL,
           `parent_item_repository_id` int(11) NOT NULL,
@@ -778,7 +778,7 @@ class DatasetsController extends Controller
           `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           `last_modified_user_account_id` int(11) NOT NULL,
           `active` tinyint(1) NOT NULL DEFAULT '1',
-          PRIMARY KEY (`capture_datasets_id`),
+          PRIMARY KEY (`capture_dataset_repository_id`),
           KEY `created_by_user_account_id` (`created_by_user_account_id`),
           KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
         ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8 COMMENT='This table stores capture_datasets metadata'");

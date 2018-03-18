@@ -44,8 +44,8 @@ class Subjects
         $statement = $conn->prepare("SELECT *
             FROM subjects
             WHERE subjects.active = 1
-            AND subjects_id = :subjects_id");
-        $statement->bindValue(":subjects_id", $subject_id, "integer");
+            AND subject_repository_id = :subject_repository_id");
+        $statement->bindValue(":subject_repository_id", $subject_id, "integer");
         $statement->execute();
         $result = $statement->fetch();
 

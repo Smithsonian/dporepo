@@ -110,23 +110,23 @@ class AdminController extends Controller
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-                projects.projects_id as manage
-                ,projects.projects_id
+                projects.project_repository_id as manage
+                ,projects.project_repository_id
                 ,projects.project_name
                 ,projects.stakeholder_guid
                 ,projects.date_created
                 ,projects.last_modified
                 ,projects.active
-                ,projects.projects_id AS DT_RowId
+                ,projects.project_repository_id AS DT_RowId
                 ,isni_data.isni_label AS stakeholder_label
             FROM projects
             LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
-            LEFT JOIN subjects ON subjects.projects_id = projects.projects_id
+            LEFT JOIN subjects ON subjects.project_repository_id = projects.project_repository_id
             WHERE projects.active = 1
             AND projects.last_modified < '{$date_today}'
             AND projects.last_modified > '{$date_limit}'
             {$search_sql}
-            GROUP BY projects.project_name, projects.stakeholder_guid, projects.date_created, projects.last_modified, projects.active, projects.projects_id
+            GROUP BY projects.project_name, projects.stakeholder_guid, projects.date_created, projects.last_modified, projects.active, projects.project_repository_id
             {$sort}
             {$limit_sql}");
         $statement->execute($pdo_params);
@@ -135,7 +135,7 @@ class AdminController extends Controller
         // Get the subjects count
         if(!empty($data['aaData'])) {
             foreach ($data['aaData'] as $key => $value) {
-                $project_subjects = $subjects->get_subjects($conn, $value['projects_id']);
+                $project_subjects = $subjects->get_subjects($conn, $value['project_repository_id']);
                 $data['aaData'][$key]['subjects_count'] = count($project_subjects);
             }
         }
@@ -195,20 +195,20 @@ class AdminController extends Controller
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-              subjects.subjects_id AS manage
-              ,subjects.subjects_id
+              subjects.subject_repository_id AS manage
+              ,subjects.subject_repository_id
               ,subjects.holding_entity_guid
               ,subjects.local_subject_id
               ,subjects.subject_guid
               ,subjects.subject_name
               ,subjects.last_modified
               ,subjects.active
-              ,subjects.subjects_id AS DT_RowId
+              ,subjects.subject_repository_id AS DT_RowId
           FROM subjects
-          LEFT JOIN items ON items.subjects_id = subjects.subjects_id
+          LEFT JOIN items ON items.subject_repository_id = subjects.subject_repository_id
           WHERE subjects.active = 1
           {$search_sql}
-          GROUP BY subjects.holding_entity_guid, subjects.local_subject_id, subjects.subject_guid, subjects.subject_name, subjects.last_modified, subjects.active, subjects.subjects_id
+          GROUP BY subjects.holding_entity_guid, subjects.local_subject_id, subjects.subject_guid, subjects.subject_name, subjects.last_modified, subjects.active, subjects.subject_repository_id
           {$sort}
           {$limit_sql}");
         $statement->execute($pdo_params);
@@ -217,7 +217,7 @@ class AdminController extends Controller
         // Get the items count
         if(!empty($data['aaData'])) {
             foreach ($data['aaData'] as $key => $value) {
-                $subject_items = $items->get_items($conn, $value['subjects_id']);
+                $subject_items = $items->get_items($conn, $value['subject_repository_id']);
                 $data['aaData'][$key]['items_count'] = count($subject_items);
             }
         }

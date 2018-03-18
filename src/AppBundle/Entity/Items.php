@@ -46,11 +46,11 @@ class Items
             ,items.item_type
             ,items.status_types_id
             ,items.last_modified
-            ,items.items_id
+            ,items.item_repository_id
             FROM items
             WHERE items.active = 1
-            AND items_id = :items_id");
-        $statement->bindValue(":items_id", $item_id, "integer");
+            AND item_repository_id = :item_repository_id");
+        $statement->bindValue(":item_repository_id", $item_id, "integer");
         $statement->execute();
         $result = $statement->fetch();
 

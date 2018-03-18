@@ -174,8 +174,8 @@
       var projects_details_page = "/admin/projects/subjects/";
       $('#browse_recent_projects tbody').on('click','td',function(event){
         if(!$(this).hasClass("manage_column")){
-          var projects_id = $(this).closest("tr").attr('id');
-          window.location.href = projects_details_page + projects_id;
+          var project_repository_id = $(this).closest("tr").attr('id');
+          window.location.href = projects_details_page + project_repository_id;
         }
       });
 
@@ -219,8 +219,8 @@
             var subjects_details_page = "/admin/projects/items/";
             $('#browse_recent_subjects tbody').on('click','td',function(event){
               if(!$(this).hasClass("manage_column")){
-                var subjects_id = $(this).closest("tr").attr('id');
-                window.location.href = subjects_details_page + aData['projects_id'] + '/' + subjects_id;
+                var subject_repository_id = $(this).closest("tr").attr('id');
+                window.location.href = subjects_details_page + aData['project_repository_id'] + '/' + subject_repository_id;
               }
             });
 

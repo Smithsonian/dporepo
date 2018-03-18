@@ -102,21 +102,21 @@ class ProjectsController extends Controller
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-                projects.projects_id as manage
-                ,projects.projects_id
+                projects.project_repository_id as manage
+                ,projects.project_repository_id
                 ,projects.project_name
                 ,projects.stakeholder_guid
                 ,projects.date_created
                 ,projects.last_modified
                 ,projects.active
-                ,projects.projects_id AS DT_RowId
+                ,projects.project_repository_id AS DT_RowId
                 ,isni_data.isni_label AS stakeholder_label
             FROM projects
             LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
-            LEFT JOIN subjects ON subjects.projects_id = projects.projects_id
+            LEFT JOIN subjects ON subjects.project_repository_id = projects.project_repository_id
             WHERE projects.active = 1
             {$search_sql}
-            GROUP BY projects.project_name, projects.stakeholder_guid, projects.date_created, projects.last_modified, projects.active, projects.projects_id
+            GROUP BY projects.project_name, projects.stakeholder_guid, projects.date_created, projects.last_modified, projects.active, projects.project_repository_id
             {$sort}
             {$limit_sql}");
         $statement->execute($pdo_params);
@@ -125,7 +125,7 @@ class ProjectsController extends Controller
         // Get the subjects count
         if(!empty($data['aaData'])) {
             foreach ($data['aaData'] as $key => $value) {
-                $project_subjects = $subjects->get_subjects($conn, $value['projects_id']);
+                $project_subjects = $subjects->get_subjects($conn, $value['project_repository_id']);
                 $data['aaData'][$key]['subjects_count'] = count($project_subjects);
             }
         }
@@ -142,22 +142,22 @@ class ProjectsController extends Controller
     /**
      * Matches /admin/projects/manage/*
      *
-     * @Route("/admin/projects/manage/{projects_id}", name="projects_manage", methods={"GET","POST"}, defaults={"projects_id" = null})
+     * @Route("/admin/projects/manage/{project_repository_id}", name="projects_manage", methods={"GET","POST"}, defaults={"project_repository_id" = null})
      *
-     * @param   int     $projects_id  The project ID
+     * @param   int     $project_repository_id  The project ID
      * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
      * @return  array                 Redirect or render
      */
-    function show_projects_form( $projects_id, Connection $conn, Request $request, IsniController $isni, UnitStakeholderController $unit )
+    function show_projects_form( $project_repository_id, Connection $conn, Request $request, IsniController $isni, UnitStakeholderController $unit )
     {
 
         $project = new Projects();
         $post = $request->request->all();
-        $projects_id = !empty($request->attributes->get('projects_id')) ? $request->attributes->get('projects_id') : false;
+        $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
 
         // Retrieve data from the database.
-        $project = (!empty($projects_id) && empty($post)) ? $project->getProject((int)$projects_id, $conn) : $project;
+        $project = (!empty($project_repository_id) && empty($post)) ? $project->getProject((int)$project_repository_id, $conn) : $project;
         
         // Get data from lookup tables.
         $project->stakeholder_guid_options = $this->get_units_stakeholders($conn);
@@ -171,15 +171,15 @@ class ProjectsController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $project = $form->getData();
-            $projects_id = $this->insert_update_project($project, $projects_id, $conn, $isni, $unit);
+            $project_repository_id = $this->insert_update_project($project, $project_repository_id, $conn, $isni, $unit);
 
             $this->addFlash('message', 'Project successfully updated.');
-            return $this->redirect('/admin/projects/subjects/' . $projects_id);
+            return $this->redirect('/admin/projects/subjects/' . $project_repository_id);
 
         }
 
         return $this->render('projects/project_form.html.twig', array(
-            'page_title' => !empty($projects_id) ? 'Project: ' . $project->project_name : 'Create Project',
+            'page_title' => !empty($project_repository_id) ? 'Project: ' . $project->project_name : 'Create Project',
             'project_data' => $project,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
@@ -198,7 +198,7 @@ class ProjectsController extends Controller
     public function get_project($project_id, $conn)
     {
         $statement = $conn->prepare("SELECT 
-            projects.projects_id,
+            projects.project_repository_id,
             projects.project_name,
             projects.stakeholder_guid,
             projects.project_description,
@@ -212,8 +212,8 @@ class ProjectsController extends Controller
             LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
             LEFT JOIN unit_stakeholder ON unit_stakeholder.isni_id = projects.stakeholder_guid
             WHERE projects.active = 1
-            AND projects_id = :projects_id");
-        $statement->bindValue(":projects_id", $project_id, PDO::PARAM_INT);
+            AND project_repository_id = :project_repository_id");
+        $statement->bindValue(":project_repository_id", $project_id, PDO::PARAM_INT);
         $statement->execute();
         return $statement->fetch(PDO::FETCH_ASSOC);
     }
@@ -273,7 +273,7 @@ class ProjectsController extends Controller
         // $statement_fgb->execute();
 
         $statement = $conn->prepare("
-            SELECT projects.projects_id
+            SELECT projects.project_repository_id
                 ,projects.stakeholder_guid
                 ,isni_data.isni_label AS stakeholder_label
             FROM projects
@@ -319,13 +319,13 @@ class ProjectsController extends Controller
         foreach ($projects as $key => $value) {
 
             // Check for child dataset records so the 'children' key can be set accordingly.
-            $subject_data = $subjects->get_subjects($conn, (int)$value['projects_id']);
+            $subject_data = $subjects->get_subjects($conn, (int)$value['project_repository_id']);
 
             $data[$key] = array(
-                'id' => 'projectId-' . $value['projects_id'],
+                'id' => 'projectId-' . $value['project_repository_id'],
                 'text' => $value['project_name'],
                 'children' => count($subject_data) ? true : false,
-                'a_attr' => array('href' => '/admin/projects/subjects/' . $value['projects_id']),
+                'a_attr' => array('href' => '/admin/projects/subjects/' . $value['project_repository_id']),
             );
             
         }
@@ -344,7 +344,7 @@ class ProjectsController extends Controller
      * @param   object  $conn        Database connection object
      * @return  int     The project ID
      */
-    public function insert_update_project($data, $projects_id = FALSE, $conn, $isni, $unit)
+    public function insert_update_project($data, $project_repository_id = FALSE, $conn, $isni, $unit)
     {
         // $this->u->dumper($data);
 
@@ -365,7 +365,7 @@ class ProjectsController extends Controller
         }
 
         // Update
-        if($projects_id) {
+        if($project_repository_id) {
 
             $statement = $conn->prepare("
                 UPDATE projects
@@ -373,20 +373,20 @@ class ProjectsController extends Controller
                 ,stakeholder_guid = :stakeholder_guid
                 ,project_description = :project_description
                 ,last_modified_user_account_id = :last_modified_user_account_id
-                WHERE projects_id = :projects_id
+                WHERE project_repository_id = :project_repository_id
                 ");
             $statement->bindValue(":project_name", $data->project_name, PDO::PARAM_STR);
             $statement->bindValue(":stakeholder_guid", $data->stakeholder_guid, PDO::PARAM_STR);
             $statement->bindValue(":project_description", $data->project_description, PDO::PARAM_STR);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->bindValue(":projects_id", $projects_id, PDO::PARAM_INT);
+            $statement->bindValue(":project_repository_id", $project_repository_id, PDO::PARAM_INT);
             $statement->execute();
 
-            return $projects_id;
+            return $project_repository_id;
         }
 
         // Insert
-        if(!$projects_id) {
+        if(!$project_repository_id) {
 
             $statement = $conn->prepare("INSERT INTO projects
               (project_name, stakeholder_guid, project_description, date_created, created_by_user_account_id, last_modified_user_account_id )
@@ -452,21 +452,21 @@ class ProjectsController extends Controller
 
             $statement = $conn->prepare("
                 UPDATE projects
-                LEFT JOIN subjects ON subjects.projects_id = projects.projects_id
-                LEFT JOIN items ON items.subjects_id = subjects.subjects_id
-                LEFT JOIN datasets ON datasets.items_id = items.items_id
-                LEFT JOIN dataset_elements ON dataset_elements.datasets_id = datasets.datasets_id
+                LEFT JOIN subjects ON subjects.project_repository_id = projects.project_repository_id
+                LEFT JOIN items ON items.subject_repository_id = subjects.subject_repository_id
+                LEFT JOIN capture_datasets ON capture_datasets.parent_item_repository_id = items.item_repository_id
+                LEFT JOIN dataset_elements ON dataset_elements.datasets_id = capture_datasets.capture_dataset_repository_id
                 SET projects.active = 0,
                     projects.last_modified_user_account_id = :last_modified_user_account_id,
                     subjects.active = 0,
                     subjects.last_modified_user_account_id = :last_modified_user_account_id,
                     items.active = 0,
                     items.last_modified_user_account_id = :last_modified_user_account_id,
-                    datasets.active = 0,
-                    datasets.last_modified_user_account_id = :last_modified_user_account_id,
+                    capture_datasets.active = 0,
+                    capture_datasets.last_modified_user_account_id = :last_modified_user_account_id,
                     dataset_elements.active = 0,
                     dataset_elements.last_modified_user_account_id = :last_modified_user_account_id
-                WHERE projects.projects_id = :id
+                WHERE projects.project_repository_id = :id
             ");
             $statement->bindValue(":id", $id, PDO::PARAM_INT);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
@@ -492,19 +492,19 @@ class ProjectsController extends Controller
      * @param   object  $conn        Database connection object
      * @return  void
      */
-    public function delete_project($projects_id, $conn)
+    public function delete_project($project_repository_id, $conn)
     {
         $statement = $conn->prepare("
             DELETE FROM projects
-            WHERE projects_id = :projects_id");
-        $statement->bindValue(":projects_id", $projects_id, PDO::PARAM_INT);
+            WHERE project_repository_id = :project_repository_id");
+        $statement->bindValue(":project_repository_id", $project_repository_id, PDO::PARAM_INT);
         $statement->execute();
 
         // First, delete all subjects.
         $statement = $conn->prepare("
             DELETE FROM subjects
-            WHERE projects_id = :projects_id");
-        $statement->bindValue(":projects_id", $projects_id, PDO::PARAM_INT);
+            WHERE project_repository_id = :project_repository_id");
+        $statement->bindValue(":project_repository_id", $project_repository_id, PDO::PARAM_INT);
         $statement->execute();
     }
 
@@ -517,7 +517,7 @@ class ProjectsController extends Controller
     public function create_projects_table($conn)
     {
         $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `projects` (
-          `projects_id` int(11) NOT NULL AUTO_INCREMENT,
+          `project_repository_id` int(11) NOT NULL AUTO_INCREMENT,
           `project_name` varchar(255) DEFAULT '',
           `stakeholder_guid` varchar(255) DEFAULT '',
           `project_description` text,
@@ -526,7 +526,7 @@ class ProjectsController extends Controller
           `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           `last_modified_user_account_id` int(11) NOT NULL,
           `active` tinyint(1) NOT NULL DEFAULT '1',
-          PRIMARY KEY (`projects_id`),
+          PRIMARY KEY (`project_repository_id`),
           KEY `created_by_user_account_id` (`created_by_user_account_id`),
           KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
           KEY `projects_label` (`project_name`,`stakeholder_guid`)

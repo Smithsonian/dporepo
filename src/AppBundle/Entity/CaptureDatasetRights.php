@@ -56,17 +56,17 @@ class CaptureDatasetRights
     /**
     * Get All Records
     *
-    * @param   int  $capture_datasets_id  The parent record ID
+    * @param   int  $capture_dataset_repository_id  The parent record ID
     * @param   object  $conn  Database connection object
     * @return  array|bool  The query result
     */
-    public function getAll($capture_datasets_id, Connection $conn)
+    public function getAll($capture_dataset_repository_id, Connection $conn)
     {
         $statement = $conn->prepare("
             SELECT * FROM capture_dataset_rights
-            WHERE capture_dataset_rights.capture_datasets_id = :capture_datasets_id
+            WHERE capture_dataset_rights.capture_dataset_repository_id = :capture_dataset_repository_id
         ");
-        $statement->bindValue(":capture_datasets_id", $capture_datasets_id, "integer");
+        $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, "integer");
         $statement->execute();
         return $statement->fetchAll(PDO::FETCH_ASSOC);
     }

@@ -43,16 +43,16 @@ class DatasetElements
      *
      * Get one dataset element from the database.
      *
-     * @param       int $capture_data_elements_id  The dataset element ID
+     * @param       int $capture_data_element_repository_id  The dataset element ID
      * @return      array|bool                     The query result
      */
-    public function getDatasetElement($capture_data_elements_id, Connection $conn)
+    public function getDatasetElement($capture_data_element_repository_id, Connection $conn)
     {
         $statement = $conn->prepare("SELECT *
             FROM capture_data_elements
             WHERE capture_data_elements.active = 1
-            AND capture_data_elements_id = :capture_data_elements_id");
-        $statement->bindValue(":capture_data_elements_id", $capture_data_elements_id, "integer");
+            AND capture_data_element_repository_id = :capture_data_element_repository_id");
+        $statement->bindValue(":capture_data_element_repository_id", $capture_data_element_repository_id, "integer");
         $statement->execute();
         $result = $statement->fetch();
 

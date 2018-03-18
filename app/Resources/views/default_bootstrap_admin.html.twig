@@ -55,7 +55,7 @@
           {% block side_nav %}
             {{ parent() }}
           {% endblock %}
-          {% if (app.request.pathInfo == '/admin/workspace/') or (projects_id is defined) %}
+          {% if (app.request.pathInfo == '/admin/workspace/') or (project_repository_id is defined) %}
             <div class="col-sm-9 col-sm-offset-3 col-md-9 col-md-offset-3 main resizable">
           {% else %}
             <div class="col-sm-12 main">

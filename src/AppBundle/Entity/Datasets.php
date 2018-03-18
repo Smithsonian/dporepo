@@ -120,11 +120,11 @@ class Datasets
      *
      * Get one dataset from the database.
      *
-     * @param   int     $capture_datasets_id  The data value
+     * @param   int     $capture_dataset_repository_id  The data value
      * @param   object  $conn         Database connection object
      * @return  array|bool            The query result
      */
-    public function getDataset($capture_datasets_id, Connection $conn)
+    public function getDataset($capture_dataset_repository_id, Connection $conn)
     {
         $statement = $conn->prepare("SELECT
               capture_datasets.capture_dataset_guid
@@ -168,8 +168,8 @@ class Datasets
             -- LEFT JOIN background_removal_methods ON background_removal_methods.background_removal_methods_id = capture_datasets.background_removal_method
             -- LEFT JOIN camera_cluster_types ON camera_cluster_types.camera_cluster_types_id = capture_datasets.cluster_type
             WHERE capture_datasets.active = 1
-            AND capture_datasets.capture_datasets_id = :capture_datasets_id");
-            $statement->bindValue(":capture_datasets_id", $capture_datasets_id, "integer");
+            AND capture_datasets.capture_dataset_repository_id = :capture_dataset_repository_id");
+            $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, "integer");
         $statement->execute();
         $result = $statement->fetch();
 

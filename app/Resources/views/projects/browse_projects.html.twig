@@ -88,8 +88,8 @@
             // Don't do anything if the table cell has the 'manage_column' CSS class.
             if(thisTableCell.hasClass('manage_column')) return;
             // Send to the details page.
-            var projects_id = thisTableCell.closest("tr").attr('id');
-            window.location.href = details_page + projects_id;
+            var project_repository_id = thisTableCell.closest("tr").attr('id');
+            window.location.href = details_page + project_repository_id;
           });
 
         }

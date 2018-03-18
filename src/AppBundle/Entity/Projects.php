@@ -84,7 +84,7 @@ class Projects
     public function getProject($project_id, Connection $conn)
     {
         $statement = $conn->prepare("SELECT 
-            projects.projects_id,
+            projects.project_repository_id,
             projects.project_name,
             projects.stakeholder_guid,
             projects.project_description,
@@ -95,8 +95,8 @@ class Projects
             LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
             LEFT JOIN unit_stakeholder ON unit_stakeholder.isni_id = projects.stakeholder_guid
             WHERE projects.active = 1
-            AND projects_id = :projects_id");
-        $statement->bindValue(":projects_id", $project_id, "integer");
+            AND project_repository_id = :project_repository_id");
+        $statement->bindValue(":project_repository_id", $project_id, "integer");
         $statement->execute();
         $result = $statement->fetch();
 
