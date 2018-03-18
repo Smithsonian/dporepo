@@ -448,7 +448,7 @@ class ItemsController extends Controller
 
             $statement = $conn->prepare("
                 UPDATE items
-                LEFT JOIN capture_datasets ON capture_datasets.parent_item_repository_id = items.parent_item_repository_id
+                LEFT JOIN capture_datasets ON capture_datasets.parent_item_repository_id = items.item_repository_id
                 LEFT JOIN capture_data_elements ON capture_data_elements.capture_dataset_repository_id = capture_datasets.capture_dataset_repository_id
                 SET items.active = 0,
                     items.last_modified_user_account_id = :last_modified_user_account_id,
@@ -456,7 +456,7 @@ class ItemsController extends Controller
                     capture_datasets.last_modified_user_account_id = :last_modified_user_account_id,
                     capture_data_elements.active = 0,
                     capture_data_elements.last_modified_user_account_id = :last_modified_user_account_id
-                WHERE items.parent_item_repository_id = :id
+                WHERE items.item_repository_id = :id
             ");
             $statement->bindValue(":id", $id, PDO::PARAM_INT);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);

@@ -190,8 +190,8 @@
             // Don't do anything if the table cell has the 'manage_column' CSS class.
             if(thisTableCell.hasClass('manage_column')) return;
             // Send to the details page.
-            var datasets_id = thisTableCell.closest("tr").attr('id');
-            window.location.href = details_page + project_repository_id + '/' + subject_repository_id + '/' + item_repository_id + '/' + datasets_id;
+            var capture_dataset_repository_id = thisTableCell.closest("tr").attr('id');
+            window.location.href = details_page + project_repository_id + '/' + subject_repository_id + '/' + item_repository_id + '/' + capture_dataset_repository_id;
           });
 
         }

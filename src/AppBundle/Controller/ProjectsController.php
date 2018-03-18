@@ -455,7 +455,7 @@ class ProjectsController extends Controller
                 LEFT JOIN subjects ON subjects.project_repository_id = projects.project_repository_id
                 LEFT JOIN items ON items.subject_repository_id = subjects.subject_repository_id
                 LEFT JOIN capture_datasets ON capture_datasets.parent_item_repository_id = items.item_repository_id
-                LEFT JOIN dataset_elements ON dataset_elements.datasets_id = capture_datasets.capture_dataset_repository_id
+                LEFT JOIN capture_data_elements ON capture_data_elements.capture_dataset_repository_id = capture_datasets.capture_dataset_repository_id
                 SET projects.active = 0,
                     projects.last_modified_user_account_id = :last_modified_user_account_id,
                     subjects.active = 0,
@@ -464,8 +464,8 @@ class ProjectsController extends Controller
                     items.last_modified_user_account_id = :last_modified_user_account_id,
                     capture_datasets.active = 0,
                     capture_datasets.last_modified_user_account_id = :last_modified_user_account_id,
-                    dataset_elements.active = 0,
-                    dataset_elements.last_modified_user_account_id = :last_modified_user_account_id
+                    capture_data_elements.active = 0,
+                    capture_data_elements.last_modified_user_account_id = :last_modified_user_account_id
                 WHERE projects.project_repository_id = :id
             ");
             $statement->bindValue(":id", $id, PDO::PARAM_INT);

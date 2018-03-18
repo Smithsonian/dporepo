@@ -369,7 +369,7 @@ class SubjectsController extends Controller
             $statement = $conn->prepare("
                 UPDATE subjects
                 LEFT JOIN items ON items.subject_repository_id = subjects.subject_repository_id
-                LEFT JOIN capture_datasets ON capture_datasets.item_repository_id = items.item_repository_id
+                LEFT JOIN capture_datasets ON capture_datasets.parent_item_repository_id = items.item_repository_id
                 LEFT JOIN capture_data_elements ON capture_data_elements.capture_dataset_repository_id = capture_datasets.capture_dataset_repository_id
                 SET subjects.active = 0,
                     subjects.last_modified_user_account_id = :last_modified_user_account_id,

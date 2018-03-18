@@ -400,7 +400,7 @@ class DatasetElementsController extends Controller
     }
 
     /**
-     * Delete Multiple Dataset Elements
+     * Delete Multiple Capture Data Elements
      *
      * @Route("/admin/projects/dataset_elements/{project_repository_id}/{subject_repository_id}/{item_repository_id}/{capture_dataset_repository_id}/delete", name="dataset_elements_remove_records", methods={"GET"})
      * Run a query to delete multiple records.
@@ -410,7 +410,7 @@ class DatasetElementsController extends Controller
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple_datasets(Connection $conn, Request $request)
+    public function delete_multiple_capture_data_elements(Connection $conn, Request $request)
     {
         $ids = $request->query->get('ids');
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
