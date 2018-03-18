@@ -250,10 +250,6 @@ dd {
 	margin-right: 8px;
 }
 
-.add-record-button {
-  margin-bottom: 0.5rem;
-}
-
 .control-label.required:before {
   content: "* ";
   color: red;
