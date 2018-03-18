@@ -32,16 +32,6 @@ class ItemsController extends Controller
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
-
-        // Establish paths.
-        if($_SERVER['SERVER_SOFTWARE'] === 'Microsoft-IIS/8.5') {
-            define('BASE_ROOT', 'C:\\');
-        } else {
-            define('BASE_ROOT', getcwd() . '/');
-        }
-
-        define('JOBBOX_PATH', BASE_ROOT . 'JobBox');
-        define('JOBBOXPROCESS_PATH', BASE_ROOT . 'JobBoxProcess');
     }
 
     /**
@@ -540,6 +530,9 @@ class ItemsController extends Controller
      * @return json  The JSON encoded data
      */
     public function processDirectoryStatuses($directoryScanType = '', $itemguid = '', $conn) {
+
+      // Instantiating Items for the path constants.
+      $item = new Items();
 
       $data = $directoryContents = array();
       $jobBoxDirectoryExists = false;
