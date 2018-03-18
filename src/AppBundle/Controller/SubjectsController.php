@@ -11,16 +11,11 @@ use Doctrine\DBAL\Driver\Connection;
 
 use PDO;
 
-// Custom utility bundles
-use AppBundle\Utils\AppUtilities;
-
-// Projects methods
-use AppBundle\Controller\ProjectsController;
-// Items methods
-use AppBundle\Controller\ItemsController;
-
 use AppBundle\Form\Subject;
 use AppBundle\Entity\Subjects;
+
+// Custom utility bundle
+use AppBundle\Utils\AppUtilities;
 
 class SubjectsController extends Controller
 {

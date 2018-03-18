@@ -10,23 +10,12 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
 use PDO;
-use GUMP;
-
-// Custom utility bundles
-use AppBundle\Utils\GumpParseErrors;
-use AppBundle\Utils\AppUtilities;
-
-// Projects methods
-use AppBundle\Controller\ProjectsController;
-// Subjects methods
-use AppBundle\Controller\SubjectsController;
-// Items methods
-use AppBundle\Controller\ItemsController;
-// Dataset Elements methods
-use AppBundle\Controller\DatasetElementsController;
 
 use AppBundle\Form\Dataset;
 use AppBundle\Entity\Datasets;
+
+// Custom utility bundle
+use AppBundle\Utils\AppUtilities;
 
 class DatasetsController extends Controller
 {
