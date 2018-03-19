@@ -20,16 +20,17 @@ class RepoStorageHybrid implements RepoStorage {
       'fields' => array(),
       'base_table' => 'projects',
       'search_params' => array(
-        0 => array('field_names' => array('projects.active'), 'search_values' => array(1)),
-        1 => array('field_names' => array('projects.projects_id'), 'search_values' => array($project_id))
+        0 => array('field_names' => array('projects.active'), 'search_values' => array(1), 'comparison' => '='),
+        1 => array('field_names' => array('projects.project_repository_id'), 'search_values' => $project_id, 'comparison' => '=')
       ),
+      'search_type' => 'AND',
       'related_tables' => array(),
     );
 
     // Fields.
     $query_params['fields'][] = array(
       'table_name' => 'projects',
-      'field_name' => 'projects_id',
+      'field_name' => 'project_repository_id',
     );
     $query_params['fields'][] = array(
       'field_name' => 'project_name',
@@ -88,8 +89,35 @@ class RepoStorageHybrid implements RepoStorage {
     $ret = $this->getRecords($query_params, $return_data);
     //@todo do something if $ret has errors
 
+    if(array_key_exists('aaData', $return_data) && array_key_exists(0, $return_data['aaData'])) {
+      $return_data = $return_data['aaData'][0];
+    }
+
     return $return_data;
 
+  }
+
+  public function getSubject($subject_id) {
+
+    $query_params = array(
+      'fields' => array(),
+      'base_table' => 'subjects',
+      'search_params' => array(
+        0 => array('field_names' => array('subjects.active'), 'search_values' => array(1), 'comparison' => '='),
+        1 => array('field_names' => array('subjects.subject_repository_id'), 'search_values' => $subject_id, 'comparison' => '=')
+      ),
+      'search_type' => 'AND'
+    );
+
+    $return_data = array();
+    $ret = $this->getRecords($query_params, $return_data);
+    //@todo do something if $ret has errors
+
+    if(array_key_exists('aaData', $return_data) && array_key_exists(0, $return_data['aaData'])) {
+      $return_data = $return_data['aaData'][0];
+    }
+
+    return $return_data;
   }
 
   /**
@@ -107,8 +135,9 @@ class RepoStorageHybrid implements RepoStorage {
     /*
      * $query_parameters should contain:
      * ------------
-     * fields - array of field_name, field_alias, field_table
      * base_table - string indicating base table for query
+     * fields - array of field_name, field_alias, field_table
+     *    if fields array is empty, query will return all fields for base_table
      * related_tables - optional array of table,
      *    where each table is an array of
      *    table_name, table_alias, join_type, table_join_field, base_join_table, base_join_field
@@ -157,7 +186,7 @@ class RepoStorageHybrid implements RepoStorage {
       }
     }
     if(count($select_fields_array) < 1) {
-      return array('fail', array('Fields parameter must contain at least one value with a field_name.'));
+      $select_fields_array[] = $base_table . '.*';
     }
     $select_sql = implode(', ', $select_fields_array);
 
@@ -237,12 +266,18 @@ class RepoStorageHybrid implements RepoStorage {
           continue;
         }
 
-        $this_search_string = '';
         $this_search_param = array();
         foreach($field_names as $fn) {
           if(count($search_values) == 1) {
+            if(array_key_exists('comparison', $p) && $p['comparison'] !== 'LIKE') {
+              $this_search_param[] = $fn . ' ' . $p['comparison'] . ' ?';
+              $k = array_keys($search_values)[0];
+              $search_params[] = $search_values[$k];
+            }
+            else {
             $this_search_param[] = $fn . ' LIKE ?';
             $search_params[] = '%' . $search_values[array_keys($search_values[0])] . '%';
+          }
           }
           else {
             $this_search_param[] = $fn['field_name'] . ' IN (?)';
@@ -250,11 +285,16 @@ class RepoStorageHybrid implements RepoStorage {
           }
         }
 
-        $search_sql_values .= '(' . implode(' OR ', $this_search_param) . ') ';
+        $search_sql_values[] = '(' . implode(' OR ', $this_search_param) . ') ';
       }
 
       if(count($search_sql_values) > 0) {
-        $search_sql = implode(' AND ', $search_sql_values);
+        if(array_key_exists('search_type', $query_parameters) && $query_parameters['search_type'] != 'OR') {
+          $search_sql = implode(' ' . $query_parameters['search_type'] . ' ', $search_sql_values);
+        }
+        else {
+          $search_sql = implode(' OR ', $search_sql_values);
+        }
       }
     }
 
