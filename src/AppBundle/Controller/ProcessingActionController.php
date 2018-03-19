@@ -106,10 +106,23 @@ class ProcessingActionController extends Controller
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
         $data = (!empty($id) && empty($post)) ? $data->getOne((int)$id, $conn) : $data;
-        if(!$data) throw $this->createNotFoundException('The record does not exist');
+
+        // $this->u->dumper($data);
+
+
+
+        if(!isset($data->action_method)) throw $this->createNotFoundException('The record does not exist');
+
+        // $this->u->dumper($data);
+
+
 
         // Add the parent_id to the $data object
         $data->target_model_repository_id = $parent_id;
+
+        // $this->u->dumper($data);
+
+        
         
         // Create the form
         $form = $this->createForm(ProcessingActionForm::class, $data);
