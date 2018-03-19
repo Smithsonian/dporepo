@@ -1,0 +1,58 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/css/bootstrap-datepicker3.css" rel="stylesheet" type="text/css">
+{% endblock %}
+
+{% block content %}
+
+  <div class="row">
+    <div class="col-sm-12 col-md-12">
+      <div class="form-group">
+        <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
+      </div>
+    </div>
+  </div>
+
+  {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
+
+    <div class="row">
+      <div class="col-sm-6 col-md-6">
+        {{ form_row(form.preceding_processing_action_repository_id) }}
+        {{ form_row(form.date_of_action) }}
+        {{ form_row(form.action_method) }}
+        {{ form_row(form.software_used) }}
+        {{ form_row(form.action_description) }}
+      </div>
+      <div class="col-sm-6 col-md-6">
+        <!-- placeholder -->
+      </div>
+    </div>
+
+    <div class="field-group" style="clear:both;">
+      {{ form_row(form.save) }}
+    </div>
+
+  {{ form_end(form) }}
+
+{% endblock %}
+
+{% block javascripts %}
+  {{ parent() }}
+  <script src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/js/bootstrap-datepicker.min.js"></script>
+  <script type="text/javascript">
+    // Datepicker
+    $(document).ready(function(){
+      var date_of_action_input = $('input[name="processing_action_form[date_of_action]"]');
+      var container = $('form.processing_action_form').length > 0 ? $('form.processing_action_form').parent() : 'body';
+      var options = {
+        format: 'yyyy-mm-dd 00:00:00',
+        container: container,
+        todayHighlight: true,
+        autoclose: true,
+      };
+      date_of_action_input.datepicker(options);
+    });
+  </script>
+{% endblock %}
