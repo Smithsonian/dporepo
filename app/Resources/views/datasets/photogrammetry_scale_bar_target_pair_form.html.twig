@@ -1,0 +1,34 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block content %}
+
+  <div class="row">
+    <div class="col-sm-12 col-md-12">
+      <div class="form-group">
+        <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
+      </div>
+    </div>
+  </div>
+
+  {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
+
+    <div class="row">
+      <div class="col-sm-6 col-md-6">
+        {{ form_row(form.target_type) }}
+        {{ form_row(form.target_pair_1_of_2) }}
+        {{ form_row(form.target_pair_2_of_2) }}
+        {{ form_row(form.distance) }}
+        {{ form_row(form.units) }}
+      </div>
+      <div class="col-sm-6 col-md-6">
+        <!-- placeholder -->
+      </div>
+    </div>
+
+    <div class="field-group" style="clear:both;">
+      {{ form_row(form.save) }}
+    </div>
+
+  {{ form_end(form) }}
+
+{% endblock %}
