@@ -196,38 +196,4 @@ class CaptureDataFile
         $statement->execute();
     }
 
-    /**
-     * Create Database Table
-     *
-     * @param Connection $conn
-     * @return bool
-     */
-    public function createTable(Connection $conn)
-    {
-        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `capture_data_file` (
-            `capture_data_file_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `parent_capture_data_element_repository_id` int(11),
-            `capture_data_file_name` varchar(255),
-            `capture_data_file_type` varchar(255),
-            `is_compressed_multiple_files` varchar(255),
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`capture_data_file_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='This table stores capture_data_file metadata'");
-        $statement->execute();
-        $error = $conn->errorInfo();
-
-        if ($error[0] !== '00000') {
-            var_dump($conn->errorInfo());
-            die('CREATE TABLE `capture_data_file` failed.');
-        } else {
-            return TRUE;
-        }
-
-    }
 }

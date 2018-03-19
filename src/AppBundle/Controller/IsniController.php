@@ -180,37 +180,5 @@ class IsniController extends Controller
         }
     }
 
-    /**
-     * Create ISNI Table
-     *
-     * @param   object $conn  Database connection object
-     * @return  void
-     */
-    public function create_isni_table($conn)
-    {
-        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `isni_data` (
-          `isni_id` int(11) NOT NULL AUTO_INCREMENT,
-          `isni_label` varchar(255) NOT NULL DEFAULT '',
-          `date_created` datetime NOT NULL,
-          `created_by_user_account_id` int(11) NOT NULL,
-          `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          `last_modified_user_account_id` int(11) NOT NULL,
-          `active` tinyint(1) NOT NULL DEFAULT '1',
-          PRIMARY KEY (`isni_id`),
-          KEY `created_by_user_account_id` (`created_by_user_account_id`),
-          KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='This table stores ISNI metadata'");
-
-        $statement->execute();
-        $error = $conn->errorInfo();
-
-        if ($error[0] !== '00000') {
-            var_dump($conn->errorInfo());
-            die('CREATE TABLE `projects` failed.');
-        } else {
-            return TRUE;
-        }
-
-    }
 
 }

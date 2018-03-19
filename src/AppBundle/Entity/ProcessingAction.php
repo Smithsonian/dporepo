@@ -221,39 +221,4 @@ class ProcessingAction
         $statement->execute();
     }
 
-    /**
-     * Create Database Table
-     *
-     * @return  void
-     */
-    public function createTable(Connection $conn)
-    {
-        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `processing_action` (
-            `processing_action_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `target_model_repository_id` int(11),
-            `preceding_processing_action_repository_id` int(11),
-            `date_of_action` datetime,
-            `action_method` varchar(255),
-            `software_used` varchar(255),
-            `action_description` mediumtext,
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`processing_action_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='This table stores processing_action metadata'");
-        $statement->execute();
-        $error = $conn->errorInfo();
-
-        if ($error[0] !== '00000') {
-            var_dump($conn->errorInfo());
-            die('CREATE TABLE `processing_action` failed.');
-        } else {
-            return TRUE;
-        }
-
-    }
 }
