@@ -11,6 +11,9 @@ use Doctrine\DBAL\Driver\Connection;
 
 use PDO;
 
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\DependencyInjection\Container;
+
 use AppBundle\Form\Subject;
 use AppBundle\Entity\Subjects;
 
@@ -45,7 +48,10 @@ class SubjectsController extends Controller
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $project_data = $projects->get_project((int)$project_repository_id, $conn);
+        $repo_controller = new RepoStorageHybridController();
+        $repo_controller->setContainer($this->container);
+        $project_data = $repo_controller->execute('getProject', array('project_repository_id' => $project_repository_id));
+
         if(!$project_data) throw $this->createNotFoundException('The record does not exist');
 
         return $this->render('subjects/browse_subjects.html.twig', array(
@@ -175,7 +181,10 @@ class SubjectsController extends Controller
         $subject->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
 
         // Retrieve data from the database.
-        $subject = (!empty($subject_repository_id) && empty($post)) ? $subject->getSubject((int)$subject_repository_id, $conn) : $subject;
+        $repo_controller = new RepoStorageHybridController();
+        $repo_controller->setContainer($this->container);
+        $subject_data = $repo_controller->execute('getSubject', array('subject_repository_id' => (int)$subject_repository_id));
+        $subject = (!empty($subject_repository_id) && empty($post)) ? (object)$subject_data : $subject;
 
         // Create the form
         $form = $this->createForm(Subject::class, $subject);

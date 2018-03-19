@@ -14,6 +14,9 @@ use PDO;
 use AppBundle\Form\Project;
 use AppBundle\Entity\Projects;
 
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\DependencyInjection\Container;
+
 // Custom utility bundle
 use AppBundle\Utils\AppUtilities;
 
@@ -24,6 +27,9 @@ class ProjectsController extends Controller
      */
     public $u;
 
+    private $repo_controller;
+    private $repo_storage_controller;
+
     /**
     * Constructor
     * @param object  $u  Utility functions object
@@ -32,6 +38,9 @@ class ProjectsController extends Controller
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
+        $this->repo_storage_controller = new RepoStorageHybridController();
+        $this->repo_controller = new RepoStorageHybridController();
+
     }
 
     /**
@@ -40,8 +49,9 @@ class ProjectsController extends Controller
     public function browse_projects(Connection $conn, Request $request, IsniController $isni)
     {
         // Database tables are only created if not present.
-        $create_projects_table = $this->create_projects_table($conn);
-        $create_isni_table = $isni->create_isni_table($conn);
+      $this->repo_storage_controller->setContainer($this->container);
+      $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'projects'));
+      $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'isni_data'));
 
         return $this->render('projects/browse_projects.html.twig', array(
             'page_title' => 'Browse Projects',
@@ -152,7 +162,9 @@ class ProjectsController extends Controller
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
 
         // Retrieve data from the database.
-        $project = (!empty($project_repository_id) && empty($post)) ? $project->getProject((int)$project_repository_id, $conn) : $project;
+        $repo_controller = new RepoStorageHybridController();
+        $repo_controller->setContainer($this->container);
+        $project = (!empty($project_repository_id) && empty($post)) ? $repo_controller->execute('getProject', array('project_repository_id' => $project_repository_id)) : $project;
         
         // Get data from lookup tables.
         $project->stakeholder_guid_options = $this->get_units_stakeholders($conn);
@@ -180,37 +192,6 @@ class ProjectsController extends Controller
             'form' => $form->createView(),
         ));
 
-    }
-
-    /**
-     * Get Project
-     *
-     * Run a query to retrieve one project from the database.
-     *
-     * @param   int $project_id  The project ID
-     * @return  array|bool       The query result
-     */
-    public function get_project($project_id, $conn)
-    {
-        $statement = $conn->prepare("SELECT 
-            projects.project_repository_id,
-            projects.project_name,
-            projects.stakeholder_guid,
-            projects.project_description,
-            projects.date_created,
-            projects.created_by_user_account_id,
-            projects.last_modified,
-            projects.last_modified_user_account_id,
-            isni_data.isni_label AS stakeholder_label,
-            unit_stakeholder.unit_stakeholder_id AS stakeholder_si_guid
-            FROM projects
-            LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
-            LEFT JOIN unit_stakeholder ON unit_stakeholder.isni_id = projects.stakeholder_guid
-            WHERE projects.active = 1
-            AND project_repository_id = :project_repository_id");
-        $statement->bindValue(":project_repository_id", $project_id, PDO::PARAM_INT);
-        $statement->execute();
-        return $statement->fetch(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -500,42 +481,6 @@ class ProjectsController extends Controller
             WHERE project_repository_id = :project_repository_id");
         $statement->bindValue(":project_repository_id", $project_repository_id, PDO::PARAM_INT);
         $statement->execute();
-    }
-
-    /**
-     * Create Project Table
-     *
-     * @param   object $conn  Database connection object
-     * @return  void
-     */
-    public function create_projects_table($conn)
-    {
-        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `projects` (
-          `project_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-          `project_name` varchar(255) DEFAULT '',
-          `stakeholder_guid` varchar(255) DEFAULT '',
-          `project_description` text,
-          `date_created` datetime NOT NULL,
-          `created_by_user_account_id` int(11) NOT NULL,
-          `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          `last_modified_user_account_id` int(11) NOT NULL,
-          `active` tinyint(1) NOT NULL DEFAULT '1',
-          PRIMARY KEY (`project_repository_id`),
-          KEY `created_by_user_account_id` (`created_by_user_account_id`),
-          KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
-          KEY `projects_label` (`project_name`,`stakeholder_guid`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8 COMMENT='This table stores projects metadata'");
-
-        $statement->execute();
-        $error = $conn->errorInfo();
-
-        if ($error[0] !== '00000') {
-            var_dump($conn->errorInfo());
-            die('CREATE TABLE `projects` failed.');
-        } else {
-            return TRUE;
-        }
-
     }
 
 }
