@@ -75,36 +75,6 @@ class Projects
     //     $this->project_description = $project_description;
     // }
 
-    /**
-     * Get Project
-     *
-     * Run a query to retrieve one project from the database.
-     *
-     * @param   int $project_id  The project ID
-     * @return  array|bool       The query result
-     */
-    public function getProject($project_id, Connection $conn)
-    {
-        $statement = $conn->prepare("SELECT 
-            projects.project_repository_id,
-            projects.project_name,
-            projects.stakeholder_guid,
-            projects.project_description,
-            isni_data.isni_label AS stakeholder_label,
-            unit_stakeholder.unit_stakeholder_id AS stakeholder_si_guid,
-            unit_stakeholder.unit_stakeholder_id AS stakeholder_guid_picker
-            FROM projects
-            LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
-            LEFT JOIN unit_stakeholder ON unit_stakeholder.isni_id = projects.stakeholder_guid
-            WHERE projects.active = 1
-            AND project_repository_id = :project_repository_id");
-        $statement->bindValue(":project_repository_id", $project_id, "integer");
-        $statement->execute();
-        $result = $statement->fetch();
-
-        return (object)$result;
-    }
-
     public function setProject($project)
     {
         $this->project = $project;

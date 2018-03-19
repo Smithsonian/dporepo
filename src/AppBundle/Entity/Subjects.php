@@ -29,26 +29,5 @@ class Subjects
      * @var int
      */
     public $local_subject_id;
-    
-    /**
-     * Get Subject
-     *
-     * Run a query to retrieve one subject from the database.
-     *
-     * @param   int $subject_id  The subject ID
-     * @param   object  $conn    Database connection object
-     * @return  array|bool       The query result
-     */
-    public function getSubject($subject_id, Connection $conn)
-    {
-        $statement = $conn->prepare("SELECT *
-            FROM subjects
-            WHERE subjects.active = 1
-            AND subject_repository_id = :subject_repository_id");
-        $statement->bindValue(":subject_repository_id", $subject_id, "integer");
-        $statement->execute();
-        $result = $statement->fetch();
 
-        return (object)$result;
-    }
 }
