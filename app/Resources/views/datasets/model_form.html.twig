@@ -1,0 +1,68 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/css/bootstrap-datepicker3.css" rel="stylesheet" type="text/css">
+{% endblock %}
+
+{% block content %}
+
+  <div class="row">
+    <div class="col-sm-12 col-md-12">
+      <div class="form-group">
+        <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
+      </div>
+    </div>
+  </div>
+
+  {{ form_start(form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
+
+    <div class="row">
+      <div class="col-sm-6 col-md-6">
+        {{ form_row(form.model_guid) }}
+        {{ form_row(form.date_of_creation) }}
+        {{ form_row(form.model_file_type) }}
+        {{ form_row(form.derived_from) }}
+        {{ form_row(form.creation_method) }}
+        {{ form_row(form.model_modality) }}
+        {{ form_row(form.units) }}
+        {{ form_row(form.is_watertight) }}
+      </div>
+      <div class="col-sm-6 col-md-6">
+        {{ form_row(form.model_purpose) }}
+        {{ form_row(form.point_count) }}
+        {{ form_row(form.has_normals) }}
+        {{ form_row(form.face_count) }}
+        {{ form_row(form.vertices_count) }}
+        {{ form_row(form.has_vertex_color) }}
+        {{ form_row(form.has_uv_space) }}
+        {{ form_row(form.model_maps) }}
+      </div>
+    </div>
+
+    <div class="field-group" style="clear:both;">
+      {{ form_row(form.save) }}
+    </div>
+
+  {{ form_end(form) }}
+
+{% endblock %}
+
+{% block javascripts %}
+  {{ parent() }}
+  <script src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/js/bootstrap-datepicker.min.js"></script>
+  <script type="text/javascript">
+    // Datepicker
+    $(document).ready(function(){
+      var date_of_creation_input = $('input[name="model_form[date_of_creation]"]');
+      var container = $('form.model_form').length > 0 ? $('form.model_form').parent() : 'body';
+      var options = {
+        format: 'yyyy-mm-dd 00:00:00',
+        container: container,
+        todayHighlight: true,
+        autoclose: true,
+      };
+      date_of_creation_input.datepicker(options);
+    });
+  </script>
+{% endblock %}
