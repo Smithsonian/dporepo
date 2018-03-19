@@ -21,9 +21,6 @@ use AppBundle\Controller\SubjectsController;
 use AppBundle\Controller\UnitStakeholderController;
 use AppBundle\Controller\IsniController;
 
-use AppBundle\Controller\RepoStorageHybridController;
-use Symfony\Component\DependencyInjection\Container;
-
 class ProjectsController extends Controller
 {
     /**
@@ -258,29 +255,6 @@ class ProjectsController extends Controller
         $statement->execute();
         return $statement->fetch(PDO::FETCH_ASSOC);
     }
-
-  /**
-   * Get Project (new)
-   * Matches /admin/projects/manage/project-test/*
-   *
-   * @Route("/admin/projects/manage/project-test/{projects_id}", name="projects_manage-new", methods={"GET","POST"}, defaults={"projects_id" = null})
-   *
-   * @param   int     $projects_id  The project ID
-   * @return  array                 Redirect or render
-   * Run a query to retrieve one project from the database.
-   */
-  public function get_project_new($projects_id)
-  {
-
-    //@todo- call all lower level functions like this:
-    $repo_controller = new RepoStorageHybridController();
-    $repo_controller->setContainer($this->container);
-    $data = $repo_controller->execute('getProject', array('project_id' => $projects_id));
-
-    // This is only an example- returns JSON- in reality we'd want to render the response.
-    return new Response(json_encode($data, true));
-
-  }
 
     /**
      * Get Projects
