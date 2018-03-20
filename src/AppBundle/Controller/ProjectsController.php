@@ -204,12 +204,22 @@ class ProjectsController extends Controller
      */
     public function get_projects($conn)
     {
-        $statement = $conn->prepare("
+      $this->repo_storage_controller->setContainer($this->container);
+      $data = $this->repo_controller->execute('getRecords', array(
+        'base_table' => 'projects',
+        'fields' => array(),
+        'sort_fields' => array(
+          'field_name' => 'stakeholder_guid'
+        ),
+        )
+      );
+
+/*      $statement = $conn->prepare("
             SELECT * FROM projects
             ORDER BY projects.stakeholder_guid ASC
         ");
-        $statement->execute();
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
+*/
+      return $data;
     }
 
     /**
@@ -223,6 +233,22 @@ class ProjectsController extends Controller
      */
     public function get_projects_by_stakeholder_guid($conn, $stakeholder_guid)
     {
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_controller->execute('getRecords', array(
+            'base_table' => 'projects',
+            'fields' => array(),
+            'sort_fields' => array(
+              'field_name' => 'project_name'
+            ),
+            'search_params' => array(
+              0 => array('field_names' => array('projects.active'), 'search_values' => array(1), 'comparison' => '='),
+              1 => array('field_names' => array('projects.stakeholder_guid'), 'search_values' => $stakeholder_guid, 'comparison' => '=')
+            ),
+            'search_type' => 'AND'
+          )
+        );
+
+        /*
         $statement = $conn->prepare("
             SELECT * FROM projects
             WHERE projects.stakeholder_guid = :stakeholder_guid
@@ -230,8 +256,8 @@ class ProjectsController extends Controller
             ORDER BY projects.project_name ASC
         ");
         $statement->bindValue(":stakeholder_guid", $stakeholder_guid, PDO::PARAM_STR);
-        $statement->execute();
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
+        */
+        return $data;
     }
 
     /**
