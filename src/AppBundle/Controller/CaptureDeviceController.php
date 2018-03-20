@@ -101,11 +101,10 @@ class CaptureDeviceController extends Controller
         if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
-        $repo_controller = new RepoStorageHybridController();
-        $repo_controller->setContainer($this->container);
+        $this->repo_storage_controller->setContainer($this->container);
 
         if(!empty($id) && empty($post)) {
-          $data = $repo_controller->execute('getRecord', array(
+          $data = $this->repo_storage_controller->execute('getRecord', array(
             'base_table' => 'capture_device',
             'id_field' => 'capture_device_repository_id',
             'id_value' => $id));

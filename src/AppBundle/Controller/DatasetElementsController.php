@@ -42,8 +42,7 @@ class DatasetElementsController extends Controller
     public function browse_dataset_elements(Connection $conn, Request $request, ProjectsController $projects, SubjectsController $subjects, ItemsController $items, DatasetsController $datasets)
     {
         // Database tables are only created if not present.
-        $repo_controller = new RepoStorageHybridController();
-        $repo_controller->setContainer($this->container);
+        $this->repo_storage_controller->setContainer($this->container);
 
         $create_capture_dataset_elements_table = $this->create_capture_dataset_elements_table($conn);
 
@@ -56,7 +55,7 @@ class DatasetElementsController extends Controller
         $dataset_data = $datasets->get_dataset((int)$capture_dataset_repository_id, $conn);
         if(!$dataset_data) throw $this->createNotFoundException('The record does not exist');
         
-        $project_data = $repo_controller->execute('getProject', array('project_repository_id' => $project_repository_id));
+        $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $project_repository_id));
 
         $subject_data = $subjects->get_subject((int)$subject_repository_id, $conn);
         $item_data = $items->get_item((int)$item_repository_id, $conn);
@@ -170,8 +169,7 @@ class DatasetElementsController extends Controller
      */
     function show_dataset_elements_form( Connection $conn, Request $request, ProjectsController $projects, SubjectsController $subjects, ItemsController $items, DatasetsController $datasets )
     {
-        $repo_controller = new RepoStorageHybridController();
-        $repo_controller->setContainer($this->container);
+        $this->repo_storage_controller->setContainer($this->container);
 
         $dataset_element = new DatasetElements();
         $post = $request->request->all();
@@ -187,7 +185,7 @@ class DatasetElementsController extends Controller
         
         // Get data for the breadcumbs.
         // TODO: find a better way?
-        $project_data = $repo_controller->execute('getProject', array('project_repository_id' => (int)$dataset_element->project_repository_id));
+        $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$dataset_element->project_repository_id));
         $subject_data = $subjects->get_subject((int)$dataset_element->subject_repository_id, $conn);
         $item_data = $items->get_item((int)$dataset_element->item_repository_id, $conn);
         $dataset_data = $datasets->get_dataset((int)$dataset_element->capture_dataset_repository_id, $conn);

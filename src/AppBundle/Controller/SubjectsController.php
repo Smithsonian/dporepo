@@ -51,9 +51,7 @@ class SubjectsController extends Controller
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $repo_controller = new RepoStorageHybridController();
-        $repo_controller->setContainer($this->container);
-        $project_data = $repo_controller->execute('getProject', array('project_repository_id' => $project_repository_id));
+        $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $project_repository_id));
 
         if(!$project_data) throw $this->createNotFoundException('The record does not exist');
 
@@ -184,10 +182,9 @@ class SubjectsController extends Controller
         $subject->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
 
         // Retrieve data from the database.
-        $repo_controller = new RepoStorageHybridController();
-        $repo_controller->setContainer($this->container);
+        $this->repo_storage_controller->setContainer($this->container);
         if(!empty($subject_repository_id) && empty($post)) {
-          $subject = ($repo_controller->execute('getRecord', array(
+          $subject = ($this->repo_storage_controller->execute('getRecord', array(
             'base_table' => 'subjects',
             'id_field' => 'subject_repository_id',
             'id_value' => (int)$subject_repository_id))

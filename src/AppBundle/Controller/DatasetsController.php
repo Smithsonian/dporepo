@@ -45,8 +45,7 @@ class DatasetsController extends Controller
     {
         // Database tables are only created if not present.
         $create_datasets_table = $this->create_capture_datasets_table($conn);
-        $repo_controller = new RepoStorageHybridController();
-        $repo_controller->setContainer($this->container);
+        $this->repo_storage_controller->setContainer($this->container);
 
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
@@ -57,7 +56,7 @@ class DatasetsController extends Controller
         $item->item_data = $item->getItem((int)$item_repository_id, $conn);
         if(!$item->item_data) throw $this->createNotFoundException('The record does not exist');
         
-        $project_data = $repo_controller->execute('getProject', array('project_repository_id' => (int)$project_repository_id));
+        $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$project_repository_id));
         $subject_data = $subjects->get_subject((int)$subject_repository_id, $conn);
         $jobBoxDirectoryContents = is_dir(JOBBOX_PATH) ? scandir(JOBBOX_PATH) : array();
         $jobBoxProcessedDirectoryContents = is_dir(JOBBOXPROCESS_PATH) ? scandir(JOBBOXPROCESS_PATH) : array();

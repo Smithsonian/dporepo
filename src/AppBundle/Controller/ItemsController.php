@@ -41,8 +41,7 @@ class ItemsController extends Controller
      */
     public function browse_items(Connection $conn, Request $request, ProjectsController $projects, SubjectsController $subjects)
     {
-        $repo_controller = new RepoStorageHybridController();
-        $repo_controller->setContainer($this->container);
+        $this->repo_storage_controller->setContainer($this->container);
 
         // Database tables are only created if not present.
         $create_db_table = $this->create_items_table($conn);
@@ -54,7 +53,7 @@ class ItemsController extends Controller
         $subject_data = $subjects->get_subject((int)$subject_repository_id, $conn);
         if(!$subject_data) throw $this->createNotFoundException('The record does not exist');
         
-        $project_data = $repo_controller->execute('getProject', array('project_repository_id' => (int)$project_repository_id));
+        $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$project_repository_id));
 
         return $this->render('items/browse_items.html.twig', array(
             'page_title' => 'Subject: ' .  $subject_data['subject_name'],
