@@ -120,6 +120,34 @@ class RepoStorageHybrid implements RepoStorage {
     return $return_data;
   }
 
+  public function getRecord($parameters) {
+
+    //@todo confirm params exist
+    $base_table = $parameters['base_table'];
+    $id_field = $parameters['id_field'];
+    $id_value = $parameters['id_value'];
+
+    $query_params = array(
+      'fields' => array(),
+      'base_table' => $base_table,
+      'search_params' => array(
+        0 => array('field_names' => array('active'), 'search_values' => array(1), 'comparison' => '='),
+        1 => array('field_names' => array($id_field), 'search_values' => $id_value, 'comparison' => '=')
+      ),
+      'search_type' => 'AND'
+    );
+
+    $return_data = array();
+    $ret = $this->getRecords($query_params, $return_data);
+    //@todo do something if $ret has errors
+
+    if(array_key_exists('aaData', $return_data) && array_key_exists(0, $return_data['aaData'])) {
+      $return_data = $return_data['aaData'][0];
+    }
+
+    return $return_data;
+  }
+
   /**
    * ---------------------------------------------------------------
    * Generic functions that get called by other getters and setters.
