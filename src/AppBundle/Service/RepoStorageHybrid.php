@@ -85,14 +85,13 @@ class RepoStorageHybrid implements RepoStorage {
       'base_join_field' => 'stakeholder_guid',
     );
 
-    $return_data = array();
-    $ret = $this->getRecords($query_params, $return_data);
+    $query_params['records_values'] = array();
+    $ret = $this->getRecords($query_params);
     //@todo do something if $ret has errors
 
-    if(array_key_exists('aaData', $return_data) && array_key_exists(0, $return_data['aaData'])) {
-      $return_data = $return_data['aaData'][0];
+    if(array_key_exists(0, $ret)) {
+      $return_data = $ret[0];
     }
-
     return $return_data;
 
   }
@@ -109,14 +108,12 @@ class RepoStorageHybrid implements RepoStorage {
       'search_type' => 'AND'
     );
 
-    $return_data = array();
-    $ret = $this->getRecords($query_params, $return_data);
+    $ret = $this->getRecords($query_params);
     //@todo do something if $ret has errors
 
-    if(array_key_exists('aaData', $return_data) && array_key_exists(0, $return_data['aaData'])) {
-      $return_data = $return_data['aaData'][0];
+    if(array_key_exists(0, $ret)) {
+      $return_data = $ret[0];
     }
-
     return $return_data;
   }
 
@@ -132,54 +129,222 @@ class RepoStorageHybrid implements RepoStorage {
       'base_table' => $base_table,
       'search_params' => array(
         0 => array('field_names' => array('active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array($id_field), 'search_values' => $id_value, 'comparison' => '=')
+        1 => array('field_names' => array($id_field), 'search_values' => array($id_value), 'comparison' => '=')
       ),
       'search_type' => 'AND'
     );
 
     $return_data = array();
-    $ret = $this->getRecords($query_params, $return_data);
+    $ret = $this->getRecords($query_params);
     //@todo do something if $ret has errors
 
-    if(array_key_exists('aaData', $return_data) && array_key_exists(0, $return_data['aaData'])) {
-      $return_data = $return_data['aaData'][0];
+    if(array_key_exists(0, $ret)) {
+      $return_data = $ret[0];
     }
-
     return $return_data;
   }
 
-  public function getRecordsNoSummary($parameters) {
+  public function getRecords(array $query_parameters) {
 
-    //@todo confirm params exist
-    $base_table = $parameters['base_table'];
-    $id_field = $parameters['id_field'];
-    $id_value = $parameters['id_value'];
+    /*
+     * $query_parameters should contain:
+     * ------------
+     * base_table - string indicating base table for query
+     * fields - array of field_name, field_alias, field_table
+     *    if fields array is empty, query will return all fields for base_table
+     * related_tables - optional array of table,
+     *    where each table is an array of
+     *    table_name, table_alias, join_type, table_join_field, base_join_table, base_join_field
+     * sort_fields - array containing fields, where each field value is an array of field_name and optionally sort_order
+     * limit - array containing limit_start, limit_stop
+     * search_params - array containing search values.
+     *          Each array value is an array containing field_names, search_values.
+     *          field_names and search_values are also arrays.
+     *          This makes it possible to structure OR queries or test fields for multiple values
+     *          as well as doing a simple 1-to-1 search.
+     */
 
-    $query_params = array(
-      'fields' => array(),
-      'base_table' => $base_table,
-      'search_params' => array(
-        0 => array('field_names' => array('active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array($id_field), 'search_values' => $id_value, 'comparison' => '=')
-      ),
-      'search_type' => 'AND'
-    );
+    $base_table = NULL;
+    $search_params = array();
+    $limit_start = $limit_stop = NULL;
+    $select_sql = $join_sql = $search_sql = $sort_sql = $limit_sql = '';
+    $data = array();
 
-    $return_data = array();
-    $ret = $this->getRecords($query_params, $return_data);
-    //@todo do something if $ret has errors
-
-    if(array_key_exists('aaData', $return_data)) {
-      $return_data = $return_data['aaData'];
+    // We need certain values: fields, base table. Fail if those aren't provided.
+    if(!array_key_exists('fields', $query_parameters)) {
+      return array('return' => 'fail', 'messages' => array('No fields parameter specified.'));
+    }
+    if(!array_key_exists('base_table', $query_parameters)) {
+      return array('return' => 'fail', 'messages' => array('No base_table parameter specified.'));
+    }
+    if(!isset($query_parameters['fields']) || !is_array($query_parameters['fields'])) {
+      return array('return' => 'fail', 'messages' => array('No fields parameter specified.'));
     }
 
-    return $return_data;
+    // Table
+    $base_table = $query_parameters['base_table'];
+
+    // Fields
+    $select_fields_array = array();
+    foreach($query_parameters['fields'] as $k => $field) {
+      if(array_key_exists('field_name', $field)) {
+        $this_field = '';
+        if(array_key_exists('table_name', $field)) {
+          $this_field = $field['table_name'] . '.';
+    }
+        $this_field .= $field['field_name'];
+        if(array_key_exists('field_alias', $field)) {
+          $this_field .= ' as ' . $field['field_alias'];
+        }
+        $select_fields_array[] = $this_field;
+      }
+    }
+    if(count($select_fields_array) < 1) {
+      $select_fields_array[] = $base_table . '.*';
+    }
+    $select_sql = implode(', ', $select_fields_array);
+
+    if(array_key_exists('related_tables', $query_parameters) && is_array($query_parameters['related_tables'])
+      && count($query_parameters['related_tables']) > 0) {
+      $joins = array();
+      foreach($query_parameters['related_tables'] as $rt) {
+        if(!array_key_exists('table_name', $rt) || !array_key_exists('join_type', $rt)
+          || !array_key_exists('base_join_table', $rt) || !array_key_exists('base_join_field', $rt)
+          || !array_key_exists('table_join_field', $rt)
+        ) {
+          continue;
+        }
+
+        if(strtoupper($rt['join_type']) !== 'LEFT JOIN' && strtoupper($rt['join_type']) !== 'INNER JOIN'
+          && strtoupper($rt['join_type']) !== 'OUTER JOIN' && strtoupper($rt['join_type']) !== 'JOIN'
+        ) {
+          continue;
+        }
+        $join = ' ' . $rt['join_type'] . ' ' . $rt['table_name'];
+        if(array_key_exists('table_alias', $rt)) {
+          $join .= ' ' . $rt['table_alias'];
+        }
+        $join .= ' ON ' . $rt['base_join_table'] . '.' . $rt['base_join_field'] . ' = ' . $rt['table_name'] . '.' . $rt['table_join_field'];
+
+        $joins[] = $join;
+      }
+      if(count($joins) > 0) {
+        $join_sql = implode(' ', $joins);
+      }
+
+    }
+
+    // Limit
+    if(array_key_exists('limit', $query_parameters) && is_array($query_parameters['limit'])) {
+      $limit = $query_parameters['limit'];
+      //@todo other checks? Like > 0 ?
+      if(array_key_exists('limit_start', $limit) && is_numeric($limit['limit_start'])) {
+        $limit_start = $limit['limit_start'];
+        if(array_key_exists('limit_start', $limit) && is_numeric($limit['limit_start'])) {
+          $limit_stop = $limit['limit_stop'];
+        }
+        if(NULL !== $limit_stop) {
+          $limit_sql = " LIMIT {$limit_start}, {$limit_stop} ";
+        }
+        else {
+          $limit_sql = " LIMIT {$limit_start} ";
+        }
+      }
+    }
+
+    // Sort
+    if(array_key_exists('sort_fields', $query_parameters) && is_array($query_parameters['sort_fields'])) {
+      $sort_params = array();
+      foreach($query_parameters['sort_fields'] as $fld) {
+        $s = $fld['field_name'];
+        if(array_key_exists('sort_order', $fld) && $fld['sort_order'] == 'DESC') {
+          $s .= ' ' . $fld['sort_order'];
+        }
+        $sort_params[] = $s;
+      }
+      $sort_sql = implode(', ', $sort_params);
+      if(strlen(trim($sort_sql)) > 0) {
+        $sort_sql = " ORDER BY " . $sort_sql;
+      }
+    }
+
+    // Search values
+    if (array_key_exists('search_params', $query_parameters) && is_array($query_parameters['search_params'])) {
+      $search_sql_values = array();
+      foreach($query_parameters['search_params'] as $p) {
+        $field_names = $p['field_names'];
+        $search_values = $p['search_values'];
+
+        if(!is_array($field_names) || count($field_names) == 0
+          || !is_array($search_values) || count($search_values) == 0) {
+          continue;
+        }
+
+        $this_search_param = array();
+        foreach($field_names as $fn) {
+          if(count($search_values) == 1) {
+            if(array_key_exists('comparison', $p) && $p['comparison'] !== 'LIKE') {
+              $this_search_param[] = $fn . ' ' . $p['comparison'] . ' ?';
+              $k = array_keys($search_values)[0];
+              $search_params[] = $search_values[$k];
+            }
+            else {
+              $this_search_param[] = $fn . ' LIKE ?';
+              $search_params[] = '%' . $search_values[array_keys($search_values[0])] . '%';
+            }
+          }
+          else {
+            $this_search_param[] = $fn['field_name'] . ' IN (?)';
+            $search_params[] = '%' . implode('%, %', $search_values) . '%';
+          }
+        }
+
+        $search_sql_values[] = '(' . implode(' OR ', $this_search_param) . ') ';
+      }
+
+      if(count($search_sql_values) > 0) {
+        if(array_key_exists('search_type', $query_parameters) && $query_parameters['search_type'] != 'OR') {
+          $search_sql = implode(' ' . $query_parameters['search_type'] . ' ', $search_sql_values);
+        }
+        else {
+          $search_sql = implode(' OR ', $search_sql_values);
+        }
+      }
+    }
+
+    $sql = "SELECT " . $select_sql .
+      " FROM " . $base_table;
+
+    if(strlen($join_sql) > 0) {
+      $sql .= $join_sql;
+    }
+
+    if(strlen(trim($search_sql)) > 0) {
+      $sql .= " WHERE {$search_sql} ";
+    }
+    if(strlen(trim($sort_sql)) > 0) {
+      $sql .= " ORDER BY {$sort_sql} ";
+    }
+    if(strlen(trim($limit_sql)) > 0) {
+      $sql .= $limit_sql;
+    }
+
+    $statement = $this->connection->prepare($sql);
+    if(count($search_params) > 0) {
+      $statement->execute($search_params);
+    }
+    else {
+      $statement->execute();
+    }
+    $records_values = $statement->fetchAll(PDO::FETCH_ASSOC);
+    return $records_values;
 
   }
 
   /**
    * ---------------------------------------------------------------
    * Generic functions that get called by other getters and setters.
+   * ---------------------------------------------------------------
    */
 
   /***
@@ -187,7 +352,7 @@ class RepoStorageHybrid implements RepoStorage {
    * Sets records into $records_values.
    * @return mixed array containing success/fail value, and any messages.
    */
-  public function getRecords(array $query_parameters, array &$records_values) {
+  public function getRecordDatatables(array $query_parameters) {
 
     /*
      * $query_parameters should contain:
@@ -388,9 +553,7 @@ class RepoStorageHybrid implements RepoStorage {
     $data["iTotalRecords"] = $count["FOUND_ROWS()"];
     $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
 
-    $records_values = $data;
-
-    return array('return' => 'success');
+    return $data;
 
   }
 
@@ -399,10 +562,10 @@ class RepoStorageHybrid implements RepoStorage {
    * Attempts to save data, and updates $records_values accordingly.
    * @return mixed array containing success/fail value, and any messages.
    */
-  public function setRecords(array &$records_values, array $query_parameters){
+  public function setRecords(array $query_parameters){
 
     /*
-     * $records_values should contain an array of record values.
+     * $query_parameters['records_values'] should contain an array of record values.
      *          Each record_value should have field_name, field_value.
      *
      *          $records_values may have an entry with key 'id'.
@@ -412,8 +575,8 @@ class RepoStorageHybrid implements RepoStorage {
      *          and field_value will be updated from the id returned after inserting.
      *
      * $query_parameters should contain the info necessary to determine which records to update:
-     * ------------
      * base_table - string indicating base table for update
+     * search_params
      */
 
     $base_table = NULL;
@@ -423,7 +586,7 @@ class RepoStorageHybrid implements RepoStorage {
     if(!array_key_exists('base_table', $query_parameters)) {
       return array('return' => 'fail', 'messages' => array('No base_table parameter specified.'));
     }
-    if(!isset($records_values) || !is_array($records_values)) {
+    if(!isset($query_parameters['records_values']) || !is_array($query_parameters['records_values'])) {
       return array('return' => 'fail', 'messages' => array('No record values specified.'));
     }
 
@@ -463,7 +626,7 @@ class RepoStorageHybrid implements RepoStorage {
       }
     }
 
-    foreach($records_values as $record_values) {
+    foreach($query_parameters['records_values'] as $record_values) {
       $update = false;
       $fields_sql_array = $fields_values_sql_array = $fields_params = array();
 
@@ -494,13 +657,13 @@ class RepoStorageHybrid implements RepoStorage {
         if($update) {
           $sql ="UPDATE " . $base_table;
           $sql .= " SET " . implode(',', $fields_sql_array);
-          $sql .= " WHERE " . $records_values['id']['field_name'] . " = :id ";
+          $sql .= " WHERE " . $query_parameters['records_values']['id']['field_name'] . " = :id ";
 
           $statement = $this->connection->prepare($sql);
           foreach($fields_params as $fn1 => $fv1) {
             $statement->bindValue($fn1, $fv1);
           }
-          $statement->bindValue(":id", $records_values['id']['field_value'], PDO::PARAM_INT);
+          $statement->bindValue(":id", $query_parameters['records_values']['id']['field_value'], PDO::PARAM_INT);
           $statement->execute();
         }
         else {
@@ -536,11 +699,10 @@ class RepoStorageHybrid implements RepoStorage {
 
   /***
    * @param $query_parameters parameters used to query records for deletion.
-   * @param $delete_children whether to delete child records.
    * Attempts to delete specified records.
    * @return mixed array containing success/fail value, and any messages.
    */
-  public function deleteRecords(array $query_parameters, $delete_children = FALSE){
+  public function deleteRecords(array $query_parameters){
 
     /*
      * $query_parameters should contain:
@@ -598,7 +760,7 @@ class RepoStorageHybrid implements RepoStorage {
       }
     }
 
-    if(true == $delete_children) {
+    if(true == $query_parameters['delete_children']) {
       //@todo delete children first
 
       switch($base_table) {
