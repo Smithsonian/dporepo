@@ -9,6 +9,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 use AppBundle\Form\Item;
@@ -270,37 +272,97 @@ class ItemsController extends Controller
      *
      * Run a query to retrieve all items from the database.
      *
-     * @param   object  $conn  Database connection object
+     * @param   $container  Symfony container, passed from caller
      * @param   int $subject_repository_id  The subject ID
      * @return  array|bool     The query result
      */
-    public function get_items($conn, $subject_repository_id = false)
+    public function get_items($container, $subject_repository_id = false)
     {
-        $statement = $conn->prepare("
-            SELECT
-                projects.project_repository_id,
-                subjects.subject_repository_id,
-                items.item_repository_id,
-                items.item_guid,
-                items.subject_repository_id,
-                items.local_item_id,
-                items.item_description,
-                items.date_created,
-                items.created_by_user_account_id,
-                items.last_modified,
-                items.last_modified_user_account_id,
-                items.active,
-                items.status_types_id
-            FROM items
-            LEFT JOIN subjects ON subjects.subject_repository_id = items.subject_repository_id
-            LEFT JOIN projects ON projects.project_repository_id = subjects.project_repository_id
-            WHERE items.active = 1
-            AND items.subject_repository_id = :subject_repository_id
-            ORDER BY items.local_item_id ASC
-        ");
-        $statement->bindValue(":subject_repository_id", (int)$subject_repository_id, PDO::PARAM_INT);
-        $statement->execute();
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
+        $this->repo_storage_controller->setContainer($container);
+        $items_data = $this->repo_storage_controller->execute('getRecords', array(
+            'base_table' => 'items',
+            'related_tables' => array(
+              0 =>
+               array(
+                 'table_name' => 'subjects',
+                'table_join_field' => 'subject_repository_id',
+                'join_type' => 'LEFT JOIN',
+                'base_join_table' => 'items',
+                'base_join_field' => 'subject_repository_id',
+                ),
+              1 => array(
+                'table_name' => 'projects',
+                'table_join_field' => 'project_repository_id',
+                'join_type' => 'LEFT JOIN',
+                'base_join_table' => 'subjects',
+                'base_join_field' => 'project_repository_id',
+              )
+            ),
+            'fields' => array(
+              0 => array(
+                'table_name' => 'projects',
+                'field_name' => 'project_repository_id',
+              ),
+              1 => array(
+                'table_name' => 'subjects',
+                'field_name' => 'subject_repository_id',
+              ),
+              2 => array(
+                'table_name' => 'items',
+                'field_name' => 'item_repository_id',
+              ),
+              3 => array(
+                'table_name' => 'items',
+                'field_name' => 'item_guid',
+              ),
+              4 => array(
+                'table_name' => 'items',
+                'field_name' => 'subject_repository_id',
+              ),
+              5 => array(
+                'table_name' => 'items',
+                'field_name' => 'local_item_id',
+              ),
+              6 => array(
+                'table_name' => 'items',
+                'field_name' => 'item_description',
+              ),
+              7 => array(
+                'table_name' => 'items',
+                'field_name' => 'date_created',
+              ),
+              8 => array(
+                'table_name' => 'items',
+                'field_name' => 'created_by_user_account_id',
+              ),
+              9 => array(
+                'table_name' => 'items',
+                'field_name' => 'last_modified',
+              ),
+              10 => array(
+                'table_name' => 'items',
+                'field_name' => 'last_modified_user_account_id',
+              ),
+              11 => array(
+                'table_name' => 'items',
+                'field_name' => 'active',
+              ),
+              12 => array(
+                'table_name' => 'items',
+                'field_name' => 'status_types_id',
+              ),
+            ),
+            'sort_fields' => array(
+              0 => array('field_name' => 'items.local_item_id')
+            ),
+            'search_params' => array(
+              0 => array('field_names' => array('items.active'), 'search_values' => array(1), 'comparison' => '='),
+              1 => array('field_names' => array('items.subject_repository_id'), 'search_values' => array($subject_repository_id), 'comparison' => '=')
+            ),
+            'search_type' => 'AND'
+          )
+        );
+        return $items_data;
     }
 
     /**
@@ -311,7 +373,7 @@ class ItemsController extends Controller
     public function get_items_tree_browser(Connection $conn, Request $request, DatasetsController $datasets)
     {      
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
-        $items = $this->get_items($conn, $subject_repository_id);
+        $items = $this->get_items($this->container, $subject_repository_id);
 
         foreach ($items as $key => $value) {
             // Check for child dataset records so the 'children' key can be set accordingly.
