@@ -52,10 +52,12 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
    * @param   string $table_name  Name of table to create
    * @return  TRUE or die
    */
-  public function createTable($table_name) {
+  public function createTable($parameters) {
 
-    print_r($table_name);
+      if(!array_key_exists('table_name', $parameters)) {
     return;
+      }
+      $table_name = $parameters['table_name'];
 
       $sql = '';
       switch($table_name) {
@@ -76,8 +78,28 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             KEY `projects_label` (`project_name`,`stakeholder_guid`)
           )";
         break;
+        case 'subjects':
+          $sql = "CREATE TABLE IF NOT EXISTS `subjects` (
+            `subject_repository_id` int(11) NOT NULL AUTO_INCREMENT,
+            `project_repository_id` int(11) NOT NULL,
+            `local_subject_id` varchar(255) DEFAULT '',
+            `subject_guid` varchar(255) DEFAULT '',
+            `subject_name` varchar(255) DEFAULT '',
+            `holding_entity_name` varchar(255) DEFAULT '',
+            `holding_entity_guid` varchar(255) DEFAULT '',
+            `date_created` varchar(255) NOT NULL DEFAULT '',
+            `created_by_user_account_id` int(11) NOT NULL,
+            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `last_modified_user_account_id` int(11) NOT NULL,
+            `active` tinyint(1) NOT NULL DEFAULT '1',
+            PRIMARY KEY (`subject_repository_id`),
+            KEY `created_by_user_account_id` (`created_by_user_account_id`),
+            KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
+            KEY `project_repository_id` (`project_repository_id`,`subject_name`)
+          )";
+        break;
         case 'isni_data':
-          $statement = $this->connection->prepare("CREATE TABLE IF NOT EXISTS `isni_data` (
+          $sql = $this->connection->prepare("CREATE TABLE IF NOT EXISTS `isni_data` (
             `isni_id` int(11) NOT NULL AUTO_INCREMENT,
             `isni_label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
@@ -264,10 +286,11 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
       }
 
       if(strlen($sql) == 0) {
-        die('CREATE TABLE `' . $table_name . '` failed. Table name not recognized. Could not build SQL for CREATE statement.');
+        return;
+        // die('CREATE TABLE `' . $table_name . '` failed. Table name not recognized. Could not build SQL for CREATE statement.');
       }
 
-      $this->connection->prepare($sql . " ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8 COMMENT='This table stores " . $table_name . " metadata'");
+      $statement = $this->connection->prepare($sql . " ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8 COMMENT='This table stores " . $table_name . " metadata'");
       $statement->execute();
       $error = $this->connection->errorInfo();
 
