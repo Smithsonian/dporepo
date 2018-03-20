@@ -35,32 +35,7 @@ class PhotogrammetryScaleBar
      * @var string
      */
     public $scale_bar_target_pairs;
-    
-    /**
-     * Get One Record
-     *
-     * @param int $id
-     * @param Connection $conn
-     * @return object|bool
-     */
-    public function getOne($id, Connection $conn)
-    {
-        $statement = $conn->prepare("SELECT
-              photogrammetry_scale_bar.photogrammetry_scale_bar_repository_id,
-              photogrammetry_scale_bar.parent_capture_dataset_repository_id,
-              photogrammetry_scale_bar.scale_bar_id,
-              photogrammetry_scale_bar.scale_bar_manufacturer,
-              photogrammetry_scale_bar.scale_bar_barcode_type,
-              photogrammetry_scale_bar.scale_bar_target_pairs
-            FROM photogrammetry_scale_bar
-            WHERE photogrammetry_scale_bar.active = 1
-            AND photogrammetry_scale_bar.photogrammetry_scale_bar_repository_id = :photogrammetry_scale_bar_repository_id");
-        $statement->bindValue(":photogrammetry_scale_bar_repository_id", $id, "integer");
-        $statement->execute();
-        $result = $statement->fetch();
 
-        return (object)$result;
-    }
 
     /**
      * Get All Records

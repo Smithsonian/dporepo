@@ -30,31 +30,7 @@ class CaptureDatasetRights
      * @var string
      */
     public $end_date;
-    
-    /**
-     * Get One Record
-     *
-     * @param int $id
-     * @param Connection $conn
-     * @return object|bool
-     */
-    public function getOne($id, Connection $conn)
-    {
-        $statement = $conn->prepare("SELECT
-              capture_dataset_rights.capture_dataset_rights_repository_id,
-              capture_dataset_rights.parent_capture_dataset_repository_id,
-              capture_dataset_rights.data_rights_restriction,
-              capture_dataset_rights.start_date,
-              capture_dataset_rights.end_date
-            FROM capture_dataset_rights
-            WHERE capture_dataset_rights.active = 1
-            AND capture_dataset_rights.capture_dataset_rights_repository_id = :capture_dataset_rights_repository_id");
-        $statement->bindValue(":capture_dataset_rights_repository_id", $id, "integer");
-        $statement->execute();
-        $result = $statement->fetch();
 
-        return !empty($result) ? (object)$result : $result;
-    }
 
     /**
      * Get All Records

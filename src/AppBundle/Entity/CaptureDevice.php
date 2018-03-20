@@ -25,30 +25,7 @@ class CaptureDevice
      * @var string
      */
     public $capture_device_component_ids;
-    
-    /**
-     * Get One Record
-     *
-     * @param int $id
-     * @param Connection $conn
-     * @return object|bool
-     */
-    public function getOne($id, Connection $conn)
-    {
-        $statement = $conn->prepare("SELECT
-              capture_device.capture_device_repository_id,
-              capture_device.parent_capture_data_element_repository_id,
-              capture_device.calibration_file,
-              capture_device.capture_device_component_ids
-            FROM capture_device
-            WHERE capture_device.active = 1
-            AND capture_device.capture_device_repository_id = :capture_device_repository_id");
-        $statement->bindValue(":capture_device_repository_id", $id, "integer");
-        $statement->execute();
-        $result = $statement->fetch();
 
-        return (object)$result;
-    }
 
     /**
      * Get All Records

@@ -30,31 +30,7 @@ class UvMap
      * @var string
      */
     private $map_size;
-    
-    /**
-     * Get One Record
-     *
-     * @param int $id
-     * @param Connection $conn
-     * @return object|bool
-     */
-    public function getOne($id, Connection $conn)
-    {
-        $statement = $conn->prepare("SELECT
-              uv_map.uv_map_repository_id,
-              uv_map.parent_capture_dataset_repository_id,
-              uv_map.map_type,
-              uv_map.map_file_type,
-              uv_map.map_size
-            FROM uv_map
-            WHERE uv_map.active = 1
-            AND uv_map.uv_map_repository_id = :uv_map_repository_id");
-        $statement->bindValue(":uv_map_repository_id", $id, "integer");
-        $statement->execute();
-        $result = $statement->fetch();
 
-        return (object)$result;
-    }
 
     /**
      * Get All Records

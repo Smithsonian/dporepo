@@ -45,33 +45,7 @@ class ProcessingAction
      * @var string
      */
     public $action_description;
-    
-    /**
-     * Get One Record
-     *
-     * @param int $id
-     * @param Connection $conn
-     * @return object|bool
-     */
-    public function getOne($id, Connection $conn)
-    {
-        $statement = $conn->prepare("SELECT
-              processing_action.processing_action_repository_id,
-              processing_action.target_model_repository_id,
-              processing_action.preceding_processing_action_repository_id,
-              processing_action.date_of_action,
-              processing_action.action_method,
-              processing_action.software_used,
-              processing_action.action_description
-            FROM processing_action
-            WHERE processing_action.active = 1
-            AND processing_action.processing_action_repository_id = :processing_action_repository_id");
-        $statement->bindValue(":processing_action_repository_id", $id, "integer");
-        $statement->execute();
-        $result = $statement->fetch();
 
-        return (object)$result;
-    }
 
     /**
      * Get All Records

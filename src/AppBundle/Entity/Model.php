@@ -96,43 +96,6 @@ class Model
      */
     public $model_maps;
 
-    /**
-     * Get One Record
-     *
-     * @param int $id
-     * @param Connection $conn
-     * @return object|bool
-     */
-    public function getOne($id, Connection $conn)
-    {
-        $statement = $conn->prepare("SELECT
-              model.model_repository_id,
-              model.parent_capture_dataset_repository_id,
-              model.model_guid,
-              model.date_of_creation,
-              model.model_file_type,
-              model.derived_from,
-              model.creation_method,
-              model.model_modality,
-              model.units,
-              model.is_watertight,
-              model.model_purpose,
-              model.point_count,
-              model.has_normals,
-              model.face_count,
-              model.vertices_count,
-              model.has_vertex_color,
-              model.has_uv_space,
-              model.model_maps
-            FROM model
-            WHERE model.active = 1
-            AND model.model_repository_id = :model_repository_id");
-        $statement->bindValue(":model_repository_id", $id, "integer");
-        $statement->execute();
-        $result = $statement->fetch();
-
-        return (object)$result;
-    }
 
     /**
      * Get All Records

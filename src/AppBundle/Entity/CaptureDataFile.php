@@ -30,31 +30,7 @@ class CaptureDataFile
      * @var string
      */
     public $is_compressed_multiple_files;
-    
-    /**
-     * Get One Record
-     *
-     * @param int $id  The ID
-     * @param Connection $conn
-     * @return object|bool
-     */
-    public function getOne($id, Connection $conn)
-    {
-        $statement = $conn->prepare("SELECT
-              capture_data_file.capture_data_file_repository_id,
-              capture_data_file.parent_capture_data_element_repository_id,
-              capture_data_file.capture_data_file_name,
-              capture_data_file.capture_data_file_type,
-              capture_data_file.is_compressed_multiple_files
-            FROM capture_data_file
-            WHERE capture_data_file.active = 1
-            AND capture_data_file.capture_data_file_repository_id = :capture_data_file_repository_id");
-        $statement->bindValue(":capture_data_file_repository_id", $id, "integer");
-        $statement->execute();
-        $result = $statement->fetch();
 
-        return !empty($result) ? (object)$result : $result;
-    }
 
     /**
      * Get All Records
