@@ -21,7 +21,7 @@ class RepoStorageHybrid implements RepoStorage {
       'base_table' => 'projects',
       'search_params' => array(
         0 => array('field_names' => array('projects.active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array('projects.project_repository_id'), 'search_values' => $project_id, 'comparison' => '=')
+        1 => array('field_names' => array('projects.project_repository_id'), 'search_values' => array($project_id), 'comparison' => '=')
       ),
       'search_type' => 'AND',
       'related_tables' => array(),
@@ -103,7 +103,7 @@ class RepoStorageHybrid implements RepoStorage {
       'base_table' => 'subjects',
       'search_params' => array(
         0 => array('field_names' => array('subjects.active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array('subjects.subject_repository_id'), 'search_values' => $subject_id, 'comparison' => '=')
+        1 => array('field_names' => array('subjects.subject_repository_id'), 'search_values' => array($subject_id), 'comparison' => '=')
       ),
       'search_type' => 'AND'
     );
