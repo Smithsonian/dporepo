@@ -202,7 +202,7 @@ class ProjectsController extends Controller
     public function get_projects($conn)
     {
       $this->repo_storage_controller->setContainer($this->container);
-      $data = $this->repo_controller->execute('getRecords', array(
+      $data = $this->repo_storage_controller->execute('getRecords', array(
         'base_table' => 'projects',
         'fields' => array(),
         'sort_fields' => array(
@@ -266,7 +266,7 @@ class ProjectsController extends Controller
      *
      * @Route("/admin/projects/get_stakeholder_projects/{stakeholder_guid}", name="get_stakeholder_projects_tree_browser", methods="GET")
      */
-    public function get_stakeholder_projects_tree_browser(Connection $conn, Request $request, SubjectsController $subjects)
+    public function get_stakeholder_projects_tree_browser(Request $request, SubjectsController $subjects)
     {
         $data = array();
         $stakeholder_guid = !empty($request->attributes->get('stakeholder_guid')) ? $request->attributes->get('stakeholder_guid') : false;
@@ -279,8 +279,8 @@ class ProjectsController extends Controller
               0 => array('field_name' => 'project_name')
             ),
             'search_params' => array(
-              0 => array('field_names' => array('projects.active'), 'search_values' => array(1), 'comparison' => '='),
-              1 => array('field_names' => array('projects.stakeholder_guid'), 'search_values' => $stakeholder_guid, 'comparison' => '=')
+              0 => array('field_names' => array('active'), 'search_values' => array(1), 'comparison' => '='),
+              1 => array('field_names' => array('stakeholder_guid'), 'search_values' => array($stakeholder_guid), 'comparison' => '=')
             ),
             'search_type' => 'AND'
           )
@@ -289,7 +289,7 @@ class ProjectsController extends Controller
         foreach ($projects as $key => $value) {
 
             // Check for child dataset records so the 'children' key can be set accordingly.
-            $subject_data = $subjects->get_subjects($conn, (int)$value['project_repository_id']);
+            $subject_data = $subjects->get_subjects((int)$value['project_repository_id']);
 
             $data[$key] = array(
                 'id' => 'projectId-' . $value['project_repository_id'],
