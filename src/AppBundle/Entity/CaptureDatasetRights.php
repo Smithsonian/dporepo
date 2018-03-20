@@ -32,23 +32,6 @@ class CaptureDatasetRights
     public $end_date;
 
 
-    /**
-     * Get All Records
-     *
-     * @param int $id The parent record ID
-     * @param Connection $conn
-     * @return array|bool
-     */
-    public function getAll($id, Connection $conn)
-    {
-        $statement = $conn->prepare("
-            SELECT * FROM capture_dataset_rights
-            WHERE capture_dataset_rights.capture_dataset_repository_id = :capture_dataset_repository_id
-        ");
-        $statement->bindValue(":capture_dataset_repository_id", $id, "integer");
-        $statement->execute();
-        return $statement->fetchAll();
-    }
 
     /**
      * Datatables Query

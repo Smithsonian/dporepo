@@ -38,24 +38,6 @@ class PhotogrammetryScaleBar
 
 
     /**
-     * Get All Records
-     *
-     * @param int $id The parent record ID
-     * @param Connection $conn
-     * @return array|bool
-     */
-    public function getAll($id, Connection $conn)
-    {
-        $statement = $conn->prepare("
-            SELECT * FROM photogrammetry_scale_bar
-            WHERE photogrammetry_scale_bar.parent_capture_dataset_repository_id = :parent_capture_dataset_repository_id
-        ");
-        $statement->bindValue(":parent_capture_dataset_repository_id", $id, "integer");
-        $statement->execute();
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    /**
      * Datatables Query
      *
      * @param array $params Parameters

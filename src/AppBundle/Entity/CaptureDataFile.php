@@ -32,23 +32,6 @@ class CaptureDataFile
     public $is_compressed_multiple_files;
 
 
-    /**
-     * Get All Records
-     *
-     * @param int $id The parent record ID
-     * @param Connection $conn
-     * @return array|bool
-     */
-    public function getAll($id, Connection $conn)
-    {
-        $statement = $conn->prepare("
-            SELECT * FROM capture_data_file
-            WHERE capture_data_file.capture_data_element_repository_id = :capture_data_element_repository_id
-        ");
-        $statement->bindValue(":capture_data_element_repository_id", $id, "integer");
-        $statement->execute();
-        return $statement->fetchAll();
-    }
 
     /**
      * Datatables Query

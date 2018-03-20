@@ -36,23 +36,6 @@ class CaptureDeviceComponent
      */
     public $model_name;
 
-    /**
-     * Get All Records
-     *
-     * @param int $id The parent record ID
-     * @param Connection $conn
-     * @return array|bool
-     */
-    public function getAll($id, Connection $conn)
-    {
-        $statement = $conn->prepare("
-            SELECT * FROM capture_device_component
-            WHERE capture_device_component.parent_capture_device_repository_id = :parent_capture_device_repository_id
-        ");
-        $statement->bindValue(":parent_capture_device_repository_id", $id, "integer");
-        $statement->execute();
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
-    }
 
     /**
      * Datatables Query

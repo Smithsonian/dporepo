@@ -47,23 +47,6 @@ class ProcessingAction
     public $action_description;
 
 
-    /**
-     * Get All Records
-     *
-     * @param int $id The parent record ID
-     * @param Connection $conn
-     * @return array|bool
-     */
-    public function getAll($id, Connection $conn)
-    {
-        $statement = $conn->prepare("
-            SELECT * FROM processing_action
-            WHERE processing_action.target_model_repository_id = :target_model_repository_id
-        ");
-        $statement->bindValue(":target_model_repository_id", $id, "integer");
-        $statement->execute();
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
-    }
 
     /**
      * Datatables Query
