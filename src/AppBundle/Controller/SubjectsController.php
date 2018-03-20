@@ -43,7 +43,8 @@ class SubjectsController extends Controller
     public function browse_subjects(Connection $conn, Request $request, ProjectsController $projects)
     {
         // Database tables are only created if not present.
-        $create_db_table = $this->create_subjects_table($conn);
+        $this->repo_storage_controller->setContainer($this->container);
+        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'subjects'));
 
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
 
@@ -183,8 +184,14 @@ class SubjectsController extends Controller
         // Retrieve data from the database.
         $repo_controller = new RepoStorageHybridController();
         $repo_controller->setContainer($this->container);
-        $subject_data = $repo_controller->execute('getSubject', array('subject_repository_id' => (int)$subject_repository_id));
-        $subject = (!empty($subject_repository_id) && empty($post)) ? (object)$subject_data : $subject;
+        if(!empty($subject_repository_id) && empty($post)) {
+          $subject = ($repo_controller->execute('getRecord', array(
+            'base_table' => 'subjects',
+            'id_field' => 'subject_repository_id',
+            'id_value' => (int)$subject_repository_id))
+          );
+          $subject = (object)$subject;
+        }
 
         // Create the form
         $form = $this->createForm(Subject::class, $subject);
@@ -418,42 +425,4 @@ class SubjectsController extends Controller
         $statement->execute();
     }
 
-    /**
-     * Create Subjects Table
-     *
-     * @param   object $conn  Database connection object
-     * @return  void
-     */
-    public function create_subjects_table($conn)
-    {
-        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `subjects` (
-          `subject_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-          `project_repository_id` int(11) NOT NULL,
-          `local_subject_id` varchar(255) DEFAULT '',
-          `subject_guid` varchar(255) DEFAULT '',
-          `subject_name` varchar(255) DEFAULT '',
-          `holding_entity_name` varchar(255) DEFAULT '',
-          `holding_entity_guid` varchar(255) DEFAULT '',
-          `date_created` varchar(255) NOT NULL DEFAULT '',
-          `created_by_user_account_id` int(11) NOT NULL,
-          `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          `last_modified_user_account_id` int(11) NOT NULL,
-          `active` tinyint(1) NOT NULL DEFAULT '1',
-          PRIMARY KEY (`subject_repository_id`),
-          KEY `created_by_user_account_id` (`created_by_user_account_id`),
-          KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
-          KEY `project_repository_id` (`project_repository_id`,`subject_name`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=45 DEFAULT CHARSET=utf8 COMMENT='This table stores subjects metadata'");
-
-        $statement->execute();
-        $error = $conn->errorInfo();
-
-        if ($error[0] !== '00000') {
-            var_dump($conn->errorInfo());
-            die('CREATE TABLE `subjects` failed.');
-        } else {
-            return TRUE;
-        }
-
-    }
 }
