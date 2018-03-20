@@ -26,8 +26,6 @@ class ProjectsController extends Controller
      * @var object $u
      */
     public $u;
-
-    private $repo_controller;
     private $repo_storage_controller;
 
     /**
@@ -39,8 +37,6 @@ class ProjectsController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController();
-        $this->repo_controller = new RepoStorageHybridController();
-
     }
 
     /**

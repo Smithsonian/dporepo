@@ -21,6 +21,7 @@ class FocusTypesController extends Controller
      * @var object $u
      */
     public $u;
+    private $repo_storage_controller;
 
     /**
      * Constructor
@@ -30,6 +31,7 @@ class FocusTypesController extends Controller
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
+        $this->repo_storage_controller = new RepoStorageHybridController();
 
         // Table name and field names.
         $this->table_name = 'focus_types';

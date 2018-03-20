@@ -13,12 +13,19 @@ class RepoStorageHybridController extends Controller
 
   private $repo_storage;
   private $repo_storage_structure;
+  protected $container;
+  private $connection;
 
   public function __construct() {
     //$this->container = $this->container->get('doctrine.dbal.default_connection');
   }
 
   public function execute($function, $parameters) {
+
+    if(!is_object($this->container)) {
+      //@todo log error
+      return NULL;
+    }
     $this->connection = $this->container->get('doctrine.dbal.default_connection');
     $this->repo_storage = new RepoStorageHybrid($this->connection);
 

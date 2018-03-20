@@ -23,6 +23,8 @@ class CaptureDataFileController extends Controller
      */
     public $u;
 
+    private $repo_storage_controller;
+
     /**
      * Constructor
      * @param object  $u  Utility functions object
@@ -31,6 +33,7 @@ class CaptureDataFileController extends Controller
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
+        $this->repo_storage_controller = new RepoStorageHybridController();
     }
 
     /**
