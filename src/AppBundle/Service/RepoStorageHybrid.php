@@ -144,6 +144,12 @@ class RepoStorageHybrid implements RepoStorage {
     return $return_data;
   }
 
+  /**
+   * ---------------------------------------------------------------
+   * Generic functions that get called by other getters and setters.
+   * ---------------------------------------------------------------
+   */
+
   public function getRecords(array $query_parameters) {
 
     /*
@@ -323,7 +329,7 @@ class RepoStorageHybrid implements RepoStorage {
       $sql .= " WHERE {$search_sql} ";
     }
     if(strlen(trim($sort_sql)) > 0) {
-      $sql .= " ORDER BY {$sort_sql} ";
+      $sql .= " {$sort_sql} ";
     }
     if(strlen(trim($limit_sql)) > 0) {
       $sql .= $limit_sql;
@@ -341,18 +347,12 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
-  /**
-   * ---------------------------------------------------------------
-   * Generic functions that get called by other getters and setters.
-   * ---------------------------------------------------------------
-   */
-
   /***
    * @param $query_parameters parameters used to query records for return.
    * Sets records into $records_values.
    * @return mixed array containing success/fail value, and any messages.
    */
-  public function getRecordDatatables(array $query_parameters) {
+  public function getRecordsDatatable(array $query_parameters) {
 
     /*
      * $query_parameters should contain:
@@ -532,7 +532,7 @@ class RepoStorageHybrid implements RepoStorage {
       $sql .= " WHERE {$search_sql} ";
     }
     if(strlen(trim($sort_sql)) > 0) {
-      $sql .= " ORDER BY {$sort_sql} ";
+      $sql .= " {$sort_sql} ";
     }
     if(strlen(trim($limit_sql)) > 0) {
       $sql .= $limit_sql;
