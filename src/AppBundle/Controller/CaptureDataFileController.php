@@ -45,11 +45,6 @@ class CaptureDataFileController extends Controller
      */
     public function datatablesBrowse(Connection $conn, Request $request)
     {
-        $data = new CaptureDataFile();
-
-        $params = array();
-        $params['pdo_params'] = array();
-        $params['search_sql'] = $params['sort'] = '';
 
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -58,30 +53,97 @@ class CaptureDataFileController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
-        $params['limit_sql'] = " LIMIT {$start_record}, {$stop_record} ";
+        $this->repo_storage_controller->setContainer($this->container);
 
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $params['sort'] = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $params['sort'] = " ORDER BY capture_data_file.last_modified DESC ";
-        }
+        $query_params = array(
+          'fields' => array(),
+          'base_table' => 'capture_data_file',
+          'search_params' => array(
+            0 => array('field_names' => array('capture_data_file.active'), 'search_values' => array(1), 'comparison' => '='),
+          ),
+          'search_type' => 'AND',
+        );
 
         if ($search) {
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['search_sql'] = "
-                AND (
-                  capture_data_file.capture_data_file_name LIKE ?
-                  capture_data_file.capture_data_file_type LIKE ?
-                  capture_data_file.is_compressed_multiple_files LIKE ?
-                ) ";
+          $query_params['search_params'][1] = array(
+            'field_names' => array(
+              'capture_data_file.capture_data_file_name',
+              'capture_data_file.capture_data_file_type',
+              'capture_data_file.is_compressed_multiple_files'
+            ),
+            'search_values' => array($search),
+            'comparison' => 'LIKE',
+          );
         }
 
-        // Run the query
-        $results = $data->datatablesQuery($params);
+        // Fields.
+        $query_params['fields'][] = array(
+          'table_name' => 'capture_data_file',
+          'field_name' => 'capture_data_file_repository_id',
+          'field_alias' => 'manage',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => 'capture_data_file',
+          'field_name' => 'capture_data_file_repository_id',
+          'field_alias' => 'DT_RowId',
+        );
+        $query_params['fields'][] = array(
+          'field_name' => 'capture_data_file_name',
+        );
+        $query_params['fields'][] = array(
+          'field_name' => 'capture_data_file_type',
+        );
+        $query_params['fields'][] = array(
+          'field_name' => 'is_compressed_multiple_files',
+        );
+        $query_params['fields'][] = array(
+          'field_name' => 'active',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => 'capture_data_file',
+          'field_name' => 'last_modified',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => 'projects',
+          'field_name' => 'last_modified',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => 'projects',
+          'field_name' => 'last_modified_user_account_id',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => 'isni_data',
+          'field_name' => 'isni_label',
+          'field_alias' => 'stakeholder_label',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => 'unit_stakeholder',
+          'field_name' => 'unit_stakeholder_id',
+          'field_alias' => 'stakeholder_si_guid',
+        );
 
-        return $this->json($results);
+        $query_params['records_values'] = array();
+
+        $query_params['limit'] = array(
+          'limit_start' => $start_record,
+          'limit_stop' => $stop_record,
+        );
+
+        if (!empty($sort_field) && !empty($sort_order)) {
+          $query_params['sort_fields'] = array(
+            'field_name' => $sort_field,
+            'sort_order' => $sort_order,
+          );
+        } else {
+          $query_params['sort_fields'] = array(
+            'field_name' => 'capture_data_file.last_modified',
+            'sort_order' => 'DESC',
+          );
+        }
+
+        $data = $this->repo_storage_controller->execute('getRecordsDatatable', $query_params);
+
+        return $this->json($data);
     }
 
     /**
@@ -104,11 +166,10 @@ class CaptureDataFileController extends Controller
         if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
-        $repo_controller = new RepoStorageHybridController();
-        $repo_controller->setContainer($this->container);
+        $this->repo_storage_controller->setContainer($this->container);
 
         if(!empty($id) && empty($post)) {
-            $data = $repo_controller->execute('getRecord', array(
+            $data = $this->repo_storage_controller->execute('getRecord', array(
               'base_table' => 'capture_data_file',
               'id_field' => 'capture_data_file_repository_id',
               'id_value' => $id));
