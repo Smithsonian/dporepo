@@ -242,21 +242,28 @@ class SubjectsController extends Controller
      *
      * Run a query to retrieve all subjects from the database.
      *
-     * @param   object  $conn    Database connection object
      * @param   int $project_repository_id  The project ID
      * @return  array|bool  The query result
      */
-    public function get_subjects($conn, $project_repository_id = false)
+    public function get_subjects($project_repository_id = false)
     {
-        $statement = $conn->prepare("
-            SELECT * FROM subjects
-            WHERE subjects.active = 1
-            AND subjects.project_repository_id = :project_repository_id
-            ORDER BY subjects.subject_name ASC
-        ");
-        $statement->bindValue(":project_repository_id", (int)$project_repository_id, PDO::PARAM_INT);
-        $statement->execute();
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      $this->repo_storage_controller->setContainer($this->container);
+      $data = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'subjects',
+          'fields' => array(),
+          'sort_fields' => array(
+            0 => array('field_name' => 'subject_name')
+          ),
+          'search_params' => array(
+            0 => array('field_names' => array('active'), 'search_values' => array(1), 'comparison' => '='),
+            1 => array('field_names' => array('project_repository_id'), 'search_values' => array($project_repository_id), 'comparison' => '=')
+          ),
+          'search_type' => 'AND',
+        )
+      );
+
+      return $data;
     }
 
     /**
