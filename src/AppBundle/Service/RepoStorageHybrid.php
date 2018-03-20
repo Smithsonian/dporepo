@@ -14,14 +14,15 @@ class RepoStorageHybrid implements RepoStorage {
     $this->connection = $connection;
   }
 
-  public function getProject($project_id) {
+  public function getProject($params) {
+    //$params will be something like array('project_id' => '123');
 
     $query_params = array(
       'fields' => array(),
       'base_table' => 'projects',
       'search_params' => array(
         0 => array('field_names' => array('projects.active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array('projects.project_repository_id'), 'search_values' => array($project_id), 'comparison' => '=')
+        1 => array('field_names' => array('projects.project_repository_id'), 'search_values' => $params, 'comparison' => '=')
       ),
       'search_type' => 'AND',
       'related_tables' => array(),
@@ -96,14 +97,15 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
-  public function getSubject($subject_id) {
+  public function getSubject($params) {
+    //$params will be something like array('subject_id' => '123');
 
     $query_params = array(
       'fields' => array(),
       'base_table' => 'subjects',
       'search_params' => array(
         0 => array('field_names' => array('subjects.active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array('subjects.subject_repository_id'), 'search_values' => array($subject_id), 'comparison' => '=')
+        1 => array('field_names' => array('subjects.subject_repository_id'), 'search_values' => $params, 'comparison' => '=')
       ),
       'search_type' => 'AND'
     );
@@ -281,8 +283,10 @@ class RepoStorageHybrid implements RepoStorage {
         $field_names = $p['field_names'];
         $search_values = $p['search_values'];
 
-        if(!is_array($field_names) || count($field_names) == 0
-          || !is_array($search_values) || count($search_values) == 0) {
+        if((!is_array($search_values) && strlen(trim($search_values)) > 0)) {
+          $search_values = array($search_values);
+        }
+        if(!is_array($field_names) || count($field_names) == 0 || !is_array($search_values) || count($search_values) == 0) {
           continue;
         }
 
@@ -483,6 +487,9 @@ class RepoStorageHybrid implements RepoStorage {
         $field_names = $p['field_names'];
         $search_values = $p['search_values'];
 
+        if((!is_array($search_values) && strlen(trim($search_values)) > 0)) {
+          $search_values = array($search_values);
+        }
         if(!is_array($field_names) || count($field_names) == 0
           || !is_array($search_values) || count($search_values) == 0) {
           continue;
