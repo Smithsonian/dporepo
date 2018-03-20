@@ -150,7 +150,7 @@ class SubjectsController extends Controller
                 $data['aaData'][$key]['active'] = '<span class="label label-' . $label . '"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span> ' . $text . '</span>';
 
                 // Get the items count
-                $subject_items = $items->get_items($conn, $value['subject_repository_id']);
+                $subject_items = $items->get_items($this->container, $value['subject_repository_id']);
                 $data['aaData'][$key]['items_count'] = count($subject_items);
             }
         }
@@ -242,13 +242,14 @@ class SubjectsController extends Controller
      *
      * Run a query to retrieve all subjects from the database.
      *
+     * @param   $container  The Symfony container, passed from the caller.
      * @param   int $project_repository_id  The project ID
      * @return  array|bool  The query result
      */
-    public function get_subjects($project_repository_id = false)
+    public function get_subjects($container, $project_repository_id = false)
     {
 
-      $this->repo_storage_controller->setContainer($this->container);
+      $this->repo_storage_controller->setContainer($container);
       $data = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'subjects',
           'fields' => array(),
@@ -271,15 +272,15 @@ class SubjectsController extends Controller
      *
      * @Route("/admin/projects/get_subjects/{project_repository_id}/{number_first}", name="get_subjects_tree_browser", methods="GET", defaults={"number_first" = false})
      */
-    public function get_subjects_tree_browser(Connection $conn, Request $request, ItemsController $items)
+    public function get_subjects_tree_browser(Request $request, ItemsController $items)
     {      
       $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
-      $subjects = $this->get_subjects($conn, $project_repository_id);
+      $subjects = $this->get_subjects($this->container, $project_repository_id);
 
       foreach ($subjects as $key => $value) {
 
           // Check for child dataset records so the 'children' key can be set accordingly.
-          $item_data = $items->get_items($conn, (int)$value['subject_repository_id']);
+          $item_data = $items->get_items($this->container, (int)$value['subject_repository_id']);
 
           $data[$key] = array(
             'id' => 'subjectId-' . $value['subject_repository_id'],

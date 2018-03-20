@@ -126,7 +126,7 @@ class ProjectsController extends Controller
         // Get the subjects count
         if(!empty($data['aaData'])) {
             foreach ($data['aaData'] as $key => $value) {
-                $project_subjects = $subjects->get_subjects($conn, $value['project_repository_id']);
+                $project_subjects = $subjects->get_subjects($this->container, $value['project_repository_id']);
                 $data['aaData'][$key]['subjects_count'] = count($project_subjects);
             }
         }
@@ -289,7 +289,7 @@ class ProjectsController extends Controller
         foreach ($projects as $key => $value) {
 
             // Check for child dataset records so the 'children' key can be set accordingly.
-            $subject_data = $subjects->get_subjects((int)$value['project_repository_id']);
+            $subject_data = $subjects->get_subjects($this->container, (int)$value['project_repository_id']);
 
             $data[$key] = array(
                 'id' => 'projectId-' . $value['project_repository_id'],
