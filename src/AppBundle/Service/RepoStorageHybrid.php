@@ -119,6 +119,225 @@ class RepoStorageHybrid implements RepoStorage {
     return $return_data;
   }
 
+  public function getRecordById($params) {
+
+    $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
+    $record_id = array_key_exists('record_id', $params) ? $params['record_id'] : NULL;
+
+    if(NULL == $record_type || NULL == $record_id) {
+      return array();
+    }
+
+    $data = $this->getRecord(array(
+      'base_table' => $record_type,
+      'id_field' => $record_type . '_repository_id',
+      'id_value' => $record_id));
+    return $data;
+  }
+
+  public function datatablesQuery($params) {
+
+    $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    //@todo- allow match on ID- specify ID field and value $record_match = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+
+
+    $query_params = array(
+      'distinct' => true, // @todo Do we always want this to be true?
+      'base_table' => $record_type,
+      'fields' => array(),
+    );
+
+    $query_params['limit'] = array(
+      'limit_start' => $start_record,
+      'limit_stop' => $stop_record,
+    );
+
+    if (!empty($sort_field) && !empty($sort_order)) {
+      $query_params['sort_fields'][] = array(
+        'field_name' => $sort_field,
+        'sort_order' => $sort_order,
+      );
+    } else {
+      $query_params['sort_fields'][] = array(
+        'field_name' => $record_type . '.last_modified',
+        'sort_order' => 'DESC',
+      );
+    }
+
+
+    switch($record_type) {
+      case 'subject':
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+          'field_alias' => 'manage',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+          'field_alias' => 'DT_RowId',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+        );
+        $query_params['fields'][] = array(
+          'field_name' => 'holding_entity_guid',
+        );
+        $query_params['fields'][] = array(
+          'field_name' => 'local_subject_id',
+        );
+        $query_params['fields'][] = array(
+          'field_name' => 'subject_guid',
+        );
+        $query_params['fields'][] = array(
+          'field_name' => 'subject_name',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'active',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'last_modified',
+        );
+
+        $query_params['search_params'][0] = array('field_names' => array('subjects.active'), 'search_values' => array(1), 'comparison' => '=');
+        if (NULL !== $search_value) {
+          $query_params['search_type'] = 'AND';
+          $query_params['search_params'][1] = array(
+            'field_names' => array(
+              'subjects.subject_name',
+              'subjects.holding_entity_guid',
+              'subjects.last_modified'
+            ),
+            'search_values' => array($search_value),
+            'comparison' => 'LIKE',
+          );
+        }
+
+        // GROUP BY subjects.holding_entity_guid, subjects.local_subject_id, subjects.subject_guid, subjects.subject_name, subjects.last_modified, subjects.active, subjects.subject_repository_id
+        $query_params['related_tables'][] = array(
+          'table_name' => 'items',
+          'table_join_field' => 'subject_repository_id',
+          'join_type' => 'LEFT JOIN',
+          'base_join_table' => 'subjects',
+          'base_join_field' => 'subject_repository_id',
+        );
+        break;
+
+      case 'processing_action':
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+          'field_alias' => 'manage',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'preceding_processing_action_repository_id',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'date_of_action',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'action_method',
+        );
+        $query_params['fields'][] = array(
+          'field_name' => 'software_used',
+        );
+        $query_params['fields'][] = array(
+          'field_name' => 'action_description',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'active',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'last_modified',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+          'field_alias' => 'DT_RowId',
+        );
+
+        $query_params['search_params'][0] = array('field_names' => array('processing_action.active'), 'search_values' => array(1), 'comparison' => '=');
+        if (NULL !== $search_value) {
+          $query_params['search_type'] = 'AND';
+          $query_params['search_params'][1] = array(
+            'field_names' => array(
+              'processing_action.action_method',
+              'processing_action.action_description',
+              'processing_action.software_used',
+              'processing_action.last_modified'
+            ),
+            'search_values' => array($search_value),
+            'comparison' => 'LIKE',
+          );
+        }
+        break;
+
+      case 'photogrammetry_scale_bar_target_pair':
+
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+          'field_alias' => 'manage',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'target_type',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'target_pair_1_of_2',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'target_pair_2_of_2',
+        );
+        $query_params['fields'][] = array(
+          'field_name' => 'distance',
+        );
+        $query_params['fields'][] = array(
+          'field_name' => 'units',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'active',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'last_modified',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+          'field_alias' => 'DT_RowId',
+        );
+
+        $query_params['search_params'][0] = array('field_names' => array('processing_action.active'), 'search_values' => array(1), 'comparison' => '=');
+        break;
+
+    }
+
+  }
+
+  /**
+   * ---------------------------------------------------------------
+   * Generic functions that get called by other getters and setters.
+   * ---------------------------------------------------------------
+   */
+
   public function getRecord($parameters) {
 
     //@todo confirm params exist
@@ -145,12 +364,6 @@ class RepoStorageHybrid implements RepoStorage {
     }
     return $return_data;
   }
-
-  /**
-   * ---------------------------------------------------------------
-   * Generic functions that get called by other getters and setters.
-   * ---------------------------------------------------------------
-   */
 
   public function getRecords(array $query_parameters) {
 
@@ -199,7 +412,7 @@ class RepoStorageHybrid implements RepoStorage {
         $this_field = '';
         if(array_key_exists('table_name', $field)) {
           $this_field = $field['table_name'] . '.';
-    }
+        }
         $this_field .= $field['field_name'];
         if(array_key_exists('field_alias', $field)) {
           $this_field .= ' as ' . $field['field_alias'];
@@ -510,9 +723,9 @@ class RepoStorageHybrid implements RepoStorage {
               $search_params[] = $search_values[$k];
             }
             else {
-            $this_search_param[] = $fn . ' LIKE ?';
-            $search_params[] = '%' . $search_values[array_keys($search_values[0])] . '%';
-          }
+              $this_search_param[] = $fn . ' LIKE ?';
+              $search_params[] = '%' . $search_values[array_keys($search_values[0])] . '%';
+            }
           }
           else {
             $this_search_param[] = $fn['field_name'] . ' IN (?)';
