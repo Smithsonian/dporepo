@@ -276,21 +276,4 @@ class ItemTypesController extends Controller
       return $this->redirectToRoute($this->table_name . '_browse');
     }
 
-    /**
-     * Delete Record
-     *
-     * Run a query to delete a Item Type record.
-     *
-     * @param       int $id           The data value
-     * @return      void
-     */
-    public function delete($id, $conn)
-    {
-        $statement = $conn->prepare("
-            DELETE FROM " . $this->table_name . "
-            WHERE " . $this->id_field_name . " = :id");
-        $statement->bindValue(":id", $id, PDO::PARAM_INT);
-        $statement->execute();
-    }
-
 }
