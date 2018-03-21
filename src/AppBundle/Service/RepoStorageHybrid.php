@@ -211,6 +211,9 @@ class RepoStorageHybrid implements RepoStorage {
       $select_fields_array[] = $base_table . '.*';
     }
     $select_sql = implode(', ', $select_fields_array);
+    if(array_key_exists('distinct', $query_parameters)) {
+      $select_sql = ' DISTINCT ' . $select_sql;
+    }
 
     if(array_key_exists('related_tables', $query_parameters) && is_array($query_parameters['related_tables'])
       && count($query_parameters['related_tables']) > 0) {
@@ -415,6 +418,9 @@ class RepoStorageHybrid implements RepoStorage {
       $select_fields_array[] = $base_table . '.*';
     }
     $select_sql = implode(', ', $select_fields_array);
+    if(array_key_exists('distinct', $query_parameters)) {
+      $select_sql = ' DISTINCT ' . $select_sql;
+    }
 
     if(array_key_exists('related_tables', $query_parameters) && is_array($query_parameters['related_tables'])
     && count($query_parameters['related_tables']) > 0) {
