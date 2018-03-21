@@ -9,6 +9,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
 use Symfony\Component\HttpFoundation\Session\Session;
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 // Custom utility bundles
@@ -158,80 +160,116 @@ class AdminController extends Controller
      *
      * Run a query to retreive recent subjects in the database.
      *
-     * @param   object  Connection  Database connection object
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_recent_subjects(Connection $conn, Request $request, ItemsController $items)
+    public function datatables_browse_recent_subjects(Request $request, ItemsController $items)
     {
-        $sort = $search_sql = '';
-        $pdo_params = $data = array();
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
-        // Today's date
-        $date_today = date('Y-m-d H:i:s');
-        // Date limit
-        $date_limit = date('Y-m-d H:i:s', strtotime('-240 days'));
-        $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
+
+        // GROUP BY subjects.holding_entity_guid, subjects.local_subject_id, subjects.subject_guid, subjects.subject_name, subjects.last_modified, subjects.active, subjects.subject_repository_id
+        $query_params = array(
+          'distinct' => true,
+          'base_table' => 'subjects',
+          'fields' => array(),
+          'search_params' => array(
+            0 => array('field_names' => array('subjects.active'), 'search_values' => array(1), 'comparison' => '='),
+          ),
+          'search_type' => 'AND',
+        );
+
+        $query_params['related_tables'][] = array(
+          'table_name' => 'items',
+          'table_join_field' => 'subject_repository_id',
+          'join_type' => 'LEFT JOIN',
+          'base_join_table' => 'subjects',
+          'base_join_field' => 'subject_repository_id',
+        );
+        if ($search) {
+          $query_params['search_params'][1] = array(
+            'field_names' => array(
+              'subjects.subject_name',
+              'subjects.holding_entity_guid',
+              'subjects.last_modified'
+            ),
+            'search_values' => array($search),
+            'comparison' => 'LIKE',
+          );
+        }
+
+        // Fields.
+        $query_params['fields'][] = array(
+          'table_name' => 'subjects',
+          'field_name' => 'subject_repository_id',
+          'field_alias' => 'manage',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => 'subjects',
+          'field_name' => 'subject_repository_id',
+          'field_alias' => 'DT_RowId',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => 'subjects',
+          'field_name' => 'subject_repository_id',
+        );
+        $query_params['fields'][] = array(
+          'field_name' => 'holding_entity_guid',
+        );
+        $query_params['fields'][] = array(
+          'field_name' => 'local_subject_id',
+        );
+        $query_params['fields'][] = array(
+          'field_name' => 'subject_guid',
+        );
+      $query_params['fields'][] = array(
+        'field_name' => 'subject_name',
+      );
+        $query_params['fields'][] = array(
+          'table_name' => 'subjects',
+          'field_name' => 'active',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => 'subjects',
+          'field_name' => 'last_modified',
+        );
+        $query_params['records_values'] = array();
+
+        $query_params['limit'] = array(
+          'limit_start' => $start_record,
+          'limit_stop' => $stop_record,
+        );
 
         if (!empty($sort_field) && !empty($sort_order)) {
-            $sort = " ORDER BY {$sort_field} {$sort_order}";
+          $query_params['sort_fields'][] = array(
+            'field_name' => $sort_field,
+            'sort_order' => $sort_order,
+          );
         } else {
-            $sort = " ORDER BY subjects.last_modified DESC ";
+          $query_params['sort_fields'][] = array(
+            'field_name' => 'subjects.last_modified',
+            'sort_order' => 'DESC',
+          );
         }
 
-        if ($search) {
-            $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
-            $search_sql = "
-                AND (
-                  subjects.subject_name LIKE ?
-                  OR subjects.holding_entity_guid LIKE ?
-                  OR subjects.last_modified LIKE ?
-                ) ";
-        }
-
-        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-              subjects.subject_repository_id AS manage
-              ,subjects.subject_repository_id
-              ,subjects.holding_entity_guid
-              ,subjects.local_subject_id
-              ,subjects.subject_guid
-              ,subjects.subject_name
-              ,subjects.last_modified
-              ,subjects.active
-              ,subjects.subject_repository_id AS DT_RowId
-          FROM subjects
-          LEFT JOIN items ON items.subject_repository_id = subjects.subject_repository_id
-          WHERE subjects.active = 1
-          {$search_sql}
-          GROUP BY subjects.holding_entity_guid, subjects.local_subject_id, subjects.subject_guid, subjects.subject_name, subjects.last_modified, subjects.active, subjects.subject_repository_id
-          {$sort}
-          {$limit_sql}");
-        $statement->execute($pdo_params);
-        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getRecordsDatatable', $query_params);
 
         // Get the items count
         if(!empty($data['aaData'])) {
             foreach ($data['aaData'] as $key => $value) {
-                $subject_items = $items->get_items($this->controller, $value['subject_repository_id']);
+                $subject_items = $items->get_items($this->container, $value['subject_repository_id']);
                 $data['aaData'][$key]['items_count'] = count($subject_items);
             }
         }
 
-        $statement = $conn->prepare("SELECT FOUND_ROWS()");
-        $statement->execute();
-        $count = $statement->fetch();
-        $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-        $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
-        
         return $this->json($data);
     }
+
 
     /**
      * @Route("/admin/get_favorites/", name="get_favorites", methods="POST")
