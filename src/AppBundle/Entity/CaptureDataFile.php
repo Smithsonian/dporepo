@@ -135,23 +135,4 @@ class CaptureDataFile
         }
     }
 
-    /**
-     * Delete Multiple Records
-     *
-     * @param int $ids
-     * @param Connection $conn
-     * @return void
-     */
-    public function deleteMultiple($id = NULL, Connection $conn)
-    {
-        $statement = $conn->prepare("
-            UPDATE capture_data_file
-            SET active = 0, last_modified_user_account_id = :last_modified_user_account_id
-            WHERE capture_data_file_repository_id = :id
-        ");
-        $statement->bindValue(":id", $id, "integer");
-        $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), "integer");
-        $statement->execute();
-    }
-
 }
