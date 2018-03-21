@@ -202,23 +202,6 @@ class UnitStakeholderController extends Controller
 
     }
 
-   /**
-    * Get All Records
-    *
-    * Run a query to retrieve all records.
-    *
-    * @return  array|bool  The query result
-    */
-    public function get_all($conn)
-    {
-        $statement = $conn->prepare("
-            SELECT * FROM " . $this->table_name . "
-            ORDER BY " . $this->label_field_name . " ASC
-        ");
-        $statement->execute();
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
-    }
-
     /**
      * Insert/Update
      *
