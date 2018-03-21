@@ -135,6 +135,26 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
+  public function deleteMultiple($params) {
+
+    $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
+    $record_id = array_key_exists('record_id', $params) ? $params['record_id'] : NULL;
+
+    if(NULL == $record_type || NULL == $record_id) {
+      return array();
+    }
+
+    $data = $this->deleteRecords(array(
+      'base_table' => $record_type,
+      'search_params' => array(
+        'field_names' => array($record_type . '_repository_id'),
+        'search_values' => array($record_id)
+        ),
+      )
+    );
+    return $data;
+  }
+
   public function datatablesQuery($params) {
 
     $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
@@ -1001,6 +1021,105 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     $sql = "DELETE FROM " . $base_table;
+
+    if(strlen(trim($search_sql)) > 0) {
+      $sql .= " WHERE {$search_sql} ";
+    }
+
+    $statement = $this->connection->prepare($sql);
+    if(count($search_params) > 0) {
+      $statement->execute($search_params);
+    }
+    else {
+      $statement->execute();
+    }
+    $return = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    return array('return' => 'success', 'data' => $return);
+  }
+
+  /***
+   * @param $query_parameters parameters used to query records to be marked inactive.
+   * @return mixed array containing success/fail value, and any messages.
+   */
+  public function markRecordsInactive(array $query_parameters){
+
+    /*
+     * $query_parameters should contain:
+     * ------------
+     * record_type - string indicating base table for query
+     * record_id
+     * user_id
+     */
+
+    $record_type = NULL;
+    $search_sql = '';
+    $search_params = array();
+    $data = array();
+
+    // We need base table. Fail if that isn't provided.
+    if(!array_key_exists('record_type', $query_parameters)) {
+      return array('return' => 'fail', 'messages' => array('No record_type parameter specified.'));
+    }
+    if(!array_key_exists('user_id', $query_parameters)) {
+      return array('return' => 'fail', 'messages' => array('No user_id parameter specified.'));
+    }
+    if(isset($query_parameters['search_params']) && !is_array($query_parameters['search_params'])) {
+      return array('return' => 'fail', 'messages' => array('Fields parameter is invalid.'));
+    }
+
+    // Table
+    $record_type = $query_parameters['record_type'];
+
+    $search_params[] = $query_parameters['user_id'];
+
+    // Search values
+    if (array_key_exists('search_params', $query_parameters) && is_array($query_parameters['search_params'])) {
+      $search_sql_values = array();
+      foreach($query_parameters['search_params'] as $p) {
+        $field_names = $p['field_names'];
+        $search_values = $p['search_values'];
+
+        if(!is_array($field_names) || count($field_names) == 0
+          || !is_array($search_values) || count($search_values) == 0) {
+          continue;
+        }
+
+        $this_search_param = array();
+        foreach($field_names as $fn) {
+          if(count($search_values) == 1) {
+            $this_search_param[] = $fn . ' LIKE ?';
+            $search_params[] = '%' . $search_values[array_keys($search_values[0])] . '%';
+          }
+          else {
+            $this_search_param[] = $fn['field_name'] . ' IN (?)';
+            $search_params[] = '%' . implode('%, %', $search_values) . '%';
+          }
+        }
+
+        $search_sql_values .= '(' . implode(' OR ', $this_search_param) . ') ';
+      }
+
+      if(count($search_sql_values) > 0) {
+        $search_sql = implode(' AND ', $search_sql_values);
+      }
+    }
+
+    if(true == $query_parameters['delete_children']) {
+      //@todo delete children first
+
+      switch($record_type) {
+        case 'projects':
+          break;
+        case 'subjects':
+          break;
+        case 'items':
+          break;
+
+      }
+    }
+
+    $sql = "UPDATE " . $record_type . " SET active = 0, last_modified_user_account_id=:";
 
     if(strlen(trim($search_sql)) > 0) {
       $sql .= " WHERE {$search_sql} ";
