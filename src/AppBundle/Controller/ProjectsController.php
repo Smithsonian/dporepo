@@ -44,9 +44,9 @@ class ProjectsController extends Controller
     public function browse_projects(Connection $conn, Request $request, IsniController $isni)
     {
         // Database tables are only created if not present.
-      $this->repo_storage_controller->setContainer($this->container);
-      $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'projects'));
-      $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'isni_data'));
+        $this->repo_storage_controller->setContainer($this->container);
+        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'projects'));
+        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'isni_data'));
 
         return $this->render('projects/browse_projects.html.twig', array(
             'page_title' => 'Browse Projects',
@@ -205,7 +205,7 @@ class ProjectsController extends Controller
         'base_table' => 'projects',
         'fields' => array(),
         'sort_fields' => array(
-          'field_name' => 'stakeholder_guid'
+          0 => array('field_name' => 'stakeholder_guid')
         ),
         )
       );
@@ -296,7 +296,6 @@ class ProjectsController extends Controller
                 'children' => count($subject_data) ? true : false,
                 'a_attr' => array('href' => '/admin/projects/subjects/' . $value['project_repository_id']),
             );
-            
         }
 
         $response = new JsonResponse($data);
