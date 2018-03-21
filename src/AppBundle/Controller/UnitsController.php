@@ -49,7 +49,8 @@ class UnitsController extends Controller
     public function browse(Connection $conn, Request $request)
     {
         // Database tables are only created if not present.
-        $create_table = $this->create_table($conn);
+        $this->repo_storage_controller->setContainer($this->container);
+        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => $this->table_name));
 
         return $this->render('resources/browse_units.html.twig', array(
             'page_title' => "Browse Units",
@@ -320,34 +321,4 @@ class UnitsController extends Controller
         $statement->execute();
     }
 
-    /**
-     * Create the Database Table
-     *
-     * @return      void
-     */
-    public function create_table($conn)
-    {
-        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `" . $this->table_name . "` (
-            `" . $this->id_field_name_raw . "` int(11) NOT NULL AUTO_INCREMENT,
-            `" . $this->label_field_name_raw . "` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`" . $this->id_field_name_raw . "`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='This table stores " . $this->table_name . " metadata'");
-        $statement->execute();
-        $error = $conn->errorInfo();
-
-        if ($error[0] !== '00000') {
-            var_dump($conn->errorInfo());
-            die('CREATE TABLE `' . $this->table_name . '` failed.');
-        } else {
-            return TRUE;
-        }
-    }
-  
 }
