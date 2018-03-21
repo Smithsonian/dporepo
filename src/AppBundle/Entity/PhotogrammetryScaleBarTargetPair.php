@@ -41,51 +41,6 @@ class PhotogrammetryScaleBarTargetPair
      */
     public $units;
 
-
-    /**
-     * Datatables Query
-     *
-     * @param array $params Parameters
-     * @param Connection $conn
-     * @return array
-     */
-    public function datatablesQuery($params = NULL, Connection $conn)
-    {
-        $data = array();
-
-        if(!empty($params)) {
-
-            $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-                photogrammetry_scale_bar_target_pair.photogrammetry_scale_bar_target_pair_repository_id AS manage,
-
-                photogrammetry_scale_bar_target_pair.target_type,
-                photogrammetry_scale_bar_target_pair.target_pair_1_of_2,
-                photogrammetry_scale_bar_target_pair.target_pair_2_of_2,
-                photogrammetry_scale_bar_target_pair.distance,
-                photogrammetry_scale_bar_target_pair.units,
-
-                photogrammetry_scale_bar_target_pair.active,
-                photogrammetry_scale_bar_target_pair.last_modified,
-                photogrammetry_scale_bar_target_pair.photogrammetry_scale_bar_target_pair_repository_id AS DT_RowId
-                FROM photogrammetry_scale_bar_target_pair
-                WHERE photogrammetry_scale_bar_target_pair.active = 1
-                {$params['search_sql']}
-                {$params['sort']}
-                {$params['limit_sql']}");
-            $statement->execute($params['pdo_params']);
-            $data['aaData'] = $statement->fetchAll();
-     
-            $statement = $conn->prepare("SELECT FOUND_ROWS()");
-            $statement->execute();
-            $count = $statement->fetch();
-            $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-            $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
-
-        }
-
-        return $data;
-    }
-
     /**
      * Insert/Update
      *

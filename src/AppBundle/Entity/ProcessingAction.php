@@ -46,52 +46,6 @@ class ProcessingAction
      */
     public $action_description;
 
-
-
-    /**
-     * Datatables Query
-     *
-     * @param array $params Parameters
-     * @param Connection $conn
-     * @return array
-     */
-    public function datatablesQuery($params = NULL, Connection $conn)
-    {
-        $data = array();
-
-        if(!empty($params)) {
-
-            $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-                processing_action.processing_action_repository_id AS manage,
-
-                processing_action.preceding_processing_action_repository_id,
-                processing_action.date_of_action,
-                processing_action.action_method,
-                processing_action.software_used,
-                processing_action.action_description,
-
-                processing_action.active,
-                processing_action.last_modified,
-                processing_action.processing_action_repository_id AS DT_RowId
-                FROM processing_action
-                WHERE processing_action.active = 1
-                {$params['search_sql']}
-                {$params['sort']}
-                {$params['limit_sql']}");
-            $statement->execute($params['pdo_params']);
-            $data['aaData'] = $statement->fetchAll();
-     
-            $statement = $conn->prepare("SELECT FOUND_ROWS()");
-            $statement->execute();
-            $count = $statement->fetch();
-            $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-            $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
-
-        }
-
-        return $data;
-    }
-
     /**
      * Insert/Update
      *
