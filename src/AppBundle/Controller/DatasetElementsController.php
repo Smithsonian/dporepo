@@ -420,17 +420,16 @@ class DatasetElementsController extends Controller
 
           $ids_array = explode(',', $ids);
 
+          $this->repo_storage_controller->setContainer($this->container);
+
+          // Loop thorough the ids.
           foreach ($ids_array as $key => $id) {
-
-            $statement = $conn->prepare("
-                UPDATE capture_data_elements
-                SET active = 0, last_modified_user_account_id = :last_modified_user_account_id
-                WHERE capture_data_element_repository_id = :id
-            ");
-            $statement->bindValue(":id", $id, PDO::PARAM_INT);
-            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->execute();
-
+            // Run the query against a single record.
+            $ret = $this->repo_storage_controller->execute('markRecordsInactive', array(
+              'record_type' => $this->table_name,
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+            ));
           }
 
           $this->addFlash('message', 'Records successfully removed.');
