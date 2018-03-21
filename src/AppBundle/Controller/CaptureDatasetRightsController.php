@@ -8,6 +8,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 use AppBundle\Form\CaptureDatasetRightsForm;

@@ -9,13 +9,12 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 use AppBundle\Form\Project;
 use AppBundle\Entity\Projects;
-
-use AppBundle\Controller\RepoStorageHybridController;
-use Symfony\Component\DependencyInjection\Container;
 
 // Custom utility bundle
 use AppBundle\Utils\AppUtilities;
