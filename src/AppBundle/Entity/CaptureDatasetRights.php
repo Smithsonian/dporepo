@@ -32,7 +32,6 @@ class CaptureDatasetRights
     public $end_date;
 
 
-
     /**
      * Datatables Query
      *

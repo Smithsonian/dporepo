@@ -55,7 +55,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
   public function createTable($parameters) {
 
       if(!array_key_exists('table_name', $parameters)) {
-    return;
+        return;
       }
       $table_name = $parameters['table_name'];
 
@@ -73,8 +73,8 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             PRIMARY KEY (`background_removal_methods_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-          )";
-        break;
+            )";
+          break;
         case 'calibration_object_types':
           $sql = "CREATE TABLE IF NOT EXISTS `calibration_object_types` (
             `calibration_object_types_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -87,8 +87,8 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             PRIMARY KEY (`calibration_object_types_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-          )";
-        break;
+            )";
+          break;
         case 'camera_cluster_types':
           $sql = "CREATE TABLE IF NOT EXISTS `camera_cluster_types` (
             `camera_cluster_types_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -102,7 +102,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
-        break;
+          break;
         case 'capture_data_file':
           $sql = "CREATE TABLE IF NOT EXISTS `capture_data_file` (
               `capture_data_file_repository_id` int(11) NOT NULL AUTO_INCREMENT,

@@ -321,5 +321,4 @@ class DataRightsRestrictionTypesController extends Controller
         $statement->execute();
     }
 
-  
 }

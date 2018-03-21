@@ -54,7 +54,7 @@ class ItemsController extends Controller
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
         $subject_data = $subjects->get_subject((int)$subject_repository_id, $conn);
         if(!$subject_data) throw $this->createNotFoundException('The record does not exist');
-        
+
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$project_repository_id));
 
         return $this->render('items/browse_items.html.twig', array(

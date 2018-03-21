@@ -36,7 +36,6 @@ class CaptureDeviceComponent
      */
     public $model_name;
 
-
     /**
      * Datatables Query
      *

@@ -36,7 +36,6 @@ class PhotogrammetryScaleBar
      */
     public $scale_bar_target_pairs;
 
-
     /**
      * Datatables Query
      *

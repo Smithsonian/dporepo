@@ -322,5 +322,5 @@ class BackgroundRemovalMethodsController extends Controller
         $statement->execute();
     }
 
-  
+
 }

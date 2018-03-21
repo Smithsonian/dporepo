@@ -32,7 +32,6 @@ class CaptureDataFile
     public $is_compressed_multiple_files;
 
 
-
     /**
      * Datatables Query
      *

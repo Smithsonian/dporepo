@@ -32,5 +32,4 @@ class UvMap
     private $map_size;
 
 
-
 }

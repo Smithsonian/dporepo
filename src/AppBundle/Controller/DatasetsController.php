@@ -57,7 +57,7 @@ class DatasetsController extends Controller
         $item = new Items();
         $item->item_data = $item->getItem((int)$item_repository_id, $conn);
         if(!$item->item_data) throw $this->createNotFoundException('The record does not exist');
-        
+
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$project_repository_id));
         $subject_data = $subjects->get_subject((int)$subject_repository_id, $conn);
         $jobBoxDirectoryContents = is_dir(JOBBOX_PATH) ? scandir(JOBBOX_PATH) : array();

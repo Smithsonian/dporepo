@@ -26,7 +26,6 @@ class CaptureDevice
      */
     public $capture_device_component_ids;
 
-
     /**
      * Datatables Query
      *

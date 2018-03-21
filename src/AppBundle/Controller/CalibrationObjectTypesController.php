@@ -321,5 +321,5 @@ class CalibrationObjectTypesController extends Controller
         $statement->execute();
     }
 
-  
+
 }

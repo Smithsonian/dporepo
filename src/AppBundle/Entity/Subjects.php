@@ -29,5 +29,4 @@ class Subjects
      * @var int
      */
     public $local_subject_id;
-
 }

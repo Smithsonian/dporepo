@@ -7,7 +7,6 @@ use Doctrine\DBAL\Driver\Connection;
 
 class Model
 {
-    
     /**
      * @Assert\NotBlank()
      * @var int
@@ -140,7 +139,6 @@ class Model
                 {$params['limit_sql']}");
             $statement->execute($params['pdo_params']);
             $data['aaData'] = $statement->fetchAll();
-     
             $statement = $conn->prepare("SELECT FOUND_ROWS()");
             $statement->execute();
             $count = $statement->fetch();
