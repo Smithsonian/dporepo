@@ -183,10 +183,10 @@ class SubjectsController extends Controller
         // Retrieve data from the database.
         $this->repo_storage_controller->setContainer($this->container);
         if(!empty($subject_repository_id) && empty($post)) {
-          $subject = ($this->repo_storage_controller->execute('getRecord', array(
-            'base_table' => 'subjects',
-            'id_field' => 'subject_repository_id',
-            'id_value' => (int)$subject_repository_id))
+          $subject = $this->repo_storage_controller->execute('getRecordById', array(
+            'record_type' => 'subjects',
+            'record_id' => (int)$subject_repository_id
+            )
           );
           $subject = (object)$subject;
         }

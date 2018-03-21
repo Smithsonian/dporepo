@@ -134,10 +134,9 @@ class ModelController extends Controller
         $this->repo_storage_controller->setContainer($this->container);
 
         if(!empty($id) && empty($post)) {
-          $data = $this->repo_storage_controller->execute('getRecord', array(
-            'base_table' => 'model',
-            'id_field' => 'model_repository_id',
-            'id_value' => $id));
+          $data = $this->repo_storage_controller->execute('getRecordById', array(
+            'record_type' => 'model',
+            'record_id' => $id));
         }
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 

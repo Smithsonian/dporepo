@@ -110,10 +110,9 @@ class CaptureDeviceComponentController extends Controller
         $this->repo_storage_controller->setContainer($this->container);
 
         if(!empty($id) && empty($post)) {
-          $data = $this->repo_storage_controller->execute('getRecord', array(
-            'base_table' => 'capture_device_component',
-            'id_field' => 'capture_device_component_repository_id',
-            'id_value' => $id));
+          $data = $this->repo_storage_controller->execute('getRecordById', array(
+            'record_type' => 'capture_device_component',
+            'record_id' => $id));
         }
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 

@@ -112,10 +112,9 @@ class ProcessingActionController extends Controller
         $this->repo_storage_controller->setContainer($this->container);
 
         if(!empty($id) && empty($post)) {
-          $data = $this->repo_storage_controller->execute('getRecord', array(
-            'base_table' => 'processing_action',
-            'id_field' => 'processing_action_repository_id',
-            'id_value' => $id));
+          $data = $this->repo_storage_controller->execute('getRecordById', array(
+            'record_type' => 'processing_action',
+            'record_id' => $id));
         }
 
         // $this->u->dumper($data);

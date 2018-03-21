@@ -132,12 +132,12 @@ class CaptureDataFileController extends Controller
         );
 
         if (!empty($sort_field) && !empty($sort_order)) {
-          $query_params['sort_fields'] = array(
+          $query_params['sort_fields'][] = array(
             'field_name' => $sort_field,
             'sort_order' => $sort_order,
           );
         } else {
-          $query_params['sort_fields'] = array(
+          $query_params['sort_fields'][] = array(
             'field_name' => 'capture_data_file.last_modified',
             'sort_order' => 'DESC',
           );
@@ -171,10 +171,9 @@ class CaptureDataFileController extends Controller
         $this->repo_storage_controller->setContainer($this->container);
 
         if(!empty($id) && empty($post)) {
-            $data = $this->repo_storage_controller->execute('getRecord', array(
-              'base_table' => 'capture_data_file',
-              'id_field' => 'capture_data_file_repository_id',
-              'id_value' => $id));
+            $data = $this->repo_storage_controller->execute('getRecordById', array(
+            'record_type' => 'capture_data_file',
+            'record_id' => $id));
         }
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 

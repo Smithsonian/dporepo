@@ -46,8 +46,6 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
      */
     public function datatablesBrowse(Connection $conn, Request $request)
     {
-        $data = new PhotogrammetryScaleBarTargetPair();
-
         $params = array();
         $params['pdo_params'] = array();
         $params['search_sql'] = $params['sort'] = '';
@@ -59,32 +57,16 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
-        $params['limit_sql'] = " LIMIT {$start_record}, {$stop_record} ";
-
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $params['sort'] = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $params['sort'] = " ORDER BY photogrammetry_scale_bar_target_pair.last_modified DESC ";
-        }
-
-        if ($search) {
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['search_sql'] = "
-                AND (
-                  photogrammetry_scale_bar_target_pair.target_type LIKE ?
-                  photogrammetry_scale_bar_target_pair.target_pair_1_of_2 LIKE ?
-                  photogrammetry_scale_bar_target_pair.target_pair_2_of_2 LIKE ?
-                  photogrammetry_scale_bar_target_pair.distance LIKE ?
-                  photogrammetry_scale_bar_target_pair.units LIKE ?
-                ) ";
-        }
-
-        // Run the query
-        $results = $data->datatablesQuery($params);
+        $query_params = array(
+          'record_type' => 'photogrammetry_scale_bar_target_pair',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+          'search_value' => $search,
+        );
+        $this->repo_storage_controller->setContainer($this->container);
+        $results = $this->repo_storage_controller->execute('datatablesQuery', $query_params);
 
         return $this->json($results);
     }
@@ -112,10 +94,9 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
         $this->repo_storage_controller->setContainer($this->container);
 
         if(!empty($id) && empty($post)) {
-          $data = $this->repo_storage_controller->execute('getRecord', array(
-            'base_table' => 'photogrammetry_scale_bar_target_pair',
-            'id_field' => 'photogrammetry_scale_bar_target_pair_repository_id',
-            'id_value' => $id));
+          $data = $this->repo_storage_controller->execute('getRecordById', array(
+            'record_type' => 'photogrammetry_scale_bar_target_pair',
+            'record_id' => $id));
         }
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 

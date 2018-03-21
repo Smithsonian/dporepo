@@ -105,14 +105,11 @@ class CaptureDatasetRightsController extends Controller
         if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
-        //$data = (!empty($id) && empty($post)) ? $data->getOne((int)$id, $conn) : $data;
         $this->repo_storage_controller->setContainer($this->container);
-
         if(!empty($id) && empty($post)) {
-          $data = $this->repo_storage_controller->execute('getRecord', array(
-            'base_table' => 'capture_dataset_rights',
-            'id_field' => 'capture_dataset_rights_repository_id',
-            'id_value' => $id));
+          $data = $this->repo_storage_controller->execute('getRecordById', array(
+            'record_type' => 'capture_dataset_rights',
+            'record_id' => $id));
         }
 
         if(!$data) throw $this->createNotFoundException('The record does not exist');
