@@ -135,7 +135,7 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
-  public function deleteMultiple($params) {
+  public function deleteRecordById($params) {
 
     $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
     $record_id = array_key_exists('record_id', $params) ? $params['record_id'] : NULL;
