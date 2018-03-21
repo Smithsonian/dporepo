@@ -6,6 +6,7 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 
 class Dataset extends AbstractType
@@ -17,6 +18,12 @@ class Dataset extends AbstractType
         $data = (array)$options['data'];
 
         $builder
+            ->add('parent_project_repository_id', HiddenType::class, array(
+                'required' => true,
+              ))
+            ->add('parent_item_repository_id', HiddenType::class, array(
+                'required' => false,
+              ))
             ->add('capture_method', ChoiceType::class, array(
                 'label' => 'Capture Method',
                 'required' => true,
