@@ -158,7 +158,13 @@ class UnitStakeholderController extends Controller
         $gump = new GUMP();
         $post = $request->request->all();
         $unit_stakeholder_id = !empty($request->attributes->get('unit_stakeholder_id')) ? $request->attributes->get('unit_stakeholder_id') : false;
-        $data = !empty($post) ? $post : $this->get_one((int)$unit_stakeholder_id, $conn);
+
+        $this->repo_storage_controller->setContainer($this->container);
+        if(empty($post)) {
+          $data = $this->repo_storage_controller->execute('getRecordById', array(
+            'record_type' => 'unit_stakeholder',
+            'record_id' => (int)$unit_stakeholder_id));
+        }
 
         // Get data from lookup tables.
         $data['units_stakeholders'] = $projects->get_units_stakeholders($conn);
@@ -194,31 +200,6 @@ class UnitStakeholderController extends Controller
             ));
         }
 
-    }
-
-    /**
-     * Get One Record
-     *
-     * Run a query to retrieve one record.
-     *
-     * @param   int $id     The id value
-     * @return  array|bool  The query result
-     */
-    public function get_one($id = false, $conn)
-    {
-        $statement = $conn->prepare("SELECT unit_stakeholder.unit_stakeholder_id,
-            unit_stakeholder.isni_id,
-            unit_stakeholder.unit_stakeholder_label,
-            unit_stakeholder.unit_stakeholder_label_aliases,
-            unit_stakeholder.unit_stakeholder_full_name,
-            unit_stakeholder.unit_stakeholder_guid,
-            isni_data.isni_label AS stakeholder_label
-            FROM unit_stakeholder
-            LEFT JOIN isni_data ON isni_data.isni_id = unit_stakeholder.isni_id
-            WHERE unit_stakeholder.unit_stakeholder_id = :id");
-        $statement->bindValue(":id", $id, PDO::PARAM_INT);
-        $statement->execute();
-        return $statement->fetch(PDO::FETCH_ASSOC);
     }
 
    /**

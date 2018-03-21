@@ -110,11 +110,13 @@ class ProcessingActionController extends Controller
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
         $this->repo_storage_controller->setContainer($this->container);
-
         if(!empty($id) && empty($post)) {
-          $data = $this->repo_storage_controller->execute('getRecordById', array(
+          $rec = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'processing_action',
             'record_id' => $id));
+          if(isset($rec)) {
+            $data = (object)$rec;
+          }
         }
 
         // $this->u->dumper($data);

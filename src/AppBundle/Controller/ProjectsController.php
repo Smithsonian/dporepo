@@ -314,8 +314,14 @@ class ProjectsController extends Controller
      */
     public function insert_update_project($data, $project_repository_id = FALSE, $conn, $isni, $unit)
     {
-
-        $unit_record = $unit->get_one($data->stakeholder_guid_picker, $conn);
+        $this->repo_storage_controller->setContainer($this->container);
+        if(empty($post)) {
+          $ret = $this->repo_storage_controller->execute('getRecordById', array(
+            'record_type' => 'unit_stakeholder',
+            'record_id' => $data->stakeholder_guid_picker));
+          $unit_record = (object)$ret;
+        }
+        //$unit_record = $unit->get_one($data->stakeholder_guid_picker, $conn);
 
         if($unit_record && !empty($unit_record['isni_id'])) {
           $data->stakeholder_guid = $unit_record['isni_id'];

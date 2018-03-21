@@ -147,8 +147,14 @@ class TargetTypesController extends Controller
         $gump = new GUMP();
         $post = $request->request->all();
         $target_types_id = !empty($request->attributes->get('target_types_id')) ? $request->attributes->get('target_types_id') : false;
-        $data = !empty($post) ? $post : $this->get_one((int)$target_types_id, $conn);
-        
+
+        $this->repo_storage_controller->setContainer($this->container);
+        if(empty($post)) {
+          $data = $this->repo_storage_controller->execute('getRecordById', array(
+            'record_type' => 'target_types',
+            'record_id' => (int)$target_types_id));
+        }
+
         // Validate posted data.
         if(!empty($post)) {
             // "" => "required|numeric",
@@ -180,24 +186,6 @@ class TargetTypesController extends Controller
             ));
         }
 
-    }
-
-    /**
-     * Get One Record
-     *
-     * Run a query to retrieve one record.
-     *
-     * @param   int $id     The id value
-     * @return  array|bool  The query result
-     */
-    public function get_one($id = false, $conn)
-    {
-        $statement = $conn->prepare("SELECT *
-            FROM " . $this->table_name . "
-            WHERE " . $this->id_field_name . " = :id");
-        $statement->bindValue(":id", $id, PDO::PARAM_INT);
-        $statement->execute();
-        return $statement->fetch(PDO::FETCH_ASSOC);
     }
 
    /**
