@@ -22,8 +22,9 @@ class RepoStorageHybridController extends Controller
 
   public function execute($function, $parameters) {
 
-    if(!is_object($this->container)) {
+    if(!isset($this->container) || !is_object($this->container)) {
       //@todo log error
+      die("Houston...!");
       return NULL;
     }
     $this->connection = $this->container->get('doctrine.dbal.default_connection');
