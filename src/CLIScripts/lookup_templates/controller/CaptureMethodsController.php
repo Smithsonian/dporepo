@@ -32,11 +32,11 @@ class CaptureMethodsController extends Controller
         $this->u = $u;
 
         // Table name and field names.
-        $this->table_name = 'capture_methods';
-        $this->id_field_name_raw = 'capture_methods_id';
-        $this->id_field_name = 'capture_methods.' . $this->id_field_name_raw;
+        $this->table_name = 'capture_method';
+        $this->id_field_name_raw = 'capture_method_repository_id';
+        $this->id_field_name = 'capture_method.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
-        $this->label_field_name = 'capture_methods.' . $this->label_field_name_raw;
+        $this->label_field_name = 'capture_method.' . $this->label_field_name_raw;
     }
 
     /**

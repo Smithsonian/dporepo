@@ -133,7 +133,7 @@ class FocusTypesController extends Controller
     /**
      * Matches /admin/resources/focus_types/manage/*
      *
-     * @Route("/admin/resources/focus_types/manage/{focus_types_id}", name="focus_types_manage", methods={"GET","POST"}, defaults={"focus_types_id" = null})
+     * @Route("/admin/resources/focus_types/manage/{id}", name="focus_types_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param   int     $id           The focus_type ID
      * @param   object  Connection    Database connection object
@@ -146,13 +146,13 @@ class FocusTypesController extends Controller
         $data = array();
         $gump = new GUMP();
         $post = $request->request->all();
-        $focus_types_id = !empty($request->attributes->get('focus_types_id')) ? $request->attributes->get('focus_types_id') : false;
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'focus_types',
-            'record_id' => (int)$focus_types_id));
+            'record_id' => (int)$id));
         }
 
         // Validate posted data.
@@ -174,7 +174,7 @@ class FocusTypesController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $focus_types_id = $this->insert_update($post, $focus_types_id, $conn);
+            $focus_types_id = $this->insert_update($post, $id, $conn);
             $this->addFlash('message', 'Focus Type successfully updated.');
             return $this->redirectToRoute('focus_types_browse');
         } else {

@@ -36,11 +36,11 @@ class CameraClusterTypesController extends Controller
         $this->repo_storage_controller = new RepoStorageHybridController();
 
         // Table name and field names.
-        $this->table_name = 'camera_cluster_types';
-        $this->id_field_name_raw = 'camera_cluster_types_id';
-        $this->id_field_name = 'camera_cluster_types.' . $this->id_field_name_raw;
+        $this->table_name = 'camera_cluster_type';
+        $this->id_field_name_raw = 'camera_cluster_type_repository_id';
+        $this->id_field_name = 'camera_cluster_type.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
-        $this->label_field_name = 'camera_cluster_types.' . $this->label_field_name_raw;
+        $this->label_field_name = 'camera_cluster_type.' . $this->label_field_name_raw;
     }
 
     /**
@@ -133,7 +133,7 @@ class CameraClusterTypesController extends Controller
     /**
      * Matches /admin/resources/camera_cluster_types/manage/*
      *
-     * @Route("/admin/resources/camera_cluster_types/manage/{camera_cluster_types_id}", name="camera_cluster_types_manage", methods={"GET","POST"}, defaults={"camera_cluster_types_id" = null})
+     * @Route("/admin/resources/camera_cluster_types/manage/{id}", name="camera_cluster_types_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param   int     $id           The camera_cluster_type ID
      * @param   object  Connection    Database connection object
@@ -146,13 +146,13 @@ class CameraClusterTypesController extends Controller
         $data = array();
         $gump = new GUMP();
         $post = $request->request->all();
-        $camera_cluster_types_id = !empty($request->attributes->get('camera_cluster_types_id')) ? $request->attributes->get('camera_cluster_types_id') : false;
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
-            'record_type' => 'camera_cluster_types',
-            'record_id' => (int)$camera_cluster_types_id));
+            'record_type' => 'camera_cluster_type',
+            'record_id' => (int)$id));
         }
 
         // Validate posted data.
@@ -174,12 +174,12 @@ class CameraClusterTypesController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $camera_cluster_types_id = $this->insert_update($post, $camera_cluster_types_id, $conn);
+          $id = $this->insert_update($post, $id, $conn);
             $this->addFlash('message', 'Camera Cluster Type successfully updated.');
             return $this->redirectToRoute('camera_cluster_types_browse');
         } else {
             return $this->render('resources/camera_cluster_types_form.html.twig', array(
-                "page_title" => !empty($camera_cluster_types_id) ? 'Manage Camera Cluster Type: ' . $data['label'] : 'Create Camera Cluster Type'
+                "page_title" => !empty($id) ? 'Manage Camera Cluster Type: ' . $data['label'] : 'Create Camera Cluster Type'
                 ,"data" => $data
                 ,"errors" => $errors
                 ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)

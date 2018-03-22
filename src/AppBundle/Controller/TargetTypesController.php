@@ -133,7 +133,7 @@ class TargetTypesController extends Controller
     /**
      * Matches /admin/resources/target_types/manage/*
      *
-     * @Route("/admin/resources/target_types/manage/{target_types_id}", name="target_types_manage", methods={"GET","POST"}, defaults={"target_types_id" = null})
+     * @Route("/admin/resources/target_types/manage/{id}", name="target_types_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param   int     $id           The target_type ID
      * @param   object  Connection    Database connection object
@@ -146,13 +146,13 @@ class TargetTypesController extends Controller
         $data = array();
         $gump = new GUMP();
         $post = $request->request->all();
-        $target_types_id = !empty($request->attributes->get('target_types_id')) ? $request->attributes->get('target_types_id') : false;
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'target_types',
-            'record_id' => (int)$target_types_id));
+            'record_id' => (int)$id));
         }
 
         // Validate posted data.
@@ -174,7 +174,7 @@ class TargetTypesController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $target_types_id = $this->insert_update($post, $target_types_id, $conn);
+            $target_types_id = $this->insert_update($post, $id, $conn);
             $this->addFlash('message', 'Target Type successfully updated.');
             return $this->redirectToRoute('target_types_browse');
         } else {

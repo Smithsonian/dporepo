@@ -61,47 +61,67 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
 
       $sql = '';
       switch($table_name) {
-        case 'background_removal_methods':
-          $sql = "CREATE TABLE IF NOT EXISTS `background_removal_methods` (
-            `background_removal_methods_id` int(11) NOT NULL AUTO_INCREMENT,
+        case 'background_removal_method':
+          $sql = "CREATE TABLE IF NOT EXISTS `background_removal_method` (
+            `background_removal_method_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`background_removal_methods_id`),
+            PRIMARY KEY (`background_removal_method_repository_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
           break;
-        case 'calibration_object_types':
-          $sql = "CREATE TABLE IF NOT EXISTS `calibration_object_types` (
-            `calibration_object_types_id` int(11) NOT NULL AUTO_INCREMENT,
+        case 'calibration_object_type':
+          $sql = "CREATE TABLE IF NOT EXISTS `calibration_object_type` (
+            `calibration_object_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`calibration_object_types_id`),
+            PRIMARY KEY (`calibration_object_type_repository_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
           break;
-        case 'camera_cluster_types':
-          $sql = "CREATE TABLE IF NOT EXISTS `camera_cluster_types` (
-            `camera_cluster_types_id` int(11) NOT NULL AUTO_INCREMENT,
+        case 'camera_cluster_type':
+          $sql = "CREATE TABLE IF NOT EXISTS `camera_cluster_type` (
+            `camera_cluster_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`camera_cluster_types_id`),
+            PRIMARY KEY (`camera_cluster_type_repository_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
+          break;
+        case 'capture_data_element':
+          $sql = "CREATE TABLE IF NOT EXISTS `capture_data_element` (
+            `capture_data_element_repository_id` int(11) NOT NULL AUTO_INCREMENT,
+            `capture_dataset_repository_id` int(11) NOT NULL,
+            `capture_device_configuration_id` varchar(255) DEFAULT '',
+            `capture_device_field_id` int(11) DEFAULT NULL,
+            `capture_sequence_number` int(11) DEFAULT NULL,
+            `cluster_position_field_id` int(11) DEFAULT NULL,
+            `position_in_cluster_field_id` int(11) DEFAULT NULL,
+            `date_created` datetime NOT NULL,
+            `created_by_user_account_id` int(11) NOT NULL,
+            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `last_modified_user_account_id` int(11) NOT NULL,
+            `active` tinyint(1) NOT NULL DEFAULT '1',
+            PRIMARY KEY (`capture_data_element_repository_id`),
+            KEY `created_by_user_account_id` (`created_by_user_account_id`),
+            KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
+            KEY `dataset_element_guid` (`capture_device_configuration_id`)
+          )";
           break;
         case 'capture_data_file':
           $sql = "CREATE TABLE IF NOT EXISTS `capture_data_file` (
@@ -120,7 +140,43 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
               KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             ) ";
           break;
-        case 'capture_dataset_rights':
+        case 'capture_dataset':
+          $sql = "CREATE TABLE IF NOT EXISTS `capture_dataset` (
+            `capture_dataset_repository_id` int(11) NOT NULL AUTO_INCREMENT,
+            `capture_dataset_guid` varchar(255) NOT NULL DEFAULT '',
+            `parent_project_repository_id` int(255) DEFAULT NULL,
+            `parent_item_repository_id` int(11) NOT NULL,
+            `capture_dataset_field_id` int(11) NOT NULL,
+            `capture_method` int(11) DEFAULT NULL,
+            `capture_dataset_type` int(11) DEFAULT NULL,
+            `capture_dataset_name` varchar(255) NOT NULL DEFAULT '',
+            `collected_by` varchar(255) NOT NULL DEFAULT '',
+            `date_of_capture` datetime NOT NULL,
+            `capture_dataset_description` text,
+            `collection_notes` text,
+            `support_equipment` varchar(255) DEFAULT NULL,
+            `item_position_type` int(11) DEFAULT NULL,
+            `item_position_field_id` int(11) NOT NULL,
+            `item_arrangement_field_id` int(11) NOT NULL,
+            `positionally_matched_capture_datasets` varchar(255) DEFAULT '',
+            `focus_type` int(11) DEFAULT NULL,
+            `light_source_type` int(11) DEFAULT NULL,
+            `background_removal_method` int(11) DEFAULT NULL,
+            `cluster_type` int(11) DEFAULT NULL,
+            `cluster_geometry_field_id` int(11) DEFAULT NULL,
+            `resource_capture_datasets` varchar(255) DEFAULT '',
+            `calibration_object_used` varchar(255) DEFAULT '',
+            `date_created` datetime NOT NULL,
+            `created_by_user_account_id` int(11) NOT NULL,
+            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `last_modified_user_account_id` int(11) NOT NULL,
+            `active` tinyint(1) NOT NULL DEFAULT '1',
+            PRIMARY KEY (`capture_dataset_repository_id`),
+            KEY `created_by_user_account_id` (`created_by_user_account_id`),
+            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
+          )";
+          break;
+        case 'capture_dataset_right':
           $sql = "CREATE TABLE IF NOT EXISTS `capture_data_file` (
             `capture_data_file_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `parent_capture_data_element_repository_id` int(11),
@@ -256,8 +312,8 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
           break;
-        case 'item_types':
-          $sql = "CREATE TABLE IF NOT EXISTS `item_types` (
+        case 'item_type':
+          $sql = "CREATE TABLE IF NOT EXISTS `item_type` (
             `item_types_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
@@ -270,9 +326,28 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
           break;
-        case 'light_source_types':
-          $sql = "CREATE TABLE IF NOT EXISTS `light_source_types` (
-            `light_source_types_id` int(11) NOT NULL AUTO_INCREMENT,
+        case 'item':
+          $sql = "CREATE TABLE IF NOT EXISTS `item` (
+            `item_repository_id` int(11) NOT NULL AUTO_INCREMENT,
+            `subject_repository_id` int(11) NOT NULL,
+            `local_item_id` varchar(255) DEFAULT '',
+            `item_guid` varchar(255) DEFAULT '',
+            `item_description` mediumtext,
+            `item_type` varchar(255) DEFAULT NULL,
+            `date_created` datetime NOT NULL,
+            `created_by_user_account_id` int(11) NOT NULL,
+            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `last_modified_user_account_id` int(11) NOT NULL,
+            `active` tinyint(1) NOT NULL DEFAULT '1',
+            `status_types_id` int(11) NOT NULL DEFAULT '0',
+            PRIMARY KEY (`item_repository_id`),
+            KEY `created_by_user_account_id` (`created_by_user_account_id`),
+            KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
+            KEY `item_guid` (`item_guid`,`subject_repository_id`) )";
+          break;
+        case 'light_source_type':
+          $sql = "CREATE TABLE IF NOT EXISTS `light_source_type` (
+            `light_source_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `label_field_name_raw` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,

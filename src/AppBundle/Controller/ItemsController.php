@@ -46,7 +46,7 @@ class ItemsController extends Controller
         $this->repo_storage_controller->setContainer($this->container);
 
         // Database tables are only created if not present.
-        $create_db_table = $this->create_items_table($conn);
+        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'item'));
 
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
@@ -133,23 +133,23 @@ class ItemsController extends Controller
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-            items.item_repository_id AS manage
-            ,items.subject_repository_id
-            ,items.local_item_id
+            item.item_repository_id AS manage
+            ,item.subject_repository_id
+            ,item.local_item_id
             ,CONCAT(SUBSTRING(items.item_description,1, 50), '...') as item_description
-            ,items.status_types_id
-            ,items.date_created
-            ,items.last_modified
-            ,items.item_repository_id AS DT_RowId
-            ,status_types.label AS status_label
-            ,count(distinct capture_datasets.parent_item_repository_id) AS datasets_count
+            ,item.status_types_id
+            ,item.date_created
+            ,item.last_modified
+            ,item.item_repository_id AS DT_RowId
+            ,status_type.label AS status_label
+            ,count(distinct capture_dataset.parent_item_repository_id) AS datasets_count
             FROM items
-            LEFT JOIN status_types ON items.status_types_id = status_types.status_types_id
-            LEFT JOIN capture_datasets ON capture_datasets.parent_item_repository_id = items.item_repository_id
-            WHERE items.active = 1
+            LEFT JOIN status_type ON item.status_types_id = status_type.status_type_repository_id
+            LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = items.item_repository_id
+            WHERE item.active = 1
             AND subject_repository_id = " . (int)$subject_repository_id . "
             {$search_sql}
-            GROUP BY items.subject_repository_id, items.local_item_id, item_description, items.status_types_id, items.date_created, items.last_modified, items.item_repository_id
+            GROUP BY item.subject_repository_id, items.local_item_id, item_description, items.status_types_id, items.date_created, items.last_modified, items.item_repository_id
             {$sort}
             {$limit_sql}");
         $statement->execute($pdo_params);
@@ -494,15 +494,15 @@ class ItemsController extends Controller
 
             $statement = $conn->prepare("
                 UPDATE items
-                LEFT JOIN capture_datasets ON capture_datasets.parent_item_repository_id = items.item_repository_id
-                LEFT JOIN capture_data_elements ON capture_data_elements.capture_dataset_repository_id = capture_datasets.capture_dataset_repository_id
+                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
+                LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
                 SET items.active = 0,
                     items.last_modified_user_account_id = :last_modified_user_account_id,
-                    capture_datasets.active = 0,
-                    capture_datasets.last_modified_user_account_id = :last_modified_user_account_id,
-                    capture_data_elements.active = 0,
-                    capture_data_elements.last_modified_user_account_id = :last_modified_user_account_id
-                WHERE items.item_repository_id = :id
+                    capture_dataset.active = 0,
+                    capture_dataset.last_modified_user_account_id = :last_modified_user_account_id,
+                    capture_data_element.active = 0,
+                    capture_data_element.last_modified_user_account_id = :last_modified_user_account_id
+                WHERE item.item_repository_id = :id
             ");
             $statement->bindValue(":id", $id, PDO::PARAM_INT);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
@@ -765,41 +765,4 @@ class ItemsController extends Controller
         }
     }
 
-    /**
-     * Create Items Table
-     *
-     * @return  void
-     */
-    public function create_items_table($conn)
-    {
-        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `items` (
-          `item_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-          `subject_repository_id` int(11) NOT NULL,
-          `local_item_id` varchar(255) DEFAULT '',
-          `item_guid` varchar(255) DEFAULT '',
-          `item_description` mediumtext,
-          `item_type` varchar(255) DEFAULT NULL,
-          `date_created` datetime NOT NULL,
-          `created_by_user_account_id` int(11) NOT NULL,
-          `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          `last_modified_user_account_id` int(11) NOT NULL,
-          `active` tinyint(1) NOT NULL DEFAULT '1',
-          `status_types_id` int(11) NOT NULL DEFAULT '0',
-          PRIMARY KEY (`item_repository_id`),
-          KEY `created_by_user_account_id` (`created_by_user_account_id`),
-          KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
-          KEY `item_guid` (`item_guid`,`subject_repository_id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8 COMMENT='This table stores item metadata'");
-
-        $statement->execute();
-        $error = $conn->errorInfo();
-
-        if ($error[0] !== '00000') {
-            var_dump($conn->errorInfo());
-            die('CREATE TABLE `items` failed.');
-        } else {
-            return TRUE;
-        }
-
-    }
 }

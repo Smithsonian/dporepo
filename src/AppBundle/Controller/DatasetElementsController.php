@@ -45,8 +45,12 @@ class DatasetElementsController extends Controller
     {
         // Database tables are only created if not present.
         $this->repo_storage_controller->setContainer($this->container);
+        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'dataset_element'));
 
-        $create_capture_dataset_elements_table = $this->create_capture_dataset_elements_table($conn);
+        return $this->render('resources/browse_unit_stakeholder.html.twig', array(
+          'page_title' => "Browse Unit/Stakeholder",
+        ));
+
 
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
@@ -325,9 +329,9 @@ class DatasetElementsController extends Controller
                 capture_data_elements.last_modified,
                 capture_data_elements.last_modified_user_account_id,
                 capture_data_elements.active
-            FROM capture_data_elements
-            LEFT JOIN capture_datasets ON capture_datasets.capture_dataset_repository_id = capture_data_elements.capture_dataset_repository_id
-            LEFT JOIN items ON items.item_repository_id = capture_datasets.parent_item_repository_id
+            FROM capture_data_element
+            LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
+            LEFT JOIN items ON items.item_repository_id = capture_dataset.parent_item_repository_id
             LEFT JOIN subjects ON subjects.subject_repository_id = items.subject_repository_id
             LEFT JOIN projects ON projects.project_repository_id = subjects.project_repository_id
             WHERE capture_data_elements.active = 1
@@ -386,12 +390,12 @@ class DatasetElementsController extends Controller
     {
         $data = array();
 
-        $statement = $conn->prepare("SELECT * FROM calibration_object_types ORDER BY label ASC");
+        $statement = $conn->prepare("SELECT * FROM calibration_object_type ORDER BY label ASC");
         $statement->execute();
         
         foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
             $label = $this->u->removeUnderscoresTitleCase($value['label']);
-            $data[$label] = $value['calibration_object_types_id'];
+            $data[$label] = $value['calibration_object_type_repository_id'];
         }
 
         return $data;
@@ -452,48 +456,12 @@ class DatasetElementsController extends Controller
      */
     public function delete_dataset_element($capture_data_element_repository_id, $conn)
     {
-        $statement = $conn->prepare("
-            DELETE FROM capture_data_elements
-            WHERE capture_data_element_repository_id = :capture_data_element_repository_id");
-        $statement->bindValue(":capture_data_element_repository_id", $capture_data_element_repository_id, PDO::PARAM_INT);
-        $statement->execute();
+        $this->repo_storage_controller->setContainer($this->container);
+        $ret = $this->repo_storage_controller->execute('markRecordsInactive', array(
+          'record_type' => 'capture_data_element',
+          'record_id' => $capture_data_element_repository_id,
+          'user_id' => $this->getUser()->getId(),
+        ));
     }
-
-  /**
-   * Create Dataset Elements Table
-   *
-   * @return      void
-   */
-  public function create_capture_dataset_elements_table($conn)
-  {
-    $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `capture_data_elements` (
-      `capture_data_element_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-      `capture_dataset_repository_id` int(11) NOT NULL,
-      `capture_device_configuration_id` varchar(255) DEFAULT '',
-      `capture_device_field_id` int(11) DEFAULT NULL,
-      `capture_sequence_number` int(11) DEFAULT NULL,
-      `cluster_position_field_id` int(11) DEFAULT NULL,
-      `position_in_cluster_field_id` int(11) DEFAULT NULL,
-      `date_created` datetime NOT NULL,
-      `created_by_user_account_id` int(11) NOT NULL,
-      `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      `last_modified_user_account_id` int(11) NOT NULL,
-      `active` tinyint(1) NOT NULL DEFAULT '1',
-      PRIMARY KEY (`capture_data_element_repository_id`),
-      KEY `created_by_user_account_id` (`created_by_user_account_id`),
-      KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
-      KEY `dataset_element_guid` (`capture_device_configuration_id`)
-    ) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8 COMMENT='This table stores capture_data_elements metadata'");
-    $statement->execute();
-    $error = $conn->errorInfo();
-
-    if ($error[0] !== '00000') {
-        var_dump($conn->errorInfo());
-        die('CREATE TABLE `capture_data_elements` failed.');
-    } else {
-      return TRUE;
-    }
-
-  }
 
 }

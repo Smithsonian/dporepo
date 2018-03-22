@@ -133,7 +133,7 @@ class CaptureMethodsController extends Controller
     /**
      * Matches /admin/resources/capture_methods/manage/*
      *
-     * @Route("/admin/resources/capture_methods/manage/{capture_methods_id}", name="capture_methods_manage", methods={"GET","POST"}, defaults={"capture_methods_id" = null})
+     * @Route("/admin/resources/capture_methods/manage/{id}", name="capture_methods_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param   int     $id           The capture_method ID
      * @param   object  Connection    Database connection object
@@ -146,13 +146,13 @@ class CaptureMethodsController extends Controller
         $data = array();
         $gump = new GUMP();
         $post = $request->request->all();
-        $capture_methods_id = !empty($request->attributes->get('capture_methods_id')) ? $request->attributes->get('capture_methods_id') : false;
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'capture_methods',
-            'record_id' => (int)$capture_methods_id));
+            'record_id' => (int)$id));
         }
 
         // Validate posted data.
@@ -174,7 +174,7 @@ class CaptureMethodsController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $capture_methods_id = $this->insert_update($post, $capture_methods_id, $conn);
+          $id = $this->insert_update($post, $id, $conn);
             $this->addFlash('message', 'Capture Method successfully updated.');
             return $this->redirectToRoute('capture_methods_browse');
         } else {

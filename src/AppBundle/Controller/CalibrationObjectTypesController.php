@@ -36,11 +36,11 @@ class CalibrationObjectTypesController extends Controller
         $this->repo_storage_controller = new RepoStorageHybridController();
 
         // Table name and field names.
-        $this->table_name = 'calibration_object_types';
-        $this->id_field_name_raw = 'calibration_object_types_id';
-        $this->id_field_name = 'calibration_object_types.' . $this->id_field_name_raw;
+        $this->table_name = 'calibration_object_type';
+        $this->id_field_name_raw = 'calibration_object_type_repository_id';
+        $this->id_field_name = 'calibration_object_type.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
-        $this->label_field_name = 'calibration_object_types.' . $this->label_field_name_raw;
+        $this->label_field_name = 'calibration_object_type.' . $this->label_field_name_raw;
     }
 
     /**
@@ -133,7 +133,7 @@ class CalibrationObjectTypesController extends Controller
     /**
      * Matches /admin/resources/calibration_object_types/manage/*
      *
-     * @Route("/admin/resources/calibration_object_types/manage/{calibration_object_types_id}", name="calibration_object_types_manage", methods={"GET","POST"}, defaults={"calibration_object_types_id" = null})
+     * @Route("/admin/resources/calibration_object_types/manage/{id}", name="calibration_object_types_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param   int     $id           The calibration_object_type ID
      * @param   object  Connection    Database connection object
@@ -146,13 +146,13 @@ class CalibrationObjectTypesController extends Controller
         $data = array();
         $gump = new GUMP();
         $post = $request->request->all();
-        $calibration_object_types_id = !empty($request->attributes->get('calibration_object_types_id')) ? $request->attributes->get('calibration_object_types_id') : false;
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'calibration_object_types',
-            'record_id' => (int)$calibration_object_types_id));
+            'record_id' => (int)$id));
         }
 
         // Validate posted data.
@@ -174,7 +174,7 @@ class CalibrationObjectTypesController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $calibration_object_types_id = $this->insert_update($post, $calibration_object_types_id, $conn);
+          $id = $this->insert_update($post, $id, $conn);
             $this->addFlash('message', 'Calibration Object Type successfully updated.');
             return $this->redirectToRoute('calibration_object_types_browse');
         } else {

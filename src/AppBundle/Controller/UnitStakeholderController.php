@@ -144,7 +144,7 @@ class UnitStakeholderController extends Controller
     /**
      * Matches /admin/resources/unit_stakeholder/manage/*
      *
-     * @Route("/admin/resources/unit_stakeholder/manage/{unit_stakeholder_id}", name="unit_stakeholder_manage", methods={"GET","POST"}, defaults={"unit_stakeholder_id" = null})
+     * @Route("/admin/resources/unit_stakeholder/manage/{id}", name="unit_stakeholder_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param   int     $id           The unit_stakeholder ID
      * @param   object  Connection    Database connection object
@@ -157,13 +157,13 @@ class UnitStakeholderController extends Controller
         $data = array();
         $gump = new GUMP();
         $post = $request->request->all();
-        $unit_stakeholder_id = !empty($request->attributes->get('unit_stakeholder_id')) ? $request->attributes->get('unit_stakeholder_id') : false;
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'unit_stakeholder',
-            'record_id' => (int)$unit_stakeholder_id));
+            'record_id' => (int)$id));
         }
 
         // Get data from lookup tables.
@@ -189,12 +189,12 @@ class UnitStakeholderController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $unit_stakeholder_id = $this->insert_update($post, $unit_stakeholder_id, $conn, $isni);
+          $id = $this->insert_update($post, $id, $conn, $isni);
             $this->addFlash('message', 'Unit/Stakeholder successfully updated.');
             return $this->redirectToRoute('unit_stakeholder_browse');
         } else {
             return $this->render('resources/unit_stakeholder_form.html.twig', array(
-                "page_title" => !empty($unit_stakeholder_id) ? 'Manage Unit/Stakeholder: ' . $data['unit_stakeholder_label'] : 'Create Unit/Stakeholder'
+                "page_title" => !empty($id) ? 'Manage Unit/Stakeholder: ' . $data['unit_stakeholder_label'] : 'Create Unit/Stakeholder'
                 ,"data" => $data
                 ,"errors" => $errors
             ));

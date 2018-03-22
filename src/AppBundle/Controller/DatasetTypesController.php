@@ -133,7 +133,7 @@ class DatasetTypesController extends Controller
     /**
      * Matches /admin/resources/dataset_types/manage/*
      *
-     * @Route("/admin/resources/dataset_types/manage/{dataset_types_id}", name="dataset_types_manage", methods={"GET","POST"}, defaults={"dataset_types_id" = null})
+     * @Route("/admin/resources/dataset_types/manage/{id}", name="dataset_types_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param   int     $id           The dataset_type ID
      * @param   object  Connection    Database connection object
@@ -146,13 +146,13 @@ class DatasetTypesController extends Controller
         $data = array();
         $gump = new GUMP();
         $post = $request->request->all();
-        $dataset_types_id = !empty($request->attributes->get('dataset_types_id')) ? $request->attributes->get('dataset_types_id') : false;
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'dataset_types',
-            'record_id' => (int)$dataset_types_id));
+            'record_id' => (int)$id));
         }
 
         // Validate posted data.
@@ -174,12 +174,12 @@ class DatasetTypesController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $dataset_types_id = $this->insert_update($post, $dataset_types_id, $conn);
+          $id = $this->insert_update($post, $id, $conn);
             $this->addFlash('message', 'Dataset Type successfully updated.');
             return $this->redirectToRoute('dataset_types_browse');
         } else {
             return $this->render('resources/dataset_types_form.html.twig', array(
-                "page_title" => !empty($dataset_types_id) ? 'Manage Dataset Type: ' . $data['label'] : 'Create Dataset Type'
+                "page_title" => !empty($id) ? 'Manage Dataset Type: ' . $data['label'] : 'Create Dataset Type'
                 ,"data" => $data
                 ,"errors" => $errors
                 ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)

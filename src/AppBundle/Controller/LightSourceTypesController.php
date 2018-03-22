@@ -133,7 +133,7 @@ class LightSourceTypesController extends Controller
     /**
      * Matches /admin/resources/light_source_types/manage/*
      *
-     * @Route("/admin/resources/light_source_types/manage/{light_source_types_id}", name="light_source_types_manage", methods={"GET","POST"}, defaults={"light_source_types_id" = null})
+     * @Route("/admin/resources/light_source_types/manage/{id}", name="light_source_types_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param   int     $id           The light_source_type ID
      * @param   object  Connection    Database connection object
@@ -146,13 +146,13 @@ class LightSourceTypesController extends Controller
         $data = array();
         $gump = new GUMP();
         $post = $request->request->all();
-        $light_source_types_id = !empty($request->attributes->get('light_source_types_id')) ? $request->attributes->get('light_source_types_id') : false;
+      $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'light_source_types',
-            'record_id' => (int)$light_source_types_id));
+            'record_id' => (int)$id));
         }
 
         // Validate posted data.
@@ -174,12 +174,12 @@ class LightSourceTypesController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $light_source_types_id = $this->insert_update($post, $light_source_types_id, $conn);
+          $id = $this->insert_update($post, $id, $conn);
             $this->addFlash('message', 'Light Source Type successfully updated.');
             return $this->redirectToRoute('light_source_types_browse');
         } else {
             return $this->render('resources/light_source_types_form.html.twig', array(
-                "page_title" => !empty($light_source_types_id) ? 'Manage Light Source Type: ' . $data['label'] : 'Create Light Source Type'
+                "page_title" => !empty($id) ? 'Manage Light Source Type: ' . $data['label'] : 'Create Light Source Type'
                 ,"data" => $data
                 ,"errors" => $errors
                 ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)

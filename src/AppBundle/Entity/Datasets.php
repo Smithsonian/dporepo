@@ -127,48 +127,48 @@ class Datasets
     public function getDataset($capture_dataset_repository_id, Connection $conn)
     {
         $statement = $conn->prepare("SELECT
-              capture_datasets.capture_dataset_guid
-              ,capture_datasets.capture_dataset_field_id
-              ,capture_datasets.capture_method
-              ,capture_datasets.capture_dataset_type
-              ,capture_datasets.capture_dataset_name
-              ,capture_datasets.collected_by
-              ,capture_datasets.date_of_capture
-              ,capture_datasets.capture_dataset_description
-              ,capture_datasets.collection_notes
-              ,capture_datasets.support_equipment
-              ,capture_datasets.item_position_type
-              ,capture_datasets.item_position_field_id
-              ,capture_datasets.item_arrangement_field_id
-              ,capture_datasets.positionally_matched_capture_datasets
-              ,capture_datasets.focus_type
-              ,capture_datasets.light_source_type
-              ,capture_datasets.background_removal_method
-              ,capture_datasets.cluster_type
-              ,capture_datasets.cluster_geometry_field_id
-              ,capture_datasets.resource_capture_datasets
-              ,capture_datasets.calibration_object_used
-              ,capture_datasets.date_created
-              ,capture_datasets.created_by_user_account_id
-              ,capture_datasets.last_modified
-              ,capture_datasets.last_modified_user_account_id
-              -- ,capture_methods.label AS capture_method
-              -- ,dataset_types.label AS capture_dataset_type
-              -- ,item_position_types.label_alias AS item_position_type
-              -- ,focus_types.label AS focus_type
-              -- ,light_source_types.label AS light_source_type
-              -- ,background_removal_methods.label AS background_removal_method
-              -- ,camera_cluster_types.label AS camera_cluster_type
-            FROM capture_datasets
-            -- LEFT JOIN capture_methods ON capture_methods.capture_methods_id = capture_datasets.capture_method
-            -- LEFT JOIN dataset_types ON dataset_types.dataset_types_id = capture_datasets.capture_dataset_type
-            -- LEFT JOIN item_position_types ON item_position_types.item_position_types_id = capture_datasets.item_position_type
-            -- LEFT JOIN focus_types ON focus_types.focus_types_id = capture_datasets.focus_type
-            -- LEFT JOIN light_source_types ON light_source_types.light_source_types_id = capture_datasets.light_source_type
-            -- LEFT JOIN background_removal_methods ON background_removal_methods.background_removal_methods_id = capture_datasets.background_removal_method
-            -- LEFT JOIN camera_cluster_types ON camera_cluster_types.camera_cluster_types_id = capture_datasets.cluster_type
-            WHERE capture_datasets.active = 1
-            AND capture_datasets.capture_dataset_repository_id = :capture_dataset_repository_id");
+              capture_dataset.capture_dataset_guid
+              ,capture_dataset.capture_dataset_field_id
+              ,capture_dataset.capture_method
+              ,capture_dataset.capture_dataset_type
+              ,capture_dataset.capture_dataset_name
+              ,capture_dataset.collected_by
+              ,capture_dataset.date_of_capture
+              ,capture_dataset.capture_dataset_description
+              ,capture_dataset.collection_notes
+              ,capture_dataset.support_equipment
+              ,capture_dataset.item_position_type
+              ,capture_dataset.item_position_field_id
+              ,capture_dataset.item_arrangement_field_id
+              ,capture_dataset.positionally_matched_capture_datasets
+              ,capture_dataset.focus_type
+              ,capture_dataset.light_source_type
+              ,capture_dataset.background_removal_method
+              ,capture_dataset.cluster_type
+              ,capture_dataset.cluster_geometry_field_id
+              ,capture_dataset.resource_capture_datasets
+              ,capture_dataset.calibration_object_used
+              ,capture_dataset.date_created
+              ,capture_dataset.created_by_user_account_id
+              ,capture_dataset.last_modified
+              ,capture_dataset.last_modified_user_account_id
+              -- ,capture_method.label AS capture_method
+              -- ,dataset_type.label AS capture_dataset_type
+              -- ,item_position_type.label_alias AS item_position_type
+              -- ,focus_type.label AS focus_type
+              -- ,light_source_type.label AS light_source_type
+              -- ,background_removal_method.label AS background_removal_method
+              -- ,camera_cluster_type.label AS camera_cluster_type
+            FROM capture_dataset
+            -- LEFT JOIN capture_method ON capture_method.capture_method_repository_id = capture_dataset.capture_method
+            -- LEFT JOIN dataset_type ON dataset_type.dataset_type_repository_id = capture_dataset.capture_dataset_type
+            -- LEFT JOIN item_position_type ON item_position_type.item_position_type_repository_id = capture_dataset.item_position_type
+            -- LEFT JOIN focus_type ON focus_types.focus_type_repository_id = capture_dataset.focus_type
+            -- LEFT JOIN light_source_type ON light_source_type.light_source_type_repository_id = capture_dataset.light_source_type
+            -- LEFT JOIN background_removal_method ON background_removal_method.background_removal_method_repository_id = capture_dataset.background_removal_method
+            -- LEFT JOIN camera_cluster_type ON camera_cluster_type.camera_cluster_type_id = capture_dataset.cluster_type
+            WHERE capture_dataset.active = 1
+            AND capture_dataset.capture_dataset_repository_id = :capture_dataset_repository_id");
             $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, "integer");
         $statement->execute();
         $result = $statement->fetch();

@@ -133,7 +133,7 @@ class UnitsController extends Controller
     /**
      * Matches /admin/resources/units/manage/*
      *
-     * @Route("/admin/resources/units/manage/{units_id}", name="units_manage", methods={"GET","POST"}, defaults={"units_id" = null})
+     * @Route("/admin/resources/units/manage/{id}", name="units_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param   int     $id           The unit ID
      * @param   object  Connection    Database connection object
@@ -146,13 +146,13 @@ class UnitsController extends Controller
         $data = array();
         $gump = new GUMP();
         $post = $request->request->all();
-        $units_id = !empty($request->attributes->get('units_id')) ? $request->attributes->get('units_id') : false;
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'units',
-            'record_id' => (int)$units_id));
+            'record_id' => (int)$id));
         }
 
         // Validate posted data.
@@ -174,12 +174,12 @@ class UnitsController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $units_id = $this->insert_update($post, $units_id, $conn);
+          $id = $this->insert_update($post, $id, $conn);
             $this->addFlash('message', 'Unit successfully updated.');
             return $this->redirectToRoute('units_browse');
         } else {
             return $this->render('resources/units_form.html.twig', array(
-                "page_title" => !empty($units_id) ? 'Manage Unit: ' . $data['label'] : 'Create Unit'
+                "page_title" => !empty($id) ? 'Manage Unit: ' . $data['label'] : 'Create Unit'
                 ,"data" => $data
                 ,"errors" => $errors
                 ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)

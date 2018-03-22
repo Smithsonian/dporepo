@@ -384,19 +384,19 @@ class SubjectsController extends Controller
           foreach ($ids_array as $key => $id) {
 
             $statement = $conn->prepare("
-                UPDATE subjects
-                LEFT JOIN items ON items.subject_repository_id = subjects.subject_repository_id
-                LEFT JOIN capture_datasets ON capture_datasets.parent_item_repository_id = items.item_repository_id
-                LEFT JOIN capture_data_elements ON capture_data_elements.capture_dataset_repository_id = capture_datasets.capture_dataset_repository_id
-                SET subjects.active = 0,
-                    subjects.last_modified_user_account_id = :last_modified_user_account_id,
-                    items.active = 0,
-                    items.last_modified_user_account_id = :last_modified_user_account_id,
-                    capture_datasets.active = 0,
-                    capture_datasets.last_modified_user_account_id = :last_modified_user_account_id,
-                    capture_data_elements.active = 0,
-                    capture_data_elements.last_modified_user_account_id = :last_modified_user_account_id
-                WHERE subjects.subject_repository_id = :id
+                UPDATE subject
+                LEFT JOIN item ON item.subject_repository_id = subject.subject_repository_id
+                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
+                LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
+                SET subject.active = 0,
+                    subject.last_modified_user_account_id = :last_modified_user_account_id,
+                    item.active = 0,
+                    item.last_modified_user_account_id = :last_modified_user_account_id,
+                    capture_dataset.active = 0,
+                    capture_dataset.last_modified_user_account_id = :last_modified_user_account_id,
+                    capture_data_element.active = 0,
+                    capture_data_element.last_modified_user_account_id = :last_modified_user_account_id
+                WHERE subject.subject_repository_id = :id
             ");
             $statement->bindValue(":id", $id, PDO::PARAM_INT);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);

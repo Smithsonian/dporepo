@@ -142,24 +142,24 @@ class ProjectsController extends Controller
     /**
      * Matches /admin/projects/manage/*
      *
-     * @Route("/admin/projects/manage/{project_repository_id}", name="projects_manage", methods={"GET","POST"}, defaults={"project_repository_id" = null})
+     * @Route("/admin/projects/manage/{id}", name="projects_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param   int     $project_repository_id  The project ID
      * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
      * @return  array                 Redirect or render
      */
-    function show_projects_form( $project_repository_id, Connection $conn, Request $request, IsniController $isni, UnitStakeholderController $unit )
+    function show_projects_form( $id, Connection $conn, Request $request, IsniController $isni, UnitStakeholderController $unit )
     {
 
         $project = new Projects();
         $post = $request->request->all();
-        $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         // Retrieve data from the database.
         $this->repo_storage_controller->setContainer($this->container);
-        if (!empty($project_repository_id) && empty($post)) {
-          $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $project_repository_id));
+        if (!empty($id) && empty($post)) {
+          $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $id));
         }
         
         // Get data from lookup tables.
@@ -174,7 +174,7 @@ class ProjectsController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $project = $form->getData();
-            $project_repository_id = $this->insert_update_project($project, $project_repository_id, $conn, $isni, $unit);
+            $project_repository_id = $this->insert_update_project($project, $id, $conn, $isni, $unit);
 
             $this->addFlash('message', 'Project successfully updated.');
             return $this->redirect('/admin/projects/subjects/' . $project_repository_id);
@@ -182,7 +182,7 @@ class ProjectsController extends Controller
         }
 
         return $this->render('projects/project_form.html.twig', array(
-            'page_title' => !empty($project_repository_id) ? 'Project: ' . $project->project_name : 'Create Project',
+            'page_title' => !empty($id) ? 'Project: ' . $project->project_name : 'Create Project',
             'project_data' => $project,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
@@ -424,22 +424,22 @@ class ProjectsController extends Controller
           foreach ($ids_array as $key => $id) {
 
             $statement = $conn->prepare("
-                UPDATE projects
-                LEFT JOIN subjects ON subjects.project_repository_id = projects.project_repository_id
-                LEFT JOIN items ON items.subject_repository_id = subjects.subject_repository_id
-                LEFT JOIN capture_datasets ON capture_datasets.parent_item_repository_id = items.item_repository_id
-                LEFT JOIN capture_data_elements ON capture_data_elements.capture_dataset_repository_id = capture_datasets.capture_dataset_repository_id
-                SET projects.active = 0,
-                    projects.last_modified_user_account_id = :last_modified_user_account_id,
-                    subjects.active = 0,
-                    subjects.last_modified_user_account_id = :last_modified_user_account_id,
-                    items.active = 0,
-                    items.last_modified_user_account_id = :last_modified_user_account_id,
-                    capture_datasets.active = 0,
-                    capture_datasets.last_modified_user_account_id = :last_modified_user_account_id,
-                    capture_data_elements.active = 0,
-                    capture_data_elements.last_modified_user_account_id = :last_modified_user_account_id
-                WHERE projects.project_repository_id = :id
+                UPDATE project
+                LEFT JOIN subject ON subject.project_repository_id = project.project_repository_id
+                LEFT JOIN item ON item.subject_repository_id = subject.subject_repository_id
+                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
+                LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
+                SET project.active = 0,
+                    project.last_modified_user_account_id = :last_modified_user_account_id,
+                    subject.active = 0,
+                    subject.last_modified_user_account_id = :last_modified_user_account_id,
+                    item.active = 0,
+                    item.last_modified_user_account_id = :last_modified_user_account_id,
+                    capture_dataset.active = 0,
+                    capture_dataset.last_modified_user_account_id = :last_modified_user_account_id,
+                    capture_data_element.active = 0,
+                    capture_data_element.last_modified_user_account_id = :last_modified_user_account_id
+                WHERE project.project_repository_id = :id
             ");
             $statement->bindValue(":id", $id, PDO::PARAM_INT);
             $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);

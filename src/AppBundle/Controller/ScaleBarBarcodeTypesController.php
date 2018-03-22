@@ -133,7 +133,7 @@ class ScaleBarBarcodeTypesController extends Controller
     /**
      * Matches /admin/resources/scale_bar_barcode_types/manage/*
      *
-     * @Route("/admin/resources/scale_bar_barcode_types/manage/{scale_bar_barcode_types_id}", name="scale_bar_barcode_types_manage", methods={"GET","POST"}, defaults={"scale_bar_barcode_types_id" = null})
+     * @Route("/admin/resources/scale_bar_barcode_types/manage/{id}", name="scale_bar_barcode_types_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param   int     $id           The scale_bar_barcode_type ID
      * @param   object  Connection    Database connection object
@@ -146,13 +146,13 @@ class ScaleBarBarcodeTypesController extends Controller
         $data = array();
         $gump = new GUMP();
         $post = $request->request->all();
-        $scale_bar_barcode_types_id = !empty($request->attributes->get('scale_bar_barcode_types_id')) ? $request->attributes->get('scale_bar_barcode_types_id') : false;
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'scale_bar_barcode_types',
-            'record_id' => (int)$scale_bar_barcode_types_id));
+            'record_id' => (int)$id));
         }
 
         // Validate posted data.
@@ -174,12 +174,12 @@ class ScaleBarBarcodeTypesController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $scale_bar_barcode_types_id = $this->insert_update($post, $scale_bar_barcode_types_id, $conn);
+            $scale_bar_barcode_types_id = $this->insert_update($post, $id, $conn);
             $this->addFlash('message', 'Scale Bar Barcode Type successfully updated.');
             return $this->redirectToRoute('scale_bar_barcode_types_browse');
         } else {
             return $this->render('resources/scale_bar_barcode_types_form.html.twig', array(
-                "page_title" => !empty($scale_bar_barcode_types_id) ? 'Manage Scale Bar Barcode Type: ' . $data['label'] : 'Create Scale Bar Barcode Type'
+                "page_title" => !empty($id) ? 'Manage Scale Bar Barcode Type: ' . $data['label'] : 'Create Scale Bar Barcode Type'
                 ,"data" => $data
                 ,"errors" => $errors
                 ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)

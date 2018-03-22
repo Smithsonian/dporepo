@@ -133,7 +133,7 @@ class DataRightsRestrictionTypesController extends Controller
     /**
      * Matches /admin/resources/data_rights_restriction_types/manage/*
      *
-     * @Route("/admin/resources/data_rights_restriction_types/manage/{data_rights_restriction_types_id}", name="data_rights_restriction_types_manage", methods={"GET","POST"}, defaults={"data_rights_restriction_types_id" = null})
+     * @Route("/admin/resources/data_rights_restriction_types/manage/{id}", name="data_rights_restriction_types_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param   int     $id           The data_rights_restriction_type ID
      * @param   object  Connection    Database connection object
@@ -146,13 +146,13 @@ class DataRightsRestrictionTypesController extends Controller
         $data = array();
         $gump = new GUMP();
         $post = $request->request->all();
-        $data_rights_restriction_types_id = !empty($request->attributes->get('data_rights_restriction_types_id')) ? $request->attributes->get('data_rights_restriction_types_id') : false;
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'data_rights_restriction_types',
-            'record_id' => (int)$data_rights_restriction_types_id));
+            'record_id' => (int)$id));
         }
 
         // Validate posted data.
@@ -174,7 +174,7 @@ class DataRightsRestrictionTypesController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $data_rights_restriction_types_id = $this->insert_update($post, $data_rights_restriction_types_id, $conn);
+            $id = $this->insert_update($post, $id, $conn);
             $this->addFlash('message', 'Data Rights Restriction Type successfully updated.');
             return $this->redirectToRoute('data_rights_restriction_types_browse');
         } else {

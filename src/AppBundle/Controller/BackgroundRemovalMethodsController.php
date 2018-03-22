@@ -37,11 +37,11 @@ class BackgroundRemovalMethodsController extends Controller
         $this->repo_storage_controller = new RepoStorageHybridController();
 
         // Table name and field names.
-        $this->table_name = 'background_removal_methods';
-        $this->id_field_name_raw = 'background_removal_methods_id';
-        $this->id_field_name = 'background_removal_methods.' . $this->id_field_name_raw;
+        $this->table_name = 'background_removal_method';
+        $this->id_field_name_raw = 'background_removal_method_repository_id';
+        $this->id_field_name = 'background_removal_method.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
-        $this->label_field_name = 'background_removal_methods.' . $this->label_field_name_raw;
+        $this->label_field_name = 'background_removal_method.' . $this->label_field_name_raw;
     }
 
     /**
@@ -134,7 +134,7 @@ class BackgroundRemovalMethodsController extends Controller
     /**
      * Matches /admin/resources/background_removal_methods/manage/*
      *
-     * @Route("/admin/resources/background_removal_methods/manage/{background_removal_methods_id}", name="background_removal_methods_manage", methods={"GET","POST"}, defaults={"background_removal_methods_id" = null})
+     * @Route("/admin/resources/background_removal_methods/manage/{id}", name="background_removal_methods_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param   int     $id           The background_removal_method ID
      * @param   object  Connection    Database connection object
@@ -147,13 +147,13 @@ class BackgroundRemovalMethodsController extends Controller
         $data = array();
         $gump = new GUMP();
         $post = $request->request->all();
-        $background_removal_methods_id = !empty($request->attributes->get('background_removal_methods_id')) ? $request->attributes->get('background_removal_methods_id') : false;
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
-            'record_type' => 'background_removal_methods',
-            'record_id' => (int)$background_removal_methods_id));
+            'record_type' => 'background_removal_method',
+            'record_id' => (int)$id));
         }
 
         // Validate posted data.
@@ -175,12 +175,12 @@ class BackgroundRemovalMethodsController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $background_removal_methods_id = $this->insert_update($post, $background_removal_methods_id, $conn);
+          $id = $this->insert_update($post, $id, $conn);
             $this->addFlash('message', 'Background Removal Method successfully updated.');
             return $this->redirectToRoute('background_removal_methods_browse');
         } else {
             return $this->render('resources/background_removal_methods_form.html.twig', array(
-                "page_title" => !empty($background_removal_methods_id) ? 'Manage Background Removal Method: ' . $data['label'] : 'Create Background Removal Method'
+                "page_title" => !empty($id) ? 'Manage Background Removal Method: ' . $data['label'] : 'Create Background Removal Method'
                 ,"data" => $data
                 ,"errors" => $errors
                 ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
