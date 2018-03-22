@@ -314,9 +314,9 @@ class DatasetElementsController extends Controller
     {
         $statement = $conn->prepare("
             SELECT
-                projects.project_repository_id,
-                subjects.subject_repository_id,
-                items.item_repository_id,
+                project.project_repository_id,
+                subject.subject_repository_id,
+                item.item_repository_id,
                 capture_data_elements.capture_data_element_repository_id,
                 capture_data_elements.capture_dataset_repository_id,
                 capture_data_elements.capture_device_configuration_id,
@@ -331,11 +331,11 @@ class DatasetElementsController extends Controller
                 capture_data_elements.active
             FROM capture_data_element
             LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
-            LEFT JOIN items ON items.item_repository_id = capture_dataset.parent_item_repository_id
-            LEFT JOIN subjects ON subjects.subject_repository_id = items.subject_repository_id
-            LEFT JOIN projects ON projects.project_repository_id = subjects.project_repository_id
+            LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
+            LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
+            LEFT JOIN project ON project.project_repository_id = subject.project_repository_id
             WHERE capture_data_elements.active = 1
-            AND capture_data_elements.capture_dataset_repository_id = :capture_dataset_repository_id");
+            AND capture_data_element.capture_dataset_repository_id = :capture_dataset_repository_id");
         $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, PDO::PARAM_INT);
         $statement->execute();
         return $statement->fetchAll(PDO::FETCH_ASSOC);

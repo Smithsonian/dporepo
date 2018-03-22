@@ -409,8 +409,8 @@ class DatasetsController extends Controller
     {
       $statement = $conn->prepare("
           SELECT
-              projects.project_repository_id
-              ,subjects.subject_repository_id
+              project.project_repository_id
+              ,subject.subject_repository_id
               ,capture_dataset.parent_item_repository_id
               ,capture_dataset.capture_dataset_repository_id
               ,capture_dataset.capture_dataset_guid

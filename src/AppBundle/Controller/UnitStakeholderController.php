@@ -39,7 +39,7 @@ class UnitStakeholderController extends Controller
 
         // Table name and field names.
         $this->table_name = 'unit_stakeholder';
-        $this->id_field_name_raw = 'unit_stakeholder_id';
+        $this->id_field_name_raw = 'unit_stakeholder_repository_id';
         $this->id_field_name = 'unit_stakeholder.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'unit_stakeholder_label';
         $this->label_field_name = 'unit_stakeholder.' . $this->label_field_name_raw;

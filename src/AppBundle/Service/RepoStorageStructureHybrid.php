@@ -144,7 +144,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
           $sql = "CREATE TABLE IF NOT EXISTS `capture_dataset` (
             `capture_dataset_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `capture_dataset_guid` varchar(255) NOT NULL DEFAULT '',
-            `parent_project_repository_id` int(255) DEFAULT NULL,
+            `project_repository_id` int(255) DEFAULT NULL,
             `parent_item_repository_id` int(11) NOT NULL,
             `capture_dataset_field_id` int(11) NOT NULL,
             `capture_method` int(11) DEFAULT NULL,
@@ -339,7 +339,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            `status_types_id` int(11) NOT NULL DEFAULT '0',
+            `status_type_id` int(11) NOT NULL DEFAULT '0',
             PRIMARY KEY (`item_repository_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
@@ -445,8 +445,8 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
           break;
-        case 'projects':
-          $sql = "CREATE TABLE IF NOT EXISTS `projects` (
+        case 'project':
+          $sql = "CREATE TABLE IF NOT EXISTS `project` (
             `project_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `project_name` varchar(255) DEFAULT '',
             `stakeholder_guid` varchar(255) DEFAULT '',
@@ -478,20 +478,20 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
           break;
         case 'status_types':
           $sql = "CREATE TABLE IF NOT EXISTS `status_types` (
-            `status_types_id` int(11) NOT NULL AUTO_INCREMENT,
+            `status_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`status_types_id`),
+            PRIMARY KEY (`status_type_repository_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
           break;
-        case 'subjects':
-          $sql = "CREATE TABLE IF NOT EXISTS `subjects` (
+        case 'subject':
+          $sql = "CREATE TABLE IF NOT EXISTS `subject` (
             `subject_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `project_repository_id` int(11) NOT NULL,
             `local_subject_id` varchar(255) DEFAULT '',

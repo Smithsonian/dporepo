@@ -79,8 +79,8 @@ class User extends BaseUser implements LdapUserInterface{
         $req = $request->request->all();
 
         $statement = $conn->prepare("
-            SELECT favorites.path FROM favorites
-            WHERE favorites.fos_user_id = {$this->getId()}
+            SELECT path FROM favorite
+            WHERE fos_user_id = {$this->getId()}
         ");
         $statement->execute();
         $results = $statement->fetchAll();

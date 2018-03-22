@@ -45,7 +45,7 @@ class ProjectsController extends Controller
     {
         // Database tables are only created if not present.
         $this->repo_storage_controller->setContainer($this->container);
-        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'projects'));
+        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'project'));
         $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'isni_data'));
 
         return $this->render('projects/browse_projects.html.twig', array(
@@ -84,7 +84,7 @@ class ProjectsController extends Controller
         if (!empty($sort_field) && !empty($sort_order)) {
             $sort = " ORDER BY {$sort_field} {$sort_order}";
         } else {
-            $sort = " ORDER BY projects.last_modified DESC ";
+            $sort = " ORDER BY project.last_modified DESC ";
         }
 
         if ($search) {
@@ -94,29 +94,29 @@ class ProjectsController extends Controller
             $pdo_params[] = '%' . $search . '%';
             $search_sql = "
             AND (
-                projects.project_name LIKE ?
-                OR projects.stakeholder_label LIKE ?
-                OR projects.date_created LIKE ?
-                OR projects.last_modified LIKE ?
+                project.project_name LIKE ?
+                OR project.stakeholder_label LIKE ?
+                OR project.date_created LIKE ?
+                OR project.last_modified LIKE ?
             ) ";
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-                projects.project_repository_id as manage
-                ,projects.project_repository_id
-                ,projects.project_name
-                ,projects.stakeholder_guid
-                ,projects.date_created
-                ,projects.last_modified
-                ,projects.active
-                ,projects.project_repository_id AS DT_RowId
+                project.project_repository_id as manage
+                ,project.project_repository_id
+                ,project.project_name
+                ,project.stakeholder_guid
+                ,project.date_created
+                ,project.last_modified
+                ,project.active
+                ,project.project_repository_id AS DT_RowId
                 ,isni_data.isni_label AS stakeholder_label
-            FROM projects
-            LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
-            LEFT JOIN subjects ON subjects.project_repository_id = projects.project_repository_id
-            WHERE projects.active = 1
+            FROM project
+            LEFT JOIN isni_data ON isni_data.isni_id = project.stakeholder_guid
+            LEFT JOIN subject ON subject.project_repository_id = project.project_repository_id
+            WHERE project.active = 1
             {$search_sql}
-            GROUP BY projects.project_name, projects.stakeholder_guid, projects.date_created, projects.last_modified, projects.active, projects.project_repository_id
+            GROUP BY project.project_name, project.stakeholder_guid, project.date_created, project.last_modified, project.active, project.project_repository_id
             {$sort}
             {$limit_sql}");
         $statement->execute($pdo_params);
@@ -202,7 +202,7 @@ class ProjectsController extends Controller
     {
       $this->repo_storage_controller->setContainer($this->container);
       $data = $this->repo_storage_controller->execute('getRecords', array(
-        'base_table' => 'projects',
+        'base_table' => 'project',
         'fields' => array(),
         'sort_fields' => array(
           0 => array('field_name' => 'stakeholder_guid')
@@ -228,12 +228,12 @@ class ProjectsController extends Controller
         // $statement_fgb->execute();
 
         $statement = $conn->prepare("
-            SELECT projects.project_repository_id
-                ,projects.stakeholder_guid
+            SELECT project.project_repository_id
+                ,project.stakeholder_guid
                 ,isni_data.isni_label AS stakeholder_label
-            FROM projects
-            LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
-            WHERE projects.active = 1
+            FROM project
+            LEFT JOIN isni_data ON isni_data.isni_id = project.stakeholder_guid
+            WHERE project.active = 1
             GROUP BY isni_data.isni_label
             ORDER BY isni_data.isni_label ASC
         ");
@@ -249,7 +249,6 @@ class ProjectsController extends Controller
     public function get_stakeholder_guids_tree_browser(Connection $conn)
     {
       $projects = $this->get_stakeholder_guids($conn);
-
       foreach ($projects as $key => $value) {
           $data[$key]['id'] = 'stakeholderGuid-' . $value['stakeholder_guid'];
           $data[$key]['text'] = $value['stakeholder_label'];
@@ -272,7 +271,7 @@ class ProjectsController extends Controller
 
         $this->repo_storage_controller->setContainer($this->container);
         $projects = $this->repo_storage_controller->execute('getRecords', array(
-            'base_table' => 'projects',
+            'base_table' => 'project',
             'fields' => array(),
             'sort_fields' => array(
               0 => array('field_name' => 'project_name')
@@ -341,7 +340,7 @@ class ProjectsController extends Controller
         if($project_repository_id) {
 
             $statement = $conn->prepare("
-                UPDATE projects
+                UPDATE project
                 SET project_name = :project_name
                 ,stakeholder_guid = :stakeholder_guid
                 ,project_description = :project_description
@@ -361,7 +360,7 @@ class ProjectsController extends Controller
         // Insert
         if(!$project_repository_id) {
 
-            $statement = $conn->prepare("INSERT INTO projects
+            $statement = $conn->prepare("INSERT INTO project
               (project_name, stakeholder_guid, project_description, date_created, created_by_user_account_id, last_modified_user_account_id )
               VALUES (:project_name, :stakeholder_guid, :project_description, NOW(), :user_account_id, :user_account_id )");
             $statement->bindValue(":project_name", $data->project_name, PDO::PARAM_STR);
@@ -372,7 +371,7 @@ class ProjectsController extends Controller
             $last_inserted_id = $conn->lastInsertId();
 
             if(!$last_inserted_id) {
-              die('INSERT INTO `projects` failed.');
+              die('INSERT INTO `project` failed.');
             }
 
             return $last_inserted_id;
@@ -394,7 +393,7 @@ class ProjectsController extends Controller
       $statement->execute();
 
       foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
-        $data[$value['unit_stakeholder_label'] . ' - ' . $value['unit_stakeholder_full_name']] = $value['unit_stakeholder_id'];
+        $data[$value['unit_stakeholder_label'] . ' - ' . $value['unit_stakeholder_full_name']] = $value['unit_stakeholder_repository_id'];
       }
 
       return $data;
@@ -468,14 +467,14 @@ class ProjectsController extends Controller
     public function delete_project($project_repository_id, $conn)
     {
         $statement = $conn->prepare("
-            DELETE FROM projects
+            DELETE FROM project
             WHERE project_repository_id = :project_repository_id");
         $statement->bindValue(":project_repository_id", $project_repository_id, PDO::PARAM_INT);
         $statement->execute();
 
         // First, delete all subjects.
         $statement = $conn->prepare("
-            DELETE FROM subjects
+            DELETE FROM subject
             WHERE project_repository_id = :project_repository_id");
         $statement->bindValue(":project_repository_id", $project_repository_id, PDO::PARAM_INT);
         $statement->execute();

@@ -65,17 +65,17 @@ class Items
     public function getItem($item_id, Connection $conn)
     {
         $statement = $conn->prepare("SELECT
-            items.item_guid
-            ,items.local_item_id
-            ,items.item_description
-            ,items.item_type
-            ,items.status_types_id
-            ,items.last_modified
-            ,items.item_repository_id
-            ,item_types.label as item_type_label
-            FROM items
-            LEFT JOIN item_types ON item_types.item_types_id = items.item_type
-            WHERE items.active = 1
+            item.item_guid
+            ,item.local_item_id
+            ,item.item_description
+            ,item.item_type
+            ,item.status_type_id
+            ,item.last_modified
+            ,item.item_repository_id
+            ,item_type.label as item_type_label
+            FROM item
+            LEFT JOIN item_type ON item_type.item_type_repository_id = item.item_type
+            WHERE item.active = 1
             AND item_repository_id = :item_repository_id");
         $statement->bindValue(":item_repository_id", $item_id, "integer");
         $statement->execute();

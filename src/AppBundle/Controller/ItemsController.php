@@ -89,9 +89,9 @@ class ItemsController extends Controller
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
 
         // First, perform a 3D model generation status check, and update statuses in the database accordingly.
-        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS items.item_guid
-            FROM items
-            LEFT JOIN status_types ON items.status_types_id = status_types.status_types_id
+        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS item.item_guid
+            FROM item
+            LEFT JOIN status_type ON item.status_type_id = status_type.status_type_repository_id
             WHERE subject_repository_id = " . (int)$subject_repository_id);
         $statement->execute();
         $results = $statement->fetchAll(PDO::FETCH_ASSOC);
@@ -113,7 +113,7 @@ class ItemsController extends Controller
         if (!empty($sort_field) && !empty($sort_order)) {
             $sort = " ORDER BY {$sort_field} {$sort_order}";
         } else {
-            $sort = " ORDER BY items.last_modified DESC ";
+            $sort = " ORDER BY item.last_modified DESC ";
         }
 
         if ($search) {
@@ -124,11 +124,11 @@ class ItemsController extends Controller
             $pdo_params[] = '%'.$search.'%';
             $search_sql = "
             AND (
-                OR items.item_description LIKE ? 
-                OR items.local_item_id LIKE ?
-                OR items.date_created LIKE ?
-                OR items.last_modified LIKE ?
-                OR items.status_label LIKE ?
+                OR item.item_description LIKE ? 
+                OR item.local_item_id LIKE ?
+                OR item.date_created LIKE ?
+                OR item.last_modified LIKE ?
+                OR item.status_label LIKE ?
             ) ";
         }
 
@@ -137,19 +137,19 @@ class ItemsController extends Controller
             ,item.subject_repository_id
             ,item.local_item_id
             ,CONCAT(SUBSTRING(items.item_description,1, 50), '...') as item_description
-            ,item.status_types_id
+            ,item.status_type_id
             ,item.date_created
             ,item.last_modified
             ,item.item_repository_id AS DT_RowId
             ,status_type.label AS status_label
             ,count(distinct capture_dataset.parent_item_repository_id) AS datasets_count
             FROM items
-            LEFT JOIN status_type ON item.status_types_id = status_type.status_type_repository_id
+            LEFT JOIN status_type ON item.status_type_id = status_type.status_type_repository_id
             LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = items.item_repository_id
             WHERE item.active = 1
             AND subject_repository_id = " . (int)$subject_repository_id . "
             {$search_sql}
-            GROUP BY item.subject_repository_id, items.local_item_id, item_description, items.status_types_id, items.date_created, items.last_modified, items.item_repository_id
+            GROUP BY item.subject_repository_id, item.local_item_id, item_description, item.status_type_id, item.date_created, item.last_modified, item.item_repository_id
             {$sort}
             {$limit_sql}");
         $statement->execute($pdo_params);
@@ -159,7 +159,7 @@ class ItemsController extends Controller
         // TODO: create an entry in the status_types table for this.
         if(!empty($data['aaData'])) {
             foreach ($data['aaData'] as $key => $value) {
-                switch($value['status_types_id']) {
+                switch($value['status_type_id']) {
                     case '0': // Not Found in JobBox
                         $data['aaData'][$key]['status_label'] = '<span class="label label-danger">Not Found in JobBox</span>';
                         break;
@@ -252,15 +252,15 @@ class ItemsController extends Controller
     public function get_item($item_id, $conn)
     {
         $statement = $conn->prepare("SELECT
-            items.item_guid
-            ,items.local_item_id
-            ,items.item_description
-            ,items.item_type
-            ,items.status_types_id
-            ,items.last_modified
-            ,items.item_repository_id
-            FROM items
-            WHERE items.active = 1
+            item.item_guid
+            ,item.local_item_id
+            ,item.item_description
+            ,item.item_type
+            ,item.status_type_id
+            ,item.last_modified
+            ,item.item_repository_id
+            FROM item
+            WHERE item.active = 1
             AND item_repository_id = :item_repository_id");
         $statement->bindValue(":item_repository_id", $item_id, PDO::PARAM_INT);
         $statement->execute();
@@ -280,84 +280,84 @@ class ItemsController extends Controller
     {
         $this->repo_storage_controller->setContainer($container);
         $items_data = $this->repo_storage_controller->execute('getRecords', array(
-            'base_table' => 'items',
+            'base_table' => 'item',
             'related_tables' => array(
               0 =>
                array(
-                 'table_name' => 'subjects',
+                 'table_name' => 'subject',
                 'table_join_field' => 'subject_repository_id',
                 'join_type' => 'LEFT JOIN',
-                'base_join_table' => 'items',
+                'base_join_table' => 'item',
                 'base_join_field' => 'subject_repository_id',
                 ),
               1 => array(
-                'table_name' => 'projects',
+                'table_name' => 'project',
                 'table_join_field' => 'project_repository_id',
                 'join_type' => 'LEFT JOIN',
-                'base_join_table' => 'subjects',
+                'base_join_table' => 'subject',
                 'base_join_field' => 'project_repository_id',
               )
             ),
             'fields' => array(
               0 => array(
-                'table_name' => 'projects',
+                'table_name' => 'project',
                 'field_name' => 'project_repository_id',
               ),
               1 => array(
-                'table_name' => 'subjects',
+                'table_name' => 'subject',
                 'field_name' => 'subject_repository_id',
               ),
               2 => array(
-                'table_name' => 'items',
+                'table_name' => 'item',
                 'field_name' => 'item_repository_id',
               ),
               3 => array(
-                'table_name' => 'items',
+                'table_name' => 'item',
                 'field_name' => 'item_guid',
               ),
               4 => array(
-                'table_name' => 'items',
+                'table_name' => 'item',
                 'field_name' => 'subject_repository_id',
               ),
               5 => array(
-                'table_name' => 'items',
+                'table_name' => 'item',
                 'field_name' => 'local_item_id',
               ),
               6 => array(
-                'table_name' => 'items',
+                'table_name' => 'item',
                 'field_name' => 'item_description',
               ),
               7 => array(
-                'table_name' => 'items',
+                'table_name' => 'item',
                 'field_name' => 'date_created',
               ),
               8 => array(
-                'table_name' => 'items',
+                'table_name' => 'item',
                 'field_name' => 'created_by_user_account_id',
               ),
               9 => array(
-                'table_name' => 'items',
+                'table_name' => 'item',
                 'field_name' => 'last_modified',
               ),
               10 => array(
-                'table_name' => 'items',
+                'table_name' => 'item',
                 'field_name' => 'last_modified_user_account_id',
               ),
               11 => array(
-                'table_name' => 'items',
+                'table_name' => 'item',
                 'field_name' => 'active',
               ),
               12 => array(
-                'table_name' => 'items',
-                'field_name' => 'status_types_id',
+                'table_name' => 'item',
+                'field_name' => 'status_type_id',
               ),
             ),
             'sort_fields' => array(
-              0 => array('field_name' => 'items.local_item_id')
+              0 => array('field_name' => 'item.local_item_id')
             ),
             'search_params' => array(
-              0 => array('field_names' => array('items.active'), 'search_values' => array(1), 'comparison' => '='),
-              1 => array('field_names' => array('items.subject_repository_id'), 'search_values' => array($subject_repository_id), 'comparison' => '=')
+              0 => array('field_names' => array('item.active'), 'search_values' => array(1), 'comparison' => '='),
+              1 => array('field_names' => array('item.subject_repository_id'), 'search_values' => array($subject_repository_id), 'comparison' => '=')
             ),
             'search_type' => 'AND'
           )
@@ -446,7 +446,7 @@ class ItemsController extends Controller
         // Insert
         if(!$item_repository_id) {
 
-            $statement = $conn->prepare("INSERT INTO items
+            $statement = $conn->prepare("INSERT INTO item
                 ( subject_repository_id, item_guid, local_item_id, item_description, item_type, 
                 date_created, created_by_user_account_id, last_modified_user_account_id )
                 VALUES (:subject_repository_id, (select md5(UUID())), :local_item_id, :item_description, :item_type, NOW(), 
@@ -566,7 +566,7 @@ class ItemsController extends Controller
         if(!empty($itemguid)) {
 
             // First, verify that the item_guid is found within the database.
-            $statement = $conn->prepare("SELECT item_guid FROM items WHERE item_guid = :itemguid");
+            $statement = $conn->prepare("SELECT item_guid FROM item WHERE item_guid = :itemguid");
             $statement->bindValue(":itemguid", $itemguid, PDO::PARAM_STR);
             $statement->execute();
             $result = $statement->fetch(PDO::FETCH_ASSOC);
@@ -707,7 +707,7 @@ class ItemsController extends Controller
         if(!empty($itemguid)) {
             $statement = $conn->prepare("
                 UPDATE items
-                SET status_types_id = :statusid
+                SET status_type_id = :statusid
                 WHERE item_guid = :itemguid
             ");
             $statement->bindValue(":itemguid", $itemguid, PDO::PARAM_STR);

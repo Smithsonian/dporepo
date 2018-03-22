@@ -106,11 +106,11 @@ class CaptureDataFileController extends Controller
           'field_name' => 'last_modified',
         );
         $query_params['fields'][] = array(
-          'table_name' => 'projects',
+          'table_name' => 'project',
           'field_name' => 'last_modified',
         );
         $query_params['fields'][] = array(
-          'table_name' => 'projects',
+          'table_name' => 'project',
           'field_name' => 'last_modified_user_account_id',
         );
         $query_params['fields'][] = array(
@@ -120,7 +120,7 @@ class CaptureDataFileController extends Controller
         );
         $query_params['fields'][] = array(
           'table_name' => 'unit_stakeholder',
-          'field_name' => 'unit_stakeholder_id',
+          'field_name' => 'unit_stakeholder_repository_id',
           'field_alias' => 'stakeholder_si_guid',
         );
 

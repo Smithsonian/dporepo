@@ -45,7 +45,7 @@ class SubjectsController extends Controller
     {
         // Database tables are only created if not present.
         $this->repo_storage_controller->setContainer($this->container);
-        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'subjects'));
+        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'subject'));
 
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
 
@@ -93,7 +93,7 @@ class SubjectsController extends Controller
         if (!empty($sort_field) && !empty($sort_order)) {
             $sort = " ORDER BY {$sort_field} {$sort_order}";
         } else {
-            $sort = " ORDER BY subjects.last_modified DESC ";
+            $sort = " ORDER BY subject.last_modified DESC ";
         }
 
         if ($search) {
@@ -102,28 +102,28 @@ class SubjectsController extends Controller
             $pdo_params[] = '%'.$search.'%';
             $search_sql = "
                 AND (
-                  subjects.subject_name LIKE ?
-                  OR subjects.holding_entity_guid LIKE ?
-                  OR subjects.last_modified LIKE ?
+                  subject.subject_name LIKE ?
+                  OR subject.holding_entity_guid LIKE ?
+                  OR subject.last_modified LIKE ?
                 ) ";
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-              subjects.subject_repository_id AS manage
-              ,subjects.subject_repository_id
-              ,subjects.holding_entity_guid
-              ,subjects.local_subject_id
-              ,subjects.subject_guid
-              ,subjects.subject_name
-              ,subjects.last_modified
-              ,subjects.active
-              ,subjects.subject_repository_id AS DT_RowId
-          FROM subjects
-          LEFT JOIN items ON items.subject_repository_id = subjects.subject_repository_id
-          WHERE subjects.active = 1
+              subject.subject_repository_id AS manage
+              ,subject.subject_repository_id
+              ,subject.holding_entity_guid
+              ,subject.local_subject_id
+              ,subject.subject_guid
+              ,subject.subject_name
+              ,subject.last_modified
+              ,subject.active
+              ,subject.subject_repository_id AS DT_RowId
+          FROM subject
+          LEFT JOIN item ON item.subject_repository_id = subject.subject_repository_id
+          WHERE subject.active = 1
           AND project_repository_id = " . (int)$project_repository_id . "
           {$search_sql}
-          GROUP BY subjects.holding_entity_guid, subjects.local_subject_id, subjects.subject_guid, subjects.subject_name, subjects.last_modified, subjects.active, subjects.subject_repository_id
+          GROUP BY subject.holding_entity_guid, subject.local_subject_id, subject.subject_guid, subject.subject_name, subject.last_modified, subject.active, subject.subject_repository_id
           {$sort}
           {$limit_sql}");
         $statement->execute($pdo_params);
@@ -184,7 +184,7 @@ class SubjectsController extends Controller
         $this->repo_storage_controller->setContainer($this->container);
         if(!empty($id) && empty($post)) {
           $rec = $this->repo_storage_controller->execute('getRecordById', array(
-            'record_type' => 'subjects',
+            'record_type' => 'subject',
             'record_id' => $id));
           if(isset($rec)) {
             $subject = (object)$rec;
@@ -228,8 +228,8 @@ class SubjectsController extends Controller
     public function get_subject($subject_id, $conn)
     {
         $statement = $conn->prepare("SELECT *
-            FROM subjects
-            WHERE subjects.active = 1
+            FROM subject
+            WHERE subject.active = 1
             AND subject_repository_id = :subject_repository_id");
         $statement->bindValue(":subject_repository_id", $subject_id, PDO::PARAM_INT);
         $statement->execute();
@@ -250,7 +250,7 @@ class SubjectsController extends Controller
 
       $this->repo_storage_controller->setContainer($container);
       $data = $this->repo_storage_controller->execute('getRecords', array(
-          'base_table' => 'subjects',
+          'base_table' => 'subject',
           'fields' => array(),
           'sort_fields' => array(
             0 => array('field_name' => 'subject_name')

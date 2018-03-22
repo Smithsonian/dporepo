@@ -96,7 +96,7 @@ class AdminController extends Controller
         if (!empty($sort_field) && !empty($sort_order)) {
             $sort = " ORDER BY {$sort_field} {$sort_order}";
         } else {
-            $sort = " ORDER BY projects.last_modified DESC ";
+            $sort = " ORDER BY project.last_modified DESC ";
         }
 
         if ($search) {
@@ -106,31 +106,31 @@ class AdminController extends Controller
             $pdo_params[] = '%' . $search . '%';
             $search_sql = "
             AND (
-                projects.project_name LIKE ?
-                OR projects.stakeholder_label LIKE ?
-                OR projects.date_created LIKE ?
-                OR projects.last_modified LIKE ?
+                project.project_name LIKE ?
+                OR project.stakeholder_label LIKE ?
+                OR project.date_created LIKE ?
+                OR project.last_modified LIKE ?
             ) ";
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-                projects.project_repository_id as manage
-                ,projects.project_repository_id
-                ,projects.project_name
-                ,projects.stakeholder_guid
-                ,projects.date_created
-                ,projects.last_modified
-                ,projects.active
-                ,projects.project_repository_id AS DT_RowId
+                project.project_repository_id as manage
+                ,project.project_repository_id
+                ,project.project_name
+                ,project.stakeholder_guid
+                ,project.date_created
+                ,project.last_modified
+                ,project.active
+                ,project.project_repository_id AS DT_RowId
                 ,isni_data.isni_label AS stakeholder_label
-            FROM projects
-            LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
-            LEFT JOIN subjects ON subjects.project_repository_id = projects.project_repository_id
-            WHERE projects.active = 1
-            AND projects.last_modified < '{$date_today}'
-            AND projects.last_modified > '{$date_limit}'
+            FROM project
+            LEFT JOIN isni_data ON isni_data.isni_id = project.stakeholder_guid
+            LEFT JOIN subject ON subject.project_repository_id = project.project_repository_id
+            WHERE project.active = 1
+            AND project.last_modified < '{$date_today}'
+            AND project.last_modified > '{$date_limit}'
             {$search_sql}
-            GROUP BY projects.project_name, projects.stakeholder_guid, projects.date_created, projects.last_modified, projects.active, projects.project_repository_id
+            GROUP BY project.project_name, project.stakeholder_guid, project.date_created, project.last_modified, project.active, project.project_repository_id
             {$sort}
             {$limit_sql}");
         $statement->execute($pdo_params);
@@ -175,27 +175,27 @@ class AdminController extends Controller
         // GROUP BY subjects.holding_entity_guid, subjects.local_subject_id, subjects.subject_guid, subjects.subject_name, subjects.last_modified, subjects.active, subjects.subject_repository_id
         $query_params = array(
           'distinct' => true,
-          'base_table' => 'subjects',
+          'base_table' => 'subject',
           'fields' => array(),
           'search_params' => array(
-            0 => array('field_names' => array('subjects.active'), 'search_values' => array(1), 'comparison' => '='),
+            0 => array('field_names' => array('subject.active'), 'search_values' => array(1), 'comparison' => '='),
           ),
           'search_type' => 'AND',
         );
 
         $query_params['related_tables'][] = array(
-          'table_name' => 'items',
+          'table_name' => 'item',
           'table_join_field' => 'subject_repository_id',
           'join_type' => 'LEFT JOIN',
-          'base_join_table' => 'subjects',
+          'base_join_table' => 'subject',
           'base_join_field' => 'subject_repository_id',
         );
         if ($search) {
           $query_params['search_params'][1] = array(
             'field_names' => array(
-              'subjects.subject_name',
-              'subjects.holding_entity_guid',
-              'subjects.last_modified'
+              'subject.subject_name',
+              'subject.holding_entity_guid',
+              'subject.last_modified'
             ),
             'search_values' => array($search),
             'comparison' => 'LIKE',
@@ -204,17 +204,17 @@ class AdminController extends Controller
 
         // Fields.
         $query_params['fields'][] = array(
-          'table_name' => 'subjects',
+          'table_name' => 'subject',
           'field_name' => 'subject_repository_id',
           'field_alias' => 'manage',
         );
         $query_params['fields'][] = array(
-          'table_name' => 'subjects',
+          'table_name' => 'subject',
           'field_name' => 'subject_repository_id',
           'field_alias' => 'DT_RowId',
         );
         $query_params['fields'][] = array(
-          'table_name' => 'subjects',
+          'table_name' => 'subject',
           'field_name' => 'subject_repository_id',
         );
         $query_params['fields'][] = array(
@@ -230,11 +230,11 @@ class AdminController extends Controller
         'field_name' => 'subject_name',
       );
         $query_params['fields'][] = array(
-          'table_name' => 'subjects',
+          'table_name' => 'subject',
           'field_name' => 'active',
         );
         $query_params['fields'][] = array(
-          'table_name' => 'subjects',
+          'table_name' => 'subject',
           'field_name' => 'last_modified',
         );
         $query_params['records_values'] = array();
@@ -251,7 +251,7 @@ class AdminController extends Controller
           );
         } else {
           $query_params['sort_fields'][] = array(
-            'field_name' => 'subjects.last_modified',
+            'field_name' => 'subject.last_modified',
             'sort_order' => 'DESC',
           );
         }
@@ -319,20 +319,20 @@ class AdminController extends Controller
             $pdo_params[] = '%'.$search.'%';
             $search_sql = "
                 AND (
-                  favorites.page_title LIKE ?
-                  OR favorites.path LIKE ?
-                  OR favorites.date_created LIKE ?
+                  page_title LIKE ?
+                  OR path LIKE ?
+                  OR date_created LIKE ?
                 ) ";
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS 
-            DISTINCT favorites.path,
-            favorites.page_title,
-            favorites.date_created,
-            favorites.id AS DT_RowId
-            FROM favorites
+            DISTINCT path,
+            page_title,
+            date_created,
+            id AS DT_RowId
+            FROM favorite
             WHERE 1 = 1
-            AND favorites.fos_user_id = {$this->getUser()->getId()}
+            AND fos_user_id = {$this->getUser()->getId()}
             {$search_sql}
             {$sort}
             {$limit_sql}");
@@ -363,7 +363,7 @@ class AdminController extends Controller
         $last_inserted_id = false;
 
         if(!empty($req) && isset($req['favoritePath'])) {
-            $statement = $conn->prepare("INSERT INTO favorites
+            $statement = $conn->prepare("INSERT INTO favorite
                 (fos_user_id, path, page_title, date_created)
                 VALUES (:fos_user_id, :path, :page_title, NOW())");
             $statement->bindValue(":fos_user_id", $this->getUser()->getId(), PDO::PARAM_INT);
@@ -374,7 +374,7 @@ class AdminController extends Controller
         }
 
         if(!$last_inserted_id) {
-            die('INSERT INTO `favorites` failed.');
+            die('INSERT INTO `favorite` failed.');
         }
 
         return $this->json($last_inserted_id);
@@ -395,9 +395,9 @@ class AdminController extends Controller
 
         if(!empty($req) && isset($req['favoritePath'])) {
             $statement = $conn->prepare("
-                DELETE FROM favorites
-                WHERE favorites.fos_user_id = :fos_user_id
-                AND favorites.path = :path");
+                DELETE FROM favorite
+                WHERE fos_user_id = :fos_user_id
+                AND path = :path");
             $statement->bindValue(":fos_user_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->bindValue(":path", $req['favoritePath'], PDO::PARAM_STR);
             $statement->execute();
@@ -416,7 +416,7 @@ class AdminController extends Controller
      */
     public function create_favorites_table($conn)
     {
-        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `favorites` (
+        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `favorite` (
           `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
           `fos_user_id` int(11) NOT NULL,
           `path` text NOT NULL,
@@ -430,7 +430,7 @@ class AdminController extends Controller
 
         if ($error[0] !== '00000') {
             var_dump($conn->errorInfo());
-            die('CREATE TABLE `projects` failed.');
+            die('CREATE TABLE `project` failed.');
         } else {
             return TRUE;
         }

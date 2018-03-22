@@ -19,10 +19,10 @@ class RepoStorageHybrid implements RepoStorage {
 
     $query_params = array(
       'fields' => array(),
-      'base_table' => 'projects',
+      'base_table' => 'project',
       'search_params' => array(
-        0 => array('field_names' => array('projects.active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array('projects.project_repository_id'), 'search_values' => $params, 'comparison' => '=')
+        0 => array('field_names' => array('project.active'), 'search_values' => array(1), 'comparison' => '='),
+        1 => array('field_names' => array('project.project_repository_id'), 'search_values' => $params, 'comparison' => '=')
       ),
       'search_type' => 'AND',
       'related_tables' => array(),
@@ -30,33 +30,33 @@ class RepoStorageHybrid implements RepoStorage {
 
     // Fields.
     $query_params['fields'][] = array(
-      'table_name' => 'projects',
+      'table_name' => 'project',
       'field_name' => 'project_repository_id',
     );
     $query_params['fields'][] = array(
       'field_name' => 'project_name',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'projects',
+      'table_name' => 'project',
       'field_name' => 'stakeholder_guid',
     );
     $query_params['fields'][] = array(
       'field_name' => 'project_description',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'projects',
+      'table_name' => 'project',
       'field_name' => 'date_created',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'projects',
+      'table_name' => 'project',
       'field_name' => 'created_by_user_account_id',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'projects',
+      'table_name' => 'project',
       'field_name' => 'last_modified',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'projects',
+      'table_name' => 'project',
       'field_name' => 'last_modified_user_account_id',
     );
     $query_params['fields'][] = array(
@@ -66,7 +66,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'unit_stakeholder',
-      'field_name' => 'unit_stakeholder_id',
+      'field_name' => 'unit_stakeholder_repository_id',
       'field_alias' => 'stakeholder_si_guid',
     );
 
@@ -75,14 +75,14 @@ class RepoStorageHybrid implements RepoStorage {
       'table_name' => 'isni_data',
       'table_join_field' => 'isni_id',
       'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'projects',
+      'base_join_table' => 'project',
       'base_join_field' => 'stakeholder_guid',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'unit_stakeholder',
       'table_join_field' => 'isni_id',
       'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'projects',
+      'base_join_table' => 'project',
       'base_join_field' => 'stakeholder_guid',
     );
 
@@ -102,10 +102,10 @@ class RepoStorageHybrid implements RepoStorage {
 
     $query_params = array(
       'fields' => array(),
-      'base_table' => 'subjects',
+      'base_table' => 'subject',
       'search_params' => array(
-        0 => array('field_names' => array('subjects.active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array('subjects.subject_repository_id'), 'search_values' => $params, 'comparison' => '=')
+        0 => array('field_names' => array('subject.active'), 'search_values' => array(1), 'comparison' => '='),
+        1 => array('field_names' => array('subject.subject_repository_id'), 'search_values' => $params, 'comparison' => '=')
       ),
       'search_type' => 'AND'
     );
@@ -228,14 +228,14 @@ class RepoStorageHybrid implements RepoStorage {
           'field_name' => 'last_modified',
         );
 
-        $query_params['search_params'][0] = array('field_names' => array('subjects.active'), 'search_values' => array(1), 'comparison' => '=');
+        $query_params['search_params'][0] = array('field_names' => array('subject.active'), 'search_values' => array(1), 'comparison' => '=');
         if (NULL !== $search_value) {
           $query_params['search_type'] = 'AND';
           $query_params['search_params'][1] = array(
             'field_names' => array(
-              'subjects.subject_name',
-              'subjects.holding_entity_guid',
-              'subjects.last_modified'
+              'subject.subject_name',
+              'subject.holding_entity_guid',
+              'subject.last_modified'
             ),
             'search_values' => array($search_value),
             'comparison' => 'LIKE',
@@ -244,10 +244,10 @@ class RepoStorageHybrid implements RepoStorage {
 
         // GROUP BY subjects.holding_entity_guid, subjects.local_subject_id, subjects.subject_guid, subjects.subject_name, subjects.last_modified, subjects.active, subjects.subject_repository_id
         $query_params['related_tables'][] = array(
-          'table_name' => 'items',
+          'table_name' => 'item',
           'table_join_field' => 'subject_repository_id',
           'join_type' => 'LEFT JOIN',
-          'base_join_table' => 'subjects',
+          'base_join_table' => 'subject',
           'base_join_field' => 'subject_repository_id',
         );
         break;
@@ -1010,11 +1010,11 @@ class RepoStorageHybrid implements RepoStorage {
       //@todo delete children first
 
       switch($base_table) {
-        case 'projects':
+        case 'project':
           break;
-        case 'subjects':
+        case 'subject':
           break;
-        case 'items':
+        case 'item':
           break;
 
       }
@@ -1109,11 +1109,11 @@ class RepoStorageHybrid implements RepoStorage {
       //@todo delete children first
 
       switch($record_type) {
-        case 'projects':
+        case 'project':
           break;
-        case 'subjects':
+        case 'subject':
           break;
-        case 'items':
+        case 'item':
           break;
 
       }
