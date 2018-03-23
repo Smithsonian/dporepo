@@ -49,8 +49,8 @@ class DatasetElements
     public function getDatasetElement($capture_data_element_repository_id, Connection $conn)
     {
         $statement = $conn->prepare("SELECT *
-            FROM capture_data_elements
-            WHERE capture_data_elements.active = 1
+            FROM capture_data_element
+            WHERE capture_data_element.active = 1
             AND capture_data_element_repository_id = :capture_data_element_repository_id");
         $statement->bindValue(":capture_data_element_repository_id", $capture_data_element_repository_id, "integer");
         $statement->execute();

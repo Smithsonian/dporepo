@@ -201,11 +201,11 @@ class DatasetsController extends Controller
               ,background_removal_method.label AS background_removal_method
               ,camera_cluster_type.label AS cluster_type
           FROM capture_dataset
-          LEFT JOIN capture_method ON capture_method.capture_methods_id = capture_dataset.capture_method
-          LEFT JOIN dataset_type ON dataset_type.dataset_types_id = capture_dataset.capture_dataset_type
-          LEFT JOIN item_position_type ON item_position_type.item_position_types_id = capture_dataset.item_position_type
-          LEFT JOIN focus_type ON focus_type.focus_types_id = capture_dataset.focus_type
-          LEFT JOIN light_source_type ON light_source_type.light_source_types_id = capture_dataset.light_source_type
+          LEFT JOIN capture_method ON capture_method.capture_method_repository_id = capture_dataset.capture_method
+          LEFT JOIN dataset_type ON dataset_type.dataset_type_repository_id = capture_dataset.capture_dataset_type
+          LEFT JOIN item_position_type ON item_position_type.item_position_type_repository_id = capture_dataset.item_position_type
+          LEFT JOIN focus_type ON focus_type.focus_type_repository_id = capture_dataset.focus_type
+          LEFT JOIN light_source_type ON light_source_type.light_source_type_repository_id = capture_dataset.light_source_type
           LEFT JOIN background_removal_method ON background_removal_method.background_removal_method_repository_id = capture_dataset.background_removal_method
           LEFT JOIN camera_cluster_type ON camera_cluster_type.camera_cluster_type_repository_id = capture_dataset.cluster_type
           WHERE capture_dataset.active = 1
@@ -512,18 +512,18 @@ class DatasetsController extends Controller
           ,capture_dataset.created_by_user_account_id
           ,capture_dataset.last_modified
           ,capture_dataset.last_modified_user_account_id
-          ,capture_methods.label AS capture_method
-          ,dataset_types.label AS capture_dataset_type
+          ,capture_method.label AS capture_method
+          ,dataset_type.label AS capture_dataset_type
           ,item_position_type.label_alias AS item_position_type
-          ,focus_types.label AS focus_type
+          ,focus_type.label AS focus_type
           ,light_source_type.label AS light_source_type
           ,background_removal_method.label AS background_removal_method
           ,camera_cluster_type.label AS camera_cluster_type
         FROM capture_dataset
         LEFT JOIN capture_method ON capture_method.capture_method_repository_id = capture_dataset.capture_method
         LEFT JOIN dataset_type ON dataset_type.dataset_type_repository_id = capture_dataset.capture_dataset_type
-        LEFT JOIN item_position_type ON item_position_types.item_position_types_id = capture_dataset.item_position_type
-        LEFT JOIN focus_type ON focus_type.focus_types_id = capture_dataset.focus_type
+        LEFT JOIN item_position_type ON item_position_type.item_position_type_repository_id = capture_dataset.item_position_type
+        LEFT JOIN focus_type ON focus_type.focus_type_repository_id = capture_dataset.focus_type
         LEFT JOIN light_source_type ON light_source_type.light_source_type_repository_id = capture_dataset.light_source_type
         LEFT JOIN background_removal_method ON background_removal_method.background_removal_method_repository_id = capture_dataset.background_removal_method
         LEFT JOIN camera_cluster_type ON camera_cluster_type.camera_cluster_type_repository_id = capture_dataset.cluster_type
@@ -542,12 +542,12 @@ class DatasetsController extends Controller
     {
       $data = array();
 
-      $statement = $conn->prepare("SELECT * FROM capture_methods ORDER BY label ASC");
+      $statement = $conn->prepare("SELECT * FROM capture_method ORDER BY label ASC");
       $statement->execute();
       
       foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
         $label = $this->u->removeUnderscoresTitleCase($value['label']);
-        $data[$label] = $value['capture_methods_id'];
+        $data[$label] = $value['capture_method_repository_id'];
       }
 
       return $data;
@@ -566,7 +566,7 @@ class DatasetsController extends Controller
       
       foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
         $label = $this->u->removeUnderscoresTitleCase($value['label']);
-        $data[$label] = $value['dataset_types_id'];
+        $data[$label] = $value['dataset_type_repository_id'];
       }
 
       return $data;
@@ -580,12 +580,12 @@ class DatasetsController extends Controller
     {
       $data = array();
 
-      $statement = $conn->prepare("SELECT * FROM item_position_types ORDER BY label ASC");
+      $statement = $conn->prepare("SELECT * FROM item_position_type ORDER BY label ASC");
       $statement->execute();
       
       foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
         $label = $this->u->removeUnderscoresTitleCase($value['label']);
-        $data[$label] = $value['item_position_types_id'];
+        $data[$label] = $value['item_position_type_repository_id'];
       }
 
       return $data;
@@ -604,7 +604,7 @@ class DatasetsController extends Controller
       
       foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
         $label = $this->u->removeUnderscoresTitleCase($value['label']);
-        $data[$label] = $value['focus_types_id'];
+        $data[$label] = $value['focus_type_repository_id'];
       }
 
       return $data;

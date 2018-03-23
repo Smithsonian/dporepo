@@ -139,8 +139,8 @@ class CaptureMethodsController extends Controller
         $data = array();
         $gump = new GUMP();
         $post = $request->request->all();
-        $capture_methods_id = !empty($request->attributes->get('capture_methods_id')) ? $request->attributes->get('capture_methods_id') : false;
-        $data = !empty($post) ? $post : $this->get_one((int)$capture_methods_id, $conn);
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
+        $data = !empty($post) ? $post : $this->get_one((int)$id, $conn);
         
         // Validate posted data.
         if(!empty($post)) {
@@ -161,12 +161,12 @@ class CaptureMethodsController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $capture_methods_id = $this->insert_update($post, $capture_methods_id, $conn);
+          $id = $this->insert_update($post, $id, $conn);
             $this->addFlash('message', 'Capture Method successfully updated.');
             return $this->redirectToRoute('capture_methods_browse');
         } else {
             return $this->render('resources/capture_methods_form.html.twig', array(
-                "page_title" => !empty($capture_methods_id) ? 'Manage Capture Method: ' . $data['label'] : 'Create Capture Method'
+                "page_title" => !empty($id) ? 'Manage Capture Method: ' . $data['label'] : 'Create Capture Method'
                 ,"data" => $data
                 ,"errors" => $errors
             ));

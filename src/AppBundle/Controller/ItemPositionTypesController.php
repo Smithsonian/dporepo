@@ -36,11 +36,11 @@ class ItemPositionTypesController extends Controller
         $this->repo_storage_controller = new RepoStorageHybridController();
 
         // Table name and field names.
-        $this->table_name = 'item_position_types';
-        $this->id_field_name_raw = 'item_position_types_id';
-        $this->id_field_name = 'item_position_types.' . $this->id_field_name_raw;
+        $this->table_name = 'item_position_type';
+        $this->id_field_name_raw = 'item_position_type_repository_id';
+        $this->id_field_name = 'item_position_type.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
-        $this->label_field_name = 'item_position_types.' . $this->label_field_name_raw;
+        $this->label_field_name = 'item_position_type.' . $this->label_field_name_raw;
     }
 
     /**
@@ -155,7 +155,7 @@ class ItemPositionTypesController extends Controller
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
-            'record_type' => 'item_position_types',
+            'record_type' => 'item_position_type',
             'record_id' => (int)$id));
         }
 

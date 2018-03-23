@@ -36,11 +36,11 @@ class CaptureMethodsController extends Controller
         $this->repo_storage_controller = new RepoStorageHybridController();
 
         // Table name and field names.
-        $this->table_name = 'capture_methods';
-        $this->id_field_name_raw = 'capture_methods_id';
-        $this->id_field_name = 'capture_methods.' . $this->id_field_name_raw;
+        $this->table_name = 'capture_method';
+        $this->id_field_name_raw = 'capture_method_repository_id';
+        $this->id_field_name = 'capture_method.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
-        $this->label_field_name = 'capture_methods.' . $this->label_field_name_raw;
+        $this->label_field_name = 'capture_method.' . $this->label_field_name_raw;
     }
 
     /**
@@ -151,7 +151,7 @@ class CaptureMethodsController extends Controller
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
-            'record_type' => 'capture_methods',
+            'record_type' => 'capture_method',
             'record_id' => (int)$id));
         }
 

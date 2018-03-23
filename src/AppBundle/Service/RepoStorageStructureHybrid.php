@@ -227,22 +227,22 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
           break;
-        case 'capture_methods':
-          $sql = "CREATE TABLE IF NOT EXISTS `capture_methods` (
-            `capture_methods_id` int(11) NOT NULL AUTO_INCREMENT,
+        case 'capture_method':
+          $sql = "CREATE TABLE IF NOT EXISTS `capture_method` (
+            `capture_method_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`capture_methods_id`),
+            PRIMARY KEY (`capture_method_repository_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
           )";
           break;
-        case 'data_rights_restriction_types':
-          $sql = "CREATE TABLE IF NOT EXISTS `data_rights_restriction_types` (
+        case 'data_rights_restriction_type':
+          $sql = "CREATE TABLE IF NOT EXISTS `data_rights_restriction_type` (
             `data_rights_restriction_types_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
@@ -255,30 +255,30 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
           break;
-        case 'dataset_types':
-          $sql = "CREATE TABLE IF NOT EXISTS `dataset_types` (
-            `dataset_types_id` int(11) NOT NULL AUTO_INCREMENT,
+        case 'dataset_type':
+          $sql = "CREATE TABLE IF NOT EXISTS `dataset_type` (
+            `dataset_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`dataset_types_id`),
+            PRIMARY KEY (`dataset_type_repository_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
           break;
-        case 'focus_types':
-          $sql = "CREATE TABLE IF NOT EXISTS `focus_types` (
-            `focus_types_id` int(11) NOT NULL AUTO_INCREMENT,
+        case 'focus_type':
+          $sql = "CREATE TABLE IF NOT EXISTS `focus_type` (
+            `focus_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`focus_types_id`),
+            PRIMARY KEY (`focus_type_repository_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
@@ -297,9 +297,9 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
           ) ");
           break;
-        case 'item_position_types':
-          $sql = "CREATE TABLE IF NOT EXISTS `item_position_types` (
-            `item_position_types_id` int(11) NOT NULL AUTO_INCREMENT,
+        case 'item_position_type':
+          $sql = "CREATE TABLE IF NOT EXISTS `item_position_type` (
+            `item_position_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `label_alias` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
@@ -307,7 +307,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`item_position_types_id`),
+            PRIMARY KEY (`item_position_type_repository_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
@@ -462,8 +462,8 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             KEY `projects_label` (`project_name`,`stakeholder_guid`)
           )";
           break;
-        case 'scale_bar_barcode_types':
-          $sql = "CREATE TABLE IF NOT EXISTS `scale_bar_barcode_types` (
+        case 'scale_bar_barcode_type':
+          $sql = "CREATE TABLE IF NOT EXISTS `scale_bar_barcode_type` (
             `scale_bar_barcode_types_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
@@ -476,8 +476,8 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
           break;
-        case 'status_types':
-          $sql = "CREATE TABLE IF NOT EXISTS `status_types` (
+        case 'status_type':
+          $sql = "CREATE TABLE IF NOT EXISTS `status_type` (
             `status_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
@@ -510,8 +510,8 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             KEY `project_repository_id` (`project_repository_id`,`subject_name`)
           )";
           break;
-        case 'target_types':
-          $sql = "CREATE TABLE IF NOT EXISTS `target_types` (
+        case 'target_type':
+          $sql = "CREATE TABLE IF NOT EXISTS `target_type` (
             `target_types_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
@@ -542,8 +542,8 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             ) ";
           break;
-        case 'units':
-          $sql = "CREATE TABLE IF NOT EXISTS `units` (
+        case 'unit':
+          $sql = "CREATE TABLE IF NOT EXISTS `unit` (
             `units_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,

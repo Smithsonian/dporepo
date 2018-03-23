@@ -36,11 +36,11 @@ class DatasetTypesController extends Controller
         $this->repo_storage_controller = new RepoStorageHybridController();
 
         // Table name and field names.
-        $this->table_name = 'dataset_types';
-        $this->id_field_name_raw = 'dataset_types_id';
-        $this->id_field_name = 'dataset_types.' . $this->id_field_name_raw;
+        $this->table_name = 'dataset_type';
+        $this->id_field_name_raw = 'dataset_type_repository_id';
+        $this->id_field_name = 'dataset_type.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
-        $this->label_field_name = 'dataset_types.' . $this->label_field_name_raw;
+        $this->label_field_name = 'dataset_type.' . $this->label_field_name_raw;
     }
 
     /**

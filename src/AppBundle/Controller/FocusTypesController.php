@@ -36,11 +36,11 @@ class FocusTypesController extends Controller
         $this->repo_storage_controller = new RepoStorageHybridController();
 
         // Table name and field names.
-        $this->table_name = 'focus_types';
-        $this->id_field_name_raw = 'focus_types_id';
-        $this->id_field_name = 'focus_types.' . $this->id_field_name_raw;
+        $this->table_name = 'focus_type';
+        $this->id_field_name_raw = 'focus_type_repository_id';
+        $this->id_field_name = 'focus_type.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
-        $this->label_field_name = 'focus_types.' . $this->label_field_name_raw;
+        $this->label_field_name = 'focus_type.' . $this->label_field_name_raw;
     }
 
     /**
@@ -174,12 +174,12 @@ class FocusTypesController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $focus_types_id = $this->insert_update($post, $id, $conn);
+          $id = $this->insert_update($post, $id, $conn);
             $this->addFlash('message', 'Focus Type successfully updated.');
             return $this->redirectToRoute('focus_types_browse');
         } else {
             return $this->render('resources/focus_types_form.html.twig', array(
-                "page_title" => !empty($focus_types_id) ? 'Manage Focus Type: ' . $data['label'] : 'Create Focus Type'
+                "page_title" => !empty($id) ? 'Manage Focus Type: ' . $data['label'] : 'Create Focus Type'
                 ,"data" => $data
                 ,"errors" => $errors
                 ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)

@@ -117,7 +117,7 @@ class DatasetElementsController extends Controller
         if (!empty($sort_field) && !empty($sort_order)) {
             $sort = " ORDER BY {$sort_field} {$sort_order}";
         } else {
-            $sort = " ORDER BY capture_data_elements.last_modified DESC ";
+            $sort = " ORDER BY capture_data_element.last_modified DESC ";
         }
 
         if ($search) {
@@ -125,26 +125,26 @@ class DatasetElementsController extends Controller
             $pdo_params[] = '%'.$search.'%';
             $search_sql = "
                 AND (
-                  capture_data_elements.dataset_element_guid LIKE ?
-                  OR capture_data_elements.camera_id LIKE ?
+                  capture_data_element.dataset_element_guid LIKE ?
+                  OR capture_data_element.camera_id LIKE ?
                 ) ";
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-                capture_data_elements.capture_data_element_repository_id AS manage
-                ,capture_data_elements.capture_dataset_repository_id
-                ,capture_data_elements.capture_device_configuration_id
-                ,capture_data_elements.capture_device_field_id
-                ,capture_data_elements.capture_sequence_number
-                ,capture_data_elements.cluster_position_field_id
-                ,capture_data_elements.position_in_cluster_field_id
-                ,capture_data_elements.date_created
-                ,capture_data_elements.created_by_user_account_id
-                ,capture_data_elements.last_modified
-                ,capture_data_elements.last_modified_user_account_id
-                ,capture_data_elements.capture_data_element_repository_id AS DT_RowId
-            FROM capture_data_elements
-            WHERE capture_data_elements.active = 1
+                capture_data_element.capture_data_element_repository_id AS manage
+                ,capture_data_element.capture_dataset_repository_id
+                ,capture_data_element.capture_device_configuration_id
+                ,capture_data_element.capture_device_field_id
+                ,capture_data_element.capture_sequence_number
+                ,capture_data_element.cluster_position_field_id
+                ,capture_data_element.position_in_cluster_field_id
+                ,capture_data_element.date_created
+                ,capture_data_element.created_by_user_account_id
+                ,capture_data_element.last_modified
+                ,capture_data_element.last_modified_user_account_id
+                ,capture_data_element.capture_data_element_repository_id AS DT_RowId
+            FROM capture_data_element
+            WHERE capture_data_element.active = 1
             AND capture_dataset_repository_id = " . (int)$capture_dataset_repository_id . "
             {$search_sql}
             {$sort}
@@ -237,7 +237,7 @@ class DatasetElementsController extends Controller
     }
 
     /**
-     * Insert/Update capture_data_elements
+     * Insert/Update capture_data_element
      *
      * Run queries to insert and update a capture_data_element in the database.
      *
@@ -253,7 +253,7 @@ class DatasetElementsController extends Controller
         // Update
         if($capture_data_element_repository_id) {
             $statement = $conn->prepare("
-                UPDATE capture_data_elements
+                UPDATE capture_data_element
                 SET capture_device_configuration_id = :capture_device_configuration_id
                 ,capture_device_field_id = :capture_device_field_id
                 ,capture_sequence_number = :capture_sequence_number
@@ -276,7 +276,7 @@ class DatasetElementsController extends Controller
 
         // Insert
         if(!$capture_data_element_repository_id) {
-            $statement = $conn->prepare("INSERT INTO capture_data_elements
+            $statement = $conn->prepare("INSERT INTO capture_data_element
                 (capture_dataset_repository_id, capture_device_configuration_id, capture_device_field_id, 
                 capture_sequence_number, cluster_position_field_id, position_in_cluster_field_id,  
                 date_created, created_by_user_account_id, last_modified_user_account_id )
@@ -294,7 +294,7 @@ class DatasetElementsController extends Controller
             $last_inserted_id = $conn->lastInsertId();
 
             if(!$last_inserted_id) {
-                die('INSERT INTO `capture_data_elements` failed.');
+                die('INSERT INTO `capture_data_element` failed.');
             }
 
             return $last_inserted_id;
@@ -317,24 +317,24 @@ class DatasetElementsController extends Controller
                 project.project_repository_id,
                 subject.subject_repository_id,
                 item.item_repository_id,
-                capture_data_elements.capture_data_element_repository_id,
-                capture_data_elements.capture_dataset_repository_id,
-                capture_data_elements.capture_device_configuration_id,
-                capture_data_elements.capture_device_field_id,
-                capture_data_elements.capture_sequence_number,
-                capture_data_elements.cluster_position_field_id,
-                capture_data_elements.position_in_cluster_field_id,
-                capture_data_elements.date_created,
-                capture_data_elements.created_by_user_account_id,
-                capture_data_elements.last_modified,
-                capture_data_elements.last_modified_user_account_id,
-                capture_data_elements.active
+                capture_data_element.capture_data_element_repository_id,
+                capture_data_element.capture_dataset_repository_id,
+                capture_data_element.capture_device_configuration_id,
+                capture_data_element.capture_device_field_id,
+                capture_data_element.capture_sequence_number,
+                capture_data_element.cluster_position_field_id,
+                capture_data_element.position_in_cluster_field_id,
+                capture_data_element.date_created,
+                capture_data_element.created_by_user_account_id,
+                capture_data_element.last_modified,
+                capture_data_element.last_modified_user_account_id,
+                capture_data_element.active
             FROM capture_data_element
             LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
             LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
             LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
             LEFT JOIN project ON project.project_repository_id = subject.project_repository_id
-            WHERE capture_data_elements.active = 1
+            WHERE capture_data_element.active = 1
             AND capture_data_element.capture_dataset_repository_id = :capture_dataset_repository_id");
         $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, PDO::PARAM_INT);
         $statement->execute();
@@ -349,9 +349,9 @@ class DatasetElementsController extends Controller
     public function get_dataset_elements_tree_browser(Connection $conn, Request $request)
     {      
         $capture_dataset_repository_id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;        
-        $capture_data_elements = $this->get_dataset_elements($capture_dataset_repository_id, $conn);
+        $capture_data_element = $this->get_dataset_elements($capture_dataset_repository_id, $conn);
 
-        foreach ($capture_data_elements as $key => $value) {
+        foreach ($capture_data_element as $key => $value) {
             $data[$key] = array(
                 'id' => 'datasetElementId-' . $value['capture_data_element_repository_id'],
                 'children' => false,
@@ -375,7 +375,7 @@ class DatasetElementsController extends Controller
     public function get_dataset_element($capture_data_element_repository_id = false, $conn)
     {
         $statement = $conn->prepare("SELECT *
-            FROM capture_data_elements
+            FROM capture_data_element
             WHERE capture_data_element_repository_id = :capture_data_element_repository_id");
         $statement->bindValue(":capture_data_element_repository_id", $capture_data_element_repository_id, PDO::PARAM_INT);
         $statement->execute();
@@ -412,7 +412,7 @@ class DatasetElementsController extends Controller
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple_capture_data_elements(Connection $conn, Request $request)
+    public function delete_multiple_capture_data_element(Connection $conn, Request $request)
     {
         $ids = $request->query->get('ids');
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
