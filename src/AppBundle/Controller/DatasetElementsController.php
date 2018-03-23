@@ -308,28 +308,34 @@ class DatasetElementsController extends Controller
      * @param       int $capture_data_element_repository_id  The dataset element ID
      * @return      array|bool                The query result
      */
-    public function get_dataset_element($capture_data_element_repository_id = false, $conn)
+    public function get_dataset_element($capture_data_element_repository_id = false)
     {
-        $statement = $conn->prepare("SELECT *
-            FROM capture_data_element
-            WHERE capture_data_element_repository_id = :capture_data_element_repository_id");
-        $statement->bindValue(":capture_data_element_repository_id", $capture_data_element_repository_id, PDO::PARAM_INT);
-        $statement->execute();
-        return $statement->fetch(PDO::FETCH_ASSOC);
+        $this->repo_storage_controller->setContainer($this->container);
+        $record = $this->repo_storage_controller->execute('getRecordById',
+          array(
+            'base_table' => 'capture_data_element',
+            'id_field' => 'capture_data_element_repository_id',
+            'id_value' => $capture_data_element_repository_id
+          )
+        );
+        return $record;
     }
 
     /**
      * Get calibration_object_types
      * @return  array|bool  The query result
      */
-    public function get_calibration_object_types($conn)
+    public function get_calibration_object_types()
     {
         $data = array();
 
-        $statement = $conn->prepare("SELECT * FROM calibration_object_type ORDER BY label ASC");
-        $statement->execute();
-        
-        foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
+        $this->repo_storage_controller->setContainer($this->container);
+        $records = $this->repo_storage_controller->execute('getRecords',
+          array(
+            'base_table' => 'calibration_object_type',
+          )
+        );
+        foreach ($records as $key => $value) {
             $label = $this->u->removeUnderscoresTitleCase($value['label']);
             $data[$label] = $value['calibration_object_type_repository_id'];
         }
