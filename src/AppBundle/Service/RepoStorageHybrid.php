@@ -352,11 +352,129 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
+  public function saveRecord($params) {
+
+    $base_table = array_key_exists('base_table', $params) ? $params['base_table'] : NULL;
+    $values = array_key_exists('values', $params) ? $params['values'] : NULL;
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
+    $id = array_key_exists('record_id', $params) ? $params['record_id'] : NULL;
+
+    if(!isset($id) || strlen(trim($id)) < 1) {
+      $id = NULL;
+    }
+
+    if(NULL == $base_table || NULL == $values || NULL == $user_id) {
+      return NULL;
+    }
+
+    // Get the expected fields for this table from MySQL.
+    $query_params = array('base_table' => $base_table);
+
+    $table_columns = $this->getTableColumns($base_table);
+    // returns an array with 'id', 'fields',
+    // where 'id' specifies the primary key field and fields is an array of other field names.
+
+    $record = array();
+    $fields = array();
+    // Fill in values for fields this table is expecting, using $values.
+    // (Rather than just blindly attempting to submit $values to the INSERT or UPDATE).
+    foreach($table_columns['fields'] as $col) {
+
+      if($col == 'last_modified') {
+        // last_modified will default to current timestamp if not set.
+        // We don't need to add this field to the update or insert statement.
+        continue;
+      }
+      if($col == 'date_created' && NULL !== $id) {
+        // Don't reset date_created if we're editing.
+        continue;
+      }
+      if($col == 'created_by_user_account_id' && NULL !== $id) {
+        // Don't reset creating user if we're editing.
+        continue;
+      }
+      if($col == 'active' && !array_key_exists($col, $values)) {
+        // Don't set value for active unless the caller explicitly sets it.
+        continue;
+      }
+
+      $f = array('field_name' => $col);
+      if(array_key_exists($col, $values)) {
+        $f['field_value'] = $values[$col];
+      }
+
+      // Certain values should be auto-set.
+      if($col == 'created_by_user_account_id') { // implied because of if statement at the top of the loop && NULL == $id) {
+        $f['field_value'] = $user_id;
+      }
+      if($col == 'last_modified_user_account_id' && NULL !== $id) {
+        $f['field_value'] = $user_id;
+      }
+      if($col == 'date_created') { // implied because of if statement at the top of the loop && NULL == $id) {
+        $f['field_value'] = 'NOW()';
+      }
+
+      $fields[] = $f;
+    }
+
+    $record['fields'] = $fields;
+
+    if(NULL !== $id) {
+      $id_field = array(
+        'field_name' => $table_columns['id'],
+        'field_value' => $id,
+      );
+      $record['id'] = $id_field;
+    }
+
+    $query_params['records_values'][] = $record;
+
+    // Submit for save.
+    $ret = $this->setRecords($query_params);
+
+    if(array_key_exists('success', $ret)) {
+      $ids = $ret['ids'];
+      if(count($ids) == 1) {
+        // This should always be true!
+        return $ids[0];
+      }
+      else {
+        return $ids;
+      }
+    }
+    else {
+      return NULL;
+      //@todo return $ret['error']
+    }
+
+  }
+
   /**
    * ---------------------------------------------------------------
    * Generic functions that get called by other getters and setters.
    * ---------------------------------------------------------------
    */
+
+  private function getTableColumns($base_table) {
+
+    $sql ="SHOW COLUMNS FROM " . $base_table;
+    $statement = $this->connection->prepare($sql);
+
+    $statement->execute();
+    $column_data = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $fields = array();
+    foreach($column_data as $col) {
+      if($col['Key'] == 'PRI') {
+        $fields['id'] = $col['Field'];
+      }
+      else {
+        $fields['fields'][] = $col['Field'];
+      }
+    }
+
+    return $fields;
+  }
 
   public function getRecord($parameters) {
 
@@ -827,6 +945,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     $base_table = NULL;
     $data = array();
+    $last_inserted_ids = array();
 
     // We need certain values: record_values, base table. Fail if those aren't provided.
     if(!array_key_exists('base_table', $query_parameters)) {
@@ -840,6 +959,7 @@ class RepoStorageHybrid implements RepoStorage {
     $base_table = $query_parameters['base_table'];
 
     // Search values
+    /*
     if (array_key_exists('search_params', $query_parameters) && is_array($query_parameters['search_params'])) {
       $search_sql_values = array();
       foreach($query_parameters['search_params'] as $p) {
@@ -851,7 +971,6 @@ class RepoStorageHybrid implements RepoStorage {
           continue;
         }
 
-        $this_search_string = '';
         $this_search_param = array();
         foreach($field_names as $fn) {
           if(count($search_values) == 1) {
@@ -871,6 +990,7 @@ class RepoStorageHybrid implements RepoStorage {
         $search_sql = implode(' AND ', $search_sql_values);
       }
     }
+    */
 
     foreach($query_parameters['records_values'] as $record_values) {
       $update = false;
@@ -882,11 +1002,11 @@ class RepoStorageHybrid implements RepoStorage {
       )
       {
         $update = true;
+        $last_inserted_id = $record_values['id']['field_value'];
       }
 
-      foreach($record_values as $rv) {
-        if(!array_key_exists('id', $rv)
-          && array_key_exists('field_value', $rv) && isset($rv['field_value'])
+      foreach($record_values['fields'] as $rv) {
+        if(array_key_exists('field_value', $rv) && isset($rv['field_value'])
           && array_key_exists('field_name', $rv) && isset($rv['field_name'])
         ) {
           if($update) {
@@ -903,23 +1023,17 @@ class RepoStorageHybrid implements RepoStorage {
         if($update) {
           $sql ="UPDATE " . $base_table;
           $sql .= " SET " . implode(',', $fields_sql_array);
-          $sql .= " WHERE " . $query_parameters['records_values']['id']['field_name'] . " = :id ";
+          $sql .= " WHERE " . $record_values['id']['field_name'] . " = :id ";
 
           $statement = $this->connection->prepare($sql);
           foreach($fields_params as $fn1 => $fv1) {
             $statement->bindValue($fn1, $fv1);
           }
-          $statement->bindValue(":id", $query_parameters['records_values']['id']['field_value'], PDO::PARAM_INT);
+          $statement->bindValue(":id", $record_values['id']['field_value'], PDO::PARAM_INT);
           $statement->execute();
+
         }
         else {
-          $statement = $this->connection->prepare("INSERT INTO " . $this->table_name . "
-                (" . $this->label_field_name_raw . ", date_created, created_by_user_account_id, last_modified_user_account_id)
-                VALUES (:" . $this->label_field_name_raw . ", NOW(), :user_account_id, :user_account_id)");
-          $statement->bindValue(":" . $this->label_field_name_raw . "", $data[$this->label_field_name_raw], PDO::PARAM_STR);
-          $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-
-
           $sql ="INSERT INTO " . $base_table;
           $sql .= " (" . implode(',', array_keys($fields_sql_array)) . ')';
           $sql .= " VALUES (" . implode(',', array_values($fields_sql_array)) . ')';
@@ -932,15 +1046,16 @@ class RepoStorageHybrid implements RepoStorage {
           $last_inserted_id = $this->connection->lastInsertId();
 
           if(!$last_inserted_id) {
-            //@todo die('INSERT INTO `' . $this->table_name . '` failed.');
+            return array('return' => 'fail', 'messages' => 'INSERT INTO `' . $this->table_name . '` failed.');
           }
         }
 
       } // if we have enough info to perform an insert or update
 
+      $last_inserted_ids[] = $last_inserted_id;
     } // each set of record values
 
-    return array('return' => 'success');
+    return array('return' => 'success', 'ids' => $last_inserted_ids);
   }
 
   /***

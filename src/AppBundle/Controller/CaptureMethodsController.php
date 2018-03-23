@@ -174,7 +174,13 @@ class CaptureMethodsController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-          $id = $this->insert_update($post, $id, $conn);
+            $id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => $this->table_name,
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+              'values' => $post
+            ));
+
             $this->addFlash('message', 'Capture Method successfully updated.');
             return $this->redirectToRoute('capture_methods_browse');
         } else {
@@ -187,54 +193,6 @@ class CaptureMethodsController extends Controller
         }
 
     }
-
-  /**
-   * Insert/Update
-   *
-   * Run queries to insert and update records.
-   *
-   * @param       array $data  The data array
-   * @param       int $id      The id value
-   * @return      void
-   */
-  public function insert_update($data, $id = false, $conn) {
-
-    // Update
-    if($id) {
-      $statement = $conn->prepare("
-          UPDATE " . $this->table_name . "
-          SET " . $this->label_field_name . " = :" . $this->label_field_name_raw . "
-          ,last_modified_user_account_id = :last_modified_user_account_id
-          WHERE " . $this->id_field_name . " = :id
-      ");
-      $statement->bindValue(":" . $this->label_field_name_raw, $data[$this->label_field_name_raw], PDO::PARAM_STR);
-      $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-      $statement->bindValue(":id", $id, PDO::PARAM_INT);
-      $statement->execute();
-
-      return $id;
-    }
-
-    // Insert
-    if(!$id) {
-
-      $statement = $conn->prepare("INSERT INTO " . $this->table_name . "
-        (" . $this->label_field_name_raw . ", date_created, created_by_user_account_id, last_modified_user_account_id)
-      VALUES (:" . $this->label_field_name_raw . ", NOW(), :user_account_id, :user_account_id)");
-      $statement->bindValue(":" . $this->label_field_name_raw . "", $data[$this->label_field_name_raw], PDO::PARAM_STR);
-      $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-      $statement->execute();
-      $last_inserted_id = $conn->lastInsertId();
-
-      if(!$last_inserted_id) {
-        die('INSERT INTO `' . $this->table_name . '` failed.');
-      }
-
-      return $last_inserted_id;
-
-    }
-
-  }
 
   /**
    * Delete Multiple Capture Methods

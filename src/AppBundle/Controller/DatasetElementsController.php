@@ -179,10 +179,10 @@ class DatasetElementsController extends Controller
 
         $dataset_element = new DatasetElements();
         $post = $request->request->all();
-        $capture_data_element_repository_id = !empty($request->attributes->get('capture_data_element_rep_id')) ? $request->attributes->get('capture_data_element_rep_id') : false;
+        $id = !empty($request->attributes->get('capture_data_element_rep_id')) ? $request->attributes->get('capture_data_element_rep_id') : false;
         
         // Retrieve data from the database.
-        $dataset_element = (!empty($capture_data_element_repository_id) && empty($post)) ? $dataset_element->getDatasetElement((int)$capture_data_element_repository_id, $conn) : $dataset_element;
+        $dataset_element = (!empty($id) && empty($post)) ? $dataset_element->getDatasetElement((int)$id, $conn) : $dataset_element;
 
         $dataset_element->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $dataset_element->subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
@@ -212,7 +212,14 @@ class DatasetElementsController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $dataset_element = $form->getData();
-            $capture_data_element_repository_id = $this->insert_update_dataset_elements($dataset_element, $dataset_element->capture_dataset_repository_id, $capture_data_element_repository_id, $conn);
+            $dataset_array = (array)$dataset_element;
+
+            $id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'capture_data_element',
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+              'values' => $dataset_array
+            ));
 
             $this->addFlash('message', 'Dataset Element successfully updated.');
             return $this->redirectToRoute('dataset_elements_browse', array('project_repository_id' => $dataset_element->project_repository_id, 'subject_repository_id' => $dataset_element->subject_repository_id, 'item_repository_id' => $dataset_element->item_repository_id, 'capture_dataset_repository_id' => $dataset_element->capture_dataset_repository_id));
@@ -220,7 +227,7 @@ class DatasetElementsController extends Controller
         }
 
         return $this->render('datasetElements/dataset_element_form.html.twig', array(
-            'page_title' => ((int)$capture_data_element_repository_id && isset($dataset_element->capture_sequence_number)) ? 'Dataset Element: ' . $dataset_element->capture_sequence_number : 'Add a Dataset Element',
+            'page_title' => ((int)$id && isset($dataset_element->capture_sequence_number)) ? 'Dataset Element: ' . $dataset_element->capture_sequence_number : 'Add a Dataset Element',
             'project_repository_id' => $dataset_element->project_repository_id,
             'subject_repository_id' => $dataset_element->subject_repository_id,
             'item_repository_id' => $dataset_element->item_repository_id,
@@ -233,72 +240,6 @@ class DatasetElementsController extends Controller
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
         ));
-
-    }
-
-    /**
-     * Insert/Update capture_data_element
-     *
-     * Run queries to insert and update a capture_data_element in the database.
-     *
-     * @param   array   $data                 The data array
-     * @param   int     $capture_dataset_repository_id          The dataset ID
-     * @param   int     $capture_data_element_repository_id  The dataset elements ID
-     * @param   object  $conn                 Database connection object
-     * @return  int     The item ID
-     */
-    public function insert_update_dataset_elements($data, $capture_dataset_repository_id = FALSE, $capture_data_element_repository_id = FALSE, $conn)
-    {
-
-        // Update
-        if($capture_data_element_repository_id) {
-            $statement = $conn->prepare("
-                UPDATE capture_data_element
-                SET capture_device_configuration_id = :capture_device_configuration_id
-                ,capture_device_field_id = :capture_device_field_id
-                ,capture_sequence_number = :capture_sequence_number
-                ,cluster_position_field_id = :cluster_position_field_id
-                ,position_in_cluster_field_id = :position_in_cluster_field_id
-                ,last_modified_user_account_id = :last_modified_user_account_id
-                WHERE capture_data_element_repository_id = :capture_data_element_repository_id
-            ");
-            $statement->bindValue(":capture_device_configuration_id", $data->capture_device_configuration_id, PDO::PARAM_INT);
-            $statement->bindValue(":capture_device_field_id", $data->capture_device_field_id, PDO::PARAM_INT);
-            $statement->bindValue(":capture_sequence_number", $data->capture_sequence_number, PDO::PARAM_INT);
-            $statement->bindValue(":cluster_position_field_id", $data->cluster_position_field_id, PDO::PARAM_INT);
-            $statement->bindValue(":position_in_cluster_field_id", $data->position_in_cluster_field_id, PDO::PARAM_INT);
-            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->bindValue(":capture_data_element_repository_id", $capture_data_element_repository_id, PDO::PARAM_INT);
-            $statement->execute();
-
-            return $capture_data_element_repository_id;
-        }
-
-        // Insert
-        if(!$capture_data_element_repository_id) {
-            $statement = $conn->prepare("INSERT INTO capture_data_element
-                (capture_dataset_repository_id, capture_device_configuration_id, capture_device_field_id, 
-                capture_sequence_number, cluster_position_field_id, position_in_cluster_field_id,  
-                date_created, created_by_user_account_id, last_modified_user_account_id )
-                VALUES (:capture_dataset_repository_id, :capture_device_configuration_id, :capture_device_field_id, 
-                :capture_sequence_number, :cluster_position_field_id, :position_in_cluster_field_id, 
-                NOW(), :user_account_id, :user_account_id )");
-            $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, PDO::PARAM_INT);
-            $statement->bindValue(":capture_device_configuration_id", $data->capture_device_configuration_id, PDO::PARAM_INT);
-            $statement->bindValue(":capture_device_field_id", $data->capture_device_field_id, PDO::PARAM_INT);
-            $statement->bindValue(":capture_sequence_number", $data->capture_sequence_number, PDO::PARAM_INT);
-            $statement->bindValue(":cluster_position_field_id", $data->cluster_position_field_id, PDO::PARAM_INT);
-            $statement->bindValue(":position_in_cluster_field_id", $data->position_in_cluster_field_id, PDO::PARAM_INT);
-            $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->execute();
-            $last_inserted_id = $conn->lastInsertId();
-
-            if(!$last_inserted_id) {
-                die('INSERT INTO `capture_data_element` failed.');
-            }
-
-            return $last_inserted_id;
-        }
 
     }
 

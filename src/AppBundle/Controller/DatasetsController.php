@@ -260,14 +260,24 @@ class DatasetsController extends Controller
         // Handle the request
         $form->handleRequest($request);
 
+        $this->repo_storage_controller->setContainer($this->container);
+
         // If form is submitted and passes validation, insert/update the database record.
         if ($form->isSubmitted() && $form->isValid()) {
 
             $dataset = $form->getData();
-            $capture_dataset_repository_id = $this->insert_update_datasets($dataset, $capture_dataset_repository_id, $dataset->item_repository_id, $conn);
+            $dataset_array = (array)$dataset;
+            $dataset_array['parent_item_repository_id'] = $dataset_array['item_repository_id'];
+
+            $id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'capture_dataset',
+              'record_id' => $capture_dataset_repository_id,
+              'user_id' => $this->getUser()->getId(),
+              'values' => $dataset_array
+            ));
 
             $this->addFlash('message', 'Dataset successfully updated.');
-            return $this->redirect('/admin/projects/dataset_elements/' . $dataset->project_repository_id . '/' . $dataset->subject_repository_id . '/' . $dataset->item_repository_id . '/' . $capture_dataset_repository_id);
+            return $this->redirect('/admin/projects/datasets/' . $dataset->project_repository_id . '/' . $dataset->subject_repository_id . '/' . $dataset->item_repository_id); // . '/' . $capture_dataset_repository_id);
 
         }
 
@@ -277,123 +287,6 @@ class DatasetsController extends Controller
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
         ));
-
-    }
-
-    /**
-     * Insert/Update dataset
-     *
-     * Run queries to insert and update a dataset in the database.
-     *
-     * @param   array   $data                       The data array
-     * @param   int     $capture_dataset_repository_id        The dataset ID
-     * @param   int     $parent_item_repository_id  The item ID
-     * @param   object  $conn                       Database connection object
-     * @return  int     The item ID
-     */
-    public function insert_update_datasets($data, $capture_dataset_repository_id = FALSE, $parent_item_repository_id = FALSE, $conn)
-    {
-
-        // Update
-        if($capture_dataset_repository_id) {
-          $statement = $conn->prepare("
-            UPDATE capture_dataset
-            SET 
-            capture_method = :capture_method
-            ,capture_dataset_type = :capture_dataset_type
-            ,capture_dataset_name = :capture_dataset_name
-            ,collected_by = :collected_by
-            ,date_of_capture = :date_of_capture
-            ,capture_dataset_description = :capture_dataset_description
-            ,collection_notes = :collection_notes
-            ,item_position_type = :item_position_type
-            ,positionally_matched_capture_datasets = :positionally_matched_capture_datasets
-            ,focus_type = :focus_type
-            ,light_source_type = :light_source_type
-            ,background_removal_method = :background_removal_method
-            ,cluster_type = :cluster_type
-            ,cluster_geometry_field_id = :cluster_geometry_field_id
-            ,capture_dataset_guid = :capture_dataset_guid
-            ,capture_dataset_field_id = :capture_dataset_field_id
-            ,support_equipment = :support_equipment
-            ,item_position_field_id = :item_position_field_id
-            ,item_arrangement_field_id = :item_arrangement_field_id
-            ,resource_capture_datasets = :resource_capture_datasets
-            ,calibration_object_used = :calibration_object_used
-            ,last_modified_user_account_id = :last_modified_user_account_id
-            WHERE capture_dataset_repository_id = :capture_dataset_repository_id
-          ");
-          $statement->bindValue(":capture_method", $data->capture_method);
-          $statement->bindValue(":capture_dataset_type", $data->capture_dataset_type);
-          $statement->bindValue(":capture_dataset_name", $data->capture_dataset_name);
-          $statement->bindValue(":collected_by", $data->collected_by);
-          $statement->bindValue(":date_of_capture", $data->date_of_capture);
-          $statement->bindValue(":capture_dataset_description", $data->capture_dataset_description);
-          $statement->bindValue(":collection_notes", $data->collection_notes);
-          $statement->bindValue(":item_position_type", $data->item_position_type);
-          $statement->bindValue(":positionally_matched_capture_datasets", $data->positionally_matched_capture_datasets);
-          $statement->bindValue(":focus_type", $data->focus_type);
-          $statement->bindValue(":light_source_type", $data->light_source_type);
-          $statement->bindValue(":background_removal_method", $data->background_removal_method);
-          $statement->bindValue(":cluster_type", $data->cluster_type);
-          $statement->bindValue(":cluster_geometry_field_id", $data->cluster_geometry_field_id);
-          $statement->bindValue(":capture_dataset_guid", $data->capture_dataset_guid);
-          $statement->bindValue(":capture_dataset_field_id", $data->capture_dataset_field_id);
-          $statement->bindValue(":support_equipment", $data->support_equipment);
-          $statement->bindValue(":item_position_field_id", $data->item_position_field_id);
-          $statement->bindValue(":item_arrangement_field_id", $data->item_arrangement_field_id);
-          $statement->bindValue(":resource_capture_datasets", $data->resource_capture_datasets);
-          $statement->bindValue(":calibration_object_used", $data->calibration_object_used);
-          $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-          $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, PDO::PARAM_INT);
-          $statement->execute();
-
-          return $capture_dataset_repository_id;
-        }
-
-        // Insert
-        if(!$capture_dataset_repository_id) {
-
-          $statement = $conn->prepare("INSERT INTO capture_dataset
-            (capture_dataset_guid, parent_item_repository_id, capture_method, capture_dataset_type, capture_dataset_name, collected_by, date_of_capture, 
-            capture_dataset_description, collection_notes, item_position_type, positionally_matched_capture_datasets, focus_type, 
-            light_source_type, background_removal_method, cluster_type, cluster_geometry_field_id, capture_dataset_field_id, support_equipment, item_position_field_id, item_arrangement_field_id, resource_capture_datasets, calibration_object_used, date_created, created_by_user_account_id, last_modified_user_account_id )
-          VALUES ((select md5(UUID())), :parent_item_repository_id, :capture_method, :capture_dataset_type, :capture_dataset_name, :collected_by, :date_of_capture, 
-          :capture_dataset_description, :collection_notes, :item_position_type, :positionally_matched_capture_datasets, :focus_type, 
-          :light_source_type, :background_removal_method, :cluster_type, :cluster_geometry_field_id, :capture_dataset_field_id, :support_equipment, :item_position_field_id, :item_arrangement_field_id, :resource_capture_datasets, :calibration_object_used, NOW(), :user_account_id, :user_account_id )");
-          $statement->bindValue(":capture_dataset_guid", $data->capture_dataset_guid);
-          $statement->bindValue(":parent_item_repository_id", $parent_item_repository_id, PDO::PARAM_INT);
-          $statement->bindValue(":capture_method", $data->capture_method);
-          $statement->bindValue(":capture_dataset_type", $data->capture_dataset_type);
-          $statement->bindValue(":capture_dataset_name", $data->capture_dataset_name);
-          $statement->bindValue(":collected_by", $data->collected_by);
-          $statement->bindValue(":date_of_capture", $data->date_of_capture);
-          $statement->bindValue(":capture_dataset_description", $data->capture_dataset_description);
-          $statement->bindValue(":collection_notes", $data->collection_notes);
-          $statement->bindValue(":item_position_type", $data->item_position_type);
-          $statement->bindValue(":positionally_matched_capture_datasets", $data->positionally_matched_capture_datasets);
-          $statement->bindValue(":focus_type", $data->focus_type);
-          $statement->bindValue(":light_source_type", $data->light_source_type);
-          $statement->bindValue(":background_removal_method", $data->background_removal_method);
-          $statement->bindValue(":cluster_type", $data->cluster_type);
-          $statement->bindValue(":cluster_geometry_field_id", $data->cluster_geometry_field_id);
-          $statement->bindValue(":capture_dataset_field_id", $data->capture_dataset_field_id);
-          $statement->bindValue(":support_equipment", $data->support_equipment);
-          $statement->bindValue(":item_position_field_id", $data->item_position_field_id);
-          $statement->bindValue(":item_arrangement_field_id", $data->item_arrangement_field_id);
-          $statement->bindValue(":resource_capture_datasets", $data->resource_capture_datasets);
-          $statement->bindValue(":calibration_object_used", $data->calibration_object_used);
-          $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-          $statement->execute();
-          $last_inserted_id = $conn->lastInsertId();
-
-          if(!$last_inserted_id) {
-            die('INSERT INTO `capture_dataset` failed.');
-          }
-
-          return $last_inserted_id;
-
-        }
 
     }
 
@@ -561,7 +454,7 @@ class DatasetsController extends Controller
     {
       $data = array();
 
-      $statement = $conn->prepare("SELECT * FROM dataset_types ORDER BY label ASC");
+      $statement = $conn->prepare("SELECT * FROM dataset_type ORDER BY label ASC");
       $statement->execute();
       
       foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
@@ -599,7 +492,7 @@ class DatasetsController extends Controller
     {
       $data = array();
 
-      $statement = $conn->prepare("SELECT * FROM focus_types ORDER BY label ASC");
+      $statement = $conn->prepare("SELECT * FROM focus_type ORDER BY label ASC");
       $statement->execute();
       
       foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
@@ -618,12 +511,12 @@ class DatasetsController extends Controller
     {
       $data = array();
 
-      $statement = $conn->prepare("SELECT * FROM light_source_types ORDER BY label ASC");
+      $statement = $conn->prepare("SELECT * FROM light_source_type ORDER BY label ASC");
       $statement->execute();
       
       foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
         $label = $this->u->removeUnderscoresTitleCase($value['label']);
-        $data[$label] = $value['light_source_types_id'];
+        $data[$label] = $value['light_source_type_repository_id'];
       }
 
       return $data;
