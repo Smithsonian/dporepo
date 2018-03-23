@@ -47,11 +47,6 @@ class DatasetElementsController extends Controller
         $this->repo_storage_controller->setContainer($this->container);
         $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'dataset_element'));
 
-        return $this->render('resources/browse_unit_stakeholder.html.twig', array(
-          'page_title' => "Browse Unit/Stakeholder",
-        ));
-
-
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
         $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
