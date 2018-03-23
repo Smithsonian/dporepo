@@ -136,16 +136,16 @@ class ItemsController extends Controller
             item.item_repository_id AS manage
             ,item.subject_repository_id
             ,item.local_item_id
-            ,CONCAT(SUBSTRING(items.item_description,1, 50), '...') as item_description
+            ,CONCAT(SUBSTRING(item.item_description,1, 50), '...') as item_description
             ,item.status_type_id
             ,item.date_created
             ,item.last_modified
             ,item.item_repository_id AS DT_RowId
             ,status_type.label AS status_label
             ,count(distinct capture_dataset.parent_item_repository_id) AS datasets_count
-            FROM items
+            FROM item
             LEFT JOIN status_type ON item.status_type_id = status_type.status_type_repository_id
-            LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = items.item_repository_id
+            LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
             WHERE item.active = 1
             AND subject_repository_id = " . (int)$subject_repository_id . "
             {$search_sql}
@@ -398,12 +398,12 @@ class ItemsController extends Controller
     {
         $data = array();
 
-        $statement = $conn->prepare("SELECT * FROM item_types WHERE item_types.active = 1 ORDER BY label ASC");
+        $statement = $conn->prepare("SELECT * FROM item_type WHERE item_type.active = 1 ORDER BY label ASC");
         $statement->execute();
 
         foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
             $label = $this->u->removeUnderscoresTitleCase($value['label']);
-            $data[$label] = $value['item_types_id'];
+            $data[$label] = $value['item_type_repository_id'];
         }
 
         return $data;
@@ -426,7 +426,7 @@ class ItemsController extends Controller
         // Update
         if($item_repository_id) {
             $statement = $conn->prepare("
-                UPDATE items
+                UPDATE item
                 SET local_item_id = :local_item_id
                 ,item_description = :item_description
                 ,item_type = :item_type
@@ -460,7 +460,7 @@ class ItemsController extends Controller
             $last_inserted_id = $conn->lastInsertId();
 
             if(!$last_inserted_id) {
-                die('INSERT INTO `items` failed.');
+                die('INSERT INTO `item` failed.');
             }
 
             return $last_inserted_id;
@@ -493,11 +493,11 @@ class ItemsController extends Controller
           foreach ($ids_array as $key => $id) {
 
             $statement = $conn->prepare("
-                UPDATE items
+                UPDATE item
                 LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
                 LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
-                SET items.active = 0,
-                    items.last_modified_user_account_id = :last_modified_user_account_id,
+                SET item.active = 0,
+                    item.last_modified_user_account_id = :last_modified_user_account_id,
                     capture_dataset.active = 0,
                     capture_dataset.last_modified_user_account_id = :last_modified_user_account_id,
                     capture_data_element.active = 0,
@@ -531,7 +531,7 @@ class ItemsController extends Controller
     public function delete_item($item_repository_id, $conn)
     {
         $statement = $conn->prepare("
-            DELETE FROM items
+            DELETE FROM item
             WHERE item_repository_id = :item_repository_id");
         $statement->bindValue(":item_repository_id", $item_repository_id, PDO::PARAM_INT);
         $statement->execute();
@@ -706,7 +706,7 @@ class ItemsController extends Controller
 
         if(!empty($itemguid)) {
             $statement = $conn->prepare("
-                UPDATE items
+                UPDATE item
                 SET status_type_id = :statusid
                 WHERE item_guid = :itemguid
             ");
