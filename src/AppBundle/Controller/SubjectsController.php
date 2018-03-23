@@ -200,7 +200,12 @@ class SubjectsController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $subject = $form->getData();
-            $subject_repository_id = $this->insert_update_subject($subject, $subject->project_repository_id, $subject_repository_id, $conn);
+            $id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'subject',
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+              'values' => (array)$subject
+            ));
 
             $this->addFlash('message', 'Subject successfully updated.');
             return $this->redirect('/admin/projects/items/' . $subject->project_repository_id . '/' . $subject_repository_id);
@@ -296,69 +301,6 @@ class SubjectsController extends Controller
 
       $response = new JsonResponse($data);
       return $response;
-    }
-
-    /**
-     * Insert/Update subject
-     *
-     * Run queries to insert and update subjects in the database.
-     *
-     * @param   array   $data         The data array
-     * @param   int     $project_repository_id  The project ID
-     * @param   int     $subject_repository_id  The subject ID
-     * @param   object  $conn         Database connection object
-     * @return  int     The subject ID
-     */
-    public function insert_update_subject($data, $project_repository_id = false, $subject_repository_id = FALSE, $conn)
-    {
-
-        // Update
-        if($subject_repository_id) {
-          $statement = $conn->prepare("
-            UPDATE subjects
-            SET subject_guid = :subject_guid
-            ,subject_name = :subject_name
-            ,holding_entity_guid = :holding_entity_guid
-            ,local_subject_id = :local_subject_id
-            ,last_modified_user_account_id = :last_modified_user_account_id
-            WHERE subject_repository_id = :subject_repository_id
-          ");
-          $statement->bindValue(":subject_guid", $data->subject_guid, PDO::PARAM_STR);
-          $statement->bindValue(":subject_name", $data->subject_name, PDO::PARAM_STR);
-          $statement->bindValue(":holding_entity_guid", $data->holding_entity_guid, PDO::PARAM_STR);
-          $statement->bindValue(":local_subject_id", $data->local_subject_id, PDO::PARAM_STR);
-          $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-          $statement->bindValue(":subject_repository_id", $subject_repository_id, PDO::PARAM_INT);
-          $statement->execute();
-
-          return $subject_repository_id;
-        }
-
-        // Insert
-        if(!$subject_repository_id) {
-
-          $statement = $conn->prepare("INSERT INTO subjects
-            (subject_guid, project_repository_id, subject_name, holding_entity_guid, local_subject_id, 
-            date_created, created_by_user_account_id, last_modified_user_account_id )
-          VALUES (:subject_guid, :project_repository_id, :subject_name, :holding_entity_guid, :local_subject_id,
-             NOW(), :user_account_id, :user_account_id )");
-          $statement->bindValue(":subject_guid", $data->subject_guid, PDO::PARAM_STR);
-          $statement->bindValue(":project_repository_id", $project_repository_id, PDO::PARAM_INT);
-          $statement->bindValue(":subject_name", $data->subject_name, PDO::PARAM_STR);
-          $statement->bindValue(":holding_entity_guid", $data->holding_entity_guid, PDO::PARAM_STR);
-          $statement->bindValue(":local_subject_id", $data->local_subject_id, PDO::PARAM_STR);
-          $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-          $statement->execute();
-          $last_inserted_id = $conn->lastInsertId();
-
-          if(!$last_inserted_id) {
-            die('INSERT INTO `subjects` failed.');
-          }
-
-          return $last_inserted_id;
-
-        }
-
     }
 
     /**

@@ -115,7 +115,12 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $data = $form->getData();
-            $id = $data->insertUpdate($data, $id, $this->getUser()->getId(), $conn);
+            $id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'photogrammetry_scale_bar_target_pair',
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+              'values' => (array)$data
+            ));
 
             $this->addFlash('message', 'Record successfully updated.');
             return $this->redirect('/admin/projects/photogrammetry_scale_bar_target_pair/manage/' . $data->parent_photogrammetry_scale_bar_repository_id . '/' . $id);

@@ -224,7 +224,13 @@ class ItemsController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $subject = $form->getData();
-            $item_repository_id = $this->insert_update_item($item, $item->subject_repository_id, $item_repository_id, $conn);
+            $id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'capture_device_component',
+              'record_id' => $item_repository_id,
+              'user_id' => $this->getUser()->getId(),
+              'values' => (array)$item
+            ));
+            //$item_repository_id = $this->insert_update_item($item, $item->subject_repository_id, $item_repository_id, $conn);
 
             $this->addFlash('message', 'Item successfully updated.');
             return $this->redirect('/admin/projects/datasets/' . $subject->project_repository_id . '/' . $item->subject_repository_id . '/' . $item_repository_id);
@@ -407,66 +413,6 @@ class ItemsController extends Controller
         }
 
         return $data;
-    }
-
-    /**
-     * Insert/Update item
-     *
-     * Run queries to insert and update items in the database.
-     *
-     * @param   array   $data         The data array
-     * @param   int     $subject_repository_id  The subject ID
-     * @param   int     $item_repository_id     The item ID
-     * @param   object  $conn         Database connection object
-     * @return  int     The item ID
-     */
-    public function insert_update_item($data, $subject_repository_id = false, $item_repository_id = FALSE, $conn)
-    {
-
-        // Update
-        if($item_repository_id) {
-            $statement = $conn->prepare("
-                UPDATE item
-                SET local_item_id = :local_item_id
-                ,item_description = :item_description
-                ,item_type = :item_type
-                ,last_modified_user_account_id = :last_modified_user_account_id
-                WHERE item_repository_id = :item_repository_id
-            ");
-            $statement->bindValue(":local_item_id", $data->local_item_id, PDO::PARAM_STR);
-            $statement->bindValue(":item_description", $data->item_description, PDO::PARAM_STR);
-            $statement->bindValue(":item_type", $data->item_type, PDO::PARAM_STR);
-            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->bindValue(":item_repository_id", $item_repository_id, PDO::PARAM_INT);
-            $statement->execute();
-
-            return $item_repository_id;
-        }
-
-        // Insert
-        if(!$item_repository_id) {
-
-            $statement = $conn->prepare("INSERT INTO item
-                ( subject_repository_id, item_guid, local_item_id, item_description, item_type, 
-                date_created, created_by_user_account_id, last_modified_user_account_id )
-                VALUES (:subject_repository_id, (select md5(UUID())), :local_item_id, :item_description, :item_type, NOW(), 
-                :user_account_id, :user_account_id )");
-            $statement->bindValue(":subject_repository_id", $subject_repository_id, PDO::PARAM_STR);
-            $statement->bindValue(":local_item_id", $data->local_item_id, PDO::PARAM_STR);
-            $statement->bindValue(":item_description", $data->item_description, PDO::PARAM_STR);
-            $statement->bindValue(":item_type", $data->item_type, PDO::PARAM_STR);
-            $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->execute();
-            $last_inserted_id = $conn->lastInsertId();
-
-            if(!$last_inserted_id) {
-                die('INSERT INTO `item` failed.');
-            }
-
-            return $last_inserted_id;
-
-        }
-
     }
 
     /**

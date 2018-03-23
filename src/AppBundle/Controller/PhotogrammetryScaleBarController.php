@@ -131,7 +131,12 @@ class PhotogrammetryScaleBarController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $data = $form->getData();
-            $id = $data->insertUpdate($data, $id, $this->getUser()->getId(), $conn);
+            $id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'photogrammetry_scale_bar',
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+              'values' => (array)$data
+            ));
 
             $this->addFlash('message', 'Record successfully updated.');
             return $this->redirect('/admin/projects/photogrammetry_scale_bar/manage/' . $data->parent_capture_dataset_repository_id . '/' . $id);

@@ -146,7 +146,12 @@ class ProcessingActionController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $data = $form->getData();
-            $id = $data->insertUpdate($data, $id, $this->getUser()->getId(), $conn);
+            $id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'processing_action',
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+              'values' => (array)$data
+            ));
 
             $this->addFlash('message', 'Record successfully updated.');
             return $this->redirect('/admin/projects/processing_action/manage/' . $data->target_model_repository_id . '/' . $id);
