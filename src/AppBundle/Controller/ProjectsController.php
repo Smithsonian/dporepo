@@ -149,7 +149,7 @@ class ProjectsController extends Controller
      * @param   object  Request       Request object
      * @return  array                 Redirect or render
      */
-    function show_projects_form( $id, Connection $conn, Request $request, IsniController $isni, UnitStakeholderController $unit )
+    function show_projects_form( $id, Connection $conn, Request $request)
     {
 
         $project = new Projects();
@@ -174,7 +174,7 @@ class ProjectsController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $project = $form->getData();
-            $project_repository_id = $this->insert_update_project($project, $id, $conn, $isni, $unit);
+            $project_repository_id = $this->insert_update_project($project, $id);
 
             $this->addFlash('message', 'Project successfully updated.');
             return $this->redirect('/admin/projects/subjects/' . $project_repository_id);
@@ -311,16 +311,15 @@ class ProjectsController extends Controller
      * @param   object  $conn        Database connection object
      * @return  int     The project ID
      */
-    public function insert_update_project($data, $project_repository_id = FALSE, $conn, $isni, $unit)
+    public function insert_update_project($data, $project_repository_id = FALSE)
     {
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $ret = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'unit_stakeholder',
             'record_id' => $data->stakeholder_guid_picker));
-          $unit_record = (object)$ret;
+          $unit_record = $ret;
         }
-        //$unit_record = $unit->get_one($data->stakeholder_guid_picker, $conn);
 
         if($unit_record && !empty($unit_record['isni_id'])) {
           $data->stakeholder_guid = $unit_record['isni_id'];
@@ -329,54 +328,31 @@ class ProjectsController extends Controller
         }
 
         // Query the isni_data table to see if there's an entry.
-        $isni_data = $isni->get_isni_data_from_database($data->stakeholder_guid, $conn);
+        $isni_data = $this->repo_storage_controller->execute('getRecordById', array(
+          'record_type' => 'isni',
+          'record_id' => $data->stakeholder_guid));
 
         // If there is no entry, then perform an insert.
         if(!$isni_data) {
-          $isni_inserted = $isni->insert_isni_data($data->stakeholder_guid, $data->stakeholder_label, $this->getUser()->getId(), $conn);
+          //$isni_inserted = $isni->insert_isni_data($data->stakeholder_guid, $data->stakeholder_label, $this->getUser()->getId(), $conn);
+          $isni_inserted = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'isni',
+            'user_id' => $this->getUser()->getId(),
+            'values' => array(
+              'isni_id' => $data->stakeholder_guid,
+              'isni_label' => $data->stakeholder_label,
+            )
+          ));
         }
 
-        // Update
-        if($project_repository_id) {
+        $id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'project',
+          'record_id' => $project_repository_id,
+          'user_id' => $this->getUser()->getId(),
+          'values' => (array)$data
+        ));
 
-            $statement = $conn->prepare("
-                UPDATE project
-                SET project_name = :project_name
-                ,stakeholder_guid = :stakeholder_guid
-                ,project_description = :project_description
-                ,last_modified_user_account_id = :last_modified_user_account_id
-                WHERE project_repository_id = :project_repository_id
-                ");
-            $statement->bindValue(":project_name", $data->project_name, PDO::PARAM_STR);
-            $statement->bindValue(":stakeholder_guid", $data->stakeholder_guid, PDO::PARAM_STR);
-            $statement->bindValue(":project_description", $data->project_description, PDO::PARAM_STR);
-            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->bindValue(":project_repository_id", $project_repository_id, PDO::PARAM_INT);
-            $statement->execute();
-
-            return $project_repository_id;
-        }
-
-        // Insert
-        if(!$project_repository_id) {
-
-            $statement = $conn->prepare("INSERT INTO project
-              (project_name, stakeholder_guid, project_description, date_created, created_by_user_account_id, last_modified_user_account_id )
-              VALUES (:project_name, :stakeholder_guid, :project_description, NOW(), :user_account_id, :user_account_id )");
-            $statement->bindValue(":project_name", $data->project_name, PDO::PARAM_STR);
-            $statement->bindValue(":stakeholder_guid", $data->stakeholder_guid, PDO::PARAM_STR);
-            $statement->bindValue(":project_description", $data->project_description, PDO::PARAM_STR);
-            $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->execute();
-            $last_inserted_id = $conn->lastInsertId();
-
-            if(!$last_inserted_id) {
-              die('INSERT INTO `project` failed.');
-            }
-
-            return $last_inserted_id;
-        }
-
+        return $id;
     }
 
     /**

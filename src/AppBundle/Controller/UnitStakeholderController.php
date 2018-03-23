@@ -189,7 +189,7 @@ class UnitStakeholderController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-          $id = $this->insert_update($post, $id, $conn, $isni);
+          $id = $this->insert_update($post, $id);
             $this->addFlash('message', 'Unit/Stakeholder successfully updated.');
             return $this->redirectToRoute('unit_stakeholder_browse');
         } else {
@@ -211,58 +211,35 @@ class UnitStakeholderController extends Controller
      * @param   int $id      The id value
      * @return  void
      */
-    public function insert_update($data, $id = false, $conn, $isni)
+    public function insert_update($data, $id = false)
     {
         // Query the isni_data table to see if there's an entry.
-        $isni_data = $isni->get_isni_data_from_database($data['isni_id'], $conn);
+        //$isni_data = $isni->get_isni_data_from_database($data['isni_id'], $conn);
+        $isni_data = $this->repo_storage_controller->execute('getRecordById', array (
+          'record_type' => 'isni',
+          'record_id' => $data->stakeholder_guid));
 
         // If there is no entry, then perform an insert.
         if(!$isni_data) {
-          $isni_inserted = $isni->insert_isni_data($data['isni_id'], $data['stakeholder_label'], $this->getUser()->getId(), $conn);
+          //$isni_inserted = $isni->insert_isni_data($data['isni_id'], $data['stakeholder_label'], $this->getUser()->getId(), $conn);
+          $isni_inserted = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'isni',
+            'user_id' => $this->getUser()->getId(),
+            'values' => array(
+              'isni_id' => $data['isni_id'],
+              'isni_label' => $data['stakeholder_label'],
+            )
+          ));
         }
 
-        // Update
-        if($id) {
-            $statement = $conn->prepare("
-                UPDATE " . $this->table_name . "
-                SET " . $this->label_field_name . " = :" . $this->label_field_name_raw . ", 
-                    " . $this->full_name_field_name . " = :" . $this->full_name_field_name_raw . ",
-                    isni_id = :isni_id,
-                    unit_stakeholder_label_aliases = :unit_stakeholder_label_aliases,
-                    last_modified_user_account_id = :last_modified_user_account_id
-                WHERE " . $this->id_field_name . " = :id
-            ");
-          $statement->bindValue(":" . $this->label_field_name_raw, $data[$this->label_field_name_raw], PDO::PARAM_STR);
-          $statement->bindValue(":" . $this->full_name_field_name_raw, $data[$this->full_name_field_name_raw], PDO::PARAM_STR);
-          $statement->bindValue(":unit_stakeholder_label_aliases", $data['unit_stakeholder_label_aliases'], PDO::PARAM_STR);
-          $statement->bindValue(":isni_id", $data['isni_id'], PDO::PARAM_STR);
-          $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-          $statement->bindValue(":id", $id, PDO::PARAM_INT);
-          $statement->execute();
+        $id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'unit_stakeholder',
+          'record_id' => $id,
+          'user_id' => $this->getUser()->getId(),
+          'values' => $data
+        ));
 
-          return $id;
-        }
-
-        // Insert
-        if(!$id) {
-            $statement = $conn->prepare("INSERT INTO " . $this->table_name . "
-                (" . $this->label_field_name_raw . ", " . $this->full_name_field_name_raw . ", unit_stakeholder_label_aliases, isni_id, date_created, created_by_user_account_id, last_modified_user_account_id)
-                VALUES (:" . $this->label_field_name_raw . ", :" . $this->full_name_field_name_raw . ", :unit_stakeholder_label_aliases, :isni_id, NOW(), :user_account_id, :user_account_id)");
-            $statement->bindValue(":" . $this->label_field_name_raw, $data[$this->label_field_name_raw], PDO::PARAM_STR);
-            $statement->bindValue(":" . $this->full_name_field_name_raw, $data[$this->full_name_field_name_raw], PDO::PARAM_STR);
-            $statement->bindValue(":unit_stakeholder_label_aliases", $data['unit_stakeholder_label_aliases'], PDO::PARAM_STR);
-            $statement->bindValue(":isni_id", $data['isni_id'], PDO::PARAM_STR);
-            $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->execute();
-            $last_inserted_id = $conn->lastInsertId();
-
-            if(!$last_inserted_id) {
-                die('INSERT INTO `' . $this->table_name . '` failed.');
-            }
-
-            return $last_inserted_id;
-        }
-
+        return $id;
     }
 
     /**
