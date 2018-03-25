@@ -242,7 +242,18 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
-  /*public function datatablesQuery($params) {
+  /**
+   * ----------------------------------------------------------------
+   * Datatables queries- returns
+   * ----------------------------------------------------------------
+   */
+
+  /**
+   * Generic function for getting datatable data.
+   * @param $params
+   * @return mixed
+   */
+  public function getDatatable($params) {
 
     $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
     $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
@@ -252,7 +263,6 @@ class RepoStorageHybrid implements RepoStorage {
 
     $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
     //@todo- allow match on ID- specify ID field and value $record_match = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
-
 
     $query_params = array(
       'distinct' => true, // @todo Do we always want this to be true?
@@ -279,66 +289,6 @@ class RepoStorageHybrid implements RepoStorage {
 
 
     switch($record_type) {
-      case 'subject':
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
-          'field_alias' => 'manage',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
-          'field_alias' => 'DT_RowId',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
-        );
-        $query_params['fields'][] = array(
-          'field_name' => 'holding_entity_guid',
-        );
-        $query_params['fields'][] = array(
-          'field_name' => 'local_subject_id',
-        );
-        $query_params['fields'][] = array(
-          'field_name' => 'subject_guid',
-        );
-        $query_params['fields'][] = array(
-          'field_name' => 'subject_name',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'active',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'last_modified',
-        );
-
-        $query_params['search_params'][0] = array('field_names' => array('subject.active'), 'search_values' => array(1), 'comparison' => '=');
-        if (NULL !== $search_value) {
-          $query_params['search_type'] = 'AND';
-          $query_params['search_params'][1] = array(
-            'field_names' => array(
-              'subject.subject_name',
-              'subject.holding_entity_guid',
-              'subject.last_modified'
-            ),
-            'search_values' => array($search_value),
-            'comparison' => 'LIKE',
-          );
-        }
-
-        // GROUP BY subjects.holding_entity_guid, subjects.local_subject_id, subjects.subject_guid, subjects.subject_name, subjects.last_modified, subjects.active, subjects.subject_repository_id
-        $query_params['related_tables'][] = array(
-          'table_name' => 'item',
-          'table_join_field' => 'subject_repository_id',
-          'join_type' => 'LEFT JOIN',
-          'base_join_table' => 'subject',
-          'base_join_field' => 'subject_repository_id',
-        );
-        break;
-
       case 'processing_action':
         $query_params['fields'][] = array(
           'table_name' => $record_type,
@@ -432,19 +382,59 @@ class RepoStorageHybrid implements RepoStorage {
           'field_alias' => 'DT_RowId',
         );
 
-        $query_params['search_params'][0] = array('field_names' => array('processing_action.active'), 'search_values' => array(1), 'comparison' => '=');
+        $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
         break;
 
+      case 'unit_stakeholder':
+
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+          'field_alias' => 'manage',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'unit_stakeholder_label',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'unit_stakeholder_full_name',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'active',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'last_modified',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+          'field_alias' => 'DT_RowId',
+        );
+
+        $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
+        if (NULL !== $search_value) {
+          $query_params['search_type'] = 'AND';
+          $query_params['search_params'][1] = array(
+            'field_names' => array(
+              $record_type . '.unit_stakeholder_label',
+              $record_type . '.unit_stakeholder_full_name',
+              $record_type . '.last_modified'
+            ),
+            'search_values' => array($search_value),
+            'comparison' => 'LIKE',
+          );
+        }
+
+        break;
     }
 
-  }
-  */
+    $data = $this->getRecordsDatatable($query_params);
+    return $data;
 
-  /**
-   * ----------------------------------------------------------------
-   * Datatables queries- returns
-   * ----------------------------------------------------------------
-   */
+  }
 
   /**
    * @param $params
@@ -547,6 +537,10 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
+  /**
+   * @param $params
+   * @return mixed
+   */
   public function getDatatableCaptureDataFile($params) {
 
     $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
