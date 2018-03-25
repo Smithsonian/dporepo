@@ -31,47 +31,4 @@ class CaptureDataFile
      */
     public $is_compressed_multiple_files;
 
-
-    /**
-     * Datatables Query
-     *
-     * @param array $params Parameters
-     * @param Connection $conn
-     * @return array
-     */
-    public function datatablesQuery($params = NULL, Connection $conn)
-    {
-        $data = array();
-
-        if(!empty($params)) {
-
-            $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-                capture_data_file.capture_data_file_repository_id AS manage,
-
-                capture_data_file.capture_data_file_name,
-                capture_data_file.capture_data_file_type,
-                capture_data_file.is_compressed_multiple_files,
-
-                capture_data_file.active,
-                capture_data_file.last_modified,
-                capture_data_file.capture_data_file_repository_id AS DT_RowId
-                FROM capture_data_file
-                WHERE capture_data_file.active = 1
-                {$params['search_sql']}
-                {$params['sort']}
-                {$params['limit_sql']}");
-            $statement->execute($params['pdo_params']);
-            $data['aaData'] = $statement->fetchAll();
-     
-            $statement = $conn->prepare("SELECT FOUND_ROWS()");
-            $statement->execute();
-            $count = $statement->fetch();
-            $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-            $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
-
-        }
-
-        return $data;
-    }
-
 }
