@@ -80,16 +80,12 @@ class ItemsController extends Controller
      */
     public function datatables_browse_items(Connection $conn, Request $request)
     {
-        $sort = '';
-        $search_sql = '';
-        $pdo_params = array();
-        $data = array();
-
         $req = $request->request->all();
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
 
         // First, perform a 3D model generation status check, and update statuses in the database accordingly.
-        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS item.item_guid
+//@todo do this a different way
+        $statement = $conn->prepare("SELECT item.item_guid
             FROM item
             LEFT JOIN status_type ON item.status_type_id = status_type.status_type_repository_id
             WHERE subject_repository_id = " . (int)$subject_repository_id);
@@ -102,58 +98,28 @@ class ItemsController extends Controller
                 $this->getDirectoryStatuses($value['item_guid'], $conn);
             }
         }
+//@todo end
 
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
-        $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
 
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $sort = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $sort = " ORDER BY item.last_modified DESC ";
-        }
-
+        $query_params = array(
+          'record_type' => 'item',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+          'subject_repository_id' => $subject_repository_id,
+        );
         if ($search) {
-            $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
-            $search_sql = "
-            AND (
-                OR item.item_description LIKE ? 
-                OR item.local_item_id LIKE ?
-                OR item.date_created LIKE ?
-                OR item.last_modified LIKE ?
-                OR item.status_label LIKE ?
-            ) ";
+          $query_params['search_value'] = $search;
         }
 
-        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-            item.item_repository_id AS manage
-            ,item.subject_repository_id
-            ,item.local_item_id
-            ,CONCAT(SUBSTRING(item.item_description,1, 50), '...') as item_description
-            ,item.status_type_id
-            ,item.date_created
-            ,item.last_modified
-            ,item.item_repository_id AS DT_RowId
-            ,status_type.label AS status_label
-            ,count(distinct capture_dataset.parent_item_repository_id) AS datasets_count
-            FROM item
-            LEFT JOIN status_type ON item.status_type_id = status_type.status_type_repository_id
-            LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
-            WHERE item.active = 1
-            AND subject_repository_id = " . (int)$subject_repository_id . "
-            {$search_sql}
-            GROUP BY item.subject_repository_id, item.local_item_id, item_description, item.status_type_id, item.date_created, item.last_modified, item.item_repository_id
-            {$sort}
-            {$limit_sql}");
-        $statement->execute($pdo_params);
-        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
         // Set status for value of zero (0).
         // TODO: create an entry in the status_types table for this.
@@ -183,12 +149,6 @@ class ItemsController extends Controller
             }
         }
 
-        $statement = $conn->prepare("SELECT FOUND_ROWS()");
-        $statement->execute();
-        $count = $statement->fetch();
-        $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-        $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
-        
         return $this->json($data);
     }
 
@@ -256,28 +216,19 @@ class ItemsController extends Controller
     /**
      * Get Item
      *
-     * Run a query to retrieve one subject from the database.
+     * Run a query to retrieve one item from the database.
      *
      * @param   int $item_id   The subject ID
-     * @param   object  $conn  Database connection object
      * @return  array|bool     The query result
      */
-    public function get_item($item_id, $conn)
+    public function get_item($item_id)
     {
-        $statement = $conn->prepare("SELECT
-            item.item_guid
-            ,item.local_item_id
-            ,item.item_description
-            ,item.item_type
-            ,item.status_type_id
-            ,item.last_modified
-            ,item.item_repository_id
-            FROM item
-            WHERE item.active = 1
-            AND item_repository_id = :item_repository_id");
-        $statement->bindValue(":item_repository_id", $item_id, PDO::PARAM_INT);
-        $statement->execute();
-        return $statement->fetch(PDO::FETCH_ASSOC);
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getItem', array(
+            'item_repository_id' => $item_id,
+          )
+        );
+        return $data;
     }
 
     /**
@@ -291,88 +242,11 @@ class ItemsController extends Controller
      */
     public function get_items($container, $subject_repository_id = false)
     {
+
         $this->repo_storage_controller->setContainer($container);
-        $items_data = $this->repo_storage_controller->execute('getRecords', array(
-            'base_table' => 'item',
-            'related_tables' => array(
-              0 =>
-               array(
-                 'table_name' => 'subject',
-                'table_join_field' => 'subject_repository_id',
-                'join_type' => 'LEFT JOIN',
-                'base_join_table' => 'item',
-                'base_join_field' => 'subject_repository_id',
-                ),
-              1 => array(
-                'table_name' => 'project',
-                'table_join_field' => 'project_repository_id',
-                'join_type' => 'LEFT JOIN',
-                'base_join_table' => 'subject',
-                'base_join_field' => 'project_repository_id',
-              )
-            ),
-            'fields' => array(
-              0 => array(
-                'table_name' => 'project',
-                'field_name' => 'project_repository_id',
-              ),
-              1 => array(
-                'table_name' => 'subject',
-                'field_name' => 'subject_repository_id',
-              ),
-              2 => array(
-                'table_name' => 'item',
-                'field_name' => 'item_repository_id',
-              ),
-              3 => array(
-                'table_name' => 'item',
-                'field_name' => 'item_guid',
-              ),
-              4 => array(
-                'table_name' => 'item',
-                'field_name' => 'subject_repository_id',
-              ),
-              5 => array(
-                'table_name' => 'item',
-                'field_name' => 'local_item_id',
-              ),
-              6 => array(
-                'table_name' => 'item',
-                'field_name' => 'item_description',
-              ),
-              7 => array(
-                'table_name' => 'item',
-                'field_name' => 'date_created',
-              ),
-              8 => array(
-                'table_name' => 'item',
-                'field_name' => 'created_by_user_account_id',
-              ),
-              9 => array(
-                'table_name' => 'item',
-                'field_name' => 'last_modified',
-              ),
-              10 => array(
-                'table_name' => 'item',
-                'field_name' => 'last_modified_user_account_id',
-              ),
-              11 => array(
-                'table_name' => 'item',
-                'field_name' => 'active',
-              ),
-              12 => array(
-                'table_name' => 'item',
-                'field_name' => 'status_type_id',
-              ),
-            ),
-            'sort_fields' => array(
-              0 => array('field_name' => 'item.local_item_id')
-            ),
-            'search_params' => array(
-              0 => array('field_names' => array('item.active'), 'search_values' => array(1), 'comparison' => '='),
-              1 => array('field_names' => array('item.subject_repository_id'), 'search_values' => array($subject_repository_id), 'comparison' => '=')
-            ),
-            'search_type' => 'AND'
+        $items_data = $this->repo_storage_controller->execute('getItemsBySubjectId',
+          array(
+            'subject_repository_id' => $subject_repository_id,
           )
         );
         return $items_data;
