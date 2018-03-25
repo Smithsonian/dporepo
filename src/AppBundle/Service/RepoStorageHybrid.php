@@ -197,6 +197,103 @@ class RepoStorageHybrid implements RepoStorage {
       return $return_data;
   }
 
+  public function getItemsBySubjectId($params) {
+    //$params will be something like array('subject_repository_id' => '123');
+
+    $subject_repository_id = array_key_exists('subject_repository_id', $params) ? $params['subject_repository_id'] : NULL;
+    $query_params = array(
+        'base_table' => 'item',
+        'related_tables' => array(
+          0 =>
+            array(
+              'table_name' => 'subject',
+              'table_join_field' => 'subject_repository_id',
+              'join_type' => 'LEFT JOIN',
+              'base_join_table' => 'item',
+              'base_join_field' => 'subject_repository_id',
+            ),
+          1 => array(
+            'table_name' => 'project',
+            'table_join_field' => 'project_repository_id',
+            'join_type' => 'LEFT JOIN',
+            'base_join_table' => 'subject',
+            'base_join_field' => 'project_repository_id',
+          )
+        ),
+        'fields' => array(
+          0 => array(
+            'table_name' => 'project',
+            'field_name' => 'project_repository_id',
+          ),
+          1 => array(
+            'table_name' => 'subject',
+            'field_name' => 'subject_repository_id',
+          ),
+          2 => array(
+            'table_name' => 'item',
+            'field_name' => 'item_repository_id',
+          ),
+          3 => array(
+            'table_name' => 'item',
+            'field_name' => 'item_guid',
+          ),
+          4 => array(
+            'table_name' => 'item',
+            'field_name' => 'subject_repository_id',
+          ),
+          5 => array(
+            'table_name' => 'item',
+            'field_name' => 'local_item_id',
+          ),
+          6 => array(
+            'table_name' => 'item',
+            'field_name' => 'item_description',
+          ),
+          7 => array(
+            'table_name' => 'item',
+            'field_name' => 'date_created',
+          ),
+          8 => array(
+            'table_name' => 'item',
+            'field_name' => 'created_by_user_account_id',
+          ),
+          9 => array(
+            'table_name' => 'item',
+            'field_name' => 'last_modified',
+          ),
+          10 => array(
+            'table_name' => 'item',
+            'field_name' => 'last_modified_user_account_id',
+          ),
+          11 => array(
+            'table_name' => 'item',
+            'field_name' => 'active',
+          ),
+          12 => array(
+            'table_name' => 'item',
+            'field_name' => 'status_type_id',
+          ),
+        ),
+        'sort_fields' => array(
+          0 => array('field_name' => 'item.local_item_id')
+        ),
+        'search_params' => array(
+          0 => array('field_names' => array('item.active'), 'search_values' => array(1), 'comparison' => '='),
+        ),
+        'search_type' => 'AND'
+      );
+
+      if($subject_repository_id) {
+          $query_params['search_params'][1] = array('field_names' => array('item.subject_repository_id'), 'search_values' => array($subject_repository_id), 'comparison' => '=');
+      }
+
+      $query_params['records_values'] = array();
+      $return_data = $this->getRecords($query_params);
+      //@todo do something if $ret has errors
+
+      return $return_data;
+  }
+
   public function getRecordById($params) {
 
     $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
@@ -218,6 +315,7 @@ class RepoStorageHybrid implements RepoStorage {
    * Getters for multiple records.
    * ----------------------------------------------------------------
    */
+
   public function getDatasets($params) {
 
     $item_repository_id = array_key_exists('item_repository_id', $params) ? $params['item_repository_id'] : NULL;
@@ -681,6 +779,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     $query_params = array(
       'fields' => array(),
+      'distinct' => true,
       'base_table' => 'capture_data_file',
       'search_params' => array(
         0 => array('field_names' => array('capture_data_file.active'), 'search_values' => array(1), 'comparison' => '='),
@@ -771,6 +870,10 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
+  /**
+   * @param $params
+   * @return mixed
+   */
   public function getDatatableCaptureDataset($params) {
 
     $item_repository_id = array_key_exists('item_repository_id', $params) ? $params['item_repository_id'] : NULL;
@@ -1012,6 +1115,124 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
+  public function getDatatableItem($params) {
+
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+
+    $query_params = array(
+      'fields' => array(),
+      'distinct' => true,
+      'base_table' => 'item',
+      'search_params' => array(
+        0 => array('field_names' => array('item.active'), 'search_values' => array(1), 'comparison' => '='),
+        1 => array('field_names' => array('item.subject_repository_id'), 'search_values' => $params, 'comparison' => '=')
+      ),
+      'search_type' => 'AND',
+    );
+
+    if ($search_value) {
+      $query_params['search_params'][2] = array(
+        'field_names' => array(
+          'item.item_description',
+          'item.local_item_id',
+          'item.date_created',
+          'item.last_modified',
+          'item.status_label',
+        ),
+        'search_values' => array($search_value),
+        'comparison' => 'LIKE',
+      );
+    }
+
+    $query_params['related_tables'][] = array(
+      'table_name' => 'status_type',
+      'table_join_field' => 'status_type_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'item',
+      'base_join_field' => 'status_type_repository_id',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'capture_dataset',
+      'table_join_field' => 'item_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'item',
+      'base_join_field' => 'item_repository_id',
+    );
+
+    // Fields.
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'item_repository_id',
+      'field_alias' => 'manage',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'subject_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'local_item_id',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => "CONCAT(SUBSTRING(item.item_description,1, 50), '...'",
+      'field_alias' => 'item_description',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'status_type_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'date_created',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'last_modified',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'item_repository_id',
+      'field_alias' => 'DT_RowId',
+    );
+
+    $query_params['fields'][] = array(
+      'table_name' => 'status_type',
+      'field_name' => 'label',
+      'field_alias' => 'status_label'
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'count(distinct capture_dataset.parent_item_repository_id)',
+      'field_alias' => 'datasets_count',
+    );
+
+    $query_params['records_values'] = array();
+
+    $query_params['limit'] = array(
+      'limit_start' => $start_record,
+      'limit_stop' => $stop_record,
+    );
+
+    if (!empty($sort_field) && !empty($sort_order)) {
+      $query_params['sort_fields'][] = array(
+        'field_name' => $sort_field,
+        'sort_order' => $sort_order,
+      );
+    } else {
+      $query_params['sort_fields'][] = array(
+        'field_name' => 'item.last_modified',
+        'sort_order' => 'DESC',
+      );
+    }
+
+    $data = $this->getRecordsDatatable($query_params);
+
+    return $data;
+
+  }
 
   /**
    * Save function.
