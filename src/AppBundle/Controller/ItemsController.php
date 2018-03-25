@@ -205,12 +205,19 @@ class ItemsController extends Controller
     {
         $item = new Items();
         $post = $request->request->all();
-        $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
         $item->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $item->subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
 
         // Retrieve data from the database.
-        $item = (!empty($item_repository_id) && empty($post)) ? $item->getItem((int)$item_repository_id, $conn) : $item;
+        if (!empty($id) && empty($post)) {
+          $item_array = $this->repo_storage_controller->execute('getItem', array(
+            'item_repository_id' => $id,
+          ));
+          if(is_array($item_array)) {
+            $item = (object)$item_array;
+          }
+        }
 
         // Get data from lookup tables.
         $item->item_type_lookup_options = $this->get_item_types($conn);
@@ -226,19 +233,19 @@ class ItemsController extends Controller
             $subject = $form->getData();
             $id = $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => 'capture_device_component',
-              'record_id' => $item_repository_id,
+              'record_id' => $id,
               'user_id' => $this->getUser()->getId(),
               'values' => (array)$item
             ));
             //$item_repository_id = $this->insert_update_item($item, $item->subject_repository_id, $item_repository_id, $conn);
 
             $this->addFlash('message', 'Item successfully updated.');
-            return $this->redirect('/admin/projects/datasets/' . $subject->project_repository_id . '/' . $item->subject_repository_id . '/' . $item_repository_id);
+            return $this->redirect('/admin/projects/datasets/' . $subject->project_repository_id . '/' . $item->subject_repository_id . '/' . $id);
 
         }
 
         return $this->render('items/item_form.html.twig', array(
-            'page_title' => ((int)$item_repository_id && isset($item->local_item_id)) ? 'Item: ' . $item->local_item_id : 'Add Item',
+            'page_title' => ((int)$id && isset($item->local_item_id)) ? 'Item: ' . $item->local_item_id : 'Add Item',
             'item_data' => $item,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),

@@ -56,7 +56,14 @@ class DatasetsController extends Controller
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
         $item = new Items();
-        $item->item_data = $item->getItem((int)$item_repository_id, $conn);
+        //$item->item_data = $item->getItem((int)$item_repository_id, $conn);
+        $item_array = $this->repo_storage_controller->execute('getItem', array(
+          'item_repository_id' => $item_repository_id,
+        ));
+        if(is_array($item_array)) {
+          $item->item_data = (object)$item_array;
+        }
+
         if(!$item->item_data) throw $this->createNotFoundException('The record does not exist');
 
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$project_repository_id));
@@ -234,18 +241,27 @@ class DatasetsController extends Controller
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_datasets_form( $capture_dataset_repository_id, Connection $conn, Request $request )
+    function show_datasets_form( $id, Connection $conn, Request $request )
     {
         $dataset = new Datasets();
         $post = $request->request->all();
-        $capture_dataset_repository_id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
         $dataset->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $dataset->subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
         $dataset->item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
 
         // Retrieve data from the database.
-        $dataset = (!empty($capture_dataset_repository_id) && empty($post)) ? $dataset->getDataset((int)$capture_dataset_repository_id, $conn) : $dataset;
-        
+        if (!empty($id) && empty($post)) {
+            $dataset_array = $this->repo_storage_controller->execute('getRecordById', array(
+              'base_table' => 'capture_dataset',
+              'id_field' => 'capture_dataset_repository_id',
+              'id_value' => $id,
+            ));
+            if(is_array($dataset_array)) {
+              $dataset = (object)$dataset_array;
+            }
+        }
+
         // Get data from lookup tables.
         $dataset->capture_methods_lookup_options = $this->get_capture_methods($conn);
         $dataset->dataset_types_lookup_options = $this->get_dataset_types($conn);
@@ -271,7 +287,7 @@ class DatasetsController extends Controller
 
             $id = $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => 'capture_dataset',
-              'record_id' => $capture_dataset_repository_id,
+              'record_id' => $id,
               'user_id' => $this->getUser()->getId(),
               'values' => $dataset_array
             ));
@@ -282,7 +298,7 @@ class DatasetsController extends Controller
         }
 
         return $this->render('datasets/dataset_form.html.twig', array(
-            'page_title' => !empty($capture_dataset_repository_id) ? 'Dataset: ' . $dataset->capture_dataset_name : 'Create Dataset',
+            'page_title' => !empty($id) ? 'Dataset: ' . $dataset->capture_dataset_name : 'Create Dataset',
             'dataset_data' => $dataset,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
