@@ -121,7 +121,7 @@ class ProjectsController extends Controller
         }
         
         // Get data from lookup tables.
-        $project->stakeholder_guid_options = $this->get_units_stakeholders($conn);
+        $project->stakeholder_guid_options = $this->get_units_stakeholders();
 
         // Create the form
         $form = $this->createForm(Project::class, $project);
@@ -176,7 +176,7 @@ class ProjectsController extends Controller
      *
      * @Route("/admin/projects/get_stakeholder_guids", name="get_stakeholder_guids_tree_browser", methods="GET")
      */
-    public function get_stakeholder_guids_tree_browser(Connection $conn)
+    public function get_stakeholder_guids_tree_browser()
     {
       $this->repo_storage_controller->setContainer($this->container);
       $projects = $this->repo_storage_controller->execute('getStakeholderGuids');
@@ -290,7 +290,7 @@ class ProjectsController extends Controller
      * Get unit_stakeholder
      * @return  array|bool  The query result
      */
-    public function get_units_stakeholders($conn)
+    public function get_units_stakeholders()
     {
       $data = array();
 
@@ -319,11 +319,10 @@ class ProjectsController extends Controller
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
-     * @param   object  $conn     Database connection object
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple_projects(Connection $conn, Request $request)
+    public function delete_multiple_projects(Request $request)
     {
         $ids = $request->query->get('ids');
 

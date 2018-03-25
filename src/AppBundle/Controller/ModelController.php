@@ -40,11 +40,10 @@ class ModelController extends Controller
     /**
      * @Route("/admin/projects/model/datatables_browse", name="model_browse_datatables", methods="POST")
      *
-     * @param Connection $conn
      * @param Request $request
      * @return JsonResponse The query result in JSON
      */
-    public function datatablesBrowse(Connection $conn, Request $request)
+    public function datatablesBrowse(Request $request)
     {
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -136,11 +135,10 @@ class ModelController extends Controller
     /**
      * @Route("/admin/projects/model/delete", name="model_remove_records", methods={"GET"})
      *
-     * @param Connection $conn
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\RedirectResponse|Response Redirect or render
      */
-    public function deleteMultiple(Connection $conn, Request $request)
+    public function deleteMultiple(Request $request)
     {
         if(!empty($request->query->get('ids'))) {
 

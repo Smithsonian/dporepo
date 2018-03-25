@@ -69,11 +69,10 @@ class SubjectsController extends Controller
      *
      * Run a query to retreive all subjects in the database.
      *
-     * @param   object  Connection  Database connection object
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_subjects(Connection $conn, Request $request, ItemsController $items)
+    public function datatables_browse_subjects(Request $request, ItemsController $items)
     {
         $req = $request->request->all();
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
@@ -269,11 +268,10 @@ class SubjectsController extends Controller
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
-     * @param   object  $conn     Database connection object
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple_subjects(Connection $conn, Request $request)
+    public function delete_multiple_subjects(Request $request)
     {
         $ids = $request->query->get('ids');
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;

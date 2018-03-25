@@ -53,14 +53,14 @@ class DatasetElementsController extends Controller
         $capture_dataset_repository_id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $dataset_data = $datasets->get_dataset((int)$capture_dataset_repository_id, $conn);
+        $dataset_data = $datasets->get_dataset($this->container, (int)$capture_dataset_repository_id);
         if(!$dataset_data) throw $this->createNotFoundException('The record does not exist');
         
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $project_repository_id));
 
-        $subject_data = $subjects->get_subject((int)$subject_repository_id, $conn);
+        $subject_data = $subjects->get_subject($this->container, (int)$subject_repository_id);
         $item_data = $items->get_item((int)$item_repository_id);
-        $dataset_element_data = $this->get_dataset_element((int)$capture_dataset_repository_id, $conn);
+        $dataset_element_data = $this->get_dataset_element($this->container, (int)$capture_dataset_repository_id);
 
         // Truncate the item_description.
         $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
@@ -161,16 +161,16 @@ class DatasetElementsController extends Controller
         // Get data for the breadcumbs.
         // TODO: find a better way?
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$dataset_element->project_repository_id));
-        $subject_data = $subjects->get_subject((int)$dataset_element->subject_repository_id, $conn);
+        $subject_data = $subjects->get_subject($this->container, (int)$dataset_element->subject_repository_id);
         $item_data = $items->get_item((int)$dataset_element->item_repository_id);
-        $dataset_data = $datasets->get_dataset((int)$dataset_element->capture_dataset_repository_id, $conn);
+        $dataset_data = $datasets->get_dataset($this->container, (int)$dataset_element->capture_dataset_repository_id);
         
         // Truncate the item_description so the breadcrumb don't blow up.
         $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
         $item_data['item_description_truncated'] = substr($item_data['item_description'], 0, 50) . $more_indicator;
 
         // Get data from lookup tables.
-        $dataset_element->calibration_object_type_options = $this->get_calibration_object_types($conn);
+        $dataset_element->calibration_object_type_options = $this->get_calibration_object_types();
 
         // Create the form
         $form = $this->createForm(DatasetElement::class, $dataset_element);
@@ -220,12 +220,12 @@ class DatasetElementsController extends Controller
      * @param       int $capture_dataset_repository_id  The dataset ID
      * @return      array|bool        The query result
      */
-    public function get_dataset_elements($capture_dataset_repository_id = false, $conn)
+    public function get_dataset_elements($container, $capture_dataset_repository_id = false)
     {
         $query_params = array(
           'capture_dataset_repository_id' => $capture_dataset_repository_id,
         );
-        $this->repo_storage_controller->setContainer($this->container);
+        $this->repo_storage_controller->setContainer($container);
         $data = $this->repo_storage_controller->execute('getElementsForCaptureDataset', $query_params);
         return $data;
     }
@@ -235,10 +235,10 @@ class DatasetElementsController extends Controller
      *
      * @Route("/admin/projects/get_dataset_elements/{capture_dataset_repository_id}", name="get_dataset_elements_tree_browser", methods="GET")
      */
-    public function get_dataset_elements_tree_browser(Connection $conn, Request $request)
+    public function get_dataset_elements_tree_browser(Request $request)
     {      
         $capture_dataset_repository_id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;        
-        $capture_data_element = $this->get_dataset_elements($capture_dataset_repository_id, $conn);
+        $capture_data_element = $this->get_dataset_elements($this->container, $capture_dataset_repository_id);
 
         foreach ($capture_data_element as $key => $value) {
             $data[$key] = array(
@@ -261,9 +261,9 @@ class DatasetElementsController extends Controller
      * @param       int $capture_data_element_repository_id  The dataset element ID
      * @return      array|bool                The query result
      */
-    public function get_dataset_element($capture_data_element_repository_id = false)
+    public function get_dataset_element($container, $capture_data_element_repository_id = false)
     {
-        $this->repo_storage_controller->setContainer($this->container);
+        $this->repo_storage_controller->setContainer($container);
         $record = $this->repo_storage_controller->execute('getRecordById',
           array(
             'base_table' => 'capture_data_element',
@@ -303,11 +303,10 @@ class DatasetElementsController extends Controller
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
-     * @param   object  $conn     Database connection object
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple_capture_data_element(Connection $conn, Request $request)
+    public function delete_multiple_capture_data_element(Request $request)
     {
         $ids = $request->query->get('ids');
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;

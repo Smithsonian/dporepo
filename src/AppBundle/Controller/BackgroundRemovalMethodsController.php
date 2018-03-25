@@ -70,7 +70,7 @@ class BackgroundRemovalMethodsController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_background_removal_methods(Connection $conn, Request $request)
+    public function datatables_browse_background_removal_methods(Request $request)
     {
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -174,11 +174,10 @@ class BackgroundRemovalMethodsController extends Controller
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
-     * @param   object  $conn     Database connection object
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple(Connection $conn, Request $request)
+    public function delete_multiple(Request $request)
     {
       $ids = $request->query->get('ids');
 

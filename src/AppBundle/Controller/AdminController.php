@@ -73,11 +73,10 @@ class AdminController extends Controller
      *
      * Run a query to retreive all recent projects.
      *
-     * @param   object  Connection  Database connection object
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_recent_projects(Connection $conn, Request $request, SubjectsController $subjects)
+    public function datatables_browse_recent_projects(Request $request, SubjectsController $subjects)
     {
         $data = array();
         $req = $request->request->all();

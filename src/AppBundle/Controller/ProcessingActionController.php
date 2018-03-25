@@ -40,11 +40,10 @@ class ProcessingActionController extends Controller
     /**
      * @Route("/admin/projects/processing_action/datatables_browse", name="processing_action_browse_datatables", methods="POST")
      *
-     * @param Connection $conn
      * @param Request $request
      * @return JsonResponse The query result in JSON
      */
-    public function datatablesBrowse(Connection $conn, Request $request)
+    public function datatablesBrowse(Request $request)
     {
         $data = new ProcessingAction();
 
@@ -168,11 +167,10 @@ class ProcessingActionController extends Controller
     /**
      * @Route("/admin/projects/processing_action/delete", name="processing_action_remove_records", methods={"GET"})
      *
-     * @param Connection $conn
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\RedirectResponse|Response Redirect or render
      */
-    public function deleteMultiple(Connection $conn, Request $request)
+    public function deleteMultiple(Request $request)
     {
         if(!empty($request->query->get('ids'))) {
 

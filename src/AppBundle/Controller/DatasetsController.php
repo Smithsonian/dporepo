@@ -67,7 +67,7 @@ class DatasetsController extends Controller
         if(!$item->item_data) throw $this->createNotFoundException('The record does not exist');
 
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$project_repository_id));
-        $subject_data = $subjects->get_subject((int)$subject_repository_id, $conn);
+        $subject_data = $subjects->get_subject($this->container, (int)$subject_repository_id);
         $jobBoxDirectoryContents = is_dir(JOBBOX_PATH) ? scandir(JOBBOX_PATH) : array();
         $jobBoxProcessedDirectoryContents = is_dir(JOBBOXPROCESS_PATH) ? scandir(JOBBOXPROCESS_PATH) : array();
 
@@ -96,11 +96,10 @@ class DatasetsController extends Controller
      *
      * Run a query to retreive all datasets in the database.
      *
-     * @param   object  Connection  Database connection object
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_datasets(Connection $conn, Request $request)
+    public function datatables_browse_datasets(Request $request)
     {
         $req = $request->request->all();
         $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
@@ -210,13 +209,13 @@ class DatasetsController extends Controller
      * @param       int $item_repository_id    The item ID
      * @return      array|bool       The query result
      */
-    public function get_datasets($item_repository_id = false)
+    public function get_datasets($container, $item_repository_id = false)
     {
 
       $query_params = array(
         'item_repository_id' => $item_repository_id,
       );
-      $this->repo_storage_controller->setContainer($this->container);
+      $this->repo_storage_controller->setContainer($container);
       $data = $this->repo_storage_controller->execute('getDatasets', $query_params);
 
       return $data;
@@ -228,15 +227,15 @@ class DatasetsController extends Controller
      *
      * @Route("/admin/projects/get_datasets/{item_repository_id}", name="get_datasets_tree_browser", methods="GET")
      */
-    public function get_datasets_tree_browser(Connection $conn, Request $request, DatasetElementsController $dataset_elements)
+    public function get_datasets_tree_browser(Request $request, DatasetElementsController $dataset_elements)
     {      
         $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;        
-        $datasets = $this->get_datasets($item_repository_id);
+        $datasets = $this->get_datasets($this->container, $item_repository_id);
 
         foreach ($datasets as $key => $value) {
 
             // Check for child dataset records so the 'children' key can be set accordingly.
-            $dataset_elements_data = $dataset_elements->get_dataset_elements((int)$value['capture_dataset_repository_id'], $conn);
+            $dataset_elements_data = $dataset_elements->get_dataset_elements($this->container, (int)$value['capture_dataset_repository_id']);
             $data[$key] = array(
                 'id' => 'datasetId-' . $value['capture_dataset_repository_id'],
                 'children' => count($dataset_elements_data) ? true : false,
@@ -257,12 +256,12 @@ class DatasetsController extends Controller
      * @param       int $capture_dataset_repository_id    The data value
      * @return      array|bool              The query result
      */
-    public function get_dataset($capture_dataset_repository_id = false, $conn)
+    public function get_dataset($container, $capture_dataset_repository_id = false)
     {
       $query_params = array(
         'capture_dataset_repository_id' => $capture_dataset_repository_id,
       );
-      $this->repo_storage_controller->setContainer($this->container);
+      $this->repo_storage_controller->setContainer($container);
       $data = $this->repo_storage_controller->execute('getCaptureDataset', $query_params);
       return $data;
     }
@@ -343,7 +342,7 @@ class DatasetsController extends Controller
      * Get focus_types
      * @return  array|bool  The query result
      */
-    public function get_focus_types($conn)
+    public function get_focus_types()
     {
       $data = array();
       $this->repo_storage_controller->setContainer($this->container);
@@ -442,11 +441,10 @@ class DatasetsController extends Controller
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
-     * @param   object  $conn     Database connection object
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple_datasets(Connection $conn, Request $request)
+    public function delete_multiple_datasets(Request $request)
     {
         $ids = $request->query->get('ids');
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;

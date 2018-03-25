@@ -52,7 +52,7 @@ class ItemsController extends Controller
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $subject_data = $subjects->get_subject((int)$subject_repository_id, $conn);
+        $subject_data = $subjects->get_subject($this->container, (int)$subject_repository_id);
         if(!$subject_data) throw $this->createNotFoundException('The record does not exist');
 
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$project_repository_id));
@@ -253,14 +253,14 @@ class ItemsController extends Controller
      *
      * @Route("/admin/projects/get_items/{subject_repository_id}", name="get_items_tree_browser", methods="GET")
      */
-    public function get_items_tree_browser(Connection $conn, Request $request, DatasetsController $datasets)
+    public function get_items_tree_browser(Request $request, DatasetsController $datasets)
     {      
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
         $items = $this->get_items($this->container, $subject_repository_id);
 
         foreach ($items as $key => $value) {
             // Check for child dataset records so the 'children' key can be set accordingly.
-            $dataset_data = $datasets->get_datasets((int)$value['item_repository_id']);
+            $dataset_data = $datasets->get_datasets($this->container, (int)$value['item_repository_id']);
             $data[$key] = array(
                 'id' => 'itemId-' . $value['item_repository_id'],
                 'children' => count($dataset_data) ? true : false,
@@ -305,11 +305,10 @@ class ItemsController extends Controller
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
-     * @param   object  $conn     Database connection object
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple_items(Connection $conn, Request $request)
+    public function delete_multiple_items(Request $request)
     {
         $ids = $request->query->get('ids');
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;

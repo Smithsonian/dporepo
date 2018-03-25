@@ -50,7 +50,7 @@ class UnitStakeholderController extends Controller
     /**
      * @Route("/admin/resources/unit_stakeholder/", name="unit_stakeholder_browse", methods="GET")
      */
-    public function browse(Connection $conn, Request $request)
+    public function browse(Request $request)
     {
         // Database tables are only created if not present.
         $this->repo_storage_controller->setContainer($this->container);
@@ -68,11 +68,10 @@ class UnitStakeholderController extends Controller
      *
      * Run a query to retreive all Unit Stakeholder in the database.
      *
-     * @param   object  Connection  Database connection object
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_unit_stakeholder(Connection $conn, Request $request)
+    public function datatables_browse_unit_stakeholder(Request $request)
     {
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -116,11 +115,10 @@ class UnitStakeholderController extends Controller
      * @Route("/admin/resources/unit_stakeholder/manage/{id}", name="unit_stakeholder_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param   int     $id           The unit_stakeholder ID
-     * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_unit_stakeholder_form(Connection $conn, Request $request, GumpParseErrors $gump_parse_errors, ProjectsController $projects, IsniController $isni)
+    function show_unit_stakeholder_form(Request $request, GumpParseErrors $gump_parse_errors, ProjectsController $projects, IsniController $isni)
     {
         $errors = false;
         $data = array();
@@ -136,7 +134,7 @@ class UnitStakeholderController extends Controller
         }
 
         // Get data from lookup tables.
-        $data['units_stakeholders'] = $projects->get_units_stakeholders($conn);
+        $data['units_stakeholders'] = $projects->get_units_stakeholders();
 
         // Validate posted data.
         if(!empty($post)) {
@@ -220,11 +218,10 @@ class UnitStakeholderController extends Controller
      * Run a query to delete multiple Unit Stakeholde records.
      *
      * @param   int     $ids      The record ids
-     * @param   object  $conn     Database connection object
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple(Connection $conn, Request $request)
+    public function delete_multiple(Request $request)
     {
         $ids = $request->query->get('ids');
 

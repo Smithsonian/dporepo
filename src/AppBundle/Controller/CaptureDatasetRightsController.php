@@ -137,11 +137,10 @@ class CaptureDatasetRightsController extends Controller
     /**
      * @Route("/admin/projects/capture_dataset_rights/delete", name="capture_dataset_rights_remove_records", methods={"GET"})
      *
-     * @param Connection $conn
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\RedirectResponse|Response Redirect or render
      */
-    public function deleteMultiple(Connection $conn, Request $request)
+    public function deleteMultiple(Request $request)
     {
         if(!empty($request->query->get('ids'))) {
 
