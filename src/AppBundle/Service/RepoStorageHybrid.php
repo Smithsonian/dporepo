@@ -197,6 +197,66 @@ class RepoStorageHybrid implements RepoStorage {
       return $return_data;
   }
 
+  public function getCaptureDataset($params) {
+    //$params will be something like array('capture_dataset_repository_id' => '123');
+
+
+    $capture_dataset_repository_id = array_key_exists('capture_dataset_repository_id', $params) ? $params['capture_dataset_repository_id'] : NULL;
+    $sql = "SELECT
+          capture_dataset.capture_dataset_guid
+          ,capture_dataset.capture_dataset_field_id
+          ,capture_dataset.capture_method
+          ,capture_dataset.capture_dataset_type
+          ,capture_dataset.capture_dataset_name
+          ,capture_dataset.collected_by
+          ,capture_dataset.date_of_capture
+          ,capture_dataset.capture_dataset_description
+          ,capture_dataset.collection_notes
+          ,capture_dataset.support_equipment
+          ,capture_dataset.item_position_type
+          ,capture_dataset.item_position_field_id
+          ,capture_dataset.item_arrangement_field_id
+          ,capture_dataset.positionally_matched_capture_datasets
+          ,capture_dataset.focus_type
+          ,capture_dataset.light_source_type
+          ,capture_dataset.background_removal_method
+          ,capture_dataset.cluster_type
+          ,capture_dataset.cluster_geometry_field_id
+          ,capture_dataset.resource_capture_datasets
+          ,capture_dataset.calibration_object_used
+          ,capture_dataset.date_created
+          ,capture_dataset.created_by_user_account_id
+          ,capture_dataset.last_modified
+          ,capture_dataset.last_modified_user_account_id
+          ,capture_method.label AS capture_method
+          ,dataset_type.label AS capture_dataset_type
+          ,item_position_type.label_alias AS item_position_type
+          ,focus_type.label AS focus_type
+          ,light_source_type.label AS light_source_type
+          ,background_removal_method.label AS background_removal_method
+          ,camera_cluster_type.label AS camera_cluster_type
+        FROM capture_dataset
+        LEFT JOIN capture_method ON capture_method.capture_method_repository_id = capture_dataset.capture_method
+        LEFT JOIN dataset_type ON dataset_type.dataset_type_repository_id = capture_dataset.capture_dataset_type
+        LEFT JOIN item_position_type ON item_position_type.item_position_type_repository_id = capture_dataset.item_position_type
+        LEFT JOIN focus_type ON focus_type.focus_type_repository_id = capture_dataset.focus_type
+        LEFT JOIN light_source_type ON light_source_type.light_source_type_repository_id = capture_dataset.light_source_type
+        LEFT JOIN background_removal_method ON background_removal_method.background_removal_method_repository_id = capture_dataset.background_removal_method
+        LEFT JOIN camera_cluster_type ON camera_cluster_type.camera_cluster_type_repository_id = capture_dataset.cluster_type
+        WHERE capture_dataset.active = 1
+        AND capture_dataset.capture_dataset_repository_id = :capture_dataset_repository_id";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, PDO::PARAM_INT);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    if(array_key_exists(0, $ret)) {
+      $return_data = $ret[0];
+    }
+    return $return_data;
+  }
+
   public function getRecordById($params) {
 
     $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
@@ -285,6 +345,40 @@ class RepoStorageHybrid implements RepoStorage {
     //@todo do something if $ret has errors
 
     return $return_data;
+  }
+
+  public function getElementsForCaptureDataset($params) {
+
+      $capture_dataset_repository_id = array_key_exists('capture_dataset_repository_id', $params) ? $params['capture_dataset_repository_id'] : NULL;
+      $sql = "SELECT
+                project.project_repository_id,
+                subject.subject_repository_id,
+                item.item_repository_id,
+                capture_data_element.capture_data_element_repository_id,
+                capture_data_element.capture_dataset_repository_id,
+                capture_data_element.capture_device_configuration_id,
+                capture_data_element.capture_device_field_id,
+                capture_data_element.capture_sequence_number,
+                capture_data_element.cluster_position_field_id,
+                capture_data_element.position_in_cluster_field_id,
+                capture_data_element.date_created,
+                capture_data_element.created_by_user_account_id,
+                capture_data_element.last_modified,
+                capture_data_element.last_modified_user_account_id,
+                capture_data_element.active
+            FROM capture_data_element
+            LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
+            LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
+            LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
+            LEFT JOIN project ON project.project_repository_id = subject.project_repository_id
+            WHERE capture_data_element.active = 1
+            AND capture_data_element.capture_dataset_repository_id = :capture_dataset_repository_id";
+
+      $statement = $this->connection->prepare($sql);
+
+      $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, PDO::PARAM_INT);
+      $statement->execute();
+      return $statement->fetchAll(PDO::FETCH_ASSOC);
   }
 
   public function getItemsBySubjectId($params) {
@@ -1095,10 +1189,134 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   /**
+   * Generic function for getting datatable data.
    * @param $params
    * @return mixed
    */
-  public function getDatatableSubjectItems($params) {
+  public function getDatatableProject($params) {
+
+    $record_type = 'project';
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $date_range_start = array_key_exists('date_range_start', $params) ? $params['date_range_start'] : NULL;
+    $date_range_end = array_key_exists('date_range_end', $params) ? $params['date_range_end'] : NULL;
+
+    $query_params = array(
+      'distinct' => true, // @todo Do we always want this to be true?
+      'base_table' => $record_type,
+      'fields' => array(),
+    );
+
+    $query_params['limit'] = array(
+      'limit_start' => $start_record,
+      'limit_stop' => $stop_record,
+    );
+
+    if (!empty($sort_field) && !empty($sort_order)) {
+      $query_params['sort_fields'][] = array(
+        'field_name' => $sort_field,
+        'sort_order' => $sort_order,
+      );
+    } else {
+      $query_params['sort_fields'][] = array(
+        'field_name' => $record_type . '.last_modified',
+        'sort_order' => 'DESC',
+      );
+    }
+
+    $query_params['related_tables'][] = array(
+      'table_name' => 'isni_data',
+      'table_join_field' => 'isni_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'project',
+      'base_join_field' => 'stakeholder_guid',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => $record_type . '_repository_id',
+      'field_alias' => 'manage',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => 'project_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => 'project_name',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => 'stakeholder_guid',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => 'date_created',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => 'last_modified',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => 'active',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => $record_type . '_repository_id',
+      'field_alias' => 'DT_RowId',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'isni_data',
+      'field_name' => 'isni_label',
+      'field_alias' => 'stakeholder_label',
+    );
+
+    $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
+    if (NULL !== $search_value) {
+      $query_params['search_type'] = 'AND';
+      $query_params['search_params'][1] = array(
+        'field_names' => array(
+          $record_type . '.project_name',
+          $record_type . '.stakeholder_label',
+          $record_type . '.date_created',
+          $record_type . '.last_modified',
+        ),
+        'search_values' => array($search_value),
+        'comparison' => 'LIKE',
+      );
+    }
+
+    if(NULL !== $date_range_start) {
+      $c = count($query_params['search_params']);
+      $query_params['search_params'][$c] = array(
+        'field_names' => array('project.last_modified'),
+        'search_values' => array($date_range_start),
+        'comparison' => '<',
+      );
+    }
+    if(NULL !== $date_range_end) {
+      $c = count($query_params['search_params']);
+      $query_params['search_params'][$c] = array(
+        'field_names' => array('project.last_modified'),
+        'search_values' => array($date_range_end),
+        'comparison' => '>',
+      );
+    }
+
+    $data = $this->getRecordsDatatable($query_params);
+    return $data;
+
+  }
+
+  /**
+   * @param $params
+   * @return mixed
+   */
+  public function getDatatableSubjectItem($params) {
 
     $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
     $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
@@ -1545,6 +1763,121 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
+  public function getDatatableCaptureDataElement($params) {
+
+      $record_type = 'capture_data_element';
+      $capture_dataset_repository_id = array_key_exists('capture_dataset_repository_id', $params) ? $params['capture_dataset_repository_id'] : NULL;
+      $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+      $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+      $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+      $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+
+      $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+      //@todo- allow match on ID- specify ID field and value $record_match = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+
+      $query_params = array(
+        'distinct' => true, // @todo Do we always want this to be true?
+        'base_table' => $record_type,
+        'fields' => array(),
+      );
+
+      $query_params['limit'] = array(
+        'limit_start' => $start_record,
+        'limit_stop' => $stop_record,
+      );
+
+      if (!empty($sort_field) && !empty($sort_order)) {
+        $query_params['sort_fields'][] = array(
+          'field_name' => $sort_field,
+          'sort_order' => $sort_order,
+        );
+      } else {
+        $query_params['sort_fields'][] = array(
+          'field_name' => $record_type . '.last_modified',
+          'sort_order' => 'DESC',
+        );
+      }
+
+      $query_params['fields'][] = array(
+        'table_name' => $record_type,
+        'field_name' => $record_type . '_repository_id',
+        'field_alias' => 'manage',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => $record_type,
+        'field_name' => 'capture_dataset_repository_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => $record_type,
+        'field_name' => 'capture_device_configuration_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => $record_type,
+        'field_name' => 'capture_device_field_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => $record_type,
+        'field_name' => 'capture_sequence_number',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => $record_type,
+        'field_name' => 'cluster_position_field_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => $record_type,
+        'field_name' => 'position_in_cluster_field_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => $record_type,
+        'field_name' => 'date_created',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => $record_type,
+        'field_name' => 'created_by_user_account_id',
+      );
+
+      $query_params['fields'][] = array(
+        'table_name' => $record_type,
+        'field_name' => 'last_modified',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => $record_type,
+        'field_name' => 'last_modified_user_account_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => $record_type,
+        'field_name' => $record_type . '_repository_id',
+        'field_alias' => 'DT_RowId',
+      );
+      $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
+      if (NULL !== $search_value) {
+        $query_params['search_type'] = 'AND';
+        $query_params['search_params'][1] = array(
+          'field_names' => array(
+            $record_type . '.dataset_element_guid',
+            $record_type . '.camera_id',
+          ),
+          'search_values' => array($search_value),
+          'comparison' => 'LIKE',
+        );
+      }
+      if(NULL !== $capture_dataset_repository_id) {
+        $query_params['search_type'] = 'AND';
+        $c = count($query_params['search_params']);
+        $query_params['search_params'][$c] = array(
+          'field_names' => array(
+            $record_type . '.capture_dataset_repository_id',
+          ),
+          'search_values' => array((int)$capture_dataset_repository_id),
+          'comparison' => 'LIKE',
+        );
+      }
+
+      $data = $this->getRecordsDatatable($query_params);
+      return $data;
+
+  }
+
   /**
    * @param $params
    * @return mixed
@@ -1701,6 +2034,31 @@ class RepoStorageHybrid implements RepoStorage {
     return array('return' => 'success', 'data' => $return);
 
 }
+
+  public function markCaptureDatasetInactive($params) {
+    $user_id = $params['user_id'];
+    $capture_dataset_repository_id = $params['record_id'];
+
+    //@todo trap for missing user_id or record_id.
+    $sql = "UPDATE capture_dataset
+                LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_repository_id = capture_dataset.capture_dataset_repository_id
+                SET capture_dataset.active = 0,
+                    capture_dataset.last_modified_user_account_id = :last_modified_user_account_id,
+                    capture_data_element.active = 0,
+                    capture_data_element.last_modified_user_account_id = :last_modified_user_account_id
+                WHERE capture_dataset.capture_dataset_repository_id = :id
+            ";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":id", $capture_dataset_repository_id, PDO::PARAM_INT);
+    $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
+    $statement->execute();
+
+    $return = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    return array('return' => 'success', 'data' => $return);
+
+  }
 
   /**
    * Save function.
