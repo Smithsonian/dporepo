@@ -48,7 +48,7 @@ class DatasetsController extends Controller
         // Database tables are only created if not present.
         $this->repo_storage_controller->setContainer($this->container);
 
-        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'dataset'));
+        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'capture_dataset'));
 
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
@@ -102,11 +102,6 @@ class DatasetsController extends Controller
      */
     public function datatables_browse_datasets(Connection $conn, Request $request)
     {
-        $sort = '';
-        $search_sql = '';
-        $pdo_params = array();
-        $data = array();
-
         $req = $request->request->all();
         $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
 
@@ -115,120 +110,21 @@ class DatasetsController extends Controller
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
-        $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
 
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $sort = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $sort = " ORDER BY capture_dataset.last_modified DESC ";
-        }
-
+        $query_params = array(
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+          'item_repository_id' => $item_repository_id,
+        );
         if ($search) {
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $pdo_params[] = '%'.$search.'%';
-          $search_sql = "
-              AND (
-                OR capture_dataset.capture_dataset_guid LIKE ?
-                OR capture_dataset.capture_dataset_field_id LIKE ?
-                OR capture_dataset.capture_method LIKE ?
-                OR capture_dataset.capture_dataset_type LIKE ?
-                OR capture_dataset.capture_dataset_name LIKE ?
-                OR capture_dataset.collected_by LIKE ?
-                OR capture_dataset.date_of_capture LIKE ?
-                OR capture_dataset.capture_dataset_description LIKE ?
-                OR capture_dataset.collection_notes LIKE ?
-                OR capture_dataset.support_equipment LIKE ?
-                OR capture_dataset.item_position_type LIKE ?
-                OR capture_dataset.item_position_field_id LIKE ?
-                OR capture_dataset.item_arrangement_field_id LIKE ?
-                OR capture_dataset.positionally_matched_capture_datasets LIKE ?
-                OR capture_dataset.focus_type LIKE ?
-                OR capture_dataset.light_source_type LIKE ?
-                OR capture_dataset.background_removal_method LIKE ?
-                OR capture_dataset.cluster_type LIKE ?
-                OR capture_dataset.cluster_geometry_field_id LIKE ?
-                OR capture_dataset.resource_capture_datasets LIKE ?
-                OR capture_dataset.calibration_object_used LIKE ?
-                OR capture_dataset.date_created LIKE ?
-                OR capture_dataset.created_by_user_account_id LIKE ?
-                OR capture_dataset.last_modified LIKE ?
-                OR capture_dataset.last_modified_user_account_id LIKE ?
-              ) ";
+          $query_params['search_value'] = $search;
         }
 
-        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-              capture_dataset.capture_dataset_repository_id AS manage
-              ,capture_dataset.capture_dataset_guid
-              ,capture_dataset.capture_dataset_field_id
-              ,capture_dataset.capture_dataset_name
-              ,capture_dataset.collected_by
-              ,capture_dataset.date_of_capture
-              ,capture_dataset.capture_dataset_description
-              ,capture_dataset.collection_notes
-              ,capture_dataset.support_equipment
-              ,capture_dataset.item_position_field_id
-              ,capture_dataset.item_arrangement_field_id
-              ,capture_dataset.positionally_matched_capture_datasets
-              ,capture_dataset.cluster_geometry_field_id
-              ,capture_dataset.resource_capture_datasets
-              ,capture_dataset.calibration_object_used
-              ,capture_dataset.date_created
-              ,capture_dataset.created_by_user_account_id
-              ,capture_dataset.last_modified
-              ,capture_dataset.last_modified_user_account_id
-              ,capture_dataset.capture_dataset_repository_id AS DT_RowId
-              ,capture_method.label AS capture_method
-              ,dataset_type.label AS capture_dataset_type
-              ,item_position_type.label_alias AS item_position_type
-              ,focus_type.label AS focus_type
-              ,light_source_type.label AS light_source_type
-              ,background_removal_method.label AS background_removal_method
-              ,camera_cluster_type.label AS cluster_type
-          FROM capture_dataset
-          LEFT JOIN capture_method ON capture_method.capture_method_repository_id = capture_dataset.capture_method
-          LEFT JOIN dataset_type ON dataset_type.dataset_type_repository_id = capture_dataset.capture_dataset_type
-          LEFT JOIN item_position_type ON item_position_type.item_position_type_repository_id = capture_dataset.item_position_type
-          LEFT JOIN focus_type ON focus_type.focus_type_repository_id = capture_dataset.focus_type
-          LEFT JOIN light_source_type ON light_source_type.light_source_type_repository_id = capture_dataset.light_source_type
-          LEFT JOIN background_removal_method ON background_removal_method.background_removal_method_repository_id = capture_dataset.background_removal_method
-          LEFT JOIN camera_cluster_type ON camera_cluster_type.camera_cluster_type_repository_id = capture_dataset.cluster_type
-          WHERE capture_dataset.active = 1
-          AND capture_dataset.parent_item_repository_id = " . (int)$item_repository_id . "
-          {$search_sql}
-          {$sort}
-          {$limit_sql}");
-        $statement->execute($pdo_params);
-        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatableCaptureDataset', $query_params);
 
-        $statement = $conn->prepare("SELECT FOUND_ROWS()");
-        $statement->execute();
-        $count = $statement->fetch();
-        $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-        $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
-        
         return $this->json($data);
     }
 
@@ -314,49 +210,17 @@ class DatasetsController extends Controller
      * @param       int $item_repository_id    The item ID
      * @return      array|bool       The query result
      */
-    public function get_datasets($conn, $parent_item_repository_id = false)
+    public function get_datasets($item_repository_id = false)
     {
-      $statement = $conn->prepare("
-          SELECT
-              project.project_repository_id
-              ,subject.subject_repository_id
-              ,capture_dataset.parent_item_repository_id
-              ,capture_dataset.capture_dataset_repository_id
-              ,capture_dataset.capture_dataset_guid
-              ,capture_dataset.capture_dataset_field_id
-              ,capture_dataset.capture_method
-              ,capture_dataset.capture_dataset_type
-              ,capture_dataset.capture_dataset_name
-              ,capture_dataset.collected_by
-              ,capture_dataset.date_of_capture
-              ,capture_dataset.capture_dataset_description
-              ,capture_dataset.collection_notes
-              ,capture_dataset.support_equipment
-              ,capture_dataset.item_position_type
-              ,capture_dataset.item_position_field_id
-              ,capture_dataset.item_arrangement_field_id
-              ,capture_dataset.positionally_matched_capture_datasets
-              ,capture_dataset.focus_type
-              ,capture_dataset.light_source_type
-              ,capture_dataset.background_removal_method
-              ,capture_dataset.cluster_type
-              ,capture_dataset.cluster_geometry_field_id
-              ,capture_dataset.resource_capture_datasets
-              ,capture_dataset.calibration_object_used
-              ,capture_dataset.date_created
-              ,capture_dataset.created_by_user_account_id
-              ,capture_dataset.last_modified
-              ,capture_dataset.last_modified_user_account_id
-              ,capture_dataset.active
-          FROM capture_dataset
-          LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
-          LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
-          LEFT JOIN project ON project.project_repository_id = subject.project_repository_id
-          WHERE capture_dataset.active = 1
-          AND capture_dataset.parent_item_repository_id = :parent_item_repository_id");
-      $statement->bindValue(":parent_item_repository_id", $parent_item_repository_id, PDO::PARAM_INT);
-      $statement->execute();
-      return $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      $query_params = array(
+        'item_repository_id' => $item_repository_id,
+      );
+      $this->repo_storage_controller->setContainer($this->container);
+      $data = $this->repo_storage_controller->execute('getDatasets', $query_params);
+
+      return $data;
+
     }
 
     /**
@@ -367,7 +231,7 @@ class DatasetsController extends Controller
     public function get_datasets_tree_browser(Connection $conn, Request $request, DatasetElementsController $dataset_elements)
     {      
         $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;        
-        $datasets = $this->get_datasets($conn, $item_repository_id);
+        $datasets = $this->get_datasets($item_repository_id);
 
         foreach ($datasets as $key => $value) {
 
