@@ -511,7 +511,7 @@ class RepoStorageHybrid implements RepoStorage {
 
         break;
 
-      case 'capture_dataset_rights':
+      case 'capture_dataset_right':
         $query_params['fields'][] = array(
           'table_name' => $record_type,
           'field_name' => $record_type . '_repository_id',
@@ -907,6 +907,70 @@ class RepoStorageHybrid implements RepoStorage {
         );
 
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
+        break;
+
+      case 'project':
+        $query_params['related_tables'][] = array(
+          'table_name' => 'isni_data',
+          'table_join_field' => 'isni_id',
+          'join_type' => 'LEFT JOIN',
+          'base_join_table' => 'project',
+          'base_join_field' => 'stakeholder_guid',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+          'field_alias' => 'manage',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'project_repository_id',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'project_name',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'stakeholder_guid',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'date_created',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'last_modified',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'active',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+          'field_alias' => 'DT_RowId',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => 'isni_data',
+          'field_name' => 'isni_label',
+          'field_alias' => 'stakeholder_label',
+        );
+
+        $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
+        if (NULL !== $search_value) {
+          $query_params['search_type'] = 'AND';
+          $query_params['search_params'][1] = array(
+            'field_names' => array(
+              $record_type . '.project_name',
+              $record_type . '.stakeholder_label',
+              $record_type . '.date_created',
+              $record_type . '.last_modified',
+            ),
+            'search_values' => array($search_value),
+            'comparison' => 'LIKE',
+          );
+        }
         break;
 
       case 'unit_stakeholder':
@@ -1466,6 +1530,10 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
+  /**
+   * @param $params
+   * @return mixed
+   */
   public function getDatatableItem($params) {
 
     $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
