@@ -172,92 +172,18 @@ class AdminController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
-        // GROUP BY subjects.holding_entity_guid, subjects.local_subject_id, subjects.subject_guid, subjects.subject_name, subjects.last_modified, subjects.active, subjects.subject_repository_id
         $query_params = array(
-          'distinct' => true,
-          'base_table' => 'subject',
-          'fields' => array(),
-          'search_params' => array(
-            0 => array('field_names' => array('subject.active'), 'search_values' => array(1), 'comparison' => '='),
-          ),
-          'search_type' => 'AND',
-        );
-
-        $query_params['related_tables'][] = array(
-          'table_name' => 'item',
-          'table_join_field' => 'subject_repository_id',
-          'join_type' => 'LEFT JOIN',
-          'base_join_table' => 'subject',
-          'base_join_field' => 'subject_repository_id',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
         );
         if ($search) {
-          $query_params['search_params'][1] = array(
-            'field_names' => array(
-              'subject.subject_name',
-              'subject.holding_entity_guid',
-              'subject.last_modified'
-            ),
-            'search_values' => array($search),
-            'comparison' => 'LIKE',
-          );
-        }
-
-        // Fields.
-        $query_params['fields'][] = array(
-          'table_name' => 'subject',
-          'field_name' => 'subject_repository_id',
-          'field_alias' => 'manage',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => 'subject',
-          'field_name' => 'subject_repository_id',
-          'field_alias' => 'DT_RowId',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => 'subject',
-          'field_name' => 'subject_repository_id',
-        );
-        $query_params['fields'][] = array(
-          'field_name' => 'holding_entity_guid',
-        );
-        $query_params['fields'][] = array(
-          'field_name' => 'local_subject_id',
-        );
-        $query_params['fields'][] = array(
-          'field_name' => 'subject_guid',
-        );
-      $query_params['fields'][] = array(
-        'field_name' => 'subject_name',
-      );
-        $query_params['fields'][] = array(
-          'table_name' => 'subject',
-          'field_name' => 'active',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => 'subject',
-          'field_name' => 'last_modified',
-        );
-        $query_params['records_values'] = array();
-
-        $query_params['limit'] = array(
-          'limit_start' => $start_record,
-          'limit_stop' => $stop_record,
-        );
-
-        if (!empty($sort_field) && !empty($sort_order)) {
-          $query_params['sort_fields'][] = array(
-            'field_name' => $sort_field,
-            'sort_order' => $sort_order,
-          );
-        } else {
-          $query_params['sort_fields'][] = array(
-            'field_name' => 'subject.last_modified',
-            'sort_order' => 'DESC',
-          );
+          $query_params['search_value'] = $search;
         }
 
         $this->repo_storage_controller->setContainer($this->container);
-        $data = $this->repo_storage_controller->execute('getRecordsDatatable', $query_params);
+        $data = $this->repo_storage_controller->execute('getDatatableSubjectItems', $query_params);
 
         // Get the items count
         if(!empty($data['aaData'])) {

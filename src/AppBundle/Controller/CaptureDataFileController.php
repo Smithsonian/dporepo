@@ -55,95 +55,18 @@ class CaptureDataFileController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
-        $this->repo_storage_controller->setContainer($this->container);
-
         $query_params = array(
-          'fields' => array(),
-          'base_table' => 'capture_data_file',
-          'search_params' => array(
-            0 => array('field_names' => array('capture_data_file.active'), 'search_values' => array(1), 'comparison' => '='),
-          ),
-          'search_type' => 'AND',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
         );
-
         if ($search) {
-          $query_params['search_params'][1] = array(
-            'field_names' => array(
-              'capture_data_file.capture_data_file_name',
-              'capture_data_file.capture_data_file_type',
-              'capture_data_file.is_compressed_multiple_files'
-            ),
-            'search_values' => array($search),
-            'comparison' => 'LIKE',
-          );
+          $query_params['search_value'] = $search;
         }
 
-        // Fields.
-        $query_params['fields'][] = array(
-          'table_name' => 'capture_data_file',
-          'field_name' => 'capture_data_file_repository_id',
-          'field_alias' => 'manage',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => 'capture_data_file',
-          'field_name' => 'capture_data_file_repository_id',
-          'field_alias' => 'DT_RowId',
-        );
-        $query_params['fields'][] = array(
-          'field_name' => 'capture_data_file_name',
-        );
-        $query_params['fields'][] = array(
-          'field_name' => 'capture_data_file_type',
-        );
-        $query_params['fields'][] = array(
-          'field_name' => 'is_compressed_multiple_files',
-        );
-        $query_params['fields'][] = array(
-          'field_name' => 'active',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => 'capture_data_file',
-          'field_name' => 'last_modified',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => 'project',
-          'field_name' => 'last_modified',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => 'project',
-          'field_name' => 'last_modified_user_account_id',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => 'isni_data',
-          'field_name' => 'isni_label',
-          'field_alias' => 'stakeholder_label',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => 'unit_stakeholder',
-          'field_name' => 'unit_stakeholder_repository_id',
-          'field_alias' => 'stakeholder_si_guid',
-        );
-
-        $query_params['records_values'] = array();
-
-        $query_params['limit'] = array(
-          'limit_start' => $start_record,
-          'limit_stop' => $stop_record,
-        );
-
-        if (!empty($sort_field) && !empty($sort_order)) {
-          $query_params['sort_fields'][] = array(
-            'field_name' => $sort_field,
-            'sort_order' => $sort_order,
-          );
-        } else {
-          $query_params['sort_fields'][] = array(
-            'field_name' => 'capture_data_file.last_modified',
-            'sort_order' => 'DESC',
-          );
-        }
-
-        $data = $this->repo_storage_controller->execute('getRecordsDatatable', $query_params);
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatableCaptureDataFile', $query_params);
 
         return $this->json($data);
     }
