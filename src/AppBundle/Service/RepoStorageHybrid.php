@@ -478,6 +478,35 @@ class RepoStorageHybrid implements RepoStorage {
     return $return_data;
   }
 
+  public function getItemGuidsBySubjectId($params) {
+    //$params will be something like array('subject_repository_id' => '123');
+
+    $subject_repository_id = array_key_exists('subject_repository_id', $params) ? $params['subject_repository_id'] : NULL;
+    $query_params = array(
+      'base_table' => 'item',
+      'fields' => array(
+        0 => array(
+          'table_name' => 'item',
+          'field_name' => 'item_guid',
+        ),
+      ),
+      'search_params' => array(
+        0 => array('field_names' => array('item.active'), 'search_values' => array(1), 'comparison' => '='),
+      ),
+      'search_type' => 'AND'
+    );
+
+    if($subject_repository_id) {
+      $query_params['search_params'][1] = array('field_names' => array('item.subject_repository_id'), 'search_values' => array($subject_repository_id), 'comparison' => '=');
+    }
+
+    $query_params['records_values'] = array();
+    $return_data = $this->getRecords($query_params);
+    //@todo do something if $ret has errors
+
+    return $return_data;
+  }
+
   public function getStakeholderGuids() {
     $sql = "
       SELECT project.project_repository_id
@@ -758,6 +787,48 @@ class RepoStorageHybrid implements RepoStorage {
             'comparison' => 'LIKE',
           );
         }
+        break;
+
+      case 'item_position_type':
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+          'field_alias' => 'manage',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'label',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'label_alias',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'active',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'last_modified',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+          'field_alias' => 'DT_RowId',
+        );
+
+        $query_params['search_params'][0] = array('field_names' => array('processing_action.active'), 'search_values' => array(1), 'comparison' => '=');
+        if (NULL !== $search_value) {
+          $query_params['search_type'] = 'AND';
+          $query_params['search_params'][1] = array(
+            'field_names' => array(
+              'label',
+            ),
+            'search_values' => array($search_value),
+            'comparison' => 'LIKE',
+          );
+        }
+
         break;
 
       case 'model':
@@ -1309,6 +1380,112 @@ class RepoStorageHybrid implements RepoStorage {
 
     $data = $this->getRecordsDatatable($query_params);
     return $data;
+
+  }
+
+  /**
+   * @param $params
+   * @return mixed
+   */
+  public function getDatatableSubject($params) {
+
+      $project_repository_id = array_key_exists('project_repository_id', $params) ? $params['project_repository_id'] : NULL;
+      $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+      $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+      $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+
+      $query_params = array(
+        'fields' => array(),
+        'base_table' => 'subject',
+        'search_params' => array(
+          0 => array('field_names' => array('subject.active'), 'search_values' => array(1), 'comparison' => '='),
+        ),
+        'search_type' => 'AND',
+      );
+
+      $query_params['related_tables'][] = array(
+        'table_name' => 'item',
+        'table_join_field' => 'subject_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'subject',
+        'base_join_field' => 'subject_repository_id',
+      );
+
+      if ($search_value) {
+        $query_params['search_params'][1] = array(
+          'field_names' => array(
+            'subject.subject_name',
+            'subject.holding_entity_guid',
+            'subject.last_modified',
+          ),
+          'search_values' => array($search_value),
+          'comparison' => 'LIKE',
+        );
+      }
+
+      if($project_repository_id && is_int($project_repository_id)) {
+        $count_params = count($query_params['search_params']);
+        $query_params[$count_params] = array(
+          'field_names' => array(
+            'subject.project_repository_id',
+          ),
+          'search_values' => array((int)$project_repository_id),
+          'comparison' => '=',
+        );
+      }
+
+      // Fields.
+      $query_params['fields'][] = array(
+        'table_name' => 'subject',
+        'field_name' => 'subject_repository_id',
+        'field_alias' => 'manage',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'subject',
+        'field_name' => 'subject_repository_id',
+      );
+      $query_params['fields'][] = array(
+        'field_name' => 'holding_entity_guid',
+      );
+      $query_params['fields'][] = array(
+        'field_name' => 'local_subject_id',
+      );
+      $query_params['fields'][] = array(
+        'field_name' => 'subject_guid',
+      );
+      $query_params['fields'][] = array(
+        'field_name' => 'subject_name',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'subject',
+        'field_name' => 'last_modified',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'subject',
+        'field_name' => 'active',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'subject',
+        'field_name' => 'subject_repository_id',
+        'field_alias' => 'DT_RowId',
+      );
+
+      $query_params['records_values'] = array();
+
+      if (!empty($sort_field) && !empty($sort_order)) {
+        $query_params['sort_fields'][] = array(
+          'field_name' => $sort_field,
+          'sort_order' => $sort_order,
+        );
+      } else {
+        $query_params['sort_fields'][] = array(
+          'field_name' => 'subject.last_modified',
+          'sort_order' => 'DESC',
+        );
+      }
+
+      $data = $this->getRecordsDatatable($query_params);
+      return $data;
 
   }
 
@@ -2035,6 +2212,38 @@ class RepoStorageHybrid implements RepoStorage {
 
 }
 
+  public function markSubjectInactive($params) {
+
+    $user_id = $params['user_id'];
+    $subject_id = $params['record_id'];
+
+    //@todo trap for missing user_id or record_id.
+    $sql = "UPDATE subject
+                LEFT JOIN item ON item.subject_repository_id = subject.subject_repository_id
+                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
+                LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
+                SET subject.active = 0,
+                    subject.last_modified_user_account_id = :last_modified_user_account_id,
+                    item.active = 0,
+                    item.last_modified_user_account_id = :last_modified_user_account_id,
+                    capture_dataset.active = 0,
+                    capture_dataset.last_modified_user_account_id = :last_modified_user_account_id,
+                    capture_data_element.active = 0,
+                    capture_data_element.last_modified_user_account_id = :last_modified_user_account_id
+                WHERE subject.subject_repository_id = :id
+            ";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":id", $subject_id, PDO::PARAM_INT);
+    $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
+    $statement->execute();
+
+    $return = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    return array('return' => 'success', 'data' => $return);
+
+  }
+
   public function markCaptureDatasetInactive($params) {
     $user_id = $params['user_id'];
     $capture_dataset_repository_id = $params['record_id'];
@@ -2052,6 +2261,54 @@ class RepoStorageHybrid implements RepoStorage {
     $statement = $this->connection->prepare($sql);
     $statement->bindValue(":id", $capture_dataset_repository_id, PDO::PARAM_INT);
     $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
+    $statement->execute();
+
+    $return = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    return array('return' => 'success', 'data' => $return);
+
+  }
+
+  public function markItemInactive($params) {
+    $user_id = $params['user_id'];
+    $item_id = $params['record_id'];
+
+    //@todo trap for missing user_id or record_id.
+    $sql = "UPDATE item
+                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
+                LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
+                SET item.active = 0,
+                    item.last_modified_user_account_id = :last_modified_user_account_id,
+                    capture_dataset.active = 0,
+                    capture_dataset.last_modified_user_account_id = :last_modified_user_account_id,
+                    capture_data_element.active = 0,
+                    capture_data_element.last_modified_user_account_id = :last_modified_user_account_id
+                WHERE item.item_repository_id = :id
+            ";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":id", $item_id, PDO::PARAM_INT);
+    $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
+    $statement->execute();
+
+    $return = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    return array('return' => 'success', 'data' => $return);
+
+  }
+
+  public function updateItemStatus($params) {
+    $status_id = $params['status_type_id'];
+    $item_id = $params['item_guid'];
+
+    //@todo trap for missing user_id or record_id.
+    $sql = "UPDATE item
+                SET status_type_id = :statusid
+                WHERE item_guid = :itemguid";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":statusid", $status_id, PDO::PARAM_INT);
+    $statement->bindValue(":itemguid", $item_id, PDO::PARAM_INT);
     $statement->execute();
 
     $return = $statement->fetchAll(PDO::FETCH_ASSOC);
