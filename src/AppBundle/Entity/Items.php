@@ -53,35 +53,4 @@ class Items
         }
     }
 
-    /**
-     * Get Item
-     *
-     * Run a query to retrieve one subject from the database.
-     *
-     * @param   int $item_id   The subject ID
-     * @param   object  $conn  Database connection object
-     * @return  array|bool     The query result
-     */
-    public function getItem($item_id, Connection $conn)
-    {
-        $statement = $conn->prepare("SELECT
-            item.item_guid
-            ,item.local_item_id
-            ,item.item_description
-            ,item.item_type
-            ,item.status_type_id
-            ,item.last_modified
-            ,item.item_repository_id
-            ,item_type.label as item_type_label
-            FROM item
-            LEFT JOIN item_type ON item_type.item_type_repository_id = item.item_type
-            WHERE item.active = 1
-            AND item_repository_id = :item_repository_id");
-        $statement->bindValue(":item_repository_id", $item_id, "integer");
-        $statement->execute();
-        $result = $statement->fetch();
-
-        return (object)$result;
-    }
-    
 }
