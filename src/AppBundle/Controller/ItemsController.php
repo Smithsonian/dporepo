@@ -390,7 +390,7 @@ class ItemsController extends Controller
 
         foreach ($items as $key => $value) {
             // Check for child dataset records so the 'children' key can be set accordingly.
-            $dataset_data = $datasets->get_datasets($conn, (int)$value['item_repository_id']);
+            $dataset_data = $datasets->get_datasets((int)$value['item_repository_id']);
             $data[$key] = array(
                 'id' => 'itemId-' . $value['item_repository_id'],
                 'children' => count($dataset_data) ? true : false,
