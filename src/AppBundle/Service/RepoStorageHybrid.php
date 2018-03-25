@@ -14,6 +14,16 @@ class RepoStorageHybrid implements RepoStorage {
     $this->connection = $connection;
   }
 
+  /**
+   * ----------------------------------------------------------------
+   * Getters for single records.
+   * ----------------------------------------------------------------
+   */
+
+  /***
+   * @param $params
+   * @return mixed
+   */
   public function getProject($params) {
     //$params will be something like array('project_repository_id' => '123');
 
@@ -203,6 +213,15 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
+  /**
+   * ----------------------------------------------------------------
+   * Delete for single record.
+   * ----------------------------------------------------------------
+   */
+  /**
+   * @param $params
+   * @return array|mixed
+   */
   public function deleteRecordById($params) {
 
     $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
@@ -223,7 +242,7 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
-  public function datatablesQuery($params) {
+  /*public function datatablesQuery($params) {
 
     $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
     $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
@@ -419,7 +438,221 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
   }
+  */
 
+  /**
+   * ----------------------------------------------------------------
+   * Datatables queries- returns
+   * ----------------------------------------------------------------
+   */
+
+  /**
+   * @param $params
+   * @return mixed
+   */
+  public function getDatatableSubjectItems($params) {
+
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+
+    // GROUP BY subjects.holding_entity_guid, subjects.local_subject_id, subjects.subject_guid, subjects.subject_name, subjects.last_modified, subjects.active, subjects.subject_repository_id
+    $query_params = array(
+      'distinct' => true,
+      'base_table' => 'subject',
+      'fields' => array(),
+      'search_params' => array(
+        0 => array('field_names' => array('subject.active'), 'search_values' => array(1), 'comparison' => '='),
+      ),
+      'search_type' => 'AND',
+    );
+
+    $query_params['related_tables'][] = array(
+      'table_name' => 'item',
+      'table_join_field' => 'subject_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'subject',
+      'base_join_field' => 'subject_repository_id',
+    );
+    if ($search_value) {
+      $query_params['search_params'][1] = array(
+        'field_names' => array(
+          'subject.subject_name',
+          'subject.holding_entity_guid',
+          'subject.last_modified'
+        ),
+        'search_values' => array($search_value),
+        'comparison' => 'LIKE',
+      );
+    }
+
+    // Fields.
+    $query_params['fields'][] = array(
+      'table_name' => 'subject',
+      'field_name' => 'subject_repository_id',
+      'field_alias' => 'manage',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'subject',
+      'field_name' => 'subject_repository_id',
+      'field_alias' => 'DT_RowId',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'subject',
+      'field_name' => 'subject_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'holding_entity_guid',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'local_subject_id',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'subject_guid',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'subject_name',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'subject',
+      'field_name' => 'active',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'subject',
+      'field_name' => 'last_modified',
+    );
+    $query_params['records_values'] = array();
+
+    $query_params['limit'] = array(
+      'limit_start' => $start_record,
+      'limit_stop' => $stop_record,
+    );
+
+    if (!empty($sort_field) && !empty($sort_order)) {
+      $query_params['sort_fields'][] = array(
+        'field_name' => $sort_field,
+        'sort_order' => $sort_order,
+      );
+    } else {
+      $query_params['sort_fields'][] = array(
+        'field_name' => 'subject.last_modified',
+        'sort_order' => 'DESC',
+      );
+    }
+
+    $data = $this->getRecordsDatatable($query_params);
+
+    return $data;
+  }
+
+  public function getDatatableCaptureDataFile($params) {
+
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+
+    $query_params = array(
+      'fields' => array(),
+      'base_table' => 'capture_data_file',
+      'search_params' => array(
+        0 => array('field_names' => array('capture_data_file.active'), 'search_values' => array(1), 'comparison' => '='),
+      ),
+      'search_type' => 'AND',
+    );
+
+    if ($search_value) {
+      $query_params['search_params'][1] = array(
+        'field_names' => array(
+          'capture_data_file.capture_data_file_name',
+          'capture_data_file.capture_data_file_type',
+          'capture_data_file.is_compressed_multiple_files'
+        ),
+        'search_values' => array($search_value),
+        'comparison' => 'LIKE',
+      );
+    }
+
+    // Fields.
+    $query_params['fields'][] = array(
+      'table_name' => 'capture_data_file',
+      'field_name' => 'capture_data_file_repository_id',
+      'field_alias' => 'manage',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'capture_data_file',
+      'field_name' => 'capture_data_file_repository_id',
+      'field_alias' => 'DT_RowId',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'capture_data_file_name',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'capture_data_file_type',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'is_compressed_multiple_files',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'active',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'capture_data_file',
+      'field_name' => 'last_modified',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'project',
+      'field_name' => 'last_modified',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'project',
+      'field_name' => 'last_modified_user_account_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'isni_data',
+      'field_name' => 'isni_label',
+      'field_alias' => 'stakeholder_label',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'unit_stakeholder',
+      'field_name' => 'unit_stakeholder_repository_id',
+      'field_alias' => 'stakeholder_si_guid',
+    );
+
+    $query_params['records_values'] = array();
+
+    $query_params['limit'] = array(
+      'limit_start' => $start_record,
+      'limit_stop' => $stop_record,
+    );
+
+    if (!empty($sort_field) && !empty($sort_order)) {
+      $query_params['sort_fields'][] = array(
+        'field_name' => $sort_field,
+        'sort_order' => $sort_order,
+      );
+    } else {
+      $query_params['sort_fields'][] = array(
+        'field_name' => 'capture_data_file.last_modified',
+        'sort_order' => 'DESC',
+      );
+    }
+
+    $data = $this->getRecordsDatatable($query_params);
+
+    return $data;
+
+  }
+  /**
+   * Save function.
+   */
+  /**
+   * @param $params
+   * @return null
+   */
   public function saveRecord($params) {
 
     $base_table = array_key_exists('base_table', $params) ? $params['base_table'] : NULL;
@@ -518,32 +751,14 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   /**
-   * ---------------------------------------------------------------
-   * Generic functions that get called by other getters and setters.
-   * ---------------------------------------------------------------
+   * ----------------------------------------------------------------
+   * Generic functions for getting, setting, deleting and marking inactive.
+   * ----------------------------------------------------------------
    */
-
-  private function getTableColumns($base_table) {
-
-    $sql ="SHOW COLUMNS FROM " . $base_table;
-    $statement = $this->connection->prepare($sql);
-
-    $statement->execute();
-    $column_data = $statement->fetchAll(PDO::FETCH_ASSOC);
-
-    $fields = array();
-    foreach($column_data as $col) {
-      if($col['Key'] == 'PRI') {
-        $fields['id'] = $col['Field'];
-      }
-      else {
-        $fields['fields'][] = $col['Field'];
-      }
-    }
-
-    return $fields;
-  }
-
+  /**
+   * @param $parameters
+   * @return array
+   */
   public function getRecord($parameters) {
 
     //@todo confirm params exist
@@ -1318,6 +1533,32 @@ class RepoStorageHybrid implements RepoStorage {
     $return = $statement->fetchAll(PDO::FETCH_ASSOC);
 
     return array('return' => 'success', 'data' => $return);
+  }
+
+
+  /**
+   * @param $base_table
+   * @return array
+   */
+  private function getTableColumns($base_table) {
+
+    $sql ="SHOW COLUMNS FROM " . $base_table;
+    $statement = $this->connection->prepare($sql);
+
+    $statement->execute();
+    $column_data = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $fields = array();
+    foreach($column_data as $col) {
+      if($col['Key'] == 'PRI') {
+        $fields['id'] = $col['Field'];
+      }
+      else {
+        $fields['fields'][] = $col['Field'];
+      }
+    }
+
+    return $fields;
   }
 
 }
