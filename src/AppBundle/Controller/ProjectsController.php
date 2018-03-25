@@ -173,41 +173,14 @@ class ProjectsController extends Controller
     }
 
     /**
-     * Get Stakeholder GUIDs
-     *
-     * Run a query to retrieve all Stakeholder GUIDs from the database.
-     *
-     * @return  array|bool  The query result
-     */
-    public function get_stakeholder_guids($conn)
-    {
-        // $statement_fgb = $conn->prepare("
-        //     SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));
-        // ");
-        // $statement_fgb->execute();
-
-        $statement = $conn->prepare("
-            SELECT project.project_repository_id
-                ,project.stakeholder_guid
-                ,isni_data.isni_label AS stakeholder_label
-            FROM project
-            LEFT JOIN isni_data ON isni_data.isni_id = project.stakeholder_guid
-            WHERE project.active = 1
-            GROUP BY isni_data.isni_label
-            ORDER BY isni_data.isni_label ASC
-        ");
-        $statement->execute();
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    /**
      * Get Stakeholder GUIDs (route for the tree browser)
      *
      * @Route("/admin/projects/get_stakeholder_guids", name="get_stakeholder_guids_tree_browser", methods="GET")
      */
     public function get_stakeholder_guids_tree_browser(Connection $conn)
     {
-      $projects = $this->get_stakeholder_guids($conn);
+      $this->repo_storage_controller->setContainer($this->container);
+      $projects = $this->repo_storage_controller->execute('getStakeholderGuids');
       foreach ($projects as $key => $value) {
           $data[$key]['id'] = 'stakeholderGuid-' . $value['stakeholder_guid'];
           $data[$key]['text'] = $value['stakeholder_label'];
@@ -322,12 +295,16 @@ class ProjectsController extends Controller
     {
       $data = array();
 
-      $statement = $conn->prepare("SELECT * FROM unit_stakeholder
-        WHERE unit_stakeholder.active = 1
-        ORDER BY unit_stakeholder_label ASC");
-      $statement->execute();
+      $this->repo_storage_controller->setContainer($this->container);
+      $temp = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'unit_stakeholder',
+          'sort_fields' => array(
+            0 => array('field_name' => 'unit_stakeholder_label')
+          ),
+        )
+      );
 
-      foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
+      foreach ($temp as $key => $value) {
         $data[$value['unit_stakeholder_label'] . ' - ' . $value['unit_stakeholder_full_name']] = $value['unit_stakeholder_repository_id'];
       }
 
@@ -356,29 +333,10 @@ class ProjectsController extends Controller
           $ids_array = explode(',', $ids);
 
           foreach ($ids_array as $key => $id) {
-
-            $statement = $conn->prepare("
-                UPDATE project
-                LEFT JOIN subject ON subject.project_repository_id = project.project_repository_id
-                LEFT JOIN item ON item.subject_repository_id = subject.subject_repository_id
-                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
-                LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
-                SET project.active = 0,
-                    project.last_modified_user_account_id = :last_modified_user_account_id,
-                    subject.active = 0,
-                    subject.last_modified_user_account_id = :last_modified_user_account_id,
-                    item.active = 0,
-                    item.last_modified_user_account_id = :last_modified_user_account_id,
-                    capture_dataset.active = 0,
-                    capture_dataset.last_modified_user_account_id = :last_modified_user_account_id,
-                    capture_data_element.active = 0,
-                    capture_data_element.last_modified_user_account_id = :last_modified_user_account_id
-                WHERE project.project_repository_id = :id
-            ");
-            $statement->bindValue(":id", $id, PDO::PARAM_INT);
-            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->execute();
-
+            $ret = $this->repo_storage_controller->execute('markProjectInactive', array(
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+            ));
           }
 
           $this->addFlash('message', 'Records successfully removed.');
@@ -388,31 +346,6 @@ class ProjectsController extends Controller
         }
 
         return $this->redirectToRoute('projects_browse');
-    }
-
-    /**
-     * Delete Project
-     *
-     * Run a query to delete a project from the database.
-     *
-     * @param   int     $project_id  The project ID
-     * @param   object  $conn        Database connection object
-     * @return  void
-     */
-    public function delete_project($project_repository_id, $conn)
-    {
-        $statement = $conn->prepare("
-            DELETE FROM project
-            WHERE project_repository_id = :project_repository_id");
-        $statement->bindValue(":project_repository_id", $project_repository_id, PDO::PARAM_INT);
-        $statement->execute();
-
-        // First, delete all subjects.
-        $statement = $conn->prepare("
-            DELETE FROM subject
-            WHERE project_repository_id = :project_repository_id");
-        $statement->bindValue(":project_repository_id", $project_repository_id, PDO::PARAM_INT);
-        $statement->execute();
     }
 
 }
