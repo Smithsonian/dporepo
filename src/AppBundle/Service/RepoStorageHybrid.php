@@ -15,7 +15,7 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   public function getProject($params) {
-    //$params will be something like array('project_id' => '123');
+    //$params will be something like array('project_repository_id' => '123');
 
     $query_params = array(
       'fields' => array(),
@@ -98,7 +98,7 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   public function getSubject($params) {
-    //$params will be something like array('subject_id' => '123');
+    //$params will be something like array('subject_repository_id' => '123');
 
     $query_params = array(
       'fields' => array(),
@@ -117,6 +117,74 @@ class RepoStorageHybrid implements RepoStorage {
       $return_data = $ret[0];
     }
     return $return_data;
+  }
+
+  public function getItem($params) {
+      //$params will be something like array('item_repository_id' => '123');
+
+      $query_params = array(
+        'fields' => array(),
+        'base_table' => 'item',
+        'search_params' => array(
+          0 => array('field_names' => array('item.active'), 'search_values' => array(1), 'comparison' => '='),
+          1 => array('field_names' => array('item.item_repository_id'), 'search_values' => $params, 'comparison' => '=')
+        ),
+        'search_type' => 'AND',
+        'related_tables' => array(),
+      );
+
+      // Fields.
+      $query_params['fields'][] = array(
+        'table_name' => 'item',
+        'field_name' => 'item_guid',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'item',
+        'field_name' => 'local_item_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'item',
+        'field_name' => 'item_description',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'item',
+        'field_name' => 'item_type',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'item',
+        'field_name' => 'status_type_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'item',
+        'field_name' => 'last_modified',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'item',
+        'field_name' => 'item_repository_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'item_type',
+        'field_name' => 'label',
+        'field_alias' => 'item_type_label',
+      );
+
+      // Joins.
+      $query_params['related_tables'][] = array(
+        'table_name' => 'item_type',
+        'table_join_field' => 'item_type_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'item',
+        'base_join_field' => 'item_type',
+      );
+
+      $query_params['records_values'] = array();
+      $ret = $this->getRecords($query_params);
+      //@todo do something if $ret has errors
+
+      if(array_key_exists(0, $ret)) {
+        $return_data = $ret[0];
+      }
+      return $return_data;
   }
 
   public function getRecordById($params) {
