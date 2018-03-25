@@ -385,45 +385,6 @@ class RepoStorageHybrid implements RepoStorage {
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
         break;
 
-      case 'unit':
-
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
-          'field_alias' => 'manage',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'label',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'active',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'last_modified',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
-          'field_alias' => 'DT_RowId',
-        );
-
-        $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
-        if (NULL !== $search_value) {
-          $query_params['search_type'] = 'AND';
-          $query_params['search_params'][1] = array(
-            'field_names' => array(
-              $record_type . '.label',
-            ),
-            'search_values' => array($search_value),
-            'comparison' => 'LIKE',
-          );
-        }
-
-        break;
-
       case 'unit_stakeholder':
 
         $query_params['fields'][] = array(
@@ -466,8 +427,63 @@ class RepoStorageHybrid implements RepoStorage {
             'comparison' => 'LIKE',
           );
         }
+      break;
+
+      default:
+        // Handles any case where we only search the label field,
+        // and we only return the 5 fields specified below.
+
+        /*
+          camera_cluster_type
+          capture_method
+          dataset_type
+          data_rights_restriction_type
+          focus_type
+          item_type
+          light_source_type
+          scale_bar_barcode_type
+          status_type
+          target_type
+          unit
+        */
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+          'field_alias' => 'manage',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'label',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'active',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'last_modified',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+          'field_alias' => 'DT_RowId',
+        );
+
+        $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
+        if (NULL !== $search_value) {
+          $query_params['search_type'] = 'AND';
+          $query_params['search_params'][1] = array(
+            'field_names' => array(
+              $record_type . '.label',
+            ),
+            'search_values' => array($search_value),
+            'comparison' => 'LIKE',
+          );
+        }
 
         break;
+
+
     }
 
     $data = $this->getRecordsDatatable($query_params);
