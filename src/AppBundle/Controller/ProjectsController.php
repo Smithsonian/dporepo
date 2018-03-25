@@ -75,7 +75,6 @@ class ProjectsController extends Controller
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
         $query_params = array(
-          'record_type' => 'project',
           'sort_field' => $sort_field,
           'sort_order' => $sort_order,
           'start_record' => $start_record,
@@ -86,7 +85,7 @@ class ProjectsController extends Controller
         }
 
         $this->repo_storage_controller->setContainer($this->container);
-        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
+        $data = $this->repo_storage_controller->execute('getDatatableProject', $query_params);
 
         // Get the subjects count
         if(!empty($data['aaData'])) {
