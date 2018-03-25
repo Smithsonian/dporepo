@@ -197,103 +197,6 @@ class RepoStorageHybrid implements RepoStorage {
       return $return_data;
   }
 
-  public function getItemsBySubjectId($params) {
-    //$params will be something like array('subject_repository_id' => '123');
-
-    $subject_repository_id = array_key_exists('subject_repository_id', $params) ? $params['subject_repository_id'] : NULL;
-    $query_params = array(
-        'base_table' => 'item',
-        'related_tables' => array(
-          0 =>
-            array(
-              'table_name' => 'subject',
-              'table_join_field' => 'subject_repository_id',
-              'join_type' => 'LEFT JOIN',
-              'base_join_table' => 'item',
-              'base_join_field' => 'subject_repository_id',
-            ),
-          1 => array(
-            'table_name' => 'project',
-            'table_join_field' => 'project_repository_id',
-            'join_type' => 'LEFT JOIN',
-            'base_join_table' => 'subject',
-            'base_join_field' => 'project_repository_id',
-          )
-        ),
-        'fields' => array(
-          0 => array(
-            'table_name' => 'project',
-            'field_name' => 'project_repository_id',
-          ),
-          1 => array(
-            'table_name' => 'subject',
-            'field_name' => 'subject_repository_id',
-          ),
-          2 => array(
-            'table_name' => 'item',
-            'field_name' => 'item_repository_id',
-          ),
-          3 => array(
-            'table_name' => 'item',
-            'field_name' => 'item_guid',
-          ),
-          4 => array(
-            'table_name' => 'item',
-            'field_name' => 'subject_repository_id',
-          ),
-          5 => array(
-            'table_name' => 'item',
-            'field_name' => 'local_item_id',
-          ),
-          6 => array(
-            'table_name' => 'item',
-            'field_name' => 'item_description',
-          ),
-          7 => array(
-            'table_name' => 'item',
-            'field_name' => 'date_created',
-          ),
-          8 => array(
-            'table_name' => 'item',
-            'field_name' => 'created_by_user_account_id',
-          ),
-          9 => array(
-            'table_name' => 'item',
-            'field_name' => 'last_modified',
-          ),
-          10 => array(
-            'table_name' => 'item',
-            'field_name' => 'last_modified_user_account_id',
-          ),
-          11 => array(
-            'table_name' => 'item',
-            'field_name' => 'active',
-          ),
-          12 => array(
-            'table_name' => 'item',
-            'field_name' => 'status_type_id',
-          ),
-        ),
-        'sort_fields' => array(
-          0 => array('field_name' => 'item.local_item_id')
-        ),
-        'search_params' => array(
-          0 => array('field_names' => array('item.active'), 'search_values' => array(1), 'comparison' => '='),
-        ),
-        'search_type' => 'AND'
-      );
-
-      if($subject_repository_id) {
-          $query_params['search_params'][1] = array('field_names' => array('item.subject_repository_id'), 'search_values' => array($subject_repository_id), 'comparison' => '=');
-      }
-
-      $query_params['records_values'] = array();
-      $return_data = $this->getRecords($query_params);
-      //@todo do something if $ret has errors
-
-      return $return_data;
-  }
-
   public function getRecordById($params) {
 
     $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
@@ -384,7 +287,119 @@ class RepoStorageHybrid implements RepoStorage {
     return $return_data;
   }
 
+  public function getItemsBySubjectId($params) {
+    //$params will be something like array('subject_repository_id' => '123');
 
+    $subject_repository_id = array_key_exists('subject_repository_id', $params) ? $params['subject_repository_id'] : NULL;
+    $query_params = array(
+      'base_table' => 'item',
+      'related_tables' => array(
+        0 =>
+          array(
+            'table_name' => 'subject',
+            'table_join_field' => 'subject_repository_id',
+            'join_type' => 'LEFT JOIN',
+            'base_join_table' => 'item',
+            'base_join_field' => 'subject_repository_id',
+          ),
+        1 => array(
+          'table_name' => 'project',
+          'table_join_field' => 'project_repository_id',
+          'join_type' => 'LEFT JOIN',
+          'base_join_table' => 'subject',
+          'base_join_field' => 'project_repository_id',
+        )
+      ),
+      'fields' => array(
+        0 => array(
+          'table_name' => 'project',
+          'field_name' => 'project_repository_id',
+        ),
+        1 => array(
+          'table_name' => 'subject',
+          'field_name' => 'subject_repository_id',
+        ),
+        2 => array(
+          'table_name' => 'item',
+          'field_name' => 'item_repository_id',
+        ),
+        3 => array(
+          'table_name' => 'item',
+          'field_name' => 'item_guid',
+        ),
+        4 => array(
+          'table_name' => 'item',
+          'field_name' => 'subject_repository_id',
+        ),
+        5 => array(
+          'table_name' => 'item',
+          'field_name' => 'local_item_id',
+        ),
+        6 => array(
+          'table_name' => 'item',
+          'field_name' => 'item_description',
+        ),
+        7 => array(
+          'table_name' => 'item',
+          'field_name' => 'date_created',
+        ),
+        8 => array(
+          'table_name' => 'item',
+          'field_name' => 'created_by_user_account_id',
+        ),
+        9 => array(
+          'table_name' => 'item',
+          'field_name' => 'last_modified',
+        ),
+        10 => array(
+          'table_name' => 'item',
+          'field_name' => 'last_modified_user_account_id',
+        ),
+        11 => array(
+          'table_name' => 'item',
+          'field_name' => 'active',
+        ),
+        12 => array(
+          'table_name' => 'item',
+          'field_name' => 'status_type_id',
+        ),
+      ),
+      'sort_fields' => array(
+        0 => array('field_name' => 'item.local_item_id')
+      ),
+      'search_params' => array(
+        0 => array('field_names' => array('item.active'), 'search_values' => array(1), 'comparison' => '='),
+      ),
+      'search_type' => 'AND'
+    );
+
+    if($subject_repository_id) {
+      $query_params['search_params'][1] = array('field_names' => array('item.subject_repository_id'), 'search_values' => array($subject_repository_id), 'comparison' => '=');
+    }
+
+    $query_params['records_values'] = array();
+    $return_data = $this->getRecords($query_params);
+    //@todo do something if $ret has errors
+
+    return $return_data;
+  }
+
+  public function getStakeholderGuids() {
+    $sql = "
+      SELECT project.project_repository_id
+          ,project.stakeholder_guid
+          ,isni_data.isni_label AS stakeholder_label
+      LEFT JOIN isni_data ON isni_data.isni_id = project.stakeholder_guid
+      GROUP BY isni_data.isni_label
+      ORDER BY isni_data.isni_label ASC";
+
+    $statement = $this->connection->prepare($sql);
+
+    $statement->execute();
+    $records_values = $statement->fetchAll(PDO::FETCH_ASSOC);
+    return $records_values;
+
+  }
 
   /**
    * ----------------------------------------------------------------
@@ -1652,6 +1667,40 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
 
   }
+
+  public function markProjectInactive($params) {
+    $user_id = $params['user_id'];
+    $project_id = $params['record_id'];
+
+    //@todo trap for missing user_id or record_id.
+    $sql = "UPDATE project
+                LEFT JOIN subject ON subject.project_repository_id = project.project_repository_id
+                LEFT JOIN item ON item.subject_repository_id = subject.subject_repository_id
+                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
+                LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
+                SET project.active = 0,
+                    project.last_modified_user_account_id = :last_modified_user_account_id,
+                    subject.active = 0,
+                    subject.last_modified_user_account_id = :last_modified_user_account_id,
+                    item.active = 0,
+                    item.last_modified_user_account_id = :last_modified_user_account_id,
+                    capture_dataset.active = 0,
+                    capture_dataset.last_modified_user_account_id = :last_modified_user_account_id,
+                    capture_data_element.active = 0,
+                    capture_data_element.last_modified_user_account_id = :last_modified_user_account_id
+                WHERE project.project_repository_id = :id
+            ";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":id", $project_id, PDO::PARAM_INT);
+    $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
+    $statement->execute();
+
+    $return = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    return array('return' => 'success', 'data' => $return);
+
+}
 
   /**
    * Save function.
