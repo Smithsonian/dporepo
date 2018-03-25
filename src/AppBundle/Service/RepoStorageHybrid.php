@@ -244,7 +244,7 @@ class RepoStorageHybrid implements RepoStorage {
 
   /**
    * ----------------------------------------------------------------
-   * Datatables queries- returns
+   * Datatables queries- returns rows needed for rendering client-side tables
    * ----------------------------------------------------------------
    */
 
@@ -383,6 +383,45 @@ class RepoStorageHybrid implements RepoStorage {
         );
 
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
+        break;
+
+      case 'unit':
+
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+          'field_alias' => 'manage',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'label',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'active',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'last_modified',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
+          'field_alias' => 'DT_RowId',
+        );
+
+        $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
+        if (NULL !== $search_value) {
+          $query_params['search_type'] = 'AND';
+          $query_params['search_params'][1] = array(
+            'field_names' => array(
+              $record_type . '.label',
+            ),
+            'search_values' => array($search_value),
+            'comparison' => 'LIKE',
+          );
+        }
+
         break;
 
       case 'unit_stakeholder':
