@@ -259,52 +259,12 @@ class DatasetsController extends Controller
      */
     public function get_dataset($capture_dataset_repository_id = false, $conn)
     {
-      $statement = $conn->prepare("SELECT
-          capture_dataset.capture_dataset_guid
-          ,capture_dataset.capture_dataset_field_id
-          ,capture_dataset.capture_method
-          ,capture_dataset.capture_dataset_type
-          ,capture_dataset.capture_dataset_name
-          ,capture_dataset.collected_by
-          ,capture_dataset.date_of_capture
-          ,capture_dataset.capture_dataset_description
-          ,capture_dataset.collection_notes
-          ,capture_dataset.support_equipment
-          ,capture_dataset.item_position_type
-          ,capture_dataset.item_position_field_id
-          ,capture_dataset.item_arrangement_field_id
-          ,capture_dataset.positionally_matched_capture_datasets
-          ,capture_dataset.focus_type
-          ,capture_dataset.light_source_type
-          ,capture_dataset.background_removal_method
-          ,capture_dataset.cluster_type
-          ,capture_dataset.cluster_geometry_field_id
-          ,capture_dataset.resource_capture_datasets
-          ,capture_dataset.calibration_object_used
-          ,capture_dataset.date_created
-          ,capture_dataset.created_by_user_account_id
-          ,capture_dataset.last_modified
-          ,capture_dataset.last_modified_user_account_id
-          ,capture_method.label AS capture_method
-          ,dataset_type.label AS capture_dataset_type
-          ,item_position_type.label_alias AS item_position_type
-          ,focus_type.label AS focus_type
-          ,light_source_type.label AS light_source_type
-          ,background_removal_method.label AS background_removal_method
-          ,camera_cluster_type.label AS camera_cluster_type
-        FROM capture_dataset
-        LEFT JOIN capture_method ON capture_method.capture_method_repository_id = capture_dataset.capture_method
-        LEFT JOIN dataset_type ON dataset_type.dataset_type_repository_id = capture_dataset.capture_dataset_type
-        LEFT JOIN item_position_type ON item_position_type.item_position_type_repository_id = capture_dataset.item_position_type
-        LEFT JOIN focus_type ON focus_type.focus_type_repository_id = capture_dataset.focus_type
-        LEFT JOIN light_source_type ON light_source_type.light_source_type_repository_id = capture_dataset.light_source_type
-        LEFT JOIN background_removal_method ON background_removal_method.background_removal_method_repository_id = capture_dataset.background_removal_method
-        LEFT JOIN camera_cluster_type ON camera_cluster_type.camera_cluster_type_repository_id = capture_dataset.cluster_type
-        WHERE capture_dataset.active = 1
-        AND capture_dataset.capture_dataset_repository_id = :capture_dataset_repository_id");
-      $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, PDO::PARAM_INT);
-      $statement->execute();
-      return $statement->fetch(PDO::FETCH_ASSOC);
+      $query_params = array(
+        'capture_dataset_repository_id' => $capture_dataset_repository_id,
+      );
+      $this->repo_storage_controller->setContainer($this->container);
+      $data = $this->repo_storage_controller->execute('getCaptureDataset', $query_params);
+      return $data;
     }
 
     /**
@@ -498,20 +458,10 @@ class DatasetsController extends Controller
           $ids_array = explode(',', $ids);
 
           foreach ($ids_array as $key => $id) {
-
-            $statement = $conn->prepare("
-                UPDATE capture_dataset
-                LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_repository_id = capture_dataset.capture_dataset_repository_id
-                SET capture_dataset.active = 0,
-                    capture_dataset.last_modified_user_account_id = :last_modified_user_account_id,
-                    capture_data_element.active = 0,
-                    capture_data_element.last_modified_user_account_id = :last_modified_user_account_id
-                WHERE capture_dataset.capture_dataset_repository_id = :id
-            ");
-            $statement->bindValue(":id", $id, PDO::PARAM_INT);
-            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->execute();
-
+            $ret = $this->repo_storage_controller->execute('markCaptureDatasetInactive', array(
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+            ));
           }
 
           $this->addFlash('message', 'Records successfully removed.');
@@ -521,24 +471,6 @@ class DatasetsController extends Controller
         }
 
         return $this->redirectToRoute('datasets_browse', array('project_repository_id' => $project_repository_id, 'subject_repository_id' => $subject_repository_id, 'item_repository_id' => $item_repository_id));
-    }
-
-    /**
-     * Delete dataset
-     *
-     * Run a query to delete a dataset from the database.
-     *
-     * @param   int     $capture_dataset_repository_id  The dataset ID
-     * @param   object  $conn         Database connection object
-     * @return  void
-     */
-    public function delete_dataset($capture_dataset_repository_id, $conn)
-    {
-        $statement = $conn->prepare("
-            DELETE FROM capture_dataset
-            WHERE capture_dataset_repository_id = :capture_dataset_repository_id");
-        $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, PDO::PARAM_INT);
-        $statement->execute();
     }
 
 }

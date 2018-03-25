@@ -82,77 +82,42 @@ class DatasetElementsController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/datatables_browse_dataset_elements/{project_repository_id}/{subject_repository_id}/{item_repository_id}/{capture_dataset_repository_id}", name="dataset_elements_browse_datatables", methods="POST")
+     * @Route("/admin/projects/datatables_browse_dataset_elements/{project_repository_id}/{subject_repository_id}/{item_repository_id}/{id}", name="dataset_elements_browse_datatables", methods="POST")
      *
      * Browse dataset_elements
      *
      * Run a query to retreive all dataset elements in the database.
      *
-     * @param   object  Connection  Database connection object
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_dataset_elements(Connection $conn, Request $request)
+    public function datatables_browse_dataset_elements(Request $request)
     {
-        $sort = '';
-        $search_sql = '';
-        $pdo_params = array();
-        $data = array();
-
         $req = $request->request->all();
-        $capture_dataset_repository_id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
-        $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
 
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $sort = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $sort = " ORDER BY capture_data_element.last_modified DESC ";
-        }
-
+        $query_params = array(
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+        );
         if ($search) {
-            $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
-            $search_sql = "
-                AND (
-                  capture_data_element.dataset_element_guid LIKE ?
-                  OR capture_data_element.camera_id LIKE ?
-                ) ";
+          $query_params['search_value'] = $search;
+        }
+        if ($id) {
+          $query_params['capture_dataset_repository_id'] = $id;
         }
 
-        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-                capture_data_element.capture_data_element_repository_id AS manage
-                ,capture_data_element.capture_dataset_repository_id
-                ,capture_data_element.capture_device_configuration_id
-                ,capture_data_element.capture_device_field_id
-                ,capture_data_element.capture_sequence_number
-                ,capture_data_element.cluster_position_field_id
-                ,capture_data_element.position_in_cluster_field_id
-                ,capture_data_element.date_created
-                ,capture_data_element.created_by_user_account_id
-                ,capture_data_element.last_modified
-                ,capture_data_element.last_modified_user_account_id
-                ,capture_data_element.capture_data_element_repository_id AS DT_RowId
-            FROM capture_data_element
-            WHERE capture_data_element.active = 1
-            AND capture_dataset_repository_id = " . (int)$capture_dataset_repository_id . "
-            {$search_sql}
-            {$sort}
-            {$limit_sql}");
-        $statement->execute($pdo_params);
-        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatableCaptureDataElement', $query_params);
 
-        $statement = $conn->prepare("SELECT FOUND_ROWS()");
-        $statement->execute();
-        $count = $statement->fetch();
-        $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-        $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
-        
         return $this->json($data);
     }
 
@@ -257,33 +222,12 @@ class DatasetElementsController extends Controller
      */
     public function get_dataset_elements($capture_dataset_repository_id = false, $conn)
     {
-        $statement = $conn->prepare("
-            SELECT
-                project.project_repository_id,
-                subject.subject_repository_id,
-                item.item_repository_id,
-                capture_data_element.capture_data_element_repository_id,
-                capture_data_element.capture_dataset_repository_id,
-                capture_data_element.capture_device_configuration_id,
-                capture_data_element.capture_device_field_id,
-                capture_data_element.capture_sequence_number,
-                capture_data_element.cluster_position_field_id,
-                capture_data_element.position_in_cluster_field_id,
-                capture_data_element.date_created,
-                capture_data_element.created_by_user_account_id,
-                capture_data_element.last_modified,
-                capture_data_element.last_modified_user_account_id,
-                capture_data_element.active
-            FROM capture_data_element
-            LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
-            LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
-            LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
-            LEFT JOIN project ON project.project_repository_id = subject.project_repository_id
-            WHERE capture_data_element.active = 1
-            AND capture_data_element.capture_dataset_repository_id = :capture_dataset_repository_id");
-        $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, PDO::PARAM_INT);
-        $statement->execute();
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
+        $query_params = array(
+          'capture_dataset_repository_id' => $capture_dataset_repository_id,
+        );
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getElementsForCaptureDataset', $query_params);
+        return $data;
     }
 
     /**
@@ -394,25 +338,6 @@ class DatasetElementsController extends Controller
         }
 
         return $this->redirectToRoute('dataset_elements_browse', array('project_repository_id' => $project_repository_id, 'subject_repository_id' => $subject_repository_id, 'item_repository_id' => $item_repository_id, 'capture_dataset_repository_id' => $capture_dataset_repository_id));
-    }
-
-    /**
-     * Delete dataset element
-     *
-     * Run a query to delete a dataset element from the database.
-     *
-     * @param   int     $capture_data_element_repository_id  The dataset element ID
-     * @param   object  $conn                 Database connection object
-     * @return  void
-     */
-    public function delete_dataset_element($capture_data_element_repository_id, $conn)
-    {
-        $this->repo_storage_controller->setContainer($this->container);
-        $ret = $this->repo_storage_controller->execute('markRecordsInactive', array(
-          'record_type' => 'capture_data_element',
-          'record_id' => $capture_data_element_repository_id,
-          'user_id' => $this->getUser()->getId(),
-        ));
     }
 
 }
