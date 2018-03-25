@@ -198,17 +198,17 @@ class ProjectsController extends Controller
      * @param   object  $conn  Database connection object
      * @return  array|bool     The query result
      */
-    public function get_projects($conn)
+    public function get_projects()
     {
-      $this->repo_storage_controller->setContainer($this->container);
-      $data = $this->repo_storage_controller->execute('getRecords', array(
-        'base_table' => 'project',
-        'fields' => array(),
-        'sort_fields' => array(
-          0 => array('field_name' => 'stakeholder_guid')
-        ),
-        )
-      );
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'project',
+          'fields' => array(),
+          'sort_fields' => array(
+            0 => array('field_name' => 'stakeholder_guid')
+          ),
+          )
+        );
 
         return $data;
     }

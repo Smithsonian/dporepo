@@ -59,7 +59,7 @@ class DatasetElementsController extends Controller
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $project_repository_id));
 
         $subject_data = $subjects->get_subject((int)$subject_repository_id, $conn);
-        $item_data = $items->get_item((int)$item_repository_id, $conn);
+        $item_data = $items->get_item((int)$item_repository_id);
         $dataset_element_data = $this->get_dataset_element((int)$capture_dataset_repository_id, $conn);
 
         // Truncate the item_description.
@@ -197,7 +197,7 @@ class DatasetElementsController extends Controller
         // TODO: find a better way?
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$dataset_element->project_repository_id));
         $subject_data = $subjects->get_subject((int)$dataset_element->subject_repository_id, $conn);
-        $item_data = $items->get_item((int)$dataset_element->item_repository_id, $conn);
+        $item_data = $items->get_item((int)$dataset_element->item_repository_id);
         $dataset_data = $datasets->get_dataset((int)$dataset_element->capture_dataset_repository_id, $conn);
         
         // Truncate the item_description so the breadcrumb don't blow up.
