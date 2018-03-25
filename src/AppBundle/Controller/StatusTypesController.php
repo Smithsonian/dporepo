@@ -36,11 +36,11 @@ class StatusTypesController extends Controller
         $this->repo_storage_controller = new RepoStorageHybridController();
 
         // Table name and field names.
-        $this->table_name = 'status_types';
-        $this->id_field_name_raw = 'status_types_id';
-        $this->id_field_name = 'status_types.' . $this->id_field_name_raw;
+        $this->table_name = 'status_type';
+        $this->id_field_name_raw = 'status_type_repository_id';
+        $this->id_field_name = 'status_type.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
-        $this->label_field_name = 'status_types.' . $this->label_field_name_raw;
+        $this->label_field_name = 'status_type.' . $this->label_field_name_raw;
     }
 
     /**
@@ -91,41 +91,19 @@ class StatusTypesController extends Controller
                 break;
         }
 
-        $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
-
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $sort = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $sort = " ORDER BY " . $this->table_name . ".last_modified DESC ";
-        }
-
+        $query_params = array(
+          'record_type' => 'target_type',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+        );
         if ($search) {
-            $pdo_params[] = '%' . $search . '%';
-            $search_sql = "
-                AND (
-                  " . $this->label_field_name . " LIKE ?
-                ) ";
+          $query_params['search_value'] = $search;
         }
 
-        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-            " . $this->id_field_name . " AS manage,
-            " . $this->label_field_name . ",
-            " . $this->table_name . ".active,
-            " . $this->table_name . ".last_modified,
-            " . $this->id_field_name . " AS DT_RowId
-            FROM " . $this->table_name . "
-            WHERE " . $this->table_name . ".active = 1
-            {$search_sql}
-            {$sort}
-            {$limit_sql}");
-        $statement->execute($pdo_params);
-        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
- 
-        $statement = $conn->prepare("SELECT FOUND_ROWS()");
-        $statement->execute();
-        $count = $statement->fetch(PDO::FETCH_ASSOC);
-        $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-        $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
         return $this->json($data);
     }

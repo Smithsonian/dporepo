@@ -36,11 +36,11 @@ class DataRightsRestrictionTypesController extends Controller
         $this->repo_storage_controller = new RepoStorageHybridController();
 
         // Table name and field names.
-        $this->table_name = 'data_rights_restriction_types';
-        $this->id_field_name_raw = 'data_rights_restriction_types_id';
-        $this->id_field_name = 'data_rights_restriction_types.' . $this->id_field_name_raw;
+        $this->table_name = 'data_rights_restriction_type';
+        $this->id_field_name_raw = 'data_rights_restriction_type_repository_id';
+        $this->id_field_name = 'data_rights_restriction_type.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
-        $this->label_field_name = 'data_rights_restriction_types.' . $this->label_field_name_raw;
+        $this->label_field_name = 'data_rights_restriction_type.' . $this->label_field_name_raw;
     }
 
     /**
@@ -71,11 +71,6 @@ class DataRightsRestrictionTypesController extends Controller
      */
     public function datatables_browse_data_rights_restriction_types(Connection $conn, Request $request)
     {
-        $sort = '';
-        $search_sql = '';
-        $pdo_params = array();
-        $data = array();
-
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_order = $req['order'][0]['dir'];
@@ -91,41 +86,19 @@ class DataRightsRestrictionTypesController extends Controller
                 break;
         }
 
-        $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
-
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $sort = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $sort = " ORDER BY " . $this->table_name . ".last_modified DESC ";
-        }
-
+        $query_params = array(
+          'record_type' => 'data_rights_restriction_type',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+        );
         if ($search) {
-            $pdo_params[] = '%' . $search . '%';
-            $search_sql = "
-                AND (
-                  " . $this->label_field_name . " LIKE ?
-                ) ";
+          $query_params['search_value'] = $search;
         }
 
-        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-            " . $this->id_field_name . " AS manage,
-            " . $this->label_field_name . ",
-            " . $this->table_name . ".active,
-            " . $this->table_name . ".last_modified,
-            " . $this->id_field_name . " AS DT_RowId
-            FROM " . $this->table_name . "
-            WHERE " . $this->table_name . ".active = 1
-            {$search_sql}
-            {$sort}
-            {$limit_sql}");
-        $statement->execute($pdo_params);
-        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
- 
-        $statement = $conn->prepare("SELECT FOUND_ROWS()");
-        $statement->execute();
-        $count = $statement->fetch(PDO::FETCH_ASSOC);
-        $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-        $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
         return $this->json($data);
     }
