@@ -215,6 +215,81 @@ class RepoStorageHybrid implements RepoStorage {
 
   /**
    * ----------------------------------------------------------------
+   * Getters for multiple records.
+   * ----------------------------------------------------------------
+   */
+  public function getDatasets($params) {
+
+    $item_repository_id = array_key_exists('item_repository_id', $params) ? $params['item_repository_id'] : NULL;
+
+    $query_params = array(
+      'fields' => array(),
+      'base_table' => 'capture_dataset',
+      'search_params' => array(
+        0 => array('field_names' => array('capture_dataset.active'), 'search_values' => array(1), 'comparison' => '='),
+      ),
+      'search_type' => 'AND',
+      'related_tables' => array(),
+    );
+
+    if($item_repository_id && is_int($item_repository_id)) {
+      $query_params[1] = array(
+        'field_names' => array(
+          'capture_dataset.item_repository_id',
+        ),
+        'search_values' => array((int)$item_repository_id),
+        'comparison' => '=',
+      );
+    }
+
+    // Fields.
+    $query_params['fields'][] = array(
+      'table_name' => 'project',
+      'field_name' => 'project_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'subject',
+      'field_name' => 'subject_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'capture_dataset',
+      'field_name' => '*',
+    );
+
+    // Joins.
+    $query_params['related_tables'][] = array(
+      'table_name' => 'item',
+      'table_join_field' => 'item_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'capture_dataset',
+      'base_join_field' => 'item_repository_id',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'subject',
+      'table_join_field' => 'subject_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'item',
+      'base_join_field' => 'subject_repository_id',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'project',
+      'table_join_field' => 'project_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'subject',
+      'base_join_field' => 'project_repository_id',
+    );
+
+    $query_params['records_values'] = array();
+    $return_data = $this->getRecords($query_params);
+    //@todo do something if $ret has errors
+
+    return $return_data;
+  }
+
+
+
+  /**
+   * ----------------------------------------------------------------
    * Delete for single record.
    * ----------------------------------------------------------------
    */
@@ -695,6 +770,249 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
 
   }
+
+  public function getDatatableCaptureDataset($params) {
+
+    $item_repository_id = array_key_exists('item_repository_id', $params) ? $params['item_repository_id'] : NULL;
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+
+    $query_params = array(
+      'fields' => array(),
+      'base_table' => 'capture_dataset',
+      'search_params' => array(
+        0 => array('field_names' => array('capture_dataset.active'), 'search_values' => array(1), 'comparison' => '='),
+      ),
+      'search_type' => 'AND',
+    );
+
+    $query_params['related_tables'][] = array(
+      'table_name' => 'capture_method',
+      'table_join_field' => 'capture_method_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'capture_dataset',
+      'base_join_field' => 'capture_method',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'dataset_type',
+      'table_join_field' => 'dataset_type_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'capture_dataset',
+      'base_join_field' => 'capture_dataset_type',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'item_position_type',
+      'table_join_field' => 'item_position_type_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'capture_dataset',
+      'base_join_field' => 'item_position_type',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'focus_type',
+      'table_join_field' => 'focus_type_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'capture_dataset',
+      'base_join_field' => 'focus_type',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'light_source_type',
+      'table_join_field' => 'light_source_type_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'capture_dataset',
+      'base_join_field' => 'light_source_type',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'background_removal_method',
+      'table_join_field' => 'background_removal_method_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'capture_dataset',
+      'base_join_field' => 'background_removal_method',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'camera_cluster_type',
+      'table_join_field' => 'camera_cluster_type_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'capture_dataset',
+      'base_join_field' => 'camera_cluster_type',
+    );
+
+    if ($search_value) {
+      $query_params['search_params'][1] = array(
+        'field_names' => array(
+          'capture_dataset.capture_dataset_guid',
+          'capture_dataset.capture_dataset_field_id',
+          'capture_dataset.capture_method',
+          'capture_dataset.capture_dataset_type',
+          'capture_dataset.capture_dataset_name',
+          'capture_dataset.collected_by',
+          'capture_dataset.date_of_capture',
+          'capture_dataset.capture_dataset_description',
+          'capture_dataset.collection_notes',
+          'capture_dataset.support_equipment',
+          'capture_dataset.item_position_type',
+          'capture_dataset.item_position_field_id',
+          'capture_dataset.item_arrangement_field_id',
+          'capture_dataset.positionally_matched_capture_datasets',
+          'capture_dataset.focus_type',
+          'capture_dataset.light_source_type',
+          'capture_dataset.background_removal_method',
+          'capture_dataset.cluster_type',
+          'capture_dataset.cluster_geometry_field_id',
+          'capture_dataset.resource_capture_datasets',
+          'capture_dataset.calibration_object_used',
+          'capture_dataset.date_created',
+          'capture_dataset.created_by_user_account_id',
+          'capture_dataset.last_modified',
+          'capture_dataset.last_modified_user_account_id',
+        ),
+        'search_values' => array($search_value),
+        'comparison' => 'LIKE',
+      );
+    }
+
+    if($item_repository_id && is_int($item_repository_id)) {
+      $count_params = count($query_params['search_params']);
+      $query_params[$count_params] = array(
+        'field_names' => array(
+          'capture_dataset.item_repository_id',
+        ),
+        'search_values' => array((int)$item_repository_id),
+        'comparison' => '=',
+      );
+      //          AND capture_dataset.item_repository_id = " . (int)$item_repository_id . "");
+    }
+
+    // Fields.
+    $query_params['fields'][] = array(
+      'table_name' => 'capture_dataset',
+      'field_name' => 'capture_dataset_repository_id',
+      'field_alias' => 'manage',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'capture_dataset',
+      'field_name' => 'capture_dataset_guid',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'capture_dataset_field_id',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'capture_dataset_name',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'collected_by',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'date_of_capture',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'capture_dataset_description',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'collection_notes',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'support_equipment',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'item_position_field_id',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'item_arrangement_field_id',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'positionally_matched_capture_datasets',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'cluster_geometry_field_id',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'resource_capture_datasets',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'calibration_object_used',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'date_created',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'created_by_user_account_id',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'last_modified',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'last_modified_user_account_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'capture_dataset',
+      'field_name' => 'capture_dataset_repository_id',
+      'field_alias' => 'DT_RowId',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'capture_method',
+      'field_name' => 'label',
+      'field_alias' => 'capture_method'
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'dataset_type',
+      'field_name' => 'label',
+      'field_alias' => 'capture_dataset_type'
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'item_position_type',
+      'field_name' => 'label',
+      'field_alias' => 'item_position_type'
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'focus_type',
+      'field_name' => 'label',
+      'field_alias' => 'focus_type'
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'light_source_type',
+      'field_name' => 'label',
+      'field_alias' => 'light_source_type'
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'background_removal_method',
+      'field_name' => 'label',
+      'field_alias' => 'background_removal_method'
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'camera_cluster_type',
+      'field_name' => 'label',
+      'field_alias' => 'camera_cluster_type'
+    );
+
+    $query_params['records_values'] = array();
+
+    $query_params['limit'] = array(
+      'limit_start' => $start_record,
+      'limit_stop' => $stop_record,
+    );
+
+    if (!empty($sort_field) && !empty($sort_order)) {
+      $query_params['sort_fields'][] = array(
+        'field_name' => $sort_field,
+        'sort_order' => $sort_order,
+      );
+    } else {
+      $query_params['sort_fields'][] = array(
+        'field_name' => 'capture_dataset.last_modified',
+        'sort_order' => 'DESC',
+      );
+    }
+
+    $data = $this->getRecordsDatatable($query_params);
+
+    return $data;
+
+  }
+
+
   /**
    * Save function.
    */
