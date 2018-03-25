@@ -20,7 +20,7 @@ class RepoStorageHybridController extends Controller
     //$this->container = $this->container->get('doctrine.dbal.default_connection');
   }
 
-  public function execute($function, $parameters) {
+  public function execute($function, $parameters = array()) {
 
     if(!isset($this->container) || !is_object($this->container)) {
       //@todo log error
@@ -35,7 +35,12 @@ class RepoStorageHybridController extends Controller
       return NULL;
     }
     else {
-      return $this->repo_storage->$function($parameters);
+      if(count($parameters) > 0) {
+        return $this->repo_storage->$function($parameters);
+      }
+      else {
+        return $this->repo_storage->$function();
+      }
     }
 
   }
