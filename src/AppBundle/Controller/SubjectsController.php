@@ -75,11 +75,6 @@ class SubjectsController extends Controller
      */
     public function datatables_browse_subjects(Connection $conn, Request $request, ItemsController $items)
     {
-        $sort = '';
-        $search_sql = '';
-        $pdo_params = array();
-        $data = array();
-
         $req = $request->request->all();
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
 
@@ -88,46 +83,19 @@ class SubjectsController extends Controller
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
-        $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
 
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $sort = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $sort = " ORDER BY subject.last_modified DESC ";
-        }
-
+        $query_params = array(
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+          'project_repository_id' => $project_repository_id,
+        );
         if ($search) {
-            $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
-            $search_sql = "
-                AND (
-                  subject.subject_name LIKE ?
-                  OR subject.holding_entity_guid LIKE ?
-                  OR subject.last_modified LIKE ?
-                ) ";
+          $query_params['search_value'] = $search;
         }
 
-        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-              subject.subject_repository_id AS manage
-              ,subject.subject_repository_id
-              ,subject.holding_entity_guid
-              ,subject.local_subject_id
-              ,subject.subject_guid
-              ,subject.subject_name
-              ,subject.last_modified
-              ,subject.active
-              ,subject.subject_repository_id AS DT_RowId
-          FROM subject
-          LEFT JOIN item ON item.subject_repository_id = subject.subject_repository_id
-          WHERE subject.active = 1
-          AND project_repository_id = " . (int)$project_repository_id . "
-          {$search_sql}
-          GROUP BY subject.holding_entity_guid, subject.local_subject_id, subject.subject_guid, subject.subject_name, subject.last_modified, subject.active, subject.subject_repository_id
-          {$sort}
-          {$limit_sql}");
-        $statement->execute($pdo_params);
-        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+        $data = $this->repo_storage_controller->execute('getDatatableSubject', $query_params);
 
         // Convert status to human readable words.
         if(!empty($data['aaData'])) {
@@ -154,12 +122,6 @@ class SubjectsController extends Controller
             }
         }
 
-        $statement = $conn->prepare("SELECT FOUND_ROWS()");
-        $statement->execute();
-        $count = $statement->fetch();
-        $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-        $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
-        
         return $this->json($data);
     }
 
@@ -227,18 +189,15 @@ class SubjectsController extends Controller
      * Run a query to retrieve one subject from the database.
      *
      * @param   int $subject_id  The subject ID
-     * @param   object  $conn    Database connection object
      * @return  array|bool       The query result
      */
-    public function get_subject($subject_id, $conn)
+    public function get_subject($container, $subject_id)
     {
-        $statement = $conn->prepare("SELECT *
-            FROM subject
-            WHERE subject.active = 1
-            AND subject_repository_id = :subject_repository_id");
-        $statement->bindValue(":subject_repository_id", $subject_id, PDO::PARAM_INT);
-        $statement->execute();
-        return $statement->fetch(PDO::FETCH_ASSOC);
+        $this->repo_storage_controller->setContainer($container);
+        $data = $this->repo_storage_controller->execute('getRecordById', array(
+          'record_type' => 'subject',
+          'record_id' => (int)$subject_id));
+        return $data;
     }
 
     /**
@@ -324,26 +283,10 @@ class SubjectsController extends Controller
           $ids_array = explode(',', $ids);
 
           foreach ($ids_array as $key => $id) {
-
-            $statement = $conn->prepare("
-                UPDATE subject
-                LEFT JOIN item ON item.subject_repository_id = subject.subject_repository_id
-                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
-                LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
-                SET subject.active = 0,
-                    subject.last_modified_user_account_id = :last_modified_user_account_id,
-                    item.active = 0,
-                    item.last_modified_user_account_id = :last_modified_user_account_id,
-                    capture_dataset.active = 0,
-                    capture_dataset.last_modified_user_account_id = :last_modified_user_account_id,
-                    capture_data_element.active = 0,
-                    capture_data_element.last_modified_user_account_id = :last_modified_user_account_id
-                WHERE subject.subject_repository_id = :id
-            ");
-            $statement->bindValue(":id", $id, PDO::PARAM_INT);
-            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->execute();
-
+            $ret = $this->repo_storage_controller->execute('markSubjectInactive', array(
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+            ));
           }
 
           $this->addFlash('message', 'Records successfully removed.');
@@ -353,24 +296,6 @@ class SubjectsController extends Controller
         }
 
         return $this->redirectToRoute('subjects_browse', array('project_repository_id' => $project_repository_id));
-    }
-
-    /**
-     * Delete Subject
-     *
-     * Run a query to delete a subject from the database.
-     *
-     * @param   int     $subject_repository_id  The subject ID
-     * @param   object  $conn         Database connection object
-     * @return  void
-     */
-    public function delete_subject($subject_repository_id, $conn)
-    {
-        $statement = $conn->prepare("
-            DELETE FROM subjects
-            WHERE subject_repository_id = :subject_repository_id");
-        $statement->bindValue(":subject_repository_id", $subject_repository_id, PDO::PARAM_INT);
-        $statement->execute();
     }
 
 }
