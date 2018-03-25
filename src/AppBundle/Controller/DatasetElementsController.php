@@ -177,7 +177,16 @@ class DatasetElementsController extends Controller
         $id = !empty($request->attributes->get('capture_data_element_rep_id')) ? $request->attributes->get('capture_data_element_rep_id') : false;
         
         // Retrieve data from the database.
-        $dataset_element = (!empty($id) && empty($post)) ? $dataset_element->getDatasetElement((int)$id, $conn) : $dataset_element;
+        if (!empty($id) && empty($post)) {
+          $dataset_element_array = $this->repo_storage_controller->execute('getRecordById', array(
+            'base_table' => 'capture_data_element',
+            'id_field' => 'capture_data_element_repository_id',
+            'id_value' => $id,
+          ));
+          if(is_array($dataset_element_array)) {
+            $dataset_element = (object)$dataset_element_array;
+          }
+        }
 
         $dataset_element->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $dataset_element->subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;

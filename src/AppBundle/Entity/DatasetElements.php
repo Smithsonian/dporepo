@@ -37,25 +37,5 @@ class DatasetElements
      * @var int
      */
     public $position_in_cluster_field_id;
-    
-    /**
-     * Get Dataset Element
-     *
-     * Get one dataset element from the database.
-     *
-     * @param       int $capture_data_element_repository_id  The dataset element ID
-     * @return      array|bool                     The query result
-     */
-    public function getDatasetElement($capture_data_element_repository_id, Connection $conn)
-    {
-        $statement = $conn->prepare("SELECT *
-            FROM capture_data_element
-            WHERE capture_data_element.active = 1
-            AND capture_data_element_repository_id = :capture_data_element_repository_id");
-        $statement->bindValue(":capture_data_element_repository_id", $capture_data_element_repository_id, "integer");
-        $statement->execute();
-        $result = $statement->fetch();
 
-        return (object)$result;
-    }
 }
