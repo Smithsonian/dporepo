@@ -65,62 +65,28 @@ class ProjectsController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_projects(Connection $conn, Request $request, SubjectsController $subjects)
+    public function datatables_browse_projects(Request $request, SubjectsController $subjects)
     {
-
-        $sort = '';
-        $search_sql = '';
-        $pdo_params = array();
-        $data = array();
-
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
-        $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
 
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $sort = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $sort = " ORDER BY project.last_modified DESC ";
-        }
-
+        $query_params = array(
+          'record_type' => 'project',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+        );
         if ($search) {
-            $pdo_params[] = '%' . $search . '%';
-            $pdo_params[] = '%' . $search . '%';
-            $pdo_params[] = '%' . $search . '%';
-            $pdo_params[] = '%' . $search . '%';
-            $search_sql = "
-            AND (
-                project.project_name LIKE ?
-                OR project.stakeholder_label LIKE ?
-                OR project.date_created LIKE ?
-                OR project.last_modified LIKE ?
-            ) ";
+          $query_params['search_value'] = $search;
         }
 
-        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-                project.project_repository_id as manage
-                ,project.project_repository_id
-                ,project.project_name
-                ,project.stakeholder_guid
-                ,project.date_created
-                ,project.last_modified
-                ,project.active
-                ,project.project_repository_id AS DT_RowId
-                ,isni_data.isni_label AS stakeholder_label
-            FROM project
-            LEFT JOIN isni_data ON isni_data.isni_id = project.stakeholder_guid
-            LEFT JOIN subject ON subject.project_repository_id = project.project_repository_id
-            WHERE project.active = 1
-            {$search_sql}
-            GROUP BY project.project_name, project.stakeholder_guid, project.date_created, project.last_modified, project.active, project.project_repository_id
-            {$sort}
-            {$limit_sql}");
-        $statement->execute($pdo_params);
-        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
         // Get the subjects count
         if(!empty($data['aaData'])) {
@@ -129,13 +95,6 @@ class ProjectsController extends Controller
                 $data['aaData'][$key]['subjects_count'] = count($project_subjects);
             }
         }
-
-        $statement = $conn->prepare("SELECT FOUND_ROWS()");
-        $statement->execute();
-        $count = $statement->fetch();
-        $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-        $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
-        
         return $this->json($data);
     }
 
