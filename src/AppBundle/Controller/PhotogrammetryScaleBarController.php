@@ -46,12 +46,6 @@ class PhotogrammetryScaleBarController extends Controller
      */
     public function datatablesBrowse(Connection $conn, Request $request)
     {
-        $data = new PhotogrammetryScaleBar();
-
-        $params = array();
-        $params['pdo_params'] = array();
-        $params['search_sql'] = $params['sort'] = '';
-
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
@@ -59,32 +53,21 @@ class PhotogrammetryScaleBarController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
-        $params['limit_sql'] = " LIMIT {$start_record}, {$stop_record} ";
+      $query_params = array(
+        'record_type' => 'photogrammetry_scale_bar',
+        'sort_field' => $sort_field,
+        'sort_order' => $sort_order,
+        'start_record' => $start_record,
+        'stop_record' => $stop_record,
+      );
+      if ($search) {
+        $query_params['search_value'] = $search;
+      }
 
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $params['sort'] = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $params['sort'] = " ORDER BY photogrammetry_scale_bar.last_modified DESC ";
-        }
+      $this->repo_storage_controller->setContainer($this->container);
+      $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
-        if ($search) {
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['search_sql'] = "
-                AND (
-                  photogrammetry_scale_bar.scale_bar_id LIKE ?
-                  photogrammetry_scale_bar.scale_bar_manufacturer LIKE ?
-                  photogrammetry_scale_bar.scale_bar_barcode_type LIKE ?
-                  photogrammetry_scale_bar.scale_bar_target_pairs LIKE ?
-                ) ";
-        }
-
-        // Run the query
-        $results = $data->datatablesQuery($params);
-
-        return $this->json($results);
+        return $this->json($data);
     }
 
     /**

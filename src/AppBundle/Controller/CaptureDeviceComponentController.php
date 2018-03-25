@@ -46,12 +46,6 @@ class CaptureDeviceComponentController extends Controller
      */
     public function datatablesBrowse(Connection $conn, Request $request)
     {
-        $data = new CaptureDeviceComponent();
-
-        $params = array();
-        $params['pdo_params'] = array();
-        $params['search_sql'] = $params['sort'] = '';
-
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
@@ -59,32 +53,21 @@ class CaptureDeviceComponentController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
-        $params['limit_sql'] = " LIMIT {$start_record}, {$stop_record} ";
-
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $params['sort'] = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $params['sort'] = " ORDER BY capture_device_component.last_modified DESC ";
-        }
-
+        $query_params = array(
+          'record_type' => 'capture_device_component',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+        );
         if ($search) {
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['search_sql'] = "
-                AND (
-                  capture_device_component.serial_number LIKE ?
-                  capture_device_component.capture_device_component_type LIKE ?
-                  capture_device_component.manufacturer LIKE ?
-                  capture_device_component.model_name LIKE ?
-                ) ";
+          $query_params['search_value'] = $search;
         }
 
-        // Run the query
-        $results = $data->datatablesQuery($params);
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
-        return $this->json($results);
+        return $this->json($data);
     }
 
     /**

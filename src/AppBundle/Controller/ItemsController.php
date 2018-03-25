@@ -72,7 +72,7 @@ class ItemsController extends Controller
      *
      * Browse items
      *
-     * Run a query to retreive all items in the database.
+     * Run a query to retrieve all items in the database.
      *
      * @param   object  Connection  Database connection object
      * @param   object  Request     Request object

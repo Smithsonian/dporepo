@@ -46,12 +46,6 @@ class ModelController extends Controller
      */
     public function datatablesBrowse(Connection $conn, Request $request)
     {
-        $data = new Model();
-
-        $params = array();
-        $params['pdo_params'] = array();
-        $params['search_sql'] = $params['sort'] = '';
-
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
@@ -59,56 +53,21 @@ class ModelController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
-        $params['limit_sql'] = " LIMIT {$start_record}, {$stop_record} ";
-
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $params['sort'] = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $params['sort'] = " ORDER BY model.last_modified DESC ";
-        }
-
+        $query_params = array(
+          'record_type' => 'model',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+        );
         if ($search) {
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['search_sql'] = "
-                AND (
-                  model.model_guid LIKE ?
-                  model.date_of_creation LIKE ?
-                  model.model_file_type LIKE ?
-                  model.derived_from LIKE ?
-                  model.creation_method LIKE ?
-                  model.model_modality LIKE ?
-                  model.units LIKE ?
-                  model.is_watertight LIKE ?
-                  model.model_purpose LIKE ?
-                  model.point_count LIKE ?
-                  model.has_normals LIKE ?
-                  model.face_count LIKE ?
-                  model.vertices_count LIKE ?
-                  model.has_vertex_color LIKE ?
-                  model.has_uv_space LIKE ?
-                  model.model_maps LIKE ?
-                ) ";
+          $query_params['search_value'] = $search;
         }
 
-        // Run the query
-        $results = $data->datatablesQuery($params);
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
-        return $this->json($results);
+        return $this->json($data);
     }
 
     /**

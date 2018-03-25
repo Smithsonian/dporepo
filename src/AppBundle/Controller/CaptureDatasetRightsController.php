@@ -40,18 +40,11 @@ class CaptureDatasetRightsController extends Controller
     /**
      * @Route("/admin/projects/capture_dataset_rights/datatables_browse", name="capture_dataset_rights_browse_datatables", methods="POST")
      *
-     * @param Connection $conn
      * @param Request $request
      * @return JsonResponse The query result in JSON
      */
-    public function datatablesBrowse(Connection $conn, Request $request)
+    public function datatablesBrowse(Request $request)
     {
-        $data = new CaptureDatasetRights();
-
-        $params = array();
-        $params['pdo_params'] = array();
-        $params['search_sql'] = $params['sort'] = '';
-
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
@@ -59,30 +52,21 @@ class CaptureDatasetRightsController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
-        $params['limit_sql'] = " LIMIT {$start_record}, {$stop_record} ";
-
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $params['sort'] = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $params['sort'] = " ORDER BY capture_dataset_rights.last_modified DESC ";
-        }
-
+        $query_params = array(
+          'record_type' => 'capture_dataset_right',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+        );
         if ($search) {
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['search_sql'] = "
-                AND (
-                  capture_dataset_rights.data_rights_restriction LIKE ?
-                  capture_dataset_rights.start_date LIKE ?
-                  capture_dataset_rights.end_date LIKE ?
-                ) ";
+          $query_params['search_value'] = $search;
         }
 
-        // Run the query
-        $results = $data->datatablesQuery($params);
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
-        return $this->json($results);
+        return $this->json($data);
     }
 
     /**
