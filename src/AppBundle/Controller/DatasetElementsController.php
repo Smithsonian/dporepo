@@ -314,9 +314,10 @@ class DatasetElementsController extends Controller
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
         $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
-        $id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
+        $capture_dataset_repository_id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
-        if(!empty($ids) && $project_repository_id && $subject_repository_id && $item_repository_id && $id) {
+
+        if(!empty($ids) && $project_repository_id && $subject_repository_id && $item_repository_id && $capture_dataset_repository_id) {
 
           $ids_array = explode(',', $ids);
 
@@ -326,7 +327,7 @@ class DatasetElementsController extends Controller
           foreach ($ids_array as $key => $id) {
             // Run the query against a single record.
             $ret = $this->repo_storage_controller->execute('markRecordInactive', array(
-              'record_type' => $this->table_name,
+              'record_type' => 'capture_data_element',
               'record_id' => $id,
               'user_id' => $this->getUser()->getId(),
             ));
@@ -338,7 +339,8 @@ class DatasetElementsController extends Controller
           $this->addFlash('message', 'Missing data. No records removed.');
         }
 
-        return $this->redirectToRoute('dataset_elements_browse', array('project_repository_id' => $project_repository_id, 'subject_repository_id' => $subject_repository_id, 'item_repository_id' => $item_repository_id, 'capture_dataset_repository_id' => $id));
+        return $this->redirectToRoute('dataset_elements_browse', array('project_repository_id' => $project_repository_id, 'subject_repository_id' => $subject_repository_id,
+          'item_repository_id' => $item_repository_id, 'capture_dataset_repository_id' => $capture_dataset_repository_id));
     }
 
 }
