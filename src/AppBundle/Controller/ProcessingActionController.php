@@ -126,7 +126,7 @@ class ProcessingActionController extends Controller
 
         // $this->u->dumper($data);
 
-
+        if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
         $data->target_model_repository_id = $parent_id;
