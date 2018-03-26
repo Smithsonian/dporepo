@@ -188,7 +188,7 @@ class ItemsController extends Controller
         // If form is submitted and passes validation, insert/update the database record.
         if ($form->isSubmitted() && $form->isValid()) {
 
-            $subject = $form->getData();
+            $item = $form->getData();
             $id = $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => 'item',
               'record_id' => $id,
@@ -198,7 +198,7 @@ class ItemsController extends Controller
             //$item_repository_id = $this->insert_update_item($item, $item->subject_repository_id, $item_repository_id, $conn);
 
             $this->addFlash('message', 'Item successfully updated.');
-            return $this->redirect('/admin/projects/datasets/' . $subject->project_repository_id . '/' . $item->subject_repository_id . '/' . $id);
+            return $this->redirect('/admin/projects/datasets/' . $item->project_repository_id . '/' . $item->subject_repository_id . '/' . $id);
 
         }
 

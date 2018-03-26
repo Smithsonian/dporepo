@@ -147,6 +147,7 @@ class ItemTypesController extends Controller
             if (isset($validated) && ($validated !== true)) {
                 $errors = $gump_parse_errors->gump_parse_errors($validated);
             }
+            $data = (array)$post;
         }
 
         if (!$errors && !empty($post)) {
