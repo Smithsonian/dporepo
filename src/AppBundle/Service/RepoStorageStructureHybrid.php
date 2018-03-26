@@ -512,14 +512,14 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
           break;
         case 'target_type':
           $sql = "CREATE TABLE IF NOT EXISTS `target_type` (
-            `target_types_id` int(11) NOT NULL AUTO_INCREMENT,
+            `target_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`target_types_id`),
+            PRIMARY KEY (`target_type_repository_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
