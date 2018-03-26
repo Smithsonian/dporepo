@@ -66,7 +66,7 @@ class UnitStakeholderController extends Controller
      *
      * Browse Unit Stakeholder
      *
-     * Run a query to retreive all Unit Stakeholder in the database.
+     * Run a query to retrieve all Unit Stakeholder in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result
@@ -183,7 +183,7 @@ class UnitStakeholderController extends Controller
         // Query the isni_data table to see if there's an entry.
         //$isni_data = $isni->get_isni_data_from_database($data['isni_id'], $conn);
         $isni_data = $this->repo_storage_controller->execute('getRecordById', array (
-          'record_type' => 'isni',
+          'record_type' => 'isni_data',
           'record_id' => $data->stakeholder_guid));
 
         // If there is no entry, then perform an insert.

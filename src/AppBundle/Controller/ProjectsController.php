@@ -59,7 +59,7 @@ class ProjectsController extends Controller
      *
      * Browse Projects
      *
-     * Run a query to retreive all projects in the database.
+     * Run a query to retrieve all projects in the database.
      *
      * @param   object  Connection  Database connection object
      * @param   object  Request     Request object
@@ -258,7 +258,7 @@ class ProjectsController extends Controller
 
         // Query the isni_data table to see if there's an entry.
         $isni_data = $this->repo_storage_controller->execute('getRecordById', array(
-          'record_type' => 'isni',
+          'record_type' => 'isni_data',
           'record_id' => $data->stakeholder_guid));
 
         // If there is no entry, then perform an insert.
@@ -328,6 +328,8 @@ class ProjectsController extends Controller
         if(!empty($ids)) {
 
           $ids_array = explode(',', $ids);
+
+          $this->repo_storage_controller->setContainer($this->container);
 
           foreach ($ids_array as $key => $id) {
             $ret = $this->repo_storage_controller->execute('markProjectInactive', array(

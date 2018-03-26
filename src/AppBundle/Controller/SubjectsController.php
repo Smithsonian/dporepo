@@ -67,7 +67,7 @@ class SubjectsController extends Controller
      *
      * Browse subjects
      *
-     * Run a query to retreive all subjects in the database.
+     * Run a query to retrieve all subjects in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result
@@ -139,7 +139,7 @@ class SubjectsController extends Controller
     {
         $subject = new Subjects();
         $post = $request->request->all();
-        $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
+        $id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
         $subject->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
 
         // Retrieve data from the database.
@@ -170,12 +170,12 @@ class SubjectsController extends Controller
             ));
 
             $this->addFlash('message', 'Subject successfully updated.');
-            return $this->redirect('/admin/projects/items/' . $subject->project_repository_id . '/' . $subject_repository_id);
+            return $this->redirect('/admin/projects/items/' . $subject->project_repository_id . '/' . $id);
 
         }
 
         return $this->render('subjects/subject_form.html.twig', array(
-            'page_title' => !empty($subject_repository_id) ? 'Subject: ' . $subject->subject_name : 'Create Subject',
+            'page_title' => !empty($id) ? 'Subject: ' . $subject->subject_name : 'Create Subject',
             'subject_data' => $subject,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
@@ -281,6 +281,7 @@ class SubjectsController extends Controller
 
           $ids_array = explode(',', $ids);
 
+          $this->repo_storage_controller->setContainer($this->container);
           foreach ($ids_array as $key => $id) {
             $ret = $this->repo_storage_controller->execute('markSubjectInactive', array(
               'record_id' => $id,

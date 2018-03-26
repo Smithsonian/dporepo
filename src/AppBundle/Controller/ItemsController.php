@@ -318,6 +318,8 @@ class ItemsController extends Controller
 
           $ids_array = explode(',', $ids);
 
+          $this->repo_storage_controller->setContainer($this->container);
+
           foreach ($ids_array as $key => $id) {
             $ret = $this->repo_storage_controller->execute('markItemInactive', array(
               'record_id' => $id,
