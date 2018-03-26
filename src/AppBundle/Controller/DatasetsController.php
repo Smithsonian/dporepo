@@ -140,10 +140,12 @@ class DatasetsController extends Controller
     {
         $dataset = new Datasets();
         $post = $request->request->all();
-        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
+        $id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
         $dataset->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $dataset->subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
         $dataset->item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
+
+        $this->repo_storage_controller->setContainer($this->container);
 
         // Retrieve data from the database.
         if (!empty($id) && empty($post)) {
