@@ -161,9 +161,11 @@ class ItemsController extends Controller
     {
         $item = new Items();
         $post = $request->request->all();
-        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
+        $id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
         $item->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $item->subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
+
+        $this->repo_storage_controller->setContainer($this->container);
 
         // Retrieve data from the database.
         if (!empty($id) && empty($post)) {
@@ -188,7 +190,7 @@ class ItemsController extends Controller
 
             $subject = $form->getData();
             $id = $this->repo_storage_controller->execute('saveRecord', array(
-              'base_table' => 'capture_device_component',
+              'base_table' => 'item',
               'record_id' => $id,
               'user_id' => $this->getUser()->getId(),
               'values' => (array)$item
