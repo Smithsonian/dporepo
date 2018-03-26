@@ -194,7 +194,7 @@ class ItemTypesController extends Controller
         // Loop thorough the ids.
         foreach ($ids_array as $key => $id) {
           // Run the query against a single record.
-          $ret = $this->repo_storage_controller->execute('markRecordsInactive', array(
+          $ret = $this->repo_storage_controller->execute('markRecordInactive', array(
             'record_type' => $this->table_name,
             'record_id' => $id,
             'user_id' => $this->getUser()->getId(),
@@ -207,7 +207,7 @@ class ItemTypesController extends Controller
         $this->addFlash('message', 'Missing data. No records removed.');
       }
 
-      return $this->redirectToRoute($this->table_name . '_browse');
+      return $this->redirectToRoute('item_types_browse');
     }
 
 }

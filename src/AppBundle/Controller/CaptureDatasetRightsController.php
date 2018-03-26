@@ -92,7 +92,7 @@ class CaptureDatasetRightsController extends Controller
         $this->repo_storage_controller->setContainer($this->container);
         if(!empty($id) && empty($post)) {
           $rec = $this->repo_storage_controller->execute('getRecordById', array(
-            'record_type' => 'capture_dataset_rights',
+            'record_type' => 'capture_dataset_right',
             'record_id' => $id));
           if(isset($rec)) {
             $data = (object)$rec;
@@ -152,8 +152,8 @@ class CaptureDatasetRightsController extends Controller
             // Loop thorough the ids.
             foreach ($ids_array as $key => $id) {
               // Run the query against a single record.
-              $ret = $this->repo_storage_controller->execute('markRecordsInactive', array(
-                'record_type' => 'capture_dataset_rights',
+              $ret = $this->repo_storage_controller->execute('markRecordInactive', array(
+                'record_type' => 'capture_dataset_right',
                 'record_id' => $id,
                 'user_id' => $this->getUser()->getId(),
               ));

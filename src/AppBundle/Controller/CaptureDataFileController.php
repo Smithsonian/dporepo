@@ -151,7 +151,7 @@ class CaptureDataFileController extends Controller
             // Loop thorough the ids.
             foreach ($ids_array as $key => $id) {
               // Run the query against a single record.
-              $ret = $this->repo_storage_controller->execute('markRecordsInactive', array(
+              $ret = $this->repo_storage_controller->execute('markRecordInactive', array(
                 'record_type' => 'capture_data_file',
                 'record_id' => $id,
                 'user_id' => $this->getUser()->getId(),

@@ -136,7 +136,7 @@ class DatasetsController extends Controller
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_datasets_form( $id, Connection $conn, Request $request )
+    function show_datasets_form( Connection $conn, Request $request )
     {
         $dataset = new Datasets();
         $post = $request->request->all();

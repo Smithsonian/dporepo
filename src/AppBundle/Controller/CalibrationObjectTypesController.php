@@ -122,7 +122,7 @@ class CalibrationObjectTypesController extends Controller
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
-            'record_type' => 'calibration_object_types',
+            'record_type' => 'calibration_object_type',
             'record_id' => (int)$id));
         }
 
@@ -188,7 +188,7 @@ class CalibrationObjectTypesController extends Controller
         // Loop thorough the ids.
         foreach ($ids_array as $key => $id) {
           // Run the query against a single record.
-          $ret = $this->repo_storage_controller->execute('markRecordsInactive', array(
+          $ret = $this->repo_storage_controller->execute('markRecordInactive', array(
             'record_type' => $this->table_name,
             'record_id' => $id,
             'user_id' => $this->getUser()->getId(),
@@ -201,7 +201,7 @@ class CalibrationObjectTypesController extends Controller
         $this->addFlash('message', 'Missing data. No records removed.');
       }
 
-      return $this->redirectToRoute($this->table_name . '_browse');
+      return $this->redirectToRoute('calibration_object_types_browse');
     }
 
 

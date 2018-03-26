@@ -36,11 +36,11 @@ class TargetTypesController extends Controller
         $this->repo_storage_controller = new RepoStorageHybridController();
 
         // Table name and field names.
-        $this->table_name = 'target_types';
-        $this->id_field_name_raw = 'target_types_id';
-        $this->id_field_name = 'target_types.' . $this->id_field_name_raw;
+        $this->table_name = 'target_type';
+        $this->id_field_name_raw = 'target_type_repository_id';
+        $this->id_field_name = 'target_type.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
-        $this->label_field_name = 'target_types.' . $this->label_field_name_raw;
+        $this->label_field_name = 'target_type.' . $this->label_field_name_raw;
     }
 
     /**
@@ -122,7 +122,7 @@ class TargetTypesController extends Controller
         $this->repo_storage_controller->setContainer($this->container);
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
-            'record_type' => 'target_types',
+            'record_type' => 'target_type',
             'record_id' => (int)$id));
         }
 
@@ -187,7 +187,7 @@ class TargetTypesController extends Controller
         // Loop thorough the ids.
         foreach ($ids_array as $key => $id) {
           // Run the query against a single record.
-          $ret = $this->repo_storage_controller->execute('markRecordsInactive', array(
+          $ret = $this->repo_storage_controller->execute('markRecordInactive', array(
             'record_type' => $this->table_name,
             'record_id' => $id,
             'user_id' => $this->getUser()->getId(),
@@ -200,7 +200,7 @@ class TargetTypesController extends Controller
         $this->addFlash('message', 'Missing data. No records removed.');
       }
 
-      return $this->redirectToRoute($this->table_name . '_browse');
+      return $this->redirectToRoute('target_types_browse');
     }
 
 }
