@@ -122,7 +122,7 @@ class CaptureDataFileController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/capture_data_files/manage/' . $data->parent_capture_data_element_repository_id . '/' . $id);
+            return $this->redirect('/admin/projects/capture_data_files/manage/' . $data->capture_data_element_repository_id . '/' . $id);
         }
 
         return $this->render('datasetElements/capture_data_file_form.html.twig', array(

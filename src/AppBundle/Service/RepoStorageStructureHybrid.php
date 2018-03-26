@@ -126,7 +126,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'capture_data_file':
           $sql = "CREATE TABLE IF NOT EXISTS `capture_data_file` (
               `capture_data_file_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-              `parent_capture_data_element_repository_id` int(11),
+              `capture_data_element_repository_id` int(11),
               `capture_data_file_name` varchar(255),
               `capture_data_file_type` varchar(255),
               `is_compressed_multiple_files` varchar(255),
@@ -145,7 +145,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             `capture_dataset_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `capture_dataset_guid` varchar(255) NOT NULL DEFAULT '',
             `project_repository_id` int(255) DEFAULT NULL,
-            `parent_item_repository_id` int(11) NOT NULL,
+            `item_repository_id` int(11) NOT NULL,
             `capture_dataset_field_id` int(11) NOT NULL,
             `capture_method` int(11) DEFAULT NULL,
             `capture_dataset_type` int(11) DEFAULT NULL,
@@ -179,7 +179,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'capture_dataset_right':
           $sql = "CREATE TABLE IF NOT EXISTS `capture_data_file` (
             `capture_data_file_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `parent_capture_data_element_repository_id` int(11),
+            `capture_data_element_repository_id` int(11),
             `capture_data_file_name` varchar(255),
             `capture_data_file_type` varchar(255),
             `is_compressed_multiple_files` varchar(255),
@@ -196,7 +196,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'capture_device':
           $sql = "CREATE TABLE IF NOT EXISTS `capture_device` (
             `capture_device_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `parent_capture_data_element_repository_id` int(11),
+            `capture_data_element_repository_id` int(11),
             `calibration_file` varchar(255),
             `capture_device_component_ids` varchar(255),
             `date_created` datetime NOT NULL,
@@ -212,7 +212,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'capture_device_component':
           $sql = "CREATE TABLE IF NOT EXISTS `capture_device_component` (
             `capture_device_component_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `parent_capture_device_repository_id` int(11),
+            `capture_device_repository_id` int(11),
             `serial_number` varchar(255),
             `capture_device_component_type` varchar(255),
             `manufacturer` varchar(255),
@@ -339,7 +339,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            `status_type_id` int(11) NOT NULL DEFAULT '0',
+            `status_type_repository_id` int(11) NOT NULL DEFAULT '0',
             PRIMARY KEY (`item_repository_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
@@ -362,7 +362,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'model':
           $sql = "CREATE TABLE IF NOT EXISTS `model` (
             `model_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `parent_capture_dataset_repository_id` int(11),
+            `capture_dataset_repository_id` int(11),
             `model_guid` varchar(255),
             `date_of_creation` datetime,
             `model_file_type` varchar(255),
@@ -392,7 +392,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'photogrammetry_scale_bar':
           $sql = "CREATE TABLE IF NOT EXISTS `photogrammetry_scale_bar` (
             `photogrammetry_scale_bar_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `parent_capture_dataset_repository_id` int(11),
+            `capture_dataset_repository_id` int(11),
             `scale_bar_id` varchar(255),
             `scale_bar_manufacturer` varchar(255),
             `scale_bar_barcode_type` varchar(255),
@@ -410,7 +410,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'photogrammetry_scale_bar_target_pair':
           $sql = "CREATE TABLE IF NOT EXISTS `photogrammetry_scale_bar_target_pair` (
             `photogrammetry_scale_bar_target_pair_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `parent_photogrammetry_scale_bar_repository_id` int(11),
+            `photogrammetry_scale_bar_repository_id` int(11),
             `target_type` varchar(255),
             `target_pair_1_of_2` varchar(255),
             `target_pair_2_of_2` varchar(255),
@@ -559,7 +559,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'uv_map':
           $sql = "CREATE TABLE IF NOT EXISTS `uv_map` (
             `uv_map_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `parent_capture_dataset_repository_id` int(11),
+            `capture_dataset_repository_id` int(11),
             `map_type` varchar(255),
             `map_file_type` varchar(255),
             `map_size` varchar(255),

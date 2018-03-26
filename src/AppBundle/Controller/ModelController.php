@@ -121,7 +121,7 @@ class ModelController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/model/manage/' . $data->parent_capture_dataset_repository_id . '/' . $id);
+            return $this->redirect('/admin/projects/model/manage/' . $data->capture_dataset_repository_id . '/' . $id);
         }
 
         return $this->render('datasets/model_form.html.twig', array(

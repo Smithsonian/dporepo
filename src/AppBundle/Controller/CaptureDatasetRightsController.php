@@ -123,7 +123,7 @@ class CaptureDatasetRightsController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/capture_dataset_rights/manage/' . $data->parent_capture_dataset_repository_id . '/' . $id);
+            return $this->redirect('/admin/projects/capture_dataset_rights/manage/' . $data->capture_dataset_repository_id . '/' . $id);
         }
 
         return $this->render('datasets/capture_dataset_rights_form.html.twig', array(

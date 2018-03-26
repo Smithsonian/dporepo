@@ -178,7 +178,7 @@ class DatasetsController extends Controller
 
             $dataset = $form->getData();
             $dataset_array = (array)$dataset;
-            $dataset_array['parent_item_repository_id'] = $dataset_array['item_repository_id'];
+            //$dataset_array['item_repository_id'] = $dataset_array['item_repository_id'];
 
             $id = $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => 'capture_dataset',
@@ -240,7 +240,7 @@ class DatasetsController extends Controller
                 'id' => 'datasetId-' . $value['capture_dataset_repository_id'],
                 'children' => count($dataset_elements_data) ? true : false,
                 'text' => $value['capture_dataset_name'],
-                'a_attr' => array('href' => '/admin/projects/dataset_elements/' . $value['project_repository_id'] . '/' . $value['subject_repository_id'] . '/' . $value['parent_item_repository_id'] . '/' . $value['capture_dataset_repository_id']),
+                'a_attr' => array('href' => '/admin/projects/dataset_elements/' . $value['project_repository_id'] . '/' . $value['subject_repository_id'] . '/' . $value['item_repository_id'] . '/' . $value['capture_dataset_repository_id']),
             );
         }
 

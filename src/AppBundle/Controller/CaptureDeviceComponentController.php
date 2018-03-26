@@ -121,7 +121,7 @@ class CaptureDeviceComponentController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/capture_device_component/manage/' . $data->parent_capture_device_repository_id . '/' . $id);
+            return $this->redirect('/admin/projects/capture_device_component/manage/' . $data->capture_device_repository_id . '/' . $id);
         }
 
         return $this->render('datasetElements/capture_device_component_form.html.twig', array(
