@@ -26,6 +26,7 @@ class RepoStorageHybrid implements RepoStorage {
    */
   public function getProject($params) {
     //$params will be something like array('project_repository_id' => '123');
+    $return_data = array();
 
     $query_params = array(
       'fields' => array(),
@@ -109,6 +110,7 @@ class RepoStorageHybrid implements RepoStorage {
 
   public function getSubject($params) {
     //$params will be something like array('subject_repository_id' => '123');
+    $return_data = array();
 
     $query_params = array(
       'fields' => array(),
@@ -131,6 +133,7 @@ class RepoStorageHybrid implements RepoStorage {
 
   public function getItem($params) {
       //$params will be something like array('item_repository_id' => '123');
+    $return_data = array();
 
       $query_params = array(
         'fields' => array(),
@@ -162,7 +165,7 @@ class RepoStorageHybrid implements RepoStorage {
       );
       $query_params['fields'][] = array(
         'table_name' => 'item',
-        'field_name' => 'status_type_id',
+        'field_name' => 'status_type_repository_id',
       );
       $query_params['fields'][] = array(
         'table_name' => 'item',
@@ -199,7 +202,7 @@ class RepoStorageHybrid implements RepoStorage {
 
   public function getCaptureDataset($params) {
     //$params will be something like array('capture_dataset_repository_id' => '123');
-
+    $return_data = array();
 
     $capture_dataset_repository_id = array_key_exists('capture_dataset_repository_id', $params) ? $params['capture_dataset_repository_id'] : NULL;
     $sql = "SELECT
@@ -293,7 +296,7 @@ class RepoStorageHybrid implements RepoStorage {
       'related_tables' => array(),
     );
 
-    if($item_repository_id && is_int($item_repository_id)) {
+    if($item_repository_id && is_numeric($item_repository_id)) {
       $query_params[1] = array(
         'field_names' => array(
           'capture_dataset.item_repository_id',
@@ -368,7 +371,7 @@ class RepoStorageHybrid implements RepoStorage {
                 capture_data_element.active
             FROM capture_data_element
             LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
-            LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
+            LEFT JOIN item ON item.item_repository_id = capture_dataset.item_repository_id
             LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
             LEFT JOIN project ON project.project_repository_id = subject.project_repository_id
             WHERE capture_data_element.active = 1
@@ -455,7 +458,7 @@ class RepoStorageHybrid implements RepoStorage {
         ),
         12 => array(
           'table_name' => 'item',
-          'field_name' => 'status_type_id',
+          'field_name' => 'status_type_repository_id',
         ),
       ),
       'sort_fields' => array(
@@ -512,6 +515,7 @@ class RepoStorageHybrid implements RepoStorage {
       SELECT project.project_repository_id
           ,project.stakeholder_guid
           ,isni_data.isni_label AS stakeholder_label
+      FROM project
       LEFT JOIN isni_data ON isni_data.isni_id = project.stakeholder_guid
       GROUP BY isni_data.isni_label
       ORDER BY isni_data.isni_label ASC";
@@ -1393,14 +1397,21 @@ class RepoStorageHybrid implements RepoStorage {
       $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
       $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
       $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+      $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+      $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
 
       $query_params = array(
         'fields' => array(),
         'base_table' => 'subject',
+        'distinct' => true,
         'search_params' => array(
           0 => array('field_names' => array('subject.active'), 'search_values' => array(1), 'comparison' => '='),
         ),
         'search_type' => 'AND',
+      );
+      $query_params['limit'] = array(
+        'limit_start' => $start_record,
+        'limit_stop' => $stop_record,
       );
 
       $query_params['related_tables'][] = array(
@@ -1423,9 +1434,9 @@ class RepoStorageHybrid implements RepoStorage {
         );
       }
 
-      if($project_repository_id && is_int($project_repository_id)) {
+      if($project_repository_id && is_numeric($project_repository_id)) {
         $count_params = count($query_params['search_params']);
-        $query_params[$count_params] = array(
+        $query_params['search_params'][$count_params] = array(
           'field_names' => array(
             'subject.project_repository_id',
           ),
@@ -1764,7 +1775,7 @@ class RepoStorageHybrid implements RepoStorage {
       'table_join_field' => 'camera_cluster_type_repository_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'capture_dataset',
-      'base_join_field' => 'camera_cluster_type',
+      'base_join_field' => 'cluster_type',
     );
 
     if ($search_value) {
@@ -1801,9 +1812,9 @@ class RepoStorageHybrid implements RepoStorage {
       );
     }
 
-    if($item_repository_id && is_int($item_repository_id)) {
+    if($item_repository_id && is_numeric($item_repository_id)) {
       $count_params = count($query_params['search_params']);
-      $query_params[$count_params] = array(
+      $query_params['search_params'][$count_params] = array(
         'field_names' => array(
           'capture_dataset.item_repository_id',
         ),
@@ -1863,15 +1874,23 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'calibration_object_used',
     );
     $query_params['fields'][] = array(
+      'table_name' => 'capture_dataset',
       'field_name' => 'date_created',
     );
     $query_params['fields'][] = array(
+      'table_name' => 'capture_dataset',
+      'field_name' => 'cluster_type',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'capture_dataset',
       'field_name' => 'created_by_user_account_id',
     );
     $query_params['fields'][] = array(
+      'table_name' => 'capture_dataset',
       'field_name' => 'last_modified',
     );
     $query_params['fields'][] = array(
+      'table_name' => 'capture_dataset',
       'field_name' => 'last_modified_user_account_id',
     );
     $query_params['fields'][] = array(
@@ -2046,7 +2065,7 @@ class RepoStorageHybrid implements RepoStorage {
             $record_type . '.capture_dataset_repository_id',
           ),
           'search_values' => array((int)$capture_dataset_repository_id),
-          'comparison' => 'LIKE',
+          'comparison' => '=',
         );
       }
 
@@ -2066,6 +2085,7 @@ class RepoStorageHybrid implements RepoStorage {
     $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
     $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
     $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+    $subject_repository_id = array_key_exists('subject_repository_id', $params) ? $params['subject_repository_id'] : NULL;
 
     $query_params = array(
       'fields' => array(),
@@ -2073,22 +2093,31 @@ class RepoStorageHybrid implements RepoStorage {
       'base_table' => 'item',
       'search_params' => array(
         0 => array('field_names' => array('item.active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array('item.subject_repository_id'), 'search_values' => $params, 'comparison' => '=')
       ),
       'search_type' => 'AND',
     );
 
     if ($search_value) {
-      $query_params['search_params'][2] = array(
+      $query_params['search_params'][1] = array(
         'field_names' => array(
           'item.item_description',
           'item.local_item_id',
           'item.date_created',
           'item.last_modified',
-          'item.status_label',
+          'status_type.status_label',
         ),
         'search_values' => array($search_value),
         'comparison' => 'LIKE',
+      );
+    }
+    if($subject_repository_id && is_numeric($subject_repository_id)) {
+      $count_params = count($query_params['search_params']);
+      $query_params['search_params'][$count_params] = array(
+        'field_names' => array(
+          'item.subject_repository_id',
+        ),
+        'search_values' => array((int)$subject_repository_id),
+        'comparison' => '=',
       );
     }
 
@@ -2122,12 +2151,12 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'local_item_id',
     );
     $query_params['fields'][] = array(
-      'field_name' => "CONCAT(SUBSTRING(item.item_description,1, 50), '...'",
+      'field_name' => "CONCAT(SUBSTRING(item.item_description,1, 50), '...')",
       'field_alias' => 'item_description',
     );
     $query_params['fields'][] = array(
       'table_name' => 'item',
-      'field_name' => 'status_type_id',
+      'field_name' => 'status_type_repository_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'item',
@@ -2149,8 +2178,13 @@ class RepoStorageHybrid implements RepoStorage {
       'field_alias' => 'status_label'
     );
     $query_params['fields'][] = array(
-      'field_name' => 'count(distinct capture_dataset.parent_item_repository_id)',
+      'field_name' => 'count(distinct capture_dataset.item_repository_id)',
       'field_alias' => 'datasets_count',
+    );
+
+    // Need to group by since we're doing a count
+    $query_params['group_by'] = array(
+      'item.item_repository_id'
     );
 
     $query_params['records_values'] = array();
@@ -2186,7 +2220,7 @@ class RepoStorageHybrid implements RepoStorage {
     $sql = "UPDATE project
                 LEFT JOIN subject ON subject.project_repository_id = project.project_repository_id
                 LEFT JOIN item ON item.subject_repository_id = subject.subject_repository_id
-                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
+                LEFT JOIN capture_dataset ON capture_dataset.item_repository_id = item.item_repository_id
                 LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
                 SET project.active = 0,
                     project.last_modified_user_account_id = :last_modified_user_account_id,
@@ -2220,7 +2254,7 @@ class RepoStorageHybrid implements RepoStorage {
     //@todo trap for missing user_id or record_id.
     $sql = "UPDATE subject
                 LEFT JOIN item ON item.subject_repository_id = subject.subject_repository_id
-                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
+                LEFT JOIN capture_dataset ON capture_dataset.item_repository_id = item.item_repository_id
                 LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
                 SET subject.active = 0,
                     subject.last_modified_user_account_id = :last_modified_user_account_id,
@@ -2275,7 +2309,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     //@todo trap for missing user_id or record_id.
     $sql = "UPDATE item
-                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
+                LEFT JOIN capture_dataset ON capture_dataset.item_repository_id = item.item_repository_id
                 LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
                 SET item.active = 0,
                     item.last_modified_user_account_id = :last_modified_user_account_id,
@@ -2303,7 +2337,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     //@todo trap for missing user_id or record_id.
     $sql = "UPDATE item
-                SET status_type_id = :statusid
+                SET status_type_repository_id = :statusid
                 WHERE item_guid = :itemguid";
 
     $statement = $this->connection->prepare($sql);
@@ -2686,7 +2720,6 @@ class RepoStorageHybrid implements RepoStorage {
 
     $base_table = NULL;
     $search_params = array();
-    $limit_start = $limit_stop = NULL;
     $select_sql = $join_sql = $search_sql = $sort_sql = $limit_sql = '';
     $data = array();
 
@@ -2791,6 +2824,13 @@ class RepoStorageHybrid implements RepoStorage {
       }
     }
 
+    if(array_key_exists('group_by', $query_parameters) && is_array($query_parameters['group_by'])) {
+      $group_sql = implode(', ', $query_parameters['group_by']);
+      if(strlen(trim($group_sql)) > 0) {
+        $group_sql = " GROUP BY " . $group_sql;
+      }
+    }
+
     // Search values
     if (array_key_exists('search_params', $query_parameters) && is_array($query_parameters['search_params'])) {
       $search_sql_values = array();
@@ -2848,6 +2888,9 @@ class RepoStorageHybrid implements RepoStorage {
 
     if(strlen(trim($search_sql)) > 0) {
       $sql .= " WHERE {$search_sql} ";
+    }
+    if(strlen(trim($group_sql)) > 0) {
+      $sql .= " {$group_sql} ";
     }
     if(strlen(trim($sort_sql)) > 0) {
       $sql .= " {$sort_sql} ";
