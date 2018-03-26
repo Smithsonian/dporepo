@@ -121,7 +121,7 @@ class ProjectsController extends Controller
         }
         
         // Get data from lookup tables.
-        $project->stakeholder_guid_options = $this->get_units_stakeholders();
+        $project->stakeholder_guid_options = $this->get_units_stakeholders($this->container);
 
         // Create the form
         $form = $this->createForm(Project::class, $project);
@@ -132,7 +132,7 @@ class ProjectsController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $project = $form->getData();
-            $project_repository_id = $this->insert_update_project($project, $id);
+            $project_repository_id = $this->insert_update_project($this->container, $project, $id);
 
             $this->addFlash('message', 'Project successfully updated.');
             return $this->redirect('/admin/projects/subjects/' . $project_repository_id);
@@ -153,12 +153,11 @@ class ProjectsController extends Controller
      *
      * Run a query to retrieve all projects from the database.
      *
-     * @param   object  $conn  Database connection object
      * @return  array|bool     The query result
      */
-    public function get_projects()
+    public function get_projects($container)
     {
-        $this->repo_storage_controller->setContainer($this->container);
+        $this->repo_storage_controller->setContainer($container);
         $data = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'project',
           'fields' => array(),
@@ -239,12 +238,11 @@ class ProjectsController extends Controller
      *
      * @param   array   $data        The data array
      * @param   int     $project_id  The project ID
-     * @param   object  $conn        Database connection object
      * @return  int     The project ID
      */
-    public function insert_update_project($data, $project_repository_id = FALSE)
+    public function insert_update_project($container, $data, $project_repository_id = FALSE)
     {
-        $this->repo_storage_controller->setContainer($this->container);
+        $this->repo_storage_controller->setContainer($container);
         if(empty($post)) {
           $ret = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'unit_stakeholder',
@@ -267,7 +265,7 @@ class ProjectsController extends Controller
         if(!$isni_data) {
           //$isni_inserted = $isni->insert_isni_data($data->stakeholder_guid, $data->stakeholder_label, $this->getUser()->getId(), $conn);
           $isni_inserted = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => 'isni',
+            'base_table' => 'isni_data',
             'user_id' => $this->getUser()->getId(),
             'values' => array(
               'isni_id' => $data->stakeholder_guid,
@@ -290,11 +288,11 @@ class ProjectsController extends Controller
      * Get unit_stakeholder
      * @return  array|bool  The query result
      */
-    public function get_units_stakeholders()
+    public function get_units_stakeholders($container)
     {
       $data = array();
 
-      $this->repo_storage_controller->setContainer($this->container);
+      $this->repo_storage_controller->setContainer($container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'unit_stakeholder',
           'sort_fields' => array(
@@ -304,7 +302,8 @@ class ProjectsController extends Controller
       );
 
       foreach ($temp as $key => $value) {
-        $data[$value['unit_stakeholder_label'] . ' - ' . $value['unit_stakeholder_full_name']] = $value['unit_stakeholder_repository_id'];
+        $akey = $value['unit_stakeholder_label'] . ' - ' . $value['unit_stakeholder_full_name'];
+        $data[$akey] = $value['unit_stakeholder_repository_id'];
       }
 
       return $data;

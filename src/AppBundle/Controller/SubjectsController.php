@@ -94,6 +94,7 @@ class SubjectsController extends Controller
           $query_params['search_value'] = $search;
         }
 
+        $this->repo_storage_controller->setContainer($this->container);
         $data = $this->repo_storage_controller->execute('getDatatableSubject', $query_params);
 
         // Convert status to human readable words.

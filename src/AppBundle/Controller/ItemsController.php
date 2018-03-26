@@ -115,7 +115,7 @@ class ItemsController extends Controller
           $query_params['search_value'] = $search;
         }
 
-        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
+        $data = $this->repo_storage_controller->execute('getDatatableItem', $query_params);
 
         // Set status for value of zero (0).
         // TODO: create an entry in the status_types table for this.
@@ -217,9 +217,9 @@ class ItemsController extends Controller
      * @param   int $item_id   The subject ID
      * @return  array|bool     The query result
      */
-    public function get_item($item_id)
+    public function get_item($container, $item_id)
     {
-        $this->repo_storage_controller->setContainer($this->container);
+        $this->repo_storage_controller->setContainer($container);
         $data = $this->repo_storage_controller->execute('getItem', array(
             'item_repository_id' => $item_id,
           )
