@@ -7,35 +7,41 @@ use Doctrine\DBAL\Driver\Connection;
 
 class Datasets
 {
-    
+
     /**
-     * @var string
+     * @Assert\NotBlank()
+     * @Assert\Length(min="1", max="10")
+     * @var int
      */
     public $capture_method;
 
     /**
+     * @Assert\NotBlank()
+     * @Assert\Length(min="1", max="10")
      * @var int
      */
     public $capture_dataset_type;
-
     /**
      * @Assert\NotBlank()
      * @Assert\Length(min="1", max="255")
-     * @var int
+     * @var string
      */
     public $capture_dataset_name;
 
     /**
+     * @Assert\NotBlank()
      * @var string
      */
     public $collected_by;
 
     /**
+     * @Assert\NotBlank()
      * @var string
      */
     public $date_of_capture;
 
     /**
+     * @Assert\NotBlank()
      * @var string
      */
     public $capture_dataset_description;
@@ -46,31 +52,38 @@ class Datasets
     public $collection_notes;
 
     /**
-     * @var string
+     * @Assert\NotBlank()
+     * @Assert\Length(min="1", max="10")
+     * @var int
      */
     public $item_position_type;
 
     /**
+     * @Assert\NotBlank()
      * @var string
      */
     public $positionally_matched_capture_datasets;
 
     /**
+     * @Assert\NotBlank()
      * @var int
      */
     public $focus_type;
 
     /**
+     * @Assert\NotBlank()
      * @var int
      */
     public $light_source_type;
 
     /**
+     * @Assert\NotBlank()
      * @var string
      */
     public $background_removal_method;
 
     /**
+     * @Assert\NotBlank()
      * @var int
      */
     public $cluster_type;
@@ -81,11 +94,13 @@ class Datasets
     public $cluster_geometry_field_id;
 
     /**
+     * @Assert\NotBlank()
      * @var int
      */
     public $capture_dataset_guid;
 
     /**
+     * @Assert\NotBlank()
      * @var string
      */
     public $capture_dataset_field_id;
@@ -96,11 +111,13 @@ class Datasets
     public $support_equipment;
 
     /**
+     * @Assert\NotBlank()
      * @var int
      */
     public $item_position_field_id;
 
     /**
+     * @Assert\NotBlank()
      * @var int
      */
     public $item_arrangement_field_id;
