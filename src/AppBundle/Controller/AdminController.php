@@ -71,7 +71,7 @@ class AdminController extends Controller
      *
      * Browse recent projects
      *
-     * Run a query to retreive all recent projects.
+     * Run a query to retrieve all recent projects.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result
@@ -123,7 +123,7 @@ class AdminController extends Controller
      *
      * Browse recent subjects
      *
-     * Run a query to retreive recent subjects in the database.
+     * Run a query to retrieve recent subjects in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result
@@ -148,7 +148,7 @@ class AdminController extends Controller
         }
 
         $this->repo_storage_controller->setContainer($this->container);
-        $data = $this->repo_storage_controller->execute('getDatatableSubjectItem', $query_params);
+        $data = $this->repo_storage_controller->execute('getDatatableSubject', $query_params); //@todo or getDatatableSubjectItem ?
 
         // Get the items count
         if(!empty($data['aaData'])) {
