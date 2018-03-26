@@ -366,7 +366,7 @@ class ItemsController extends Controller
             // First, verify that the item_guid is found within the database.
             $this->repo_storage_controller->setContainer($container);
             $result = $this->repo_storage_controller->execute('getRecords', array(
-                'base_table' => 'item_guid',
+                'base_table' => 'item',
                 'search_params' => array(
                   0 => array('field_names' => array('item_guid'), 'search_values' => array($itemguid), 'comparison' => '='),
                 ),
