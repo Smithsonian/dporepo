@@ -86,7 +86,7 @@ class DatasetElementsController extends Controller
      *
      * Browse dataset_elements
      *
-     * Run a query to retreive all dataset elements in the database.
+     * Run a query to retrieve all dataset elements in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result
@@ -140,15 +140,15 @@ class DatasetElementsController extends Controller
         $dataset_element = new DatasetElements();
         $post = $request->request->all();
         $id = !empty($request->attributes->get('capture_data_element_rep_id')) ? $request->attributes->get('capture_data_element_rep_id') : false;
-        
+
         // Retrieve data from the database.
         if (!empty($id) && empty($post)) {
+
           $dataset_element_array = $this->repo_storage_controller->execute('getRecordById', array(
-            'base_table' => 'capture_data_element',
-            'id_field' => 'capture_data_element_repository_id',
-            'id_value' => $id,
+            'record_type' => 'capture_data_element',
+            'record_id' => $id,
           ));
-          if(is_array($dataset_element_array)) {
+          if(is_array($dataset_element_array) && !empty($dataset_element_array)) {
             $dataset_element = (object)$dataset_element_array;
           }
         }
@@ -238,8 +238,8 @@ class DatasetElementsController extends Controller
      * @Route("/admin/projects/get_dataset_elements/{capture_dataset_repository_id}", name="get_dataset_elements_tree_browser", methods="GET")
      */
     public function get_dataset_elements_tree_browser(Request $request)
-    {      
-        $capture_dataset_repository_id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;        
+    {
+        $capture_dataset_repository_id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
         $capture_data_element = $this->get_dataset_elements($this->container, $capture_dataset_repository_id);
 
         foreach ($capture_data_element as $key => $value) {

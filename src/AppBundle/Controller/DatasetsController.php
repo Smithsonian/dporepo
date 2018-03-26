@@ -94,7 +94,7 @@ class DatasetsController extends Controller
      *
      * Browse datasets
      *
-     * Run a query to retreive all datasets in the database.
+     * Run a query to retrieve all datasets in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result
@@ -148,9 +148,8 @@ class DatasetsController extends Controller
         // Retrieve data from the database.
         if (!empty($id) && empty($post)) {
             $dataset_array = $this->repo_storage_controller->execute('getRecordById', array(
-              'base_table' => 'capture_dataset',
-              'id_field' => 'capture_dataset_repository_id',
-              'id_value' => $id,
+              'record_type' => 'capture_dataset',
+              'record_id' => $id,
             ));
             if(is_array($dataset_array)) {
               $dataset = (object)$dataset_array;
@@ -455,6 +454,7 @@ class DatasetsController extends Controller
 
           $ids_array = explode(',', $ids);
 
+          $this->repo_storage_controller->setContainer($this->container);
           foreach ($ids_array as $key => $id) {
             $ret = $this->repo_storage_controller->execute('markCaptureDatasetInactive', array(
               'record_id' => $id,
