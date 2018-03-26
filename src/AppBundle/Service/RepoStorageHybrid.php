@@ -821,7 +821,7 @@ class RepoStorageHybrid implements RepoStorage {
           'field_alias' => 'DT_RowId',
         );
 
-        $query_params['search_params'][0] = array('field_names' => array('processing_action.active'), 'search_values' => array(1), 'comparison' => '=');
+        $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
         if (NULL !== $search_value) {
           $query_params['search_type'] = 'AND';
           $query_params['search_params'][1] = array(
@@ -984,15 +984,15 @@ class RepoStorageHybrid implements RepoStorage {
           'field_alias' => 'DT_RowId',
         );
 
-        $query_params['search_params'][0] = array('field_names' => array('processing_action.active'), 'search_values' => array(1), 'comparison' => '=');
+        $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
         if (NULL !== $search_value) {
           $query_params['search_type'] = 'AND';
           $query_params['search_params'][1] = array(
             'field_names' => array(
-              'processing_action.action_method',
-              'processing_action.action_description',
-              'processing_action.software_used',
-              'processing_action.last_modified'
+              $record_type . '.action_method',
+              $record_type . '.action_description',
+              $record_type . '.software_used',
+              $record_type . '.last_modified'
             ),
             'search_values' => array($search_value),
             'comparison' => 'LIKE',
@@ -2522,14 +2522,18 @@ class RepoStorageHybrid implements RepoStorage {
     $data = array();
 
     // We need certain values: fields, base table. Fail if those aren't provided.
-    if(!array_key_exists('fields', $query_parameters)) {
-      return array('return' => 'fail', 'messages' => array('No fields parameter specified.'));
+    if(!array_key_exists('fields', $query_parameters) || !isset($query_parameters['fields']) || !is_array($query_parameters['fields'])) {
+      $fields = array(
+        0 => array(
+          'field_name' => 'label',
+        ),
+        1 => array(
+          'field_name' => $base_table . '_repository_id',
+        ),
+      );
     }
     if(!array_key_exists('base_table', $query_parameters)) {
       return array('return' => 'fail', 'messages' => array('No base_table parameter specified.'));
-    }
-    if(!isset($query_parameters['fields']) || !is_array($query_parameters['fields'])) {
-      return array('return' => 'fail', 'messages' => array('No fields parameter specified.'));
     }
 
     // Table
@@ -3158,7 +3162,7 @@ class RepoStorageHybrid implements RepoStorage {
    * @param $query_parameters parameters used to query records to be marked inactive.
    * @return mixed array containing success/fail value, and any messages.
    */
-  public function markRecordsInactive(array $query_parameters){
+  public function markRecordInactive(array $query_parameters){
 
     /*
      * $query_parameters should contain:
@@ -3169,9 +3173,6 @@ class RepoStorageHybrid implements RepoStorage {
      */
 
     $record_type = NULL;
-    $search_sql = '';
-    $search_params = array();
-    $data = array();
 
     // We need base table. Fail if that isn't provided.
     if(!array_key_exists('record_type', $query_parameters)) {
@@ -3180,77 +3181,25 @@ class RepoStorageHybrid implements RepoStorage {
     if(!array_key_exists('user_id', $query_parameters)) {
       return array('return' => 'fail', 'messages' => array('No user_id parameter specified.'));
     }
-    if(isset($query_parameters['search_params']) && !is_array($query_parameters['search_params'])) {
-      return array('return' => 'fail', 'messages' => array('Fields parameter is invalid.'));
+    if(!isset($query_parameters['record_id']) || !is_numeric($query_parameters['record_id'])) {
+      return array('return' => 'fail', 'messages' => array('To mark a record inactive a record_id must be specified.'));
     }
 
     // Table
     $record_type = $query_parameters['record_type'];
 
-    $search_params[] = $query_parameters['user_id'];
+    $user_id = $query_parameters['user_id'];
+    $record_id = array_key_exists('record_id', $query_parameters) ? $query_parameters['record_id'] : NULL;
 
-    // Search values
-    if (array_key_exists('search_params', $query_parameters) && is_array($query_parameters['search_params'])) {
-      $search_sql_values = array();
-      foreach($query_parameters['search_params'] as $p) {
-        $field_names = $p['field_names'];
-        $search_values = $p['search_values'];
-
-        if(!is_array($field_names) || count($field_names) == 0
-          || !is_array($search_values) || count($search_values) == 0) {
-          continue;
-        }
-
-        $this_search_param = array();
-        foreach($field_names as $fn) {
-          if(count($search_values) == 1) {
-            $this_search_param[] = $fn . ' LIKE ?';
-            $search_params[] = '%' . $search_values[array_keys($search_values[0])] . '%';
-          }
-          else {
-            $this_search_param[] = $fn['field_name'] . ' IN (?)';
-            $search_params[] = '%' . implode('%, %', $search_values) . '%';
-          }
-        }
-
-        $search_sql_values .= '(' . implode(' OR ', $this_search_param) . ') ';
-      }
-
-      if(count($search_sql_values) > 0) {
-        $search_sql = implode(' AND ', $search_sql_values);
-      }
-    }
-
-    if(true == $query_parameters['delete_children']) {
-      //@todo delete children first
-
-      switch($record_type) {
-        case 'project':
-          break;
-        case 'subject':
-          break;
-        case 'item':
-          break;
-
-      }
-    }
-
-    $sql = "UPDATE " . $record_type . " SET active = 0, last_modified_user_account_id=:";
-
-    if(strlen(trim($search_sql)) > 0) {
-      $sql .= " WHERE {$search_sql} ";
-    }
+    $sql = "UPDATE " . $record_type . " SET active = 0, last_modified_user_account_id=:user_id WHERE " . $record_type . "_repository_id=:id ";
 
     $statement = $this->connection->prepare($sql);
-    if(count($search_params) > 0) {
-      $statement->execute($search_params);
-    }
-    else {
-      $statement->execute();
-    }
-    $return = $statement->fetchAll(PDO::FETCH_ASSOC);
+    $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
+    $statement->bindValue(":id", $record_id, PDO::PARAM_INT);
+    $statement->execute();
+    //$return = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-    return array('return' => 'success', 'data' => $return);
+    return array('return' => 'success'); //, 'data' => $return);
   }
 
 
