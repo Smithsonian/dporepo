@@ -63,7 +63,7 @@ class DatasetTypesController extends Controller
      *
      * Browse Dataset Types
      *
-     * Run a query to retreive all Dataset Types in the database.
+     * Run a query to retrieve all Dataset Types in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result

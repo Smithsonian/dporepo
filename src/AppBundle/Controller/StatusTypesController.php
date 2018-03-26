@@ -63,7 +63,7 @@ class StatusTypesController extends Controller
      *
      * Browse Status Types
      *
-     * Run a query to retreive all Status Types in the database.
+     * Run a query to retrieve all Status Types in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result

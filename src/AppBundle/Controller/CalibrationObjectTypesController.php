@@ -63,7 +63,7 @@ class CalibrationObjectTypesController extends Controller
      *
      * Browse Calibration Object Types
      *
-     * Run a query to retreive all Calibration Object Types in the database.
+     * Run a query to retrieve all Calibration Object Types in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result

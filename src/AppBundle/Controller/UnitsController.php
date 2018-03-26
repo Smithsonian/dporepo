@@ -63,7 +63,7 @@ class UnitsController extends Controller
      *
      * Browse Units
      *
-     * Run a query to retreive all Units in the database.
+     * Run a query to retrieve all Units in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result

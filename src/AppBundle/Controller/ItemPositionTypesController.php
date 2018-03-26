@@ -63,7 +63,7 @@ class ItemPositionTypesController extends Controller
      *
      * Browse Item Position Types
      *
-     * Run a query to retreive all Item Position Types in the database.
+     * Run a query to retrieve all Item Position Types in the database.
      *
      * @param   object  Connection  Database connection object
      * @param   object  Request     Request object

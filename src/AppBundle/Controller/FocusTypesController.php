@@ -63,7 +63,7 @@ class FocusTypesController extends Controller
      *
      * Browse Focus Types
      *
-     * Run a query to retreive all Focus Types in the database.
+     * Run a query to retrieve all Focus Types in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result

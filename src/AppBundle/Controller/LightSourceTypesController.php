@@ -63,7 +63,7 @@ class LightSourceTypesController extends Controller
      *
      * Browse Light Source Types
      *
-     * Run a query to retreive all Light Source Types in the database.
+     * Run a query to retrieve all Light Source Types in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result

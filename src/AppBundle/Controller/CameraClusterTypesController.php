@@ -63,7 +63,7 @@ class CameraClusterTypesController extends Controller
      *
      * Browse Camera Cluster Types
      *
-     * Run a query to retreive all Camera Cluster Types in the database.
+     * Run a query to retrieve all Camera Cluster Types in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result

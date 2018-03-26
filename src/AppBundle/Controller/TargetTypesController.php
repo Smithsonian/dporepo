@@ -63,7 +63,7 @@ class TargetTypesController extends Controller
      *
      * Browse Target Types
      *
-     * Run a query to retreive all Target Types in the database.
+     * Run a query to retrieve all Target Types in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result

@@ -63,7 +63,7 @@ class CaptureMethodsController extends Controller
      *
      * Browse Capture Methods
      *
-     * Run a query to retreive all capture methods in the database.
+     * Run a query to retrieve all capture methods in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result

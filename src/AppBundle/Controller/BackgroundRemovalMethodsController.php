@@ -64,7 +64,7 @@ class BackgroundRemovalMethodsController extends Controller
      *
      * Browse Background Removal Methods
      *
-     * Run a query to retreive all Background Removal Methods in the database.
+     * Run a query to retrieve all Background Removal Methods in the database.
      *
      * @param   object  Connection  Database connection object
      * @param   object  Request     Request object

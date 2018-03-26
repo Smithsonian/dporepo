@@ -63,7 +63,7 @@ class ScaleBarBarcodeTypesController extends Controller
      *
      * Browse Scale Bar Barcode Types
      *
-     * Run a query to retreive all Scale Bar Barcode Types in the database.
+     * Run a query to retrieve all Scale Bar Barcode Types in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result

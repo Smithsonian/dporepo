@@ -63,7 +63,7 @@ class ItemTypesController extends Controller
      *
      * Browse item Types
      *
-     * Run a query to retreive all item Types in the database.
+     * Run a query to retrieve all item Types in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result

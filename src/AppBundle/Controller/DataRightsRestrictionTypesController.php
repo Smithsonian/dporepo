@@ -63,7 +63,7 @@ class DataRightsRestrictionTypesController extends Controller
      *
      * Browse Data Rights Restriction Types
      *
-     * Run a query to retreive all Data Rights Restriction Types in the database.
+     * Run a query to retrieve all Data Rights Restriction Types in the database.
      *
      * @param   object  Request     Request object
      * @return  array|bool          The query result
