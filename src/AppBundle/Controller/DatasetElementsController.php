@@ -50,17 +50,17 @@ class DatasetElementsController extends Controller
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
         $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
-        $capture_dataset_repository_id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
+        $id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $dataset_data = $datasets->get_dataset($this->container, (int)$capture_dataset_repository_id);
+        $dataset_data = $datasets->get_dataset($this->container, (int)$id);
         if(!$dataset_data) throw $this->createNotFoundException('The record does not exist');
         
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $project_repository_id));
 
         $subject_data = $subjects->get_subject($this->container, (int)$subject_repository_id);
-        $item_data = $items->get_item((int)$item_repository_id);
-        $dataset_element_data = $this->get_dataset_element($this->container, (int)$capture_dataset_repository_id);
+        $item_data = $items->get_item($this->container, (int)$item_repository_id);
+        $dataset_element_data = $this->get_dataset_element($this->container, (int)$id);
 
         // Truncate the item_description.
         $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
@@ -71,7 +71,7 @@ class DatasetElementsController extends Controller
             'project_repository_id' => $project_repository_id,
             'subject_repository_id' => $subject_repository_id,
             'item_repository_id' => $item_repository_id,
-            'capture_dataset_repository_id' => $capture_dataset_repository_id,
+            'capture_dataset_repository_id' => $id,
             'project_data' => $project_data,
             'subject_data' => $subject_data,
             'item_data' => $item_data,
@@ -82,7 +82,7 @@ class DatasetElementsController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/datatables_browse_dataset_elements/{project_repository_id}/{subject_repository_id}/{item_repository_id}/{id}", name="dataset_elements_browse_datatables", methods="POST")
+     * @Route("/admin/projects/datatables_browse_dataset_elements/{project_repository_id}/{subject_repository_id}/{item_repository_id}/{capture_dataset_repository_id}", name="dataset_elements_browse_datatables", methods="POST")
      *
      * Browse dataset_elements
      *
@@ -94,7 +94,7 @@ class DatasetElementsController extends Controller
     public function datatables_browse_dataset_elements(Request $request)
     {
         $req = $request->request->all();
-        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
+        $id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
 
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
@@ -162,7 +162,7 @@ class DatasetElementsController extends Controller
         // TODO: find a better way?
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$dataset_element->project_repository_id));
         $subject_data = $subjects->get_subject($this->container, (int)$dataset_element->subject_repository_id);
-        $item_data = $items->get_item((int)$dataset_element->item_repository_id);
+        $item_data = $items->get_item($this->container, (int)$dataset_element->item_repository_id);
         $dataset_data = $datasets->get_dataset($this->container, (int)$dataset_element->capture_dataset_repository_id);
         
         // Truncate the item_description so the breadcrumb don't blow up.
@@ -191,7 +191,9 @@ class DatasetElementsController extends Controller
             ));
 
             $this->addFlash('message', 'Dataset Element successfully updated.');
-            return $this->redirectToRoute('dataset_elements_browse', array('project_repository_id' => $dataset_element->project_repository_id, 'subject_repository_id' => $dataset_element->subject_repository_id, 'item_repository_id' => $dataset_element->item_repository_id, 'capture_dataset_repository_id' => $dataset_element->capture_dataset_repository_id));
+            return $this->redirectToRoute('dataset_elements_browse', array('project_repository_id' => $dataset_element->project_repository_id,
+              'subject_repository_id' => $dataset_element->subject_repository_id, 'item_repository_id' => $dataset_element->item_repository_id,
+              'capture_dataset_repository_id' => $dataset_element->capture_dataset_repository_id));
 
         }
 
@@ -299,7 +301,7 @@ class DatasetElementsController extends Controller
     /**
      * Delete Multiple Capture Data Elements
      *
-     * @Route("/admin/projects/dataset_elements/{project_repository_id}/{subject_repository_id}/{item_repository_id}/{capture_dataset_repository_id}/delete", name="dataset_elements_remove_records", methods={"GET"})
+     * @Route("/admin/projects/dataset_elements/{project_repository_id}/{subject_repository_id}/{item_repository_id}/{id}/delete", name="dataset_elements_remove_records", methods={"GET"})
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
@@ -312,9 +314,9 @@ class DatasetElementsController extends Controller
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
         $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
-        $capture_dataset_repository_id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
+        $id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
 
-        if(!empty($ids) && $project_repository_id && $subject_repository_id && $item_repository_id && $capture_dataset_repository_id) {
+        if(!empty($ids) && $project_repository_id && $subject_repository_id && $item_repository_id && $id) {
 
           $ids_array = explode(',', $ids);
 
@@ -336,7 +338,7 @@ class DatasetElementsController extends Controller
           $this->addFlash('message', 'Missing data. No records removed.');
         }
 
-        return $this->redirectToRoute('dataset_elements_browse', array('project_repository_id' => $project_repository_id, 'subject_repository_id' => $subject_repository_id, 'item_repository_id' => $item_repository_id, 'capture_dataset_repository_id' => $capture_dataset_repository_id));
+        return $this->redirectToRoute('dataset_elements_browse', array('project_repository_id' => $project_repository_id, 'subject_repository_id' => $subject_repository_id, 'item_repository_id' => $item_repository_id, 'capture_dataset_repository_id' => $id));
     }
 
 }
