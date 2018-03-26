@@ -297,7 +297,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
 
     if($item_repository_id && is_numeric($item_repository_id)) {
-      $query_params[1] = array(
+      $query_params['search_params'][1] = array(
         'field_names' => array(
           'capture_dataset.item_repository_id',
         ),
@@ -2240,9 +2240,10 @@ class RepoStorageHybrid implements RepoStorage {
     $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
     $statement->execute();
 
-    $return = $statement->fetchAll(PDO::FETCH_ASSOC);
+    // Can't return records- causes PDO error.
+    //$return = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-    return array('return' => 'success', 'data' => $return);
+    return array('return' => 'success'); //, 'data' => $return);
 
 }
 
@@ -2272,9 +2273,10 @@ class RepoStorageHybrid implements RepoStorage {
     $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
     $statement->execute();
 
-    $return = $statement->fetchAll(PDO::FETCH_ASSOC);
+    // Can't return records- causes PDO error.
+    //$return = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-    return array('return' => 'success', 'data' => $return);
+    return array('return' => 'success'); //, 'data' => $return);
 
   }
 
@@ -2297,9 +2299,10 @@ class RepoStorageHybrid implements RepoStorage {
     $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
     $statement->execute();
 
-    $return = $statement->fetchAll(PDO::FETCH_ASSOC);
+    // Can't return records- causes PDO error.
+    //$return = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-    return array('return' => 'success', 'data' => $return);
+    return array('return' => 'success'); //, 'data' => $return);
 
   }
 
@@ -2325,9 +2328,10 @@ class RepoStorageHybrid implements RepoStorage {
     $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
     $statement->execute();
 
-    $return = $statement->fetchAll(PDO::FETCH_ASSOC);
+    // Can't return records- causes PDO error.
+    //$return = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-    return array('return' => 'success', 'data' => $return);
+    return array('return' => 'success'); //, 'data' => $return);
 
   }
 
@@ -2438,7 +2442,7 @@ class RepoStorageHybrid implements RepoStorage {
     // Submit for save.
     $ret = $this->setRecords($query_params);
 
-    if(array_key_exists('success', $ret)) {
+    if(array_key_exists('return', $ret) && $ret['return'] == 'success') {
       $ids = $ret['ids'];
       if(count($ids) == 1) {
         // This should always be true!
