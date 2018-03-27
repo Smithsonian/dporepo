@@ -27,17 +27,28 @@ class DatasetsController extends Controller
      */
     public $u;
     private $repo_storage_controller;
+    /**
+     * @var string
+     */
+    private $file_upload_path;
 
+    /**
+     * @var string
+     */
+    private $file_processing_path;
 
     /**
     * Constructor
     * @param object  $u  Utility functions object
     */
-    public function __construct(AppUtilities $u)
+    public function __construct(AppUtilities $u, $file_upload_path, $file_processing_path)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController();
+
+        $this->file_upload_path = $file_upload_path;
+        $this->file_processing_path = $file_processing_path;
     }
 
     /**
@@ -68,10 +79,10 @@ class DatasetsController extends Controller
 
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$project_repository_id));
         $subject_data = $subjects->get_subject($this->container, (int)$subject_repository_id);
-        $jobBoxDirectoryContents = is_dir(JOBBOX_PATH) ? scandir(JOBBOX_PATH) : array();
-        $jobBoxProcessedDirectoryContents = is_dir(JOBBOXPROCESS_PATH) ? scandir(JOBBOXPROCESS_PATH) : array();
+        $jobBoxDirectoryContents = is_dir($this->file_upload_path) ? scandir($this->file_upload_path) : array();
+        $jobBoxProcessedDirectoryContents = is_dir($this->file_processing_path) ? scandir($this->file_processing_path) : array();
 
-        // Truncate the item_description.
+      // Truncate the item_description.
         $more_indicator = (strlen($item->item_data->item_description) > 50) ? '...' : '';
         $item->item_data->item_description_truncated = substr($item->item_data->item_description, 0, 50) . $more_indicator;
 

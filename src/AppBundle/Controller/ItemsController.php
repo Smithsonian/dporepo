@@ -26,16 +26,26 @@ class ItemsController extends Controller
      */
     public $u;
     private $repo_storage_controller;
+    /**
+     * @var string
+     */
+    private $file_upload_path;
+    /**
+     * @var string
+     */
+    private $file_processing_path;
 
     /**
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u)
+    public function __construct(AppUtilities $u, $file_upload_path, $file_processing_path)
     {
-        // Usage: $this->u->dumper($variable);
-        $this->u = $u;
-        $this->repo_storage_controller = new RepoStorageHybridController();
+      // Usage: $this->u->dumper($variable);
+      $this->u = $u;
+      // Establish paths.
+      $this->file_upload_path = $file_upload_path;
+      $this->file_processing_path = $file_processing_path;
     }
 
     /**
@@ -414,35 +424,35 @@ class ItemsController extends Controller
         switch($directoryScanType) {
             case 'jobbox':
 
-                $jobBoxDirectoryExists = is_dir(JOBBOX_PATH . '/' . $itemguid);
-                $directoryContents = is_dir(JOBBOX_PATH . '/' . $itemguid) ? scandir(JOBBOX_PATH . '/' . $itemguid) : array();
+                $jobBoxDirectoryExists = is_dir($this->file_upload_path . '/' . $itemguid);
+                $directoryContents = is_dir($this->file_upload_path . '/' . $itemguid) ? scandir($this->file_upload_path . '/' . $itemguid) : array();
 
                 break;
             case 'jobboxprocess':
 
-                $dirContents = is_dir(JOBBOXPROCESS_PATH . '/' . $itemguid) ? scandir(JOBBOXPROCESS_PATH . '/' . $itemguid) : array();
+                $dirContents = is_dir($this->file_processing_path . '/' . $itemguid) ? scandir($this->file_processing_path . '/' . $itemguid) : array();
 
-                if( !empty($dirContents) && in_array('_ready.txt', scandir(JOBBOXPROCESS_PATH . '/' . $itemguid)) ) {
-                    $directoryContents = scandir(JOBBOXPROCESS_PATH . '/' . $itemguid);
+                if( !empty($dirContents) && in_array('_ready.txt', scandir($this->file_processing_path . '/' . $itemguid)) ) {
+                    $directoryContents = scandir($this->file_processing_path . '/' . $itemguid);
                 }
 
                 break;
             case 'clipped':
-                $dirContents = is_dir(JOBBOXPROCESS_PATH . '/' . $itemguid) ? scandir(JOBBOXPROCESS_PATH . '/' . $itemguid) : array();
-                if( !empty($dirContents) && in_array('_finish_im.txt', scandir(JOBBOXPROCESS_PATH . '/' . $itemguid)) && in_array('clipped', $dirContents) ) {
-                    $directoryContents = scandir(JOBBOXPROCESS_PATH . '/' . $itemguid . '/clipped');
+                $dirContents = is_dir($this->file_processing_path . '/' . $itemguid) ? scandir($this->file_processing_path . '/' . $itemguid) : array();
+                if( !empty($dirContents) && in_array('_finish_im.txt', scandir($this->file_processing_path . '/' . $itemguid)) && in_array('clipped', $dirContents) ) {
+                    $directoryContents = scandir($this->file_processing_path . '/' . $itemguid . '/clipped');
                 }
                 break;
             case 'realitycapture':
-                $dirContents = is_dir(JOBBOXPROCESS_PATH . '/' . $itemguid . '/processed') ? scandir(JOBBOXPROCESS_PATH . '/' . $itemguid . '/processed') : array();
-                if( !empty($dirContents) && in_array('_finish_rc.txt', scandir(JOBBOXPROCESS_PATH . '/' . $itemguid)) && in_array('mesh.obj', $dirContents) ) {
-                    $directoryContents = scandir(JOBBOXPROCESS_PATH . '/' . $itemguid . '/processed');
+                $dirContents = is_dir($this->file_processing_path . '/' . $itemguid . '/processed') ? scandir($this->file_processing_path . '/' . $itemguid . '/processed') : array();
+                if( !empty($dirContents) && in_array('_finish_rc.txt', scandir($this->file_processing_path . '/' . $itemguid)) && in_array('mesh.obj', $dirContents) ) {
+                    $directoryContents = scandir($this->file_processing_path . '/' . $itemguid . '/processed');
                 }
                 break;
             case 'instantuv':
-                $dirContents = is_dir(JOBBOXPROCESS_PATH . '/' . $itemguid . '/processed') ? scandir(JOBBOXPROCESS_PATH . '/' . $itemguid . '/processed') : array();
-                if( !empty($dirContents) && in_array('_finish_iuv.txt', scandir(JOBBOXPROCESS_PATH . '/' . $itemguid)) && in_array('webready', $dirContents) ) {
-                    $directoryContents = scandir(JOBBOXPROCESS_PATH . '/' . $itemguid . '/processed/webready');
+                $dirContents = is_dir($this->file_processing_path . '/' . $itemguid . '/processed') ? scandir($this->file_processing_path . '/' . $itemguid . '/processed') : array();
+                if( !empty($dirContents) && in_array('_finish_iuv.txt', scandir($this->file_processing_path . '/' . $itemguid)) && in_array('webready', $dirContents) ) {
+                    $directoryContents = scandir($this->file_processing_path . '/' . $itemguid . '/processed/webready');
                 }
             break;
         }
@@ -538,13 +548,13 @@ class ItemsController extends Controller
  
         if($itemguid && !empty($itemguid)) {
 
-            $directoryContents = is_dir(JOBBOX_PATH) ? scandir(JOBBOX_PATH) : array();
+            $directoryContents = is_dir($this->file_upload_path) ? scandir($this->file_upload_path) : array();
 
             if(!in_array($itemguid, $directoryContents)) {
                 // Create the directory.
-                mkdir(JOBBOX_PATH . '/' . $itemguid, 0775);
+                mkdir($this->file_upload_path . '/' . $itemguid, 0775);
                 // Check to see if the directory was created.
-                if(is_dir(JOBBOX_PATH . '/' . $itemguid)) {
+                if(is_dir($this->file_upload_path . '/' . $itemguid)) {
                     $message = 'The directory has been created (' . $itemguid . ').';
                 }
                 

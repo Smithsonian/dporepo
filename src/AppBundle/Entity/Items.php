@@ -30,27 +30,4 @@ class Items
      */
     public $item_type;
 
-    /**
-     * Constructor
-     */
-    public function __construct()
-    {
-        // Establish paths.
-        if(!defined('BASE_ROOT')) {
-            if($_SERVER['SERVER_SOFTWARE'] === 'Microsoft-IIS/8.5') {
-                define('BASE_ROOT', 'C:\\');
-            } else {
-                define('BASE_ROOT', getcwd() . '/');
-            }
-        }
-
-        if(!defined('JOBBOX_PATH')) {
-            define('JOBBOX_PATH', BASE_ROOT . 'JobBox');
-        }
-
-        if(!defined('JOBBOXPROCESS_PATH')) {
-            define('JOBBOXPROCESS_PATH', BASE_ROOT . 'JobBoxProcess');
-        }
-    }
-
 }
