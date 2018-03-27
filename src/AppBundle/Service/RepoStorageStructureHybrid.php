@@ -176,7 +176,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
           )";
           break;
-        case 'capture_dataset_right':
+        case 'capture_dataset_rights':
           $sql = "CREATE TABLE IF NOT EXISTS `capture_data_file` (
             `capture_data_file_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `capture_data_element_repository_id` int(11),

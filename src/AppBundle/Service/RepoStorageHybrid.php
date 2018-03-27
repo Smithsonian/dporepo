@@ -654,7 +654,7 @@ class RepoStorageHybrid implements RepoStorage {
 
         break;
 
-      case 'capture_dataset_right':
+      case 'capture_dataset_rights':
         $query_params['fields'][] = array(
           'table_name' => $record_type,
           'field_name' => $record_type . '_repository_id',

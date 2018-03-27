@@ -53,7 +53,7 @@ class CaptureDatasetRightsController extends Controller
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
         $query_params = array(
-          'record_type' => 'capture_dataset_right',
+          'record_type' => 'capture_dataset_rights',
           'sort_field' => $sort_field,
           'sort_order' => $sort_order,
           'start_record' => $start_record,
@@ -93,7 +93,7 @@ class CaptureDatasetRightsController extends Controller
         $this->repo_storage_controller->setContainer($this->container);
         if(!empty($id) && empty($post)) {
           $rec = $this->repo_storage_controller->execute('getRecordById', array(
-            'record_type' => 'capture_dataset_right',
+            'record_type' => 'capture_dataset_rights',
             'record_id' => $id));
           if(isset($rec)) {
             $data = (object)$rec;
@@ -117,7 +117,7 @@ class CaptureDatasetRightsController extends Controller
             $data = $form->getData();
 
             $id = $this->repo_storage_controller->execute('saveRecord', array(
-              'base_table' => 'capture_dataset_right',
+              'base_table' => 'capture_dataset_rights',
               'record_id' => $id,
               'user_id' => $this->getUser()->getId(),
               'values' => (array)$data
@@ -154,7 +154,7 @@ class CaptureDatasetRightsController extends Controller
             foreach ($ids_array as $key => $id) {
               // Run the query against a single record.
               $ret = $this->repo_storage_controller->execute('markRecordInactive', array(
-                'record_type' => 'capture_dataset_right',
+                'record_type' => 'capture_dataset_rights',
                 'record_id' => $id,
                 'user_id' => $this->getUser()->getId(),
               ));
