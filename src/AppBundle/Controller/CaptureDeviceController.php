@@ -106,8 +106,8 @@ class CaptureDeviceController extends Controller
 
         // Back link
         $back_link = $request->headers->get('referer');
-        if(isset($data->project_repository_id)) {
-            $back_link = "/admin/projects/dataset_element/{$data->project_repository_id}/{$data->subject_repository_id}/{$data->parent_item_repository_id}/{$data->capture_dataset_repository_id}/{$data->parent_capture_data_element_repository_id}";
+        if(isset($data->parent_project_repository_id)) {
+            $back_link = "/admin/projects/dataset_element/{$data->parent_project_repository_id}/{$data->subject_repository_id}/{$data->parent_item_repository_id}/{$data->capture_dataset_repository_id}/{$data->parent_capture_data_element_repository_id}";
         }
 
         // Create the form

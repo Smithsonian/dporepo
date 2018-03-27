@@ -250,7 +250,7 @@ class DatasetsController extends Controller
                 'id' => 'datasetId-' . $value['capture_dataset_repository_id'],
                 'children' => count($dataset_elements_data) ? true : false,
                 'text' => $value['capture_dataset_name'],
-                'a_attr' => array('href' => '/admin/projects/dataset_elements/' . $value['project_repository_id'] . '/' . $value['subject_repository_id'] . '/' . $value['item_repository_id'] . '/' . $value['capture_dataset_repository_id']),
+                'a_attr' => array('href' => '/admin/projects/dataset_elements/' . $value['project_repository_id'] . '/' . $value['subject_repository_id'] . '/' . $value['parent_item_repository_id'] . '/' . $value['capture_dataset_repository_id']),
             );
         }
 
