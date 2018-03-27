@@ -980,7 +980,16 @@ class RepoStorageHybrid implements RepoStorage {
             'comparison' => 'LIKE',
           );
         }
-
+        if (NULL !== $parent_id) {
+          $c = count($query_params['search_params']);
+          $query_params['search_params'][$c] = array(
+            'field_names' => array(
+              'parent_capture_data_element_repository_id',
+            ),
+            'search_values' => array($parent_id),
+            'comparison' => '=',
+          );
+        }
         break;
 
       case 'capture_dataset_rights':
@@ -1129,6 +1138,16 @@ class RepoStorageHybrid implements RepoStorage {
             ),
             'search_values' => array($search_value),
             'comparison' => 'LIKE',
+          );
+        }
+        if (NULL !== $parent_id) {
+          $c = count($query_params['search_params']);
+          $query_params['search_params'][$c] = array(
+            'field_names' => array(
+              'parent_capture_device_repository_id',
+            ),
+            'search_values' => array($parent_id),
+            'comparison' => '=',
           );
         }
         break;
