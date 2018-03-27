@@ -55,6 +55,10 @@ doctrine:
         user: '%database_user%'
         password: '%database_password%'
         charset: UTF8
+        options:
+          # PDO::MYSQL_ATTR_INIT_COMMAND
+          1002: "SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))"
+        unix_socket: /Applications/DevDesktop/mysql/data/mysql.sock
         # if using pdo_sqlite as your database driver:
         #   1. add the path in parameters.yml
         #     e.g. database_path: '%kernel.project_dir%/var/data/data.sqlite'
