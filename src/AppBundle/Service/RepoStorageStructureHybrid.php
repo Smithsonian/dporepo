@@ -429,7 +429,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'processing_action':
           $sql = "CREATE TABLE IF NOT EXISTS `processing_action` (
             `processing_action_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `target_model_repository_id` int(11),
+            `parent_model_repository_id` int(11),
             `preceding_processing_action_repository_id` int(11),
             `date_of_action` datetime,
             `action_method` varchar(255),

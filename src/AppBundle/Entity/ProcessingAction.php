@@ -12,7 +12,7 @@ class ProcessingAction
      * @Assert\NotBlank()
      * @var int
      */
-    public $target_model_repository_id;
+    public $parent_model_repository_id;
 
     /**
      * @Assert\Type(

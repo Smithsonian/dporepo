@@ -111,7 +111,7 @@ class ProcessingActionController extends Controller
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
-        $data->target_model_repository_id = $parent_id;
+        $data->parent_model_repository_id = $parent_id;
 
         // $this->u->dumper($data);
 
@@ -135,7 +135,7 @@ class ProcessingActionController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/processing_action/manage/' . $data->target_model_repository_id . '/' . $id);
+            return $this->redirect('/admin/projects/processing_action/manage/' . $data->parent_model_repository_id . '/' . $id);
         }
 
         return $this->render('datasets/processing_action_form.html.twig', array(
