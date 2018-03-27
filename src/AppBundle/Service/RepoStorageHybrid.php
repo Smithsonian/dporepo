@@ -200,6 +200,129 @@ class RepoStorageHybrid implements RepoStorage {
       return $return_data;
   }
 
+  public function getModel($params) {
+    //$params will be something like array('model_repository_id' => '123');
+    $return_data = array();
+
+    $query_params = array(
+      'fields' => array(),
+      'base_table' => 'model',
+      'search_params' => array(
+        0 => array('field_names' => array('model.active'), 'search_values' => array(1), 'comparison' => '='),
+        1 => array('field_names' => array('model.model_repository_id'), 'search_values' => $params, 'comparison' => '=')
+      ),
+      'search_type' => 'AND',
+      'related_tables' => array(),
+    );
+
+    // Fields.
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'model_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'parent_capture_dataset_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'model_guid',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'date_of_creation',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'model_file_type',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'derived_from',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'creation_method',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'units',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'is_watertight',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'model_purpose',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'point_count',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'has_normals',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'face_count',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'vertices_count',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'has_vertex_color',
+    );
+
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'has_uv_space',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'model_maps',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'capture_dataset',
+      'field_name' => 'parent_item_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'subject_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'subject',
+      'field_name' => 'project_repository_id',
+    );
+
+    // Joins.
+    $query_params['related_tables'][] = array(
+      'table_name' => 'item_type',
+      'table_join_field' => 'item_type_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'item',
+      'base_join_field' => 'item_type',
+    );
+
+    /*
+    LEFT JOIN capture_datasets ON capture_datasets.capture_dataset_repository_id = model.parent_capture_dataset_repository_id
+    LEFT JOIN items ON items.item_repository_id = capture_datasets.parent_item_repository_id
+    LEFT JOIN subjects ON subjects.subject_repository_id = items.subject_repository_id
+*/
+
+    $query_params['records_values'] = array();
+    $ret = $this->getRecords($query_params);
+    //@todo do something if $ret has errors
+
+    if(array_key_exists(0, $ret)) {
+      $return_data = $ret[0];
+    }
+    return $return_data;
+  }
+
   public function getCaptureDataset($params) {
     //$params will be something like array('capture_dataset_repository_id' => '123');
     $return_data = array();
@@ -311,7 +434,7 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'parent_item_repository_id',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'items',
+      'table_name' => 'item',
       'field_name' => 'subject_repository_id',
     );
     $query_params['fields'][] = array(
@@ -340,24 +463,24 @@ class RepoStorageHybrid implements RepoStorage {
       'base_join_field' => 'parent_photogrammetry_scale_bar_repository_id',
     );
     $query_params['related_tables'][] = array(
-      'table_name' => 'capture_datasets',
+      'table_name' => 'capture_dataset',
       'table_join_field' => 'capture_dataset_repository_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'photogrammetry_scale_bar',
       'base_join_field' => 'parent_capture_dataset_repository_id',
     );
     $query_params['related_tables'][] = array(
-      'table_name' => 'items',
+      'table_name' => 'item',
       'table_join_field' => 'item_repository_id',
       'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'capture_datasets',
+      'base_join_table' => 'capture_dataset',
       'base_join_field' => 'parent_item_repository_id',
     );
     $query_params['related_tables'][] = array(
-      'table_name' => 'subjects',
+      'table_name' => 'subject',
       'table_join_field' => 'subject_repository_id',
       'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'items',
+      'base_join_table' => 'item',
       'base_join_field' => 'subject_repository_id',
     );
 
@@ -407,18 +530,18 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'photogrammetry_scale_bar',
-      'field_name' => 'scale_bar_target_pairs',
+      'field_name' => 'scale_bar_target_pair',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'capture_datasets',
+      'table_name' => 'capture_dataset',
       'field_name' => 'parent_item_repository_id',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'items',
+      'table_name' => 'item',
       'field_name' => 'subject_repository_id',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'subjects',
+      'table_name' => 'subject',
       'field_name' => 'project_repository_id',
     );
     $query_params['fields'][] = array(
@@ -436,24 +559,24 @@ class RepoStorageHybrid implements RepoStorage {
 
     // Joins.
     $query_params['related_tables'][] = array(
-      'table_name' => 'capture_datasets',
+      'table_name' => 'capture_dataset',
       'table_join_field' => 'capture_dataset_repository_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'photogrammetry_scale_bar',
       'base_join_field' => 'parent_capture_dataset_repository_id',
     );
     $query_params['related_tables'][] = array(
-      'table_name' => 'items',
+      'table_name' => 'item',
       'table_join_field' => 'item_repository_id',
       'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'capture_datasets',
+      'base_join_table' => 'capture_dataset',
       'base_join_field' => 'parent_item_repository_id',
     );
     $query_params['related_tables'][] = array(
-      'table_name' => 'subjects',
+      'table_name' => 'subject',
       'table_join_field' => 'subject_repository_id',
       'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'items',
+      'base_join_table' => 'item',
       'base_join_field' => 'subject_repository_id',
     );
 
@@ -1216,6 +1339,7 @@ class RepoStorageHybrid implements RepoStorage {
           $query_params['search_type'] = 'AND';
           $query_params['search_params'][1] = array(
             'field_names' => array(
+              $record_type . '.preceding_processing_action_repository_id',
               $record_type . '.action_method',
               $record_type . '.action_description',
               $record_type . '.software_used',
@@ -1223,6 +1347,16 @@ class RepoStorageHybrid implements RepoStorage {
             ),
             'search_values' => array($search_value),
             'comparison' => 'LIKE',
+          );
+        }
+        if (NULL !== $parent_id) {
+          $c = count($query_params['search_params']);
+          $query_params['search_params'][$c] = array(
+            'field_names' => array(
+              'target_model_repository_id',
+            ),
+            'search_values' => array($parent_id),
+            'comparison' => '=',
           );
         }
         break;

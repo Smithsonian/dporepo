@@ -103,7 +103,12 @@ class ModelController extends Controller
 
         // Add the parent_id to the $data object
         $data->parent_capture_dataset_repository_id = $parent_id;
-        
+
+        // Back link
+        $back_link = $request->headers->get('referer');
+        if(isset($data->project_repository_id)) {
+            $back_link = "/admin/projects/dataset_elements/{$data->project_repository_id}/{$data->subject_repository_id}/{$data->parent_item_repository_id}/{$data->parent_capture_dataset_repository_id}";
+        }
         // Create the form
         $form = $this->createForm(ModelForm::class, $data);
         
@@ -118,7 +123,8 @@ class ModelController extends Controller
               'base_table' => 'model',
               'record_id' => $id,
               'user_id' => $this->getUser()->getId(),
-              'values' => (array)$data
+              'values' => (array)$data,
+              'back_link' => $back_link,
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
