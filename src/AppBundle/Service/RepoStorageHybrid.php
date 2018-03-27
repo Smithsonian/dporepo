@@ -260,6 +260,212 @@ class RepoStorageHybrid implements RepoStorage {
     return $return_data;
   }
 
+  public function getPhotogrammetryScaleBarTargetPair($params) {
+    //$params will be something like array('photogrammetry_scale_bar_target_pair_repository_id' => '123');
+    $return_data = array();
+
+    $query_params = array(
+      'fields' => array(),
+      'base_table' => 'photogrammetry_scale_bar_target_pair',
+      'search_params' => array(
+        0 => array('field_names' => array('photogrammetry_scale_bar_target_pair.active'), 'search_values' => array(1), 'comparison' => '='),
+        1 => array('field_names' => array('photogrammetry_scale_bar_target_pair.photogrammetry_scale_bar_target_pair_repository_id'), 'search_values' => $params, 'comparison' => '=')
+      ),
+      'search_type' => 'AND',
+      'related_tables' => array(),
+    );
+
+    // Fields.
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar_target_pair',
+      'field_name' => 'photogrammetry_scale_bar_target_pair_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'parent_photogrammetry_scale_bar_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar_target_pair',
+      'field_name' => 'target_type',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'target_pair_1_of_2',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar_target_pair',
+      'field_name' => 'target_pair_2_of_2',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar_target_pair',
+      'field_name' => 'distance',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar_target_pair',
+      'field_name' => 'units',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar_target_pair',
+      'field_name' => 'parent_capture_dataset_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar_target_pair',
+      'field_name' => 'parent_item_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'items',
+      'field_name' => 'subject_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'subject',
+      'field_name' => 'project_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar_target_pair',
+      'field_name' => 'created_by_user_account_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar_target_pair',
+      'field_name' => 'last_modified',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar_target_pair',
+      'field_name' => 'last_modified_user_account_id',
+    );
+
+    // Joins.
+    $query_params['related_tables'][] = array(
+      'table_name' => 'photogrammetry_scale_bar',
+      'table_join_field' => 'photogrammetry_scale_bar_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'photogrammetry_scale_bar_target_pair',
+      'base_join_field' => 'parent_photogrammetry_scale_bar_repository_id',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'capture_datasets',
+      'table_join_field' => 'capture_dataset_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'photogrammetry_scale_bar',
+      'base_join_field' => 'parent_capture_dataset_repository_id',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'items',
+      'table_join_field' => 'item_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'capture_datasets',
+      'base_join_field' => 'parent_item_repository_id',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'subjects',
+      'table_join_field' => 'subject_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'items',
+      'base_join_field' => 'subject_repository_id',
+    );
+
+    $ret = $this->getRecords($query_params);
+    //@todo do something if $ret has errors
+
+    if(array_key_exists(0, $ret)) {
+      $return_data = $ret[0];
+    }
+    return $return_data;
+  }
+
+  public function getPhotogrammetryScaleBar($params) {
+    //$params will be something like array('photogrammetry_scale_bar_repository_id' => '123');
+    $return_data = array();
+
+    $query_params = array(
+      'fields' => array(),
+      'base_table' => 'photogrammetry_scale_bar',
+      'search_params' => array(
+        0 => array('field_names' => array('photogrammetry_scale_bar.active'), 'search_values' => array(1), 'comparison' => '='),
+        1 => array('field_names' => array('photogrammetry_scale_bar.photogrammetry_scale_bar_repository_id'), 'search_values' => $params, 'comparison' => '=')
+      ),
+      'search_type' => 'AND',
+      'related_tables' => array(),
+    );
+
+    // Fields.
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar_target_pair',
+      'field_name' => 'photogrammetry_scale_bar_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'parent_capture_dataset_repository_id',
+    );
+
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar',
+      'field_name' => 'scale_bar_id',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'scale_bar_manufacturer',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar',
+      'field_name' => 'scale_bar_barcode_type',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar',
+      'field_name' => 'scale_bar_target_pairs',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'capture_datasets',
+      'field_name' => 'parent_item_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'items',
+      'field_name' => 'subject_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'subjects',
+      'field_name' => 'project_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar',
+      'field_name' => 'created_by_user_account_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar',
+      'field_name' => 'last_modified',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar',
+      'field_name' => 'last_modified_user_account_id',
+    );
+
+    // Joins.
+    $query_params['related_tables'][] = array(
+      'table_name' => 'capture_datasets',
+      'table_join_field' => 'capture_dataset_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'photogrammetry_scale_bar',
+      'base_join_field' => 'parent_capture_dataset_repository_id',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'items',
+      'table_join_field' => 'item_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'capture_datasets',
+      'base_join_field' => 'parent_item_repository_id',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'subjects',
+      'table_join_field' => 'subject_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'items',
+      'base_join_field' => 'subject_repository_id',
+    );
+
+    $ret = $this->getRecords($query_params);
+    //@todo do something if $ret has errors
+
+    if(array_key_exists(0, $ret)) {
+      $return_data = $ret[0];
+    }
+    return $return_data;
+  }
+
   public function getRecordById($params) {
 
     $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
@@ -1122,6 +1328,18 @@ class RepoStorageHybrid implements RepoStorage {
         );
 
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
+
+        if (NULL !== $parent_id) {
+          $c = count($query_params['search_params']);
+          $query_params['search_params'][$c] = array(
+            'field_names' => array(
+              'parent_photogrammetry_scale_bar_repository_id',
+            ),
+            'search_values' => array($parent_id),
+            'comparison' => '=',
+          );
+        }
+
         break;
 
       case 'project':

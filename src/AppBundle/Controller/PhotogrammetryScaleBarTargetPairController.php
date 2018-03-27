@@ -63,6 +63,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
           'start_record' => $start_record,
           'stop_record' => $stop_record,
           'search_value' => $search,
+          'parent_id' => $req['parent_id']
         );
         $this->repo_storage_controller->setContainer($this->container);
         $results = $this->repo_storage_controller->execute('datatablesQuery', $query_params);
