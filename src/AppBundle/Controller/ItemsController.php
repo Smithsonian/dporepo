@@ -43,6 +43,8 @@ class ItemsController extends Controller
     {
       // Usage: $this->u->dumper($variable);
       $this->u = $u;
+      $this->repo_storage_controller = new RepoStorageHybridController();
+
       // Establish paths.
       $this->file_upload_path = $file_upload_path;
       $this->file_processing_path = $file_processing_path;
