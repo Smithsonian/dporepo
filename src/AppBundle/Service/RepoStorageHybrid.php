@@ -383,6 +383,39 @@ class RepoStorageHybrid implements RepoStorage {
     return $return_data;
   }
 
+  public function getCaptureDevice($params) {
+    //$params will be something like array('capture_device_repository_id' => '123');
+    $return_data = array();
+
+    $capture_device_repository_id = array_key_exists('capture_device_repository_id', $params) ? $params['capture_device_repository_id'] : NULL;
+    $sql = "SELECT
+              capture_device.capture_device_repository_id,
+              capture_device.parent_capture_data_element_repository_id,
+              capture_device.calibration_file,
+              capture_device.capture_device_component_ids,
+              capture_data_element.capture_dataset_repository_id,
+              capture_dataset.parent_item_repository_id,
+              item.subject_repository_id,
+              subject.project_repository_id
+            FROM capture_device
+            LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_repository_id = capture_device.parent_capture_data_element_repository_id
+            LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
+            LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
+            LEFT JOIN subject ON subject.subject_repository_id = itemssubject_repository_id
+            WHERE capture_device.active = 1
+            AND capture_device.capture_device_repository_id = :capture_device_repository_id";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":capture_device_repository_id", $capture_device_repository_id, PDO::PARAM_INT);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    if(array_key_exists(0, $ret)) {
+      $return_data = $ret[0];
+    }
+    return $return_data;
+  }
+
   public function getPhotogrammetryScaleBarTargetPair($params) {
     //$params will be something like array('photogrammetry_scale_bar_target_pair_repository_id' => '123');
     $return_data = array();
