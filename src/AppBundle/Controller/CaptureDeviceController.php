@@ -38,7 +38,7 @@ class CaptureDeviceController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/capture_device/datatables_browse", name="capture_dataset_rights_browse_datatables", methods="POST")
+     * @Route("/admin/projects/capture_device/datatables_browse", name="capture_device_browse_datatables", methods="POST")
      *
      * @param Request $request
      * @return JsonResponse The query result in JSON

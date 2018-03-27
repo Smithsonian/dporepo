@@ -58,6 +58,7 @@ class CaptureDatasetRightsController extends Controller
           'sort_order' => $sort_order,
           'start_record' => $start_record,
           'stop_record' => $stop_record,
+          'parent_id' => $req['parent_id']
         );
         if ($search) {
           $query_params['search_value'] = $search;

@@ -1,138 +1,189 @@
 {% extends 'default_bootstrap_admin.html.twig' %}
 
 {% block stylesheets %}
-  {{ parent() }}
-  <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
-  <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
+    {{ parent() }}
+    <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
 
-  <ol class="breadcrumb">
-    <li><a href="/admin">Dashboard</a></li>
-    <li><a href="/admin/workspace">Browse Projects</a></li>
-    <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ project_repository_id }}">{{ project_data.project_name|e }}</a></li>
-    <li><strong>Subject:</strong> <a href="/admin/projects/items/{{ project_repository_id }}/{{ subject_repository_id }}">{{ subject_data.subject_name|e }}</a></li>
-    <li><strong>Item:</strong> <a href="/admin/projects/datasets/{{ project_repository_id }}/{{ subject_repository_id }}/{{ item_repository_id }}">{{ item_data.item_description_truncated|e }}</a></li>
-    <li class="active"><strong>Capture Dataset:</strong> {{ dataset_data.capture_dataset_name|e }}</li>
-  </ol>
+    <ol class="breadcrumb">
+        <li><a href="/admin">Dashboard</a></li>
+        <li><a href="/admin/workspace">Browse Projects</a></li>
+        <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ project_repository_id }}">{{ project_data.project_name|e }}</a></li>
+        <li><strong>Subject:</strong> <a href="/admin/projects/items/{{ project_repository_id }}/{{ subject_repository_id }}">{{ subject_data.subject_name|e }}</a></li>
+        <li><strong>Item:</strong> <a href="/admin/projects/datasets/{{ project_repository_id }}/{{ subject_repository_id }}/{{ item_repository_id }}">{{ item_data.item_description_truncated|e }}</a></li>
+        <li class="active"><strong>Capture Dataset:</strong> {{ dataset_data.capture_dataset_name|e }}</li>
+    </ol>
 
-  <div class="row">
-    <div class="col-sm-6 col-md-6">
-      <dl class="dl-horizontal">
-        <dt>Capture Dataset Name</dt>
-        <dd>{{ dataset_data.capture_dataset_name|e }}</dd>
-        <dt>Date Of Capture</dt>
-        <dd>{{ dataset_data.date_of_capture|e }}</dd>
-        <dt>Capture Dataset Type</dt>
-        <dd>{{ dataset_data.capture_dataset_type|e }}</dd>
-        <dt>Collected By</dt>
-        <dd>{{ dataset_data.collected_by|e }}</dd>
-      </dl>
-    </div>
-    <div class="col-sm-6 col-md-6">
-      <dl class="dl-horizontal">
-        <dt>Capture Method</dt>
-        <dd>{{ dataset_data.capture_method|e }}</dd>
-        <dt>Date Created</dt>
-        <dd>{{ dataset_data.date_created|e }}</dd>
-        <dt>Last Modified</dt>
-        <dd>{{ dataset_data.last_modified|e }}</dd>
-      </dl>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="col-sm-6 col-md-6 col-hidden-toggle clearfix">
-      <dl class="dl-horizontal">
-        <dt>Positionally Matched Sets ID</dt>
-        <dd>{{ dataset_data.positionally_matched_capture_datasets|e }}</dd>
-        <dt>Light Source</dt>
-        <dd>{{ dataset_data.light_source_type|e }}</dd>
-        <dt>Cluster Geometry Geometry ID</dt>
-        <dd>{{ dataset_data.cluster_geometry_field_id|e }}</dd>
-        <dt>Dataset Guid</dt>
-        <dd>{{ dataset_data.capture_dataset_guid|e }}</dd>
-      </dl>
-    </div>
-    <div class="col-sm-6 col-md-6 col-hidden-toggle">
-      <dl class="dl-horizontal">
-        <dt>Item Position Type</dt>
-        <dd>{{ dataset_data.item_position_type|e }}</dd>
-        <dt>Focus Type</dt>
-        <dd>{{ dataset_data.focus_type|e }}</dd>
-        <dt>Light Source Type</dt>
-        <dd>{{ dataset_data.light_source_type|e }}</dd>
-        <dt>Background Removal Method</dt>
-        <dd>{{ dataset_data.background_removal_method|e }}</dd>
-        <dt>Camera Cluster Type</dt>
-        <dd>{{ dataset_data.camera_cluster_type|e }}</dd>
-      </dl>
-    </div>
-    <div class="col-sm-12 col-md-12 col-hidden-toggle">
-      <dl class="dl-horizontal">
-        <dt>Dataset Description</dt>
-        <dd>{{ dataset_data.capture_dataset_description|e|nl2br }}</dd>
-        <dt>Dataset Collection Notes</dt>
-        <dd>{{ dataset_data.collection_notes|e|nl2br }}</dd>
-      </dl>
-    </div>
-
-    <div class="col-sm-12 col-md-12">
-      <a href="javascript:void(0);" class="view-hidden-content" role="button"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span> <span class="view-hidden-content-text">Expand Details</span></a>
-      <hr>
-    </div>
-
-    <div class="col-sm-12 col-md-12">
-      <a href="/admin/projects/datasets/{{ project_repository_id }}/{{ subject_repository_id }}/{{ item_repository_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Item</a>
-      <a href="/admin/projects/dataset/{{ project_repository_id }}/{{ subject_repository_id }}/{{ item_repository_id }}/{{ capture_dataset_repository_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span> Edit Dataset</a>
-    </div>
-
-    <div class="col-sm-12 col-md-12 child-data">
-      <div class="panel panel-default">
-        <div class="panel-body">
-
-          <h2>Capture Data Elements</h2>
-          <a href="/admin/projects/dataset_element/{{ project_repository_id }}/{{ subject_repository_id }}/{{ item_repository_id }}/{{ capture_dataset_repository_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Dataset Element</a>
-
-          <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
-            <thead>
-              <tr>
-                <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
-                <th class="text-center">Download</th>
-                <th class="text-center">Capture Device Configuration ID</th>
-                <th class="text-center">Capture Device Field ID</th>
-                <th class="text-center">Capture Sequence Number</th>
-                <th class="text-center">Cluster Position Field ID</th>
-                <th class="text-center">Position In Cluster Field ID</th>
-                <th class="text-center">Last Modified</th>
-              </tr>
-            </thead>
-          </table>
+    <div class="row">
+        <div class="col-sm-6 col-md-6">
+            <dl class="dl-horizontal">
+                <dt>Capture Dataset Name</dt>
+                <dd>{{ dataset_data.capture_dataset_name|e }}</dd>
+                <dt>Date Of Capture</dt>
+                <dd>{{ dataset_data.date_of_capture|e }}</dd>
+                <dt>Capture Dataset Type</dt>
+                <dd>{{ dataset_data.capture_dataset_type|e }}</dd>
+                <dt>Collected By</dt>
+                <dd>{{ dataset_data.collected_by|e }}</dd>
+            </dl>
         </div>
-      </div>
+        <div class="col-sm-6 col-md-6">
+            <dl class="dl-horizontal">
+                <dt>Capture Method</dt>
+                <dd>{{ dataset_data.capture_method|e }}</dd>
+                <dt>Date Created</dt>
+                <dd>{{ dataset_data.date_created|e }}</dd>
+                <dt>Last Modified</dt>
+                <dd>{{ dataset_data.last_modified|e }}</dd>
+            </dl>
+        </div>
     </div>
 
-  </div> <!-- /row -->
+    <div class="row">
+        <div class="col-sm-6 col-md-6 col-hidden-toggle clearfix">
+            <dl class="dl-horizontal">
+                <dt>Positionally Matched Sets ID</dt>
+                <dd>{{ dataset_data.positionally_matched_capture_datasets|e }}</dd>
+                <dt>Light Source</dt>
+                <dd>{{ dataset_data.light_source_type|e }}</dd>
+                <dt>Cluster Geometry Geometry ID</dt>
+                <dd>{{ dataset_data.cluster_geometry_field_id|e }}</dd>
+                <dt>Dataset Guid</dt>
+                <dd>{{ dataset_data.capture_dataset_guid|e }}</dd>
+            </dl>
+        </div>
+        <div class="col-sm-6 col-md-6 col-hidden-toggle">
+            <dl class="dl-horizontal">
+                <dt>Item Position Type</dt>
+                <dd>{{ dataset_data.item_position_type|e }}</dd>
+                <dt>Focus Type</dt>
+                <dd>{{ dataset_data.focus_type|e }}</dd>
+                <dt>Light Source Type</dt>
+                <dd>{{ dataset_data.light_source_type|e }}</dd>
+                <dt>Background Removal Method</dt>
+                <dd>{{ dataset_data.background_removal_method|e }}</dd>
+                <dt>Camera Cluster Type</dt>
+                <dd>{{ dataset_data.camera_cluster_type|e }}</dd>
+            </dl>
+        </div>
+        <div class="col-sm-12 col-md-12 col-hidden-toggle">
+            <dl class="dl-horizontal">
+                <dt>Dataset Description</dt>
+                <dd>{{ dataset_data.capture_dataset_description|e|nl2br }}</dd>
+                <dt>Dataset Collection Notes</dt>
+                <dd>{{ dataset_data.collection_notes|e|nl2br }}</dd>
+            </dl>
+        </div>
+
+        <div class="col-sm-12 col-md-12">
+            <a href="javascript:void(0);" class="view-hidden-content" role="button"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span> <span class="view-hidden-content-text">Expand Details</span></a>
+            <hr>
+        </div>
+
+        <div class="col-sm-12 col-md-12">
+            <a href="/admin/projects/datasets/{{ project_repository_id }}/{{ subject_repository_id }}/{{ item_repository_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Item</a>
+            <a href="/admin/projects/dataset/{{ project_repository_id }}/{{ subject_repository_id }}/{{ item_repository_id }}/{{ capture_dataset_repository_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span> Edit Dataset</a>
+        </div>
+
+        <div class="col-sm-12 col-md-12 child-data">
+
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <h2>Capture Data Elements</h2>
+                    <a href="/admin/projects/dataset_element/{{ project_repository_id }}/{{ subject_repository_id }}/{{ item_repository_id }}/{{ capture_dataset_repository_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Dataset Element</a>
+                    <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
+                        <thead>
+                        <tr>
+                            <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
+                            <th class="text-center">Download</th>
+                            <th class="text-center">Capture Device Configuration ID</th>
+                            <th class="text-center">Capture Device Field ID</th>
+                            <th class="text-center">Capture Sequence Number</th>
+                            <th class="text-center">Cluster Position Field ID</th>
+                            <th class="text-center">Position In Cluster Field ID</th>
+                            <th class="text-center">Last Modified</th>
+                        </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <h2>Capture Dataset Rights</h2>
+                    <table id="browse_capture_dataset_rights" class="table table-striped table-bordered" cellspacing="0" width="100%">
+                        <thead>
+                        <tr>
+                            <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
+                            <th class="text-center">Data Rights Restriction</th>
+                            <th class="text-center">Start Date</th>
+                            <th class="text-center">End Date</th>
+                            <th class="text-center">Last Modified</th>
+                        </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <h2>Models</h2>
+                    <table id="browse_model" class="table table-striped table-bordered" cellspacing="0" width="100%">
+                        <thead>
+                        <tr>
+                            <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
+                            <th class="text-center">Model Guid</th>
+                            <th class="text-center">Date of Creation</th>
+                            <th class="text-center">Model File Type</th>
+                            <th class="text-center">Derived From</th>
+                            <th class="text-center">Creation Method</th>
+                            <th class="text-center">Last Modified</th>
+                        </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <h2>UV Maps</h2>
+                    <table id="browse_uv_map" class="table table-striped table-bordered" cellspacing="0" width="100%">
+                        <thead>
+                        <tr>
+                            <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
+                            <th class="text-center">Map Type</th>
+                            <th class="text-center">Map File Type</th>
+                            <th class="text-center">Map Size</th>
+                            <th class="text-center">Last Modified</th>
+                        </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </div> <!-- /row -->
 {% endblock %}
 {% block js_bottom %}
-  {{ parent() }}
-  <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
-  <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
-  <script type="text/javascript">
-    $(document).ready(function() {
-
-      var project_repository_id = "{{ project_repository_id }}",
+    {{ parent() }}
+    <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
+    <script type="text/javascript">
+      $(document).ready(function() {
+        var project_repository_id = "{{ project_repository_id }}",
           subject_repository_id = "{{ subject_repository_id }}",
           item_repository_id = "{{ item_repository_id }}",
           capture_dataset_repository_id =  "{{ capture_dataset_repository_id }}",
           details_page = "/admin/projects/dataset_element/";
-
-      $('#browse').dataTable( {
-        "columns": [
+        $('#browse').dataTable( {
+          "columns": [
             { "data": "manage" },
             { "data": "manage" },
             { "data": "capture_device_configuration_id" },
@@ -142,90 +193,242 @@
             { "data": "position_in_cluster_field_id" },
             { "data": "last_modified" }
           ],
-        "dom": 'lfip<"datatables_bulk_actions">tip',
-        "pagingType": "simple_numbers",
-        "stateSave": true,
-        "order": [[7,"desc"]],
-        // Show processing throbber.
-        "processing": true,
-        "serverMethod": "POST",
-        // All data management will be done on the server side.
-        "serverSide": true,
-        // Path to the file that is going to handle the queries.
-        "ajax": "/admin/projects/datatables_browse_dataset_elements/{{ project_repository_id }}/{{ subject_repository_id }}/{{ item_repository_id }}/{{ capture_dataset_repository_id }}",
-        // Method type.
-        "serverMethod": "POST",
-        // Values in the length dropdown.
-        "lengthMenu":[10,50,100,500],
-        // Set some widths.
-        "aoColumnDefs":[
-          {"sWidth":"106px","aTargets":[0,1]},
-          {"bSortable":false,"aTargets":[0]},
-        ],
-        "fnRowCallback":function(nRow, aData, iDisplayIndex) {
-          
-          // This table row.
-          var thisTableRow = $(nRow);
+          "dom": 'lfip<"datatables_bulk_actions">tip',
+          "pagingType": "simple_numbers",
+          "stateSave": true,
+          "order": [[7,"desc"]],
+          // Show processing throbber.
+          "processing": true,
+          "serverMethod": "POST",
+          // All data management will be done on the server side.
+          "serverSide": true,
+          // Path to the file that is going to handle the queries.
+          "ajax": "/admin/projects/datatables_browse_dataset_elements/{{ project_repository_id }}/{{ subject_repository_id }}/{{ item_repository_id }}/{{ capture_dataset_repository_id }}",
+          // Method type.
+          "serverMethod": "POST",
+          // Values in the length dropdown.
+          "lengthMenu":[10,50,100,500],
+          // Set some widths.
+          "aoColumnDefs":[
+            {"sWidth":"106px","aTargets":[0,1]},
+            {"bSortable":false,"aTargets":[0]},
+          ],
+          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
 
-          // Create the delete record checkboxes.
-          thisTableRow.find('td:eq(0)')
-            .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
-            .addClass("manage_column");
-
-          // Create the download checkboxes.
-          thisTableRow.find('td:eq(1)')
-            .html("<input type='checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
-            .addClass("manage_column");
-
-          // Send to details page when clicked.
-          thisTableRow.find('td').click(function() {
-            // This table cell.
-            var thisTableCell = $(this);
-            // Don't do anything if the table cell has the 'manage_column' CSS class.
-            if(thisTableCell.hasClass('manage_column')) return;
-            // Send to the details page.
-            var capture_data_element_repository_id = thisTableCell.closest("tr").attr('id');
-            window.location.href = details_page + project_repository_id + '/' + subject_repository_id + '/' + item_repository_id + '/' + capture_dataset_repository_id + '/' + capture_data_element_repository_id;
-          });
-
-        }
-      });
-
-      var request_download_button = $("<button></button>")
-        .addClass('btn btn-default glyphicon glyphicon-download-alt')
-        .attr('style', 'width: 13.8rem;')
-        .on("click", function(){
-
-          var download_ids = new Array;
-          $('#browse [name="download_checkbox"]:checked').each(function(){
-            download_ids.push($(this).val());
-          });
-
-          if(!download_ids.length) {
-            swal('No Records Selected', 'Please choose at least one record.');
-            return;
-          }
-
-          if(download_ids.length > 0) {
-
-            swal({
-              title: "Send Download Request",
-              text: "Send a request to download chosen assets?",
-              type: "warning",
-              showCancelButton: true,
-              confirmButtonColor: "#DD6B55",
-              confirmButtonText: "Send Request",
-              closeOnConfirm: true
-            },
-            function(){
-              // Placeholder
+            // This table row.
+            var thisTableRow = $(nRow);
+            // Create the delete record checkboxes.
+            thisTableRow.find('td:eq(0)')
+              .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+              .addClass("manage_column");
+            // Create the download checkboxes.
+            thisTableRow.find('td:eq(1)')
+              .html("<input type='checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
+              .addClass("manage_column");
+            // Send to details page when clicked.
+            thisTableRow.find('td').click(function() {
+              // This table cell.
+              var thisTableCell = $(this);
+              // Don't do anything if the table cell has the 'manage_column' CSS class.
+              if(thisTableCell.hasClass('manage_column')) return;
+              // Send to the details page.
+              var capture_data_element_repository_id = thisTableCell.closest("tr").attr('id');
+              window.location.href = details_page + project_repository_id + '/' + subject_repository_id + '/' + item_repository_id + '/' + capture_dataset_repository_id + '/' + capture_data_element_repository_id;
             });
-
           }
         });
+        var request_download_button = $("<button></button>")
+          .addClass('btn btn-default glyphicon glyphicon-download-alt')
+          .attr('style', 'width: 13.8rem;')
+          .on("click", function(){
+            var download_ids = new Array;
+            $('#browse [name="download_checkbox"]:checked').each(function(){
+              download_ids.push($(this).val());
+            });
+            if(!download_ids.length) {
+              swal('No Records Selected', 'Please choose at least one record.');
+              return;
+            }
+            if(download_ids.length > 0) {
+              swal({
+                  title: "Send Download Request",
+                  text: "Send a request to download chosen assets?",
+                  type: "warning",
+                  showCancelButton: true,
+                  confirmButtonColor: "#DD6B55",
+                  confirmButtonText: "Send Request",
+                  closeOnConfirm: true
+                },
+                function(){
+                  // Placeholder
+                });
+            }
+          });
+        $(".datatables_bulk_actions").append(request_download_button);
+        $('#browse_capture_dataset_rights').dataTable( {
+          "columns": [
+            { "data": "manage" },
+            { "data": "data_rights_restriction" },
+            { "data": "start_date" },
+            { "data": "end_date" },
+            { "data": "last_modified" }
+          ],
+          "dom": 'lfip<"datatables_bulk_actions">tip',
+          "pagingType": "simple_numbers",
+          "stateSave": true,
+          "order": [[4,"desc"]],
+          // Show processing throbber.
+          "processing": true,
+          "serverMethod": "POST",
+          // All data management will be done on the server side.
+          "serverSide": true,
+          // Path to the file that is going to handle the queries.
+          "ajax": {
+            "url": "/admin/projects/capture_dataset_rights/datatables_browse",
+            "data": {
+              "parent_id": capture_dataset_repository_id
+            }
+          },
+          // Method type.
+          "serverMethod": "POST",
+          // Values in the length dropdown.
+          "lengthMenu":[10,50,100,500],
+          // Set some widths.
+          "aoColumnDefs":[
+            {"sWidth":"106px","aTargets":[0]},
+            {"bSortable":false,"aTargets":[0]},
+          ],
+          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
 
-      $(".datatables_bulk_actions").append(request_download_button);
+            // This table row.
+            var thisTableRow = $(nRow);
+            // Create the delete record checkboxes.
+            thisTableRow.find('td:eq(0)')
+              .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+              .addClass("manage_column");
+            // Send to details page when clicked.
+            thisTableRow.find('td').click(function() {
+              // This table cell.
+              var thisTableCell = $(this);
+              // Don't do anything if the table cell has the 'manage_column' CSS class.
+              if(thisTableCell.hasClass('manage_column')) return;
+              // Send to the details page.
+              var this_id = thisTableCell.closest("tr").attr('id');
+              window.location.href = '/admin/projects/capture_dataset_rights/manage' + '/' + capture_dataset_repository_id + '/' + this_id;
+            });
+          }
+        });
+        $('#browse_model').dataTable( {
+          "columns": [
+            { "data": "manage" },
+            { "data": "model_guid" },
+            { "data": "date_of_creation" },
+            { "data": "model_file_type" },
+            { "data": "derived_from" },
+            { "data": "creation_method" },
+            { "data": "last_modified" }
+          ],
+          "dom": 'lfip<"datatables_bulk_actions">tip',
+          "pagingType": "simple_numbers",
+          "stateSave": true,
+          "order": [[6,"desc"]],
+          // Show processing throbber.
+          "processing": true,
+          "serverMethod": "POST",
+          // All data management will be done on the server side.
+          "serverSide": true,
+          // Path to the file that is going to handle the queries.
+          "ajax": {
+            "url": "/admin/projects/model/datatables_browse",
+            "data": {
+              "parent_id": capture_dataset_repository_id
+            }
+          },
+          // Method type.
+          "serverMethod": "POST",
+          // Values in the length dropdown.
+          "lengthMenu":[10,50,100,500],
+          // Set some widths.
+          "aoColumnDefs":[
+            {"sWidth":"106px","aTargets":[0]},
+            {"bSortable":false,"aTargets":[0]},
+          ],
+          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
 
-    });
-  </script>
+            // This table row.
+            var thisTableRow = $(nRow);
+            // Create the delete record checkboxes.
+            thisTableRow.find('td:eq(0)')
+              .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+              .addClass("manage_column");
+            // Send to details page when clicked.
+            thisTableRow.find('td').click(function() {
+              // This table cell.
+              var thisTableCell = $(this);
+              // Don't do anything if the table cell has the 'manage_column' CSS class.
+              if(thisTableCell.hasClass('manage_column')) return;
+              // Send to the details page.
+              var this_id = thisTableCell.closest("tr").attr('id');
+              window.location.href = '/admin/projects/model/manage' + '/' + capture_dataset_repository_id + '/' + this_id;
+            });
+          }
+        });
+        $('#browse_uv_map').dataTable( {
+          "columns": [
+            { "data": "manage" },
+            { "data": "map_type" },
+            { "data": "map_file_type" },
+            { "data": "map_size" },
+            { "data": "last_modified" }
+          ],
+          "dom": 'lfip<"datatables_bulk_actions">tip',
+          "pagingType": "simple_numbers",
+          "stateSave": true,
+          "order": [[4,"desc"]],
+          // Show processing throbber.
+          "processing": true,
+          "serverMethod": "POST",
+          // All data management will be done on the server side.
+          "serverSide": true,
+          // Path to the file that is going to handle the queries.
+          "ajax": {
+            "url": "/admin/projects/uv_map/datatables_browse",
+            "data": {
+              "parent_id": capture_dataset_repository_id
+            }
+          },
+          // Method type.
+          "serverMethod": "POST",
+          // Values in the length dropdown.
+          "lengthMenu":[10,50,100,500],
+          // Set some widths.
+          "aoColumnDefs":[
+            {"sWidth":"106px","aTargets":[0]},
+            {"bSortable":false,"aTargets":[0]},
+          ],
+          "data": {
+            "parent_id": capture_dataset_repository_id
+          },
+          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+
+            // This table row.
+            var thisTableRow = $(nRow);
+            // Create the delete record checkboxes.
+            thisTableRow.find('td:eq(0)')
+              .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+              .addClass("manage_column");
+            // Send to details page when clicked.
+            thisTableRow.find('td').click(function() {
+              // This table cell.
+              var thisTableCell = $(this);
+              // Don't do anything if the table cell has the 'manage_column' CSS class.
+              if(thisTableCell.hasClass('manage_column')) return;
+              // Send to the details page.
+              var this_id = thisTableCell.closest("tr").attr('id');
+              window.location.href = '/admin/projects/uv_map/manage/' + capture_dataset_repository_id + '/' + this_id;
+            });
+          }
+        });
+      });
+    </script>
 {% endblock %}
