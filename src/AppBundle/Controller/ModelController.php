@@ -58,7 +58,8 @@ class ModelController extends Controller
           'sort_order' => $sort_order,
           'start_record' => $start_record,
           'stop_record' => $stop_record,
-          'parent_id' => $req['parent_id']
+          'parent_id' => $req['parent_id'],
+          'parent_id_field' => !empty($req['parent_type']) ? 'parent_item_repository_id' : 'parent_capture_dataset_repository_id',
         );
         if ($search) {
           $query_params['search_value'] = $search;
@@ -118,6 +119,12 @@ class ModelController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $data = $form->getData();
+
+            // Set the parent_item_repository_id if adding a Model from an Item record.
+            if(empty($id) && (!empty($request->query->get('from')) && $request->query->get('from') === 'item')) {
+                $data->parent_item_repository_id = $parent_id;
+                $data->parent_capture_dataset_repository_id = 0;
+            }
             $id = $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => 'model',
               'record_id' => $id,
@@ -127,7 +134,7 @@ class ModelController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/model/manage/' . $data->capture_dataset_repository_id . '/' . $id);
+            return $this->redirect('/admin/projects/model/manage/' . $parent_id . '/' . $id);
         }
 
         return $this->render('datasets/model_form.html.twig', array(

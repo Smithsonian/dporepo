@@ -938,7 +938,9 @@ class RepoStorageHybrid implements RepoStorage {
     $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
     $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
 
+    $parent_id_field = array_key_exists('parent_id_field', $params) ? $params['parent_id_field'] : NULL;
     $parent_id = array_key_exists('parent_id', $params) ? $params['parent_id'] : NULL;
+
     $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
     //@todo- allow match on ID- specify ID field and value $record_match = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
 
@@ -1340,7 +1342,7 @@ class RepoStorageHybrid implements RepoStorage {
           $c = count($query_params['search_params']);
           $query_params['search_params'][$c] = array(
             'field_names' => array(
-              'parent_capture_dataset_repository_id',
+              $parent_id_field,
             ),
             'search_values' => array($parent_id),
             'comparison' => '=',
