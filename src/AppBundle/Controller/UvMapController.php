@@ -27,6 +27,8 @@ class UvMapController extends Controller
   {
     // Usage: $this->u->dumper($variable);
     $this->u = $u;
+    $this->repo_storage_controller = new RepoStorageHybridController();
+
   }
 
   /**
@@ -46,7 +48,7 @@ class UvMapController extends Controller
     $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
     $query_params = array(
-      'record_type' => 'camera_cluster_type',
+      'record_type' => 'uv_map',
       'sort_field' => $sort_field,
       'sort_order' => $sort_order,
       'start_record' => $start_record,
