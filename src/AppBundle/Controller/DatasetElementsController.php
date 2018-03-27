@@ -190,7 +190,7 @@ class DatasetElementsController extends Controller
               'values' => $dataset_array
             ));
 
-            $this->addFlash('message', 'Dataset Element successfully updated.');
+            $this->addFlash('message', 'Capture Data Element successfully updated.');
             return $this->redirectToRoute('dataset_elements_browse', array('project_repository_id' => $dataset_element->project_repository_id,
               'subject_repository_id' => $dataset_element->subject_repository_id, 'item_repository_id' => $dataset_element->item_repository_id,
               'capture_dataset_repository_id' => $dataset_element->capture_dataset_repository_id));
@@ -198,7 +198,7 @@ class DatasetElementsController extends Controller
         }
 
         return $this->render('datasetElements/dataset_element_form.html.twig', array(
-            'page_title' => ((int)$id && isset($dataset_element->capture_sequence_number)) ? 'Dataset Element: ' . $dataset_element->capture_sequence_number : 'Add a Dataset Element',
+            'page_title' => ((int)$id && isset($dataset_element->capture_sequence_number)) ? 'Capture Data Element: ' . $dataset_element->capture_sequence_number : 'Add a Capture Data Element',
             'project_repository_id' => $dataset_element->project_repository_id,
             'subject_repository_id' => $dataset_element->subject_repository_id,
             'item_repository_id' => $dataset_element->item_repository_id,
