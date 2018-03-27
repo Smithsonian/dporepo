@@ -300,18 +300,26 @@ class RepoStorageHybrid implements RepoStorage {
 
     // Joins.
     $query_params['related_tables'][] = array(
-      'table_name' => 'item_type',
-      'table_join_field' => 'item_type_repository_id',
+      'table_name' => 'capture_dataset',
+      'table_join_field' => 'capture_dataset_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'model',
+      'base_join_field' => 'parent_capture_dataset_repository_id',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'item',
+      'table_join_field' => 'item_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'capture_dataset',
+      'base_join_field' => 'parent_item_repository_id',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'subject',
+      'table_join_field' => 'subject_repository_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'item',
-      'base_join_field' => 'item_type',
+      'base_join_field' => 'subject_repository_id',
     );
-
-    /*
-    LEFT JOIN capture_datasets ON capture_datasets.capture_dataset_repository_id = model.parent_capture_dataset_repository_id
-    LEFT JOIN items ON items.item_repository_id = capture_datasets.parent_item_repository_id
-    LEFT JOIN subjects ON subjects.subject_repository_id = items.subject_repository_id
-*/
 
     $query_params['records_values'] = array();
     $ret = $this->getRecords($query_params);
@@ -401,7 +409,7 @@ class RepoStorageHybrid implements RepoStorage {
             LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_repository_id = capture_device.parent_capture_data_element_repository_id
             LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
             LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
-            LEFT JOIN subject ON subject.subject_repository_id = itemssubject_repository_id
+            LEFT JOIN subject ON item.subject_repository_id =subject.subject_repository_id
             WHERE capture_device.active = 1
             AND capture_device.capture_device_repository_id = :capture_device_repository_id";
 
@@ -661,7 +669,7 @@ class RepoStorageHybrid implements RepoStorage {
     if($item_repository_id && is_numeric($item_repository_id)) {
       $query_params['search_params'][1] = array(
         'field_names' => array(
-          'capture_dataset.item_repository_id',
+          'capture_dataset.parent_item_repository_id',
         ),
         'search_values' => array((int)$item_repository_id),
         'comparison' => '=',
@@ -688,7 +696,7 @@ class RepoStorageHybrid implements RepoStorage {
       'table_join_field' => 'item_repository_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'capture_dataset',
-      'base_join_field' => 'item_repository_id',
+      'base_join_field' => 'parent_item_repository_id',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'subject',
@@ -733,7 +741,7 @@ class RepoStorageHybrid implements RepoStorage {
                 capture_data_element.active
             FROM capture_data_element
             LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
-            LEFT JOIN item ON item.item_repository_id = capture_dataset.item_repository_id
+            LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
             LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
             LEFT JOIN project ON project.project_repository_id = subject.project_repository_id
             WHERE capture_data_element.active = 1
@@ -1407,7 +1415,7 @@ class RepoStorageHybrid implements RepoStorage {
           $c = count($query_params['search_params']);
           $query_params['search_params'][$c] = array(
             'field_names' => array(
-              'target_model_repository_id',
+              'parent_model_repository_id',
             ),
             'search_values' => array($parent_id),
             'comparison' => '=',
@@ -2156,22 +2164,8 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'last_modified',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'project',
-      'field_name' => 'last_modified',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'project',
+      'table_name' => 'capture_data_file',
       'field_name' => 'last_modified_user_account_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'isni_data',
-      'field_name' => 'isni_label',
-      'field_alias' => 'stakeholder_label',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'unit_stakeholder',
-      'field_name' => 'unit_stakeholder_repository_id',
-      'field_alias' => 'stakeholder_si_guid',
     );
 
     $query_params['records_values'] = array();
@@ -2309,7 +2303,7 @@ class RepoStorageHybrid implements RepoStorage {
       $count_params = count($query_params['search_params']);
       $query_params['search_params'][$count_params] = array(
         'field_names' => array(
-          'capture_dataset.item_repository_id',
+          'capture_dataset.parent_item_repository_id',
         ),
         'search_values' => array((int)$item_repository_id),
         'comparison' => '=',
@@ -2623,7 +2617,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'capture_dataset',
-      'table_join_field' => 'item_repository_id',
+      'table_join_field' => 'parent_item_repository_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'item',
       'base_join_field' => 'item_repository_id',
@@ -2671,7 +2665,7 @@ class RepoStorageHybrid implements RepoStorage {
       'field_alias' => 'status_label'
     );
     $query_params['fields'][] = array(
-      'field_name' => 'count(distinct capture_dataset.item_repository_id)',
+      'field_name' => 'count(distinct capture_dataset.parent_item_repository_id)',
       'field_alias' => 'datasets_count',
     );
 
@@ -2713,7 +2707,7 @@ class RepoStorageHybrid implements RepoStorage {
     $sql = "UPDATE project
                 LEFT JOIN subject ON subject.project_repository_id = project.project_repository_id
                 LEFT JOIN item ON item.subject_repository_id = subject.subject_repository_id
-                LEFT JOIN capture_dataset ON capture_dataset.item_repository_id = item.item_repository_id
+                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
                 LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
                 SET project.active = 0,
                     project.last_modified_user_account_id = :last_modified_user_account_id,
@@ -2748,7 +2742,7 @@ class RepoStorageHybrid implements RepoStorage {
     //@todo trap for missing user_id or record_id.
     $sql = "UPDATE subject
                 LEFT JOIN item ON item.subject_repository_id = subject.subject_repository_id
-                LEFT JOIN capture_dataset ON capture_dataset.item_repository_id = item.item_repository_id
+                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
                 LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
                 SET subject.active = 0,
                     subject.last_modified_user_account_id = :last_modified_user_account_id,
@@ -2805,7 +2799,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     //@todo trap for missing user_id or record_id.
     $sql = "UPDATE item
-                LEFT JOIN capture_dataset ON capture_dataset.item_repository_id = item.item_repository_id
+                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
                 LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
                 SET item.active = 0,
                     item.last_modified_user_account_id = :last_modified_user_account_id,
