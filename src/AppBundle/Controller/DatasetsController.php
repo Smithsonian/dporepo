@@ -141,8 +141,7 @@ class DatasetsController extends Controller
     /**
      * Matches /admin/projects/dataset/*
      *
-     * @Route("/admin/projects/dataset/{project_repository_id}/{subject_repository_id}/{item_repository_id}/{capture_dataset_repository_id}", name="datasets_manage", methods={"GET","POST"}, defaults={"capture_dataset_repository_id" = null})
-     *
+     * @Route("/admin/projects/dataset/{parent_project_repository_id}/{parent_subject_repository_id}/{parent_item_repository_id}/{capture_dataset_repository_id}", name="datasets_manage", methods={"GET","POST"}, defaults={"capture_dataset_repository_id" = null})     *
      * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
      * @return  array|bool            The query result
@@ -152,9 +151,6 @@ class DatasetsController extends Controller
         $dataset = new Datasets();
         $post = $request->request->all();
         $id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
-        $dataset->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
-        $dataset->subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
-        $dataset->item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
 
         $this->repo_storage_controller->setContainer($this->container);
 
@@ -166,6 +162,9 @@ class DatasetsController extends Controller
             if(is_array($dataset_array)) {
               $dataset = (object)$dataset_array;
             }
+            $dataset->parent_project_repository_id = !empty($request->attributes->get('parent_project_repository_id')) ? $request->attributes->get('parent_project_repository_id') : false;
+            $dataset->parent_subject_repository_id = !empty($request->attributes->get('parent_subject_repository_id')) ? $request->attributes->get('parent_subject_repository_id') : false;
+            $dataset->parent_item_repository_id = !empty($request->attributes->get('parent_item_repository_id')) ? $request->attributes->get('parent_item_repository_id') : false;
         }
 
         // Get data from lookup tables.
@@ -199,8 +198,8 @@ class DatasetsController extends Controller
             ));
 
             $this->addFlash('message', 'Dataset successfully updated.');
-            return $this->redirect('/admin/projects/datasets/' . $dataset->project_repository_id . '/' . $dataset->subject_repository_id . '/' . $dataset->item_repository_id); // . '/' . $capture_dataset_repository_id);
-
+            //return $this->redirect('/admin/projects/datasets/' . $dataset->project_repository_id . '/' . $dataset->subject_repository_id . '/' . $dataset->item_repository_id); // . '/' . $capture_dataset_repository_id);
+            return $this->redirect('/admin/projects/dataset_elements/' . $dataset->parent_project_repository_id . '/' . $dataset->parent_subject_repository_id . '/' . $dataset->parent_item_repository_id . '/' . $capture_dataset_repository_id);
         }
 
         return $this->render('datasets/dataset_form.html.twig', array(

@@ -3517,6 +3517,8 @@ class RepoStorageHybrid implements RepoStorage {
         }
       }
 
+      //@todo - capture_dataset.capture_dataset_guid = (select md5(UUID()))
+
       if(count($fields_sql_array) > 0 && count($fields_sql_array) == count($fields_params)) {
         if($update) {
           $sql ="UPDATE " . $base_table;
