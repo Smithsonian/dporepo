@@ -92,9 +92,8 @@ class PhotogrammetryScaleBarController extends Controller
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
         $this->repo_storage_controller->setContainer($this->container);
         if(!empty($id) && empty($post)) {
-          $rec = $this->repo_storage_controller->execute('getRecordById', array(
-            'record_type' => 'photogrammetry_scale_bar',
-            'record_id' => $id));
+          $rec = $this->repo_storage_controller->execute('getPhotogrammetryScaleBar', array(
+            'photogrammetry_scale_bar_repository_id' => $id));
           if(isset($rec)) {
             $data = (object)$rec;
           }
