@@ -133,27 +133,29 @@ class ItemsController extends Controller
         // TODO: create an entry in the status_types table for this.
         if(!empty($data['aaData'])) {
             foreach ($data['aaData'] as $key => $value) {
+              if(array_key_exists('status_type_id', $value)) {
                 switch($value['status_type_id']) {
-                    case '0': // Not Found in JobBox
-                        $data['aaData'][$key]['status_label'] = '<span class="label label-danger">Not Found in JobBox</span>';
-                        break;
-                    case '1': // Uploaded and Properly Labeled
-                        $data['aaData'][$key]['status_label'] = '<span class="label label-default">' . $value['status_label'] . '</span>';
-                        break;
-                    case '2': // Transferred to Processing Directory and In Queue
-                        $data['aaData'][$key]['status_label'] = '<span class="label label-warning">' . $value['status_label'] . '</span>';
-                        break;
-                    case '3': // Clipped via ImageMagick
-                    case '4': // Master Model Processed via RealityCapture
-                        $data['aaData'][$key]['status_label'] = '<span class="label label-info">' . $value['status_label'] . '</span>';
-                        break;
-                    case '5': // Web Ready Model Processed via InstantUV
-                        $data['aaData'][$key]['status_label'] = '<span class="label label-success">' . $value['status_label'] . '</span>';
-                        break;
-                    case '6': // Target directory exists in JobBox
-                        $data['aaData'][$key]['status_label'] = '<span class="label label-default">' . $value['status_label'] . '</span>';
-                        break;
+                  case '0': // Not Found in JobBox
+                    $data['aaData'][$key]['status_label'] = '<span class="label label-danger">Not Found in JobBox</span>';
+                    break;
+                  case '1': // Uploaded and Properly Labeled
+                    $data['aaData'][$key]['status_label'] = '<span class="label label-default">' . $value['status_label'] . '</span>';
+                    break;
+                  case '2': // Transferred to Processing Directory and In Queue
+                    $data['aaData'][$key]['status_label'] = '<span class="label label-warning">' . $value['status_label'] . '</span>';
+                    break;
+                  case '3': // Clipped via ImageMagick
+                  case '4': // Master Model Processed via RealityCapture
+                    $data['aaData'][$key]['status_label'] = '<span class="label label-info">' . $value['status_label'] . '</span>';
+                    break;
+                  case '5': // Web Ready Model Processed via InstantUV
+                    $data['aaData'][$key]['status_label'] = '<span class="label label-success">' . $value['status_label'] . '</span>';
+                    break;
+                  case '6': // Target directory exists in JobBox
+                    $data['aaData'][$key]['status_label'] = '<span class="label label-default">' . $value['status_label'] . '</span>';
+                    break;
                 }
+              }
             }
         }
 
