@@ -134,7 +134,7 @@ class UnitStakeholderController extends Controller
         }
 
         // Get data from lookup tables.
-        $data['units_stakeholders'] = $projects->get_units_stakeholders();
+        $data['units_stakeholders'] = $projects->get_units_stakeholders($this->container);
 
         // Validate posted data.
         if(!empty($post)) {
