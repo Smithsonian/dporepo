@@ -193,7 +193,7 @@ class UnitStakeholderController extends Controller
             'base_table' => 'isni_data',
             'user_id' => $this->getUser()->getId(),
             'values' => array(
-              'isni_id' => $data['isni_id'],
+              'isni_id' => $data['isni_data_repository_id'],
               'isni_label' => $data['stakeholder_label'],
             )
           ));

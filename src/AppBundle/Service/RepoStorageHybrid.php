@@ -84,7 +84,7 @@ class RepoStorageHybrid implements RepoStorage {
     // Joins.
     $query_params['related_tables'][] = array(
       'table_name' => 'isni_data',
-      'table_join_field' => 'isni_id',
+      'table_join_field' => 'isni_data_repository_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'project',
       'base_join_field' => 'stakeholder_guid',
@@ -886,7 +886,7 @@ class RepoStorageHybrid implements RepoStorage {
           ,project.stakeholder_guid
           ,isni_data.isni_label AS stakeholder_label
       FROM project
-      LEFT JOIN isni_data ON isni_data.isni_id = project.stakeholder_guid
+      LEFT JOIN isni_data ON isni_data.isni_data_repository_id = project.stakeholder_guid
       GROUP BY isni_data.isni_label
       ORDER BY isni_data.isni_label ASC";
 
@@ -1541,7 +1541,7 @@ class RepoStorageHybrid implements RepoStorage {
       case 'project':
         $query_params['related_tables'][] = array(
           'table_name' => 'isni_data',
-          'table_join_field' => 'isni_id',
+          'table_join_field' => 'isni_data_repository_id',
           'join_type' => 'LEFT JOIN',
           'base_join_table' => 'project',
           'base_join_field' => 'stakeholder_guid',
@@ -1806,7 +1806,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     $query_params['related_tables'][] = array(
       'table_name' => 'isni_data',
-      'table_join_field' => 'isni_id',
+      'table_join_field' => 'isni_data_repository_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'project',
       'base_join_field' => 'stakeholder_guid',
