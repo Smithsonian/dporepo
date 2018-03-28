@@ -181,19 +181,17 @@ class UnitStakeholderController extends Controller
     public function insert_update($data, $id = false)
     {
         // Query the isni_data table to see if there's an entry.
-        //$isni_data = $isni->get_isni_data_from_database($data['isni_id'], $conn);
         $isni_data = $this->repo_storage_controller->execute('getRecordById', array (
           'record_type' => 'isni_data',
           'record_id' => $data->stakeholder_guid));
 
         // If there is no entry, then perform an insert.
         if(!$isni_data) {
-          //$isni_inserted = $isni->insert_isni_data($data['isni_id'], $data['stakeholder_label'], $this->getUser()->getId(), $conn);
           $isni_inserted = $this->repo_storage_controller->execute('saveRecord', array(
             'base_table' => 'isni_data',
             'user_id' => $this->getUser()->getId(),
             'values' => array(
-              'isni_id' => $data['isni_data_repository_id'],
+              'isni_data_repository_id' => $data['isni_data_repository_id'],
               'isni_label' => $data['stakeholder_label'],
             )
           ));

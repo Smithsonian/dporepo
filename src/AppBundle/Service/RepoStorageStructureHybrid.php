@@ -527,7 +527,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'unit_stakeholder':
           $sql = "CREATE TABLE IF NOT EXISTS `unit_stakeholder` (
             `unit_stakeholder_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `isni_id` varchar(255) DEFAULT NULL,
+            `isni_data_repository_id` varchar(255) DEFAULT NULL,
             `unit_stakeholder_label` varchar(255) NOT NULL DEFAULT '',
             `unit_stakeholder_label_aliases` text DEFAULT NULL,
             `unit_stakeholder_full_name` varchar(255) NOT NULL DEFAULT '',

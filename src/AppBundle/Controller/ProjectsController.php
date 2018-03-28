@@ -243,6 +243,7 @@ class ProjectsController extends Controller
     public function insert_update_project($container, $data, $project_repository_id = FALSE)
     {
         $this->repo_storage_controller->setContainer($container);
+        $unit_record = array();
         if(empty($post)) {
           $ret = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'unit_stakeholder',
@@ -250,8 +251,8 @@ class ProjectsController extends Controller
           $unit_record = $ret;
         }
 
-        if($unit_record && !empty($unit_record['isni_id'])) {
-          $data->stakeholder_guid = $unit_record['isni_id'];
+        if($unit_record && !empty($unit_record['isni_data_repository_id'])) {
+          $data->stakeholder_guid = $unit_record['isni_data_repository_id'];
         } else {
           $data->stakeholder_guid = $data->stakeholder_guid_picker;
         }
@@ -268,7 +269,7 @@ class ProjectsController extends Controller
             'base_table' => 'isni_data',
             'user_id' => $this->getUser()->getId(),
             'values' => array(
-              'isni_id' => $data->stakeholder_guid,
+              'isni_data_repository_id' => $data->stakeholder_guid,
               'isni_label' => $data->stakeholder_label,
             )
           ));

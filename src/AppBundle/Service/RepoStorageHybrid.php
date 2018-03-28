@@ -91,7 +91,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'unit_stakeholder',
-      'table_join_field' => 'isni_id',
+      'table_join_field' => 'isni_data_repository_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'project',
       'base_join_field' => 'stakeholder_guid',
