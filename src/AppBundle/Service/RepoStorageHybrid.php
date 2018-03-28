@@ -3032,17 +3032,19 @@ class RepoStorageHybrid implements RepoStorage {
 
     // Fields
     $select_fields_array = array();
-    foreach($query_parameters['fields'] as $k => $field) {
-      if(array_key_exists('field_name', $field)) {
-        $this_field = '';
-        if(array_key_exists('table_name', $field)) {
-          $this_field = $field['table_name'] . '.';
+    if(array_key_exists('fields', $query_parameters)) {
+      foreach($query_parameters['fields'] as $k => $field) {
+        if(array_key_exists('field_name', $field)) {
+          $this_field = '';
+          if(array_key_exists('table_name', $field)) {
+            $this_field = $field['table_name'] . '.';
+          }
+          $this_field .= $field['field_name'];
+          if(array_key_exists('field_alias', $field)) {
+            $this_field .= ' as ' . $field['field_alias'];
+          }
+          $select_fields_array[] = $this_field;
         }
-        $this_field .= $field['field_name'];
-        if(array_key_exists('field_alias', $field)) {
-          $this_field .= ' as ' . $field['field_alias'];
-        }
-        $select_fields_array[] = $this_field;
       }
     }
     if(count($select_fields_array) < 1) {
