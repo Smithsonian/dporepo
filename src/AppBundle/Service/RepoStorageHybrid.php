@@ -2904,7 +2904,7 @@ class RepoStorageHybrid implements RepoStorage {
       if($col == 'created_by_user_account_id') { // implied because of if statement at the top of the loop && NULL == $id) {
         $f['field_value'] = $user_id;
       }
-      if($col == 'last_modified_user_account_id' && NULL !== $id) {
+      if($col == 'last_modified_user_account_id' && NULL !== $user_id) {
         $f['field_value'] = $user_id;
       }
       if($col == 'date_created') { // implied because of if statement at the top of the loop && NULL == $id) {
