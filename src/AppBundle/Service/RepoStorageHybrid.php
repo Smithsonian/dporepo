@@ -3215,7 +3215,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     $base_table = NULL;
     $search_params = array();
-    $select_sql = $join_sql = $search_sql = $sort_sql = $limit_sql = '';
+    $select_sql = $join_sql = $search_sql = $sort_sql = $limit_sql = $group_sql = '';
     $data = array();
 
     // We need certain values: fields, base table. Fail if those aren't provided.
@@ -3291,6 +3291,7 @@ class RepoStorageHybrid implements RepoStorage {
       //@todo other checks? Like > 0 ?
       if(array_key_exists('limit_start', $limit) && is_numeric($limit['limit_start'])) {
         $limit_start = $limit['limit_start'];
+        $limit_stop = '';
         if(array_key_exists('limit_start', $limit) && is_numeric($limit['limit_start'])) {
           $limit_stop = $limit['limit_stop'];
         }
