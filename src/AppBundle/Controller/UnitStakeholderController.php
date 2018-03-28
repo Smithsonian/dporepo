@@ -190,7 +190,7 @@ class UnitStakeholderController extends Controller
         if(!$isni_data) {
           //$isni_inserted = $isni->insert_isni_data($data['isni_id'], $data['stakeholder_label'], $this->getUser()->getId(), $conn);
           $isni_inserted = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => 'isni',
+            'base_table' => 'isni_data',
             'user_id' => $this->getUser()->getId(),
             'values' => array(
               'isni_id' => $data['isni_id'],
