@@ -3108,7 +3108,7 @@ class RepoStorageHybrid implements RepoStorage {
         $sort_params[] = $s;
       }
       $sort_sql = implode(', ', $sort_params);
-      if(strlen(trim($sort_sql)) > 0) {
+      if(!is_object($sort_sql) && strlen(trim($sort_sql)) > 0) {
         $sort_sql = " ORDER BY " . $sort_sql;
       }
     }
@@ -3162,17 +3162,17 @@ class RepoStorageHybrid implements RepoStorage {
     $sql = "SELECT " . $select_sql .
       " FROM " . $base_table;
 
-    if(strlen($join_sql) > 0) {
+    if(!is_object($join_sql) && strlen($join_sql) > 0) {
       $sql .= $join_sql;
     }
 
-    if(strlen(trim($search_sql)) > 0) {
+    if(!is_object($search_sql) && strlen(trim($search_sql)) > 0) {
       $sql .= " WHERE {$search_sql} ";
     }
-    if(strlen(trim($sort_sql)) > 0) {
+    if(!is_object($sort_sql) && strlen(trim($sort_sql)) > 0) {
       $sql .= " {$sort_sql} ";
     }
-    if(strlen(trim($limit_sql)) > 0) {
+    if(!is_object($limit_sql) && strlen(trim($limit_sql)) > 0) {
       $sql .= $limit_sql;
     }
 
@@ -3314,14 +3314,14 @@ class RepoStorageHybrid implements RepoStorage {
         $sort_params[] = $s;
       }
       $sort_sql = implode(', ', $sort_params);
-      if(strlen(trim($sort_sql)) > 0) {
+      if(!is_object($sort_sql) && strlen(trim($sort_sql)) > 0) {
         $sort_sql = " ORDER BY " . $sort_sql;
       }
     }
 
     if(array_key_exists('group_by', $query_parameters) && is_array($query_parameters['group_by'])) {
       $group_sql = implode(', ', $query_parameters['group_by']);
-      if(strlen(trim($group_sql)) > 0) {
+      if(!is_object($group_sql) && strlen(trim($group_sql)) > 0) {
         $group_sql = " GROUP BY " . $group_sql;
       }
     }
@@ -3333,7 +3333,7 @@ class RepoStorageHybrid implements RepoStorage {
         $field_names = $p['field_names'];
         $search_values = $p['search_values'];
 
-        if((!is_array($search_values) && strlen(trim($search_values)) > 0)) {
+        if((!is_array($search_values) && !is_object($search_values) && strlen(trim($search_values)) > 0)) {
           $search_values = array($search_values);
         }
         if(!is_array($field_names) || count($field_names) == 0
@@ -3377,20 +3377,20 @@ class RepoStorageHybrid implements RepoStorage {
       . $select_sql .
       " FROM " . $base_table;
 
-    if(strlen($join_sql) > 0) {
+    if(!is_object($join_sql) && strlen($join_sql) > 0) {
       $sql .= $join_sql;
     }
 
-    if(strlen(trim($search_sql)) > 0) {
+    if(!is_object($search_sql) && strlen(trim($search_sql)) > 0) {
       $sql .= " WHERE {$search_sql} ";
     }
-    if(strlen(trim($group_sql)) > 0) {
+    if(!is_object($group_sql) && strlen(trim($group_sql)) > 0) {
       $sql .= " {$group_sql} ";
     }
-    if(strlen(trim($sort_sql)) > 0) {
+    if(!is_object($sort_sql) && strlen(trim($sort_sql)) > 0) {
       $sql .= " {$sort_sql} ";
     }
-    if(strlen(trim($limit_sql)) > 0) {
+    if(!is_object($limit_sql) && strlen(trim($limit_sql)) > 0) {
       $sql .= $limit_sql;
     }
 
@@ -3629,7 +3629,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     $sql = "DELETE FROM " . $base_table;
 
-    if(strlen(trim($search_sql)) > 0) {
+    if(!is_object($search_sql) && strlen(trim($search_sql)) > 0) {
       $sql .= " WHERE {$search_sql} ";
     }
 

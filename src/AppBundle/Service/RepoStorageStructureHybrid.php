@@ -575,7 +575,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
           break;
       }
 
-      if(strlen($sql) == 0) {
+      if(is_object($sql) || strlen($sql) == 0) {
         return;
         // die('CREATE TABLE `' . $table_name . '` failed. Table name not recognized. Could not build SQL for CREATE statement.');
       }
