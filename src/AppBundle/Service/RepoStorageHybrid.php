@@ -2901,14 +2901,18 @@ class RepoStorageHybrid implements RepoStorage {
       }
 
       // Certain values should be auto-set.
-      if($col == 'created_by_user_account_id') { // implied because of if statement at the top of the loop && NULL == $id) {
-        $f['field_value'] = $user_id;
+      if($col == 'last_modified_user_account_id') {
+        if(NULL !== $user_id) {
+          $f['field_value'] = $user_id;
+        }
+        else {
+          $f['field_value'] = 0;
+        }
       }
-      if($col == 'last_modified_user_account_id' && NULL !== $user_id) {
-        $f['field_value'] = $user_id;
-      }
-      if($col == 'date_created') { // implied because of if statement at the top of the loop && NULL == $id) {
-        $f['field_value'] = 'NOW()';
+      if(NULL == $id) {
+        if($col == 'created_by_user_account_id') {
+          $f['field_value'] = $user_id;
+        }
       }
 
       $fields[] = $f;
@@ -3528,8 +3532,8 @@ class RepoStorageHybrid implements RepoStorage {
         }
         else {
           $sql ="INSERT INTO " . $base_table;
-          $sql .= " (" . implode(',', array_keys($fields_sql_array)) . ')';
-          $sql .= " VALUES (" . implode(',', array_values($fields_sql_array)) . ')';
+          $sql .= " (" . implode(',', array_keys($fields_sql_array)) . ', date_created)';
+          $sql .= " VALUES (" . implode(',', array_values($fields_sql_array)) . ', NOW())';
 
           $statement = $this->connection->prepare($sql);
           foreach($fields_params as $fn1 => $fv1) {
