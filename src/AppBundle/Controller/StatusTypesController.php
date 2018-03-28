@@ -70,11 +70,6 @@ class StatusTypesController extends Controller
      */
     public function datatables_browse_status_types(Request $request)
     {
-        $sort = '';
-        $search_sql = '';
-        $pdo_params = array();
-        $data = array();
-
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_order = $req['order'][0]['dir'];
@@ -91,7 +86,7 @@ class StatusTypesController extends Controller
         }
 
         $query_params = array(
-          'record_type' => 'target_type',
+          'record_type' => 'status_type',
           'sort_field' => $sort_field,
           'sort_order' => $sort_order,
           'start_record' => $start_record,
