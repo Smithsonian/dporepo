@@ -2597,7 +2597,7 @@ class RepoStorageHybrid implements RepoStorage {
           'item.local_item_id',
           'item.date_created',
           'item.last_modified',
-          'status_type.status_label',
+          'status_type.label',
         ),
         'search_values' => array($search_value),
         'comparison' => 'LIKE',
