@@ -3042,7 +3042,7 @@ class RepoStorageHybrid implements RepoStorage {
     $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
     if(count($ret) > 0) {
       // update
-      $sql ="UPDATE isni_data set isni_label=:label, last_modified=NOW, last_modified_user_account_id=:user_id WHERE isni_id=:id";
+      $sql ="UPDATE isni_data set isni_label=:label, last_modified=NOW(), last_modified_user_account_id=:user_id WHERE isni_id=:id";
       $statement = $this->connection->prepare($sql);
       $statement->bindValue(":id", $id, PDO::PARAM_INT);
       $statement->bindValue(":label", $label, PDO::PARAM_INT);
