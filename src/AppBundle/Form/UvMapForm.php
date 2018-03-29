@@ -10,7 +10,7 @@ class UvMapForm extends AbstractType
   public function buildForm(FormBuilderInterface $builder, array $options)
   {
     $builder
-      ->add('capture_dataset_repository_id', HiddenType::class, array(
+      ->add('parent_capture_dataset_repository_id', HiddenType::class, array(
         'required' => true,
       ))
       ->add('map_type', null, array(

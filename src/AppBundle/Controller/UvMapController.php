@@ -91,6 +91,7 @@ class UvMapController extends Controller
       $data = $this->repo_storage_controller->execute('getRecordById', array(
         'record_type' => 'uv_map',
         'record_id' => (int)$id));
+      $data = (object)$data;
     }
     if(!$data) throw $this->createNotFoundException('The record does not exist');
 
@@ -106,16 +107,16 @@ class UvMapController extends Controller
     // If form is submitted and passes validation, insert/update the database record.
     if ($form->isSubmitted() && $form->isValid()) {
 
-      $data = $form->getData();
+      $data = (array)$form->getData();
       $id = $this->repo_storage_controller->execute('saveRecord', array(
         'base_table' => 'uv_map',
         'record_id' => $id,
         'user_id' => $this->getUser()->getId(),
-        'values' => $post
+        'values' => $data
       ));
 
       $this->addFlash('message', 'Record successfully updated.');
-      return $this->redirect('/admin/projects/uv_map/manage/' . $data->parent_capture_dataset_repository_id . '/' . $id);
+      return $this->redirect('/admin/projects/uv_map/manage/' . $data['parent_capture_dataset_repository_id'] . '/' . $id);
     }
     return $this->render('datasets/uv_map_form.html.twig', array(
       'page_title' => !empty($id) ? 'UV Map: ' . $data->map_type : 'Create UV Map',
