@@ -1440,6 +1440,10 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
+          'field_name' => 'preceding_processing_action_repository_id',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
           'field_name' => 'date_of_action',
         );
         $query_params['fields'][] = array(
