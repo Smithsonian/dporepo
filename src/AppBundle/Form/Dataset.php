@@ -22,7 +22,7 @@ class Dataset extends AbstractType
                 'required' => true,
               ))
             ->add('parent_item_repository_id', HiddenType::class, array(
-                'required' => false,
+                'required' => true,
               ))
             ->add('capture_method', ChoiceType::class, array(
                 'label' => 'Capture Method',
