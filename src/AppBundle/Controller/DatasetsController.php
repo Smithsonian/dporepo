@@ -167,6 +167,10 @@ class DatasetsController extends Controller
         $dataset->parent_subject_repository_id = !empty($request->attributes->get('parent_subject_repository_id')) ? $request->attributes->get('parent_subject_repository_id') : false;
         $dataset->parent_item_repository_id = !empty($request->attributes->get('parent_item_repository_id')) ? $request->attributes->get('parent_item_repository_id') : false;
 
+        $dataset->parent_project_repository_id = !empty($request->attributes->get('parent_project_repository_id')) ? $request->attributes->get('parent_project_repository_id') : false;
+        $dataset->parent_subject_repository_id = !empty($request->attributes->get('parent_subject_repository_id')) ? $request->attributes->get('parent_subject_repository_id') : false;
+        $dataset->parent_item_repository_id = !empty($request->attributes->get('parent_item_repository_id')) ? $request->attributes->get('parent_item_repository_id') : false;
+
         // Get data from lookup tables.
         $dataset->capture_methods_lookup_options = $this->get_capture_methods();
         $dataset->dataset_types_lookup_options = $this->get_dataset_types();
@@ -197,9 +201,8 @@ class DatasetsController extends Controller
               'values' => $dataset_array
             ));
 
-            $this->addFlash('message', 'Dataset successfully updated.');
-            //return $this->redirect('/admin/projects/datasets/' . $dataset->project_repository_id . '/' . $dataset->subject_repository_id . '/' . $dataset->item_repository_id); // . '/' . $capture_dataset_repository_id);
-            return $this->redirect('/admin/projects/dataset_elements/' . $dataset->parent_project_repository_id . '/' . $dataset->parent_subject_repository_id . '/' . $dataset->parent_item_repository_id . '/' . $capture_dataset_repository_id);
+            $this->addFlash('message', 'Capture Dataset successfully updated.');
+            return $this->redirect('/admin/projects/dataset_elements/' . $dataset->parent_project_repository_id . '/' . $dataset->parent_subject_repository_id . '/' . $dataset->parent_item_repository_id . '/' . $id);
         }
 
         return $this->render('datasets/dataset_form.html.twig', array(

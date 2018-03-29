@@ -30,6 +30,7 @@ class Datasets
 
     /**
      * @Assert\NotBlank()
+     * @Assert\Type("integer")
      * @Assert\Length(min="1", max="10")
      * @var int
      */
@@ -94,6 +95,7 @@ class Datasets
 
     /**
      * @Assert\NotBlank()
+     * @Assert\Type("integer")
      * @Assert\Length(min="1", max="10")
      * @var int
      */
@@ -101,6 +103,7 @@ class Datasets
 
     /**
      * @Assert\NotBlank()
+     * @Assert\Type("integer")
      * @Assert\Length(min="1", max="10")
      * @var int
      */
@@ -142,6 +145,7 @@ class Datasets
     public $cluster_type;
 
     /**
+     * @Assert\Type("integer")
      * @Assert\Length(min="1", max="10")
      * @var int
      */

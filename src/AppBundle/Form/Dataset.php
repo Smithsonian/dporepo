@@ -102,7 +102,7 @@ class Dataset extends AbstractType
               ))
             ->add('background_removal_method', ChoiceType::class, array(
                 'label' => 'Background Removal Method',
-                'required' => false,
+                'required' => true,
                 'placeholder' => 'Select',
                 // All options
                 'choices' => $data['background_removal_methods_lookup_options'],

@@ -362,13 +362,13 @@ class RepoStorageHybrid implements RepoStorage {
           ,capture_dataset.created_by_user_account_id
           ,capture_dataset.last_modified
           ,capture_dataset.last_modified_user_account_id
-          ,capture_method.label AS capture_method
-          ,dataset_type.label AS capture_dataset_type
-          ,item_position_type.label_alias AS item_position_type
-          ,focus_type.label AS focus_type
-          ,light_source_type.label AS light_source_type
-          ,background_removal_method.label AS background_removal_method
-          ,camera_cluster_type.label AS camera_cluster_type
+          ,capture_method.label AS capture_method_label
+          ,dataset_type.label AS capture_dataset_type_label
+          ,item_position_type.label_alias AS item_position_type_label
+          ,focus_type.label AS focus_type_label
+          ,light_source_type.label AS light_source_type_label
+          ,background_removal_method.label AS background_removal_method_label
+          ,camera_cluster_type.label AS camera_cluster_type_label
         FROM capture_dataset
         LEFT JOIN capture_method ON capture_method.capture_method_repository_id = capture_dataset.capture_method
         LEFT JOIN dataset_type ON dataset_type.dataset_type_repository_id = capture_dataset.capture_dataset_type
