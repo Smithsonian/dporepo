@@ -3038,18 +3038,23 @@ class RepoStorageHybrid implements RepoStorage {
     $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
     if(count($ret) > 0) {
       // update
-      $sql ="UPDATE isni_data set isni_label=:label WHERE isni_id=:id";
+      $sql ="UPDATE isni_data set isni_label=:label, last_modified=NOW, last_modified_user_account_id=:user_id WHERE isni_id=:id";
       $statement = $this->connection->prepare($sql);
       $statement->bindValue(":id", $id, PDO::PARAM_INT);
       $statement->bindValue(":label", $label, PDO::PARAM_INT);
+      $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
       $statement->execute();
     }
     else {
       // insert
-      $sql ="INSERT INTO isni_data (isni_id, isni_label) VALUES (:id, :label)";
+      $sql ="INSERT INTO isni_data (isni_id, isni_label, date_created, last_modified,
+        created_by_user_account_id, last_modified_user_account_id	
+        ) 
+        VALUES (:id, :label, NOW(), NOW(), :user_id, :user_id)";
       $statement = $this->connection->prepare($sql);
       $statement->bindValue(":id", $id, PDO::PARAM_INT);
       $statement->bindValue(":label", $label, PDO::PARAM_INT);
+      $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
       $statement->execute();
     }
 
