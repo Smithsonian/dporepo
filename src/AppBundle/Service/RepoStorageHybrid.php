@@ -3228,6 +3228,8 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     // Search values
+    $query_parameters['search_params'][] = array('field_names' => array($base_table . '.active'), 'search_values' => array(1), 'comparison' => '=');
+
     if (array_key_exists('search_params', $query_parameters) && is_array($query_parameters['search_params'])) {
       $search_sql_values = array();
       foreach($query_parameters['search_params'] as $p) {
@@ -3264,11 +3266,11 @@ class RepoStorageHybrid implements RepoStorage {
       }
 
       if(count($search_sql_values) > 0) {
-        if(array_key_exists('search_type', $query_parameters) && $query_parameters['search_type'] != 'OR') {
+        if(array_key_exists('search_type', $query_parameters) && $query_parameters['search_type'] != 'AND') {
           $search_sql = implode(' ' . $query_parameters['search_type'] . ' ', $search_sql_values);
         }
         else {
-          $search_sql = implode(' OR ', $search_sql_values);
+          $search_sql = implode(' AND ', $search_sql_values);
         }
       }
     }

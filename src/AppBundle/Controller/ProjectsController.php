@@ -218,8 +218,7 @@ class ProjectsController extends Controller
               0 => array('field_name' => 'project_name')
             ),
             'search_params' => array(
-              0 => array('field_names' => array('active'), 'search_values' => array(1), 'comparison' => '='),
-              1 => array('field_names' => array('stakeholder_guid'), 'search_values' => array($stakeholder_guid), 'comparison' => '=')
+              0 => array('field_names' => array('stakeholder_guid'), 'search_values' => array($stakeholder_guid), 'comparison' => '=')
             ),
             'search_type' => 'AND'
           )

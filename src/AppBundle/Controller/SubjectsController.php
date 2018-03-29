@@ -220,8 +220,7 @@ class SubjectsController extends Controller
             0 => array('field_name' => 'subject_name')
           ),
           'search_params' => array(
-            0 => array('field_names' => array('active'), 'search_values' => array(1), 'comparison' => '='),
-            1 => array('field_names' => array('project_repository_id'), 'search_values' => array($project_repository_id), 'comparison' => '=')
+            0 => array('field_names' => array('project_repository_id'), 'search_values' => array($project_repository_id), 'comparison' => '=')
           ),
           'search_type' => 'AND',
         )
