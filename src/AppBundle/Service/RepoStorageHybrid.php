@@ -1601,7 +1601,7 @@ class RepoStorageHybrid implements RepoStorage {
           $query_params['search_params'][1] = array(
             'field_names' => array(
               $record_type . '.project_name',
-              $record_type . '.stakeholder_label',
+              'isni_data.isni_label',
               $record_type . '.date_created',
               $record_type . '.last_modified',
             ),
@@ -1864,7 +1864,7 @@ class RepoStorageHybrid implements RepoStorage {
       $query_params['search_params'][1] = array(
         'field_names' => array(
           $record_type . '.project_name',
-          $record_type . '.stakeholder_label',
+          'isni_data.isni_label',
           $record_type . '.date_created',
           $record_type . '.last_modified',
         ),
@@ -3397,14 +3397,14 @@ class RepoStorageHybrid implements RepoStorage {
         $this_search_param = array();
         foreach($field_names as $fn) {
           if(count($search_values) == 1) {
+            $val = array_keys($search_values)[0];
             if(array_key_exists('comparison', $p) && $p['comparison'] !== 'LIKE') {
               $this_search_param[] = $fn . ' ' . $p['comparison'] . ' ?';
-              $k = array_keys($search_values)[0];
-              $search_params[] = $search_values[$k];
+              $search_params[] = $search_values[$val];
             }
             else {
               $this_search_param[] = $fn . ' LIKE ?';
-              $search_params[] = '%' . $search_values[array_keys($search_values[0])] . '%';
+              $search_params[] = '%' . $search_values[$val] . '%';
             }
           }
           else {
