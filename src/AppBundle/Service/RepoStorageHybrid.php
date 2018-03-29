@@ -2544,8 +2544,11 @@ class RepoStorageHybrid implements RepoStorage {
       if (NULL !== $search_value) {
         $query_params['search_params'][1] = array(
           'field_names' => array(
-            $record_type . '.dataset_element_guid',
-            $record_type . '.camera_id',
+            $record_type . '.capture_device_configuration_id',
+            $record_type . '.capture_device_field_id',
+            $record_type . '.capture_sequence_number',
+            $record_type . '.cluster_position_field_id',
+            $record_type . '.position_in_cluster_field_id',
           ),
           'search_values' => array($search_value),
           'comparison' => 'LIKE',
