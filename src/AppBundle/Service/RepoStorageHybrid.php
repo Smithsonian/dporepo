@@ -449,6 +449,7 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'photogrammetry_scale_bar_target_pair_repository_id',
     );
     $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar_target_pair',
       'field_name' => 'parent_photogrammetry_scale_bar_repository_id',
     );
     $query_params['fields'][] = array(
@@ -554,10 +555,12 @@ class RepoStorageHybrid implements RepoStorage {
     );
 
     // Fields.
+    /*
     $query_params['fields'][] = array(
       'table_name' => 'photogrammetry_scale_bar_target_pair',
-      'field_name' => 'photogrammetry_scale_bar_repository_id',
+      'field_name' => 'parent_photogrammetry_scale_bar_repository_id',
     );
+    */
     $query_params['fields'][] = array(
       'field_name' => 'parent_capture_dataset_repository_id',
     );
@@ -575,7 +578,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'photogrammetry_scale_bar',
-      'field_name' => 'scale_bar_target_pair',
+      'field_name' => 'scale_bar_target_pairs',
     );
     $query_params['fields'][] = array(
       'table_name' => 'capture_dataset',
