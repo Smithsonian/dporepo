@@ -53,12 +53,13 @@ class ProcessingActionController extends Controller
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
         $query_params = array(
-          'record_type' => 'model',
+          'record_type' => 'processing_action',
           'sort_field' => $sort_field,
           'sort_order' => $sort_order,
           'start_record' => $start_record,
           'stop_record' => $stop_record,
-          'parent_id' => $req['parent_id']
+          'parent_id' => $req['parent_id'],
+          'parent_id_field' => 'parent_model_repository_id',
         );
         if ($search) {
           $query_params['search_value'] = $search;

@@ -1336,7 +1336,11 @@ class RepoStorageHybrid implements RepoStorage {
           'field_alias' => 'DT_RowId',
         );
 
-        $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
+        $query_params['search_params'][0] = array(
+          'field_names' => array($record_type . '.active'),
+          'search_values' => array(1),
+          'comparison' => '='
+        );
         if (NULL !== $search_value) {
           $query_params['search_params'][1] = array(
             'field_names' => array(
@@ -1361,13 +1365,15 @@ class RepoStorageHybrid implements RepoStorage {
             'comparison' => 'LIKE',
           );
         }
-        if (NULL !== $parent_id) {
+        if (isset($parent_id_field) && NULL !== $parent_id) {
           $c = count($query_params['search_params']);
           $query_params['search_params'][$c] = array(
             'field_names' => array(
               $parent_id_field,
             ),
-            'search_values' => array($parent_id),
+            'search_values' => array(
+              $parent_id
+            ),
             'comparison' => '=',
           );
         }
@@ -1381,7 +1387,7 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => 'preceding_processing_action_repository_id',
+          'field_name' => 'parent_model_repository_id',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,

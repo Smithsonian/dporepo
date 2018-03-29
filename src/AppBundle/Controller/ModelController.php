@@ -59,7 +59,7 @@ class ModelController extends Controller
           'start_record' => $start_record,
           'stop_record' => $stop_record,
           'parent_id' => $req['parent_id'],
-          'parent_id_field' => !empty($req['parent_type']) ? 'parent_item_repository_id' : 'parent_capture_dataset_repository_id',
+          'parent_id_field' => isset($req['parent_type']) ? 'parent_item_repository_id' : 'parent_capture_dataset_repository_id',
         );
         if ($search) {
           $query_params['search_value'] = $search;
