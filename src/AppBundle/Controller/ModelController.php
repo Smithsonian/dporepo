@@ -142,6 +142,7 @@ class ModelController extends Controller
             'data' => $data,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
+            'back_link' => $back_link,
         ));
     }
 
