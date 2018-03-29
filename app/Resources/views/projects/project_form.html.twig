@@ -19,7 +19,7 @@
     <div class="row">
       <div class="col-sm-6 col-md-6">
         {{ form_row(form.project_name) }}
-        {{ form_row(form.stakeholder_guid_picker) }}
+        {{ form_row(form.stakeholder_guid) }}
 
         <div class="form-group">
           <div class="controls stakeholder-container">
@@ -31,7 +31,7 @@
               {% endif %}
             </div>
             <input name="stakeholder_label" id="stakeholder_label" type="hidden" value="{{ project_data.stakeholder_label|default('')|e }}">
-            <input name="stakeholder_guid_picker" id="stakeholder_guid_picker" type="hidden" value="{{ project_data.stakeholder_guid|default('')|e }}">
+            <input name="stakeholder_guid" id="stakeholder_guid" type="hidden" value="{{ project_data.stakeholder_guid|default('')|e }}">
             <button type="button" class="btn btn-default btn-sm" data-toggle="modal" data-target="#isniSearchModal">
               Choose a Stakeholder from ISNI
             </button>
@@ -200,7 +200,7 @@
         // Set all of the variables.
         var chosenIsniGuid = $("input:radio[name='isni_chosen']:checked").val(),
             chosenIsniLabel = $("input:radio[name='" + chosenIsniGuid + "']:checked").val(),
-            chosenSiGuid = $('#stakeholder_guid_picker').val(),
+            chosenSiGuid = $('#stakeholder_guid').val(),
             isniValuePresent = (typeof chosenIsniGuid !== 'undefined') ? true : false,
             isniLabelPresent = (typeof chosenIsniLabel !== 'undefined') ? true : false,
             isniInfo = 'ISNI ID: <a href="http://www.isni.org/' + chosenIsniGuid + '" title="View full record (opens in a new tab/window)" target="_blank">' + chosenIsniGuid + '</a>',
@@ -220,7 +220,7 @@
         // Populate the display area and hidden fields in the parent form.
         if(isniValuePresent) {
           $('#stakeholder_label').val(chosenIsniLabel);
-          $('#stakeholder_guid_picker').val(chosenIsniGuid);
+          $('#stakeholder_guid').val(chosenIsniGuid);
           $('#stakeholder-display').empty().append(displayText);
           $('#isniSearchModal').modal('hide');
         }

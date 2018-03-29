@@ -26,14 +26,14 @@ class Projects
     public $project_description;
 
     /**
-     * @var int
-     */
-    public $stakeholder_guid_picker;
-
-    /**
      * @var string
      */
     public $stakeholder_label;
+
+    /**
+     * @var array
+     */
+    public $stakeholder_guid_options;
 
     // public function getProjectsLabel()
     // {

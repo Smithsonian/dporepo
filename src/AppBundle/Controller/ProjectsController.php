@@ -117,7 +117,7 @@ class ProjectsController extends Controller
         // Retrieve data from the database.
         $this->repo_storage_controller->setContainer($this->container);
         if (!empty($id) && empty($post)) {
-          $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $id));
+          $project = (object)$this->repo_storage_controller->execute('getProject', array('project_repository_id' => $id));
         }
         
         // Get data from lookup tables.
@@ -125,6 +125,7 @@ class ProjectsController extends Controller
 
         // Create the form
         $form = $this->createForm(Project::class, $project);
+
         // Handle the request
         $form->handleRequest($request);
         
@@ -141,7 +142,7 @@ class ProjectsController extends Controller
 
         return $this->render('projects/project_form.html.twig', array(
             'page_title' => !empty($id) ? 'Project: ' . $project->project_name : 'Create Project',
-            'project_data' => $project,
+            'project_data' => (array)$project,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
         ));
@@ -247,14 +248,12 @@ class ProjectsController extends Controller
         if(empty($post)) {
           $ret = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'unit_stakeholder',
-            'record_id' => $data->stakeholder_guid_picker));
+            'record_id' => $data->stakeholder_guid));
           $unit_record = $ret;
         }
 
         if($unit_record && !empty($unit_record['isni_data_repository_id'])) {
           $data->stakeholder_guid = $unit_record['isni_data_repository_id'];
-        } else {
-          $data->stakeholder_guid = $data->stakeholder_guid_picker;
         }
 
         // Query the isni_data table to see if there's an entry.
@@ -264,7 +263,6 @@ class ProjectsController extends Controller
 
         // If there is no entry, then perform an insert.
         if(!$isni_data) {
-          //$isni_inserted = $isni->insert_isni_data($data->stakeholder_guid, $data->stakeholder_label, $this->getUser()->getId(), $conn);
           $isni_inserted = $this->repo_storage_controller->execute('saveRecord', array(
             'base_table' => 'isni_data',
             'user_id' => $this->getUser()->getId(),

@@ -26,14 +26,14 @@ class Project extends AbstractType
                 'required' => false,
                 'attr' => array('rows' => '10'),
               ))
-            ->add('stakeholder_guid_picker', ChoiceType::class, array(
+            ->add('stakeholder_guid', ChoiceType::class, array(
                 'label' => 'Stakeholder',
                 'required' => false,
                 'placeholder' => 'Select SI Unit',
                 // All options
                 'choices' => $data['stakeholder_guid_options'],
                 // Selected option
-                'data' => $data['stakeholder_guid_picker'],
+                'data' => $data['stakeholder_guid'],
                 'attr' => array('class' => 'stakeholder-chosen-select'),
               ))
             ->add('save', SubmitType::class, array(

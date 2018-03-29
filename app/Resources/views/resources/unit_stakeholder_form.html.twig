@@ -51,14 +51,14 @@
             <div class="controls stakeholder-container">
               <h4>ISNI ID</h4>
               <div id="stakeholder-display">
-                {% if data.isni_id is not empty %}
+                {% if data.isni_data_repository_id is not empty %}
                   {{ data.stakeholder_label }}<br>
-                  ISNI ID: <a href="http://www.isni.org/{{ data.isni_id }}" title="View full record (opens in a new tab/window)" target="_blank">{{ data.isni_id }}</a>
+                  ISNI ID: <a href="http://www.isni.org/{{ data.isni_data_repository_id }}" title="View full record (opens in a new tab/window)" target="_blank">{{ data.isni_data_repository_id }}</a>
                 {% endif %}
               </div>
               <input name="stakeholder_label" id="stakeholder_label" type="hidden" value="{{ data.stakeholder_label|default('')|e }}">
               <input name="stakeholder_guid" id="stakeholder_guid" type="hidden" value="{{ data.stakeholder_guid|default('')|e }}">
-              <input name="isni_id" id="isni_id" type="hidden" value="{{ data.isni_id|default('')|e }}">
+              <input name="isni_data_repository_id" id="isni_data_repository_id" type="hidden" value="{{ data.isni_data_repository_id|default('')|e }}">
               <button type="button" class="btn btn-sm" data-toggle="modal" data-target="#isniSearchModal">
                 Associate an ISNI ID to this record
               </button>
@@ -235,7 +235,7 @@
         if(isniValuePresent) {
           $('#stakeholder_label').val(chosenIsniLabel);
           $('#stakeholder_guid').val(chosenIsniGuid);
-          $('#isni_id').val(chosenIsniGuid);
+          $('#isni_data_repository_id').val(chosenIsniGuid);
           $('#stakeholder-display').empty().append(displayText);
           $('#isniSearchModal').modal('hide');
         }

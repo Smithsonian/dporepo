@@ -162,10 +162,10 @@ class DatasetsController extends Controller
             if(is_array($dataset_array)) {
               $dataset = (object)$dataset_array;
             }
-            $dataset->parent_project_repository_id = !empty($request->attributes->get('parent_project_repository_id')) ? $request->attributes->get('parent_project_repository_id') : false;
-            $dataset->parent_subject_repository_id = !empty($request->attributes->get('parent_subject_repository_id')) ? $request->attributes->get('parent_subject_repository_id') : false;
-            $dataset->parent_item_repository_id = !empty($request->attributes->get('parent_item_repository_id')) ? $request->attributes->get('parent_item_repository_id') : false;
         }
+        $dataset->parent_project_repository_id = !empty($request->attributes->get('parent_project_repository_id')) ? $request->attributes->get('parent_project_repository_id') : false;
+        $dataset->parent_subject_repository_id = !empty($request->attributes->get('parent_subject_repository_id')) ? $request->attributes->get('parent_subject_repository_id') : false;
+        $dataset->parent_item_repository_id = !empty($request->attributes->get('parent_item_repository_id')) ? $request->attributes->get('parent_item_repository_id') : false;
 
         // Get data from lookup tables.
         $dataset->capture_methods_lookup_options = $this->get_capture_methods();

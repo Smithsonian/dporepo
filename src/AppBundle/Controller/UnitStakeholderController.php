@@ -135,6 +135,9 @@ class UnitStakeholderController extends Controller
 
         // Get data from lookup tables.
         $data['units_stakeholders'] = $projects->get_units_stakeholders($this->container);
+        if(!array_key_exists('isni_data_repository_id', $data)) {
+          $data['isni_data_repository_id'] = NULL;
+        }
 
         // Validate posted data.
         if(!empty($post)) {
@@ -183,7 +186,7 @@ class UnitStakeholderController extends Controller
         // Query the isni_data table to see if there's an entry.
         $isni_data = $this->repo_storage_controller->execute('getRecordById', array (
           'record_type' => 'isni_data',
-          'record_id' => $data->stakeholder_guid));
+          'record_id' => $data['stakeholder_guid']));
 
         // If there is no entry, then perform an insert.
         if(!$isni_data) {

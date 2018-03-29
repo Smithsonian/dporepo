@@ -78,7 +78,7 @@ class RepoStorageHybrid implements RepoStorage {
     $query_params['fields'][] = array(
       'table_name' => 'unit_stakeholder',
       'field_name' => 'unit_stakeholder_repository_id',
-      'field_alias' => 'stakeholder_si_guid',
+      'field_alias' => 'stakeholder_guid',
     );
 
     // Joins.
