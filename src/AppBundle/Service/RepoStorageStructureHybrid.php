@@ -285,7 +285,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
           break;
         case 'isni_data':
           $sql = $this->connection->prepare("CREATE TABLE IF NOT EXISTS `isni_data` (
-            `isni_id` int(11) NOT NULL,
+            `isni_id` varchar(255) NOT NULL,
             `isni_label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
