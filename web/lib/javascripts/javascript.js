@@ -19,6 +19,13 @@ jQuery(document).ready(function($) {
   $('#remove-records-checkbox').click(function() {
     $('input[name=manage_checkbox]').click();
   });
+  /**
+   * For forms with multiple tables
+   */
+  $('.remove-records-checkbox').click(function() {
+    //       th       tr      thead     table
+    $(this).parent().parent().parent().parent().find('input[name=manage_checkbox]').click();
+  });
 
   /**
    * Remove records button click handler.
@@ -78,7 +85,7 @@ jQuery(document).ready(function($) {
   });
 
   $('select.stakeholder-chosen-select').on('change', function(evt, params) {
-    $('#stakeholder_guid_picker').val(params.selected);
+    $('#stakeholder_guid').val(params.selected);
   });
   
   /**
