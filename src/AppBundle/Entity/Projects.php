@@ -23,6 +23,11 @@ class Projects
     /**
      * @var string
      */
+    public $stakeholder_guid_picker;
+
+    /**
+     * @var string
+     */
     public $project_description;
 
     /**

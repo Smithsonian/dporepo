@@ -661,6 +661,55 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
+  public function getStakeholderByIsniId($params) {
+
+    $isni_id = array_key_exists('record_id', $params) ? $params['record_id'] : NULL;
+
+    if(NULL == $isni_id) {
+      return array();
+    }
+
+    $query_params = array(
+      'fields' => array(),
+      'base_table' => 'unit_stakeholder',
+      'search_params' => array(
+        0 => array(
+          'field_names' => array('active'),
+          'search_values' => array(1),
+          'comparison' => '='
+        ),
+      ),
+      'search_type' => 'AND',
+    );
+
+    $query_params['search_params'][1] = array(
+      'field_names' => array(
+        'isni_id',
+      ),
+      'search_values' => array(
+        (int)$isni_id
+      ),
+      'comparison' => '=',
+    );
+
+    // Fields.
+    $query_params['fields'][] = array(
+      'table_name' => 'unit_stakeholder',
+      'field_name' => 'unit_stakeholder_repository_id',
+    );
+
+    $query_params['records_values'] = array();
+
+    $return_data = array();
+    $ret = $this->getRecords($query_params);
+
+    if(array_key_exists(0, $ret)) {
+      $return_data = $ret[0];
+    }
+    return $return_data;
+
+  }
+
   /**
    * ----------------------------------------------------------------
    * Getters for multiple records.

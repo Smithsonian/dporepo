@@ -118,8 +118,18 @@ class ProjectsController extends Controller
         $this->repo_storage_controller->setContainer($this->container);
         if (!empty($id) && empty($post)) {
           $project = (object)$this->repo_storage_controller->execute('getProject', array('project_repository_id' => $id));
+          $project->stakeholder_guid_picker = NULL;
+
+          if ($project->stakeholder_guid) {
+              $stakeholder = $this->repo_storage_controller->execute('getStakeholderByIsniId', array(
+                'record_id' => $project->stakeholder_guid));
+
+              if(!empty($stakeholder)) {
+                  $project->stakeholder_guid_picker = $stakeholder['unit_stakeholder_repository_id'];
+              }
+          }
         }
-        
+
         // Get data from lookup tables.
         $project->stakeholder_guid_options = $this->get_units_stakeholders($this->container);
 
@@ -244,31 +254,25 @@ class ProjectsController extends Controller
     public function insert_update_project($container, $data, $project_repository_id = FALSE)
     {
         $this->repo_storage_controller->setContainer($container);
-        $unit_record = array();
-        if(empty($post)) {
-          $ret = $this->repo_storage_controller->execute('getRecordById', array(
-            'record_type' => 'unit_stakeholder',
-            'record_id' => $data->stakeholder_guid));
-          $unit_record = $ret;
-        }
-
-        if($unit_record && !empty($unit_record['isni_id'])) {
-          $data->stakeholder_guid = $unit_record['isni_id'];
-          if(!isset($data->stakeholder_label)) {
-            $data->stakeholder_label = $unit_record['unit_stakeholder_label'];
-          }
-        }
-        else {
-          //@todo?
-        }
 
         // If there is no entry, then perform an insert.
-        $this->repo_storage_controller->execute('saveIsniRecord', array(
-            'user_id' => $this->getUser()->getId(),
-            'record_id' => $data->stakeholder_guid,
-            'record_label' => $data->stakeholder_label,
-          )
-        );
+        if(isset($data->stakeholder_guid)) {
+          $this->repo_storage_controller->execute('saveIsniRecord', array(
+              'user_id' => $this->getUser()->getId(),
+              'record_id' => $data->stakeholder_guid,
+              'record_label' => $data->stakeholder_label,
+            )
+          );
+        }
+        elseif(isset($data->stakeholder_guid_picker)) {
+          // get the isni id from unit_stakeholder
+          $stakeholder = $this->repo_storage_controller->execute('getRecordById', array(
+            'record_type' => 'unit_stakeholder',
+            'record_id' => (int)$data->stakeholder_guid_picker));
+          if(isset($stakeholder) && isset($stakeholder['isni_id'])) {
+            $data->stakeholder_guid = $stakeholder['isni_id'];
+          }
+        }
 
         $id = $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'project',
