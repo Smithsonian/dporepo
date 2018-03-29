@@ -78,20 +78,20 @@ class RepoStorageHybrid implements RepoStorage {
     $query_params['fields'][] = array(
       'table_name' => 'unit_stakeholder',
       'field_name' => 'unit_stakeholder_repository_id',
-      'field_alias' => 'stakeholder_guid',
+      //'field_alias' => 'stakeholder_guid',
     );
 
     // Joins.
     $query_params['related_tables'][] = array(
       'table_name' => 'isni_data',
-      'table_join_field' => 'isni_data_repository_id',
+      'table_join_field' => 'isni_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'project',
       'base_join_field' => 'stakeholder_guid',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'unit_stakeholder',
-      'table_join_field' => 'isni_data_repository_id',
+      'table_join_field' => 'isni_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'project',
       'base_join_field' => 'stakeholder_guid',
@@ -646,6 +646,17 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
+  public function getIsniRecordById($params) {
+
+    $record_id = array_key_exists('record_id', $params) ? $params['record_id'] : NULL;
+
+    $data = $this->getRecord(array(
+      'base_table' => 'isni_data',
+      'id_field' => 'isni_id',
+      'id_value' => $record_id));
+    return $data;
+  }
+
   /**
    * ----------------------------------------------------------------
    * Getters for multiple records.
@@ -886,7 +897,7 @@ class RepoStorageHybrid implements RepoStorage {
           ,project.stakeholder_guid
           ,isni_data.isni_label AS stakeholder_label
       FROM project
-      LEFT JOIN isni_data ON isni_data.isni_data_repository_id = project.stakeholder_guid
+      LEFT JOIN isni_data ON isni_data.isni_id = project.stakeholder_guid
       GROUP BY isni_data.isni_label
       ORDER BY isni_data.isni_label ASC";
 
@@ -1541,7 +1552,7 @@ class RepoStorageHybrid implements RepoStorage {
       case 'project':
         $query_params['related_tables'][] = array(
           'table_name' => 'isni_data',
-          'table_join_field' => 'isni_data_repository_id',
+          'table_join_field' => 'isni_id',
           'join_type' => 'LEFT JOIN',
           'base_join_table' => 'project',
           'base_join_field' => 'stakeholder_guid',
@@ -1806,7 +1817,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     $query_params['related_tables'][] = array(
       'table_name' => 'isni_data',
-      'table_join_field' => 'isni_data_repository_id',
+      'table_join_field' => 'isni_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'project',
       'base_join_field' => 'stakeholder_guid',
@@ -2949,6 +2960,46 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
   }
+
+  public function saveIsniRecord($params) {
+
+    $label = array_key_exists('record_label', $params) ? $params['record_label'] : NULL;
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
+    $id = array_key_exists('record_id', $params) ? $params['record_id'] : NULL;
+
+    if(!isset($id) || strlen(trim($id)) < 1 || !isset($label) || strlen(trim($label)) < 1) {
+      // ISNI data requires an ID.
+      return; //@todo with error
+    }
+
+    // See if record exists; update if so, insert otherwise.
+    $sql = "Select isni_id FROM isni_data WHERE isni_id=:id";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":id", $id, PDO::PARAM_INT);
+    $statement->execute();
+
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+    if(count($ret) > 0) {
+      // update
+      $sql ="UPDATE isni_data set isni_label=:label WHERE isni_id=:id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":id", $id, PDO::PARAM_INT);
+      $statement->bindValue(":label", $label, PDO::PARAM_INT);
+      $statement->execute();
+    }
+    else {
+      // insert
+      $sql ="INSERT INTO isni_data (isni_id, isni_label) VALUES (:id, :label)";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":id", $id, PDO::PARAM_INT);
+      $statement->bindValue(":label", $label, PDO::PARAM_INT);
+      $statement->execute();
+    }
+
+    return $id;
+
+  }
+
 
   /**
    * ----------------------------------------------------------------

@@ -252,26 +252,23 @@ class ProjectsController extends Controller
           $unit_record = $ret;
         }
 
-        if($unit_record && !empty($unit_record['isni_data_repository_id'])) {
-          $data->stakeholder_guid = $unit_record['isni_data_repository_id'];
+        if($unit_record && !empty($unit_record['isni_id'])) {
+          $data->stakeholder_guid = $unit_record['isni_id'];
+          if(!isset($data->stakeholder_label)) {
+            $data->stakeholder_label = $unit_record['unit_stakeholder_label'];
+          }
         }
-
-        // Query the isni_data table to see if there's an entry.
-        $isni_data = $this->repo_storage_controller->execute('getRecordById', array(
-          'record_type' => 'isni_data',
-          'record_id' => $data->stakeholder_guid));
+        else {
+          //@todo?
+        }
 
         // If there is no entry, then perform an insert.
-        if(!$isni_data) {
-          $isni_inserted = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => 'isni_data',
+        $this->repo_storage_controller->execute('saveIsniRecord', array(
             'user_id' => $this->getUser()->getId(),
-            'values' => array(
-              'isni_data_repository_id' => $data->stakeholder_guid,
-              'isni_label' => $data->stakeholder_label,
-            )
-          ));
-        }
+            'record_id' => $data->stakeholder_guid,
+            'record_label' => $data->stakeholder_label,
+          )
+        );
 
         $id = $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'project',

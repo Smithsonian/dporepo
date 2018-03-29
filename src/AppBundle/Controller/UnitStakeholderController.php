@@ -135,8 +135,8 @@ class UnitStakeholderController extends Controller
 
         // Get data from lookup tables.
         $data['units_stakeholders'] = $projects->get_units_stakeholders($this->container);
-        if(!array_key_exists('isni_data_repository_id', $data)) {
-          $data['isni_data_repository_id'] = NULL;
+        if(!array_key_exists('isni_id', $data)) {
+          $data['isni_id'] = NULL;
         }
 
         // Validate posted data.
@@ -184,19 +184,16 @@ class UnitStakeholderController extends Controller
     public function insert_update($data, $id = false)
     {
         // Query the isni_data table to see if there's an entry.
-        $isni_data = $this->repo_storage_controller->execute('getRecordById', array (
-          'record_type' => 'isni_data',
-          'record_id' => $data['stakeholder_guid']));
+        $isni_data = $this->repo_storage_controller->execute('getIsniRecordById', array (
+          'record_id' => $data['stakeholder_guid'])
+        );
 
         // If there is no entry, then perform an insert.
         if(!$isni_data) {
-          $isni_inserted = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => 'isni_data',
+          $isni_inserted = $this->repo_storage_controller->execute('saveIsniRecord', array(
             'user_id' => $this->getUser()->getId(),
-            'values' => array(
-              'isni_data_repository_id' => $data['isni_data_repository_id'],
-              'isni_label' => $data['stakeholder_label'],
-            )
+            'record_id' => $data['isni_id'],
+            'record_label' => $data['stakeholder_label'],
           ));
         }
 
