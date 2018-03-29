@@ -985,6 +985,7 @@ class RepoStorageHybrid implements RepoStorage {
         'sort_order' => 'DESC',
       );
     }
+    $query_params['search_type'] = 'AND';
 
 
     switch($record_type) {
@@ -1021,8 +1022,8 @@ class RepoStorageHybrid implements RepoStorage {
           'field_alias' => 'DT_RowId',
         );
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
+
         if (NULL !== $search_value) {
-          $query_params['search_type'] = 'AND';
           $query_params['search_params'][1] = array(
             'field_names' => array(
               $record_type . '.active',
@@ -1079,8 +1080,8 @@ class RepoStorageHybrid implements RepoStorage {
           'field_alias' => 'DT_RowId',
         );
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
+
         if (NULL !== $search_value) {
-          $query_params['search_type'] = 'AND';
           $query_params['search_params'][1] = array(
             'field_names' => array(
               $record_type . '.active',
@@ -1131,9 +1132,9 @@ class RepoStorageHybrid implements RepoStorage {
           'field_name' => $record_type . '_repository_id',
           'field_alias' => 'DT_RowId',
         );
+
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
         if (NULL !== $search_value) {
-          $query_params['search_type'] = 'AND';
           $query_params['search_params'][1] = array(
             'field_names' => array(
               $record_type . '.calibration_file',
@@ -1180,9 +1181,9 @@ class RepoStorageHybrid implements RepoStorage {
           'field_name' => $record_type . '_repository_id',
           'field_alias' => 'DT_RowId',
         );
+
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
         if (NULL !== $search_value) {
-          $query_params['search_type'] = 'AND';
           $query_params['search_params'][1] = array(
             'field_names' => array(
               $record_type . '.serial_number',
@@ -1236,7 +1237,6 @@ class RepoStorageHybrid implements RepoStorage {
 
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
         if (NULL !== $search_value) {
-          $query_params['search_type'] = 'AND';
           $query_params['search_params'][1] = array(
             'field_names' => array(
               'label',
@@ -1331,9 +1331,9 @@ class RepoStorageHybrid implements RepoStorage {
           'field_name' => $record_type . '_repository_id',
           'field_alias' => 'DT_RowId',
         );
+
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
         if (NULL !== $search_value) {
-          $query_params['search_type'] = 'AND';
           $query_params['search_params'][1] = array(
             'field_names' => array(
               $record_type . '.model_guid',
@@ -1409,7 +1409,6 @@ class RepoStorageHybrid implements RepoStorage {
 
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
         if (NULL !== $search_value) {
-          $query_params['search_type'] = 'AND';
           $query_params['search_params'][1] = array(
             'field_names' => array(
               $record_type . '.preceding_processing_action_repository_id',
@@ -1469,9 +1468,9 @@ class RepoStorageHybrid implements RepoStorage {
           'field_name' => $record_type . '_repository_id',
           'field_alias' => 'DT_RowId',
         );
+
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
         if (NULL !== $search_value) {
-          $query_params['search_type'] = 'AND';
           $query_params['search_params'][1] = array(
             'field_names' => array(
               $record_type . '.scale_bar_id',
@@ -1599,7 +1598,6 @@ class RepoStorageHybrid implements RepoStorage {
 
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
         if (NULL !== $search_value) {
-          $query_params['search_type'] = 'AND';
           $query_params['search_params'][1] = array(
             'field_names' => array(
               $record_type . '.project_name',
@@ -1644,7 +1642,6 @@ class RepoStorageHybrid implements RepoStorage {
 
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
         if (NULL !== $search_value) {
-          $query_params['search_type'] = 'AND';
           $query_params['search_params'][1] = array(
             'field_names' => array(
               $record_type . '.unit_stakeholder_label',
@@ -1688,9 +1685,9 @@ class RepoStorageHybrid implements RepoStorage {
           'field_name' => $record_type . '_repository_id',
           'field_alias' => 'DT_RowId',
         );
+
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
         if (NULL !== $search_value) {
-          $query_params['search_type'] = 'AND';
           $query_params['search_params'][1] = array(
             'field_names' => array(
               $record_type . '.map_type',
@@ -1755,7 +1752,6 @@ class RepoStorageHybrid implements RepoStorage {
 
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
         if (NULL !== $search_value) {
-          $query_params['search_type'] = 'AND';
           $query_params['search_params'][1] = array(
             'field_names' => array(
               $record_type . '.label',
@@ -1863,8 +1859,8 @@ class RepoStorageHybrid implements RepoStorage {
     );
 
     $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
+    $query_params['search_type'] = 'AND';
     if (NULL !== $search_value) {
-      $query_params['search_type'] = 'AND';
       $query_params['search_params'][1] = array(
         'field_names' => array(
           $record_type . '.project_name',
@@ -2544,8 +2540,8 @@ class RepoStorageHybrid implements RepoStorage {
         'field_alias' => 'DT_RowId',
       );
       $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
+      $query_params['search_type'] = 'AND';
       if (NULL !== $search_value) {
-        $query_params['search_type'] = 'AND';
         $query_params['search_params'][1] = array(
           'field_names' => array(
             $record_type . '.dataset_element_guid',
@@ -2556,7 +2552,6 @@ class RepoStorageHybrid implements RepoStorage {
         );
       }
       if(NULL !== $capture_dataset_repository_id) {
-        $query_params['search_type'] = 'AND';
         $c = count($query_params['search_params']);
         $query_params['search_params'][$c] = array(
           'field_names' => array(
