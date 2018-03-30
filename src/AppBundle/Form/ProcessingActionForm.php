@@ -14,7 +14,7 @@ class ProcessingActionForm extends AbstractType
     {
 
         $builder
-            ->add('target_model_repository_id', HiddenType::class, array(
+            ->add('parent_model_repository_id', HiddenType::class, array(
                 'required' => true,
               ))
             ->add('preceding_processing_action_repository_id', null, array(

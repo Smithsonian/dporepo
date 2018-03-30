@@ -8,6 +8,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\DependencyInjection\Container;
 use PDO;
 use GUMP;
 
@@ -21,6 +23,7 @@ class BackgroundRemovalMethodsController extends Controller
      * @var object $u
      */
     public $u;
+    private $repo_storage_controller;
 
     /**
      * Constructor
@@ -31,12 +34,14 @@ class BackgroundRemovalMethodsController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
 
+        $this->repo_storage_controller = new RepoStorageHybridController();
+
         // Table name and field names.
-        $this->table_name = 'background_removal_methods';
-        $this->id_field_name_raw = 'background_removal_methods_id';
-        $this->id_field_name = 'background_removal_methods.' . $this->id_field_name_raw;
+        $this->table_name = 'background_removal_method';
+        $this->id_field_name_raw = 'background_removal_method_repository_id';
+        $this->id_field_name = 'background_removal_method.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
-        $this->label_field_name = 'background_removal_methods.' . $this->label_field_name_raw;
+        $this->label_field_name = 'background_removal_method.' . $this->label_field_name_raw;
     }
 
     /**
@@ -45,7 +50,8 @@ class BackgroundRemovalMethodsController extends Controller
     public function browse(Connection $conn, Request $request)
     {
         // Database tables are only created if not present.
-        $create_table = $this->create_table($conn);
+        $this->repo_storage_controller->setContainer($this->container);
+        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => $this->table_name));
 
         return $this->render('resources/browse_background_removal_methods.html.twig', array(
             'page_title' => "Browse Background Removal Methods",
@@ -58,19 +64,14 @@ class BackgroundRemovalMethodsController extends Controller
      *
      * Browse Background Removal Methods
      *
-     * Run a query to retreive all Background Removal Methods in the database.
+     * Run a query to retrieve all Background Removal Methods in the database.
      *
      * @param   object  Connection  Database connection object
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_background_removal_methods(Connection $conn, Request $request)
+    public function datatables_browse_background_removal_methods(Request $request)
     {
-        $sort = '';
-        $search_sql = '';
-        $pdo_params = array();
-        $data = array();
-
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_order = $req['order'][0]['dir'];
@@ -86,41 +87,19 @@ class BackgroundRemovalMethodsController extends Controller
                 break;
         }
 
-        $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
-
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $sort = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $sort = " ORDER BY " . $this->table_name . ".last_modified DESC ";
-        }
-
+        $query_params = array(
+          'record_type' => 'camera_cluster_type',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+        );
         if ($search) {
-            $pdo_params[] = '%' . $search . '%';
-            $search_sql = "
-                AND (
-                  " . $this->label_field_name . " LIKE ?
-                ) ";
+          $query_params['search_value'] = $search;
         }
 
-        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-            " . $this->id_field_name . " AS manage,
-            " . $this->label_field_name . ",
-            " . $this->table_name . ".active,
-            " . $this->table_name . ".last_modified,
-            " . $this->id_field_name . " AS DT_RowId
-            FROM " . $this->table_name . "
-            WHERE " . $this->table_name . ".active = 1
-            {$search_sql}
-            {$sort}
-            {$limit_sql}");
-        $statement->execute($pdo_params);
-        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
- 
-        $statement = $conn->prepare("SELECT FOUND_ROWS()");
-        $statement->execute();
-        $count = $statement->fetch(PDO::FETCH_ASSOC);
-        $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-        $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
         return $this->json($data);
     }
@@ -128,7 +107,7 @@ class BackgroundRemovalMethodsController extends Controller
     /**
      * Matches /admin/resources/background_removal_methods/manage/*
      *
-     * @Route("/admin/resources/background_removal_methods/manage/{background_removal_methods_id}", name="background_removal_methods_manage", methods={"GET","POST"}, defaults={"background_removal_methods_id" = null})
+     * @Route("/admin/resources/background_removal_methods/manage/{id}", name="background_removal_methods_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param   int     $id           The background_removal_method ID
      * @param   object  Connection    Database connection object
@@ -141,9 +120,15 @@ class BackgroundRemovalMethodsController extends Controller
         $data = array();
         $gump = new GUMP();
         $post = $request->request->all();
-        $background_removal_methods_id = !empty($request->attributes->get('background_removal_methods_id')) ? $request->attributes->get('background_removal_methods_id') : false;
-        $data = !empty($post) ? $post : $this->get_one((int)$background_removal_methods_id, $conn);
-        
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
+
+        $this->repo_storage_controller->setContainer($this->container);
+        if(empty($post)) {
+          $data = $this->repo_storage_controller->execute('getRecordById', array(
+            'record_type' => 'background_removal_method',
+            'record_id' => (int)$id));
+        }
+
         // Validate posted data.
         if(!empty($post)) {
             // "" => "required|numeric",
@@ -163,97 +148,21 @@ class BackgroundRemovalMethodsController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $background_removal_methods_id = $this->insert_update($post, $background_removal_methods_id, $conn);
-            $this->addFlash('message', 'Background Removal Method successfully updated.');
-            return $this->redirectToRoute('background_removal_methods_browse');
+          $id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => $this->table_name,
+            'record_id' => $id,
+            'user_id' => $this->getUser()->getId(),
+            'values' => $post
+          ));
+          $this->addFlash('message', 'Background Removal Method successfully updated.');
+          return $this->redirectToRoute('background_removal_methods_browse');
         } else {
             return $this->render('resources/background_removal_methods_form.html.twig', array(
-                "page_title" => !empty($background_removal_methods_id) ? 'Manage Background Removal Method: ' . $data['label'] : 'Create Background Removal Method'
+                "page_title" => !empty($id) ? 'Manage Background Removal Method: ' . $data['label'] : 'Create Background Removal Method'
                 ,"data" => $data
                 ,"errors" => $errors
                 ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
             ));
-        }
-
-    }
-
-    /**
-     * Get One Record
-     *
-     * Run a query to retrieve one record.
-     *
-     * @param   int $id     The id value
-     * @return  array|bool  The query result
-     */
-    public function get_one($id = false, $conn)
-    {
-        $statement = $conn->prepare("SELECT *
-            FROM " . $this->table_name . "
-            WHERE " . $this->id_field_name . " = :id");
-        $statement->bindValue(":id", $id, PDO::PARAM_INT);
-        $statement->execute();
-        return $statement->fetch(PDO::FETCH_ASSOC);
-    }
-
-   /**
-    * Get All Records
-    *
-    * Run a query to retrieve all records.
-    *
-    * @return  array|bool  The query result
-    */
-    public function get_all($conn)
-    {
-        $statement = $conn->prepare("
-            SELECT * FROM " . $this->table_name . "
-            ORDER BY " . $this->label_field_name . " ASC
-        ");
-        $statement->execute();
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    /**
-     * Insert/Update
-     *
-     * Run queries to insert and update records.
-     *
-     * @param   array $data  The data array
-     * @param   int $id      The id value
-     * @return  void
-     */
-    public function insert_update($data, $id = false, $conn)
-    {
-        // Update
-        if($id) {
-            $statement = $conn->prepare("
-                UPDATE " . $this->table_name . "
-                SET " . $this->label_field_name . " = :" . $this->label_field_name_raw . "
-                ,last_modified_user_account_id = :last_modified_user_account_id
-                WHERE " . $this->id_field_name . " = :id
-            ");
-          $statement->bindValue(":" . $this->label_field_name_raw, $data[$this->label_field_name_raw], PDO::PARAM_STR);
-          $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-          $statement->bindValue(":id", $id, PDO::PARAM_INT);
-          $statement->execute();
-
-          return $id;
-        }
-
-        // Insert
-        if(!$id) {
-            $statement = $conn->prepare("INSERT INTO " . $this->table_name . "
-                (" . $this->label_field_name_raw . ", date_created, created_by_user_account_id, last_modified_user_account_id)
-                VALUES (:" . $this->label_field_name_raw . ", NOW(), :user_account_id, :user_account_id)");
-            $statement->bindValue(":" . $this->label_field_name_raw . "", $data[$this->label_field_name_raw], PDO::PARAM_STR);
-            $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->execute();
-            $last_inserted_id = $conn->lastInsertId();
-
-            if(!$last_inserted_id) {
-                die('INSERT INTO `' . $this->table_name . '` failed.');
-            }
-
-            return $last_inserted_id;
         }
 
     }
@@ -265,11 +174,10 @@ class BackgroundRemovalMethodsController extends Controller
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
-     * @param   object  $conn     Database connection object
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple(Connection $conn, Request $request)
+    public function delete_multiple(Request $request)
     {
       $ids = $request->query->get('ids');
 
@@ -277,17 +185,16 @@ class BackgroundRemovalMethodsController extends Controller
 
         $ids_array = explode(',', $ids);
 
+        $this->repo_storage_controller->setContainer($this->container);
+
+        // Loop thorough the ids.
         foreach ($ids_array as $key => $id) {
-
-          $statement = $conn->prepare("
-              UPDATE " . $this->table_name . "
-              SET active = 0, last_modified_user_account_id = :last_modified_user_account_id
-              WHERE " . $this->id_field_name . " = :id
-          ");
-          $statement->bindValue(":id", $id, PDO::PARAM_INT);
-          $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-          $statement->execute();
-
+          // Run the query against a single record.
+          $ret = $this->repo_storage_controller->execute('markRecordInactive', array(
+            'record_type' => $this->table_name,
+            'record_id' => $id,
+            'user_id' => $this->getUser()->getId(),
+          ));
         }
 
         $this->addFlash('message', 'Records successfully removed.');
@@ -296,54 +203,9 @@ class BackgroundRemovalMethodsController extends Controller
         $this->addFlash('message', 'Missing data. No records removed.');
       }
 
-      return $this->redirectToRoute($this->table_name . '_browse');
+      return $this->redirectToRoute('background_removal_methods_browse');
     }
 
-    /**
-     * Delete Record
-     *
-     * Run a query to delete a Background Removal Method record.
-     *
-     * @param       int $id           The data value
-     * @return      void
-     */
-    public function delete($id, $conn)
-    {
-        $statement = $conn->prepare("
-            DELETE FROM " . $this->table_name . "
-            WHERE " . $this->id_field_name . " = :id");
-        $statement->bindValue(":id", $id, PDO::PARAM_INT);
-        $statement->execute();
-    }
 
-    /**
-     * Create the Database Table
-     *
-     * @return      void
-     */
-    public function create_table($conn)
-    {
-        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `" . $this->table_name . "` (
-            `" . $this->id_field_name_raw . "` int(11) NOT NULL AUTO_INCREMENT,
-            `" . $this->label_field_name_raw . "` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`" . $this->id_field_name_raw . "`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='This table stores " . $this->table_name . " metadata'");
-        $statement->execute();
-        $error = $conn->errorInfo();
 
-        if ($error[0] !== '00000') {
-            var_dump($conn->errorInfo());
-            die('CREATE TABLE `' . $this->table_name . '` failed.');
-        } else {
-            return TRUE;
-        }
-    }
-  
 }

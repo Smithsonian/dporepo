@@ -9,6 +9,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
 use Symfony\Component\HttpFoundation\Session\Session;
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 // Custom utility bundles
@@ -25,6 +27,7 @@ class AdminController extends Controller
      * @var object $u
      */
     public $u;
+    private $repo_storage_controller;
 
     /**
     * Constructor
@@ -34,6 +37,7 @@ class AdminController extends Controller
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
+        $this->repo_storage_controller = new RepoStorageHybridController();
     }
 
     /**
@@ -67,86 +71,51 @@ class AdminController extends Controller
      *
      * Browse recent projects
      *
-     * Run a query to retreive all recent projects.
+     * Run a query to retrieve all recent projects.
      *
-     * @param   object  Connection  Database connection object
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_recent_projects(Connection $conn, Request $request, SubjectsController $subjects)
+    public function datatables_browse_recent_projects(Request $request, SubjectsController $subjects)
     {
-        $sort = $search_sql = '';
-        $pdo_params = $data = array();
+        $data = array();
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
+
         // Today's date
         $date_today = date('Y-m-d H:i:s');
         // Date limit
         $date_limit = date('Y-m-d H:i:s', strtotime('-240 days'));
-        $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
 
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $sort = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $sort = " ORDER BY projects.last_modified DESC ";
-        }
-
+        $query_params = array(
+          'record_type' => 'project',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+          'date_range_start' => $date_today,
+          'date_range_end' => $date_limit,
+        );
         if ($search) {
-            $pdo_params[] = '%' . $search . '%';
-            $pdo_params[] = '%' . $search . '%';
-            $pdo_params[] = '%' . $search . '%';
-            $pdo_params[] = '%' . $search . '%';
-            $search_sql = "
-            AND (
-                projects.project_name LIKE ?
-                OR projects.stakeholder_label LIKE ?
-                OR projects.date_created LIKE ?
-                OR projects.last_modified LIKE ?
-            ) ";
+          $query_params['search_value'] = $search;
         }
 
-        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-                projects.project_repository_id as manage
-                ,projects.project_repository_id
-                ,projects.project_name
-                ,projects.stakeholder_guid
-                ,projects.date_created
-                ,projects.last_modified
-                ,projects.active
-                ,projects.project_repository_id AS DT_RowId
-                ,isni_data.isni_label AS stakeholder_label
-            FROM projects
-            LEFT JOIN isni_data ON isni_data.isni_id = projects.stakeholder_guid
-            LEFT JOIN subjects ON subjects.project_repository_id = projects.project_repository_id
-            WHERE projects.active = 1
-            AND projects.last_modified < '{$date_today}'
-            AND projects.last_modified > '{$date_limit}'
-            {$search_sql}
-            GROUP BY projects.project_name, projects.stakeholder_guid, projects.date_created, projects.last_modified, projects.active, projects.project_repository_id
-            {$sort}
-            {$limit_sql}");
-        $statement->execute($pdo_params);
-        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatableProject', $query_params);
 
         // Get the subjects count
         if(!empty($data['aaData'])) {
-            foreach ($data['aaData'] as $key => $value) {
-                $project_subjects = $subjects->get_subjects($conn, $value['project_repository_id']);
-                $data['aaData'][$key]['subjects_count'] = count($project_subjects);
-            }
+          foreach ($data['aaData'] as $key => $value) {
+            $project_subjects = $subjects->get_subjects($this->container, $value['project_repository_id']);
+            $data['aaData'][$key]['subjects_count'] = count($project_subjects);
+          }
         }
 
-        $statement = $conn->prepare("SELECT FOUND_ROWS()");
-        $statement->execute();
-        $count = $statement->fetch();
-        $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-        $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
-        
-        return $this->json($data);
+      return $this->json($data);
     }
 
     /**
@@ -154,82 +123,44 @@ class AdminController extends Controller
      *
      * Browse recent subjects
      *
-     * Run a query to retreive recent subjects in the database.
+     * Run a query to retrieve recent subjects in the database.
      *
-     * @param   object  Connection  Database connection object
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_recent_subjects(Connection $conn, Request $request, ItemsController $items)
+    public function datatables_browse_recent_subjects(Request $request, ItemsController $items)
     {
-        $sort = $search_sql = '';
-        $pdo_params = $data = array();
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
-        // Today's date
-        $date_today = date('Y-m-d H:i:s');
-        // Date limit
-        $date_limit = date('Y-m-d H:i:s', strtotime('-240 days'));
-        $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
 
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $sort = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $sort = " ORDER BY subjects.last_modified DESC ";
-        }
-
+        $query_params = array(
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+        );
         if ($search) {
-            $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
-            $search_sql = "
-                AND (
-                  subjects.subject_name LIKE ?
-                  OR subjects.holding_entity_guid LIKE ?
-                  OR subjects.last_modified LIKE ?
-                ) ";
+          $query_params['search_value'] = $search;
         }
 
-        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-              subjects.subject_repository_id AS manage
-              ,subjects.subject_repository_id
-              ,subjects.holding_entity_guid
-              ,subjects.local_subject_id
-              ,subjects.subject_guid
-              ,subjects.subject_name
-              ,subjects.last_modified
-              ,subjects.active
-              ,subjects.subject_repository_id AS DT_RowId
-          FROM subjects
-          LEFT JOIN items ON items.subject_repository_id = subjects.subject_repository_id
-          WHERE subjects.active = 1
-          {$search_sql}
-          GROUP BY subjects.holding_entity_guid, subjects.local_subject_id, subjects.subject_guid, subjects.subject_name, subjects.last_modified, subjects.active, subjects.subject_repository_id
-          {$sort}
-          {$limit_sql}");
-        $statement->execute($pdo_params);
-        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatableSubject', $query_params); //@todo or getDatatableSubjectItem ?
 
         // Get the items count
         if(!empty($data['aaData'])) {
             foreach ($data['aaData'] as $key => $value) {
-                $subject_items = $items->get_items($conn, $value['subject_repository_id']);
+                $subject_items = $items->get_items($this->container, $value['subject_repository_id']);
                 $data['aaData'][$key]['items_count'] = count($subject_items);
             }
         }
 
-        $statement = $conn->prepare("SELECT FOUND_ROWS()");
-        $statement->execute();
-        $count = $statement->fetch();
-        $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-        $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
-        
         return $this->json($data);
     }
+
 
     /**
      * @Route("/admin/get_favorites/", name="get_favorites", methods="POST")
@@ -279,20 +210,20 @@ class AdminController extends Controller
             $pdo_params[] = '%'.$search.'%';
             $search_sql = "
                 AND (
-                  favorites.page_title LIKE ?
-                  OR favorites.path LIKE ?
-                  OR favorites.date_created LIKE ?
+                  page_title LIKE ?
+                  OR path LIKE ?
+                  OR date_created LIKE ?
                 ) ";
         }
 
         $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS 
-            DISTINCT favorites.path,
-            favorites.page_title,
-            favorites.date_created,
-            favorites.id AS DT_RowId
-            FROM favorites
+            DISTINCT path,
+            page_title,
+            date_created,
+            id AS DT_RowId
+            FROM favorite
             WHERE 1 = 1
-            AND favorites.fos_user_id = {$this->getUser()->getId()}
+            AND fos_user_id = {$this->getUser()->getId()}
             {$search_sql}
             {$sort}
             {$limit_sql}");
@@ -323,7 +254,7 @@ class AdminController extends Controller
         $last_inserted_id = false;
 
         if(!empty($req) && isset($req['favoritePath'])) {
-            $statement = $conn->prepare("INSERT INTO favorites
+            $statement = $conn->prepare("INSERT INTO favorite
                 (fos_user_id, path, page_title, date_created)
                 VALUES (:fos_user_id, :path, :page_title, NOW())");
             $statement->bindValue(":fos_user_id", $this->getUser()->getId(), PDO::PARAM_INT);
@@ -334,7 +265,7 @@ class AdminController extends Controller
         }
 
         if(!$last_inserted_id) {
-            die('INSERT INTO `favorites` failed.');
+            die('INSERT INTO `favorite` failed.');
         }
 
         return $this->json($last_inserted_id);
@@ -355,9 +286,9 @@ class AdminController extends Controller
 
         if(!empty($req) && isset($req['favoritePath'])) {
             $statement = $conn->prepare("
-                DELETE FROM favorites
-                WHERE favorites.fos_user_id = :fos_user_id
-                AND favorites.path = :path");
+                DELETE FROM favorite
+                WHERE fos_user_id = :fos_user_id
+                AND path = :path");
             $statement->bindValue(":fos_user_id", $this->getUser()->getId(), PDO::PARAM_INT);
             $statement->bindValue(":path", $req['favoritePath'], PDO::PARAM_STR);
             $statement->execute();
@@ -376,7 +307,7 @@ class AdminController extends Controller
      */
     public function create_favorites_table($conn)
     {
-        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `favorites` (
+        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `favorite` (
           `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
           `fos_user_id` int(11) NOT NULL,
           `path` text NOT NULL,
@@ -390,7 +321,7 @@ class AdminController extends Controller
 
         if ($error[0] !== '00000') {
             var_dump($conn->errorInfo());
-            die('CREATE TABLE `projects` failed.');
+            die('CREATE TABLE `project` failed.');
         } else {
             return TRUE;
         }

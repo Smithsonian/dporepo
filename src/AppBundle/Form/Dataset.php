@@ -6,6 +6,7 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 
 class Dataset extends AbstractType
@@ -17,9 +18,15 @@ class Dataset extends AbstractType
         $data = (array)$options['data'];
 
         $builder
+            ->add('parent_project_repository_id', HiddenType::class, array(
+                'required' => true,
+              ))
+            ->add('parent_item_repository_id', HiddenType::class, array(
+                'required' => true,
+              ))
             ->add('capture_method', ChoiceType::class, array(
                 'label' => 'Capture Method',
-                'required' => false,
+                'required' => true,
                 'placeholder' => 'Select',
                 // All options
                 'choices' => $data['capture_methods_lookup_options'],
@@ -29,7 +36,7 @@ class Dataset extends AbstractType
               ))
             ->add('capture_dataset_type', ChoiceType::class, array(
                 'label' => 'Capture Dataset Type',
-                'required' => false,
+                'required' => true,
                 'placeholder' => 'Select',
                 // All options
                 'choices' => $data['dataset_types_lookup_options'],
@@ -56,11 +63,12 @@ class Dataset extends AbstractType
               ))
             ->add('collection_notes', TextareaType::class, array(
                 'label' => 'Collection Notes',
+                'required' => false,
                 'attr' => array('rows' => '10'),
               ))
             ->add('item_position_type', ChoiceType::class, array(
                 'label' => 'Item Position Type',
-                'required' => false,
+                'required' => true,
                 'placeholder' => 'Select',
                 // All options
                 'choices' => $data['item_position_types_lookup_options'],
@@ -69,11 +77,12 @@ class Dataset extends AbstractType
                 'attr' => array('class' => 'default-chosen-select'),
               ))
             ->add('positionally_matched_capture_datasets', null, array(
-                'label' => 'Positionally Matched Sets',
+                'label' => 'Positionally Matched Capture Datasets',
+                'required' => true,
               ))
             ->add('focus_type', ChoiceType::class, array(
                 'label' => 'Focus Type',
-                'required' => false,
+                'required' => true,
                 'placeholder' => 'Select',
                 // All options
                 'choices' => $data['focus_types_lookup_options'],
@@ -83,7 +92,7 @@ class Dataset extends AbstractType
               ))
             ->add('light_source_type', ChoiceType::class, array(
                 'label' => 'Light Source Type',
-                'required' => false,
+                'required' => true,
                 'placeholder' => 'Select',
                 // All options
                 'choices' => $data['light_source_types_lookup_options'],
@@ -93,7 +102,7 @@ class Dataset extends AbstractType
               ))
             ->add('background_removal_method', ChoiceType::class, array(
                 'label' => 'Background Removal Method',
-                'required' => false,
+                'required' => true,
                 'placeholder' => 'Select',
                 // All options
                 'choices' => $data['background_removal_methods_lookup_options'],
@@ -103,7 +112,7 @@ class Dataset extends AbstractType
               ))
             ->add('cluster_type', ChoiceType::class, array(
                 'label' => 'Camera Cluster Type',
-                'required' => false,
+                'required' => true,
                 'placeholder' => 'Select',
                 // All options
                 'choices' => $data['camera_cluster_types_lookup_options'],
@@ -113,7 +122,7 @@ class Dataset extends AbstractType
               ))
             ->add('cluster_geometry_field_id', null, array(
                 'label' => 'Cluster Geometry Field ID',
-                'required' => true,
+                'required' => false,
               ))
             ->add('capture_dataset_guid', null, array(
                 'label' => 'Capture Dataset GUID',
@@ -125,7 +134,7 @@ class Dataset extends AbstractType
               ))
             ->add('support_equipment', null, array(
                 'label' => 'Support Equipment',
-                'required' => true,
+                'required' => false,
               ))
             ->add('item_position_field_id', null, array(
                 'label' => 'Item Position Field ID',
@@ -137,11 +146,11 @@ class Dataset extends AbstractType
               ))
             ->add('resource_capture_datasets', null, array(
                 'label' => 'Resource Capture Datasets',
-                'required' => true,
+                'required' => false,
               ))
             ->add('calibration_object_used', null, array(
                 'label' => 'Calibration Object Used',
-                'required' => true,
+                'required' => false,
               ))
             
             ->add('save', SubmitType::class, array(

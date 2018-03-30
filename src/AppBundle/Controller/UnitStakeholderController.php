@@ -8,6 +8,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\DependencyInjection\Container;
 use PDO;
 use GUMP;
 
@@ -23,6 +25,7 @@ class UnitStakeholderController extends Controller
      * @var object $u
      */
     public $u;
+    private $repo_storage_controller;
 
     /**
      * Constructor
@@ -32,10 +35,11 @@ class UnitStakeholderController extends Controller
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
+        $this->repo_storage_controller = new RepoStorageHybridController();
 
         // Table name and field names.
         $this->table_name = 'unit_stakeholder';
-        $this->id_field_name_raw = 'unit_stakeholder_id';
+        $this->id_field_name_raw = 'unit_stakeholder_repository_id';
         $this->id_field_name = 'unit_stakeholder.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'unit_stakeholder_label';
         $this->label_field_name = 'unit_stakeholder.' . $this->label_field_name_raw;
@@ -46,10 +50,11 @@ class UnitStakeholderController extends Controller
     /**
      * @Route("/admin/resources/unit_stakeholder/", name="unit_stakeholder_browse", methods="GET")
      */
-    public function browse(Connection $conn, Request $request)
+    public function browse(Request $request)
     {
         // Database tables are only created if not present.
-        $create_table = $this->create_table($conn);
+        $this->repo_storage_controller->setContainer($this->container);
+        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => $this->table_name));
 
         return $this->render('resources/browse_unit_stakeholder.html.twig', array(
             'page_title' => "Browse Unit/Stakeholder",
@@ -61,77 +66,45 @@ class UnitStakeholderController extends Controller
      *
      * Browse Unit Stakeholder
      *
-     * Run a query to retreive all Unit Stakeholder in the database.
+     * Run a query to retrieve all Unit Stakeholder in the database.
      *
-     * @param   object  Connection  Database connection object
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_unit_stakeholder(Connection $conn, Request $request)
+    public function datatables_browse_unit_stakeholder(Request $request)
     {
-        $sort = '';
-        $search_sql = '';
-        $pdo_params = array();
-        $data = array();
-
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
+        $sort_field = 'last_modified';
         switch($req['order'][0]['column']) {
-            case '1':
-                $sort_field = 'unit_stakeholder_label';
-                break;
-            case '2':
-                $sort_field = 'unit_stakeholder_full_name';
-                break;
-            case '3':
-                $sort_field = 'last_modified';
-                break;
+          case '1':
+            $sort_field = 'unit_stakeholder_label';
+            break;
+          case '2':
+            $sort_field = 'unit_stakeholder_full_name';
+            break;
+          case '3':
+            $sort_field = 'last_modified';
+            break;
         }
 
-        $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
-
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $sort = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $sort = " ORDER BY " . $this->table_name . ".last_modified DESC ";
-        }
-
+        $query_params = array(
+          'record_type' => 'unit_stakeholder',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+        );
         if ($search) {
-            $pdo_params[] = '%' . $search . '%';
-            $pdo_params[] = '%' . $search . '%';
-            $pdo_params[] = '%' . $search . '%';
-            $search_sql = "
-                AND (
-                  " . $this->label_field_name . " LIKE ?
-                  OR " . $this->full_name_field_name . " LIKE ?
-                  OR " . $this->table_name . ".last_modified LIKE ?
-                ) ";
+          $query_params['search_value'] = $search;
         }
 
-        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-            " . $this->id_field_name . " AS manage,
-            " . $this->label_field_name . ",
-            " . $this->full_name_field_name . ",
-            " . $this->table_name . ".active,
-            " . $this->table_name . ".last_modified,
-            " . $this->id_field_name . " AS DT_RowId
-            FROM " . $this->table_name . "
-            WHERE " . $this->table_name . ".active = 1
-            {$search_sql}
-            {$sort}
-            {$limit_sql}");
-        $statement->execute($pdo_params);
-        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
- 
-        $statement = $conn->prepare("SELECT FOUND_ROWS()");
-        $statement->execute();
-        $count = $statement->fetch(PDO::FETCH_ASSOC);
-        $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-        $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
         return $this->json($data);
     }
@@ -139,24 +112,32 @@ class UnitStakeholderController extends Controller
     /**
      * Matches /admin/resources/unit_stakeholder/manage/*
      *
-     * @Route("/admin/resources/unit_stakeholder/manage/{unit_stakeholder_id}", name="unit_stakeholder_manage", methods={"GET","POST"}, defaults={"unit_stakeholder_id" = null})
+     * @Route("/admin/resources/unit_stakeholder/manage/{id}", name="unit_stakeholder_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param   int     $id           The unit_stakeholder ID
-     * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_unit_stakeholder_form(Connection $conn, Request $request, GumpParseErrors $gump_parse_errors, ProjectsController $projects, IsniController $isni)
+    function show_unit_stakeholder_form(Request $request, GumpParseErrors $gump_parse_errors, ProjectsController $projects, IsniController $isni)
     {
         $errors = false;
         $data = array();
         $gump = new GUMP();
         $post = $request->request->all();
-        $unit_stakeholder_id = !empty($request->attributes->get('unit_stakeholder_id')) ? $request->attributes->get('unit_stakeholder_id') : false;
-        $data = !empty($post) ? $post : $this->get_one((int)$unit_stakeholder_id, $conn);
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
+
+        $this->repo_storage_controller->setContainer($this->container);
+        if(empty($post)) {
+          $data = $this->repo_storage_controller->execute('getRecordById', array(
+            'record_type' => 'unit_stakeholder',
+            'record_id' => (int)$id));
+        }
 
         // Get data from lookup tables.
-        $data['units_stakeholders'] = $projects->get_units_stakeholders($conn);
+        $data['units_stakeholders'] = $projects->get_units_stakeholders($this->container);
+        if(!array_key_exists('isni_id', $data)) {
+          $data['isni_id'] = NULL;
+        }
 
         // Validate posted data.
         if(!empty($post)) {
@@ -178,59 +159,17 @@ class UnitStakeholderController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-            $unit_stakeholder_id = $this->insert_update($post, $unit_stakeholder_id, $conn, $isni);
+          $id = $this->insert_update($post, $id);
             $this->addFlash('message', 'Unit/Stakeholder successfully updated.');
             return $this->redirectToRoute('unit_stakeholder_browse');
         } else {
             return $this->render('resources/unit_stakeholder_form.html.twig', array(
-                "page_title" => !empty($unit_stakeholder_id) ? 'Manage Unit/Stakeholder: ' . $data['unit_stakeholder_label'] : 'Create Unit/Stakeholder'
+                "page_title" => !empty($id) ? 'Manage Unit/Stakeholder: ' . $data['unit_stakeholder_label'] : 'Create Unit/Stakeholder'
                 ,"data" => $data
                 ,"errors" => $errors
             ));
         }
 
-    }
-
-    /**
-     * Get One Record
-     *
-     * Run a query to retrieve one record.
-     *
-     * @param   int $id     The id value
-     * @return  array|bool  The query result
-     */
-    public function get_one($id = false, $conn)
-    {
-        $statement = $conn->prepare("SELECT unit_stakeholder.unit_stakeholder_id,
-            unit_stakeholder.isni_id,
-            unit_stakeholder.unit_stakeholder_label,
-            unit_stakeholder.unit_stakeholder_label_aliases,
-            unit_stakeholder.unit_stakeholder_full_name,
-            unit_stakeholder.unit_stakeholder_guid,
-            isni_data.isni_label AS stakeholder_label
-            FROM unit_stakeholder
-            LEFT JOIN isni_data ON isni_data.isni_id = unit_stakeholder.isni_id
-            WHERE unit_stakeholder.unit_stakeholder_id = :id");
-        $statement->bindValue(":id", $id, PDO::PARAM_INT);
-        $statement->execute();
-        return $statement->fetch(PDO::FETCH_ASSOC);
-    }
-
-   /**
-    * Get All Records
-    *
-    * Run a query to retrieve all records.
-    *
-    * @return  array|bool  The query result
-    */
-    public function get_all($conn)
-    {
-        $statement = $conn->prepare("
-            SELECT * FROM " . $this->table_name . "
-            ORDER BY " . $this->label_field_name . " ASC
-        ");
-        $statement->execute();
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -242,58 +181,30 @@ class UnitStakeholderController extends Controller
      * @param   int $id      The id value
      * @return  void
      */
-    public function insert_update($data, $id = false, $conn, $isni)
+    public function insert_update($data, $id = false)
     {
         // Query the isni_data table to see if there's an entry.
-        $isni_data = $isni->get_isni_data_from_database($data['isni_id'], $conn);
+        $isni_data = $this->repo_storage_controller->execute('getIsniRecordById', array (
+          'record_id' => $data['stakeholder_guid'])
+        );
 
         // If there is no entry, then perform an insert.
         if(!$isni_data) {
-          $isni_inserted = $isni->insert_isni_data($data['isni_id'], $data['stakeholder_label'], $this->getUser()->getId(), $conn);
+          $isni_inserted = $this->repo_storage_controller->execute('saveIsniRecord', array(
+            'user_id' => $this->getUser()->getId(),
+            'record_id' => $data['isni_id'],
+            'record_label' => $data['stakeholder_label'],
+          ));
         }
 
-        // Update
-        if($id) {
-            $statement = $conn->prepare("
-                UPDATE " . $this->table_name . "
-                SET " . $this->label_field_name . " = :" . $this->label_field_name_raw . ", 
-                    " . $this->full_name_field_name . " = :" . $this->full_name_field_name_raw . ",
-                    isni_id = :isni_id,
-                    unit_stakeholder_label_aliases = :unit_stakeholder_label_aliases,
-                    last_modified_user_account_id = :last_modified_user_account_id
-                WHERE " . $this->id_field_name . " = :id
-            ");
-          $statement->bindValue(":" . $this->label_field_name_raw, $data[$this->label_field_name_raw], PDO::PARAM_STR);
-          $statement->bindValue(":" . $this->full_name_field_name_raw, $data[$this->full_name_field_name_raw], PDO::PARAM_STR);
-          $statement->bindValue(":unit_stakeholder_label_aliases", $data['unit_stakeholder_label_aliases'], PDO::PARAM_STR);
-          $statement->bindValue(":isni_id", $data['isni_id'], PDO::PARAM_STR);
-          $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-          $statement->bindValue(":id", $id, PDO::PARAM_INT);
-          $statement->execute();
+        $id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'unit_stakeholder',
+          'record_id' => $id,
+          'user_id' => $this->getUser()->getId(),
+          'values' => $data
+        ));
 
-          return $id;
-        }
-
-        // Insert
-        if(!$id) {
-            $statement = $conn->prepare("INSERT INTO " . $this->table_name . "
-                (" . $this->label_field_name_raw . ", " . $this->full_name_field_name_raw . ", unit_stakeholder_label_aliases, isni_id, date_created, created_by_user_account_id, last_modified_user_account_id)
-                VALUES (:" . $this->label_field_name_raw . ", :" . $this->full_name_field_name_raw . ", :unit_stakeholder_label_aliases, :isni_id, NOW(), :user_account_id, :user_account_id)");
-            $statement->bindValue(":" . $this->label_field_name_raw, $data[$this->label_field_name_raw], PDO::PARAM_STR);
-            $statement->bindValue(":" . $this->full_name_field_name_raw, $data[$this->full_name_field_name_raw], PDO::PARAM_STR);
-            $statement->bindValue(":unit_stakeholder_label_aliases", $data['unit_stakeholder_label_aliases'], PDO::PARAM_STR);
-            $statement->bindValue(":isni_id", $data['isni_id'], PDO::PARAM_STR);
-            $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->execute();
-            $last_inserted_id = $conn->lastInsertId();
-
-            if(!$last_inserted_id) {
-                die('INSERT INTO `' . $this->table_name . '` failed.');
-            }
-
-            return $last_inserted_id;
-        }
-
+        return $id;
     }
 
     /**
@@ -305,11 +216,10 @@ class UnitStakeholderController extends Controller
      * Run a query to delete multiple Unit Stakeholde records.
      *
      * @param   int     $ids      The record ids
-     * @param   object  $conn     Database connection object
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple(Connection $conn, Request $request)
+    public function delete_multiple(Request $request)
     {
         $ids = $request->query->get('ids');
 
@@ -317,17 +227,16 @@ class UnitStakeholderController extends Controller
 
           $ids_array = explode(',', $ids);
 
+          $this->repo_storage_controller->setContainer($this->container);
+
+          // Loop thorough the ids.
           foreach ($ids_array as $key => $id) {
-
-            $statement = $conn->prepare("
-                UPDATE " . $this->table_name . "
-                SET active = 0, last_modified_user_account_id = :last_modified_user_account_id
-                WHERE " . $this->id_field_name . " = :id
-            ");
-            $statement->bindValue(":id", $id, PDO::PARAM_INT);
-            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->execute();
-
+            // Run the query against a single record.
+            $ret = $this->repo_storage_controller->execute('markRecordInactive', array(
+              'record_type' => $this->table_name,
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+            ));
           }
 
           $this->addFlash('message', 'Records successfully removed.');
@@ -339,55 +248,5 @@ class UnitStakeholderController extends Controller
         return $this->redirectToRoute('unit_stakeholder_browse');
     }
 
-    /**
-     * Delete Record
-     *
-     * Run a query to delete a Unit Stakeholde record.
-     *
-     * @param       int $id           The data value
-     * @return      void
-     */
-    public function delete($id, $conn)
-    {
-        $statement = $conn->prepare("
-            DELETE FROM " . $this->table_name . "
-            WHERE " . $this->id_field_name . " = :id");
-        $statement->bindValue(":id", $id, PDO::PARAM_INT);
-        $statement->execute();
-    }
 
-    /**
-     * Create the Database Table
-     *
-     * @return      void
-     */
-    public function create_table($conn)
-    {
-        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `" . $this->table_name . "` (
-            `" . $this->id_field_name_raw . "` int(11) NOT NULL AUTO_INCREMENT,
-            `isni_id` varchar(255) DEFAULT NULL,
-            `" . $this->label_field_name_raw . "` varchar(255) NOT NULL DEFAULT '',
-            `unit_stakeholder_label_aliases` text DEFAULT NULL,
-            `" . $this->full_name_field_name_raw . "` varchar(255) NOT NULL DEFAULT '',
-            `unit_stakeholder_guid` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`" . $this->id_field_name_raw . "`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='This table stores " . $this->table_name . " metadata'");
-        $statement->execute();
-        $error = $conn->errorInfo();
-
-        if ($error[0] !== '00000') {
-            var_dump($conn->errorInfo());
-            die('CREATE TABLE `' . $this->table_name . '` failed.');
-        } else {
-            return TRUE;
-        }
-    }
-  
 }

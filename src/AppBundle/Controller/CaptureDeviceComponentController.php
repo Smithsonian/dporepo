@@ -8,6 +8,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 use AppBundle\Form\CaptureDeviceComponentForm;
@@ -22,6 +24,7 @@ class CaptureDeviceComponentController extends Controller
      * @var object $u
      */
     public $u;
+    private $repo_storage_controller;
 
     /**
      * Constructor
@@ -31,23 +34,17 @@ class CaptureDeviceComponentController extends Controller
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
+        $this->repo_storage_controller = new RepoStorageHybridController();
     }
 
     /**
      * @Route("/admin/projects/capture_device_component/datatables_browse", name="capture_device_component_browse_datatables", methods="POST")
      *
-     * @param Connection $conn
      * @param Request $request
      * @return JsonResponse The query result in JSON
      */
-    public function datatablesBrowse(Connection $conn, Request $request)
+    public function datatablesBrowse(Request $request)
     {
-        $data = new CaptureDeviceComponent();
-
-        $params = array();
-        $params['pdo_params'] = array();
-        $params['search_sql'] = $params['sort'] = '';
-
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
@@ -55,32 +52,22 @@ class CaptureDeviceComponentController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
-        $params['limit_sql'] = " LIMIT {$start_record}, {$stop_record} ";
-
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $params['sort'] = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $params['sort'] = " ORDER BY capture_device_component.last_modified DESC ";
-        }
-
+        $query_params = array(
+          'record_type' => 'capture_device_component',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+          'parent_id' => $req['parent_id']
+        );
         if ($search) {
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['search_sql'] = "
-                AND (
-                  capture_device_component.serial_number LIKE ?
-                  capture_device_component.capture_device_component_type LIKE ?
-                  capture_device_component.manufacturer LIKE ?
-                  capture_device_component.model_name LIKE ?
-                ) ";
+          $query_params['search_value'] = $search;
         }
 
-        // Run the query
-        $results = $data->datatablesQuery($params);
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
-        return $this->json($results);
+        return $this->json($data);
     }
 
     /**
@@ -103,7 +90,15 @@ class CaptureDeviceComponentController extends Controller
         if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
-        $data = (!empty($id) && empty($post)) ? $data->getOne((int)$id, $conn) : $data;
+        $this->repo_storage_controller->setContainer($this->container);
+        if(!empty($id) && empty($post)) {
+          $rec = $this->repo_storage_controller->execute('getRecordById', array(
+            'record_type' => 'capture_device_component',
+            'record_id' => $id));
+          if(isset($rec)) {
+            $data = (object)$rec;
+          }
+        }
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
@@ -119,7 +114,12 @@ class CaptureDeviceComponentController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $data = $form->getData();
-            $id = $data->insertUpdate($data, $id, $this->getUser()->getId(), $conn);
+            $id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'capture_device_component',
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+              'values' => (array)$data
+            ));
 
             $this->addFlash('message', 'Record successfully updated.');
             return $this->redirect('/admin/projects/capture_device_component/manage/' . $data->parent_capture_device_repository_id . '/' . $id);
@@ -136,23 +136,26 @@ class CaptureDeviceComponentController extends Controller
     /**
      * @Route("/admin/projects/capture_device_component/delete", name="capture_device_component_remove_records", methods={"GET"})
      *
-     * @param Connection $conn
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\RedirectResponse|Response Redirect or render
      */
-    public function deleteMultiple(Connection $conn, Request $request)
+    public function deleteMultiple(Request $request)
     {
-        $data = new CaptureDeviceComponent();
-
         if(!empty($request->query->get('ids'))) {
 
             // Create the array of ids.
             $ids_array = explode(',', $request->query->get('ids'));
 
+            $this->repo_storage_controller->setContainer($this->container);
+
             // Loop thorough the ids.
             foreach ($ids_array as $key => $id) {
-                // Run the query against a single record.
-                $data->deleteMultiple($id);
+              // Run the query against a single record.
+              $ret = $this->repo_storage_controller->execute('markRecordInactive', array(
+                'record_type' => 'capture_device_component',
+                'record_id' => $id,
+                'user_id' => $this->getUser()->getId(),
+              ));
             }
 
             $this->addFlash('message', 'Records successfully removed.');
@@ -161,7 +164,8 @@ class CaptureDeviceComponentController extends Controller
             $this->addFlash('message', 'Missing data. No records removed.');
         }
 
-        return $this->redirectToRoute('capture_device_component_browse');
+        $referer = $request->headers->get('referer');
+        return $this->redirect($referer);
     }
 
     /**

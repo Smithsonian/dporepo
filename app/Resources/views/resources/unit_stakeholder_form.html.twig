@@ -52,7 +52,7 @@
               <h4>ISNI ID</h4>
               <div id="stakeholder-display">
                 {% if data.isni_id is not empty %}
-                  {{ data.stakeholder_label }}<br>
+                  {{ data.unit_stakeholder_label }}<br>
                   ISNI ID: <a href="http://www.isni.org/{{ data.isni_id }}" title="View full record (opens in a new tab/window)" target="_blank">{{ data.isni_id }}</a>
                 {% endif %}
               </div>
