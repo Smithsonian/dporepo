@@ -10,9 +10,8 @@
 {% endblock %}
 
 {% block content %}
-
     <div class="alert alert-warning" role="alert">
-        TODO: Provide a way to reference an existing Model
+        TODO: Provide a way to reference existing UV Maps?
     </div>
     <div class="row">
         <div class="col-sm-12 col-md-12">
@@ -165,6 +164,14 @@
                 });
               }
             });
+
+            var add_button = $('<a />')
+              .addClass('btn btn-default add-record-button')
+              .attr('href', '/admin/projects/processing_action/manage/' + parent_id)
+              .html('<span class="glyphicon glyphicon-plus"></span> Add a Processing Action');
+
+            $('#browse_processing_actions_wrapper').find('.datatables_bulk_actions').append(add_button);
+
           });
         </script>
     {% endif %}

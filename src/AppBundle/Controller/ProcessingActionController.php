@@ -101,23 +101,11 @@ class ProcessingActionController extends Controller
           }
         }
 
-        // $this->u->dumper($data);
-
-
-
-        if(!isset($data->action_method)) throw $this->createNotFoundException('The record does not exist');
-
-        // $this->u->dumper($data);
-
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
         $data->parent_model_repository_id = $parent_id;
 
-        // $this->u->dumper($data);
-
-        
-        
         // Create the form
         $form = $this->createForm(ProcessingActionForm::class, $data);
         

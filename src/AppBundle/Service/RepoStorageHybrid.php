@@ -562,9 +562,11 @@ class RepoStorageHybrid implements RepoStorage {
     );
     */
     $query_params['fields'][] = array(
+      'field_name' => 'photogrammetry_scale_bar_repository_id',
+    );
+    $query_params['fields'][] = array(
       'field_name' => 'parent_capture_dataset_repository_id',
     );
-
     $query_params['fields'][] = array(
       'table_name' => 'photogrammetry_scale_bar',
       'field_name' => 'scale_bar_id',
