@@ -127,7 +127,7 @@ class PhotogrammetryScaleBarController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/photogrammetry_scale_bar/manage/' . $data->parent_capture_dataset_repository_id . '/' . $id);
+            return $this->redirect('/admin/projects/photogrammetry_scale_bar/manage/' . $parent_id . '/' . $id);
         }
 
         return $this->render('datasets/photogrammetry_scale_bar_form.html.twig', array(
