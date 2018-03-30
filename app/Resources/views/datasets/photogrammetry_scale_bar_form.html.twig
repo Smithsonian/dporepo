@@ -137,6 +137,11 @@
                 });
               }
             });
+            var add_button = $('<a />')
+              .addClass('btn btn-default add-record-button')
+              .attr('href', '/admin/projects/photogrammetry_scale_bar_target_pair/manage/' + parent_id)
+              .html('<span class="glyphicon glyphicon-plus"></span> Add a Photogrammetry Scale Bar Pair');
+            $('.datatables_bulk_actions').append(add_button);
           });
         </script>
     {% endif %}
