@@ -121,7 +121,7 @@ class CaptureDeviceController extends Controller
 
             $data = $form->getData();
             $id = $this->repo_storage_controller->execute('saveRecord', array(
-              'base_table' => 'capture_device_controller',
+              'base_table' => 'capture_device',
               'record_id' => $id,
               'user_id' => $this->getUser()->getId(),
               'values' => (array)$data,
@@ -129,7 +129,7 @@ class CaptureDeviceController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/capture_device/manage/' . $data->capture_data_element_repository_id . '/' . $id);
+            return $this->redirect('/admin/projects/capture_device/manage/' . $data->parent_capture_data_element_repository_id . '/' . $id);
         }
 
         return $this->render('datasetElements/capture_device_form.html.twig', array(
@@ -137,6 +137,7 @@ class CaptureDeviceController extends Controller
             'data' => $data,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
+            'back_link' => $back_link,
         ));
     }
 
