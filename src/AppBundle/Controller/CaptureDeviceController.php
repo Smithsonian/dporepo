@@ -58,7 +58,8 @@ class CaptureDeviceController extends Controller
           'sort_order' => $sort_order,
           'start_record' => $start_record,
           'stop_record' => $stop_record,
-          'parent_id' => $req['parent_id']
+          'parent_id' => $req['parent_id'],
+          'parent_id_field' => 'parent_capture_data_element_repository_id',
         );
         if ($search) {
           $query_params['search_value'] = $search;
@@ -172,7 +173,8 @@ class CaptureDeviceController extends Controller
             $this->addFlash('message', 'Missing data. No records removed.');
         }
 
-        return $this->redirectToRoute('capture_device_browse');
+        $referer = $request->headers->get('referer');
+        return $this->redirect($referer);
     }
 
     /**

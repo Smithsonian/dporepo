@@ -1193,13 +1193,25 @@ class RepoStorageHybrid implements RepoStorage {
 
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
         if (NULL !== $search_value) {
-          $query_params['search_params'][1] = array(
+          $query_params['search_params'][] = array(
             'field_names' => array(
               $record_type . '.calibration_file',
               $record_type . '.capture_device_component_ids',
             ),
             'search_values' => array($search_value),
             'comparison' => 'LIKE',
+          );
+        }
+        if (isset($parent_id_field) && NULL !== $parent_id) {
+          $c = count($query_params['search_params']);
+          $query_params['search_params'][$c] = array(
+            'field_names' => array(
+              $parent_id_field,
+            ),
+            'search_values' => array(
+              $parent_id
+            ),
+            'comparison' => '=',
           );
         }
         break;
@@ -2188,6 +2200,7 @@ class RepoStorageHybrid implements RepoStorage {
     $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
     $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
     $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+    $parent_id = array_key_exists('parent_id', $params) ? $params['parent_id'] : NULL;
 
     $query_params = array(
       'fields' => array(),
@@ -2200,7 +2213,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
 
     if ($search_value) {
-      $query_params['search_params'][1] = array(
+      $query_params['search_params'][] = array(
         'field_names' => array(
           'capture_data_file.capture_data_file_name',
           'capture_data_file.capture_data_file_type',
@@ -2208,6 +2221,15 @@ class RepoStorageHybrid implements RepoStorage {
         ),
         'search_values' => array($search_value),
         'comparison' => 'LIKE',
+      );
+    }
+    if ($parent_id) {
+      $query_params['search_params'][] = array(
+        'field_names' => array(
+          'parent_capture_data_element_repository_id'
+        ),
+        'search_values' => array($parent_id),
+        'comparison' => '=',
       );
     }
 
