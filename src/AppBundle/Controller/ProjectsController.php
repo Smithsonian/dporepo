@@ -188,6 +188,7 @@ class ProjectsController extends Controller
      */
     public function get_stakeholder_guids_tree_browser()
     {
+      // $data = array();
       $this->repo_storage_controller->setContainer($this->container);
       $projects = $this->repo_storage_controller->execute('getStakeholderGuids');
       foreach ($projects as $key => $value) {
