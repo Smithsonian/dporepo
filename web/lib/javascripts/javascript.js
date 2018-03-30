@@ -30,14 +30,20 @@ jQuery(document).ready(function($) {
   /**
    * Remove records button click handler.
    */
-  $('.main').on('click', '#remove-records-button', function() {
+  $('.panel-body').on('click', '#remove-records-button', function() {
 
-    var allCheckedCheckboxes = $('.main').find('input[name=manage_checkbox]:checkbox:checked');
+    var allCheckedCheckboxes = $(this).parent().parent().find('input[name=manage_checkbox]:checkbox:checked');
 
     if(!allCheckedCheckboxes.length) {
       swal('No Records Selected', 'Please choose at least one record.');
       return;
     }
+
+    var deletePath;
+    var returnPath;
+
+    deletePath = $(this).parent().parent().parent().find('#delete-path').val();
+    returnPath = $(this).parent().parent().parent().find('#return-path').val();
 
     swal({
       title: 'Remove Records',
@@ -60,8 +66,26 @@ jQuery(document).ready(function($) {
       var recordIdsString = JSON.stringify(recordIds).replace('[','').replace(']','').replace(/"/g,''),
           urlSlash = ((currentPath.join('/') !== 'admin/workspace/') && (currentPath.indexOf('resources') !== 1)) ? '/' : '';
 
+      var returnPathString;
+      if(null != returnPath) {
+        returnPathString = '&returnpath=' . returnPath;
+      }
+
+      var deleteUrl;
+      if(null != deletePath) {
+        deleteUrl = window.location.origin + '/' + deletePath + '?ids=' + recordIdsString;
+      }
+      else {
+        deleteUrl = window.location.origin + '/' + currentPath.join('/') + urlSlash + 'delete?ids=' + recordIdsString;
+      }
+
+      if(null != deleteUrl) {
+        if(null != returnPathString) {
+          deleteUrl += returnPathString;
+        }
+      }
       // console.log(window.location.origin + '/' + currentPath.join('/') + urlSlash + 'delete?ids=' + recordIdsString);
-      document.location.href = window.location.origin + '/' + currentPath.join('/') + urlSlash + 'delete?ids=' + recordIdsString;
+      document.location.href = deleteUrl;
     });
 
   });
