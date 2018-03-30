@@ -8,6 +8,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 use AppBundle\Form\PhotogrammetryScaleBarForm;
@@ -22,6 +24,7 @@ class PhotogrammetryScaleBarController extends Controller
      * @var object $u
      */
     public $u;
+    private $repo_storage_controller;
 
     /**
      * Constructor
@@ -31,23 +34,17 @@ class PhotogrammetryScaleBarController extends Controller
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
+        $this->repo_storage_controller = new RepoStorageHybridController();
     }
 
     /**
      * @Route("/admin/projects/photogrammetry_scale_bar/datatables_browse", name="photogrammetry_scale_bar_browse_datatables", methods="POST")
      *
-     * @param Connection $conn
      * @param Request $request
      * @return JsonResponse The query result in JSON
      */
-    public function datatablesBrowse(Connection $conn, Request $request)
+    public function datatablesBrowse(Request $request)
     {
-        $data = new PhotogrammetryScaleBar();
-
-        $params = array();
-        $params['pdo_params'] = array();
-        $params['search_sql'] = $params['sort'] = '';
-
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
@@ -55,32 +52,22 @@ class PhotogrammetryScaleBarController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
-        $params['limit_sql'] = " LIMIT {$start_record}, {$stop_record} ";
+      $query_params = array(
+        'record_type' => 'photogrammetry_scale_bar',
+        'sort_field' => $sort_field,
+        'sort_order' => $sort_order,
+        'start_record' => $start_record,
+        'stop_record' => $stop_record,
+        'parent_id' => $req['parent_id']
+      );
+      if ($search) {
+        $query_params['search_value'] = $search;
+      }
 
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $params['sort'] = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $params['sort'] = " ORDER BY photogrammetry_scale_bar.last_modified DESC ";
-        }
+      $this->repo_storage_controller->setContainer($this->container);
+      $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
-        if ($search) {
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['search_sql'] = "
-                AND (
-                  photogrammetry_scale_bar.scale_bar_id LIKE ?
-                  photogrammetry_scale_bar.scale_bar_manufacturer LIKE ?
-                  photogrammetry_scale_bar.scale_bar_barcode_type LIKE ?
-                  photogrammetry_scale_bar.scale_bar_target_pairs LIKE ?
-                ) ";
-        }
-
-        // Run the query
-        $results = $data->datatablesQuery($params);
-
-        return $this->json($results);
+        return $this->json($data);
     }
 
     /**
@@ -103,14 +90,27 @@ class PhotogrammetryScaleBarController extends Controller
         if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
-        $data = (!empty($id) && empty($post)) ? $data->getOne((int)$id, $conn) : $data;
+        $this->repo_storage_controller->setContainer($this->container);
+        if(!empty($id) && empty($post)) {
+          $rec = $this->repo_storage_controller->execute('getPhotogrammetryScaleBar', array(
+            'photogrammetry_scale_bar_repository_id' => $id));
+          if(isset($rec)) {
+            $data = (object)$rec;
+          }
+          $data->photogrammetry_scale_bar_repository_id = $id;
+        }
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
         $data->parent_capture_dataset_repository_id = $parent_id;
-        
+
+        $back_link = $request->headers->get('referer');
+        if(isset($data->project_repository_id)) {
+            $back_link = "/admin/projects/dataset_elements/{$data->project_repository_id}/{$data->subject_repository_id}/{$data->parent_item_repository_id}/{$data->parent_capture_dataset_repository_id}";
+        }
+
         // Create the form
-        $form = $this->createForm(PhotogrammetryScaleBarForm::class, $data);
+        $form = $this->createForm(PhotogrammetryScaleBarForm::class, (array)$data);
         
         // Handle the request
         $form->handleRequest($request);
@@ -119,40 +119,49 @@ class PhotogrammetryScaleBarController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $data = $form->getData();
-            $id = $data->insertUpdate($data, $id, $this->getUser()->getId(), $conn);
+            $id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'photogrammetry_scale_bar',
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+              'values' => (array)$data
+            ));
 
             $this->addFlash('message', 'Record successfully updated.');
             return $this->redirect('/admin/projects/photogrammetry_scale_bar/manage/' . $data->parent_capture_dataset_repository_id . '/' . $id);
         }
 
         return $this->render('datasets/photogrammetry_scale_bar_form.html.twig', array(
-            'page_title' => !empty($id) ? 'Photogrammetry Scale Bar: ' . $data->scale_bar_id : 'Create Photogrammetry Scale Bar',
+            'page_title' => !empty($id) ? 'Photogrammetry Scale Bar: ' . $id : 'Create Photogrammetry Scale Bar',
             'data' => $data,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
+            'back_link' => $back_link,
         ));
     }
 
     /**
      * @Route("/admin/projects/photogrammetry_scale_bar/delete", name="photogrammetry_scale_bar_remove_records", methods={"GET"})
      *
-     * @param Connection $conn
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\RedirectResponse|Response Redirect or render
      */
-    public function deleteMultiple(Connection $conn, Request $request)
+    public function deleteMultiple(Request $request)
     {
-        $data = new PhotogrammetryScaleBar();
-
         if(!empty($request->query->get('ids'))) {
 
             // Create the array of ids.
             $ids_array = explode(',', $request->query->get('ids'));
 
+            $this->repo_storage_controller->setContainer($this->container);
+
             // Loop thorough the ids.
             foreach ($ids_array as $key => $id) {
-                // Run the query against a single record.
-                $data->deleteMultiple($id);
+              // Run the query against a single record.
+              $ret = $this->repo_storage_controller->execute('markRecordInactive', array(
+                'record_type' => 'photogrammetry_scale_bar',
+                'record_id' => $id,
+                'user_id' => $this->getUser()->getId(),
+              ));
             }
 
             $this->addFlash('message', 'Records successfully removed.');
@@ -161,7 +170,8 @@ class PhotogrammetryScaleBarController extends Controller
             $this->addFlash('message', 'Missing data. No records removed.');
         }
 
-        return $this->redirectToRoute('photogrammetry_scale_bar_browse');
+        $referer = $request->headers->get('referer');
+        return $this->redirect($referer);
     }
 
     /**

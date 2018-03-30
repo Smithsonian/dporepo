@@ -51,13 +51,13 @@
       <div class="panel panel-default">
         <div class="panel-body">
 
-          <h2>Datasets</h2>
-          <a href="/admin/projects/dataset/{{ project_repository_id }}/{{ subject_repository_id }}/{{ item_repository_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Dataset</a>
+          <h2>Capture Datasets</h2>
+          <a href="/admin/projects/dataset/{{ project_repository_id }}/{{ subject_repository_id }}/{{ item_repository_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Capture Dataset</a>
 
           <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
               <tr>
-                <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
+                <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
                 <th class="text-center">Download</th>
                 <th class="text-center"></th>
                 <th class="text-center"></th>
@@ -86,6 +86,28 @@
             </thead>
           </table>
 
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-12 col-md-12 child-data">
+      <div class="panel panel-default">
+        <div class="panel-body">
+          <h2>Models</h2>
+          <input type="hidden" id="delete-path" value="admin/projects/model/delete" />
+          <table id="browse_models" class="table table-striped table-bordered" cellspacing="0" width="100%">
+            <thead>
+              <tr>
+                <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                <th class="text-center">Model Guid</th>
+                <th class="text-center">Date of Creation</th>
+                <th class="text-center">Model File Type</th>
+                <th class="text-center">Derived From</th>
+                <th class="text-center">Creation Method</th>
+                <th class="text-center">Last Modified</th>
+              </tr>
+            </thead>
+          </table>
         </div>
       </div>
     </div>
@@ -232,6 +254,74 @@
       });
 
       $(".datatables_bulk_actions").prepend(request_download_button);
+
+
+      $('#browse_models').dataTable( {
+        "columns": [
+            { "data": "manage" },
+            { "data": "model_guid" },
+            { "data": "date_of_creation" },
+            { "data": "model_file_type" },
+            { "data": "derived_from" },
+            { "data": "creation_method" },
+            { "data": "last_modified" }
+          ],
+        "dom": 'lfip<"datatables_bulk_actions">tip',
+        "pagingType": "simple_numbers",
+        "stateSave": true,
+        "order": [[6,"desc"]],
+        // Show processing throbber.
+        "processing": true,
+        "serverMethod": "POST",
+        // All data management will be done on the server side.
+        "serverSide": true,
+        // Path to the file that is going to handle the queries.
+        "ajax": {
+          "url": "/admin/projects/model/datatables_browse",
+          "data": {
+            "parent_id": item_repository_id,
+            "parent_type": 'item'
+          }
+        },
+        // Method type.
+        "serverMethod": "POST",
+        // Values in the length dropdown.
+        "lengthMenu":[10,50,100,500],
+        // Set some widths.
+        "aoColumnDefs":[
+          {"sWidth":"106px","aTargets":[0]},
+          {"bSortable":false,"aTargets":[0]},
+        ],
+        "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+          
+          // This table row.
+          var thisTableRow = $(nRow);
+
+          // Create the delete record checkboxes.
+          thisTableRow.find('td:eq(0)')
+            .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+            .addClass("manage_column");
+
+          // Send to details page when clicked.
+          thisTableRow.find('td').click(function() {
+            // This table cell.
+            var thisTableCell = $(this);
+            // Don't do anything if the table cell has the 'manage_column' CSS class.
+            if(thisTableCell.hasClass('manage_column')) return;
+            // Send to the details page.
+            var this_id = thisTableCell.closest("tr").attr('id');
+            window.location.href = '/admin/projects/model/manage' + '/' + item_repository_id + '/' + this_id;
+          });
+
+        }
+      });
+
+      var models_add_button = $('<a />')
+        .addClass('btn btn-default add-record-button')
+        .attr('href', '/admin/projects/model/manage/' + item_repository_id + '?from=item')
+        .html('<span class="glyphicon glyphicon-plus"></span> Add a Model');
+
+      $('#browse_models_wrapper').find('.datatables_bulk_actions').append(models_add_button);
 
     });
   </script>

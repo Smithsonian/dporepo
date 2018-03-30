@@ -19,6 +19,8 @@ services:
             $edan_auth_token: '%edan_auth_token%'
             $edan_version: '%edan_version%'
             $edan_search_endpoint: '%edan_search_endpoint%'
+            $file_upload_path: '%file_upload_path%'
+            $file_processing_path: '%file_processing_path%'
 
     # makes classes in src/AppBundle available to be used as services
     # this creates a service per class whose id is the fully-qualified class name

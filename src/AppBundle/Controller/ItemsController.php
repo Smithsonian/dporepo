@@ -9,6 +9,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 use AppBundle\Form\Item;
@@ -23,15 +25,29 @@ class ItemsController extends Controller
      * @var object $u
      */
     public $u;
+    private $repo_storage_controller;
+    /**
+     * @var string
+     */
+    private $file_upload_path;
+    /**
+     * @var string
+     */
+    private $file_processing_path;
 
     /**
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u)
+    public function __construct(AppUtilities $u, $file_upload_path, $file_processing_path)
     {
-        // Usage: $this->u->dumper($variable);
-        $this->u = $u;
+      // Usage: $this->u->dumper($variable);
+      $this->u = $u;
+      $this->repo_storage_controller = new RepoStorageHybridController();
+
+      // Establish paths.
+      $this->file_upload_path = $file_upload_path;
+      $this->file_processing_path = $file_processing_path;
     }
 
     /**
@@ -39,17 +55,19 @@ class ItemsController extends Controller
      */
     public function browse_items(Connection $conn, Request $request, ProjectsController $projects, SubjectsController $subjects)
     {
+        $this->repo_storage_controller->setContainer($this->container);
+
         // Database tables are only created if not present.
-        $create_db_table = $this->create_items_table($conn);
+        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'item'));
 
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $subject_data = $subjects->get_subject((int)$subject_repository_id, $conn);
+        $subject_data = $subjects->get_subject($this->container, (int)$subject_repository_id);
         if(!$subject_data) throw $this->createNotFoundException('The record does not exist');
-        
-        $project_data = $projects->get_project((int)$project_repository_id, $conn);
+
+        $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$project_repository_id));
 
         return $this->render('items/browse_items.html.twig', array(
             'page_title' => 'Subject: ' .  $subject_data['subject_name'],
@@ -66,34 +84,28 @@ class ItemsController extends Controller
      *
      * Browse items
      *
-     * Run a query to retreive all items in the database.
+     * Run a query to retrieve all items in the database.
      *
-     * @param   object  Connection  Database connection object
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_items(Connection $conn, Request $request)
+    public function datatables_browse_items(Request $request)
     {
-        $sort = '';
-        $search_sql = '';
-        $pdo_params = array();
-        $data = array();
-
         $req = $request->request->all();
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
 
         // First, perform a 3D model generation status check, and update statuses in the database accordingly.
-        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS items.item_guid
-            FROM items
-            LEFT JOIN status_types ON items.status_types_id = status_types.status_types_id
-            WHERE subject_repository_id = " . (int)$subject_repository_id);
-        $statement->execute();
-        $results = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        $this->repo_storage_controller->setContainer($this->container);
+        $results = $this->repo_storage_controller->execute('getItemGuidsBySubjectId', array(
+            'subject_repository_id' => (int)$subject_repository_id,
+          )
+        );
 
         if(!empty($results)) {
             foreach ($results as $key => $value) {
                 // Set 3D model generation statuses.
-                $this->getDirectoryStatuses($value['item_guid'], $conn);
+                $this->getDirectoryStatuses($this->container, $value['item_guid']);
             }
         }
 
@@ -102,87 +114,51 @@ class ItemsController extends Controller
         $sort_order = $req['order'][0]['dir'];
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
-        $limit_sql = " LIMIT {$start_record}, {$stop_record} ";
 
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $sort = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $sort = " ORDER BY items.last_modified DESC ";
-        }
-
+        $query_params = array(
+          'record_type' => 'item',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+          'subject_repository_id' => $subject_repository_id,
+        );
         if ($search) {
-            $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
-            $pdo_params[] = '%'.$search.'%';
-            $search_sql = "
-            AND (
-                OR items.item_description LIKE ? 
-                OR items.local_item_id LIKE ?
-                OR items.date_created LIKE ?
-                OR items.last_modified LIKE ?
-                OR items.status_label LIKE ?
-            ) ";
+          $query_params['search_value'] = $search;
         }
 
-        $statement = $conn->prepare("SELECT SQL_CALC_FOUND_ROWS
-            items.item_repository_id AS manage
-            ,items.subject_repository_id
-            ,items.local_item_id
-            ,CONCAT(SUBSTRING(items.item_description,1, 50), '...') as item_description
-            ,items.status_types_id
-            ,items.date_created
-            ,items.last_modified
-            ,items.item_repository_id AS DT_RowId
-            ,status_types.label AS status_label
-            ,count(distinct capture_datasets.parent_item_repository_id) AS datasets_count
-            FROM items
-            LEFT JOIN status_types ON items.status_types_id = status_types.status_types_id
-            LEFT JOIN capture_datasets ON capture_datasets.parent_item_repository_id = items.item_repository_id
-            WHERE items.active = 1
-            AND subject_repository_id = " . (int)$subject_repository_id . "
-            {$search_sql}
-            GROUP BY items.subject_repository_id, items.local_item_id, item_description, items.status_types_id, items.date_created, items.last_modified, items.item_repository_id
-            {$sort}
-            {$limit_sql}");
-        $statement->execute($pdo_params);
-        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+        $data = $this->repo_storage_controller->execute('getDatatableItem', $query_params);
 
         // Set status for value of zero (0).
         // TODO: create an entry in the status_types table for this.
         if(!empty($data['aaData'])) {
             foreach ($data['aaData'] as $key => $value) {
-                switch($value['status_types_id']) {
-                    case '0': // Not Found in JobBox
-                        $data['aaData'][$key]['status_label'] = '<span class="label label-danger">Not Found in JobBox</span>';
-                        break;
-                    case '1': // Uploaded and Properly Labeled
-                        $data['aaData'][$key]['status_label'] = '<span class="label label-default">' . $value['status_label'] . '</span>';
-                        break;
-                    case '2': // Transferred to Processing Directory and In Queue
-                        $data['aaData'][$key]['status_label'] = '<span class="label label-warning">' . $value['status_label'] . '</span>';
-                        break;
-                    case '3': // Clipped via ImageMagick
-                    case '4': // Master Model Processed via RealityCapture
-                        $data['aaData'][$key]['status_label'] = '<span class="label label-info">' . $value['status_label'] . '</span>';
-                        break;
-                    case '5': // Web Ready Model Processed via InstantUV
-                        $data['aaData'][$key]['status_label'] = '<span class="label label-success">' . $value['status_label'] . '</span>';
-                        break;
-                    case '6': // Target directory exists in JobBox
-                        $data['aaData'][$key]['status_label'] = '<span class="label label-default">' . $value['status_label'] . '</span>';
-                        break;
+              if(array_key_exists('status_type_id', $value)) {
+                switch($value['status_type_id']) {
+                  case '0': // Not Found in JobBox
+                    $data['aaData'][$key]['status_label'] = '<span class="label label-danger">Not Found in JobBox</span>';
+                    break;
+                  case '1': // Uploaded and Properly Labeled
+                    $data['aaData'][$key]['status_label'] = '<span class="label label-default">' . $value['status_label'] . '</span>';
+                    break;
+                  case '2': // Transferred to Processing Directory and In Queue
+                    $data['aaData'][$key]['status_label'] = '<span class="label label-warning">' . $value['status_label'] . '</span>';
+                    break;
+                  case '3': // Clipped via ImageMagick
+                  case '4': // Master Model Processed via RealityCapture
+                    $data['aaData'][$key]['status_label'] = '<span class="label label-info">' . $value['status_label'] . '</span>';
+                    break;
+                  case '5': // Web Ready Model Processed via InstantUV
+                    $data['aaData'][$key]['status_label'] = '<span class="label label-success">' . $value['status_label'] . '</span>';
+                    break;
+                  case '6': // Target directory exists in JobBox
+                    $data['aaData'][$key]['status_label'] = '<span class="label label-default">' . $value['status_label'] . '</span>';
+                    break;
                 }
+              }
             }
         }
 
-        $statement = $conn->prepare("SELECT FOUND_ROWS()");
-        $statement->execute();
-        $count = $statement->fetch();
-        $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-        $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
-        
         return $this->json($data);
     }
 
@@ -199,15 +175,24 @@ class ItemsController extends Controller
     {
         $item = new Items();
         $post = $request->request->all();
-        $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
+        $id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
         $item->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $item->subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
 
+        $this->repo_storage_controller->setContainer($this->container);
+
         // Retrieve data from the database.
-        $item = (!empty($item_repository_id) && empty($post)) ? $item->getItem((int)$item_repository_id, $conn) : $item;
+        if (!empty($id) && empty($post)) {
+          $item_array = $this->repo_storage_controller->execute('getItem', array(
+            'item_repository_id' => $id,
+          ));
+          if(is_array($item_array)) {
+            $item = (object)$item_array;
+          }
+        }
 
         // Get data from lookup tables.
-        $item->item_type_lookup_options = $this->get_item_types($conn);
+        $item->item_type_lookup_options = $this->get_item_types($this->container);
 
         // Create the form
         $form = $this->createForm(Item::class, $item);
@@ -217,16 +202,22 @@ class ItemsController extends Controller
         // If form is submitted and passes validation, insert/update the database record.
         if ($form->isSubmitted() && $form->isValid()) {
 
-            $subject = $form->getData();
-            $item_repository_id = $this->insert_update_item($item, $item->subject_repository_id, $item_repository_id, $conn);
+            $item = $form->getData();
+            $id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'item',
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+              'values' => (array)$item
+            ));
+            //$item_repository_id = $this->insert_update_item($item, $item->subject_repository_id, $item_repository_id, $conn);
 
             $this->addFlash('message', 'Item successfully updated.');
-            return $this->redirect('/admin/projects/datasets/' . $subject->project_repository_id . '/' . $item->subject_repository_id . '/' . $item_repository_id);
+            return $this->redirect('/admin/projects/datasets/' . $item->project_repository_id . '/' . $item->subject_repository_id . '/' . $id);
 
         }
 
         return $this->render('items/item_form.html.twig', array(
-            'page_title' => ((int)$item_repository_id && isset($item->local_item_id)) ? 'Item: ' . $item->local_item_id : 'Add Item',
+            'page_title' => ((int)$id && isset($item->local_item_id)) ? 'Item: ' . $item->local_item_id : 'Add Item',
             'item_data' => $item,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
@@ -237,28 +228,19 @@ class ItemsController extends Controller
     /**
      * Get Item
      *
-     * Run a query to retrieve one subject from the database.
+     * Run a query to retrieve one item from the database.
      *
      * @param   int $item_id   The subject ID
-     * @param   object  $conn  Database connection object
      * @return  array|bool     The query result
      */
-    public function get_item($item_id, $conn)
+    public function get_item($container, $item_id)
     {
-        $statement = $conn->prepare("SELECT
-            items.item_guid
-            ,items.local_item_id
-            ,items.item_description
-            ,items.item_type
-            ,items.status_types_id
-            ,items.last_modified
-            ,items.item_repository_id
-            FROM items
-            WHERE items.active = 1
-            AND item_repository_id = :item_repository_id");
-        $statement->bindValue(":item_repository_id", $item_id, PDO::PARAM_INT);
-        $statement->execute();
-        return $statement->fetch(PDO::FETCH_ASSOC);
+        $this->repo_storage_controller->setContainer($container);
+        $data = $this->repo_storage_controller->execute('getItem', array(
+            'item_repository_id' => $item_id,
+          )
+        );
+        return $data;
     }
 
     /**
@@ -266,37 +248,20 @@ class ItemsController extends Controller
      *
      * Run a query to retrieve all items from the database.
      *
-     * @param   object  $conn  Database connection object
+     * @param   $container  Symfony container, passed from caller
      * @param   int $subject_repository_id  The subject ID
      * @return  array|bool     The query result
      */
-    public function get_items($conn, $subject_repository_id = false)
+    public function get_items($container, $subject_repository_id = false)
     {
-        $statement = $conn->prepare("
-            SELECT
-                projects.project_repository_id,
-                subjects.subject_repository_id,
-                items.item_repository_id,
-                items.item_guid,
-                items.subject_repository_id,
-                items.local_item_id,
-                items.item_description,
-                items.date_created,
-                items.created_by_user_account_id,
-                items.last_modified,
-                items.last_modified_user_account_id,
-                items.active,
-                items.status_types_id
-            FROM items
-            LEFT JOIN subjects ON subjects.subject_repository_id = items.subject_repository_id
-            LEFT JOIN projects ON projects.project_repository_id = subjects.project_repository_id
-            WHERE items.active = 1
-            AND items.subject_repository_id = :subject_repository_id
-            ORDER BY items.local_item_id ASC
-        ");
-        $statement->bindValue(":subject_repository_id", (int)$subject_repository_id, PDO::PARAM_INT);
-        $statement->execute();
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        $this->repo_storage_controller->setContainer($container);
+        $items_data = $this->repo_storage_controller->execute('getItemsBySubjectId',
+          array(
+            'subject_repository_id' => $subject_repository_id,
+          )
+        );
+        return $items_data;
     }
 
     /**
@@ -304,14 +269,14 @@ class ItemsController extends Controller
      *
      * @Route("/admin/projects/get_items/{subject_repository_id}", name="get_items_tree_browser", methods="GET")
      */
-    public function get_items_tree_browser(Connection $conn, Request $request, DatasetsController $datasets)
+    public function get_items_tree_browser(Request $request, DatasetsController $datasets)
     {      
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
-        $items = $this->get_items($conn, $subject_repository_id);
+        $items = $this->get_items($this->container, $subject_repository_id);
 
         foreach ($items as $key => $value) {
             // Check for child dataset records so the 'children' key can be set accordingly.
-            $dataset_data = $datasets->get_datasets($conn, (int)$value['item_repository_id']);
+            $dataset_data = $datasets->get_datasets($this->container, (int)$value['item_repository_id']);
             $data[$key] = array(
                 'id' => 'itemId-' . $value['item_repository_id'],
                 'children' => count($dataset_data) ? true : false,
@@ -328,79 +293,25 @@ class ItemsController extends Controller
      * Get item_types
      * @return  array|bool  The query result
      */
-    public function get_item_types($conn)
+    public function get_item_types($container)
     {
         $data = array();
+        $this->repo_storage_controller->setContainer($container);
+        $temp = $this->repo_storage_controller->execute('getRecords', array(
+            'base_table' => 'item_type',
+            'fields' => array(),
+            'sort_fields' => array(
+              0 => array('field_name' => 'label')
+            ),
+          )
+        );
 
-        $statement = $conn->prepare("SELECT * FROM item_types WHERE item_types.active = 1 ORDER BY label ASC");
-        $statement->execute();
-
-        foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $key => $value) {
+        foreach ($temp as $key => $value) {
             $label = $this->u->removeUnderscoresTitleCase($value['label']);
-            $data[$label] = $value['item_types_id'];
+            $data[$label] = $value['item_type_repository_id'];
         }
 
         return $data;
-    }
-
-    /**
-     * Insert/Update item
-     *
-     * Run queries to insert and update items in the database.
-     *
-     * @param   array   $data         The data array
-     * @param   int     $subject_repository_id  The subject ID
-     * @param   int     $item_repository_id     The item ID
-     * @param   object  $conn         Database connection object
-     * @return  int     The item ID
-     */
-    public function insert_update_item($data, $subject_repository_id = false, $item_repository_id = FALSE, $conn)
-    {
-
-        // Update
-        if($item_repository_id) {
-            $statement = $conn->prepare("
-                UPDATE items
-                SET local_item_id = :local_item_id
-                ,item_description = :item_description
-                ,item_type = :item_type
-                ,last_modified_user_account_id = :last_modified_user_account_id
-                WHERE item_repository_id = :item_repository_id
-            ");
-            $statement->bindValue(":local_item_id", $data->local_item_id, PDO::PARAM_STR);
-            $statement->bindValue(":item_description", $data->item_description, PDO::PARAM_STR);
-            $statement->bindValue(":item_type", $data->item_type, PDO::PARAM_STR);
-            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->bindValue(":item_repository_id", $item_repository_id, PDO::PARAM_INT);
-            $statement->execute();
-
-            return $item_repository_id;
-        }
-
-        // Insert
-        if(!$item_repository_id) {
-
-            $statement = $conn->prepare("INSERT INTO items
-                ( subject_repository_id, item_guid, local_item_id, item_description, item_type, 
-                date_created, created_by_user_account_id, last_modified_user_account_id )
-                VALUES (:subject_repository_id, (select md5(UUID())), :local_item_id, :item_description, :item_type, NOW(), 
-                :user_account_id, :user_account_id )");
-            $statement->bindValue(":subject_repository_id", $subject_repository_id, PDO::PARAM_STR);
-            $statement->bindValue(":local_item_id", $data->local_item_id, PDO::PARAM_STR);
-            $statement->bindValue(":item_description", $data->item_description, PDO::PARAM_STR);
-            $statement->bindValue(":item_type", $data->item_type, PDO::PARAM_STR);
-            $statement->bindValue(":user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->execute();
-            $last_inserted_id = $conn->lastInsertId();
-
-            if(!$last_inserted_id) {
-                die('INSERT INTO `items` failed.');
-            }
-
-            return $last_inserted_id;
-
-        }
-
     }
 
     /**
@@ -410,11 +321,10 @@ class ItemsController extends Controller
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
-     * @param   object  $conn     Database connection object
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple_items(Connection $conn, Request $request)
+    public function delete_multiple_items(Request $request)
     {
         $ids = $request->query->get('ids');
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
@@ -424,24 +334,13 @@ class ItemsController extends Controller
 
           $ids_array = explode(',', $ids);
 
+          $this->repo_storage_controller->setContainer($this->container);
+
           foreach ($ids_array as $key => $id) {
-
-            $statement = $conn->prepare("
-                UPDATE items
-                LEFT JOIN capture_datasets ON capture_datasets.parent_item_repository_id = items.item_repository_id
-                LEFT JOIN capture_data_elements ON capture_data_elements.capture_dataset_repository_id = capture_datasets.capture_dataset_repository_id
-                SET items.active = 0,
-                    items.last_modified_user_account_id = :last_modified_user_account_id,
-                    capture_datasets.active = 0,
-                    capture_datasets.last_modified_user_account_id = :last_modified_user_account_id,
-                    capture_data_elements.active = 0,
-                    capture_data_elements.last_modified_user_account_id = :last_modified_user_account_id
-                WHERE items.item_repository_id = :id
-            ");
-            $statement->bindValue(":id", $id, PDO::PARAM_INT);
-            $statement->bindValue(":last_modified_user_account_id", $this->getUser()->getId(), PDO::PARAM_INT);
-            $statement->execute();
-
+            $ret = $this->repo_storage_controller->execute('markItemInactive', array(
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+            ));
           }
 
           $this->addFlash('message', 'Records successfully removed.');
@@ -451,24 +350,6 @@ class ItemsController extends Controller
         }
 
         return $this->redirectToRoute('items_browse', array('project_repository_id' => $project_repository_id, 'subject_repository_id' => $subject_repository_id));
-    }
-
-    /**
-     * Delete Item
-     *
-     * Run a query to delete a item from the database.
-     *
-     * @param   int     $item_repository_id  The item ID
-     * @param   object  $conn      Database connection object
-     * @return  void
-     */
-    public function delete_item($item_repository_id, $conn)
-    {
-        $statement = $conn->prepare("
-            DELETE FROM items
-            WHERE item_repository_id = :item_repository_id");
-        $statement->bindValue(":item_repository_id", $item_repository_id, PDO::PARAM_INT);
-        $statement->execute();
     }
 
     /**
@@ -490,28 +371,32 @@ class ItemsController extends Controller
      * Get Directory Statuses
      *
      * @param  bool    $itemguid  The item guid
-     * @param  object  $conn      Database connection object
      * @return array   Array of directory statuses
      */
-    public function getDirectoryStatuses($itemguid = '', $conn) {
+    public function getDirectoryStatuses($container, $itemguid = '') {
 
         $result = $data = array();
 
         if(!empty($itemguid)) {
 
             // First, verify that the item_guid is found within the database.
-            $statement = $conn->prepare("SELECT item_guid FROM items WHERE item_guid = :itemguid");
-            $statement->bindValue(":itemguid", $itemguid, PDO::PARAM_STR);
-            $statement->execute();
-            $result = $statement->fetch(PDO::FETCH_ASSOC);
-  
+            $this->repo_storage_controller->setContainer($container);
+            $result = $this->repo_storage_controller->execute('getRecords', array(
+                'base_table' => 'item',
+                'search_params' => array(
+                  0 => array('field_names' => array('item_guid'), 'search_values' => array($itemguid), 'comparison' => '='),
+                ),
+                'search_type' => 'AND'
+              )
+            );
+
             // Scan the JobBox directory to see if a directory with the item_guid is present.
             if(!empty($result)) {
                 // Get the target directory names.
                 $directoryNames = $this->directoryNames();
                 // Loop through each directory, and 
                 foreach ($directoryNames as $key => $value) {
-                  $data[$value] = $this->processDirectoryStatuses($value, $itemguid, $conn);
+                  $data[$value] = $this->processDirectoryStatuses($value, $itemguid);
                 }
   
             }
@@ -526,10 +411,9 @@ class ItemsController extends Controller
      *
      * @param  bool  $directoryScanType  The directory scan type
      * @param  bool  $itemguid           The item guid
-     * @param  object  $conn             Database connection object
      * @return json  The JSON encoded data
      */
-    public function processDirectoryStatuses($directoryScanType = '', $itemguid = '', $conn) {
+    public function processDirectoryStatuses($directoryScanType = '', $itemguid = '') {
 
       // Instantiating Items for the path constants.
       $item = new Items();
@@ -544,35 +428,35 @@ class ItemsController extends Controller
         switch($directoryScanType) {
             case 'jobbox':
 
-                $jobBoxDirectoryExists = is_dir(JOBBOX_PATH . '/' . $itemguid);
-                $directoryContents = is_dir(JOBBOX_PATH . '/' . $itemguid) ? scandir(JOBBOX_PATH . '/' . $itemguid) : array();
+                $jobBoxDirectoryExists = is_dir($this->file_upload_path . '/' . $itemguid);
+                $directoryContents = is_dir($this->file_upload_path . '/' . $itemguid) ? scandir($this->file_upload_path . '/' . $itemguid) : array();
 
                 break;
             case 'jobboxprocess':
 
-                $dirContents = is_dir(JOBBOXPROCESS_PATH . '/' . $itemguid) ? scandir(JOBBOXPROCESS_PATH . '/' . $itemguid) : array();
+                $dirContents = is_dir($this->file_processing_path . '/' . $itemguid) ? scandir($this->file_processing_path . '/' . $itemguid) : array();
 
-                if( !empty($dirContents) && in_array('_ready.txt', scandir(JOBBOXPROCESS_PATH . '/' . $itemguid)) ) {
-                    $directoryContents = scandir(JOBBOXPROCESS_PATH . '/' . $itemguid);
+                if( !empty($dirContents) && in_array('_ready.txt', scandir($this->file_processing_path . '/' . $itemguid)) ) {
+                    $directoryContents = scandir($this->file_processing_path . '/' . $itemguid);
                 }
 
                 break;
             case 'clipped':
-                $dirContents = is_dir(JOBBOXPROCESS_PATH . '/' . $itemguid) ? scandir(JOBBOXPROCESS_PATH . '/' . $itemguid) : array();
-                if( !empty($dirContents) && in_array('_finish_im.txt', scandir(JOBBOXPROCESS_PATH . '/' . $itemguid)) && in_array('clipped', $dirContents) ) {
-                    $directoryContents = scandir(JOBBOXPROCESS_PATH . '/' . $itemguid . '/clipped');
+                $dirContents = is_dir($this->file_processing_path . '/' . $itemguid) ? scandir($this->file_processing_path . '/' . $itemguid) : array();
+                if( !empty($dirContents) && in_array('_finish_im.txt', scandir($this->file_processing_path . '/' . $itemguid)) && in_array('clipped', $dirContents) ) {
+                    $directoryContents = scandir($this->file_processing_path . '/' . $itemguid . '/clipped');
                 }
                 break;
             case 'realitycapture':
-                $dirContents = is_dir(JOBBOXPROCESS_PATH . '/' . $itemguid . '/processed') ? scandir(JOBBOXPROCESS_PATH . '/' . $itemguid . '/processed') : array();
-                if( !empty($dirContents) && in_array('_finish_rc.txt', scandir(JOBBOXPROCESS_PATH . '/' . $itemguid)) && in_array('mesh.obj', $dirContents) ) {
-                    $directoryContents = scandir(JOBBOXPROCESS_PATH . '/' . $itemguid . '/processed');
+                $dirContents = is_dir($this->file_processing_path . '/' . $itemguid . '/processed') ? scandir($this->file_processing_path . '/' . $itemguid . '/processed') : array();
+                if( !empty($dirContents) && in_array('_finish_rc.txt', scandir($this->file_processing_path . '/' . $itemguid)) && in_array('mesh.obj', $dirContents) ) {
+                    $directoryContents = scandir($this->file_processing_path . '/' . $itemguid . '/processed');
                 }
                 break;
             case 'instantuv':
-                $dirContents = is_dir(JOBBOXPROCESS_PATH . '/' . $itemguid . '/processed') ? scandir(JOBBOXPROCESS_PATH . '/' . $itemguid . '/processed') : array();
-                if( !empty($dirContents) && in_array('_finish_iuv.txt', scandir(JOBBOXPROCESS_PATH . '/' . $itemguid)) && in_array('webready', $dirContents) ) {
-                    $directoryContents = scandir(JOBBOXPROCESS_PATH . '/' . $itemguid . '/processed/webready');
+                $dirContents = is_dir($this->file_processing_path . '/' . $itemguid . '/processed') ? scandir($this->file_processing_path . '/' . $itemguid . '/processed') : array();
+                if( !empty($dirContents) && in_array('_finish_iuv.txt', scandir($this->file_processing_path . '/' . $itemguid)) && in_array('webready', $dirContents) ) {
+                    $directoryContents = scandir($this->file_processing_path . '/' . $itemguid . '/processed/webready');
                 }
             break;
         }
@@ -582,9 +466,9 @@ class ItemsController extends Controller
             foreach ($directoryContents as $key => $value) {
 
                 // Set the status if the direcory exists within JobBox.
-                if($jobBoxDirectoryExists) $this->updateStatus($itemguid, 6, $conn);
+                if($jobBoxDirectoryExists) $this->updateStatus($this->container, $itemguid, 6);
                 // If the directory doesn't exist, set the status to 0.
-                if(!$jobBoxDirectoryExists) $this->updateStatus($itemguid, 0, $conn);
+                if(!$jobBoxDirectoryExists) $this->updateStatus($this->container, $itemguid, 0);
 
                 if(($value !== '.') && ($value !== '..') && ($value !== '.DS_Store')) {
                     switch($directoryScanType) {
@@ -593,28 +477,28 @@ class ItemsController extends Controller
                             if($value === '_ready.txt') {
                                 $data['status'] = 1;
                                 $data['directory'] = $value;
-                                $this->updateStatus($itemguid, 1, $conn);
+                                $this->updateStatus($this->container, $itemguid, 1);
                             }
                             break;
                         case 'jobboxprocess':
                             $data['status'] = 1;
                             $data['filelist'][] = $value;
-                            $this->updateStatus($itemguid, 2, $conn);
+                            $this->updateStatus($this->container, $itemguid, 2);
                             break;
                         case 'clipped':
                             $data['status'] = 1;
                             $data['filelist'][] = $value;
-                            $this->updateStatus($itemguid, 3, $conn);
+                            $this->updateStatus($this->container, $itemguid, 3);
                             break;
                         case 'realitycapture':
                             $data['status'] = 1;
                             $data['filelist'][] = $value;
-                            $this->updateStatus($itemguid, 4, $conn);
+                            $this->updateStatus($this->container, $itemguid, 4);
                             break;
                         case 'instantuv':
                             $data['status'] = 1;
                             $data['filelist'][] = $value;
-                            $this->updateStatus($itemguid, 5, $conn);
+                            $this->updateStatus($this->container, $itemguid, 5);
                             break;
                     }
                 }
@@ -634,19 +518,15 @@ class ItemsController extends Controller
      * @param  object  $conn    Database connection object
      * @return bool
      */
-    public function updateStatus($itemguid = FALSE, $statusid = 0, $conn) {
+    public function updateStatus($container, $itemguid = FALSE, $statusid = 0) {
 
         $updated = FALSE;
-
         if(!empty($itemguid)) {
-            $statement = $conn->prepare("
-                UPDATE items
-                SET status_types_id = :statusid
-                WHERE item_guid = :itemguid
-            ");
-            $statement->bindValue(":itemguid", $itemguid, PDO::PARAM_STR);
-            $statement->bindValue(":statusid", $statusid, PDO::PARAM_INT);
-            $statement->execute();
+            $this->repo_storage_controller->setContainer($container);
+            $ret = $this->repo_storage_controller->execute('markCaptureDatasetInactive', array(
+              'item_guid' => $itemguid,
+              'status_type_id' => $statusid,
+            ));
             $updated = TRUE;
         }
 
@@ -672,13 +552,13 @@ class ItemsController extends Controller
  
         if($itemguid && !empty($itemguid)) {
 
-            $directoryContents = is_dir(JOBBOX_PATH) ? scandir(JOBBOX_PATH) : array();
+            $directoryContents = is_dir($this->file_upload_path) ? scandir($this->file_upload_path) : array();
 
             if(!in_array($itemguid, $directoryContents)) {
                 // Create the directory.
-                mkdir(JOBBOX_PATH . '/' . $itemguid, 0775);
+                mkdir($this->file_upload_path . '/' . $itemguid, 0775);
                 // Check to see if the directory was created.
-                if(is_dir(JOBBOX_PATH . '/' . $itemguid)) {
+                if(is_dir($this->file_upload_path . '/' . $itemguid)) {
                     $message = 'The directory has been created (' . $itemguid . ').';
                 }
                 
@@ -699,41 +579,4 @@ class ItemsController extends Controller
         }
     }
 
-    /**
-     * Create Items Table
-     *
-     * @return  void
-     */
-    public function create_items_table($conn)
-    {
-        $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `items` (
-          `item_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-          `subject_repository_id` int(11) NOT NULL,
-          `local_item_id` varchar(255) DEFAULT '',
-          `item_guid` varchar(255) DEFAULT '',
-          `item_description` mediumtext,
-          `item_type` varchar(255) DEFAULT NULL,
-          `date_created` datetime NOT NULL,
-          `created_by_user_account_id` int(11) NOT NULL,
-          `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          `last_modified_user_account_id` int(11) NOT NULL,
-          `active` tinyint(1) NOT NULL DEFAULT '1',
-          `status_types_id` int(11) NOT NULL DEFAULT '0',
-          PRIMARY KEY (`item_repository_id`),
-          KEY `created_by_user_account_id` (`created_by_user_account_id`),
-          KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
-          KEY `item_guid` (`item_guid`,`subject_repository_id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8 COMMENT='This table stores item metadata'");
-
-        $statement->execute();
-        $error = $conn->errorInfo();
-
-        if ($error[0] !== '00000') {
-            var_dump($conn->errorInfo());
-            die('CREATE TABLE `items` failed.');
-        } else {
-            return TRUE;
-        }
-
-    }
 }

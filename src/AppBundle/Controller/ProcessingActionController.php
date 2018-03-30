@@ -8,6 +8,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 use AppBundle\Form\ProcessingActionForm;
@@ -22,6 +24,7 @@ class ProcessingActionController extends Controller
      * @var object $u
      */
     public $u;
+    private $repo_storage_controller;
 
     /**
      * Constructor
@@ -31,23 +34,17 @@ class ProcessingActionController extends Controller
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
+        $this->repo_storage_controller = new RepoStorageHybridController();
     }
 
     /**
      * @Route("/admin/projects/processing_action/datatables_browse", name="processing_action_browse_datatables", methods="POST")
      *
-     * @param Connection $conn
      * @param Request $request
      * @return JsonResponse The query result in JSON
      */
-    public function datatablesBrowse(Connection $conn, Request $request)
+    public function datatablesBrowse(Request $request)
     {
-        $data = new ProcessingAction();
-
-        $params = array();
-        $params['pdo_params'] = array();
-        $params['search_sql'] = $params['sort'] = '';
-
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
@@ -55,34 +52,23 @@ class ProcessingActionController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
-        $params['limit_sql'] = " LIMIT {$start_record}, {$stop_record} ";
-
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $params['sort'] = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $params['sort'] = " ORDER BY processing_action.last_modified DESC ";
-        }
-
+        $query_params = array(
+          'record_type' => 'processing_action',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+          'parent_id' => $req['parent_id'],
+          'parent_id_field' => 'parent_model_repository_id',
+        );
         if ($search) {
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['search_sql'] = "
-                AND (
-                  processing_action.preceding_processing_action_repository_id LIKE ?
-                  processing_action.date_of_action LIKE ?
-                  processing_action.action_method LIKE ?
-                  processing_action.software_used LIKE ?
-                  processing_action.action_description LIKE ?
-                ) ";
+          $query_params['search_value'] = $search;
         }
 
-        // Run the query
-        $results = $data->datatablesQuery($params);
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
-        return $this->json($results);
+        return $this->json($data);
     }
 
     /**
@@ -105,25 +91,21 @@ class ProcessingActionController extends Controller
         if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
-        $data = (!empty($id) && empty($post)) ? $data->getOne((int)$id, $conn) : $data;
+        $this->repo_storage_controller->setContainer($this->container);
+        if(!empty($id) && empty($post)) {
+          $rec = $this->repo_storage_controller->execute('getRecordById', array(
+            'record_type' => 'processing_action',
+            'record_id' => $id));
+          if(isset($rec)) {
+            $data = (object)$rec;
+          }
+        }
 
-        // $this->u->dumper($data);
-
-
-
-        if(!isset($data->action_method)) throw $this->createNotFoundException('The record does not exist');
-
-        // $this->u->dumper($data);
-
-
+        if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
-        $data->target_model_repository_id = $parent_id;
+        $data->parent_model_repository_id = $parent_id;
 
-        // $this->u->dumper($data);
-
-        
-        
         // Create the form
         $form = $this->createForm(ProcessingActionForm::class, $data);
         
@@ -134,10 +116,15 @@ class ProcessingActionController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $data = $form->getData();
-            $id = $data->insertUpdate($data, $id, $this->getUser()->getId(), $conn);
+            $id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'processing_action',
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+              'values' => (array)$data
+            ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/processing_action/manage/' . $data->target_model_repository_id . '/' . $id);
+            return $this->redirect('/admin/projects/processing_action/manage/' . $data->parent_model_repository_id . '/' . $id);
         }
 
         return $this->render('datasets/processing_action_form.html.twig', array(
@@ -151,23 +138,26 @@ class ProcessingActionController extends Controller
     /**
      * @Route("/admin/projects/processing_action/delete", name="processing_action_remove_records", methods={"GET"})
      *
-     * @param Connection $conn
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\RedirectResponse|Response Redirect or render
      */
-    public function deleteMultiple(Connection $conn, Request $request)
+    public function deleteMultiple(Request $request)
     {
-        $data = new ProcessingAction();
-
         if(!empty($request->query->get('ids'))) {
 
             // Create the array of ids.
             $ids_array = explode(',', $request->query->get('ids'));
 
+            $this->repo_storage_controller->setContainer($this->container);
+
             // Loop thorough the ids.
             foreach ($ids_array as $key => $id) {
-                // Run the query against a single record.
-                $data->deleteMultiple($id);
+              // Run the query against a single record.
+              $ret = $this->repo_storage_controller->execute('markRecordInactive', array(
+                'record_type' => 'processing_action',
+                'record_id' => $id,
+                'user_id' => $this->getUser()->getId(),
+              ));
             }
 
             $this->addFlash('message', 'Records successfully removed.');

@@ -4,6 +4,9 @@
 
   <div class="row">
     <div class="col-sm-12 col-md-12">
+      <div class="alert alert-warning" role="alert">
+          TODO: Fix the back button - hardwire to go to the parent Capture Data Element - e.g. /admin/projects/capture_device/manage/31/2
+      </div>
       <div class="form-group">
         <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
       </div>

@@ -8,6 +8,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 use AppBundle\Form\CaptureDataFileForm;
@@ -23,6 +25,8 @@ class CaptureDataFileController extends Controller
      */
     public $u;
 
+    private $repo_storage_controller;
+
     /**
      * Constructor
      * @param object  $u  Utility functions object
@@ -31,22 +35,17 @@ class CaptureDataFileController extends Controller
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
+        $this->repo_storage_controller = new RepoStorageHybridController();
     }
 
     /**
      * @Route("/admin/projects/capture_data_files/datatables_browse", name="capture_data_files_browse_datatables", methods="POST")
      *
-     * @param Connection $conn
      * @param Request $request
      * @return JsonResponse The query result in JSON
      */
-    public function datatablesBrowse(Connection $conn, Request $request)
+    public function datatablesBrowse(Request $request)
     {
-        $data = new CaptureDataFile();
-
-        $params = array();
-        $params['pdo_params'] = array();
-        $params['search_sql'] = $params['sort'] = '';
 
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -55,30 +54,21 @@ class CaptureDataFileController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
-        $params['limit_sql'] = " LIMIT {$start_record}, {$stop_record} ";
-
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $params['sort'] = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $params['sort'] = " ORDER BY capture_data_file.last_modified DESC ";
-        }
-
+        $query_params = array(
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+          'parent_id' => $req['parent_id']
+        );
         if ($search) {
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['search_sql'] = "
-                AND (
-                  capture_data_file.capture_data_file_name LIKE ?
-                  capture_data_file.capture_data_file_type LIKE ?
-                  capture_data_file.is_compressed_multiple_files LIKE ?
-                ) ";
+          $query_params['search_value'] = $search;
         }
 
-        // Run the query
-        $results = $data->datatablesQuery($params);
+        $this->repo_storage_controller->setContainer($this->container);
+        $data = $this->repo_storage_controller->execute('getDatatableCaptureDataFile', $query_params);
 
-        return $this->json($results);
+        return $this->json($data);
     }
 
     /**
@@ -101,7 +91,15 @@ class CaptureDataFileController extends Controller
         if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
-        $data = (!empty($id) && empty($post)) ? $data->getOne((int)$id, $conn) : $data;
+        $this->repo_storage_controller->setContainer($this->container);
+        if(!empty($id) && empty($post)) {
+            $rec = $this->repo_storage_controller->execute('getRecordById', array(
+            'record_type' => 'capture_data_file',
+            'record_id' => $id));
+            if(isset($rec)) {
+              $data = (object)$rec;
+            }
+        }
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
@@ -117,7 +115,12 @@ class CaptureDataFileController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $data = $form->getData();
-            $id = $data->insertUpdate($data, $id, $this->getUser()->getId(), $conn);
+            $id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'capture_data_file',
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+              'values' => (array)$data
+            ));
 
             $this->addFlash('message', 'Record successfully updated.');
             return $this->redirect('/admin/projects/capture_data_files/manage/' . $data->parent_capture_data_element_repository_id . '/' . $id);
@@ -134,23 +137,26 @@ class CaptureDataFileController extends Controller
     /**
      * @Route("/admin/projects/capture_data_files/delete", name="capture_data_files_remove_records", methods={"GET"})
      *
-     * @param Connection $conn
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\RedirectResponse|Response Redirect or render
      */
-    public function deleteMultiple(Connection $conn, Request $request)
+    public function deleteMultiple(Request $request)
     {
-        $data = new CaptureDataFile();
-
         if(!empty($request->query->get('ids'))) {
 
             // Create the array of ids.
             $ids_array = explode(',', $request->query->get('ids'));
 
+            $this->repo_storage_controller->setContainer($this->container);
+
             // Loop thorough the ids.
             foreach ($ids_array as $key => $id) {
-                // Run the query against a single record.
-                $data->deleteMultiple($id);
+              // Run the query against a single record.
+              $ret = $this->repo_storage_controller->execute('markRecordInactive', array(
+                'record_type' => 'capture_data_file',
+                'record_id' => $id,
+                'user_id' => $this->getUser()->getId(),
+              ));
             }
 
             $this->addFlash('message', 'Records successfully removed.');
@@ -159,7 +165,8 @@ class CaptureDataFileController extends Controller
             $this->addFlash('message', 'Missing data. No records removed.');
         }
 
-        return $this->redirectToRoute('capture_data_files_browse');
+        $referer = $request->headers->get('referer');
+        return $this->redirect($referer);
     }
 
     /**

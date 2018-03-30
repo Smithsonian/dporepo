@@ -8,6 +8,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\HttpFoundation\Session\Session;
 use PDO;
 use GUMP;
@@ -22,6 +24,7 @@ class ProfileSettingsController extends Controller
      * @var object $u
      */
     public $u;
+    private $repo_storage_controller;
 
     /**
     * Constructor
@@ -31,6 +34,7 @@ class ProfileSettingsController extends Controller
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
+        $this->repo_storage_controller = new RepoStorageHybridController();
     }
 
     /**

@@ -8,6 +8,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 use AppBundle\Form\PhotogrammetryScaleBarTargetPairForm;
@@ -22,6 +24,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
      * @var object $u
      */
     public $u;
+    private $repo_storage_controller;
 
     /**
      * Constructor
@@ -31,19 +34,17 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
+        $this->repo_storage_controller = new RepoStorageHybridController();
     }
 
     /**
      * @Route("/admin/projects/photogrammetry_scale_bar_target_pair/datatables_browse", name="photogrammetry_scale_bar_target_pair_browse_datatables", methods="POST")
      *
-     * @param Connection $conn
      * @param Request $request
      * @return JsonResponse The query result in JSON
      */
-    public function datatablesBrowse(Connection $conn, Request $request)
+    public function datatablesBrowse(Request $request)
     {
-        $data = new PhotogrammetryScaleBarTargetPair();
-
         $params = array();
         $params['pdo_params'] = array();
         $params['search_sql'] = $params['sort'] = '';
@@ -55,32 +56,17 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
-        $params['limit_sql'] = " LIMIT {$start_record}, {$stop_record} ";
-
-        if (!empty($sort_field) && !empty($sort_order)) {
-            $params['sort'] = " ORDER BY {$sort_field} {$sort_order}";
-        } else {
-            $params['sort'] = " ORDER BY photogrammetry_scale_bar_target_pair.last_modified DESC ";
-        }
-
-        if ($search) {
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['pdo_params'][] = '%' . $search . '%';
-            $params['search_sql'] = "
-                AND (
-                  photogrammetry_scale_bar_target_pair.target_type LIKE ?
-                  photogrammetry_scale_bar_target_pair.target_pair_1_of_2 LIKE ?
-                  photogrammetry_scale_bar_target_pair.target_pair_2_of_2 LIKE ?
-                  photogrammetry_scale_bar_target_pair.distance LIKE ?
-                  photogrammetry_scale_bar_target_pair.units LIKE ?
-                ) ";
-        }
-
-        // Run the query
-        $results = $data->datatablesQuery($params);
+        $query_params = array(
+          'record_type' => 'photogrammetry_scale_bar_target_pair',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+          'search_value' => $search,
+          'parent_id' => $req['parent_id']
+        );
+        $this->repo_storage_controller->setContainer($this->container);
+        $results = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
         return $this->json($results);
     }
@@ -105,7 +91,14 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
         if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
-        $data = (!empty($id) && empty($post)) ? $data->getOne((int)$id, $conn) : $data;
+        $this->repo_storage_controller->setContainer($this->container);
+        if(!empty($id) && empty($post)) {
+          $rec = $this->repo_storage_controller->execute('getPhotogrammetryScaleBarTargetPair', array(
+            'photogrammetry_scale_bar_target_pair_repository_id' => $id));
+          if(isset($rec)) {
+            $data = (object)$rec;
+          }
+        }
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
@@ -121,7 +114,12 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $data = $form->getData();
-            $id = $data->insertUpdate($data, $id, $this->getUser()->getId(), $conn);
+            $id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'photogrammetry_scale_bar_target_pair',
+              'record_id' => $id,
+              'user_id' => $this->getUser()->getId(),
+              'values' => (array)$data
+            ));
 
             $this->addFlash('message', 'Record successfully updated.');
             return $this->redirect('/admin/projects/photogrammetry_scale_bar_target_pair/manage/' . $data->parent_photogrammetry_scale_bar_repository_id . '/' . $id);
@@ -138,23 +136,26 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
     /**
      * @Route("/admin/projects/photogrammetry_scale_bar_target_pair/delete", name="photogrammetry_scale_bar_target_pair_remove_records", methods={"GET"})
      *
-     * @param Connection $conn
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\RedirectResponse|Response Redirect or render
      */
-    public function deleteMultiple(Connection $conn, Request $request)
+    public function deleteMultiple(Request $request)
     {
-        $data = new PhotogrammetryScaleBarTargetPair();
-
         if(!empty($request->query->get('ids'))) {
 
             // Create the array of ids.
             $ids_array = explode(',', $request->query->get('ids'));
 
+            $this->repo_storage_controller->setContainer($this->container);
+
             // Loop thorough the ids.
             foreach ($ids_array as $key => $id) {
-                // Run the query against a single record.
-                $data->deleteMultiple($id);
+              // Run the query against a single record.
+              $ret = $this->repo_storage_controller->execute('markRecordInactive', array(
+                'record_type' => 'photogrammetry_scale_bar_target_pair',
+                'record_id' => $id,
+                'user_id' => $this->getUser()->getId(),
+              ));
             }
 
             $this->addFlash('message', 'Records successfully removed.');

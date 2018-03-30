@@ -31,3 +31,7 @@ parameters:
     si_ldap_password: ~
     si_ldap_account_domain_name: ~
     si_ldap_base_dn: ~
+
+    # File upload and processing paths
+    file_upload_path: ~
+    file_processing_path: ~
