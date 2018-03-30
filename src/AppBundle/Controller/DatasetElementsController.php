@@ -339,8 +339,11 @@ class DatasetElementsController extends Controller
           $this->addFlash('message', 'Missing data. No records removed.');
         }
 
-        return $this->redirectToRoute('dataset_elements_browse', array('project_repository_id' => $project_repository_id, 'subject_repository_id' => $subject_repository_id,
-          'item_repository_id' => $item_repository_id, 'capture_dataset_repository_id' => $capture_dataset_repository_id));
+      $referer = $request->headers->get('referer');
+      return $this->redirect($referer);
+
+//      return $this->redirectToRoute('dataset_elements_browse', array('project_repository_id' => $project_repository_id, 'subject_repository_id' => $subject_repository_id,
+//          'item_repository_id' => $item_repository_id, 'capture_dataset_repository_id' => $capture_dataset_repository_id));
     }
 
 }

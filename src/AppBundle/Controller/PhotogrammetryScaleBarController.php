@@ -157,7 +157,7 @@ class PhotogrammetryScaleBarController extends Controller
             foreach ($ids_array as $key => $id) {
               // Run the query against a single record.
               $ret = $this->repo_storage_controller->execute('markRecordInactive', array(
-                'record_type' => 'photogrammetry_scale',
+                'record_type' => 'photogrammetry_scale_bar',
                 'record_id' => $id,
                 'user_id' => $this->getUser()->getId(),
               ));
@@ -169,7 +169,8 @@ class PhotogrammetryScaleBarController extends Controller
             $this->addFlash('message', 'Missing data. No records removed.');
         }
 
-        return $this->redirectToRoute('photogrammetry_scale_bar_browse');
+        $referer = $request->headers->get('referer');
+        return $this->redirect($referer);
     }
 
     /**

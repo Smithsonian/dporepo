@@ -177,7 +177,8 @@ class ModelController extends Controller
             $this->addFlash('message', 'Missing data. No records removed.');
         }
 
-        return $this->redirectToRoute('model_browse');
+        $referer = $request->headers->get('referer');
+        return $this->redirect($referer);
     }
 
     /**

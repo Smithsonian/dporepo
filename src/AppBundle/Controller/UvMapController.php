@@ -157,7 +157,8 @@ class UvMapController extends Controller
     } else {
       $this->addFlash('message', 'Missing data. No records removed.');
     }
-    return $this->redirectToRoute('uv_map_browse');
+    $referer = $request->headers->get('referer');
+    return $this->redirect($referer);
   }
 
   /**

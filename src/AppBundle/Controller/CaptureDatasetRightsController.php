@@ -166,7 +166,8 @@ class CaptureDatasetRightsController extends Controller
             $this->addFlash('message', 'Missing data. No records removed.');
         }
 
-        return $this->redirectToRoute('capture_dataset_rights_browse');
+        $referer = $request->headers->get('referer');
+        return $this->redirect($referer);
     }
 
     /**
