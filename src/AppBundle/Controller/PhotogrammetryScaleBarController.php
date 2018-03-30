@@ -97,6 +97,7 @@ class PhotogrammetryScaleBarController extends Controller
           if(isset($rec)) {
             $data = (object)$rec;
           }
+          $data->photogrammetry_scale_bar_repository_id = $id;
         }
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
@@ -109,7 +110,7 @@ class PhotogrammetryScaleBarController extends Controller
         }
 
         // Create the form
-        $form = $this->createForm(PhotogrammetryScaleBarForm::class, $data);
+        $form = $this->createForm(PhotogrammetryScaleBarForm::class, (array)$data);
         
         // Handle the request
         $form->handleRequest($request);
@@ -130,7 +131,7 @@ class PhotogrammetryScaleBarController extends Controller
         }
 
         return $this->render('datasets/photogrammetry_scale_bar_form.html.twig', array(
-            'page_title' => !empty($id) ? 'Photogrammetry Scale Bar: ' . $data->scale_bar_id : 'Create Photogrammetry Scale Bar',
+            'page_title' => !empty($id) ? 'Photogrammetry Scale Bar: ' . $id : 'Create Photogrammetry Scale Bar',
             'data' => $data,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
