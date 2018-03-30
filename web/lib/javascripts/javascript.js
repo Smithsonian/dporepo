@@ -30,7 +30,7 @@ jQuery(document).ready(function($) {
   /**
    * Remove records button click handler.
    */
-  $('.panel-body').on('click', '#remove-records-button', function() {
+  $('body').on('click', '.dataTables_wrapper .datatables_bulk_actions #remove-records-button', function() {
 
     var allCheckedCheckboxes = $(this).parent().parent().find('input[name=manage_checkbox]:checkbox:checked');
 
