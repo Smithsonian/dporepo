@@ -3439,9 +3439,7 @@ class RepoStorageHybrid implements RepoStorage {
       $sort_params = array();
       foreach($query_parameters['sort_fields'] as $fld) {
         $s = $fld['field_name'];
-        if(array_key_exists('sort_order', $fld) && $fld['sort_order'] == 'DESC') {
-          $s .= ' ' . $fld['sort_order'];
-        }
+        $s .= ' ' . $fld['sort_order'];
         $sort_params[] = $s;
       }
       $sort_sql = implode(', ', $sort_params);
