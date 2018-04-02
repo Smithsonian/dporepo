@@ -6,6 +6,7 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 
 class ModelForm extends AbstractType
@@ -68,9 +69,10 @@ class ModelForm extends AbstractType
                 'data' => $data['units'],
                 'attr' => array('class' => 'default-chosen-select'),
               ))
-            ->add('is_watertight', null, array(
+            ->add('is_watertight', CheckboxType::class, array(
                 'label' => 'Is Watertight',
-                'required' => false,
+                'required' => true,
+                'data' => (int)$data['is_watertight'] ? true : false,
               ))
             // TODO: hook-up to JSON schema
             ->add('model_purpose', ChoiceType::class, array(
@@ -87,9 +89,10 @@ class ModelForm extends AbstractType
                 'label' => 'Point Count',
                 'required' => false,
               ))
-            ->add('has_normals', null, array(
+            ->add('has_normals', CheckboxType::class, array(
                 'label' => 'Has Normals',
-                'required' => false,
+                'required' => true,
+                'data' => (int)$data['has_normals'] ? true : false,
               ))
             ->add('face_count', null, array(
                 'label' => 'Face Count',
@@ -99,13 +102,15 @@ class ModelForm extends AbstractType
                 'label' => 'Vertices Count',
                 'required' => false,
               ))
-            ->add('has_vertex_color', null, array(
+            ->add('has_vertex_color', CheckboxType::class, array(
                 'label' => 'Has Vertex Color',
-                'required' => false,
+                'required' => true,
+                'data' => (int)$data['has_vertex_color'] ? true : false,
               ))
-            ->add('has_uv_space', null, array(
+            ->add('has_uv_space', CheckboxType::class, array(
                 'label' => 'Has UV Space',
-                'required' => false,
+                'required' => true,
+                'data' => (int)$data['has_uv_space'] ? true : false,
               ))
             ->add('model_maps', null, array(
                 'label' => 'Model Maps',
