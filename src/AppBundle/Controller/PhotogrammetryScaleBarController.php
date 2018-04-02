@@ -109,6 +109,9 @@ class PhotogrammetryScaleBarController extends Controller
             $back_link = "/admin/projects/dataset_elements/{$data->project_repository_id}/{$data->subject_repository_id}/{$data->parent_item_repository_id}/{$data->parent_capture_dataset_repository_id}";
         }
 
+        // Get data from lookup tables.
+        $data->scale_bar_barcode_type_options = $this->get_scale_bar_barcode_type();
+
         // Create the form
         $form = $this->createForm(PhotogrammetryScaleBarForm::class, (array)$data);
         
@@ -137,6 +140,30 @@ class PhotogrammetryScaleBarController extends Controller
             'form' => $form->createView(),
             'back_link' => $back_link,
         ));
+    }
+
+    /**
+     * Get Scale Bar Barcode Type
+     * @return  array|bool  The query result
+     */
+    public function get_scale_bar_barcode_type()
+    {
+      $data = array();
+      $this->repo_storage_controller->setContainer($this->container);
+      $temp = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'scale_bar_barcode_type',
+          'sort_fields' => array(
+            0 => array('field_name' => 'label')
+          ),
+        )
+      );
+
+      foreach ($temp as $key => $value) {
+        $label = $value['label'];
+        $data[$label] = $value['scale_bar_barcode_type_repository_id'];
+      }
+
+      return $data;
     }
 
     /**

@@ -5,6 +5,7 @@ namespace AppBundle\Form;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 
 class PhotogrammetryScaleBarForm extends AbstractType
@@ -12,6 +13,8 @@ class PhotogrammetryScaleBarForm extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
+
+        $data = (array)$options['data'];
 
         $builder
             ->add('parent_capture_dataset_repository_id', HiddenType::class, array(
@@ -25,9 +28,15 @@ class PhotogrammetryScaleBarForm extends AbstractType
                 'label' => 'Scale Bar Manufacturer',
                 'required' => false,
               ))
-            ->add('scale_bar_barcode_type', null, array(
+            ->add('scale_bar_barcode_type', ChoiceType::class, array(
                 'label' => 'Scale Bar Barcode Type',
-                'required' => false,
+                'required' => true,
+                'placeholder' => 'Select',
+                // All options
+                'choices' => $data['scale_bar_barcode_type_options'],
+                // Selected option
+                'data' => $data['scale_bar_barcode_type'],
+                'attr' => array('class' => 'default-chosen-select'),
               ))
             ->add('scale_bar_target_pairs', null, array(
                 'label' => 'Scale Bar Target Pairs',
