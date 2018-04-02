@@ -103,6 +103,10 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
 
         // Add the parent_id to the $data object
         $data->parent_photogrammetry_scale_bar_repository_id = $parent_id;
+
+        // Get data from lookup tables.
+        $data->unit_options = $this->get_unit();
+        $data->target_type_options = $this->get_target_type();
         
         // Create the form
         $form = $this->createForm(PhotogrammetryScaleBarTargetPairForm::class, $data);
@@ -131,6 +135,54 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
         ));
+    }
+
+    /**
+     * Get Unit
+     * @return  array|bool  The query result
+     */
+    public function get_unit()
+    {
+      $data = array();
+      $this->repo_storage_controller->setContainer($this->container);
+      $temp = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'unit',
+          'sort_fields' => array(
+            0 => array('field_name' => 'label')
+          ),
+        )
+      );
+
+      foreach ($temp as $key => $value) {
+        $label = $value['label'];
+        $data[$label] = $value['unit_repository_id'];
+      }
+
+      return $data;
+    }
+
+    /**
+     * Get Target Types
+     * @return  array|bool  The query result
+     */
+    public function get_target_type()
+    {
+      $data = array();
+      $this->repo_storage_controller->setContainer($this->container);
+      $temp = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'target_type',
+          'sort_fields' => array(
+            0 => array('field_name' => 'label')
+          ),
+        )
+      );
+
+      foreach ($temp as $key => $value) {
+        $label = $value['label'];
+        $data[$label] = $value['target_type_repository_id'];
+      }
+
+      return $data;
     }
 
     /**
