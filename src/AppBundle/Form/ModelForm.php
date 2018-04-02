@@ -36,17 +36,27 @@ class ModelForm extends AbstractType
                 'label' => 'Derived From',
                 'required' => false,
               ))
-            ->add('creation_method', null, array(
+            // TODO: hook-up to JSON schema
+            ->add('creation_method', ChoiceType::class, array(
                 'label' => 'Creation Method',
-                'required' => false,
+                'required' => true,
+                'placeholder' => 'Select',
+                // All options
+                'choices' => array('scan-to-mesh' => 1, 'CAD' => 2),
+                // Selected option
+                'data' => $data['creation_method'],
+                'attr' => array('class' => 'default-chosen-select'),
               ))
-            ->add('model_modality', null, array(
+            // TODO: hook-up to JSON schema
+            ->add('model_modality', ChoiceType::class, array(
                 'label' => 'Model Modality',
-                'required' => false,
-              ))
-            ->add('units', null, array(
-                'label' => 'Units',
-                'required' => false,
+                'required' => true,
+                'placeholder' => 'Select',
+                // All options
+                'choices' => array('point cloud' => 1, 'mesh' => 2),
+                // Selected option
+                'data' => $data['model_modality'],
+                'attr' => array('class' => 'default-chosen-select'),
               ))
             ->add('units', ChoiceType::class, array(
                 'label' => 'Units',
@@ -62,9 +72,16 @@ class ModelForm extends AbstractType
                 'label' => 'Is Watertight',
                 'required' => false,
               ))
-            ->add('model_purpose', null, array(
+            // TODO: hook-up to JSON schema
+            ->add('model_purpose', ChoiceType::class, array(
                 'label' => 'Model Purpose',
-                'required' => false,
+                'required' => true,
+                'placeholder' => 'Select',
+                // All options
+                'choices' => array('master' => 1, 'delivery web' => 2, 'delivery print' => 3, 'intermediate processing step' => 4),
+                // Selected option
+                'data' => $data['model_purpose'],
+                'attr' => array('class' => 'default-chosen-select'),
               ))
             ->add('point_count', null, array(
                 'label' => 'Point Count',
