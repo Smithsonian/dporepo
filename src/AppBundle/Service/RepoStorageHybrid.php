@@ -3671,11 +3671,11 @@ class RepoStorageHybrid implements RepoStorage {
 
           $statement = $this->connection->prepare($sql);
           foreach($fields_params as $fn1 => $fv1) {
-            $statement->bindValue($fn1, $fv1);
+            $statement->bindValue($fn1, $fv1, is_bool($fv1) ? PDO::PARAM_BOOL : PDO::PARAM_STR);
           }
+
           $statement->bindValue(":id", $record_values['id']['field_value'], PDO::PARAM_INT);
           $statement->execute();
-
         }
         else {
           $sql ="INSERT INTO " . $base_table;
