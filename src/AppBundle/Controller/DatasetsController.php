@@ -82,7 +82,7 @@ class DatasetsController extends Controller
         $jobBoxDirectoryContents = is_dir($this->file_upload_path) ? scandir($this->file_upload_path) : array();
         $jobBoxProcessedDirectoryContents = is_dir($this->file_processing_path) ? scandir($this->file_processing_path) : array();
 
-      // Truncate the item_description.
+        // Truncate the item_description.
         $more_indicator = (strlen($item->item_data->item_description) > 50) ? '...' : '';
         $item->item_data->item_description_truncated = substr($item->item_data->item_description, 0, 50) . $more_indicator;
 
