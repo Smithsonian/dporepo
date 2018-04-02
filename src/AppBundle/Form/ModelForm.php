@@ -71,8 +71,8 @@ class ModelForm extends AbstractType
               ))
             ->add('is_watertight', CheckboxType::class, array(
                 'label' => 'Is Watertight',
-                'required' => true,
-                'data' => (int)$data['is_watertight'] ? true : false,
+                'required' => false,
+                'data' => (bool)$data['is_watertight'],
               ))
             // TODO: hook-up to JSON schema
             ->add('model_purpose', ChoiceType::class, array(
@@ -91,8 +91,8 @@ class ModelForm extends AbstractType
               ))
             ->add('has_normals', CheckboxType::class, array(
                 'label' => 'Has Normals',
-                'required' => true,
-                'data' => (int)$data['has_normals'] ? true : false,
+                'required' => false,
+                'data' => (bool)$data['has_normals'],
               ))
             ->add('face_count', null, array(
                 'label' => 'Face Count',
@@ -104,13 +104,13 @@ class ModelForm extends AbstractType
               ))
             ->add('has_vertex_color', CheckboxType::class, array(
                 'label' => 'Has Vertex Color',
-                'required' => true,
-                'data' => (int)$data['has_vertex_color'] ? true : false,
+                'required' => false,
+                'data' => (bool)$data['has_vertex_color'],
               ))
             ->add('has_uv_space', CheckboxType::class, array(
                 'label' => 'Has UV Space',
-                'required' => true,
-                'data' => (int)$data['has_uv_space'] ? true : false,
+                'required' => false,
+                'data' => (bool)$data['has_uv_space'],
               ))
             ->add('model_maps', null, array(
                 'label' => 'Model Maps',

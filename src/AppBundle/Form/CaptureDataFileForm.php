@@ -5,6 +5,7 @@ namespace AppBundle\Form;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 
 class CaptureDataFileForm extends AbstractType
@@ -12,6 +13,8 @@ class CaptureDataFileForm extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
+
+        $data = (array)$options['data'];
 
         $builder
             ->add('parent_capture_data_element_repository_id', HiddenType::class, array(
@@ -28,6 +31,11 @@ class CaptureDataFileForm extends AbstractType
             ->add('is_compressed_multiple_files', null, array(
                 'label' => 'Is Compressed Multiple Files',
                 'required' => false,
+              ))
+            ->add('is_compressed_multiple_files', CheckboxType::class, array(
+                'label' => 'Is Compressed Multiple Files',
+                'required' => false,
+                'data' => (bool)$data['is_compressed_multiple_files'],
               ))
             ->add('save', SubmitType::class, array(
                 'label' => 'Save Edits',
