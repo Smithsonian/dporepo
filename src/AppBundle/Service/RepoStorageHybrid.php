@@ -1098,15 +1098,24 @@ class RepoStorageHybrid implements RepoStorage {
         break;
 
       case 'capture_dataset_rights':
+        // LEFT JOIN to get the Data Rights Restriction Type.
+        $query_params['related_tables'][] = array(
+          'table_name' => 'data_rights_restriction_type',
+          'table_join_field' => 'data_rights_restriction_type_repository_id',
+          'join_type' => 'LEFT JOIN',
+          'base_join_table' => $record_type,
+          'base_join_field' => 'data_rights_restriction',
+        );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
           'field_name' => $record_type . '_repository_id',
           'field_alias' => 'manage',
         );
-
+        // The Data Rights Restriction Type.
         $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'data_rights_restriction',
+          'table_name' => 'data_rights_restriction_type',
+          'field_name' => 'label',
+          'field_alias' => 'data_rights_restriction'
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
