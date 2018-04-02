@@ -5,6 +5,7 @@ namespace AppBundle\Form;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 
 class CaptureDatasetRightsForm extends AbstractType
@@ -13,13 +14,21 @@ class CaptureDatasetRightsForm extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
 
+        $data = (array)$options['data'];
+
         $builder
             ->add('parent_capture_dataset_repository_id', HiddenType::class, array(
                 'required' => true,
               ))
-            ->add('data_rights_restriction', null, array(
+            ->add('data_rights_restriction', ChoiceType::class, array(
                 'label' => 'Data Rights Restriction',
                 'required' => true,
+                'placeholder' => 'Select',
+                // All options
+                'choices' => $data['data_rights_restriction_type_options'],
+                // Selected option
+                'data' => $data['data_rights_restriction'],
+                'attr' => array('class' => 'default-chosen-select'),
               ))
             ->add('start_date', null, array(
                 'label' => 'Start Date',
