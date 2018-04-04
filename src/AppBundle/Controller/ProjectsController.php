@@ -142,12 +142,23 @@ class ProjectsController extends Controller
         // If form is submitted and passes validation, insert/update the database record.
         if ($form->isSubmitted() && $form->isValid()) {
 
+            // EXAMPLE #1
+            // Validate agianst project data.
+            $json_validate = (object)$this->repo_storage_controller->execute('validateData', $project);
+            // $this->u->dumper($json_validate);
+
+            // EXAMPLE #2
+            // Validate agianst the entire JSON blob of example data.
+            $json_blob = __DIR__ . '/../../../web/json/json_blob.json';
+            $json_blob_object = json_decode(file_get_contents($json_blob));
+            $json_validate = (object)$this->repo_storage_controller->execute('validateData', $json_blob_object);
+            // $this->u->dumper($json_validate);
+
             $project = $form->getData();
             $project_repository_id = $this->insert_update_project($this->container, $project, $id);
 
             $this->addFlash('message', 'Project successfully updated.');
             return $this->redirect('/admin/projects/subjects/' . $project_repository_id);
-
         }
 
         return $this->render('projects/project_form.html.twig', array(
