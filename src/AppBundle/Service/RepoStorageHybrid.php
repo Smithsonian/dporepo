@@ -3684,7 +3684,7 @@ class RepoStorageHybrid implements RepoStorage {
 
           $statement = $this->connection->prepare($sql);
           foreach($fields_params as $fn1 => $fv1) {
-            $statement->bindValue($fn1, $fv1);
+            $statement->bindValue($fn1, $fv1, is_bool($fv1) ? PDO::PARAM_BOOL : PDO::PARAM_STR);
           }
           $statement->execute();
           $last_inserted_id = $this->connection->lastInsertId();
