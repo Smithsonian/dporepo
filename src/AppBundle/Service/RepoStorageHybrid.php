@@ -3875,9 +3875,6 @@ class RepoStorageHybrid implements RepoStorage {
 
     $return = array('is_valid' => false);
 
-    // Test for empty $data.
-    // $data = NULL;
-
     // If no data is passed, set a message.
     if(empty($data)) $return['messages'][] = 'Nothing to validate. Please provide an object to validate.';
 
@@ -3891,10 +3888,6 @@ class RepoStorageHybrid implements RepoStorage {
       $schemaStorage->addSchema('file://' . $schema_dir, $jsonSchemaObject);
 
       $jsonValidator = new Validator( new Factory($schemaStorage) );
-
-      // Test for empty $data->project_name.
-      // $data->project_name = NULL;
-
       $jsonValidator->validate($data, $jsonSchemaObject);
 
       if ($jsonValidator->isValid()) {
