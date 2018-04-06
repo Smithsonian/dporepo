@@ -144,15 +144,17 @@ class ProjectsController extends Controller
 
             // EXAMPLE #1
             // Validate agianst project data.
-            $json_validate = (object)$this->repo_storage_controller->execute('validateData', $project);
-            // $this->u->dumper($json_validate);
+            $project->project_repository_id = $id;
+            $json_validation_result = (object)$this->repo_storage_controller->execute('validateData', $project);
+            // $this->u->dumper($json_validation_result);
 
             // EXAMPLE #2
             // Validate agianst the entire JSON blob of example data.
-            $json_blob = __DIR__ . '/../../../web/json/json_blob.json';
-            $json_blob_object = json_decode(file_get_contents($json_blob));
-            $json_validate = (object)$this->repo_storage_controller->execute('validateData', $json_blob_object);
-            // $this->u->dumper($json_validate);
+            // $json = __DIR__ . '/../../../web/json/json_data_example.json';
+            $json = __DIR__ . '/../../../web/json/json_data_example_with_children.json';
+            $json_object = json_decode(file_get_contents($json), false);
+            $json_validation_result = (object)$this->repo_storage_controller->execute('validateData', $json_object);
+            // $this->u->dumper($json_validation_result);
 
             $project = $form->getData();
             $project_repository_id = $this->insert_update_project($this->container, $project, $id);
