@@ -88,7 +88,7 @@ class BackgroundRemovalMethodsController extends Controller
         }
 
         $query_params = array(
-          'record_type' => 'camera_cluster_type',
+          'record_type' => 'background_removal_method',
           'sort_field' => $sort_field,
           'sort_order' => $sort_order,
           'start_record' => $start_record,

@@ -1098,15 +1098,24 @@ class RepoStorageHybrid implements RepoStorage {
         break;
 
       case 'capture_dataset_rights':
+        // LEFT JOIN to get the Data Rights Restriction Type.
+        $query_params['related_tables'][] = array(
+          'table_name' => 'data_rights_restriction_type',
+          'table_join_field' => 'data_rights_restriction_type_repository_id',
+          'join_type' => 'LEFT JOIN',
+          'base_join_table' => $record_type,
+          'base_join_field' => 'data_rights_restriction',
+        );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
           'field_name' => $record_type . '_repository_id',
           'field_alias' => 'manage',
         );
-
+        // The Data Rights Restriction Type.
         $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'data_rights_restriction',
+          'table_name' => 'data_rights_restriction_type',
+          'field_name' => 'label',
+          'field_alias' => 'data_rights_restriction'
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
@@ -3662,11 +3671,11 @@ class RepoStorageHybrid implements RepoStorage {
 
           $statement = $this->connection->prepare($sql);
           foreach($fields_params as $fn1 => $fv1) {
-            $statement->bindValue($fn1, $fv1);
+            $statement->bindValue($fn1, $fv1, is_bool($fv1) ? PDO::PARAM_BOOL : PDO::PARAM_STR);
           }
+
           $statement->bindValue(":id", $record_values['id']['field_value'], PDO::PARAM_INT);
           $statement->execute();
-
         }
         else {
           $sql ="INSERT INTO " . $base_table;
@@ -3675,7 +3684,7 @@ class RepoStorageHybrid implements RepoStorage {
 
           $statement = $this->connection->prepare($sql);
           foreach($fields_params as $fn1 => $fv1) {
-            $statement->bindValue($fn1, $fv1);
+            $statement->bindValue($fn1, $fv1, is_bool($fv1) ? PDO::PARAM_BOOL : PDO::PARAM_STR);
           }
           $statement->execute();
           $last_inserted_id = $this->connection->lastInsertId();

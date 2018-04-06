@@ -19,7 +19,9 @@
       <div class="col-sm-6 col-md-6">
         {{ form_row(form.capture_data_file_name) }}
         {{ form_row(form.capture_data_file_type) }}
-        {{ form_row(form.is_compressed_multiple_files) }}
+        <div class="well well-sm">
+          {{ form_row(form.is_compressed_multiple_files) }}
+        </div>
       </div>
       <div class="col-sm-6 col-md-6">
         <!-- placeholder -->

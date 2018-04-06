@@ -5,6 +5,7 @@ namespace AppBundle\Form;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 
 class ProcessingActionForm extends AbstractType
@@ -12,6 +13,8 @@ class ProcessingActionForm extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
+
+        $data = (array)$options['data'];
 
         $builder
             ->add('parent_model_repository_id', HiddenType::class, array(
@@ -25,9 +28,16 @@ class ProcessingActionForm extends AbstractType
                 'label' => 'Date of Action',
                 'required' => false,
               ))
-            ->add('action_method', null, array(
+            // TODO: hook-up to JSON schema
+            ->add('action_method', ChoiceType::class, array(
                 'label' => 'Action Method',
                 'required' => true,
+                'placeholder' => 'Select',
+                // All options
+                'choices' => array('align' => 1, 'mesh' => 2, 'cleanup' => 3, 'texture' => 4),
+                // Selected option
+                'data' => $data['action_method'],
+                'attr' => array('class' => 'default-chosen-select'),
               ))
             ->add('software_used', null, array(
                 'label' => 'Software Used',

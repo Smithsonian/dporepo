@@ -152,7 +152,16 @@ class Dataset extends AbstractType
                 'label' => 'Calibration Object Used',
                 'required' => false,
               ))
-            
+            ->add('calibration_object_used', ChoiceType::class, array(
+                'label' => 'Calibration Object Used',
+                'required' => true,
+                'placeholder' => 'Select',
+                // All options
+                'choices' => $data['calibration_object_type_options'],
+                // Selected option
+                'data' => $data['calibration_object_used'],
+                'attr' => array('class' => 'default-chosen-select'),
+              ))
             ->add('save', SubmitType::class, array(
                 'label' => 'Save Edits',
                 'attr' => array('class' => 'btn btn-primary'),

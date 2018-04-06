@@ -169,9 +169,6 @@ class DatasetElementsController extends Controller
         $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
         $item_data['item_description_truncated'] = substr($item_data['item_description'], 0, 50) . $more_indicator;
 
-        // Get data from lookup tables.
-        $dataset_element->calibration_object_type_options = $this->get_calibration_object_types();
-
         // Create the form
         $form = $this->createForm(DatasetElement::class, $dataset_element);
         // Handle the request
@@ -274,28 +271,6 @@ class DatasetElementsController extends Controller
           )
         );
         return $record;
-    }
-
-    /**
-     * Get calibration_object_types
-     * @return  array|bool  The query result
-     */
-    public function get_calibration_object_types()
-    {
-        $data = array();
-
-        $this->repo_storage_controller->setContainer($this->container);
-        $records = $this->repo_storage_controller->execute('getRecords',
-          array(
-            'base_table' => 'calibration_object_type',
-          )
-        );
-        foreach ($records as $key => $value) {
-            $label = $this->u->removeUnderscoresTitleCase($value['label']);
-            $data[$label] = $value['calibration_object_type_repository_id'];
-        }
-
-        return $data;
     }
 
     /**

@@ -82,7 +82,7 @@ class DatasetsController extends Controller
         $jobBoxDirectoryContents = is_dir($this->file_upload_path) ? scandir($this->file_upload_path) : array();
         $jobBoxProcessedDirectoryContents = is_dir($this->file_processing_path) ? scandir($this->file_processing_path) : array();
 
-      // Truncate the item_description.
+        // Truncate the item_description.
         $more_indicator = (strlen($item->item_data->item_description) > 50) ? '...' : '';
         $item->item_data->item_description_truncated = substr($item->item_data->item_description, 0, 50) . $more_indicator;
 
@@ -179,6 +179,7 @@ class DatasetsController extends Controller
         $dataset->light_source_types_lookup_options = $this->get_light_source_types();
         $dataset->background_removal_methods_lookup_options = $this->get_background_removal_methods();
         $dataset->camera_cluster_types_lookup_options = $this->get_camera_cluster_types();
+        $dataset->calibration_object_type_options = $this->get_calibration_object_types();
 
         // Create the form
         $form = $this->createForm(Dataset::class, $dataset);
@@ -445,6 +446,28 @@ class DatasetsController extends Controller
       }
 
       return $data;
+    }
+
+    /**
+     * Get calibration_object_types
+     * @return  array|bool  The query result
+     */
+    public function get_calibration_object_types()
+    {
+        $data = array();
+
+        $this->repo_storage_controller->setContainer($this->container);
+        $records = $this->repo_storage_controller->execute('getRecords',
+          array(
+            'base_table' => 'calibration_object_type',
+          )
+        );
+        foreach ($records as $key => $value) {
+            $label = $this->u->removeUnderscoresTitleCase($value['label']);
+            $data[$label] = $value['calibration_object_type_repository_id'];
+        }
+
+        return $data;
     }
 
     /**

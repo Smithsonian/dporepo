@@ -104,6 +104,9 @@ class CaptureDatasetRightsController extends Controller
 
         // Add the parent_id to the $data object
         $data->parent_capture_dataset_repository_id = $parent_id;
+
+        // Get data from lookup tables.
+        $data->data_rights_restriction_type_options = $this->get_data_rights_restriction_type();
         
         // Create the form
         $form = $this->createForm(CaptureDatasetRightsForm::class, $data);
@@ -128,11 +131,35 @@ class CaptureDatasetRightsController extends Controller
         }
 
         return $this->render('datasets/capture_dataset_rights_form.html.twig', array(
-            'page_title' => !empty($id) ? 'Capture Dataset Rights: ' . $data->data_rights_restriction : 'Create Capture Dataset Rights',
+            'page_title' => !empty($id) ? 'Capture Dataset Rights: ' . array_search($data->data_rights_restriction, $data->data_rights_restriction_type_options) : 'Create Capture Dataset Rights',
             'data' => $data,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
         ));
+    }
+
+    /**
+     * Get Data Rights Restriction Type
+     * @return  array|bool  The query result
+     */
+    public function get_data_rights_restriction_type()
+    {
+      $data = array();
+      $this->repo_storage_controller->setContainer($this->container);
+      $temp = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'data_rights_restriction_type',
+          'sort_fields' => array(
+            0 => array('field_name' => 'label')
+          ),
+        )
+      );
+
+      foreach ($temp as $key => $value) {
+        $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        $data[$label] = $value['data_rights_restriction_type_repository_id'];
+      }
+
+      return $data;
     }
 
     /**

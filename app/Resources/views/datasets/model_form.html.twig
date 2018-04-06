@@ -32,16 +32,24 @@
             {{ form_row(form.creation_method) }}
             {{ form_row(form.model_modality) }}
             {{ form_row(form.units) }}
-            {{ form_row(form.is_watertight) }}
+            <div class="well well-sm">
+              {{ form_row(form.is_watertight) }}
+            </div>
         </div>
         <div class="col-sm-6 col-md-6">
             {{ form_row(form.model_purpose) }}
             {{ form_row(form.point_count) }}
-            {{ form_row(form.has_normals) }}
+            <div class="well well-sm">
+              {{ form_row(form.has_normals) }}
+            </div>
             {{ form_row(form.face_count) }}
             {{ form_row(form.vertices_count) }}
-            {{ form_row(form.has_vertex_color) }}
-            {{ form_row(form.has_uv_space) }}
+            <div class="well well-sm">
+              {{ form_row(form.has_vertex_color) }}
+            </div>
+            <div class="well well-sm">
+              {{ form_row(form.has_uv_space) }}
+            </div>
             {{ form_row(form.model_maps) }}
         </div>
     </div>
