@@ -125,11 +125,11 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
           break;
         case 'capture_data_file':
           $sql = "CREATE TABLE IF NOT EXISTS `capture_data_file` (
-              `capture_data_file_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-              `capture_data_element_repository_id` int(11),
-              `capture_data_file_name` varchar(255),
-              `capture_data_file_type` varchar(255),
-              `is_compressed_multiple_files` varchar(255),
+            `capture_data_file_repository_id` int(11) NOT NULL AUTO_INCREMENT,
+              `capture_data_element_repository_id` int(11) DEFAULT NULL,
+              `capture_data_file_name` varchar(255) DEFAULT NULL,
+              `capture_data_file_type` varchar(255) DEFAULT NULL,
+              `is_compressed_multiple_files` varchar(255) DEFAULT NULL,
               `date_created` datetime NOT NULL,
               `created_by_user_account_id` int(11) NOT NULL,
               `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -177,18 +177,18 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
           )";
           break;
         case 'capture_dataset_rights':
-          $sql = "CREATE TABLE IF NOT EXISTS `capture_data_file` (
-            `capture_data_file_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `capture_data_element_repository_id` int(11),
-            `capture_data_file_name` varchar(255),
-            `capture_data_file_type` varchar(255),
-            `is_compressed_multiple_files` varchar(255),
+          $sql = "CREATE TABLE IF NOT EXISTS `capture_dataset_rights` (
+            `capture_dataset_rights_repository_id` int(11) NOT NULL AUTO_INCREMENT,
+            `parent_capture_dataset_repository_id` int(11) DEFAULT NULL,
+            `data_rights_restriction` varchar(255) DEFAULT NULL,
+            `start_date` datetime DEFAULT NULL,
+            `end_date` datetime DEFAULT NULL,
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`capture_data_file_repository_id`),
+            PRIMARY KEY (`capture_dataset_rights_repository_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             ) ";
@@ -196,9 +196,9 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'capture_device':
           $sql = "CREATE TABLE IF NOT EXISTS `capture_device` (
             `capture_device_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `capture_data_element_repository_id` int(11),
-            `calibration_file` varchar(255),
-            `capture_device_component_ids` varchar(255),
+            `capture_data_element_repository_id` int(11) DEFAULT NULL,
+            `capture_device_component_ids` varchar(255) DEFAULT NULL,
+            `calibration_file` varchar(255) DEFAULT NULL,
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -212,11 +212,11 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'capture_device_component':
           $sql = "CREATE TABLE IF NOT EXISTS `capture_device_component` (
             `capture_device_component_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `capture_device_repository_id` int(11),
-            `serial_number` varchar(255),
-            `capture_device_component_type` varchar(255),
-            `manufacturer` varchar(255),
-            `model_name` varchar(255),
+            `capture_device_repository_id` int(11) DEFAULT NULL,
+            `serial_number` varchar(255) DEFAULT NULL,
+            `capture_device_component_type` varchar(255) DEFAULT NULL,
+            `manufacturer` varchar(255) DEFAULT NULL,
+            `model_name` varchar(255) DEFAULT NULL,
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -243,14 +243,14 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
           break;
         case 'data_rights_restriction_type':
           $sql = "CREATE TABLE IF NOT EXISTS `data_rights_restriction_type` (
-            `data_rights_restriction_types_id` int(11) NOT NULL AUTO_INCREMENT,
+            `data_rights_restriction_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`data_rights_restriction_types_id`),
+            PRIMARY KEY (`data_rights_restriction_type_repository_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
@@ -285,7 +285,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
           break;
         case 'isni_data':
           $sql = $this->connection->prepare("CREATE TABLE IF NOT EXISTS `isni_data` (
-            `isni_id` varchar(255) NOT NULL,
+            `isni_id` varchar(255) NOT NULL DEFAULT '',
             `isni_label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
@@ -302,6 +302,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             `item_position_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `label_alias` varchar(255) NOT NULL DEFAULT '',
+            `label_alias_` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -332,6 +333,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             `subject_repository_id` int(11) NOT NULL,
             `local_item_id` varchar(255) DEFAULT '',
             `item_guid` varchar(255) DEFAULT '',
+            `item_display_name` varchar(255) DEFAULT NULL,
             `item_description` mediumtext,
             `item_type` varchar(255) DEFAULT NULL,
             `date_created` datetime NOT NULL,
@@ -348,7 +350,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'light_source_type':
           $sql = "CREATE TABLE IF NOT EXISTS `light_source_type` (
             `light_source_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `label_field_name_raw` varchar(255) NOT NULL DEFAULT '',
+            `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -362,23 +364,24 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'model':
           $sql = "CREATE TABLE IF NOT EXISTS `model` (
             `model_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `capture_dataset_repository_id` int(11),
-            `model_guid` varchar(255),
-            `date_of_creation` datetime,
-            `model_file_type` varchar(255),
-            `derived_from` varchar(255),
-            `creation_method` varchar(255),
-            `model_modality` varchar(255),
-            `units` varchar(255),
-            `is_watertight` varchar(255),
-            `model_purpose` varchar(255),
-            `point_count` varchar(255),
-            `has_normals` varchar(255),
-            `face_count` varchar(255),
-            `vertices_count` varchar(255),
-            `has_vertex_color` varchar(255),
-            `has_uv_space` varchar(255),
-            `model_maps` varchar(255),
+            `capture_dataset_repository_id` int(11) DEFAULT NULL,
+            `item_repository_id` int(11) DEFAULT NULL,
+            `model_guid` varchar(255) DEFAULT NULL,
+            `date_of_creation` datetime DEFAULT NULL,
+            `model_file_type` varchar(255) DEFAULT NULL,
+            `derived_from` varchar(255) DEFAULT NULL,
+            `creation_method` varchar(255) DEFAULT NULL,
+            `model_modality` varchar(255) DEFAULT NULL,
+            `units` varchar(255) DEFAULT NULL,
+            `is_watertight` tinyint(1) NOT NULL,
+            `model_purpose` varchar(255) DEFAULT NULL,
+            `point_count` varchar(255) DEFAULT NULL,
+            `has_normals` tinyint(1) NOT NULL,
+            `face_count` varchar(255) DEFAULT NULL,
+            `vertices_count` varchar(255) DEFAULT NULL,
+            `has_vertex_color` tinyint(1) NOT NULL,
+            `has_uv_space` tinyint(1) NOT NULL,
+            `model_maps` varchar(255) DEFAULT NULL,
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -392,11 +395,11 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'photogrammetry_scale_bar':
           $sql = "CREATE TABLE IF NOT EXISTS `photogrammetry_scale_bar` (
             `photogrammetry_scale_bar_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `capture_dataset_repository_id` int(11),
-            `scale_bar_id` varchar(255),
-            `scale_bar_manufacturer` varchar(255),
-            `scale_bar_barcode_type` varchar(255),
-            `scale_bar_target_pairs` varchar(255),
+            `capture_dataset_repository_id` int(11) DEFAULT NULL,
+            `scale_bar_id` varchar(255) DEFAULT NULL,
+            `scale_bar_manufacturer` varchar(255) DEFAULT NULL,
+            `scale_bar_barcode_type` varchar(255) DEFAULT NULL,
+            `scale_bar_target_pairs` varchar(255) DEFAULT NULL,
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -410,12 +413,12 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'photogrammetry_scale_bar_target_pair':
           $sql = "CREATE TABLE IF NOT EXISTS `photogrammetry_scale_bar_target_pair` (
             `photogrammetry_scale_bar_target_pair_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `photogrammetry_scale_bar_repository_id` int(11),
-            `target_type` varchar(255),
-            `target_pair_1_of_2` varchar(255),
-            `target_pair_2_of_2` varchar(255),
-            `distance` varchar(255),
-            `units` varchar(255),
+            `photogrammetry_scale_bar_repository_id` int(11) DEFAULT NULL,
+            `target_type` varchar(255) DEFAULT NULL,
+            `target_pair_1_of_2` varchar(255) DEFAULT NULL,
+            `target_pair_2_of_2` varchar(255) DEFAULT NULL,
+            `distance` varchar(255) DEFAULT NULL,
+            `units` varchar(255) DEFAULT NULL,
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -429,11 +432,11 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'processing_action':
           $sql = "CREATE TABLE IF NOT EXISTS `processing_action` (
             `processing_action_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `parent_model_repository_id` int(11),
-            `preceding_processing_action_repository_id` int(11),
-            `date_of_action` datetime,
-            `action_method` varchar(255),
-            `software_used` varchar(255),
+            `model_repository_id` int(11) DEFAULT NULL,
+            `preceding_processing_action_repository_id` int(11) DEFAULT NULL,
+            `date_of_action` datetime DEFAULT NULL,
+            `action_method` varchar(255) DEFAULT NULL,
+            `software_used` varchar(255) DEFAULT NULL,
             `action_description` mediumtext,
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
@@ -464,14 +467,14 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
           break;
         case 'scale_bar_barcode_type':
           $sql = "CREATE TABLE IF NOT EXISTS `scale_bar_barcode_type` (
-            `scale_bar_barcode_types_id` int(11) NOT NULL AUTO_INCREMENT,
+            `scale_bar_barcode_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`scale_bar_barcode_types_id`),
+            PRIMARY KEY (`scale_bar_barcode_type_repository_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
@@ -497,6 +500,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             `local_subject_id` varchar(255) DEFAULT '',
             `subject_guid` varchar(255) DEFAULT '',
             `subject_name` varchar(255) DEFAULT '',
+            `subject_display_name` varchar(255) DEFAULT NULL,
             `holding_entity_name` varchar(255) DEFAULT '',
             `holding_entity_guid` varchar(255) DEFAULT '',
             `date_created` varchar(255) NOT NULL DEFAULT '',
@@ -529,7 +533,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             `unit_stakeholder_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `isni_id` varchar(255) DEFAULT NULL,
             `unit_stakeholder_label` varchar(255) NOT NULL DEFAULT '',
-            `unit_stakeholder_label_aliases` text DEFAULT NULL,
+            `unit_stakeholder_label_aliases` text,
             `unit_stakeholder_full_name` varchar(255) NOT NULL DEFAULT '',
             `unit_stakeholder_guid` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
@@ -544,14 +548,14 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
           break;
         case 'unit':
           $sql = "CREATE TABLE IF NOT EXISTS `unit` (
-            `units_id` int(11) NOT NULL AUTO_INCREMENT,
+            `unit_repository_id` int(11) NOT NULL AUTO_INCREMENT,
             `label` varchar(255) NOT NULL DEFAULT '',
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`units_id`),
+            PRIMARY KEY (`unit_repository_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
@@ -559,10 +563,10 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         case 'uv_map':
           $sql = "CREATE TABLE IF NOT EXISTS `uv_map` (
             `uv_map_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `capture_dataset_repository_id` int(11),
-            `map_type` varchar(255),
-            `map_file_type` varchar(255),
-            `map_size` varchar(255),
+            `capture_dataset_repository_id` int(11) DEFAULT NULL,
+            `map_type` varchar(255) DEFAULT NULL,
+            `map_file_type` varchar(255) DEFAULT NULL,
+            `map_size` varchar(255) DEFAULT NULL,
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
