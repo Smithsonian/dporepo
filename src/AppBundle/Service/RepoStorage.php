@@ -31,4 +31,12 @@ interface RepoStorage {
    */
   public function deleteRecords(array $query_parameters);
 
+  /***
+   * @param $data The data to validate.
+   * @param $data['schema'] The schema to validate against (optional).
+   * Validates incoming data against JSON Schema Draft 7
+   * @return mixed array containing success/fail value, and any messages.
+   */
+  public function validateData($data);
+
 }

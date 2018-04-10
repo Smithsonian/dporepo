@@ -6,6 +6,12 @@ use Doctrine\DBAL\Driver\Connection;
 
 use PDO;
 
+use JsonSchema\{
+    SchemaStorage,
+    Validator,
+    Constraints\Factory
+};
+
 class RepoStorageHybrid implements RepoStorage {
 
   private $connection;
@@ -3865,6 +3871,46 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     return $fields;
+  }
+
+
+  /**
+   * @param null $data The data to validate.
+   * Validates incoming data against JSON Schema Draft 7
+   * Documentation: https://github.com/justinrainbow/json-schema
+   * @return mixed array containing success/fail value, and any messages.
+   */
+  public function validateData($data = NULL) {
+
+    $return = array('is_valid' => false);
+
+    // If no data is passed, set a message.
+    if(empty($data)) $return['messages'][] = 'Nothing to validate. Please provide an object to validate.';
+
+    // If data is passed, go ahead and process.
+    if(!empty($data)) {
+
+      $schema_dir = __DIR__ . '/../../../web/json/schemas/';
+      $jsonSchemaObject = json_decode(file_get_contents($schema_dir . 'project.json'));
+
+      $schemaStorage = new SchemaStorage();
+      $schemaStorage->addSchema('file://' . $schema_dir, $jsonSchemaObject);
+
+      $jsonValidator = new Validator( new Factory($schemaStorage) );
+      $jsonValidator->validate($data, $jsonSchemaObject);
+
+      if ($jsonValidator->isValid()) {
+        $return['is_valid'] = true;
+      } else {
+        $return['is_valid'] = false;
+        foreach ($jsonValidator->getErrors() as $error) {
+          $return['messages'][$error['property']] = sprintf("[%s] %s", $error['property'], $error['message']);
+        }
+      }
+
+    }
+
+    return $return;
   }
 
 }

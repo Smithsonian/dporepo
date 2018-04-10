@@ -33,6 +33,7 @@
         "fr3d/ldap-bundle": "3.0.*@dev",
         "friendsofsymfony/user-bundle": "~2.0",
         "incenteev/composer-parameter-handler": "^2.0",
+        "justinrainbow/json-schema": "^5.2",
         "sensio/distribution-bundle": "^5.0.19",
         "sensio/framework-extra-bundle": "^5.0.0",
         "smithsonian/edan-client": "dev-master",
