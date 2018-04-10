@@ -28,9 +28,9 @@ class RepoValidateData implements RepoValidate {
    * JSON Schema for PHP Documentation: https://github.com/justinrainbow/json-schema
    * @return mixed array containing success/fail value, and any messages.
    */
-  public function validateData($data = NULL, $schema = NULL) {
+  public function validateData($data = NULL, $schema = 'project') {
 
-    // $data['schema']
+    $schema_definitions_dir = ($schema !== 'project') ? 'definitions/' : '';
 
     $return = array('is_valid' => false);
 
@@ -41,7 +41,7 @@ class RepoValidateData implements RepoValidate {
     if(!empty($data)) {
 
       $schema_dir = __DIR__ . '/../../../web/json/schemas/';
-      $jsonSchemaObject = json_decode(file_get_contents($schema_dir . 'project.json'));
+      $jsonSchemaObject = json_decode(file_get_contents($schema_dir . $schema_definitions_dir . $schema . '.json'));
 
       $schemaStorage = new SchemaStorage();
       $schemaStorage->addSchema('file://' . $schema_dir, $jsonSchemaObject);
