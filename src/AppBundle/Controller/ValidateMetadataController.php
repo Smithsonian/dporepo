@@ -92,6 +92,16 @@ class ValidateMetadataController extends Controller
 
         // Read the first key from the array, which is the column headers.
         $target_fields = $json_array[0];
+
+        // TODO: move into a vz-specific method?
+        // [VZ IMPORT ONLY] Convert field names to satisfy the validator.
+        foreach ($target_fields as $tfk => $tfv) {
+          // [VZ IMPORT ONLY] Convert the 'import_subject_id' field name to 'subject_repository_id'.
+          if($tfv === 'import_subject_id') {
+            $target_fields[$tfk] = 'subject_repository_id';
+          }
+        }
+
         // Remove the column headers from the array.
         array_shift($json_array);
 
