@@ -23,13 +23,14 @@ class RepoValidateData implements RepoValidate {
 
   /**
    * @param null $data The data to validate.
-   * @param null $schema The schema to validate against (optional).
+   * @param string $schema The schema to validate against (optional).
+   * @param array $blacklisted_fields An array of fields to ignore (optional).
    * Validates incoming data against JSON Schema Draft 7. See:
    * http://json-schema.org/specification.html
    * JSON Schema for PHP Documentation: https://github.com/justinrainbow/json-schema
    * @return mixed array containing success/fail value, and any messages.
    */
-  public function validateData($data = NULL, $schema = 'project') {
+  public function validateData($data = NULL, $schema = 'project', $blacklisted_fields = array()) {
 
     $schema_definitions_dir = ($schema !== 'project') ? 'definitions/' : '';
 
@@ -53,9 +54,20 @@ class RepoValidateData implements RepoValidate {
       if ($jsonValidator->isValid()) {
         $return['is_valid'] = true;
       } else {
+
         $return['is_valid'] = false;
+
         foreach ($jsonValidator->getErrors() as $error) {
-          $return['messages'][$error['property']] = sprintf("[%s] %s", $error['property'], $error['message']);
+          // Ignore blacklisted field.
+          // TODO: Loop through blacklisted fields (right now, only using the first one, $blacklisted_fields[0]).
+          if(!empty($blacklisted_fields) && !strstr($error['property'], $blacklisted_fields[0])) {
+            $return['messages'][$error['property']] = sprintf("[%s] %s", $error['property'], $error['message']);
+          }
+        }
+
+        // If there are no messages, then return true for 'is_valid'.
+        if(!isset($return['messages'])) {
+          $return['is_valid'] = true;
         }
       }
 

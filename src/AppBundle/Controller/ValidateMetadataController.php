@@ -48,6 +48,10 @@ class ValidateMetadataController extends Controller
     function validate_metadata(Request $request)
     {
       $id = $request->query->get('id');
+      // TODO: feed this into this method.
+      $blacklisted_fields = array(
+        'project_repository_id',
+      );
 
       // If there's a project ID passed, relate the uploaded data to that project ID.
       if(!empty($id)) {
@@ -110,18 +114,19 @@ class ValidateMetadataController extends Controller
 
         // Projects
         if($csv_key === 0) {
-          // $json_validation_result[$csv_key] = (object)$this->repoValidate->validateData($json_object[$csv_key], 'project');
+          // $json_validation_result[$csv_key] = (object)$this->repoValidate->validateData($json_object[$csv_key], 'project', $blacklisted_fields);
           // $this->u->dumper($json_validation_result);
         }
         // Subjects
         if($csv_key === 1) {
           // $this->u->dumper($json_object[$csv_key]);
-          $json_validation_result['subject'] = (object)$this->repoValidate->validateData($json_object[$csv_key], 'subject');
+          $json_validation_result['subject'] = (object)$this->repoValidate->validateData($json_object[$csv_key], 'subject', $blacklisted_fields);
           // $this->u->dumper($json_validation_result,0);
         }
         // Items
         if($csv_key === 2) {
-          $json_validation_result['item'] = (object)$this->repoValidate->validateData($json_object[$csv_key], 'item');
+          // $this->u->dumper($json_object[$csv_key]);
+          $json_validation_result['item'] = (object)$this->repoValidate->validateData($json_object[$csv_key], 'item', $blacklisted_fields);
           // $this->u->dumper($json_validation_result);
         }
 
