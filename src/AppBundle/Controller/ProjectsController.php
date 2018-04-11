@@ -6,11 +6,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Finder\Finder;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
-use AppBundle\Service\RepoValidateData;
 use AppBundle\Controller\RepoStorageHybridController;
 use Symfony\Component\DependencyInjection\Container;
 use PDO;
@@ -28,7 +26,6 @@ class ProjectsController extends Controller
      */
     public $u;
     private $repo_storage_controller;
-    private $repoValidate;
 
     /**
     * Constructor
@@ -39,7 +36,6 @@ class ProjectsController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController();
-        $this->repoValidate = new RepoValidateData();
     }
 
     /**
@@ -362,95 +358,6 @@ class ProjectsController extends Controller
         }
 
         return $this->redirectToRoute('projects_browse');
-    }
-
-    /**
-     * Matches /admin/projects/upload_metadata/*
-     *
-     * @Route("/admin/projects/upload_metadata/{id}", name="upload_metadata", methods={"GET"}, defaults={"id" = null})
-     *
-     * @param   object  Request       Request object
-     * @return  array                 Redirect or render
-     */
-    function upload_metadata(Request $request)
-    {
-      $id = $request->query->get('id');
-
-      // If there's a project ID passed, relate the uploaded data to that project ID.
-      if(!empty($id)) {
-        $this->u->dumper('do something with the id');
-      }
-
-      $uploads_directory = __DIR__ . '/../../../web/uploads/';
-
-      $finder = new Finder();
-      $finder->files()->in($uploads_directory);
-      $finder->sortByName();
-
-      foreach ($finder as $file) {
-
-        // Convert the CSV to JSON.
-        $csv = file_get_contents($file->getRealPath());
-        $array = array_map('str_getcsv', explode("\n", $csv));
-        $json = json_encode($array);
-
-        // Convert the JSON to a PHP array.
-        $json_array = json_decode($json, false);
-
-        // Read the first key from the array, which is the column headers.
-        $target_fields = $json_array[0];
-        // Remove the column headers from the array.
-        array_shift($json_array);
-
-        // $this->u->dumper($target_fields);
-        // $this->u->dumper($json_array);
-
-        foreach ($json_array as $key => $value) {
-          // Replace numeric keys with field names.
-          foreach ($value as $k => $v) {
-            $field_name = $target_fields[$k];
-            unset($json_array[$key][$k]);
-            $json_array[$key][$field_name] = $v;
-          }
-          // Convert the array to an object.
-          $json_object[] = (object)$json_array[$key];
-        }
-
-        
-        // $this->u->dumper($json_array);
-        // $this->u->dumper($json_object);
-
-        if(stristr($file->getRealPath(), 'projects')) {
-          
-        }
-
-        if(stristr($file->getRealPath(), 'subjects')) {
-
-        }
-
-        if(stristr($file->getRealPath(), 'items')) {
-          $json_validation_result = (object)$this->repoValidate->validateData($json_object, 'item');
-          $this->u->dumper($json_validation_result);
-        }
-
-        if(stristr($file->getRealPath(), 'models')) {
-
-        }
-
-      }
-
-
-      $this->u->dumper('done');
-
-      // Validate agianst the entire JSON blob of example data.
-      // $json = __DIR__ . '/../../../web/json/json_data_example.json';
-      // $json = __DIR__ . '/../../../web/json/json_data_example_with_children.json';
-      // $json_object = json_decode(file_get_contents($json), false);
-      // $json_validation_result = (object)$this->repoValidate->validateData($json_object);
-      // $this->u->dumper($json_validation_result);
-
-      $this->addFlash('message', 'Metadata uploaded');
-      return $this->redirect('/admin/workspace/');
     }
 
 }
