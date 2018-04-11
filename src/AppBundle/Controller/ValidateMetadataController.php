@@ -42,12 +42,12 @@ class ValidateMetadataController extends Controller
      *
      * @Route("/admin/projects/validate_metadata/{id}", name="validate_metadata", methods={"GET"}, defaults={"id" = null})
      *
+     * @param   int     $id           The project ID
      * @param   object  Request       Request object
      * @return  array                 Redirect or render
      */
-    function validate_metadata(Request $request)
+    function validate_metadata($id, Request $request)
     {
-      $id = $request->query->get('id');
       // TODO: feed this into this method.
       $blacklisted_fields = array(
         'project_repository_id',
@@ -55,7 +55,7 @@ class ValidateMetadataController extends Controller
 
       // If there's a project ID passed, relate the uploaded data to that project ID.
       if(!empty($id)) {
-        $this->u->dumper('do something with the id');
+        $this->u->dumper('TODO: use the id as the project_repository_id??? (id passed = ' . (int)$id . ')');
       }
 
       $uploads_directory = __DIR__ . '/../../../web/uploads/';
