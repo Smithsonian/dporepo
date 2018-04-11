@@ -44,7 +44,7 @@ class RepoValidateData implements RepoValidate {
       $jsonSchemaObject = json_decode(file_get_contents($schema_dir . $schema_definitions_dir . $schema . '.json'));
 
       $schemaStorage = new SchemaStorage();
-      $schemaStorage->addSchema('file://' . $schema_dir, $jsonSchemaObject);
+      $schemaStorage->addSchema('file://' . $schema_dir . $schema_definitions_dir, $jsonSchemaObject);
 
       $jsonValidator = new Validator( new Factory($schemaStorage) );
       $jsonValidator->validate($data, $jsonSchemaObject);
