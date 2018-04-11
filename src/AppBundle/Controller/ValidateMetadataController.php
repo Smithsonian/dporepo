@@ -105,15 +105,14 @@ class ValidateMetadataController extends Controller
         // Remove the column headers from the array.
         array_shift($json_array);
 
-        // $this->u->dumper($target_fields);
-        // $this->u->dumper($json_array);
-
         foreach ($json_array as $key => $value) {
           // Replace numeric keys with field names.
           foreach ($value as $k => $v) {
             $field_name = $target_fields[$k];
             unset($json_array[$key][$k]);
-            $json_array[$key][$field_name] = $v;
+            // TODO: move into a vz-specific method?
+            // [VZ IMPORT ONLY] Strip 'USNM ' from the 'subject_repository_id' field.
+            $json_array[$key][$field_name] = ($field_name === 'subject_repository_id') ? (int)str_replace('USNM ', '', $v) : $v;
           }
           // Convert the array to an object.
           $json_object[$csv_key][] = (object)$json_array[$key];
