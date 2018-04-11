@@ -9,7 +9,8 @@ use PDO;
 use JsonSchema\{
     SchemaStorage,
     Validator,
-    Constraints\Factory
+    Constraints\Factory,
+    Constraints\Constraint
 };
 
 class RepoValidateData implements RepoValidate {
@@ -47,7 +48,7 @@ class RepoValidateData implements RepoValidate {
       $schemaStorage->addSchema('file://' . $schema_dir . $schema_definitions_dir, $jsonSchemaObject);
 
       $jsonValidator = new Validator( new Factory($schemaStorage) );
-      $jsonValidator->validate($data, $jsonSchemaObject);
+      $jsonValidator->validate($data, $jsonSchemaObject, Constraint::CHECK_MODE_COERCE_TYPES);
 
       if ($jsonValidator->isValid()) {
         $return['is_valid'] = true;
