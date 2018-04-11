@@ -38,14 +38,14 @@ class ValidateMetadataController extends Controller
     }
 
     /**
-     * Matches /admin/projects/upload_metadata/*
+     * Matches /admin/projects/validate_metadata/*
      *
-     * @Route("/admin/projects/upload_metadata/{id}", name="upload_metadata", methods={"GET"}, defaults={"id" = null})
+     * @Route("/admin/projects/validate_metadata/{id}", name="validate_metadata", methods={"GET"}, defaults={"id" = null})
      *
      * @param   object  Request       Request object
      * @return  array                 Redirect or render
      */
-    function upload_metadata(Request $request)
+    function validate_metadata(Request $request)
     {
       $id = $request->query->get('id');
 
