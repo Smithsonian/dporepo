@@ -8,13 +8,18 @@ use Symfony\Component\HttpFoundation\Request;
 
 class ImportController extends Controller
 {
+
     /**
      * @Route("/admin/import", name="import_summary_dashboard")
      */
-    public function importSummaryAction(Request $request)
+    public function importSummaryAction(Connection $conn, Request $request)
     {
-        return $this->render('import/import_summary_dashboard.html.twig');
+        return $this->render('import/import_summary_dashboard.html.twig', array(
+            'page_title' => 'Uploads',
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
+        ));
     }
+
     /**
      * @Route("/admin/import/datatables_import_projects", name="projects_import_datatables", methods="POST")
      *
@@ -73,10 +78,11 @@ class ImportController extends Controller
     /**
      * @Route("/admin/import/{project_id}", name="import_summary_item")
      */
-    public function importSummaryItemAction(Request $request,$project_id)
+    public function importSummaryItemAction(Connection $conn, Request $request, $project_id)
     {
-        $data = array(array("project_repository_id"=>1,
-                          "project_name"=>ucwords("nmnh human origins vertebrate zoology models"),
+        $data = array(
+                    array("project_repository_id"=>1,
+                          "project_name"=>ucwords("NMNH human origins vertebrate zoology models"),
                           "date_uploaded"=>"Apr 17, 2018",
                           "item_success"=>25,
                           "item_failed"=>2,
@@ -122,8 +128,16 @@ class ImportController extends Controller
                     )
             );
         $key = array_search($project_id, array_column($data, 'project_repository_id'));
+
+        return $this->render('import/import_summary_item.html.twig', array(
+            'page_title' => 'Uploads: ' . $data[$key]['project_name'],
+            'project' => $data[$key],
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
+        ));
+
         return $this->render('import/import_summary_item.html.twig',array("project"=>$data[$key]));
     }
+
     /**
      * @Route("/admin/import/{project_id}/datatables_import_project_item", name="projects_import_datatables_item")
      *
