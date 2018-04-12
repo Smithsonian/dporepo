@@ -142,20 +142,6 @@ class ProjectsController extends Controller
         // If form is submitted and passes validation, insert/update the database record.
         if ($form->isSubmitted() && $form->isValid()) {
 
-            // EXAMPLE #1
-            // Validate agianst project data.
-            $project->project_repository_id = (int)$id;
-            $json_validation_result = (object)$this->repoValidate->validateData($project);
-            // $this->u->dumper($json_validation_result);
-
-            // EXAMPLE #2
-            // Validate agianst the entire JSON blob of example data.
-            // $json = __DIR__ . '/../../../web/json/json_data_example.json';
-            $json = __DIR__ . '/../../../web/json/json_data_example_with_children.json';
-            $json_object = json_decode(file_get_contents($json), false);
-            $json_validation_result = (object)$this->repoValidate->validateData($json_object);
-            // $this->u->dumper($json_validation_result);
-
             $project = $form->getData();
             $project_repository_id = $this->insert_update_project($this->container, $project, $id);
 
