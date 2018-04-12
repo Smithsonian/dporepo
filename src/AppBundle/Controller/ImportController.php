@@ -5,9 +5,52 @@ namespace AppBundle\Controller;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
+use Doctrine\DBAL\Driver\Connection;
+
+// Custom utility bundle
+use AppBundle\Utils\AppUtilities;
 
 class ImportController extends Controller
 {
+    /**
+     * @var object $u
+     */
+    public $u;
+    private $repo_storage_controller;
+
+    /**
+     * Constructor
+     * @param object  $u  Utility functions object
+     */
+    public function __construct(AppUtilities $u)
+    {
+        // Usage: $this->u->dumper($variable);
+        $this->u = $u;
+        $this->repo_storage_controller = new RepoStorageHybridController();
+    }
+
+    /**
+     * @Route("/admin/import_validation/{id}", name="import_validation", defaults={"id" = null})
+     */
+    public function importValidation($id, Connection $conn, Request $request, ValidateMetadataController $validate)
+    {
+        $project = array();
+
+        if(!empty($id)) {
+          // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
+          $this->repo_storage_controller->setContainer($this->container);
+          $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $id));
+          if(!$project) throw $this->createNotFoundException('The Project record does not exist');
+        }
+
+        $validation_results = $validate->validate_metadata($id, $request);
+
+        return $this->render('import/import_validation.html.twig', array(
+            'page_title' => !empty($project) ? 'Import Validation: ' . $project['project_name'] : 'Import Validation',
+            'validation_results' => !empty($validation_results) ? $validation_results : '',
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
+        ));
+    }
 
     /**
      * @Route("/admin/import", name="import_summary_dashboard")

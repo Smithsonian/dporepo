@@ -1,0 +1,80 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+  {{ parent() }}
+
+{% endblock %}
+
+{% block content %}
+
+  <ol class="breadcrumb">
+    <li><a href="/admin">Dashboard</a></li>
+    <li><a href="/admin/import">Uploads</a></li>
+    <li class="active">{{ page_title }}</li>
+  </ol>
+
+  {% if validation_results.subject.messages is not defined and validation_results.item.messages is not defined %}
+    <h2>Data Successfully Validated!</h2>
+    <p>Click the "Ingest Metadata" button to import metadata into the repository.</p>
+    <a href="javascript:void(0);" id="ingest-metadata" class="btn btn-default" role="button"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> Ingest Metadata</a>
+    <hr>
+  {% endif %}
+
+  <h2>Subjects</h2>
+
+  <table id="subjects" class="table table-striped">
+    <thead>
+      <tr>
+        <th width="30%">CSV Row/Field</th>
+        <th>Error Message</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if validation_results.subject.messages is defined %}
+        {% for results in validation_results.subject.messages %}
+        <tr>
+          <td width="30%">{{ results.row }}</td>
+          <td>{{ results.error }}</td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <td colspan="3" class="text-center success">Data successfully validated!</td>
+      {% endif %}
+    </tbody>
+  </table>
+
+  <hr>
+
+  <h2>Items</h2>
+
+  <table id="items" class="table table-striped">
+    <thead>
+      <tr>
+        <th width="30%">CSV Row/Field</th>
+        <th>Error Message</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if validation_results.item.messages is defined %}
+        {% for results in validation_results.item.messages %}
+        <tr>
+          <td width="30%">{{ results.row }}</td>
+          <td>{{ results.error }}</td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <td colspan="3" class="text-center success">Data successfully validated!</td>
+      {% endif %}
+    </tbody>
+  </table>
+
+{% endblock %}
+
+{% block js_bottom %}
+  {{ parent() }}
+  <script type="text/javascript">
+    // $(document).ready(function() {
+
+    // });
+  </script>
+{% endblock %}
