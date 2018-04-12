@@ -40,22 +40,24 @@ class ValidateMetadataController extends Controller
     /**
      * Matches /admin/projects/validate_metadata/*
      *
-     * @Route("/admin/projects/validate_metadata/{id}", name="validate_metadata", methods={"GET"}, defaults={"id" = null})
+     * Route_DISABLED("/admin/projects/validate_metadata/{id}", name="validate_metadata", methods={"GET"}, defaults={"id" = null})
      *
      * @param   int     $id           The project ID
      * @param   object  Request       Request object
      * @return  array                 Redirect or render
      */
-    function validate_metadata($id, Request $request)
+    public function validate_metadata($id = null)
     {
-      // TODO: feed this into this method.
-      $blacklisted_fields = array(
-        'project_repository_id',
-      );
 
-      // If there's a project ID passed, relate the uploaded data to that project ID.
-      if(!empty($id)) {
-        $this->u->dumper('TODO: use the id as the project_repository_id??? (id passed = ' . (int)$id . ')');
+      // $this->u->dumper($id);
+
+      $blacklisted_fields = array();
+
+      // TODO: feed this into this method.
+      if(empty($id)) {
+        $blacklisted_fields = array(
+          'project_repository_id',
+        );
       }
 
       $uploads_directory = __DIR__ . '/../../../web/uploads/';
@@ -110,6 +112,8 @@ class ValidateMetadataController extends Controller
           foreach ($value as $k => $v) {
             $field_name = $target_fields[$k];
             unset($json_array[$key][$k]);
+            // If present, bring the project_repository_id into the array.
+            $json_array[$key][$field_name] = ($field_name === 'project_repository_id') ? (int)$id : null;
             // TODO: move into a vz-specific method?
             // [VZ IMPORT ONLY] Strip 'USNM ' from the 'subject_repository_id' field.
             $json_array[$key][$field_name] = ($field_name === 'subject_repository_id') ? (int)str_replace('USNM ', '', $v) : $v;
@@ -141,8 +145,10 @@ class ValidateMetadataController extends Controller
 
       }
 
-      $response = new JsonResponse($json_validation_result);
-      return $response;
+      return $json_validation_result;
+
+      // $response = new JsonResponse($json_validation_result);
+      // return $response;
     }
 
 }

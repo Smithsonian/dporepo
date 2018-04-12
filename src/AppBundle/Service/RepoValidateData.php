@@ -49,7 +49,7 @@ class RepoValidateData implements RepoValidate {
       $schemaStorage->addSchema('file://' . $schema_dir . $schema_definitions_dir, $jsonSchemaObject);
 
       $jsonValidator = new Validator( new Factory($schemaStorage) );
-      $jsonValidator->validate($data, $jsonSchemaObject, Constraint::CHECK_MODE_COERCE_TYPES);
+      $jsonValidator->validate($data, $jsonSchemaObject, Constraint::CHECK_MODE_APPLY_DEFAULTS);
 
       if ($jsonValidator->isValid()) {
         $return['is_valid'] = true;
@@ -60,15 +60,19 @@ class RepoValidateData implements RepoValidate {
         foreach ($jsonValidator->getErrors() as $error) {
           // Ignore blacklisted field.
           // TODO: Loop through blacklisted fields (right now, only using the first one, $blacklisted_fields[0]).
-          if(!empty($blacklisted_fields) && !strstr($error['property'], $blacklisted_fields[0])) {
-            $return['messages'][$error['property']] = sprintf("[%s] %s", $error['property'], $error['message']);
-          }
+          // if(!strstr($error['property'], $blacklisted_fields[0])) {
+            $row = str_replace('[', 'Row ', $error['property']);
+            $row = str_replace(']', '', $row);
+            $row = str_replace('.', ' - Field: ', $row);
+            $return['messages'][] = array('row' => $row, 'error' => $error['message']);
+          // }
         }
 
         // If there are no messages, then return true for 'is_valid'.
         if(!isset($return['messages'])) {
           $return['is_valid'] = true;
         }
+
       }
 
     }
