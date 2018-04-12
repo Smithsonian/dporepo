@@ -54,10 +54,14 @@ class SubjectsController extends Controller
 
         if(!$project_data) throw $this->createNotFoundException('The record does not exist');
 
+        // Check to see if there are any subjects, to present the Upload Metadata button or not.
+        $subjects = $this->get_subjects($this->container, (int)$project_data['project_repository_id']);
+
         return $this->render('subjects/browse_subjects.html.twig', array(
             'page_title' => 'Project: ' . $project_data['project_name'],
             'project_repository_id' => $project_repository_id,
             'project_data' => $project_data,
+            'upload_metadata_button' => !empty($subjects) ? true : false,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
