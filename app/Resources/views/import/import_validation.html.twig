@@ -15,8 +15,8 @@
 
   {% if validation_results.subject.messages is not defined and validation_results.item.messages is not defined %}
     <h2>Data Successfully Validated!</h2>
-    <p>Click the "Ingest Metadata" button to import metadata into the repository.</p>
-    <a href="javascript:void(0);" id="ingest-metadata" class="btn btn-default" role="button"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> Ingest Metadata</a>
+    <p>Click the "Import Metadata" button to import metadata into the repository.</p>
+    <a href="javascript:void(0);" id="import-metadata" class="btn btn-default" role="button"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> Import Metadata</a>
     <hr>
   {% endif %}
 
@@ -73,8 +73,28 @@
 {% block js_bottom %}
   {{ parent() }}
   <script type="text/javascript">
-    // $(document).ready(function() {
+    $(document).ready(function() {
+      /**
+       * Import Metadata button click handler
+       */
+      $('#import-metadata').on('click', function(e) {
 
-    // });
+        // Validate that this is really the record.
+        swal({
+          title: "Import Metadata",
+          text: "Just making sure...",
+          type: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#DD6B55',
+          confirmButtonText: 'Yes, import metadata',
+          closeOnConfirm: true,
+        },
+        function(){
+          window.location.href = '/admin/import_metadata/' + {{ project_data.project_repository_id }};
+        });
+
+      });
+
+    });
   </script>
 {% endblock %}
