@@ -2799,6 +2799,248 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
+  /**
+   * Get datatable data for imports.
+   * @param $params
+   * @return mixed
+   */
+  public function getDatatableImports($params) {
+
+    $record_type = 'job';
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $date_range_start = array_key_exists('date_range_start', $params) ? $params['date_range_start'] : NULL;
+    $date_range_end = array_key_exists('date_range_end', $params) ? $params['date_range_end'] : NULL;
+
+    $query_params = array(
+      'distinct' => true, // @todo Do we always want this to be true?
+      'base_table' => $record_type,
+      'fields' => array(),
+    );
+
+    $query_params['limit'] = array(
+      'limit_start' => $start_record,
+      'limit_stop' => $stop_record,
+    );
+
+    if (!empty($sort_field) && !empty($sort_order)) {
+      $query_params['sort_fields'][] = array(
+        'field_name' => $sort_field,
+        'sort_order' => $sort_order,
+      );
+    } else {
+      $query_params['sort_fields'][] = array(
+        'field_name' => $record_type . '.date_created',
+        'sort_order' => 'DESC',
+      );
+    }
+
+    $query_params['related_tables'][] = array(
+      'table_name' => 'project',
+      'table_join_field' => 'project_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'job',
+      'base_join_field' => 'project_id',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'fos_user',
+      'table_join_field' => 'id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'job',
+      'base_join_field' => 'created_by_user_account_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => $record_type . '_id',
+      'field_alias' => 'manage',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'project',
+      'field_name' => 'project_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'project',
+      'field_name' => 'project_name',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => 'date_created',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => 'job_status',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'fos_user',
+      'field_name' => 'username',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => $record_type . '_id',
+      'field_alias' => 'DT_RowId',
+    );
+
+    if (NULL !== $search_value) {
+      $query_params['search_params'][0] = array(
+        'field_names' => array(
+          $record_type . '.project_name',
+          $record_type . '.date_created',
+          $record_type . '.created_by_user_account_id',
+        ),
+        'search_values' => array($search_value),
+        'comparison' => 'LIKE',
+      );
+    }
+
+    if(NULL !== $date_range_start) {
+      $c = count($query_params['search_params']);
+      $query_params['search_params'][$c] = array(
+        'field_names' => array('project.date_created'),
+        'search_values' => array($date_range_start),
+        'comparison' => '<',
+      );
+    }
+    if(NULL !== $date_range_end) {
+      $c = count($query_params['search_params']);
+      $query_params['search_params'][$c] = array(
+        'field_names' => array('project.date_created'),
+        'search_values' => array($date_range_end),
+        'comparison' => '>',
+      );
+    }
+
+    $data = $this->getRecordsDatatable($query_params);
+    return $data;
+  }
+
+  /**
+   * Get datatable data for an import's details.
+   * @param $params
+   * @return mixed
+   */
+  public function getDatatableImportDetails($params) {
+
+    $record_type = 'job_import_record';
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $date_range_start = array_key_exists('date_range_start', $params) ? $params['date_range_start'] : NULL;
+    $date_range_end = array_key_exists('date_range_end', $params) ? $params['date_range_end'] : NULL;
+
+    $query_params = array(
+      'distinct' => true, // @todo Do we always want this to be true?
+      'base_table' => $record_type,
+      'fields' => array(),
+    );
+
+    $query_params['limit'] = array(
+      'limit_start' => $start_record,
+      'limit_stop' => $stop_record,
+    );
+
+    if (!empty($sort_field) && !empty($sort_order)) {
+      $query_params['sort_fields'][] = array(
+        'field_name' => $sort_field,
+        'sort_order' => $sort_order,
+      );
+    } else {
+      $query_params['sort_fields'][] = array(
+        'field_name' => $record_type . '.date_created',
+        'sort_order' => 'DESC',
+      );
+    }
+
+    $query_params['related_tables'][] = array(
+      'table_name' => 'project',
+      'table_join_field' => 'project_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'job_import_record',
+      'base_join_field' => 'project_id',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'subject',
+      'table_join_field' => 'subject_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'job_import_record',
+      'base_join_field' => 'record_id',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'item',
+      'table_join_field' => 'subject_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'subject',
+      'base_join_field' => 'subject_repository_id',
+    );
+
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => $record_type . '_id',
+      'field_alias' => 'manage',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'project',
+      'field_name' => 'project_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'project',
+      'field_name' => 'project_name',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'subject',
+      'field_name' => 'subject_display_name',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'item_display_name',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => $record_type . '_id',
+      'field_alias' => 'DT_RowId',
+    );
+
+    $query_params['search_params'][0] = array('field_names' => array('job_import_record.record_table'), 'search_values' => array('subject'), 'comparison' => '=');
+    $query_params['search_type'] = 'AND';
+
+    if (NULL !== $search_value) {
+      $query_params['search_params'][1] = array(
+        'field_names' => array(
+          'subject_display_name',
+          'item_display_name',
+        ),
+        'search_values' => array($search_value),
+        'comparison' => 'LIKE',
+      );
+    }
+
+    if(NULL !== $date_range_start) {
+      $c = count($query_params['search_params']);
+      $query_params['search_params'][$c] = array(
+        'field_names' => array('project.date_created'),
+        'search_values' => array($date_range_start),
+        'comparison' => '<',
+      );
+    }
+    if(NULL !== $date_range_end) {
+      $c = count($query_params['search_params']);
+      $query_params['search_params'][$c] = array(
+        'field_names' => array('project.date_created'),
+        'search_values' => array($date_range_end),
+        'comparison' => '>',
+      );
+    }
+
+    $data = $this->getRecordsDatatable($query_params);
+    return $data;
+  }
+
   public function markProjectInactive($params) {
     $user_id = $params['user_id'];
     $project_id = $params['record_id'];

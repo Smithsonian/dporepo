@@ -17,12 +17,12 @@
   <div class="panel panel-default">
     <div class="panel-body">
       <div><label>Project Name:</label> {{project.project_name}}</div>
-      <div><label>Date Uploaded:</label> {{project.date_uploaded}}</div>
+{#       <div><label>Date Uploaded:</label> {{project.date_uploaded}}</div>
       <div><label>Success #:</label> {{project.item_success}}</div>
       <div><label>Failed #:</label> {{project.item_failed}}</div>
       <div><label>In Progress #:</label> {{project.item_in_progress}}</div>
       <div><label>Pending Processing #:</label> {{project.item_pending_processing}}</div>
-      <div><label>Total Items #:</label> {{project.items_total}}</div>
+      <div><label>Total Items #:</label> {{project.items_total}}</div> #}
       <input type="hidden" id="projectId" value="{{project.project_repository_id}}">
     </div>
   </div>
@@ -32,8 +32,7 @@
       <tr>
         <th class="text-center">Subject</th>
         <th class="text-center">Item</th>
-        <th class="text-center">Holding Entity</th>
-        <th class="text-center">Status</th>
+        {# <th class="text-center">Status</th> #}
       </tr>
     </thead>
   </table>
@@ -54,10 +53,9 @@
 
       $('#browse').dataTable({
         "columns": [
-          { "data": "subject" },
-          { "data": "item" },
-          { "data": "holding_entity" },
-          { "data": "status" }
+          { "data": "subject_display_name" },
+          { "data": "item_display_name" }
+          // { "data": "status" }
         ],
         //"dom": 'lfip<"datatables_bulk_actions">tip',
         "pagingType": "simple_numbers",
@@ -65,19 +63,18 @@
         "order": [[0,"desc"]],
         // Show processing throbber.
         "processing": true,
-        "serverMethod": "POST",
         // All data management will be done on the server side.
         "serverSide": true,
         // Path to the file that is going to handle the queries.
-        "ajax": "/admin/import/" + projectid + "/datatables_import_project_item",
+        "ajax": "/admin/import/" + projectid + "/datatables_browse_import_details",
         // Method type.
         "serverMethod": "POST",
         // Values in the length dropdown.
         "lengthMenu":[10,50,100,500],
         // Set some widths.
         "columnDefs":[
-          {"sWidth":"305px","aTargets":[0]},
-          {"bSortable":false,"aTargets":[0,3]}
+          {"sWidth":"400px","aTargets":[0]}
+          // {"bSortable":false,"aTargets":[0,1]}
         ]
         
       });

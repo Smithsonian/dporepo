@@ -47,15 +47,190 @@ class ImportController extends Controller
 
         return $this->render('import/import_validation.html.twig', array(
             'page_title' => !empty($project) ? 'Import Validation: ' . $project['project_name'] : 'Import Validation',
+            'project_data' => $project,
             'validation_results' => !empty($validation_results) ? $validation_results : '',
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
         ));
     }
 
     /**
+     * @Route("/admin/import_metadata/{id}", name="import_metadata", defaults={"id" = null})
+     */
+    public function importMetadata($id, Connection $conn, Request $request, ValidateMetadataController $validate)
+    {
+      $project = false;
+      $csv_data = array();
+
+      if(!empty($id)) {
+        // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
+        $this->repo_storage_controller->setContainer($this->container);
+        $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $id));
+        if(!$project) throw $this->createNotFoundException('The Project record does not exist');
+      }
+
+      // Insert a record into the job table.
+      $job_id = $this->repo_storage_controller->execute('saveRecord', array(
+        'base_table' => 'job',
+        'user_id' => $this->getUser()->getId(),
+        'values' => array(
+          'project_id' => (int)$project['project_repository_id'],
+          'job_label' => 'VZ Metadata Import',
+          'job_type' => 'metadata import',
+          'job_status' => 'in progress',
+          'date_completed' => null,
+          'qa_required' => 0,
+          'qa_approved_time' => null,
+        )
+      ));
+
+      $uploads_directory = __DIR__ . '/../../../web/uploads/';
+      $csv_data = $validate->construct_import_data($uploads_directory);
+
+      if(!empty($csv_data)) {
+
+        foreach ($csv_data as $csv_key => $csv_value) {
+          // Projects
+          if($csv_key === 0) {
+            // Placeholder
+          }
+          // Insert Subjects
+          if($csv_key === 1) {
+
+            // Insert into the job_log table
+            $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'job_log',
+              'user_id' => $this->getUser()->getId(),
+              'values' => array(
+                'job_id' => $job_id,
+                'job_log_status' => 'start',
+                'job_log_label' => 'Import VZ subjects',
+                'job_log_description' => 'Import started',
+              )
+            ));
+
+            $subject_repository_ids = array();
+
+            foreach ($csv_value as $subject_key => $subject) {
+              $subject->project_repository_id = $project['project_repository_id'];
+              // $this->u->dumper($subject);
+
+              // Insert into the subject table
+              $subject_repository_id = $this->repo_storage_controller->execute('saveRecord', array(
+                'base_table' => 'subject',
+                'user_id' => $this->getUser()->getId(),
+                'values' => (array)$subject
+              ));
+              $subject_repository_ids[$subject->subject_repository_id] = $subject_repository_id;
+
+              // Insert into the job_import_record table
+              $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+                'base_table' => 'job_import_record',
+                'user_id' => $this->getUser()->getId(),
+                'values' => array(
+                  'record_id' => $subject_repository_id,
+                  'project_id' => $project['project_repository_id'],
+                  'record_table' => 'subject',
+                  'description' => $subject->local_subject_id . ' - ' . $subject->subject_display_name,
+                )
+              ));
+
+            }
+
+            // Insert into the job_log table
+            $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'job_log',
+              'user_id' => $this->getUser()->getId(),
+              'values' => array(
+                'job_id' => $job_id,
+                'job_log_status' => 'finish',
+                'job_log_label' => 'Import VZ subjects',
+                'job_log_description' => 'Import finished',
+              )
+            ));
+
+          }
+          // Insert Items
+          if($csv_key === 2) {
+
+            // Insert into the job_log table
+            $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'job_log',
+              'user_id' => $this->getUser()->getId(),
+              'values' => array(
+                'job_id' => $job_id,
+                'job_log_status' => 'start',
+                'job_log_label' => 'Import VZ items',
+                'job_log_description' => 'Import started',
+              )
+            ));
+
+            // $this->u->dumper($subject_repository_ids);
+            // $this->u->dumper($csv_value);
+            foreach ($csv_value as $item_key => $item) {
+              $item->subject_repository_id = $subject_repository_ids[$item->subject_repository_id];
+              // $this->u->dumper($item->subject_repository_id);
+
+              // Insert into the item table
+              $item_repository_id = $this->repo_storage_controller->execute('saveRecord', array(
+                'base_table' => 'item',
+                'user_id' => $this->getUser()->getId(),
+                'values' => (array)$item
+              ));
+              
+              // Insert into the job_import_record table
+              $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+                'base_table' => 'job_import_record',
+                'user_id' => $this->getUser()->getId(),
+                'values' => array(
+                  'record_id' => $item_repository_id,
+                  'project_id' => $project['project_repository_id'],
+                  'record_table' => 'item',
+                  'description' => $item->item_display_name,
+                )
+              ));
+            }
+
+            // Insert into the job_log table
+            $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'job_log',
+              'user_id' => $this->getUser()->getId(),
+              'values' => array(
+                'job_id' => $job_id,
+                'job_log_status' => 'finish',
+                'job_log_label' => 'Import VZ items',
+                'job_log_description' => 'Import finished',
+              )
+            ));
+
+          }
+        }
+
+      }
+
+      // Insert a record into the job table.
+      $this->repo_storage_controller->execute('saveRecord', array(
+        'base_table' => 'job',
+        'record_id' => $job_id,
+        'user_id' => $this->getUser()->getId(),
+        'values' => array(
+          'project_id' => (int)$project['project_repository_id'],
+          'job_label' => 'VZ Metadata Import',
+          'job_type' => 'metadata import',
+          'job_status' => 'complete',
+          'date_completed' => date('Y-m-d h:i:s'),
+          'qa_required' => 0,
+          'qa_approved_time' => null,
+        )
+      ));
+
+      $this->addFlash('message', 'Metadata successfully imported for Project "' . $project['project_name'] . '"');
+      return $this->redirect('/admin/projects/subjects/' . $project['project_repository_id']);
+    }
+
+    /**
      * @Route("/admin/import", name="import_summary_dashboard")
      */
-    public function importSummaryAction(Connection $conn, Request $request)
+    public function importSummaryDashboard(Connection $conn, Request $request)
     {
         return $this->render('import/import_summary_dashboard.html.twig', array(
             'page_title' => 'Uploads',
@@ -64,183 +239,107 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/import/datatables_import_projects", name="projects_import_datatables", methods="POST")
+     * @Route("/admin/import/datatables_browse_imports", name="imports_browse_datatables", methods="POST")
      *
-     * Browse Projects
+     * Browse Imports
      *
-     * Run a query to retrieve all projects in the database.
+     * Run a query to retrieve all imports in the database.
      *
      * @param   object  Connection  Database connection object
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_import_projects(Request $request)
+    public function datatables_browse_imports(Request $request, SubjectsController $subject, ItemsController $items)
     {
-        $data = array("aaData"=>array(
-                        array("project_repository_id"=>1,
-                              "project_name"=>ucwords("nmnh human origins vertebrate zoology models"),
-                              "date_uploaded"=>"Apr 17, 2018",
-                              "items_total"=>2000,
-                              "uploadedby"=>"blundellj",
-                              "status"=>ucwords("processing")
-                        ),
-                        array("project_repository_id"=>3,
-                              "project_name"=>ucwords("project abc"),
-                              "date_uploaded"=>"Apr 10, 2018",
-                              "items_total"=>2000,
-                              "uploadedby"=>"andersonm",
-                              "status"=>ucwords("aborted")
-                        ),
-                        array("project_repository_id"=>4,
-                              "project_name"=>ucwords("project def"),
-                              "date_uploaded"=>"Mar 22, 2018",
-                              "items_total"=>10000,
-                              "uploadedby"=>"andersonm",
-                              "status"=>ucwords("complete")
-                        ),
-                        array("project_repository_id"=>2,
-                              "project_name"=>ucwords("project deff"),
-                              "date_uploaded"=>"Mar 20, 2018",
-                              "items_total"=>1500,
-                              "uploadedby"=>"conradj",
-                              "status"=>ucwords("failed")
-                        ),
-                        array("project_repository_id"=>5,
-                              "project_name"=>ucwords("project ghi"),
-                              "date_uploaded"=>"Mar 20, 2018",
-                              "items_total"=>1500,
-                              "uploadedby"=>"andersonm",
-                              "status"=>ucwords("complete")
-                        )
-                ));
-        $data["iTotalRecords"] = count($data['aaData']);
-        $data["iTotalDisplayRecords"] = count($data['aaData']);
-        return $this->json($data);
+      $req = $request->request->all();
+      $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+      $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
+      $sort_order = $req['order'][0]['dir'];
+      $start_record = !empty($req['start']) ? $req['start'] : 0;
+      $stop_record = !empty($req['length']) ? $req['length'] : 20;
+
+      $query_params = array(
+        'sort_field' => $sort_field,
+        'sort_order' => $sort_order,
+        'start_record' => $start_record,
+        'stop_record' => $stop_record,
+      );
+      if ($search) {
+        $query_params['search_value'] = $search;
+      }
+
+      $this->repo_storage_controller->setContainer($this->container);
+      $data = $this->repo_storage_controller->execute('getDatatableImports', $query_params);
+
+      // Get the items count
+      if(!empty($data['aaData'])) {
+        foreach ($data['aaData'] as $key => $value) {
+          $subjects = $subject->get_subjects($this->container, $value['project_repository_id']);
+          foreach ($subjects as $subject_key => $subject_value) {
+            $subject_items = $items->get_items($this->container, $subject_value['subject_repository_id']);
+            $item_counts[] = count($subject_items);
+          }
+        }
+        $data['aaData'][$key]['items_total'] = array_sum($item_counts);
+      }
+
+      return $this->json($data);
     }
     
     /**
-     * @Route("/admin/import/{project_id}", name="import_summary_item")
+     * @Route("/admin/import/{id}", name="import_summary_details")
      */
-    public function importSummaryItemAction(Connection $conn, Request $request, $project_id)
+    public function importSummaryDetails($id, Connection $conn, ProjectsController $project, Request $request)
     {
-        $data = array(
-                    array("project_repository_id"=>1,
-                          "project_name"=>ucwords("NMNH human origins vertebrate zoology models"),
-                          "date_uploaded"=>"Apr 17, 2018",
-                          "item_success"=>25,
-                          "item_failed"=>2,
-                          "item_in_progress"=>12,
-                          "item_pending_processing"=>2889,
-                          "items_total"=>2928
-                    ),
-                    array("project_repository_id"=>3,
-                          "project_name"=>ucwords("project abc"),
-                          "date_uploaded"=>"Apr 10, 2018",
-                          "item_success"=>1000,
-                          "item_failed"=>50,
-                          "item_in_progress"=>20,
-                          "item_pending_processing"=>930,
-                          "items_total"=>2000
-                    ),
-                    array("project_repository_id"=>4,
-                          "project_name"=>ucwords("project def"),
-                          "date_uploaded"=>"Mar 22, 2018",
-                          "item_success"=>6090,
-                          "item_failed"=>450,
-                          "item_in_progress"=>550,
-                          "item_pending_processing"=>2910,
-                          "items_total"=>10000
-                    ),
-                    array("project_repository_id"=>2,
-                          "project_name"=>ucwords("project deff"),
-                          "date_uploaded"=>"Mar 20, 2018",
-                          "item_success"=>450,
-                          "item_failed"=>310,
-                          "item_in_progress"=>40,
-                          "item_pending_processing"=>700,
-                          "items_total"=>1500
-                    ),
-                    array("project_repository_id"=>5,
-                          "project_name"=>ucwords("project ghi"),
-                          "date_uploaded"=>"Mar 20, 2018",
-                          "item_success"=>900,
-                          "item_failed"=>50,
-                          "item_in_progress"=>60,
-                          "item_pending_processing"=>490,
-                          "items_total"=>1500
-                    )
-            );
-        $key = array_search($project_id, array_column($data, 'project_repository_id'));
 
-        return $this->render('import/import_summary_item.html.twig', array(
-            'page_title' => 'Uploads: ' . $data[$key]['project_name'],
-            'project' => $data[$key],
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-        ));
+      if(!empty($id)) {
+        // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
+        $this->repo_storage_controller->setContainer($this->container);
+        $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $id));
+        if(!$project) throw $this->createNotFoundException('The Project record does not exist');
+      }
 
-        return $this->render('import/import_summary_item.html.twig',array("project"=>$data[$key]));
+      return $this->render('import/import_summary_item.html.twig', array(
+        'page_title' => 'Uploads: ' . $project['project_name'],
+        'project' => $project,
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
+      ));
     }
 
     /**
-     * @Route("/admin/import/{project_id}/datatables_import_project_item", name="projects_import_datatables_item")
+     * @Route("/admin/import/{id}/datatables_browse_import_details", name="import_details_browse_datatables")
      *
-     * Browse Projects
+     * Browse Import Details
      *
-     * Run a query to retrieve all projects in the database.
+     * Run a query to retrieve the details of an import.
      *
-     * @param   object  Connection  Database connection object
-     * @param   object  Request     Request object
-     * @return  array|bool          The query result
+     * @param   int $id  The project ID
+     * @param   object $request  Request object
+     * @return  array|bool  The query result
      */
-    public function datatables_import_projects_item(Request $request,$project_id)
+    public function datatables_browse_import_details($id, Request $request)
     {
-        $data = array("aaData"=>array(
-                        array("project_repository_id"=>1,
-                              "item"=>"USNM 281591 Cranium",
-                              "subject"=>ucwords("white-Fronted Capuchin, colombia (USNM 281591)"),
-                              "holding_entity"=>"smithsonian natural museum of natural history",
-                              "status"=>ucwords("success")
-                        ),
-                        array("project_repository_id"=>1,
-                              "item"=>"USNM 281591 Mandible",
-                              "subject"=>ucwords("white-Fronted Capuchin, colombia (USNM 281591)"),
-                              "holding_entity"=>"smithsonian natural museum of natural history",
-                              "status"=>ucwords("processing")
-                        ),
-                        array("project_repository_id"=>1,
-                              "item"=>"USNM A21171 Cranium",
-                              "subject"=>ucwords("sifaka, madagascar (USNM A21171)"),
-                              "holding_entity"=>"smithsonian natural museum of natural history",
-                              "status"=>ucwords("success")
-                        ),
-                        array("project_repository_id"=>1,
-                              "item"=>"USNM A21171 Mandible",
-                              "subject"=>ucwords("sifaka, madagascar (USNM A21171)"),
-                              "holding_entity"=>"smithsonian natural museum of natural history",
-                              "status"=>ucwords("failed")
-                        ),
-                        array("project_repository_id"=>2,
-                              "item"=>"USNM A22462 Mandible",
-                              "subject"=>ucwords("Ring-tailed lemur, madagascar (USNM  A22462)"),
-                              "holding_entity"=>"smithsonian natural museum of natural history",
-                              "status"=>ucwords("failed")
-                        ),
-                        array("project_repository_id"=>2,
-                              "item"=>"USNM 281591 Cranium",
-                              "subject"=>ucwords("white-Fronted Capuchin, colombia (USNM 281591)"),
-                              "holding_entity"=>"smithsonian natural museum of natural history",
-                              "status"=>ucwords("processing")
-                        )
-                ));
-        $newdata = [];
-        foreach ($data['aaData'] as $d) {
-            if((int)$d['project_repository_id'] == (int)$project_id){
-                $newdata[] = $d;
-            }
-        }
-        $newdata = array("aaData"=>$newdata);
-        $newdata["iTotalRecords"] = count($newdata['aaData']);
-        $newdata["iTotalDisplayRecords"] = count($newdata['aaData']);
-        return $this->json($newdata);
+      $req = $request->request->all();
+      $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+      $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
+      $sort_order = $req['order'][0]['dir'];
+      $start_record = !empty($req['start']) ? $req['start'] : 0;
+      $stop_record = !empty($req['length']) ? $req['length'] : 20;
+
+      $query_params = array(
+        'sort_field' => '',
+        'sort_order' => '',
+        'start_record' => $start_record,
+        'stop_record' => $stop_record,
+      );
+
+      if ($search) {
+        $query_params['search_value'] = $search;
+      }
+
+      $this->repo_storage_controller->setContainer($this->container);
+      $data = $this->repo_storage_controller->execute('getDatatableImportDetails', $query_params);
+
+      return $this->json($data);
     }
 }

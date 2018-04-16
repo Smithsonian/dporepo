@@ -42,17 +42,17 @@
         "columns": [
           { "data": "project_name",
             "render": function (data, type, row, meta) {
-                return "<a href='/admin/projects/subjects/"+row.project_repository_id+"'>"+row.project_name+"</a>";
-             }
+                return "<a href='/admin/projects/subjects/" + row.project_repository_id + "'>" + row.project_name + "</a>";
+            }
           },
-          { "data": "date_uploaded" },
+          { "data": "date_created" },
           { "data": "items_total" ,
             "render": function (data, type, row, meta) {
-                return "<a href='/admin/import/"+row.project_repository_id+"'>"+row.items_total+"</a>";
-             }
+                return "<a href='/admin/import/" + row.project_repository_id + "'>" + row.items_total + "</a>";
+            }
           },
-          { "data": "uploadedby" },
-          { "data": "status" }
+          { "data": "username" },
+          { "data": "job_status" }
         ],
         //"dom": 'lfip<"datatables_bulk_actions">tip',
         "pagingType": "simple_numbers",
@@ -60,11 +60,10 @@
         "order": [[0,"desc"]],
         // Show processing throbber.
         "processing": true,
-        "serverMethod": "POST",
         // All data management will be done on the server side.
         "serverSide": true,
         // Path to the file that is going to handle the queries.
-        "ajax": "/admin/import/datatables_import_projects",
+        "ajax": "/admin/import/datatables_browse_imports",
         // Method type.
         "serverMethod": "POST",
         // Values in the length dropdown.
