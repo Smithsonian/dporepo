@@ -67,27 +67,22 @@ class DatasetsController extends Controller
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
         $item = new Items();
-        //$item->item_data = $item->getItem((int)$item_repository_id, $conn);
         $item_array = $this->repo_storage_controller->execute('getItem', array(
           'item_repository_id' => $item_repository_id,
         ));
         if(is_array($item_array)) {
           $item->item_data = (object)$item_array;
         }
-
-        if(!$item->item_data) throw $this->createNotFoundException('The record does not exist');
+        // Throw a createNotFoundException (404).
+        if(!isset($item->item_data->item_repository_id)) throw $this->createNotFoundException('The record does not exist');
 
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$project_repository_id));
         $subject_data = $subjects->get_subject($this->container, (int)$subject_repository_id);
         $jobBoxDirectoryContents = is_dir($this->file_upload_path) ? scandir($this->file_upload_path) : array();
         $jobBoxProcessedDirectoryContents = is_dir($this->file_processing_path) ? scandir($this->file_processing_path) : array();
 
-        // Truncate the item_description.
-        $more_indicator = (strlen($item->item_data->item_description) > 50) ? '...' : '';
-        $item->item_data->item_description_truncated = substr($item->item_data->item_description, 0, 50) . $more_indicator;
-
         return $this->render('datasets/browse_datasets.html.twig', array(
-            'page_title' => 'Item: ' . $item->item_data->item_display_name,
+            'page_title' => isset($item->item_data->item_display_name) ? 'Item: ' . $item->item_data->item_display_name : 'Item',
             'project_repository_id' => $project_repository_id,
             'subject_repository_id' => $subject_repository_id,
             'item_repository_id' => $item_repository_id,
