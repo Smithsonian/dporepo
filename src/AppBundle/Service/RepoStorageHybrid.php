@@ -945,6 +945,21 @@ class RepoStorageHybrid implements RepoStorage {
     return $return_data;
   }
 
+  /**
+   * @param string $uploads_directory The upload directory
+   * @return array Import result and/or any messages
+   */
+  public function getImportedItems($params) {
+    $sql = "SELECT SUM(case when job_import_record.record_table = 'item' then 1 else 0 end) AS items_total
+      FROM job_import_record
+      WHERE job_import_record.project_id = :project_id
+      GROUP BY job_import_record.project_id";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":project_id", $params['project_id'], PDO::PARAM_INT);
+    $statement->execute();
+    return $statement->fetch();
+  }
+
   public function getStakeholderGuids() {
     $sql = "
       SELECT project.project_repository_id
@@ -2851,6 +2866,13 @@ class RepoStorageHybrid implements RepoStorage {
       'base_join_field' => 'project_id',
     );
     $query_params['related_tables'][] = array(
+      'table_name' => 'job_import_record',
+      'table_join_field' => 'project_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'job',
+      'base_join_field' => 'project_id',
+    );
+    $query_params['related_tables'][] = array(
       'table_name' => 'fos_user',
       'table_join_field' => 'id',
       'join_type' => 'LEFT JOIN',
@@ -2865,6 +2887,10 @@ class RepoStorageHybrid implements RepoStorage {
     $query_params['fields'][] = array(
       'table_name' => 'project',
       'field_name' => 'project_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => "SUM(case when job_import_record.record_table = 'item' then 1 else 0 end)",
+      'field_alias' => 'items_total',
     );
     $query_params['fields'][] = array(
       'table_name' => 'project',
@@ -2886,6 +2912,11 @@ class RepoStorageHybrid implements RepoStorage {
       'table_name' => $record_type,
       'field_name' => $record_type . '_id',
       'field_alias' => 'DT_RowId',
+    );
+
+    // Need to group by due to the SUM
+    $query_params['group_by'] = array(
+      'job.project_id'
     );
 
     if (NULL !== $search_value) {
@@ -2933,6 +2964,7 @@ class RepoStorageHybrid implements RepoStorage {
     $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
     $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
     $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+    $project_id = array_key_exists('project_id', $params) ? $params['project_id'] : NULL;
 
     $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
     $date_range_start = array_key_exists('date_range_start', $params) ? $params['date_range_start'] : NULL;
@@ -2998,7 +3030,15 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'subject',
+      'field_name' => 'subject_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'subject',
       'field_name' => 'subject_display_name',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'item_repository_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'item',
@@ -3013,8 +3053,11 @@ class RepoStorageHybrid implements RepoStorage {
     $query_params['search_params'][0] = array('field_names' => array('job_import_record.record_table'), 'search_values' => array('subject'), 'comparison' => '=');
     $query_params['search_type'] = 'AND';
 
+    $query_params['search_params'][1] = array('field_names' => array($record_type . '.project_id'), 'search_values' => array((int)$project_id), 'comparison' => '=');
+    $query_params['search_type'] = 'AND';
+
     if (NULL !== $search_value) {
-      $query_params['search_params'][1] = array(
+      $query_params['search_params'][2] = array(
         'field_names' => array(
           'subject_display_name',
           'item_display_name',

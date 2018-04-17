@@ -16,14 +16,28 @@
 
   <div class="panel panel-default">
     <div class="panel-body">
-      <div><label>Project Name:</label> {{project.project_name}}</div>
-{#       <div><label>Date Uploaded:</label> {{project.date_uploaded}}</div>
-      <div><label>Success #:</label> {{project.item_success}}</div>
-      <div><label>Failed #:</label> {{project.item_failed}}</div>
-      <div><label>In Progress #:</label> {{project.item_in_progress}}</div>
-      <div><label>Pending Processing #:</label> {{project.item_pending_processing}}</div>
-      <div><label>Total Items #:</label> {{project.items_total}}</div> #}
-      <input type="hidden" id="projectId" value="{{project.project_repository_id}}">
+      <div class="row">
+        <div class="col-sm-6 col-md-6">
+          <dl class="dl-horizontal">
+            <dt>Project Name:</dt>
+              <dd>{{ project.project_name }}</dd>
+            <dt>Date Uploaded:</dt>
+              <dd>{{ project.date_created }}</dd>
+            <dt>Total Items #:</dt>
+              <dd>{{ project.items_total|default('0') }}</dd>
+          </dl>
+        </div>
+        <div class="col-sm-6 col-md-6">
+          <dl class="dl-horizontal">
+            <dt>Success #:</dt>
+              <dd>{{ project.item_success|default('0') }}</dd>
+            <dt>Failed #:</dt>
+              <dd>{{ project.item_failed|default('0') }}</dd>
+            <dt>In Progress #:</dt>
+              <dd>{{ project.item_in_progress|default('0') }}</dd>
+          </dl>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -49,7 +63,8 @@
   <script type="text/javascript">
     $(document).ready(function() {
 
-      var projectid = $("#projectId").val();
+      var project_repository_id = "{{ project.project_repository_id }}",
+          details_page = "/admin/projects/datasets/";
 
       $('#browse').dataTable({
         "columns": [
@@ -60,13 +75,13 @@
         //"dom": 'lfip<"datatables_bulk_actions">tip',
         "pagingType": "simple_numbers",
         "stateSave": true,
-        "order": [[0,"desc"]],
+        "order": [[0,"asc"]],
         // Show processing throbber.
         "processing": true,
         // All data management will be done on the server side.
         "serverSide": true,
         // Path to the file that is going to handle the queries.
-        "ajax": "/admin/import/" + projectid + "/datatables_browse_import_details",
+        "ajax": "/admin/import/" + project_repository_id + "/datatables_browse_import_details",
         // Method type.
         "serverMethod": "POST",
         // Values in the length dropdown.
@@ -75,7 +90,23 @@
         "columnDefs":[
           {"sWidth":"400px","aTargets":[0]}
           // {"bSortable":false,"aTargets":[0,1]}
-        ]
+        ],
+        "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+
+          // This table row.
+          var thisTableRow = $(nRow);
+
+          // Send to details page when clicked.
+          thisTableRow.find('td').click(function() {
+            // This table cell.
+            var thisTableCell = $(this);
+            // Don't do anything if the table cell has the 'manage_column' CSS class.
+            if(thisTableCell.hasClass('manage_column')) return;
+            // Send to the details page.
+            window.location.href = details_page + project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
+          });
+
+        }
         
       });
 

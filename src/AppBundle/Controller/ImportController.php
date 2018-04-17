@@ -32,7 +32,7 @@ class ImportController extends Controller
     /**
      * @Route("/admin/import_validation/{id}", name="import_validation", defaults={"id" = null})
      */
-    public function importValidation($id, Connection $conn, Request $request, ValidateMetadataController $validate)
+    public function importValidation($id, Connection $conn, Request $request, ValidateMetadataController $validate, ItemsController $items)
     {
         $project = array();
 
@@ -43,7 +43,7 @@ class ImportController extends Controller
           if(!$project) throw $this->createNotFoundException('The Project record does not exist');
         }
 
-        $validation_results = $validate->validate_metadata($id, $request);
+        $validation_results = $validate->validate_metadata($id, $this->container, $items);
 
         return $this->render('import/import_validation.html.twig', array(
             'page_title' => !empty($project) ? 'Import Validation: ' . $project['project_name'] : 'Import Validation',
@@ -56,7 +56,7 @@ class ImportController extends Controller
     /**
      * @Route("/admin/import_metadata/{id}", name="import_metadata", defaults={"id" = null})
      */
-    public function importMetadata($id, Connection $conn, Request $request, ValidateMetadataController $validate)
+    public function importMetadata($id, Connection $conn, Request $request, ValidateMetadataController $validate, ItemsController $items)
     {
       $project = false;
       $csv_data = array();
@@ -84,7 +84,7 @@ class ImportController extends Controller
       ));
 
       $uploads_directory = __DIR__ . '/../../../web/uploads/';
-      $csv_data = $validate->construct_import_data($uploads_directory);
+      $csv_data = $validate->construct_import_data($uploads_directory, $this->container, $items);
 
       if(!empty($csv_data)) {
 
@@ -111,9 +111,8 @@ class ImportController extends Controller
             $subject_repository_ids = array();
 
             foreach ($csv_value as $subject_key => $subject) {
+              // Set the project_repository_id
               $subject->project_repository_id = $project['project_repository_id'];
-              // $this->u->dumper($subject);
-
               // Insert into the subject table
               $subject_repository_id = $this->repo_storage_controller->execute('saveRecord', array(
                 'base_table' => 'subject',
@@ -165,11 +164,10 @@ class ImportController extends Controller
             ));
 
             // $this->u->dumper($subject_repository_ids);
-            // $this->u->dumper($csv_value);
-            foreach ($csv_value as $item_key => $item) {
-              $item->subject_repository_id = $subject_repository_ids[$item->subject_repository_id];
-              // $this->u->dumper($item->subject_repository_id);
 
+            foreach ($csv_value as $item_key => $item) {
+              // Set the subject_repository_id
+              $item->subject_repository_id = $subject_repository_ids[$item->subject_repository_id];
               // Insert into the item table
               $item_repository_id = $this->repo_storage_controller->execute('saveRecord', array(
                 'base_table' => 'item',
@@ -271,18 +269,6 @@ class ImportController extends Controller
       $this->repo_storage_controller->setContainer($this->container);
       $data = $this->repo_storage_controller->execute('getDatatableImports', $query_params);
 
-      // Get the items count
-      if(!empty($data['aaData'])) {
-        foreach ($data['aaData'] as $key => $value) {
-          $subjects = $subject->get_subjects($this->container, $value['project_repository_id']);
-          foreach ($subjects as $subject_key => $subject_value) {
-            $subject_items = $items->get_items($this->container, $subject_value['subject_repository_id']);
-            $item_counts[] = count($subject_items);
-          }
-        }
-        $data['aaData'][$key]['items_total'] = array_sum($item_counts);
-      }
-
       return $this->json($data);
     }
     
@@ -299,6 +285,10 @@ class ImportController extends Controller
         if(!$project) throw $this->createNotFoundException('The Project record does not exist');
       }
 
+      // Get the total number of Item records for the import.
+      $items_total = $this->repo_storage_controller->execute('getImportedItems', array('project_id' => (int)$id));
+      $project = array_merge($project, $items_total);
+
       return $this->render('import/import_summary_item.html.twig', array(
         'page_title' => 'Uploads: ' . $project['project_name'],
         'project' => $project,
@@ -307,7 +297,7 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/import/{id}/datatables_browse_import_details", name="import_details_browse_datatables")
+     * @Route("/admin/import/{id}/datatables_browse_import_details", name="import_details_browse_datatables", methods="POST")
      *
      * Browse Import Details
      *
@@ -331,6 +321,7 @@ class ImportController extends Controller
         'sort_order' => $sort_order,
         'start_record' => $start_record,
         'stop_record' => $stop_record,
+        'project_id' => $id,
       );
 
       if ($search) {

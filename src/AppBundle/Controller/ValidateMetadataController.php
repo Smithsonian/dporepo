@@ -7,9 +7,9 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Finder\Finder;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Symfony\Component\DependencyInjection\Container;
 
 use AppBundle\Service\RepoValidateData;
-use Symfony\Component\DependencyInjection\Container;
 
 // Custom utility bundle
 use AppBundle\Utils\AppUtilities;
@@ -41,7 +41,7 @@ class ValidateMetadataController extends Controller
      * @param string $uploads_directory The upload directory
      * @return array Import result and/or any messages
      */
-    public function construct_import_data($uploads_directory = null)
+    public function construct_import_data($uploads_directory = null, $thisContainer, $itemsController)
     {
 
       $json_object = array();
@@ -101,6 +101,11 @@ class ValidateMetadataController extends Controller
               // TODO: move into a vz-specific method?
               // [VZ IMPORT ONLY] Strip 'USNM ' from the 'subject_repository_id' field.
               $json_array[$key][$field_name] = ($field_name === 'subject_repository_id') ? (int)str_replace('USNM ', '', $v) : $v;
+              // Look-up the ID for the 'item_type' (not when validating data, only when importing data).
+              if ((debug_backtrace()[1]['function'] !== 'validate_metadata') && ($field_name === 'item_type')) {
+                $item_type_lookup_options = $itemsController->get_item_types($thisContainer);
+                $json_array[$key][$field_name] = (int)$item_type_lookup_options[$v];
+              }
             }
             // Convert the array to an object.
             $json_object[$csv_key][] = (object)$json_array[$key];
@@ -124,7 +129,7 @@ class ValidateMetadataController extends Controller
      * @param   object  Request       Request object
      * @return  array                 Redirect or render
      */
-    public function validate_metadata($id = null)
+    public function validate_metadata($id = null, $thisContainer, $itemsController)
     {
 
       // $this->u->dumper($id);
@@ -139,7 +144,7 @@ class ValidateMetadataController extends Controller
       }
 
       $uploads_directory = __DIR__ . '/../../../web/uploads/';
-      $csv_data = $this->construct_import_data($uploads_directory);
+      $csv_data = $this->construct_import_data($uploads_directory, $thisContainer, $itemsController);
 
       if(!empty($csv_data)) {
 
