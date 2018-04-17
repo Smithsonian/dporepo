@@ -307,7 +307,8 @@ class ItemsController extends Controller
         );
 
         foreach ($temp as $key => $value) {
-            $label = $this->u->removeUnderscoresTitleCase($value['label']);
+            // $label = $this->u->removeUnderscoresTitleCase($value['label']);
+            $label = $value['label'];
             $data[$label] = $value['item_type_repository_id'];
         }
 
