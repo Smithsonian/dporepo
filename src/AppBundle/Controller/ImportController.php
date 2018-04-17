@@ -327,8 +327,8 @@ class ImportController extends Controller
       $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
       $query_params = array(
-        'sort_field' => '',
-        'sort_order' => '',
+        'sort_field' => $sort_field,
+        'sort_order' => $sort_order,
         'start_record' => $start_record,
         'stop_record' => $stop_record,
       );
