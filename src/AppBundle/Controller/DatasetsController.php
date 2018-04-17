@@ -87,7 +87,7 @@ class DatasetsController extends Controller
         $item->item_data->item_description_truncated = substr($item->item_data->item_description, 0, 50) . $more_indicator;
 
         return $this->render('datasets/browse_datasets.html.twig', array(
-            'page_title' => 'Item: ' . $item->item_data->local_item_id,
+            'page_title' => 'Item: ' . $item->item_data->item_display_name,
             'project_repository_id' => $project_repository_id,
             'subject_repository_id' => $subject_repository_id,
             'item_repository_id' => $item_repository_id,

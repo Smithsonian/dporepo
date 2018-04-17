@@ -217,7 +217,7 @@ class ItemsController extends Controller
         }
 
         return $this->render('items/item_form.html.twig', array(
-            'page_title' => ((int)$id && isset($item->local_item_id)) ? 'Item: ' . $item->local_item_id : 'Add Item',
+            'page_title' => ((int)$id && isset($item->item_display_name)) ? 'Item: ' . $item->item_display_name : 'Add Item',
             'item_data' => $item,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
