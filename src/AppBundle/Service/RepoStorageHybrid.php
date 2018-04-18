@@ -3786,9 +3786,12 @@ class RepoStorageHybrid implements RepoStorage {
         foreach($field_names as $fn) {
           if(count($search_values) == 1) {
             $k = array_keys($search_values)[0];
-            if(array_key_exists('comparison', $p) && $p['comparison'] !== 'LIKE') {
+            if(array_key_exists('comparison', $p) && (($p['comparison'] !== 'LIKE') && ($p['comparison'] !== 'IS NOT NULL'))) {
               $this_search_param[] = $fn . ' ' . $p['comparison'] . ' ?';
               $search_params[] = $search_values[$k];
+            }
+            else if(array_key_exists('comparison', $p) && (($p['comparison'] !== 'LIKE') && ($p['comparison'] === 'IS NOT NULL'))) {
+              $this_search_param[] = $fn . ' IS NOT NULL';
             }
             else {
               $this_search_param[] = $fn . ' LIKE ?';
