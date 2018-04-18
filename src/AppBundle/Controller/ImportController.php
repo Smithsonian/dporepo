@@ -69,6 +69,7 @@ class ImportController extends Controller
       }
 
       // Insert a record into the job table.
+      // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI.
       $job_id = $this->repo_storage_controller->execute('saveRecord', array(
         'base_table' => 'job',
         'user_id' => $this->getUser()->getId(),
@@ -97,6 +98,7 @@ class ImportController extends Controller
           if($csv_key === 1) {
 
             // Insert into the job_log table
+            // TODO: Feed the 'job_log_label' to the log leveraging fields from a form submission in the UI.
             $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => 'job_log',
               'user_id' => $this->getUser()->getId(),
@@ -136,6 +138,7 @@ class ImportController extends Controller
             }
 
             // Insert into the job_log table
+            // TODO: Feed the 'job_log_label' to the log leveraging fields from a form submission in the UI.
             $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => 'job_log',
               'user_id' => $this->getUser()->getId(),
@@ -152,6 +155,7 @@ class ImportController extends Controller
           if($csv_key === 2) {
 
             // Insert into the job_log table
+            // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI.
             $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => 'job_log',
               'user_id' => $this->getUser()->getId(),
