@@ -3841,6 +3841,11 @@ class RepoStorageHybrid implements RepoStorage {
       $sql .= $limit_sql;
     }
 
+    // echo '<pre>';
+    // var_dump($sql);
+    // echo '</pre>';
+    // die();
+
     $statement = $this->connection->prepare($sql);
     if(count($search_params) > 0) {
       $statement->execute($search_params);
