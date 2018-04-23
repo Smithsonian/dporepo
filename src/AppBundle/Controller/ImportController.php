@@ -128,6 +128,7 @@ class ImportController extends Controller
                 'base_table' => 'job_import_record',
                 'user_id' => $this->getUser()->getId(),
                 'values' => array(
+                  'job_id' => $job_id,
                   'record_id' => $subject_repository_id,
                   'project_id' => $project['project_repository_id'],
                   'record_table' => 'subject',
@@ -184,6 +185,7 @@ class ImportController extends Controller
                 'base_table' => 'job_import_record',
                 'user_id' => $this->getUser()->getId(),
                 'values' => array(
+                  'job_id' => $job_id,
                   'record_id' => $item_repository_id,
                   'project_id' => $project['project_repository_id'],
                   'record_table' => 'item',
