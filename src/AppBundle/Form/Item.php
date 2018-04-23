@@ -19,11 +19,15 @@ class Item extends AbstractType
         $builder
             ->add('item_guid', null, array(
                 'label' => 'Item GUID',
-                'required' => true,
+                'required' => false,
               ))
             ->add('local_item_id', null, array(
                 'label' => 'Local Item ID',
                 'required' => false,
+              ))
+            ->add('item_display_name', null, array(
+                'label' => 'Item Display Name',
+                'required' => true,
               ))
             ->add('item_description', TextareaType::class, array(
                 'label' => 'Item Description',

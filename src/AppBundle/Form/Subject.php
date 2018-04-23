@@ -19,6 +19,10 @@ class Subject extends AbstractType
                 'label' => 'Subject Name',
                 'required' => true,
               ))
+            ->add('subject_display_name', null, array(
+                'label' => 'Subject Display Name',
+                'required' => false,
+              ))
             ->add('subject_guid', null, array(
                 'label' => 'Subject GUID',
                 'required' => true,

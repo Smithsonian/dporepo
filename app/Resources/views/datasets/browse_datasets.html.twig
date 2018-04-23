@@ -12,13 +12,15 @@
     <li><a href="/admin">Dashboard</a></li>
     <li><a href="/admin/workspace">Browse Projects</a></li>
     <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ project_repository_id }}">{{ project_data.project_name|e }}</a></li>
-    <li><strong>Subject:</strong> <a href="/admin/projects/items/{{ project_repository_id }}/{{ subject_repository_id }}">{{ subject_data.subject_name|e }}</a></li>
-    <li class="active"><strong>Item:</strong> {{ item_data.item_description_truncated|e }}</li>
+    <li><strong>Subject:</strong> <a href="/admin/projects/items/{{ project_repository_id }}/{{ subject_repository_id }}">{{ subject_data.subject_display_name|e }}</a></li>
+    <li class="active"><strong>Item:</strong> {{ item_data.item_display_name|e }}</li>
   </ol>
 
   <div class="row">
     <div class="col-sm-6 col-md-6">
       <dl class="dl-horizontal">
+        <dt>Item Display Name</dt>
+        <dd>{{ item_data.item_display_name|e }}</dd>
         <dt>Item GUID</dt>
         <dd>{{ item_data.item_guid|e }}</dd>
         <dt>Local Item ID</dt>

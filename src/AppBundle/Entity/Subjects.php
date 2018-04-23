@@ -18,6 +18,11 @@ class Subjects
     /**
      * @var string
      */
+    public $subject_display_name;
+
+    /**
+     * @var string
+     */
     public $subject_guid;
 
     /**

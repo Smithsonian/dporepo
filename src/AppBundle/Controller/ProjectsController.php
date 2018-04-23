@@ -147,7 +147,6 @@ class ProjectsController extends Controller
 
             $this->addFlash('message', 'Project successfully updated.');
             return $this->redirect('/admin/projects/subjects/' . $project_repository_id);
-
         }
 
         return $this->render('projects/project_form.html.twig', array(

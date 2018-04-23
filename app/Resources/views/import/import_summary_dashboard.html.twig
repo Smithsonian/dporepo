@@ -1,0 +1,79 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block content %}
+
+  <ol class="breadcrumb">
+    <li><a href="/admin">Dashboard</a></li>
+    <li class="active">Uploads</li>
+  </ol>
+
+  <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
+    <thead>
+      <tr>
+        <th class="text-center">Project</th>
+        <th class="text-center">Date Uploaded</th>
+        <th class="text-center">Items</th>
+        <th class="text-center">Uploaded By</th>
+        <th class="text-center">Status</th>
+      </tr>
+    </thead>
+  </table>
+
+{% endblock %}
+
+{% block js_bottom %}
+  {{ parent() }}
+  <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+      var details_page = "/admin/projects/subjects/";
+      
+      $('#browse').dataTable({
+        "columns": [
+          { "data": "project_name",
+            "render": function (data, type, row, meta) {
+                return "<a href='/admin/projects/subjects/" + row.project_repository_id + "'>" + row.project_name + "</a>";
+            }
+          },
+          { "data": "date_created" },
+          { "data": "items_total" ,
+            "render": function (data, type, row, meta) {
+                return "<a href='/admin/import/" + row.project_repository_id + "'>" + row.items_total + "</a>";
+            }
+          },
+          { "data": "username" },
+          { "data": "job_status" }
+        ],
+        //"dom": 'lfip<"datatables_bulk_actions">tip',
+        "pagingType": "simple_numbers",
+        "stateSave": true,
+        "order": [[0,"desc"]],
+        // Show processing throbber.
+        "processing": true,
+        // All data management will be done on the server side.
+        "serverSide": true,
+        // Path to the file that is going to handle the queries.
+        "ajax": "/admin/import/datatables_browse_imports",
+        // Method type.
+        "serverMethod": "POST",
+        // Values in the length dropdown.
+        "lengthMenu":[10,50,100,500],
+        "columnDefs":[
+          {"sWidth":"425px","aTargets":[0]},
+          {"bSortable":false,"aTargets":[0,4]}
+        ],
+      });
+
+    });
+  </script>
+{% endblock %}
