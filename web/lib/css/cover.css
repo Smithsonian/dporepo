@@ -58,6 +58,16 @@ body {
   padding: 30px;
 }
 
+.banner {
+  width: 100%;
+  padding: 10px 0 10px 20px;
+}
+.banner.production {
+  background-color: #ffff99;
+}
+.banner.dev {
+  background-color: #ccffcc;
+}
 
 /*
  * Header
