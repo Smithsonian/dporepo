@@ -952,10 +952,10 @@ class RepoStorageHybrid implements RepoStorage {
   public function getImportedItems($params) {
     $sql = "SELECT SUM(case when job_import_record.record_table = 'item' then 1 else 0 end) AS items_total
       FROM job_import_record
-      WHERE job_import_record.project_id = :project_id
-      GROUP BY job_import_record.project_id";
+      WHERE job_import_record.job_id = :job_id
+      GROUP BY job_import_record.job_id";
     $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":project_id", $params['project_id'], PDO::PARAM_INT);
+    $statement->bindValue(":job_id", $params['job_id'], PDO::PARAM_INT);
     $statement->execute();
     return $statement->fetch();
   }
@@ -2901,6 +2901,10 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'date_created',
     );
     $query_params['fields'][] = array(
+      'table_name' => 'job',
+      'field_name' => 'job_id',
+    );
+    $query_params['fields'][] = array(
       'table_name' => $record_type,
       'field_name' => 'job_status',
     );
@@ -2916,7 +2920,8 @@ class RepoStorageHybrid implements RepoStorage {
 
     // Need to group by due to the SUM
     $query_params['group_by'] = array(
-      'job.project_id'
+      'job.project_id',
+      'job.job_id',
     );
 
     if (NULL !== $search_value) {
@@ -2964,7 +2969,7 @@ class RepoStorageHybrid implements RepoStorage {
     $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
     $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
     $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
-    $project_id = array_key_exists('project_id', $params) ? $params['project_id'] : NULL;
+    $job_id = array_key_exists('id', $params) ? $params['id'] : NULL;
 
     $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
     $date_range_start = array_key_exists('date_range_start', $params) ? $params['date_range_start'] : NULL;
@@ -3053,7 +3058,7 @@ class RepoStorageHybrid implements RepoStorage {
     $query_params['search_params'][0] = array('field_names' => array('job_import_record.record_table'), 'search_values' => array('subject'), 'comparison' => '=');
     $query_params['search_type'] = 'AND';
 
-    $query_params['search_params'][1] = array('field_names' => array($record_type . '.project_id'), 'search_values' => array((int)$project_id),'comparison' => '=');
+    $query_params['search_params'][1] = array('field_names' => array('job_import_record.job_id'), 'search_values' => array((int)$job_id),'comparison' => '=');
     $query_params['search_type'] = 'AND';
 
     $query_params['search_params'][2] = array('field_names' => array('item.item_repository_id'), 'search_values' => array(''), 'comparison' => 'IS NOT NULL');
