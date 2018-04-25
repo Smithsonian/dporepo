@@ -63,7 +63,7 @@
   <script type="text/javascript">
     $(document).ready(function() {
 
-      var project_repository_id = "{{ project.project_repository_id }}",
+      var id = "{{ id }}",
           details_page = "/admin/projects/datasets/";
 
       $('#browse').dataTable({
@@ -81,7 +81,7 @@
         // All data management will be done on the server side.
         "serverSide": true,
         // Path to the file that is going to handle the queries.
-        "ajax": "/admin/import/" + project_repository_id + "/datatables_browse_import_details",
+        "ajax": "/admin/import/" + id + "/datatables_browse_import_details",
         // Method type.
         "serverMethod": "POST",
         // Values in the length dropdown.
@@ -103,7 +103,7 @@
             // Don't do anything if the table cell has the 'manage_column' CSS class.
             if(thisTableCell.hasClass('manage_column')) return;
             // Send to the details page.
-            window.location.href = details_page + project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
+            window.location.href = details_page + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
           });
 
         }
