@@ -16,11 +16,6 @@
       <![endif]-->
     </head>
     <body data-errors="{{ errors is defined ? errors|json_encode|e('html_attr') : '' }}">
-        {% if url('homepage') == 'https://si-3ddigip01.si.edu/' %}
-            <div class="banner production">PRODUCTION Repository- proceed with caution</div>
-        {% elseif url('homepage') == 'https://si-3ddigip01.si.edu:8443/' %}
-            <div class="banner dev">TEST Repository</div>
-        {% endif %}
         {% block body %}{% endblock %}
         {% block javascripts %}{% endblock %}
         {% block js_bottom %}{% endblock %}

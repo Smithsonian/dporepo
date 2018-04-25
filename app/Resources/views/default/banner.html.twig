@@ -1,0 +1,5 @@
+{% if url('homepage') == 'https://si-3ddigip01.si.edu/' %}
+    <div class="banner production">PRODUCTION Repository- proceed with caution</div>
+{% elseif url('homepage') == 'https://si-3ddigip01.si.edu:8443/' %}
+    <div class="banner dev">TEST Repository</div>
+{% endif %}
