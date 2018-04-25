@@ -128,6 +128,7 @@ class ImportController extends Controller
                 'base_table' => 'job_import_record',
                 'user_id' => $this->getUser()->getId(),
                 'values' => array(
+                  'job_id' => $job_id,
                   'record_id' => $subject_repository_id,
                   'project_id' => $project['project_repository_id'],
                   'record_table' => 'subject',
@@ -184,6 +185,7 @@ class ImportController extends Controller
                 'base_table' => 'job_import_record',
                 'user_id' => $this->getUser()->getId(),
                 'values' => array(
+                  'job_id' => $job_id,
                   'record_id' => $item_repository_id,
                   'project_id' => $project['project_repository_id'],
                   'record_table' => 'item',
@@ -290,12 +292,13 @@ class ImportController extends Controller
       }
 
       // Get the total number of Item records for the import.
-      $items_total = $this->repo_storage_controller->execute('getImportedItems', array('project_id' => (int)$id));
+      $items_total = $this->repo_storage_controller->execute('getImportedItems', array('job_id' => (int)$id));
       $project = array_merge($project, $items_total);
 
       return $this->render('import/import_summary_item.html.twig', array(
         'page_title' => 'Uploads: ' . $project['project_name'],
         'project' => $project,
+        'id' => $id,
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
       ));
     }
@@ -307,7 +310,7 @@ class ImportController extends Controller
      *
      * Run a query to retrieve the details of an import.
      *
-     * @param   int $id  The project ID
+     * @param   int $id  The job ID
      * @param   object $request  Request object
      * @return  array|bool  The query result
      */
@@ -325,7 +328,7 @@ class ImportController extends Controller
         'sort_order' => $sort_order,
         'start_record' => $start_record,
         'stop_record' => $stop_record,
-        'project_id' => $id,
+        'id' => $id,
       );
 
       if ($search) {
