@@ -2931,7 +2931,7 @@ class RepoStorageHybrid implements RepoStorage {
     if (NULL !== $search_value) {
       $query_params['search_params'][0] = array(
         'field_names' => array(
-          $record_type . '.project_name',
+          'project.project_name',
           $record_type . '.date_created',
           $record_type . '.created_by_user_account_id',
         ),
