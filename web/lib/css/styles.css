@@ -23,6 +23,19 @@ body {
   border: 0;
 }
 
+.banner {
+  width: 100%;
+  padding: 10px 0 10px 20px;
+  text-align: center;
+  font-weight: bold;
+}
+.banner.production {
+  background-color: #ffff99;
+}
+.banner.dev {
+  background-color: #ccffcc;
+}
+
 /*
  * Sidebar
  */
