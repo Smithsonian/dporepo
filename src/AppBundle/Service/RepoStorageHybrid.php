@@ -2867,10 +2867,10 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'job_import_record',
-      'table_join_field' => 'project_id',
+      'table_join_field' => 'job_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'job',
-      'base_join_field' => 'project_id',
+      'base_join_field' => 'job_id',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'fos_user',
@@ -2903,6 +2903,10 @@ class RepoStorageHybrid implements RepoStorage {
     $query_params['fields'][] = array(
       'table_name' => 'job',
       'field_name' => 'job_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'job',
+      'field_name' => 'project_id',
     );
     $query_params['fields'][] = array(
       'table_name' => $record_type,
@@ -2999,10 +3003,17 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     $query_params['related_tables'][] = array(
+      'table_name' => 'job',
+      'table_join_field' => 'job_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'job_import_record',
+      'base_join_field' => 'job_id',
+    );
+    $query_params['related_tables'][] = array(
       'table_name' => 'project',
       'table_join_field' => 'project_repository_id',
       'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'job_import_record',
+      'base_join_table' => 'job',
       'base_join_field' => 'project_id',
     );
     $query_params['related_tables'][] = array(
