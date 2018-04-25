@@ -103,7 +103,7 @@
             // Don't do anything if the table cell has the 'manage_column' CSS class.
             if(thisTableCell.hasClass('manage_column')) return;
             // Send to the details page.
-            window.location.href = details_page + project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
+            window.location.href = details_page + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
           });
 
         }
