@@ -3598,7 +3598,7 @@ class RepoStorageHybrid implements RepoStorage {
             }
             else {
               $this_search_param[] = $fn . ' LIKE ?';
-              $search_params[] = '%' . $search_values[array_keys($search_values[0])] . '%';
+              $search_params[] = is_array($search_values[0]) ? '%' . $search_values[array_keys($search_values[0])] . '%' : '%' . $search_values[0] . '%';
             }
           }
           else {

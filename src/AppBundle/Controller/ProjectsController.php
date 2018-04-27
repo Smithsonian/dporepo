@@ -163,17 +163,28 @@ class ProjectsController extends Controller
      *
      * Run a query to retrieve all projects from the database.
      *
-     * @return  array|bool     The query result
+     * @param array $params Parameters sent by the typeahead-bundle
+     * The $params array contains the following keys: query, limit, render, property
+     *
+     * @return array|bool The query result
      */
-    public function get_projects($container)
+    public function get_projects($container, $params = array())
     {
         $this->repo_storage_controller->setContainer($container);
+
+        // Query the database.
         $data = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'project',
           'fields' => array(),
           'sort_fields' => array(
             0 => array('field_name' => 'stakeholder_guid')
           ),
+          'limit' => (int)$params['limit'],
+          'search_params' => array(
+            0 => array('field_names' => array('project.active'), 'search_values' => array(1), 'comparison' => '='),
+            1 => array('field_names' => array('project.project_name'), 'search_values' => $params['query'], 'comparison' => 'LIKE')
+          ),
+          'search_type' => 'AND',
           )
         );
 

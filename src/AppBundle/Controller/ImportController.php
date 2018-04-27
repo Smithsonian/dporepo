@@ -7,6 +7,9 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
 use Doctrine\DBAL\Driver\Connection;
 
+use AppBundle\Form\UploadsParentPickerForm;
+use AppBundle\Entity\UploadsParentPicker;
+
 // Custom utility bundle
 use AppBundle\Utils\AppUtilities;
 
@@ -31,6 +34,12 @@ class ImportController extends Controller
 
     /**
      * @Route("/admin/import_validation/{id}", name="import_validation", defaults={"id" = null})
+     *
+     * @param int $id Project ID
+     * @param object $conn Database connection object
+     * @param object $request Symfony's request object
+     * @param object $validate ValidateMetadataController class
+     * @param object $items ItemsController class
      */
     public function importValidation($id, Connection $conn, Request $request, ValidateMetadataController $validate, ItemsController $items)
     {
@@ -54,7 +63,13 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/import_metadata/{id}", name="import_metadata", defaults={"id" = null})
+     * @Route("/admin/import_metadata/{id}", name="import_metadata", defaults={"id" = null}, methods="GET")
+     *
+     * @param int $id Project ID
+     * @param object $conn Database connection object
+     * @param object $request Symfony's request object
+     * @param object $validate ValidateMetadataController class
+     * @param object $items ItemsController class
      */
     public function importMetadata($id, Connection $conn, Request $request, ValidateMetadataController $validate, ItemsController $items)
     {
@@ -232,12 +247,21 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/import", name="import_summary_dashboard")
+     * @Route("/admin/import", name="import_summary_dashboard", methods="GET")
+     *
+     * @param object $conn Database connection object
+     * @param object $request Symfony's request object
      */
     public function importSummaryDashboard(Connection $conn, Request $request)
     {
+        $obj = new UploadsParentPicker();
+
+        // Create the parent record picker typeahead form.
+        $form = $this->createForm(UploadsParentPickerForm::class, $obj);
+
         return $this->render('import/import_summary_dashboard.html.twig', array(
             'page_title' => 'Uploads',
+            'form' => $form->createView(),
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
         ));
     }
@@ -249,9 +273,9 @@ class ImportController extends Controller
      *
      * Run a query to retrieve all imports in the database.
      *
-     * @param   object  Connection  Database connection object
-     * @param   object  Request     Request object
-     * @return  array|bool          The query result
+     * @param object $conn Database connection object
+     * @param object $request Request object
+     * @return array|bool The query result
      */
     public function datatables_browse_imports(Request $request, SubjectsController $subject, ItemsController $items)
     {
@@ -279,7 +303,12 @@ class ImportController extends Controller
     }
     
     /**
-     * @Route("/admin/import/{id}", name="import_summary_details")
+     * @Route("/admin/import/{id}", name="import_summary_details", methods="GET")
+     *
+     * @param int $id Project ID
+     * @param object $conn Database connection object
+     * @param object $project ProjectsController class
+     * @param object $request Symfony's request object
      */
     public function importSummaryDetails($id, Connection $conn, ProjectsController $project, Request $request)
     {
@@ -338,6 +367,36 @@ class ImportController extends Controller
       $this->repo_storage_controller->setContainer($this->container);
       $data = $this->repo_storage_controller->execute('getDatatableImportDetails', $query_params);
 
+      return $this->json($data);
+    }
+
+    /**
+     * @Route("/admin/import/get_parent_records", name="get_parent_records", methods="POST")
+     *
+     * @param object $project ProjectsController class
+     * @param object $request Symfony's request object
+     */
+    public function getParentRecords(ProjectsController $project, Request $request)
+    {
+      $data = array();
+
+      $req = $request->request->all();
+      $params['query'] = !empty($req['query']) ? $req['query'] : false;
+      $params['limit'] = !empty($req['limit']) ? $req['limit'] : false;
+      $params['render'] = !empty($req['render']) ? $req['render'] : false;
+      $params['property'] = !empty($req['property']) ? $req['property'] : false;
+
+      // Query the database.
+      $results = $project->get_projects($this->container, $params);
+
+      // Format the $data array for the typeahead-bundle.
+      if(!empty($results)) {
+        foreach ($results as $key => $value) {
+          $data[] = array('id' => $value['project_repository_id'], 'value' => $value['project_name']);
+        }
+      }
+      
+      // Return data as JSON
       return $this->json($data);
     }
 }
