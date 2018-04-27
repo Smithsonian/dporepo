@@ -218,8 +218,12 @@ dd {
   margin-bottom: 1rem;
 }
 
-.nav-tabs li a {
+.nav-tabs.main-nav li a {
 	color: white;
+}
+
+.nav-tabs.main-nav li.active a {
+  color: black;
 }
 
 .nav-tabs li a:hover {

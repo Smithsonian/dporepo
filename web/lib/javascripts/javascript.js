@@ -115,15 +115,15 @@ jQuery(document).ready(function($) {
   /**
    * Set the Active Navigation Tab
    */
-  $('.nav-tabs li').each(function(e) {
+  $('.nav-tabs.main-nav li').each(function(e) {
     const thisItem = $(this);
     thisItem.removeClass('active');
     if(currentPath[1] === thisItem.attr('id')) {
       thisItem.addClass('active');
     } else if(currentPath[1].length === 0) {
-      $('.nav-tabs li#admin').addClass('active');
+      $('.nav-tabs.main-nav li#admin').addClass('active');
     } else if (currentPath[1] === 'projects') {
-      $('.nav-tabs li#workspace').addClass('active');
+      $('.nav-tabs.main-nav li#workspace').addClass('active');
     }
   });
 
