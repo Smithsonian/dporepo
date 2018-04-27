@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "f3564bbe0536a5f0eb61e8a119b4018e",
+    "content-hash": "8c93870e61aec27be35d78666571362f",
     "packages": [
         {
             "name": "composer/ca-bundle",
@@ -1371,6 +1371,53 @@
                 "schema"
             ],
             "time": "2018-02-14T22:26:30+00:00"
+        },
+        {
+            "name": "lifo/typeahead-bundle",
+            "version": "2.4.1",
+            "target-dir": "Lifo/TypeaheadBundle",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/lifo101/typeahead-bundle.git",
+                "reference": "41b643dbd299edd8161ee6fdeb0066e52add2912"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/lifo101/typeahead-bundle/zipball/41b643dbd299edd8161ee6fdeb0066e52add2912",
+                "reference": "41b643dbd299edd8161ee6fdeb0066e52add2912",
+                "shasum": ""
+            },
+            "require": {
+                "symfony/symfony": "^2.6 || ^3.0"
+            },
+            "suggest": {
+                "mopa/bootstrap-bundle": "Bundle to automatically enable Bootstrap styles for Symfony",
+                "twbs/bootstrap": "Bootstrap framework"
+            },
+            "type": "symfony-bundle",
+            "autoload": {
+                "psr-0": {
+                    "Lifo\\TypeaheadBundle": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Jason Morriss",
+                    "email": "lifo2013@gmail.com"
+                }
+            ],
+            "description": "A Symfony bundle that provides an autocomplete Typeahead form type compatible with Bootstrap v2|v3",
+            "keywords": [
+                "autocomplete",
+                "bootstrap",
+                "symfony",
+                "typeahead"
+            ],
+            "time": "2016-12-28T19:31:23+00:00"
         },
         {
             "name": "monolog/monolog",
