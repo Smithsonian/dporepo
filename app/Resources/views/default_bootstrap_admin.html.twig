@@ -91,7 +91,7 @@
 
       <div class="row">
         <div class="clearfix"></div>
-        {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and is_granted('ROLE_ADMIN') %}
+        {% if (app.request.pathInfo == '/admin/workspace/') or (project_repository_id is defined) %}
           <div class="col-sm-9 col-sm-offset-3 col-md-9 col-md-offset-3 col-footer">
         {% else %}
           <div class="col-sm-12 col-md-12 col-footer">
