@@ -15,7 +15,7 @@ class UploadsParentPickerForm extends AbstractType
     {
         $builder
             ->add('parent_picker', TypeaheadType::class, array(
-                'label' => 'Choose a Parent Record',
+                'label' => false,
                 'required' => false,
                 'attr' => array(
                     'placeholder' => 'Begin typing a project or subject name',

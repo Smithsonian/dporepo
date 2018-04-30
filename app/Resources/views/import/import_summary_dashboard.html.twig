@@ -44,18 +44,43 @@
 
         <div class="tab-pane fade in active" role="tabpanel" id="upload" aria-labelledby="upload-tab">
 
-          <!-- Typeahead form element -->
-          {{ form_start(form) }}
-          {{ form_row(form.parent_picker) }}
-          {{ form_end(form) }}
-
-          <div class="panel panel-default" style="margin-top: 2rem;">
-            <!-- Panel contents -->
-            <div class="panel-heading">Drag/Drop Zone</div>
-            <!-- List group -->
-            <ul id="drop-zone" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);" class="list-group" style="min-height: 20rem;">
-            </ul>
+          <div class="row">
+            <div class="col-sm-6 col-md-6">
+              <!-- Typeahead form element -->
+              {{ form_start(form) }}
+              <h3>Choose a Parent Record</h3>
+              {{ form_row(form.parent_picker) }}
+              {{ form_end(form) }}
+            </div>
           </div>
+
+          <div class="row">
+            <!-- column 1 -->
+            <div class="col-sm-6 col-md-6">
+              <!-- File Drag and Drop zone -->
+              <div class="panel panel-default panel-uploads" data-set-number="1" data-file-count="0">
+                <!-- Panel contents -->
+                <div class="panel-heading">Set 1: Uploads</div>
+                <!-- List group -->
+                <ul class="list-group drop-zone" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
+                  <li class="list-group-item drop-zone-empty">Drag and drop files onto this window to upload.</li>
+                </ul>
+              </div>
+              <a href="javascript:void(0);" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add Another Set</a>
+              <a href="javascript:void(0);" class="btn btn-default pull-right" role="button"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> Pre-Validate Set 1 Scans and CSV Files</a>
+            </div>
+            <!-- column 2 -->
+            <div class="col-sm-6 col-md-6">
+              <div class="panel panel-default panel-validation-results">
+                <!-- Panel contents -->
+                <div class="panel-heading">Set 1: Pre-Validation Results</div>
+                <div class="panel-body">
+                  
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
       </div>
@@ -117,42 +142,76 @@
 
     // Testing drag/drop handlers. Stolen from:
     // https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/File_drag_and_drop
-    function dropHandler(ev) {
-      console.log('File(s) dropped');
+    // https://developer.mozilla.org/en-US/docs/Web/API/DataTransferItem/webkitGetAsEntry
+    function dragOverHandler(ev) {
+      // Prevent default behavior (Prevent file from being opened)
+      ev.preventDefault();
+      // Remove the placeholder list item.
+      $('.drop-zone-empty').remove();
+      $('.panel-uploads, .drop-zone').attr('style', 'background-color: #eeeeee;');
+    }
 
+    function dropHandler(ev) {
       // Prevent default behavior (Prevent file from being opened)
       ev.preventDefault();
 
       if (ev.dataTransfer.items) {
+        // Count of any existing files.
+        let existingCount = $('.panel-uploads').data('file-count'),
+            // Count of new files being dropped.
+            thisCount = ev.dataTransfer.items.length,
+            // Total count.
+            thisTotalCount = (thisCount + existingCount);
+
+        // Add the total count to the file-count data attribute.
+        $('.panel-uploads').data('file-count', thisTotalCount);
+
         // Use DataTransferItemList interface to access the file(s)
         for (var i = 0; i < ev.dataTransfer.items.length; i++) {
-          // If dropped items aren't files, reject them
-          if (ev.dataTransfer.items[i].kind === 'file') {
-            var file = ev.dataTransfer.items[i].getAsFile();
-            console.log('... file[' + i + '].name = ' + file.name);
-            var listItem = '<li class="list-group-item">' + 'File #' + i + ': ' + file.name + '</li>';
-            jQuery('#drop-zone').append(listItem);
-          }
+          // Get the item's properties via webkitGetAsEntry().
+          let item = ev.dataTransfer.items[i].webkitGetAsEntry(),
+              listing = $('.drop-zone');
+          // // Add the file size and modified date to 'item'.
+          // item.detail = ev.dataTransfer.files[i];
+          // Recursively scan files and add to the DOM.
+          scanFiles(i, item, listing, existingCount);
         }
-      } else {
-        // Use DataTransfer interface to access the file(s)
-        for (var i = 0; i < ev.dataTransfer.files.length; i++) {
-          console.log('... file[' + i + '].name = ' + ev.dataTransfer.files[i].name);
-        }
-      } 
+      }
       
       // Pass event to removeDragData for cleanup
       removeDragData(ev);
     }
 
-    function dragOverHandler(ev) {
-      console.log('File(s) in drop zone'); 
-      // Prevent default behavior (Prevent file from being opened)
-      ev.preventDefault();
+    function scanFiles(i, item, container, existingCount) {
+
+      // console.log(item);
+
+      let itemIcon = item.isDirectory ? 'folder-close' : 'file',
+          spanIcon = $('<span />').addClass('glyphicon glyphicon-' + itemIcon).attr('style', 'margin-right: 4px;'),
+          allItemsCount = $('.drop-zone').find('li.list-group-item').length,
+          thisCount = item.isDirectory ? (i+allItemsCount) : i,
+          listItem = $('<li />').addClass('list-group-item').attr('data-count', thisCount).text(item.name);
+          // listItem = $('<li />').addClass('list-group-item').attr('data-count', i).text(item.name + ' | File Type: ' + item.detail.type  + ' | File Size: ' + item.detail.size + ' | Last Modified: ' + item.detail.lastModified + '');
+
+      listItem.prepend(spanIcon);
+      container.append(listItem);
+      
+      // Directory handler
+      if (item.isDirectory) {
+        let directoryReader = item.createReader();
+        let directoryContainer = $('<ul />');
+        container.append(directoryContainer);
+        
+        directoryReader.readEntries(function(entries) {
+            entries.forEach(function(entry) {
+              scanFiles(i++, entry, directoryContainer, existingCount);
+          });
+        });
+      }
+
     }
 
     function removeDragData(ev) {
-      console.log('Removing drag data')
       if (ev.dataTransfer.items) {
         // Use DataTransferItemList interface to remove the drag data
         ev.dataTransfer.items.clear();
@@ -160,6 +219,7 @@
         // Use DataTransfer interface to remove the drag data
         ev.dataTransfer.clearData();
       }
+      $('.panel-uploads, .drop-zone').attr('style', 'background-color: none;');
     }
   </script>
 {% endblock %}

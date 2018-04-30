@@ -335,3 +335,29 @@ dd {
 .isni-labels {
   margin-top: 1rem;
 }
+
+/**
+ * Uploads UI
+ */
+
+.panel-uploads,
+.panel-validation-results {
+  margin-top: 2rem;
+}
+
+.panel-uploads .panel-heading,
+.panel-validation-results .panel-heading {
+  font-size: 2rem;
+  font-weight: 500;
+}
+
+.panel-uploads .drop-zone,
+.panel-validation-results .panel-body {
+  height: 30rem;
+  overflow: scroll;
+}
+
+.panel-uploads .drop-zone-empty {
+  text-align: center;
+  color: #8c8c8c;
+}
