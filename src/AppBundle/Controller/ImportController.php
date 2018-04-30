@@ -273,9 +273,10 @@ class ImportController extends Controller
      *
      * Run a query to retrieve all imports in the database.
      *
-     * @param object $conn Database connection object
-     * @param object $request Request object
-     * @return array|bool The query result
+     * @param Request $request Symfony's request object
+     * @param SubjectsController $subject
+     * @param ItemsController $items
+     * @return \Symfony\Component\HttpFoundation\JsonResponse The query result
      */
     public function datatables_browse_imports(Request $request, SubjectsController $subject, ItemsController $items)
     {
@@ -339,9 +340,9 @@ class ImportController extends Controller
      *
      * Run a query to retrieve the details of an import.
      *
-     * @param   int $id  The job ID
-     * @param   object $request  Request object
-     * @return  array|bool  The query result
+     * @param  int $id The job ID
+     * @param Request $request Symfony's request object
+     * @return \Symfony\Component\HttpFoundation\JsonResponse The query result
      */
     public function datatables_browse_import_details($id, Request $request)
     {
@@ -373,8 +374,9 @@ class ImportController extends Controller
     /**
      * @Route("/admin/import/get_parent_records", name="get_parent_records", methods="POST")
      *
-     * @param object $project ProjectsController class
-     * @param object $request Symfony's request object
+     * @param ProjectsController $project ProjectsController class
+     * @param Request $request Symfony's request object
+     * @return \Symfony\Component\HttpFoundation\JsonResponse The query result
      */
     public function getParentRecords(ProjectsController $project, Request $request)
     {
