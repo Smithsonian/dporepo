@@ -97,7 +97,7 @@ class WorkflowController extends Controller {
 
   /**
    * @Route("/workflow/record/write", name="workflow_record_write", methods="POST")
-   * Given a record_id, record_type and values array, create a record.
+   * Given a record_id, record_type and values array, create or edit a record, and update the workflow status log.
    *
    * @param Request $request
    * @return JsonResponse The query result in JSON
