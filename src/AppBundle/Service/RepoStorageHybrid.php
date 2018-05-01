@@ -2422,7 +2422,6 @@ class RepoStorageHybrid implements RepoStorage {
           'capture_dataset.cluster_geometry_field_id',
           'capture_dataset.resource_capture_datasets',
           'capture_dataset.calibration_object_used',
-          'capture_dataset.workflow_id',
           'capture_dataset.workflow_status',
           'capture_dataset.workflow_status_detail',
           'capture_dataset.workflow_processing_step',
@@ -2496,6 +2495,19 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'field_name' => 'calibration_object_used',
+    );
+
+    $query_params['fields'][] = array(
+      'field_name' => 'workflow_id',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'workflow_status',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'workflow_status_detail',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'workflow_processing_step',
     );
     $query_params['fields'][] = array(
       'table_name' => 'capture_dataset',
@@ -3396,7 +3408,9 @@ class RepoStorageHybrid implements RepoStorage {
       $id = NULL;
     }
 
-    if(NULL == $base_table || NULL == $values || NULL == $user_id) {
+    //@todo- in the short term we want to be able to write workflow actions with no user id
+    // We may want to tighten this up to force a non-null and > 0 user_id.
+    if(NULL == $base_table || NULL == $values || (0 !== $user_id && NULL == $user_id)) {
       return NULL;
     }
 
@@ -4072,6 +4086,9 @@ class RepoStorageHybrid implements RepoStorage {
 
           $statement->bindValue(":id", $record_values['id']['field_value'], PDO::PARAM_INT);
           $statement->execute();
+
+          $last_inserted_id = $record_values['id']['field_value'];
+
         }
         else {
           $sql ="INSERT INTO " . $base_table;
