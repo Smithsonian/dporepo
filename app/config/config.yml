@@ -124,3 +124,9 @@ fr3d_ldap:
     #         - { ldap_attr: uid,  user_method: setUsername }
     #         - { ldap_attr: mail,  user_method: setEmail }
     #     filter: (&(ObjectClass=person))
+
+# OneupUploaderBundle Configuration
+oneup_uploader:
+    mappings:
+        repository:
+            frontend: plupload
