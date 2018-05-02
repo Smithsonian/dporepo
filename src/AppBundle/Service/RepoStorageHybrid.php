@@ -2076,6 +2076,9 @@ class RepoStorageHybrid implements RepoStorage {
         'field_name' => 'subject_name',
       );
       $query_params['fields'][] = array(
+        'field_name' => 'subject_display_name',
+      );
+      $query_params['fields'][] = array(
         'table_name' => 'subject',
         'field_name' => 'last_modified',
       );
