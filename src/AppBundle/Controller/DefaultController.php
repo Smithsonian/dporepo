@@ -18,4 +18,16 @@ class DefaultController extends Controller
             'base_dir' => realpath($this->getParameter('kernel.project_dir')).DIRECTORY_SEPARATOR,
         ]);
     }
+
+    /**
+    * @Route("/admin/plupload", name="plupload_test_page")
+    *
+    * https://github.com/1up-lab/OneupUploaderBundle
+    */
+    public function uploadTest(Request $request)
+    {
+        return $this->render('default/plupload_test.html.twig', array(
+            'page_title' => 'Plupload Example',
+        ));
+    }
 }
