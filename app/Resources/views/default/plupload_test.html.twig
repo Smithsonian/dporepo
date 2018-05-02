@@ -1,0 +1,26 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block content %}
+	<div class="row">
+		<div class="col-md-12">
+			<div id="fileupload"></div>
+		</div>
+	</div>
+{% endblock %}
+
+{% block js_bottom %}
+	<script type="text/javascript" src="{{ asset('lib/javascripts/plupload/browserplus-min.js') }}"></script>
+	<script type="text/javascript" src="{{ asset('lib/javascripts/plupload/jquery-ui.min.js') }}"></script>
+	<script type="text/javascript" src="{{ asset('lib/javascripts/plupload/plupload.full.min.js') }}"></script>
+	<script type="text/javascript" src="{{ asset('lib/javascripts/plupload/jquery.ui.plupload.min.js') }}"></script>
+  <script type="text/javascript">
+      $(document).ready(function()
+      {
+          $("#fileupload").plupload(
+          {
+              runtimes: "html5",
+              url: "{{ oneup_uploader_endpoint('repository') }}"
+          });
+      });
+  </script>
+{% endblock %}
