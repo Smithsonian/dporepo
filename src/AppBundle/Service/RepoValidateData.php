@@ -42,7 +42,7 @@ class RepoValidateData implements RepoValidate {
     // If data is passed, go ahead and process.
     if(!empty($data)) {
 
-      $schema_dir = __DIR__ . '/../../../web/json/schemas/';
+      $schema_dir = __DIR__ . '/../../../web/json/schemas/repository/';
       $jsonSchemaObject = json_decode(file_get_contents($schema_dir . $schema_definitions_dir . $schema . '.json'));
 
       $schemaStorage = new SchemaStorage();
