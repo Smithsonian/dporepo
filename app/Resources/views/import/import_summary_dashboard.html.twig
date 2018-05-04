@@ -5,7 +5,6 @@
   <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
   <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
   <link href="{{ asset('bundles/lifotypeahead/css/typeaheadbundle.css') }}" rel="stylesheet" type="text/css" />
-  <link href="{{ asset('lib/javascripts/plupload/jquery.ui.plupload/css/jquery.ui.plupload.css') }}" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -62,17 +61,86 @@
               <div class="panel panel-default panel-uploads" data-set-number="1" data-file-count="0">
                 <!-- Panel contents -->
                 <div class="panel-heading">Uploads</div>
-                <div class="panel-body">
-                  <div id="uploader">
-                    <p>Your browser doesn't have Flash, Silverlight or HTML5 support.</p>
+                <div class="panel-body" style="height: 40rem; overflow: scroll;">
+
+                  <!-- Template Begins -->
+                  <!-- HTML heavily inspired by http://blueimp.github.io/jQuery-File-Upload/ -->
+                  <div class="table table-striped" class="files" id="previews">
+
+                    <div id="template" class="file-row">
+                      <!-- This is used as the file preview template -->
+                      <div>
+                          <span class="preview"><img data-dz-thumbnail /></span>
+                      </div>
+                      <div>
+                          <p class="name" data-dz-name></p>
+                          <strong class="error text-danger" data-dz-errormessage></strong>
+                      </div>
+                      <div>
+                          <p class="size" data-dz-size></p>
+                          <div class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                            <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress></div>
+                          </div>
+                      </div>
+                      <div>
+                        <button class="btn btn-primary start" style="display: none;">
+                            <i class="glyphicon glyphicon-upload"></i>
+                            <span>Start</span>
+                        </button>
+                        <button data-dz-remove class="btn btn-warning cancel" style="display: none;">
+                            <i class="glyphicon glyphicon-ban-circle"></i>
+                            <span>Cancel</span>
+                        </button>
+                        <button data-dz-remove class="btn btn-danger delete" style="display: none;">
+                          <i class="glyphicon glyphicon-trash"></i>
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </div>
+
                   </div>
+                  <!-- Template Ends -->
+
                 </div>
                 <!-- List group -->
                 {# <ul class="list-group drop-zone" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
                   <li class="list-group-item drop-zone-empty">Drag and drop files onto this window to upload.</li>
                 </ul> #}
               </div>
-              <a href="javascript:void(0);" class="btn btn-default pull-right prevalidate-trigger" role="button"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> Pre-Validate Scans and CSV Files</a>
+              <div id="actions" class="row">
+
+                <div class="col-sm-7 col-md-7">
+                  <!-- The fileinput-button span is used to style the file input field as button -->
+                  <span class="btn btn-success fileinput-button dz-clickable">
+                      <i class="glyphicon glyphicon-plus"></i>
+                      <span>Add files...</span>
+                  </span>
+                  <button type="submit" class="btn btn-primary start">
+                      <i class="glyphicon glyphicon-upload"></i>
+                      <span>Start upload</span>
+                  </button>
+                  <button type="reset" class="btn btn-warning cancel">
+                      <i class="glyphicon glyphicon-ban-circle"></i>
+                      <span>Cancel upload</span>
+                  </button>
+                </div>
+
+                <div class="col-sm-5 col-md-5">
+                  <!-- The global file processing state -->
+                  <span class="fileupload-process">
+                    <div id="total-progress" class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                      <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress=""></div>
+                    </div>
+                  </span>
+                </div>
+
+              </div>
+              <div class="row">
+                <div class="col-sm-12 col-md-12">
+                  <a href="javascript:void(0);" class="btn btn-default pull-right prevalidate-trigger" role="button"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> Pre-Validate Scans and CSV Files</a>
+                </div>
+              </div>
+
             </div>
             <!-- column 2 -->
             <div class="col-sm-6 col-md-6">
@@ -104,10 +172,7 @@
   <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
   <script src="{{ asset('bundles/lifotypeahead/js/bootstrap-typeahead.js') }}"></script>
   <script src="{{ asset('bundles/lifotypeahead/js/typeaheadbundle.js') }}"></script>
-  <script type="text/javascript" src="{{ asset('lib/javascripts/plupload/plupload.full.min.js') }}"></script>
-  <script type="text/javascript" src="{{ asset('lib/javascripts/plupload/moxie.min.js') }}"></script>
-  <script type="text/javascript" src="{{ asset('lib/javascripts/plupload/jquery.ui.plupload/jquery.ui.plupload.min.js') }}"></script>
-  <script type="text/javascript" src="{{ asset('lib/javascripts/plupload/jquery.plupload.queue/jquery.plupload.queue.min.js') }}"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/dropzone.js') }}"></script>
   <script type="text/javascript">
     $(document).ready(function() {
       var details_page = "/admin/projects/subjects/";
@@ -149,114 +214,166 @@
       });
     });
 
-    let allFiles = [];
+    // Get the template HTML and remove it from the doumenthe template HTML and remove it from the doument
+    var previewNode = document.querySelector("#template");
+    previewNode.id = "";
+    var previewTemplate = previewNode.parentNode.innerHTML;
+    previewNode.parentNode.removeChild(previewNode);
 
-    $("#uploader").plupload({
-      // General settings
-      runtimes : 'html5,silverlight,html4',
-      url : "{{ oneup_uploader_endpoint('repository') }}",
-      // Maximum file size (10240mb = 10GB)
-      max_file_size : '10240mb',
-      chunk_size: '10mb',
-      max_retries: 3,
-      // // Specify what files to browse for
-      // filters : [
-      //     {title : "Image files", extensions : "jpg,gif,png,tif,xmp"},
-      //     {title : "Zip files", extensions : "zip,avi"}
-      // ],
-      // Rename files by clicking on their titles
-      rename: false,
-      // Sort files
-      sortable: true,
-      // Enable ability to drag'n'drop files onto the widget (currently only HTML5 supports that)
-      dragdrop: true,
-      // Views to activate
-      views: {
-        list: true,
-      },
-      buttons: {
-        browse: true,
-        start: false,
-        stop: true,
-      },
-      // Silverlight settings
-      silverlight_xap_url : '/web/lib/javascripts/plupload/js/Moxie.xap',
-      init: {
-        BeforeUpload: function (up, file) {
+    // See: http://www.dropzonejs.com/#configuration-options
+    var myDropzone = new Dropzone(document.body, { // Make the whole body a dropzone
+      url: "{{ oneup_uploader_endpoint('repository') }}", // Set the url
+      parallelUploads: 20,
+      previewTemplate: previewTemplate,
+      autoQueue: false, // Make sure the files aren't queued until manually added
+      previewsContainer: "#previews", // Define the container to display the previews
+      clickable: ".fileinput-button", // Define the element that should be used as click trigger to select files.
+      createImageThumbnails: false,
+      maxFilesize: 10240,
+      ignoreHiddenFiles: true
+    });
 
-          console.log(up.getOption());
+    myDropzone.on("addedfile", function(file) {
+      // Hookup the start button
+      file.previewElement.querySelector(".start").onclick = function() { myDropzone.enqueueFile(file); };
+    });
 
-          $('#uploader_stop, .plupload_upload_status, .plupload_progress, .plupload_total_status, .plupload_total_file_size').hide();
+    // Update the total progress bar
+    myDropzone.on("totaluploadprogress", function(progress) {
+      document.querySelector("#total-progress .progress-bar").style.width = progress + "%";
+    });
 
-          if(file.type !== 'text/csv') {
-            return false;
-          } else {
+    myDropzone.on("sending", function(file) {
+      // Show the total progress bar when upload starts
+      document.querySelector("#total-progress").style.opacity = "1";
+      // And disable the start button
+      file.previewElement.querySelector(".start").setAttribute("disabled", "disabled");
+    });
+
+    // Hide the total progress bar when nothing's uploading anymore
+    myDropzone.on("queuecomplete", function(progress) {
+      document.querySelector("#total-progress").style.opacity = "0";
+      $(".file-row").find('.progress').removeClass('progress-striped active').addClass('progress-bar-success');
+    });
+
+    // Setup the buttons for all transfers
+    // The "add files" button doesn't need to be setup because the config
+    // `clickable` has already been specified.
+    document.querySelector("#actions .start").onclick = function() {
+      myDropzone.enqueueFiles(myDropzone.getFilesWithStatus(Dropzone.ADDED));
+    };
+    document.querySelector("#actions .cancel").onclick = function() {
+      myDropzone.removeAllFiles(true);
+    };
+
+    // let allFiles = [];
+
+    // $("#uploader").plupload({
+    //   // General settings
+    //   runtimes : 'html5,silverlight,html4',
+    //   url : "{{ oneup_uploader_endpoint('repository') }}",
+    //   // Maximum file size (10240mb = 10GB)
+    //   max_file_size : '10240mb',
+    //   chunk_size: '10mb',
+    //   max_retries: 3,
+    //   // // Specify what files to browse for
+    //   // filters : [
+    //   //     {title : "Image files", extensions : "jpg,gif,png,tif,xmp"},
+    //   //     {title : "Zip files", extensions : "zip,avi"}
+    //   // ],
+    //   // Rename files by clicking on their titles
+    //   rename: false,
+    //   // Sort files
+    //   sortable: true,
+    //   // Enable ability to drag'n'drop files onto the widget (currently only HTML5 supports that)
+    //   dragdrop: true,
+    //   // Views to activate
+    //   views: {
+    //     list: true,
+    //   },
+    //   buttons: {
+    //     browse: true,
+    //     start: false,
+    //     stop: true,
+    //   },
+    //   // Silverlight settings
+    //   silverlight_xap_url : '/web/lib/javascripts/plupload/js/Moxie.xap',
+    //   init: {
+    //     BeforeUpload: function (up, file) {
+
+    //       console.log(up.getOption());
+
+    //       $('#uploader_stop, .plupload_upload_status, .plupload_progress, .plupload_total_status, .plupload_total_file_size').hide();
+
+    //       if(file.type !== 'text/csv') {
+    //         return false;
+    //       } else {
             
-          }
+    //       }
 
-        }
-      },
-      // Event: selected - dispatched when file dialog is closed.
-      // https://www.plupload.com/docs/v2/UI.Plupload
-      selected: function(event, args) {
+    //     }
+    //   },
+    //   // Event: selected - dispatched when file dialog is closed.
+    //   // https://www.plupload.com/docs/v2/UI.Plupload
+    //   selected: function(event, args) {
 
-        if(args.files.length) {
-          args.files.forEach(function(val, index) {
-            allFiles.push({'fileName': val.name, 'fileType': val.type});
-          });
-        }
+    //     if(args.files.length) {
+    //       args.files.forEach(function(val, index) {
+    //         allFiles.push({'fileName': val.name, 'fileType': val.type});
+    //       });
+    //     }
 
-        // console.log('all files');
-        // console.log(allFiles);
+    //     // console.log('all files');
+    //     // console.log(allFiles);
 
-      },
-      // Event: error - dispatched when error of some kind is detected.
-      // https://www.plupload.com/docs/v2/UI.Plupload
-      error: function(event, args) {
-        // Error handling here?
-        // console.log(args);
-      }
-    });
+    //   },
+    //   // Event: error - dispatched when error of some kind is detected.
+    //   // https://www.plupload.com/docs/v2/UI.Plupload
+    //   error: function(event, args) {
+    //     // Error handling here?
+    //     // console.log(args);
+    //   }
+    // });
 
-    // Pre-validate click handler.
-    $('.prevalidate-trigger').on('click', function(){
+    // // Pre-validate click handler.
+    // $('.prevalidate-trigger').on('click', function(){
 
-      $('#uploader').plupload('start');
+    //   $('#uploader').plupload('start');
 
-      // Pending uploads in the queue
-      var pendingUploads = $('#uploader').plupload('getFiles');
+    //   // Pending uploads in the queue
+    //   var pendingUploads = $('#uploader').plupload('getFiles');
 
-      let parentRecordId = $('#uploads_parent_picker_form_parent_picker').val();
+    //   let parentRecordId = $('#uploads_parent_picker_form_parent_picker').val();
 
-      // if(!parentRecordId.length) {
-      //   swal({
-      //     title: 'Select Parent Record',
-      //     text: 'Please select a parent record before running the validation.',
-      //     type: 'warning',
-      //   });
-      // }
+    //   // if(!parentRecordId.length) {
+    //   //   swal({
+    //   //     title: 'Select Parent Record',
+    //   //     text: 'Please select a parent record before running the validation.',
+    //   //     type: 'warning',
+    //   //   });
+    //   // }
 
-      // $.ajax({
-      //   type: 'POST'
-      //   ,dataType: 'json'
-      //   ,url: '/admin/import_validation'
-      //   ,data: ({ 'parentRecordId': parentRecordId, 'allFiles': allFiles })
-      //   ,success: function(result) {
+    //   // $.ajax({
+    //   //   type: 'POST'
+    //   //   ,dataType: 'json'
+    //   //   ,url: '/admin/import_validation'
+    //   //   ,data: ({ 'parentRecordId': parentRecordId, 'allFiles': allFiles })
+    //   //   ,success: function(result) {
 
-      //     if(result) {
-      //       console.log(result);
-      //       // swal({
-      //       //   title: 'Page Removed',
-      //       //   text: 'This page has been removed from your favorites.',
-      //       //   icon: 'success',
-      //       //   button: 'Close',
-      //       // });
-      //     }
+    //   //     if(result) {
+    //   //       console.log(result);
+    //   //       // swal({
+    //   //       //   title: 'Page Removed',
+    //   //       //   text: 'This page has been removed from your favorites.',
+    //   //       //   icon: 'success',
+    //   //       //   button: 'Close',
+    //   //       // });
+    //   //     }
 
-      //   }
-      // });
+    //   //   }
+    //   // });
 
-    });
+    // });
 
     // // Testing drag/drop handlers. Stolen from:
     // // https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/File_drag_and_drop

@@ -129,4 +129,5 @@ fr3d_ldap:
 oneup_uploader:
     mappings:
         repository:
-            frontend: plupload
+            # frontend: plupload
+            frontend: dropzone

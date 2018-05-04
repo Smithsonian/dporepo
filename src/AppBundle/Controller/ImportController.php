@@ -33,7 +33,7 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/import_validation/{id}", name="import_validation", defaults={"id" = null})
+     * @Route("/admin/import_validation/{id}", name="import_validation", methods={"GET","POST"}, defaults={"id" = null})
      *
      * @param int $id Project ID
      * @param object $conn Database connection object
@@ -44,6 +44,13 @@ class ImportController extends Controller
     public function importValidation($id, Connection $conn, Request $request, ValidateMetadataController $validate, ItemsController $items)
     {
         $project = array();
+        $post = $request->request->all();
+
+        if(!empty($post)) {
+          $id = isset($post['parentRecordId']) ? $post['parentRecordId'] : $id;
+        }
+
+        $this->u->dumper($post);
 
         if(!empty($id)) {
           // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
