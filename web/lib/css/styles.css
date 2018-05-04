@@ -133,7 +133,7 @@ body {
 /*
  * jQuery UI Resizable
  */
-.ui-resizable-handle {
+.sidebar-nav .ui-resizable-handle {
   position: absolute;
   font-size: 0.1px;
   display: block;
@@ -142,7 +142,7 @@ body {
   right: -8px;
 }
 
-.ui-resizable-handle:after {
+.sidebar-nav .ui-resizable-handle:after {
   content: "";
   display: block;
   position: absolute;
@@ -353,11 +353,28 @@ dd {
 
 .panel-uploads .drop-zone,
 .panel-validation-results .panel-body {
-  height: 30rem;
+  height: 40rem;
   overflow: scroll;
 }
 
 .panel-uploads .drop-zone-empty {
   text-align: center;
   color: #8c8c8c;
+}
+
+.panel-uploads .panel-body {
+  padding: 0;
+}
+
+.plupload_header {
+  display: none;
+}
+
+#uploader_container {
+  min-height: 40rem;
+}
+
+#uploader_container .plupload_content {
+  top: 30px;
+  bottom: 42px;
 }

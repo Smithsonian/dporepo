@@ -5,6 +5,7 @@
   <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
   <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
   <link href="{{ asset('bundles/lifotypeahead/css/typeaheadbundle.css') }}" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/plupload/jquery.ui.plupload/css/jquery.ui.plupload.css') }}" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -60,20 +61,24 @@
               <!-- File Drag and Drop zone -->
               <div class="panel panel-default panel-uploads" data-set-number="1" data-file-count="0">
                 <!-- Panel contents -->
-                <div class="panel-heading">Set 1: Uploads</div>
+                <div class="panel-heading">Uploads</div>
+                <div class="panel-body">
+                  <div id="uploader">
+                    <p>Your browser doesn't have Flash, Silverlight or HTML5 support.</p>
+                  </div>
+                </div>
                 <!-- List group -->
-                <ul class="list-group drop-zone" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
+                {# <ul class="list-group drop-zone" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
                   <li class="list-group-item drop-zone-empty">Drag and drop files onto this window to upload.</li>
-                </ul>
+                </ul> #}
               </div>
-              <a href="javascript:void(0);" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add Another Set</a>
-              <a href="javascript:void(0);" class="btn btn-default pull-right" role="button"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> Pre-Validate Set 1 Scans and CSV Files</a>
+              <a href="javascript:void(0);" class="btn btn-default pull-right prevalidate-trigger" role="button"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> Pre-Validate Scans and CSV Files</a>
             </div>
             <!-- column 2 -->
             <div class="col-sm-6 col-md-6">
               <div class="panel panel-default panel-validation-results">
                 <!-- Panel contents -->
-                <div class="panel-heading">Set 1: Pre-Validation Results</div>
+                <div class="panel-heading">Pre-Validation Results</div>
                 <div class="panel-body">
                   
                 </div>
@@ -99,6 +104,10 @@
   <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
   <script src="{{ asset('bundles/lifotypeahead/js/bootstrap-typeahead.js') }}"></script>
   <script src="{{ asset('bundles/lifotypeahead/js/typeaheadbundle.js') }}"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/plupload/plupload.full.min.js') }}"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/plupload/moxie.min.js') }}"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/plupload/jquery.ui.plupload/jquery.ui.plupload.min.js') }}"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/plupload/jquery.plupload.queue/jquery.plupload.queue.min.js') }}"></script>
   <script type="text/javascript">
     $(document).ready(function() {
       var details_page = "/admin/projects/subjects/";
@@ -140,86 +149,195 @@
       });
     });
 
-    // Testing drag/drop handlers. Stolen from:
-    // https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/File_drag_and_drop
-    // https://developer.mozilla.org/en-US/docs/Web/API/DataTransferItem/webkitGetAsEntry
-    function dragOverHandler(ev) {
-      // Prevent default behavior (Prevent file from being opened)
-      ev.preventDefault();
-      // Remove the placeholder list item.
-      $('.drop-zone-empty').remove();
-      $('.panel-uploads, .drop-zone').attr('style', 'background-color: #eeeeee;');
-    }
+    let allFiles = [];
 
-    function dropHandler(ev) {
-      // Prevent default behavior (Prevent file from being opened)
-      ev.preventDefault();
+    $("#uploader").plupload({
+      // General settings
+      runtimes : 'html5,silverlight,html4',
+      url : "{{ oneup_uploader_endpoint('repository') }}",
+      // Maximum file size (10240mb = 10GB)
+      max_file_size : '10240mb',
+      chunk_size: '10mb',
+      max_retries: 3,
+      // // Specify what files to browse for
+      // filters : [
+      //     {title : "Image files", extensions : "jpg,gif,png,tif,xmp"},
+      //     {title : "Zip files", extensions : "zip,avi"}
+      // ],
+      // Rename files by clicking on their titles
+      rename: false,
+      // Sort files
+      sortable: true,
+      // Enable ability to drag'n'drop files onto the widget (currently only HTML5 supports that)
+      dragdrop: true,
+      // Views to activate
+      views: {
+        list: true,
+      },
+      buttons: {
+        browse: true,
+        start: false,
+        stop: true,
+      },
+      // Silverlight settings
+      silverlight_xap_url : '/web/lib/javascripts/plupload/js/Moxie.xap',
+      init: {
+        BeforeUpload: function (up, file) {
 
-      if (ev.dataTransfer.items) {
-        // Count of any existing files.
-        let existingCount = $('.panel-uploads').data('file-count'),
-            // Count of new files being dropped.
-            thisCount = ev.dataTransfer.items.length,
-            // Total count.
-            thisTotalCount = (thisCount + existingCount);
+          console.log(up.getOption());
 
-        // Add the total count to the file-count data attribute.
-        $('.panel-uploads').data('file-count', thisTotalCount);
+          $('#uploader_stop, .plupload_upload_status, .plupload_progress, .plupload_total_status, .plupload_total_file_size').hide();
 
-        // Use DataTransferItemList interface to access the file(s)
-        for (var i = 0; i < ev.dataTransfer.items.length; i++) {
-          // Get the item's properties via webkitGetAsEntry().
-          let item = ev.dataTransfer.items[i].webkitGetAsEntry(),
-              listing = $('.drop-zone');
-          // // Add the file size and modified date to 'item'.
-          // item.detail = ev.dataTransfer.files[i];
-          // Recursively scan files and add to the DOM.
-          scanFiles(i, item, listing, existingCount);
+          if(file.type !== 'text/csv') {
+            return false;
+          } else {
+            
+          }
+
         }
-      }
-      
-      // Pass event to removeDragData for cleanup
-      removeDragData(ev);
-    }
+      },
+      // Event: selected - dispatched when file dialog is closed.
+      // https://www.plupload.com/docs/v2/UI.Plupload
+      selected: function(event, args) {
 
-    function scanFiles(i, item, container, existingCount) {
-
-      // console.log(item);
-
-      let itemIcon = item.isDirectory ? 'folder-close' : 'file',
-          spanIcon = $('<span />').addClass('glyphicon glyphicon-' + itemIcon).attr('style', 'margin-right: 4px;'),
-          allItemsCount = $('.drop-zone').find('li.list-group-item').length,
-          thisCount = item.isDirectory ? (i+allItemsCount) : i,
-          listItem = $('<li />').addClass('list-group-item').attr('data-count', thisCount).text(item.name);
-          // listItem = $('<li />').addClass('list-group-item').attr('data-count', i).text(item.name + ' | File Type: ' + item.detail.type  + ' | File Size: ' + item.detail.size + ' | Last Modified: ' + item.detail.lastModified + '');
-
-      listItem.prepend(spanIcon);
-      container.append(listItem);
-      
-      // Directory handler
-      if (item.isDirectory) {
-        let directoryReader = item.createReader();
-        let directoryContainer = $('<ul />');
-        container.append(directoryContainer);
-        
-        directoryReader.readEntries(function(entries) {
-            entries.forEach(function(entry) {
-              scanFiles(i++, entry, directoryContainer, existingCount);
+        if(args.files.length) {
+          args.files.forEach(function(val, index) {
+            allFiles.push({'fileName': val.name, 'fileType': val.type});
           });
-        });
-      }
+        }
 
-    }
+        // console.log('all files');
+        // console.log(allFiles);
 
-    function removeDragData(ev) {
-      if (ev.dataTransfer.items) {
-        // Use DataTransferItemList interface to remove the drag data
-        ev.dataTransfer.items.clear();
-      } else {
-        // Use DataTransfer interface to remove the drag data
-        ev.dataTransfer.clearData();
+      },
+      // Event: error - dispatched when error of some kind is detected.
+      // https://www.plupload.com/docs/v2/UI.Plupload
+      error: function(event, args) {
+        // Error handling here?
+        // console.log(args);
       }
-      $('.panel-uploads, .drop-zone').attr('style', 'background-color: none;');
-    }
+    });
+
+    // Pre-validate click handler.
+    $('.prevalidate-trigger').on('click', function(){
+
+      $('#uploader').plupload('start');
+
+      // Pending uploads in the queue
+      var pendingUploads = $('#uploader').plupload('getFiles');
+
+      let parentRecordId = $('#uploads_parent_picker_form_parent_picker').val();
+
+      // if(!parentRecordId.length) {
+      //   swal({
+      //     title: 'Select Parent Record',
+      //     text: 'Please select a parent record before running the validation.',
+      //     type: 'warning',
+      //   });
+      // }
+
+      // $.ajax({
+      //   type: 'POST'
+      //   ,dataType: 'json'
+      //   ,url: '/admin/import_validation'
+      //   ,data: ({ 'parentRecordId': parentRecordId, 'allFiles': allFiles })
+      //   ,success: function(result) {
+
+      //     if(result) {
+      //       console.log(result);
+      //       // swal({
+      //       //   title: 'Page Removed',
+      //       //   text: 'This page has been removed from your favorites.',
+      //       //   icon: 'success',
+      //       //   button: 'Close',
+      //       // });
+      //     }
+
+      //   }
+      // });
+
+    });
+
+    // // Testing drag/drop handlers. Stolen from:
+    // // https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/File_drag_and_drop
+    // // https://developer.mozilla.org/en-US/docs/Web/API/DataTransferItem/webkitGetAsEntry
+    // function dragOverHandler(ev) {
+    //   // Prevent default behavior (Prevent file from being opened)
+    //   ev.preventDefault();
+    //   // Remove the placeholder list item.
+    //   $('.drop-zone-empty').remove();
+    //   $('.panel-uploads, .drop-zone').attr('style', 'background-color: #eeeeee;');
+    // }
+
+    // function dropHandler(ev) {
+    //   // Prevent default behavior (Prevent file from being opened)
+    //   ev.preventDefault();
+
+    //   if (ev.dataTransfer.items) {
+    //     // Count of any existing files.
+    //     let existingCount = $('.panel-uploads').data('file-count'),
+    //         // Count of new files being dropped.
+    //         thisCount = ev.dataTransfer.items.length,
+    //         // Total count.
+    //         thisTotalCount = (thisCount + existingCount);
+
+    //     // Add the total count to the file-count data attribute.
+    //     $('.panel-uploads').data('file-count', thisTotalCount);
+
+    //     // Use DataTransferItemList interface to access the file(s)
+    //     for (var i = 0; i < ev.dataTransfer.items.length; i++) {
+    //       // Get the item's properties via webkitGetAsEntry().
+    //       let item = ev.dataTransfer.items[i].webkitGetAsEntry(),
+    //           listing = $('.drop-zone');
+    //       // // Add the file size and modified date to 'item'.
+    //       // item.detail = ev.dataTransfer.files[i];
+    //       // Recursively scan files and add to the DOM.
+    //       scanFiles(i, item, listing, existingCount);
+    //     }
+    //   }
+      
+    //   // Pass event to removeDragData for cleanup
+    //   removeDragData(ev);
+    // }
+
+    // function scanFiles(i, item, container, existingCount) {
+
+    //   // console.log(item);
+
+    //   let itemIcon = item.isDirectory ? 'folder-close' : 'file',
+    //       spanIcon = $('<span />').addClass('glyphicon glyphicon-' + itemIcon).attr('style', 'margin-right: 4px;'),
+    //       allItemsCount = $('.drop-zone').find('li.list-group-item').length,
+    //       thisCount = item.isDirectory ? (i+allItemsCount) : i,
+    //       listItem = $('<li />').addClass('list-group-item').attr('data-count', thisCount).text(item.name);
+    //       // listItem = $('<li />').addClass('list-group-item').attr('data-count', i).text(item.name + ' | File Type: ' + item.detail.type  + ' | File Size: ' + item.detail.size + ' | Last Modified: ' + item.detail.lastModified + '');
+
+    //   listItem.prepend(spanIcon);
+    //   container.append(listItem);
+      
+    //   // Directory handler
+    //   if (item.isDirectory) {
+    //     let directoryReader = item.createReader();
+    //     let directoryContainer = $('<ul />');
+    //     container.append(directoryContainer);
+        
+    //     directoryReader.readEntries(function(entries) {
+    //         entries.forEach(function(entry) {
+    //           scanFiles(i++, entry, directoryContainer, existingCount);
+    //       });
+    //     });
+    //   }
+
+    // }
+
+    // function removeDragData(ev) {
+    //   if (ev.dataTransfer.items) {
+    //     // Use DataTransferItemList interface to remove the drag data
+    //     ev.dataTransfer.items.clear();
+    //   } else {
+    //     // Use DataTransfer interface to remove the drag data
+    //     ev.dataTransfer.clearData();
+    //   }
+    //   $('.panel-uploads, .drop-zone').attr('style', 'background-color: none;');
+    // }
   </script>
 {% endblock %}
