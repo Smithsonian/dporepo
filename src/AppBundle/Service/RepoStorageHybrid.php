@@ -1410,6 +1410,22 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
+          'field_name' => 'workflow_id',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'workflow_status',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'workflow_status_detail',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'workflow_processing_step',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
           'field_name' => 'active',
         );
         $query_params['fields'][] = array(
@@ -2406,6 +2422,9 @@ class RepoStorageHybrid implements RepoStorage {
           'capture_dataset.cluster_geometry_field_id',
           'capture_dataset.resource_capture_datasets',
           'capture_dataset.calibration_object_used',
+          'capture_dataset.workflow_status',
+          'capture_dataset.workflow_status_detail',
+          'capture_dataset.workflow_processing_step',
           'capture_dataset.date_created',
           'capture_dataset.created_by_user_account_id',
           'capture_dataset.last_modified',
@@ -2476,6 +2495,19 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'field_name' => 'calibration_object_used',
+    );
+
+    $query_params['fields'][] = array(
+      'field_name' => 'workflow_id',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'workflow_status',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'workflow_status_detail',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'workflow_processing_step',
     );
     $query_params['fields'][] = array(
       'table_name' => 'capture_dataset',
@@ -2710,7 +2742,6 @@ class RepoStorageHybrid implements RepoStorage {
           'item.local_item_id',
           'item.date_created',
           'item.last_modified',
-          'status_type.label',
         ),
         'search_values' => array($search_value),
         'comparison' => 'LIKE',
@@ -2727,13 +2758,6 @@ class RepoStorageHybrid implements RepoStorage {
       );
     }
 
-    $query_params['related_tables'][] = array(
-      'table_name' => 'status_type',
-      'table_join_field' => 'status_type_repository_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'item',
-      'base_join_field' => 'status_type_repository_id',
-    );
     $query_params['related_tables'][] = array(
       'table_name' => 'capture_dataset',
       'table_join_field' => 'parent_item_repository_id',
@@ -2762,10 +2786,6 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'item',
-      'field_name' => 'status_type_repository_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'item',
       'field_name' => 'date_created',
     );
     $query_params['fields'][] = array(
@@ -2776,12 +2796,6 @@ class RepoStorageHybrid implements RepoStorage {
       'table_name' => 'item',
       'field_name' => 'item_repository_id',
       'field_alias' => 'DT_RowId',
-    );
-
-    $query_params['fields'][] = array(
-      'table_name' => 'status_type',
-      'field_name' => 'label',
-      'field_alias' => 'status_label'
     );
     $query_params['fields'][] = array(
       'field_name' => 'count(distinct capture_dataset.parent_item_repository_id)',
@@ -2867,10 +2881,10 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'job_import_record',
-      'table_join_field' => 'job_id',
+      'table_join_field' => 'project_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'job',
-      'base_join_field' => 'job_id',
+      'base_join_field' => 'project_id',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'fos_user',
@@ -2905,10 +2919,6 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'job_id',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'job',
-      'field_name' => 'project_id',
-    );
-    $query_params['fields'][] = array(
       'table_name' => $record_type,
       'field_name' => 'job_status',
     );
@@ -2931,7 +2941,7 @@ class RepoStorageHybrid implements RepoStorage {
     if (NULL !== $search_value) {
       $query_params['search_params'][0] = array(
         'field_names' => array(
-          'project.project_name',
+          $record_type . '.project_name',
           $record_type . '.date_created',
           $record_type . '.created_by_user_account_id',
         ),
@@ -3003,17 +3013,10 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     $query_params['related_tables'][] = array(
-      'table_name' => 'job',
-      'table_join_field' => 'job_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'job_import_record',
-      'base_join_field' => 'job_id',
-    );
-    $query_params['related_tables'][] = array(
       'table_name' => 'project',
       'table_join_field' => 'project_repository_id',
       'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'job',
+      'base_join_table' => 'job_import_record',
       'base_join_field' => 'project_id',
     );
     $query_params['related_tables'][] = array(
@@ -3230,30 +3233,167 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
-  public function updateItemStatus($params) {
-    $status_id = $params['status_type_id'];
-    $item_id = $params['item_guid'];
+  /***
+   * @param $params has record_type (capture_dataset, model, or uv_map)
+   * and record_id (repository id of the record)
+   * @return current status info, or false
+   */
+  public function getWorkflowProcessingStatus($params) {
 
-    //@todo trap for missing user_id or record_id.
-    $sql = "UPDATE item
-                SET status_type_repository_id = :statusid
-                WHERE item_guid = :itemguid";
+    $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
+    $record_id = array_key_exists('record_id', $params) ? $params['record_id'] : NULL;
 
+    if($record_type !== 'capture_dataset' && $record_type !== 'model') {
+      return NULL;
+    }
+
+    // See if record exists; return FALSE if not.
+    $sql = "Select * FROM " . $record_type . " WHERE " . $record_type . "_repository_id=:id";
     $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":statusid", $status_id, PDO::PARAM_INT);
-    $statement->bindValue(":itemguid", $item_id, PDO::PARAM_INT);
+    $statement->bindValue(":id", $record_id, PDO::PARAM_INT);
     $statement->execute();
 
-    $return = $statement->fetchAll(PDO::FETCH_ASSOC);
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-    return array('return' => 'success', 'data' => $return);
+    if(!is_array($ret) || empty($ret)) {
+      return false;
+    }
+
+    $record = $ret[0];
+    return array(
+      'record_type' => $record_type,
+      'record_id' => $record_id,
+      'workflow_id' => $record['workflow_id'],
+      'processing_step' => $record['workflow_processing_step'],
+      'status' => $record['workflow_status'],
+      'status_detail' => $record['workflow_status_detail'],
+      'created_by_user_account_id' => $record['created_by_user_account_id'],
+      'date_created' => $record['date_created'],
+      'last_modified_user_account_id' => $record['last_modified_user_account_id'],
+      'last_modified' => $record['last_modified'],
+    );
+  }
+
+  /***
+   * @param $params has record_type (capture_dataset, model, or uv_map)
+   * and record_id (repository id of the record)
+   * @return mixed true or false
+   */
+  public function setWorkflowProcessingStatus($params) {
+
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
+    $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
+    $record_id = array_key_exists('record_id', $params) ? $params['record_id'] : NULL;
+    $project_id = array_key_exists('project_id', $params) ? $params['project_id'] : NULL;
+    $workflow_id = array_key_exists('workflow_id', $params) ? $params['workflow_id'] : NULL;
+    $processing_step = array_key_exists('processing_step', $params) ? $params['processing_step'] : NULL;
+    $status = array_key_exists('status', $params) ? $params['status'] : NULL;
+    $status_detail = array_key_exists('status_detail', $params) ? $params['status_detail'] : NULL;
+
+    if($record_type !== 'capture_dataset' && $record_type !== 'model') {
+      return NULL;
+    }
+
+    // See if record exists; return FALSE if not.
+    $sql = "Select * FROM " . $record_type . " WHERE " . $record_type . "_repository_id=:id";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":id", $record_id, PDO::PARAM_INT);
+    $statement->execute();
+
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    if(!is_array($ret) || empty($ret)) {
+      return false;
+    }
+
+    // Update this record with new status info. Write to workflow_status_log also.
+    $sql ="INSERT INTO workflow_status_log 
+          (workflow_id, project_id, record_id, record_table, processing_step, status, status_detail, created_by_user_account_id, date_created) 
+          VALUES (:workflow_id, :project_id, :record_id, :record_table, :processing_step, :status, :status_detail, :created_by_user_account_id, NOW())";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":workflow_id", $workflow_id, PDO::PARAM_INT);
+    $statement->bindValue(":project_id", $project_id, PDO::PARAM_INT);
+    $statement->bindValue(":record_id", $record_id, PDO::PARAM_INT);
+
+    $statement->bindValue(":record_table", $user_id, PDO::PARAM_STR);
+    $statement->bindValue(":processing_step", $processing_step, PDO::PARAM_STR);
+    $statement->bindValue(":status", $status, PDO::PARAM_STR);
+    $statement->bindValue(":status_detail", $status_detail, PDO::PARAM_STR);
+    $statement->bindValue(":created_by_user_account_id", $user_id, PDO::PARAM_INT);
+
+    $statement->execute();
+
+    $sql ="UPDATE " . $record_type . " set workflow_id=:workflow_id, workflow_processing_step=:processing_step,
+    workflow_status=:status, workflow_status_detail=:status_detail,
+    last_modified=NOW(), last_modified_user_account_id=:user_id 
+    WHERE " . $record_type . "_repository_id=:id";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":id", $record_id, PDO::PARAM_INT);
+    $statement->bindValue(":workflow_id", $workflow_id, PDO::PARAM_INT);
+    $statement->bindValue(":processing_step", $processing_step, PDO::PARAM_STR);
+    $statement->bindValue(":status", $status, PDO::PARAM_STR);
+    $statement->bindValue(":status_detail", $status_detail, PDO::PARAM_STR);
+    $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
+
+    $statement->execute();
+
+    return true;
+  }
+
+  public function saveIsniRecord($params) {
+
+    $label = array_key_exists('record_label', $params) ? $params['record_label'] : NULL;
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
+    $id = array_key_exists('record_id', $params) ? $params['record_id'] : NULL;
+
+    if(!isset($id) || strlen(trim($id)) < 1 || !isset($label) || strlen(trim($label)) < 1) {
+      // ISNI data requires an ID.
+      return; //@todo with error
+    }
+
+    // See if record exists; update if so, insert otherwise.
+    $sql = "Select isni_id FROM isni_data WHERE isni_id=:id";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":id", $id, PDO::PARAM_INT);
+    $statement->execute();
+
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+    if(count($ret) > 0) {
+      // update
+      $sql ="UPDATE isni_data set isni_label=:label, last_modified=NOW(), last_modified_user_account_id=:user_id WHERE isni_id=:id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":id", $id, PDO::PARAM_INT);
+      $statement->bindValue(":label", $label, PDO::PARAM_INT);
+      $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
+      $statement->execute();
+    }
+    else {
+      // insert
+      $sql ="INSERT INTO isni_data (isni_id, isni_label, date_created, last_modified,
+        created_by_user_account_id, last_modified_user_account_id	
+        ) 
+        VALUES (:id, :label, NOW(), NOW(), :user_id, :user_id)";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":id", $id, PDO::PARAM_INT);
+      $statement->bindValue(":label", $label, PDO::PARAM_INT);
+      $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
+      $statement->execute();
+    }
+
+    return $id;
 
   }
 
+
+  /**
+   * ----------------------------------------------------------------
+   * Generic functions for getting, setting, deleting and marking inactive.
+   * ----------------------------------------------------------------
+   */
+
   /**
    * Save function.
-   */
-  /**
    * @param $params
    * @return null
    */
@@ -3268,7 +3408,9 @@ class RepoStorageHybrid implements RepoStorage {
       $id = NULL;
     }
 
-    if(NULL == $base_table || NULL == $values || NULL == $user_id) {
+    //@todo- in the short term we want to be able to write workflow actions with no user id
+    // We may want to tighten this up to force a non-null and > 0 user_id.
+    if(NULL == $base_table || NULL == $values || (0 !== $user_id && NULL == $user_id)) {
       return NULL;
     }
 
@@ -3358,57 +3500,9 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
-  public function saveIsniRecord($params) {
-
-    $label = array_key_exists('record_label', $params) ? $params['record_label'] : NULL;
-    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
-    $id = array_key_exists('record_id', $params) ? $params['record_id'] : NULL;
-
-    if(!isset($id) || strlen(trim($id)) < 1 || !isset($label) || strlen(trim($label)) < 1) {
-      // ISNI data requires an ID.
-      return; //@todo with error
-    }
-
-    // See if record exists; update if so, insert otherwise.
-    $sql = "Select isni_id FROM isni_data WHERE isni_id=:id";
-    $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":id", $id, PDO::PARAM_INT);
-    $statement->execute();
-
-    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
-    if(count($ret) > 0) {
-      // update
-      $sql ="UPDATE isni_data set isni_label=:label, last_modified=NOW(), last_modified_user_account_id=:user_id WHERE isni_id=:id";
-      $statement = $this->connection->prepare($sql);
-      $statement->bindValue(":id", $id, PDO::PARAM_INT);
-      $statement->bindValue(":label", $label, PDO::PARAM_INT);
-      $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
-      $statement->execute();
-    }
-    else {
-      // insert
-      $sql ="INSERT INTO isni_data (isni_id, isni_label, date_created, last_modified,
-        created_by_user_account_id, last_modified_user_account_id	
-        ) 
-        VALUES (:id, :label, NOW(), NOW(), :user_id, :user_id)";
-      $statement = $this->connection->prepare($sql);
-      $statement->bindValue(":id", $id, PDO::PARAM_INT);
-      $statement->bindValue(":label", $label, PDO::PARAM_INT);
-      $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
-      $statement->execute();
-    }
-
-    return $id;
-
-  }
-
 
   /**
-   * ----------------------------------------------------------------
-   * Generic functions for getting, setting, deleting and marking inactive.
-   * ----------------------------------------------------------------
-   */
-  /**
+   * Get a record.
    * @param $parameters
    * @return array
    */
@@ -3992,6 +4086,9 @@ class RepoStorageHybrid implements RepoStorage {
 
           $statement->bindValue(":id", $record_values['id']['field_value'], PDO::PARAM_INT);
           $statement->execute();
+
+          $last_inserted_id = $record_values['id']['field_value'];
+
         }
         else {
           $sql ="INSERT INTO " . $base_table;

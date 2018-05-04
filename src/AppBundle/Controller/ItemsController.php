@@ -95,7 +95,6 @@ class ItemsController extends Controller
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
 
         // First, perform a 3D model generation status check, and update statuses in the database accordingly.
-
         $this->repo_storage_controller->setContainer($this->container);
         $results = $this->repo_storage_controller->execute('getItemGuidsBySubjectId', array(
             'subject_repository_id' => (int)$subject_repository_id,
@@ -104,8 +103,12 @@ class ItemsController extends Controller
 
         if(!empty($results)) {
             foreach ($results as $key => $value) {
-                // Set 3D model generation statuses.
-                $this->getDirectoryStatuses($this->container, $value['item_guid']);
+              // Set 3D model generation statuses.
+              //@todo
+              // An item may have 1 or more of either or both capture_datasets and models.
+              // Processing status may exist for each model, for each capture_dataset.
+              // How should we show those individual statuses rolled up as one status for the item?
+              // $this->getDirectoryStatuses($this->container, $value['item_guid']);
             }
         }
 
@@ -128,36 +131,6 @@ class ItemsController extends Controller
         }
 
         $data = $this->repo_storage_controller->execute('getDatatableItem', $query_params);
-
-        // Set status for value of zero (0).
-        // TODO: create an entry in the status_types table for this.
-        if(!empty($data['aaData'])) {
-            foreach ($data['aaData'] as $key => $value) {
-              if(array_key_exists('status_type_id', $value)) {
-                switch($value['status_type_id']) {
-                  case '0': // Not Found in JobBox
-                    $data['aaData'][$key]['status_label'] = '<span class="label label-danger">Not Found in JobBox</span>';
-                    break;
-                  case '1': // Uploaded and Properly Labeled
-                    $data['aaData'][$key]['status_label'] = '<span class="label label-default">' . $value['status_label'] . '</span>';
-                    break;
-                  case '2': // Transferred to Processing Directory and In Queue
-                    $data['aaData'][$key]['status_label'] = '<span class="label label-warning">' . $value['status_label'] . '</span>';
-                    break;
-                  case '3': // Clipped via ImageMagick
-                  case '4': // Master Model Processed via RealityCapture
-                    $data['aaData'][$key]['status_label'] = '<span class="label label-info">' . $value['status_label'] . '</span>';
-                    break;
-                  case '5': // Web Ready Model Processed via InstantUV
-                    $data['aaData'][$key]['status_label'] = '<span class="label label-success">' . $value['status_label'] . '</span>';
-                    break;
-                  case '6': // Target directory exists in JobBox
-                    $data['aaData'][$key]['status_label'] = '<span class="label label-default">' . $value['status_label'] . '</span>';
-                    break;
-                }
-              }
-            }
-        }
 
         return $this->json($data);
     }
@@ -369,149 +342,6 @@ class ItemsController extends Controller
     }
 
     /**
-     * Get Directory Statuses
-     *
-     * @param  bool    $itemguid  The item guid
-     * @return array   Array of directory statuses
-     */
-    public function getDirectoryStatuses($container, $itemguid = '') {
-
-        $result = $data = array();
-
-        if(!empty($itemguid)) {
-
-            // First, verify that the item_guid is found within the database.
-            $this->repo_storage_controller->setContainer($container);
-            $result = $this->repo_storage_controller->execute('getRecords', array(
-                'base_table' => 'item',
-                'search_params' => array(
-                  0 => array('field_names' => array('item_guid'), 'search_values' => array($itemguid), 'comparison' => '='),
-                ),
-                'search_type' => 'AND'
-              )
-            );
-
-            // Scan the JobBox directory to see if a directory with the item_guid is present.
-            if(!empty($result)) {
-                // Get the target directory names.
-                $directoryNames = $this->directoryNames();
-                // Loop through each directory, and 
-                foreach ($directoryNames as $key => $value) {
-                  $data[$value] = $this->processDirectoryStatuses($value, $itemguid);
-                }
-  
-            }
-
-        }
-
-      return $data;
-    }
-
-    /**
-     * Process Directory Statuses
-     *
-     * @param  bool  $directoryScanType  The directory scan type
-     * @param  bool  $itemguid           The item guid
-     * @return json  The JSON encoded data
-     */
-    public function processDirectoryStatuses($directoryScanType = '', $itemguid = '') {
-
-      // Instantiating Items for the path constants.
-      $item = new Items();
-
-      $data = $directoryContents = array();
-      $jobBoxDirectoryExists = false;
-      $data['status'] = 0;
-
-      if(!empty($directoryScanType) && !empty($itemguid)) {
-
-        // Get the contents of each directory.
-        switch($directoryScanType) {
-            case 'jobbox':
-
-                $jobBoxDirectoryExists = is_dir($this->file_upload_path . '/' . $itemguid);
-                $directoryContents = is_dir($this->file_upload_path . '/' . $itemguid) ? scandir($this->file_upload_path . '/' . $itemguid) : array();
-
-                break;
-            case 'jobboxprocess':
-
-                $dirContents = is_dir($this->file_processing_path . '/' . $itemguid) ? scandir($this->file_processing_path . '/' . $itemguid) : array();
-
-                if( !empty($dirContents) && in_array('_ready.txt', scandir($this->file_processing_path . '/' . $itemguid)) ) {
-                    $directoryContents = scandir($this->file_processing_path . '/' . $itemguid);
-                }
-
-                break;
-            case 'clipped':
-                $dirContents = is_dir($this->file_processing_path . '/' . $itemguid) ? scandir($this->file_processing_path . '/' . $itemguid) : array();
-                if( !empty($dirContents) && in_array('_finish_im.txt', scandir($this->file_processing_path . '/' . $itemguid)) && in_array('clipped', $dirContents) ) {
-                    $directoryContents = scandir($this->file_processing_path . '/' . $itemguid . '/clipped');
-                }
-                break;
-            case 'realitycapture':
-                $dirContents = is_dir($this->file_processing_path . '/' . $itemguid . '/processed') ? scandir($this->file_processing_path . '/' . $itemguid . '/processed') : array();
-                if( !empty($dirContents) && in_array('_finish_rc.txt', scandir($this->file_processing_path . '/' . $itemguid)) && in_array('mesh.obj', $dirContents) ) {
-                    $directoryContents = scandir($this->file_processing_path . '/' . $itemguid . '/processed');
-                }
-                break;
-            case 'instantuv':
-                $dirContents = is_dir($this->file_processing_path . '/' . $itemguid . '/processed') ? scandir($this->file_processing_path . '/' . $itemguid . '/processed') : array();
-                if( !empty($dirContents) && in_array('_finish_iuv.txt', scandir($this->file_processing_path . '/' . $itemguid)) && in_array('webready', $dirContents) ) {
-                    $directoryContents = scandir($this->file_processing_path . '/' . $itemguid . '/processed/webready');
-                }
-            break;
-        }
-
-        // If the directory is not empty, build out the status arrays.
-        if(!empty($directoryContents)) {
-            foreach ($directoryContents as $key => $value) {
-
-                // Set the status if the direcory exists within JobBox.
-                if($jobBoxDirectoryExists) $this->updateStatus($this->container, $itemguid, 6);
-                // If the directory doesn't exist, set the status to 0.
-                if(!$jobBoxDirectoryExists) $this->updateStatus($this->container, $itemguid, 0);
-
-                if(($value !== '.') && ($value !== '..') && ($value !== '.DS_Store')) {
-                    switch($directoryScanType) {
-                        case 'jobbox':
-                            // Next, check to see if the '_ready.txt' file exists within the target directory.
-                            if($value === '_ready.txt') {
-                                $data['status'] = 1;
-                                $data['directory'] = $value;
-                                $this->updateStatus($this->container, $itemguid, 1);
-                            }
-                            break;
-                        case 'jobboxprocess':
-                            $data['status'] = 1;
-                            $data['filelist'][] = $value;
-                            $this->updateStatus($this->container, $itemguid, 2);
-                            break;
-                        case 'clipped':
-                            $data['status'] = 1;
-                            $data['filelist'][] = $value;
-                            $this->updateStatus($this->container, $itemguid, 3);
-                            break;
-                        case 'realitycapture':
-                            $data['status'] = 1;
-                            $data['filelist'][] = $value;
-                            $this->updateStatus($this->container, $itemguid, 4);
-                            break;
-                        case 'instantuv':
-                            $data['status'] = 1;
-                            $data['filelist'][] = $value;
-                            $this->updateStatus($this->container, $itemguid, 5);
-                            break;
-                    }
-                }
-            }
-        }
-
-      }
-
-      return $data;
-    }
-
-    /**
      * Update Statuses
      *
      * @param  bool  $itemguid  The item guid
@@ -544,6 +374,8 @@ class ItemsController extends Controller
      */
     function create_directory_in_jobbox(Request $request)
     {
+      //@todo revisit this and browse_datasets.html.twig that references this route.
+      // Move to Workflow Service.
         $data = false;
         $directoryContents = array();
         $itemguid = !empty($request->attributes->get('item_guid')) ? $request->attributes->get('item_guid') : false;
