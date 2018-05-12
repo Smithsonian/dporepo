@@ -44,3 +44,12 @@ services:
 
     AppBundle\Utils\GumpParseErrors:
         public: false
+    # Additional services for OneupUploaderBundle
+    app.file_namer:
+        public: true
+        class: AppBundle\Uploader\FileNamer
+    app.upload_listener:
+        public: true
+        class: AppBundle\EventListener\UploadListener
+        tags:
+            - { name: kernel.event_listener, event: oneup_uploader.post_persist, method: onUpload }

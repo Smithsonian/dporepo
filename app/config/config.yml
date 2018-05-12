@@ -129,5 +129,9 @@ fr3d_ldap:
 oneup_uploader:
     mappings:
         repository:
-            # frontend: plupload
             frontend: dropzone
+            # If you want to use your own path, for example /data/uploads
+            # storage:
+            #     directory: "%kernel.root_dir%/../data/uploads/"
+            # namer: oneup_uploader.namer.uniqid
+            namer: app.file_namer

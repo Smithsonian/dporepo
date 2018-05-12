@@ -356,25 +356,3 @@ dd {
   height: 40rem;
   overflow: scroll;
 }
-
-.panel-uploads .drop-zone-empty {
-  text-align: center;
-  color: #8c8c8c;
-}
-
-.panel-uploads .panel-body {
-  padding: 0;
-}
-
-.plupload_header {
-  display: none;
-}
-
-#uploader_container {
-  min-height: 40rem;
-}
-
-#uploader_container .plupload_content {
-  top: 30px;
-  bottom: 42px;
-}

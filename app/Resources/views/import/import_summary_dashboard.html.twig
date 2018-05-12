@@ -14,9 +14,11 @@
     <li class="active">Uploads</li>
   </ol>
 
+  <!-- row -->
   <div class="row">
+    <!-- column -->
     <div class="col-sm-12 col-md-12">
-
+      <!-- nav-tabs -->
       <ul class="nav nav-tabs" id="uploadsTabs" role="tablist">
         <li role="presentation">
           <a href="#browseUploads" id="browse-tab" role="tab" data-toggle="tab" aria-controls="browse" aria-expanded="true">Browse Imports</a>
@@ -25,9 +27,9 @@
           <a href="#upload" role="tab" id="upload-tab" data-toggle="tab" aria-controls="upload">New Upload</a>
         </li>
       </ul>
-
+      <!-- tab-content -->
       <div class="tab-content" id="uploadsTabContent" style="padding-top: 3rem;">
-
+        <!-- tab-pane 1 -->
         <div class="tab-pane fade" role="tabpanel" id="browseUploads" aria-labelledby="browse-tab">
           <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
@@ -41,9 +43,10 @@
             </thead>
           </table>
         </div>
-
+        <!-- // tab-pane 1 -->
+        <!-- tab-pane 2 -->
         <div class="tab-pane fade in active" role="tabpanel" id="upload" aria-labelledby="upload-tab">
-
+          <!-- row -->
           <div class="row">
             <div class="col-sm-6 col-md-6">
               <!-- Typeahead form element -->
@@ -53,36 +56,31 @@
               {{ form_end(form) }}
             </div>
           </div>
-
+          <!-- // row -->
+          <!-- row -->
           <div class="row">
             <!-- column 1 -->
             <div class="col-sm-6 col-md-6">
               <!-- File Drag and Drop zone -->
+              <!-- panel -->
               <div class="panel panel-default panel-uploads" data-set-number="1" data-file-count="0">
-                <!-- Panel contents -->
                 <div class="panel-heading">Uploads</div>
+                <!-- panel-body -->
                 <div class="panel-body" style="height: 40rem; overflow: scroll;">
-
                   <!-- Template Begins -->
                   <!-- HTML heavily inspired by http://blueimp.github.io/jQuery-File-Upload/ -->
                   <div class="table table-striped" class="files" id="previews">
-
-                    <div id="template" class="file-row">
-                      <!-- This is used as the file preview template -->
-                      <div>
-                          <span class="preview"><img data-dz-thumbnail /></span>
+                    <div id="template" class="row file-row">
+                      <div class="col-sm-7 col-md-7">
+                        <div class="pull-left"><span class="name" data-dz-name></span>, <span class="size" data-dz-size></span></div>
+                        <div class="pull-right"><strong class="error text-danger" data-dz-errormessage></strong></div>
                       </div>
-                      <div>
-                          <p class="name" data-dz-name></p>
-                          <strong class="error text-danger" data-dz-errormessage></strong>
+                      <div class="col-sm-5 col-md-5">
+                        <div class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                          <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress></div>
+                        </div>
                       </div>
-                      <div>
-                          <p class="size" data-dz-size></p>
-                          <div class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                            <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress></div>
-                          </div>
-                      </div>
-                      <div>
+                      {# <div>
                         <button class="btn btn-primary start" style="display: none;">
                             <i class="glyphicon glyphicon-upload"></i>
                             <span>Start</span>
@@ -95,46 +93,15 @@
                           <i class="glyphicon glyphicon-trash"></i>
                           <span>Delete</span>
                         </button>
-                      </div>
+                      </div> #}
                     </div>
-
                   </div>
                   <!-- Template Ends -->
-
                 </div>
-                <!-- List group -->
-                {# <ul class="list-group drop-zone" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);">
-                  <li class="list-group-item drop-zone-empty">Drag and drop files onto this window to upload.</li>
-                </ul> #}
+                <!-- // panel-body -->
               </div>
-              <div id="actions" class="row">
-
-                <div class="col-sm-7 col-md-7">
-                  <!-- The fileinput-button span is used to style the file input field as button -->
-                  <span class="btn btn-success fileinput-button dz-clickable">
-                      <i class="glyphicon glyphicon-plus"></i>
-                      <span>Add files...</span>
-                  </span>
-                  <button type="submit" class="btn btn-primary start">
-                      <i class="glyphicon glyphicon-upload"></i>
-                      <span>Start upload</span>
-                  </button>
-                  <button type="reset" class="btn btn-warning cancel">
-                      <i class="glyphicon glyphicon-ban-circle"></i>
-                      <span>Cancel upload</span>
-                  </button>
-                </div>
-
-                <div class="col-sm-5 col-md-5">
-                  <!-- The global file processing state -->
-                  <span class="fileupload-process">
-                    <div id="total-progress" class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                      <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress=""></div>
-                    </div>
-                  </span>
-                </div>
-
-              </div>
+              <!-- // panel -->
+              
               <div class="row">
                 <div class="col-sm-12 col-md-12">
                   <a href="javascript:void(0);" class="btn btn-default pull-right prevalidate-trigger" role="button"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> Pre-Validate Scans and CSV Files</a>
@@ -142,24 +109,58 @@
               </div>
 
             </div>
+            <!-- // column 1 -->
             <!-- column 2 -->
             <div class="col-sm-6 col-md-6">
               <div class="panel panel-default panel-validation-results">
                 <!-- Panel contents -->
                 <div class="panel-heading">Pre-Validation Results</div>
                 <div class="panel-body">
-                  
                 </div>
               </div>
             </div>
+            <!-- // column 2 -->
           </div>
-
+          <!-- // row -->
+          <!-- row -->
+          <div id="actions" class="row">
+            <!-- column 1 -->
+            <div class="col-sm-7 col-md-7">
+              <!-- The fileinput-button span is used to style the file input field as button -->
+              <span class="btn btn-success fileinput-button dz-clickable">
+                  <i class="glyphicon glyphicon-plus"></i>
+                  <span>Add files...</span>
+              </span>
+              <button type="submit" class="btn btn-primary start">
+                  <i class="glyphicon glyphicon-upload"></i>
+                  <span>Start upload</span>
+              </button>
+              <button type="reset" class="btn btn-warning cancel">
+                  <i class="glyphicon glyphicon-ban-circle"></i>
+                  <span>Cancel upload</span>
+              </button>
+            </div>
+            <!-- // column 1 -->
+            <!-- column 2 -->
+            <div class="col-sm-5 col-md-5">
+              <!-- The global file processing state -->
+              <span class="fileupload-process">
+                <div id="total-progress" class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress=""></div>
+                </div>
+              </span>
+            </div>
+            <!-- // column 2 -->
+          </div>
+          <!-- // row -->
         </div>
-
+        <!-- // tab-pane 2 -->
       </div>
-
+      <!-- // tab-content -->
     </div>
+    <!-- // column -->
   </div>
+  <!-- // row -->
 
 {% endblock %}
 
@@ -219,23 +220,98 @@
     previewNode.id = "";
     var previewTemplate = previewNode.parentNode.innerHTML;
     previewNode.parentNode.removeChild(previewNode);
+    // TEMPORARY HACK - faking the jobId.
+    var jobId = Math.floor(Math.random() * 2000) + 1;
 
     // See: http://www.dropzonejs.com/#configuration-options
     var myDropzone = new Dropzone(document.body, { // Make the whole body a dropzone
       url: "{{ oneup_uploader_endpoint('repository') }}", // Set the url
-      parallelUploads: 20,
+      parallelUploads: 1,
       previewTemplate: previewTemplate,
       autoQueue: false, // Make sure the files aren't queued until manually added
       previewsContainer: "#previews", // Define the container to display the previews
       clickable: ".fileinput-button", // Define the element that should be used as click trigger to select files.
       createImageThumbnails: false,
       maxFilesize: 10240,
-      ignoreHiddenFiles: true
+      ignoreHiddenFiles: true,
+      chunking: true,
+      chunkSize: 20000000, // chunk size in bytes (20 MB)
+      acceptedFiles: "image/*,application/text,application/json,.csv,.jpg,.tif,.png,.dng,.obj,.ply",
+      dictInvalidFileType: "File type not allowed"
     });
 
     myDropzone.on("addedfile", function(file) {
+
+      // console.log(file);
+
+      if(typeof file.fullPath !== 'undefined'){
+
+        // console.log(file.fullPath);
+        // console.log(file.name);
+
+        let directoryStructure = file.fullPath.replace('/' + file.name, '');
+            directoryStructureDiv = $('<div />').addClass('directory-structure').attr('style', 'font-weight: bold; margin-bottom: 0.75rem;'),
+            spanIcon = $('<span />').addClass('glyphicon glyphicon-folder-close').attr('style', 'margin-right: 4px;');
+
+        directoryStructureDiv.append(spanIcon, directoryStructure);
+
+        // console.log(directoryStructure);
+        $(file.previewTemplate).before(directoryStructureDiv);
+
+      }
       // Hookup the start button
-      file.previewElement.querySelector(".start").onclick = function() { myDropzone.enqueueFile(file); };
+      // file.previewElement.querySelector(".start").onclick = function() { myDropzone.enqueueFile(file); };
+    });
+
+    $('.prevalidate-trigger').on('click', function(e) {
+
+      // Parent record ID value.
+      let parentRecordId = $('#uploads_parent_picker_form_parent_picker').val();
+      // If there is no parent ID selected, then display an alert.
+      if(!parentRecordId.length) {
+        swal({
+          title: 'Select Parent Record',
+          text: 'Please select a parent record before running the validation.',
+          type: 'warning',
+        });
+        return false;
+      }
+
+      let queuedFiles = myDropzone.getAcceptedFiles();
+      for (var i = 0; i < queuedFiles.length; i++) {
+
+        let fileNameArray = queuedFiles[i].name.split('.');
+
+        // Pre-validate CSV files.
+        if(fileNameArray[fileNameArray.length-1].toLowerCase() === 'csv'){
+          // console.log(queuedFiles[i].name);
+          // Set a custom parameter, 'prevalidate', so it can be used within the 'success' function.
+          queuedFiles[i].prevalidate = true;
+          // Set a custom parameter, 'parentRecordId', so it can be passed to the back-end.
+          queuedFiles[i].parentRecordId = parentRecordId;
+          // Start the upload.
+          myDropzone.enqueueFile(queuedFiles[i]);
+          // Don't display the progress bar.
+          document.querySelector("#total-progress").style.opacity = "0";
+        }
+
+        // Pre-validate files count and names.
+        if(fileNameArray[fileNameArray.length-1].toLowerCase() === ('jpg' || 'tif')){
+          // console.log(queuedFiles[i].name);
+        }
+        
+      }
+    });
+
+    myDropzone.on("success", function(file, responseText) {
+      // If the uploaded file is being pre-validated,
+      // set the file status back to 'added', prevalidate to false , and reset progress bars.
+      if((typeof file.prevalidate !== 'undefined') && file.prevalidate) {
+        file.status = 'added';
+        file.prevalidate = false;
+        document.querySelector("#total-progress").style.opacity = "0";
+        $(file.previewElement).find('.progress-bar').attr('style', 'width: 0;');
+      }
     });
 
     // Update the total progress bar
@@ -243,11 +319,35 @@
       document.querySelector("#total-progress .progress-bar").style.width = progress + "%";
     });
 
-    myDropzone.on("sending", function(file) {
+    myDropzone.on("sending", function(file, xhr, formData) {
       // Show the total progress bar when upload starts
       document.querySelector("#total-progress").style.opacity = "1";
+      
       // And disable the start button
-      file.previewElement.querySelector(".start").setAttribute("disabled", "disabled");
+      // file.previewElement.querySelector(".start").setAttribute("disabled", "disabled");
+
+      // Append custom data to formData.
+      // NOTE: can't console.log formData after appending.
+      // If you want to view formData, pass it to the server side then dump/echo.
+      // See: https://github.com/enyo/dropzone/issues/1075
+
+      // Add the jobId to the formData
+      formData.append('jobId', jobId);
+
+      // Add the prevalidate value to the formData
+      if((typeof file.prevalidate !== 'undefined') && file.prevalidate) {
+        formData.append('prevalidate', file.prevalidate);
+      }
+
+      // Add the parentRecordId value to the formData
+      if((typeof file.parentRecordId !== 'undefined') && file.parentRecordId) {
+        formData.append('parentRecordId', file.parentRecordId);
+      }
+
+      // If the file is actually a folder, add the fullPath to the formData.
+      if(file.fullPath){
+        formData.append('fullPath', file.fullPath);
+      }
     });
 
     // Hide the total progress bar when nothing's uploading anymore
@@ -264,197 +364,7 @@
     };
     document.querySelector("#actions .cancel").onclick = function() {
       myDropzone.removeAllFiles(true);
+      $('.directory-structure').remove();
     };
-
-    // let allFiles = [];
-
-    // $("#uploader").plupload({
-    //   // General settings
-    //   runtimes : 'html5,silverlight,html4',
-    //   url : "{{ oneup_uploader_endpoint('repository') }}",
-    //   // Maximum file size (10240mb = 10GB)
-    //   max_file_size : '10240mb',
-    //   chunk_size: '10mb',
-    //   max_retries: 3,
-    //   // // Specify what files to browse for
-    //   // filters : [
-    //   //     {title : "Image files", extensions : "jpg,gif,png,tif,xmp"},
-    //   //     {title : "Zip files", extensions : "zip,avi"}
-    //   // ],
-    //   // Rename files by clicking on their titles
-    //   rename: false,
-    //   // Sort files
-    //   sortable: true,
-    //   // Enable ability to drag'n'drop files onto the widget (currently only HTML5 supports that)
-    //   dragdrop: true,
-    //   // Views to activate
-    //   views: {
-    //     list: true,
-    //   },
-    //   buttons: {
-    //     browse: true,
-    //     start: false,
-    //     stop: true,
-    //   },
-    //   // Silverlight settings
-    //   silverlight_xap_url : '/web/lib/javascripts/plupload/js/Moxie.xap',
-    //   init: {
-    //     BeforeUpload: function (up, file) {
-
-    //       console.log(up.getOption());
-
-    //       $('#uploader_stop, .plupload_upload_status, .plupload_progress, .plupload_total_status, .plupload_total_file_size').hide();
-
-    //       if(file.type !== 'text/csv') {
-    //         return false;
-    //       } else {
-            
-    //       }
-
-    //     }
-    //   },
-    //   // Event: selected - dispatched when file dialog is closed.
-    //   // https://www.plupload.com/docs/v2/UI.Plupload
-    //   selected: function(event, args) {
-
-    //     if(args.files.length) {
-    //       args.files.forEach(function(val, index) {
-    //         allFiles.push({'fileName': val.name, 'fileType': val.type});
-    //       });
-    //     }
-
-    //     // console.log('all files');
-    //     // console.log(allFiles);
-
-    //   },
-    //   // Event: error - dispatched when error of some kind is detected.
-    //   // https://www.plupload.com/docs/v2/UI.Plupload
-    //   error: function(event, args) {
-    //     // Error handling here?
-    //     // console.log(args);
-    //   }
-    // });
-
-    // // Pre-validate click handler.
-    // $('.prevalidate-trigger').on('click', function(){
-
-    //   $('#uploader').plupload('start');
-
-    //   // Pending uploads in the queue
-    //   var pendingUploads = $('#uploader').plupload('getFiles');
-
-    //   let parentRecordId = $('#uploads_parent_picker_form_parent_picker').val();
-
-    //   // if(!parentRecordId.length) {
-    //   //   swal({
-    //   //     title: 'Select Parent Record',
-    //   //     text: 'Please select a parent record before running the validation.',
-    //   //     type: 'warning',
-    //   //   });
-    //   // }
-
-    //   // $.ajax({
-    //   //   type: 'POST'
-    //   //   ,dataType: 'json'
-    //   //   ,url: '/admin/import_validation'
-    //   //   ,data: ({ 'parentRecordId': parentRecordId, 'allFiles': allFiles })
-    //   //   ,success: function(result) {
-
-    //   //     if(result) {
-    //   //       console.log(result);
-    //   //       // swal({
-    //   //       //   title: 'Page Removed',
-    //   //       //   text: 'This page has been removed from your favorites.',
-    //   //       //   icon: 'success',
-    //   //       //   button: 'Close',
-    //   //       // });
-    //   //     }
-
-    //   //   }
-    //   // });
-
-    // });
-
-    // // Testing drag/drop handlers. Stolen from:
-    // // https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/File_drag_and_drop
-    // // https://developer.mozilla.org/en-US/docs/Web/API/DataTransferItem/webkitGetAsEntry
-    // function dragOverHandler(ev) {
-    //   // Prevent default behavior (Prevent file from being opened)
-    //   ev.preventDefault();
-    //   // Remove the placeholder list item.
-    //   $('.drop-zone-empty').remove();
-    //   $('.panel-uploads, .drop-zone').attr('style', 'background-color: #eeeeee;');
-    // }
-
-    // function dropHandler(ev) {
-    //   // Prevent default behavior (Prevent file from being opened)
-    //   ev.preventDefault();
-
-    //   if (ev.dataTransfer.items) {
-    //     // Count of any existing files.
-    //     let existingCount = $('.panel-uploads').data('file-count'),
-    //         // Count of new files being dropped.
-    //         thisCount = ev.dataTransfer.items.length,
-    //         // Total count.
-    //         thisTotalCount = (thisCount + existingCount);
-
-    //     // Add the total count to the file-count data attribute.
-    //     $('.panel-uploads').data('file-count', thisTotalCount);
-
-    //     // Use DataTransferItemList interface to access the file(s)
-    //     for (var i = 0; i < ev.dataTransfer.items.length; i++) {
-    //       // Get the item's properties via webkitGetAsEntry().
-    //       let item = ev.dataTransfer.items[i].webkitGetAsEntry(),
-    //           listing = $('.drop-zone');
-    //       // // Add the file size and modified date to 'item'.
-    //       // item.detail = ev.dataTransfer.files[i];
-    //       // Recursively scan files and add to the DOM.
-    //       scanFiles(i, item, listing, existingCount);
-    //     }
-    //   }
-      
-    //   // Pass event to removeDragData for cleanup
-    //   removeDragData(ev);
-    // }
-
-    // function scanFiles(i, item, container, existingCount) {
-
-    //   // console.log(item);
-
-    //   let itemIcon = item.isDirectory ? 'folder-close' : 'file',
-    //       spanIcon = $('<span />').addClass('glyphicon glyphicon-' + itemIcon).attr('style', 'margin-right: 4px;'),
-    //       allItemsCount = $('.drop-zone').find('li.list-group-item').length,
-    //       thisCount = item.isDirectory ? (i+allItemsCount) : i,
-    //       listItem = $('<li />').addClass('list-group-item').attr('data-count', thisCount).text(item.name);
-    //       // listItem = $('<li />').addClass('list-group-item').attr('data-count', i).text(item.name + ' | File Type: ' + item.detail.type  + ' | File Size: ' + item.detail.size + ' | Last Modified: ' + item.detail.lastModified + '');
-
-    //   listItem.prepend(spanIcon);
-    //   container.append(listItem);
-      
-    //   // Directory handler
-    //   if (item.isDirectory) {
-    //     let directoryReader = item.createReader();
-    //     let directoryContainer = $('<ul />');
-    //     container.append(directoryContainer);
-        
-    //     directoryReader.readEntries(function(entries) {
-    //         entries.forEach(function(entry) {
-    //           scanFiles(i++, entry, directoryContainer, existingCount);
-    //       });
-    //     });
-    //   }
-
-    // }
-
-    // function removeDragData(ev) {
-    //   if (ev.dataTransfer.items) {
-    //     // Use DataTransferItemList interface to remove the drag data
-    //     ev.dataTransfer.items.clear();
-    //   } else {
-    //     // Use DataTransfer interface to remove the drag data
-    //     ev.dataTransfer.clearData();
-    //   }
-    //   $('.panel-uploads, .drop-zone').attr('style', 'background-color: none;');
-    // }
   </script>
 {% endblock %}
