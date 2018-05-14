@@ -5,6 +5,7 @@
   <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
   <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
   <link href="{{ asset('bundles/lifotypeahead/css/typeaheadbundle.css') }}" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.css') }}" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -129,15 +130,15 @@
               <!-- The fileinput-button span is used to style the file input field as button -->
               <span class="btn btn-success fileinput-button dz-clickable">
                   <i class="glyphicon glyphicon-plus"></i>
-                  <span>Add files...</span>
+                  <span>Add Files...</span>
               </span>
-              <button type="submit" class="btn btn-primary start">
+              <button type="submit" class="btn btn-primary start hidden">
                   <i class="glyphicon glyphicon-upload"></i>
-                  <span>Start upload</span>
+                  <span>Start Upload</span>
               </button>
               <button type="reset" class="btn btn-warning cancel">
                   <i class="glyphicon glyphicon-ban-circle"></i>
-                  <span>Cancel upload</span>
+                  <span>Clear Upload Stage</span>
               </button>
             </div>
             <!-- // column 1 -->
@@ -153,6 +154,17 @@
             <!-- // column 2 -->
           </div>
           <!-- // row -->
+        </div>
+        <div class="row">
+          <div class="col-sm-12 col-md-12">
+            <div class="panel panel-default panel-spreadsheet hidden">
+              <!-- Panel contents -->
+              <div class="panel-heading">CVS Results</div>
+              <div id="csv-spreadsheet" class="panel-body">
+              </div>
+            </div>
+          </div>
+          <!-- // column 2 -->
         </div>
         <!-- // tab-pane 2 -->
       </div>
@@ -174,6 +186,7 @@
   <script src="{{ asset('bundles/lifotypeahead/js/bootstrap-typeahead.js') }}"></script>
   <script src="{{ asset('bundles/lifotypeahead/js/typeaheadbundle.js') }}"></script>
   <script type="text/javascript" src="{{ asset('lib/javascripts/dropzone.js') }}"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.js') }}"></script>
   <script type="text/javascript">
     $(document).ready(function() {
       var details_page = "/admin/projects/subjects/";
@@ -215,11 +228,21 @@
       });
     });
 
-    // Get the template HTML and remove it from the doumenthe template HTML and remove it from the doument
+    // // Place focus on the parent record picker.
+    // $('form[name="uploads_parent_picker_form"]').find('#uploads_parent_picker_form_parent_picker_text').focus();
+    // console.log($('form[name="uploads_parent_picker_form"]').find('#uploads_parent_picker_form_parent_picker_text'));
+
+    var resultsContainer = $('.panel-spreadsheet').find('.panel-body'),
+        loadingGif = $('<img />').attr('src', '/lib/images/spinner.gif').attr('alt', 'loading animation').attr('style', 'width: 140px;'),
+        loadingGifContainer = $('<div />').addClass('center-block').attr('style', 'width: 140px;').append(loadingGif);
+
+    // Dropzone.js
+    // Get the template HTML and remove it from the document.
     var previewNode = document.querySelector("#template");
     previewNode.id = "";
     var previewTemplate = previewNode.parentNode.innerHTML;
     previewNode.parentNode.removeChild(previewNode);
+
     // TEMPORARY HACK - faking the jobId.
     var jobId = Math.floor(Math.random() * 2000) + 1;
 
@@ -236,13 +259,11 @@
       ignoreHiddenFiles: true,
       chunking: true,
       chunkSize: 20000000, // chunk size in bytes (20 MB)
-      acceptedFiles: "image/*,application/text,application/json,.csv,.jpg,.tif,.png,.dng,.obj,.ply",
+      acceptedFiles: "image/*,application/text,application/json,.csv,.txt,.jpg,.tif,.png,.dng,.obj,.ply",
       dictInvalidFileType: "File type not allowed"
     });
 
     myDropzone.on("addedfile", function(file) {
-
-      // console.log(file);
 
       if(typeof file.fullPath !== 'undefined'){
 
@@ -265,25 +286,28 @@
 
     $('.prevalidate-trigger').on('click', function(e) {
 
-      // Parent record ID value.
-      let parentRecordId = $('#uploads_parent_picker_form_parent_picker').val();
-      // If there is no parent ID selected, then display an alert.
-      if(!parentRecordId.length) {
-        swal({
-          title: 'Select Parent Record',
-          text: 'Please select a parent record before running the validation.',
-          type: 'warning',
-        });
-        return false;
-      }
+      // // Parent record ID value.
+      // let parentRecordId = $('#uploads_parent_picker_form_parent_picker').val();
+      // // If there is no parent ID selected, then display an alert.
+      // if(!parentRecordId.length) {
+      //   swal({
+      //     title: 'Select Parent Record',
+      //     text: 'Please select a parent record before running the validation.',
+      //     type: 'warning',
+      //   });
+      //   return false;
+      // }
+
+      let parentRecordId = 2;
 
       let queuedFiles = myDropzone.getAcceptedFiles();
       for (var i = 0; i < queuedFiles.length; i++) {
 
-        let fileNameArray = queuedFiles[i].name.split('.');
+        let fileNameArray = queuedFiles[i].name.split('.'),
+            fileExtension = fileNameArray[fileNameArray.length-1].toLowerCase();
 
-        // Pre-validate CSV files.
-        if(fileNameArray[fileNameArray.length-1].toLowerCase() === 'csv'){
+        // Pre-validate CSV files, files count, and file names.
+        if((fileExtension === 'csv') || (fileExtension === 'txt')){
           // console.log(queuedFiles[i].name);
           // Set a custom parameter, 'prevalidate', so it can be used within the 'success' function.
           queuedFiles[i].prevalidate = true;
@@ -296,21 +320,161 @@
         }
 
         // Pre-validate files count and names.
-        if(fileNameArray[fileNameArray.length-1].toLowerCase() === ('jpg' || 'tif')){
-          // console.log(queuedFiles[i].name);
+        if(queuedFiles[i].name === 'manifest-sha1.txt') {
+
+          let allManifestFiles = [],
+              allAcceptedFiles = [],
+              reader = new FileReader();
+
+          // Read the manifest file.
+          reader.readAsText(queuedFiles[i]);
+          reader.addEventListener('loadend', function(event) {
+            let manifest = event.target.result,
+                manifestArray = manifest.split(/\r?\n/),
+                acceptedFiles = myDropzone.getAcceptedFiles();
+
+            // Process the manifest to get all of the files count and names.
+            for (var i = 0; i < manifestArray.length; i++) {
+              if(manifestArray[i].length) {
+                let currentLineArray = manifestArray[i].split(' ');
+                    currentFullFilePath = currentLineArray[1].split('/');
+                // Add the file to the allManifestFiles array.
+                allManifestFiles.push(currentFullFilePath[currentFullFilePath.length - 1]);
+              }
+            }
+
+            // Process the acceptedFiles to get all of the file names.
+            for (var i = 0; i < acceptedFiles.length; i++) {
+              if((acceptedFiles[i].name.indexOf('.txt') === -1) && (acceptedFiles[i].name.indexOf('.csv') === -1)) {
+                allAcceptedFiles.push(acceptedFiles[i].name);
+              }
+            }
+
+            // Get the difference between the two arrays of files, 
+            // using the manifest as the authoritative source.
+            var diff = $(allManifestFiles).not(allAcceptedFiles).get();
+
+            // Loop through the errors and populate the panel-body.
+            let headingFiles = $('<h4 />').text('File Validation Errors');
+            let orderedFilesList = $('<ol />');
+            // Build-out the list items of missing files.
+            for (var i = 0; i < diff.length; i++) {
+              listFileItem = $('<li />').text('Missing file: ' + diff[i]);
+              orderedFilesList.append(listFileItem);
+            }
+            // Append the ordered list to the panel-body container.
+            $('.panel-validation-results').find('.panel-body').append(headingFiles, orderedFilesList);
+
+          });
+          
         }
         
       }
+
     });
 
     myDropzone.on("success", function(file, responseText) {
+
       // If the uploaded file is being pre-validated,
       // set the file status back to 'added', prevalidate to false , and reset progress bars.
       if((typeof file.prevalidate !== 'undefined') && file.prevalidate) {
+
         file.status = 'added';
         file.prevalidate = false;
+
+        // Set the display state of progress bars.
         document.querySelector("#total-progress").style.opacity = "0";
         $(file.previewElement).find('.progress-bar').attr('style', 'width: 0;');
+
+        // // If no errors are returned, display a message.
+        // if(responseText && (typeof responseText.error === 'undefined')) {
+        //   // Clear any previous data.
+        //   $('.panel-validation-results').find('.panel-body').empty();
+        //   // The message.
+        //   let message = $('<div />').addClass('alert alert-success').attr('role', 'alert').html('<strong>Validation Passed!</strong> No validation errors found.');
+        //   // Append the message to the panel-body container.
+        //   $('.panel-validation-results').find('.panel-body').append(message);
+        // }
+
+        // If errors are returned, populate the Pre-Validation Results container.
+        if(responseText && (typeof responseText.error !== 'undefined')) {
+
+          let validationErrors = JSON.parse(responseText.error);
+
+          // Display a general summary of validation errors.
+          // Clear any previous data.
+          // $('.panel-validation-results').find('.panel-body').empty();
+
+          if(validationErrors.length) {
+            // Loop through the errors and populate the panel-body.
+            let headingCsv = $('<h4 />').text('CSV Validation Errors');
+            let pCsv = $('<p />').text('(See spreadsheet below)');
+            let orderedList = $('<ol />');
+            // Build-out the list items containing the error messages.
+            for (var i = 0; i < validationErrors.length; i++) {
+              listItem = $('<li />').text(validationErrors[i].row + ': ' + validationErrors[i].error);
+              orderedList.append(listItem);
+            }
+            // Append the ordered list to the panel-body container.
+            $('.panel-validation-results').find('.panel-body').append(headingCsv, pCsv, orderedList);
+          }
+
+          // Display the CSV within a spreadsheet interface, highlighting errors.
+          // See: Handsontable
+          // https://github.com/handsontable/handsontable
+          
+          // Show the panel-spreadsheet container.
+          $('.panel-spreadsheet').removeClass('hidden');
+          // Clear any previous data.
+          $('.panel-spreadsheet').find('.panel-body').empty();
+          // Add the loading gif.
+          resultsContainer.append(loadingGifContainer);
+          // Then call destroy(), which removes the grid from the DOM.
+          if(typeof hot !== 'undefined') hot.destroy();
+
+          var container = document.getElementById('csv-spreadsheet');
+          var hot = new Handsontable(container, {
+            data: JSON.parse(responseText.csv),
+            rowHeaders: true,
+            colHeaders: true,
+            outsideClickDeselects: false,
+            selectionMode: 'multiple',
+          });
+
+          // Style rows which have errors.
+          // https://docs.handsontable.com/2.0.0/demo-selecting-ranges.html#page-styling
+          // First, make sure there are errors to parse.
+          if(validationErrors.length) {
+            for (var i = 0; i < validationErrors.length; i++) {
+              // validationErrors[i].row
+              // validationErrors[i].error
+              let row = validationErrors[i].row.match(/\d/g);
+              row = row.join('');
+              // Select the rows with errors.
+              hot.selectRows(parseInt(row));
+
+              var selected = hot.getSelected();
+
+              for (var index = 0; index < selected.length; index += 1) {
+                var item = selected[index];
+                var startRow = Math.min(item[0], item[2]);
+                var endRow = Math.max(item[0], item[2]);
+                var startCol = Math.min(item[1], item[3]);
+                var endCol = Math.max(item[1], item[3]);
+
+                for (var rowIndex = startRow; rowIndex <= endRow; rowIndex += 1) {
+                  for (var columnIndex = startCol; columnIndex <= endCol; columnIndex += 1) {
+                    // Set the text-danger CSS class on the row containing the error.
+                    hot.setCellMeta(rowIndex, columnIndex, 'className', 'text-danger');
+                  }
+                }
+              }
+
+            }
+            hot.deselectCell();
+            hot.render();
+          }
+        }
       }
     });
 
@@ -322,7 +486,7 @@
     myDropzone.on("sending", function(file, xhr, formData) {
       // Show the total progress bar when upload starts
       document.querySelector("#total-progress").style.opacity = "1";
-      
+
       // And disable the start button
       // file.previewElement.querySelector(".start").setAttribute("disabled", "disabled");
 

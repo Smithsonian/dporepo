@@ -341,12 +341,14 @@ dd {
  */
 
 .panel-uploads,
-.panel-validation-results {
+.panel-validation-results,
+.panel-spreadsheet {
   margin-top: 2rem;
 }
 
 .panel-uploads .panel-heading,
-.panel-validation-results .panel-heading {
+.panel-validation-results .panel-heading,
+.panel-spreadsheet .panel-heading {
   font-size: 2rem;
   font-weight: 500;
 }
@@ -355,4 +357,13 @@ dd {
 .panel-validation-results .panel-body {
   height: 40rem;
   overflow: scroll;
+}
+
+.panel-spreadsheet .panel-body {
+  height: 80rem;
+  overflow: scroll;
+}
+
+.panel-spreadsheet .panel-body {
+  padding: 0;
 }

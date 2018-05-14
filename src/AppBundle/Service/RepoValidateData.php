@@ -15,12 +15,6 @@ use JsonSchema\{
 
 class RepoValidateData implements RepoValidate {
 
-  // private $connection;
-
-  // public function __construct($connection) {
-  //   $this->connection = $connection;
-  // }
-
   /**
    * @param null $data The data to validate.
    * @param string $schema The schema to validate against (optional).
@@ -42,7 +36,7 @@ class RepoValidateData implements RepoValidate {
     // If data is passed, go ahead and process.
     if(!empty($data)) {
 
-      $schema_dir = __DIR__ . '/../../../web/json/schemas/';
+      $schema_dir = __DIR__ . '/../../../web/json/schemas/repository/';
       $jsonSchemaObject = json_decode(file_get_contents($schema_dir . $schema_definitions_dir . $schema . '.json'));
 
       $schemaStorage = new SchemaStorage();
@@ -61,9 +55,10 @@ class RepoValidateData implements RepoValidate {
           // Ignore blacklisted field.
           // TODO: Loop through blacklisted fields (right now, only using the first one, $blacklisted_fields[0]).
           // if(!strstr($error['property'], $blacklisted_fields[0])) {
-            $row = str_replace('[', 'Row ', $error['property']);
-            $row = str_replace(']', '', $row);
-            $row = str_replace('.', ' - Field: ', $row);
+            // $row = str_replace('[', '', $error['property']);
+            // $row = str_replace(']', '', $row);
+            // $row = str_replace('.', ' - Field: ', $row);
+            $row = str_replace('.', ' Field: ', $error['property']);
             $return['messages'][] = array('row' => $row, 'error' => $error['message']);
           // }
         }

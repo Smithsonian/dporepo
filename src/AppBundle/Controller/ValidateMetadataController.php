@@ -49,6 +49,7 @@ class ValidateMetadataController extends Controller
       if(!empty($uploads_directory)) {
 
         $finder = new Finder();
+        $finder->depth('== 0');
         $finder->files()->in($uploads_directory);
 
         // Assign keys to each CSV, with projects first, subjects second, and items third.
