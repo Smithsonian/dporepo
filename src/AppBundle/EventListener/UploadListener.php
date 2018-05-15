@@ -4,20 +4,28 @@ namespace AppBundle\EventListener;
 use Doctrine\Common\Persistence\ObjectManager;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\File\Exception\UploadException;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\HttpFoundation\Session\Session;
+use Psr\Container\ContainerInterface;
 use Oneup\UploaderBundle\Event\PostPersistEvent;
 use AppBundle\Service\RepoValidateData;
+use AppBundle\Controller\RepoStorageHybridController;
 
 class UploadListener
 {
   /**
-   * @var ObjectManager
+   * @var RepoStorageHybridController
    */
-  // private $om;
+  private $repo_storage_controller;
+  private $tokenStorage;
+  private $container;
 
-  // public function __construct(ObjectManager $om)
-  // {
-  //   $this->om = $om;
-  // }
+  public function __construct(RepoStorageHybridController $repo_storage_controller, TokenStorageInterface $tokenStorage, ContainerInterface $container)
+  {
+    $this->repo_storage_controller = $repo_storage_controller;
+    $this->tokenStorage = $tokenStorage;
+    $this->container = $container;
+  }
   
   /**
    * @param object $event  UploaderBundle's event object
@@ -41,10 +49,39 @@ class UploadListener
     $data->job_id = !empty($post['jobId']) ? $post['jobId'] : false;
     $data->parent_record_id = !empty($post['parentRecordId']) ? $post['parentRecordId'] : false;
     $data->prevalidate = (!empty($post['prevalidate']) && ($post['prevalidate'] === 'true')) ? true : false;
+    // User data.
+    $user = $this->tokenStorage->getToken()->getUser();
+    $data->user_id = $user->getId();
 
     // Move uploaded files into the original directory structures, under a parent directory the jobId.
     if ($data->job_id && $data->parent_record_id) {
+
+      // Move the files.
       $this->move_files($file, $data);
+
+      // If not pre-validating, perform the CSV ingest.
+      if(!$data->prevalidate && ($file->getExtension() === 'csv')) {
+
+        // $this->dumper($data->job_id);
+
+        // Construct the data.
+        $data->csv = $this->construct_import_data($data->job_id_directory, $file->getBasename());
+
+        if(!empty($data->csv)) {
+
+          // Set the type of data being imported.
+          $data_types = array('subject', 'item', 'capture_dataset', 'capture_dataset_element');
+          foreach ($data_types as $data_type) {
+              if (strstr($file->getBasename(), $data_type)) {
+                $data->type = $data_type;
+              }
+          }
+
+          $this->ingest_csv_data($data);
+        }
+      }
+
+      
     }
 
     // Pre-validate
@@ -137,6 +174,7 @@ class UploadListener
       );
     }
 
+    // Construct the data.
     $data->csv = $this->construct_import_data($job_id_directory, $filename); // , $thisContainer, $itemsController
 
     if(!empty($data->csv)) {
@@ -207,8 +245,8 @@ class UploadListener
         foreach ($value as $k => $v) {
           $field_name = $target_fields[$k];
           unset($json_array[$key][$k]);
-          // If present, bring the project_repository_id into the array.
-          $json_array[$key][$field_name] = ($field_name === 'project_repository_id') ? (int)$id : null;
+          // // If present, bring the project_repository_id into the array.
+          // $json_array[$key][$field_name] = ($field_name === 'project_repository_id') ? (int)$id : null;
           // TODO: move into a vz-specific method?
           // [VZ IMPORT ONLY] Strip 'USNM ' from the 'subject_repository_id' field.
           $json_array[$key][$field_name] = ($field_name === 'subject_repository_id') ? (int)str_replace('USNM ', '', $v) : $v;
@@ -230,6 +268,158 @@ class UploadListener
     // $this->dumper($json_object);
 
     return $json_object;
+  }
+
+  /**
+   * @param string $data  Data object
+   * @return null
+   */
+  public function ingest_csv_data($data = null) {
+
+    $session = new Session();
+
+    // if(!empty($data->parent_record_id)) {
+    //   // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
+    //   $this->repo_storage_controller->setContainer($this->container);
+    //   $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $data->parent_record_id));
+    //   if(!$project) throw new UploadException('The Project record does not exist');
+    // }
+
+    $this->repo_storage_controller->setContainer($this->container);
+
+    switch ($data->type) {
+      // Ingest subjects
+      case 'subject':
+        // Insert into the job_log table
+        // TODO: Feed the 'job_log_label' to the log leveraging fields from a form submission in the UI.
+        $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_log',
+          'user_id' => $data->user_id,
+          'values' => array(
+            'job_id' => $data->job_id,
+            'job_log_status' => 'start',
+            'job_log_label' => 'Import VZ subjects',
+            'job_log_description' => 'Import started',
+          )
+        ));
+
+        $subject_repository_ids = array();
+
+        foreach ($data->csv as $subject_key => $subject) {
+          // Set the project_repository_id
+          $subject->project_repository_id = (int)$data->parent_record_id;
+          // Insert into the subject table
+          $subject_repository_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'subject',
+            'user_id' => $data->user_id,
+            'values' => (array)$subject
+          ));
+          $subject_repository_ids[$subject->subject_repository_id] = $subject_repository_id;
+
+          // Insert into the job_import_record table
+          $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'job_import_record',
+            'user_id' => $data->user_id,
+            'values' => array(
+              'job_id' => $data->job_id,
+              'record_id' => $subject_repository_id,
+              'project_id' => (int)$data->parent_record_id,
+              'record_table' => 'subject',
+              'description' => $subject->local_subject_id . ' - ' . $subject->subject_display_name,
+            )
+          ));
+
+        }
+
+        // Set the session variable 'subject_repository_ids'.
+        $session->set('subject_repository_ids', $subject_repository_ids);
+
+        // Insert into the job_log table
+        // TODO: Feed the 'job_log_label' to the log leveraging fields from a form submission in the UI.
+        $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_log',
+          'user_id' => $data->user_id,
+          'values' => array(
+            'job_id' => $data->job_id,
+            'job_log_status' => 'finish',
+            'job_log_label' => 'Import VZ subjects',
+            'job_log_description' => 'Import finished',
+          )
+        ));
+        break;
+
+      // Ingest items
+      case 'item':
+        // Insert into the job_log table
+        // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI.
+        $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_log',
+          'user_id' => $data->user_id,
+          'values' => array(
+            'job_id' => $data->job_id,
+            'job_log_status' => 'start',
+            'job_log_label' => 'Import VZ items',
+            'job_log_description' => 'Import started',
+          )
+        ));
+
+        $subject_repository_ids = $session->get('subject_repository_ids');
+
+        foreach ($data->csv as $item_key => $item) {
+          // Set the subject_repository_id
+          $item->subject_repository_id = $subject_repository_ids[$item->subject_repository_id];
+          // Insert into the item table
+          $item_repository_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'item',
+            'user_id' => $data->user_id,
+            'values' => (array)$item
+          ));
+          
+          // Insert into the job_import_record table
+          $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'job_import_record',
+            'user_id' => $data->user_id,
+            'values' => array(
+              'job_id' => $data->job_id,
+              'record_id' => $item_repository_id,
+              'project_id' => (int)$data->parent_record_id,
+              'record_table' => 'item',
+              'description' => $item->item_display_name,
+            )
+          ));
+        }
+
+        // Set the session variable 'subject_repository_ids'.
+        $session->remove('subject_repository_ids');
+
+        // Insert into the job_log table
+        $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_log',
+          'user_id' => $data->user_id,
+          'values' => array(
+            'job_id' => $data->job_id,
+            'job_log_status' => 'finish',
+            'job_log_label' => 'Import VZ items',
+            'job_log_description' => 'Import finished',
+          )
+        ));
+        break;
+
+    }
+
+    // Update the record in the job table.
+    $this->repo_storage_controller->execute('saveRecord', array(
+      'base_table' => 'job',
+      'record_id' => $data->job_id,
+      'user_id' => $data->user_id,
+      'values' => array(
+        'job_status' => 'complete',
+        'date_completed' => date('Y-m-d h:i:s'),
+        'qa_required' => 0,
+        'qa_approved_time' => null,
+      )
+    ));
+
   }
 
   public function dumper($data = false, $die = true, $ip_address=false){
