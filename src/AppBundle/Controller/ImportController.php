@@ -408,4 +408,42 @@ class ImportController extends Controller
       // Return data as JSON
       return $this->json($data);
     }
+
+    /**
+     * @Route("/admin/import/create_job/{project_id}", name="create_job", methods="GET")
+     *
+     * @param $project_id The project ID
+     * @return int
+     */
+    public function createJob($project_id, Request $request)
+    {
+      $job_id = null;
+
+      if(!empty($project_id)) {
+        // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
+        $this->repo_storage_controller->setContainer($this->container);
+        $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $project_id));
+        if(!$project) throw $this->createNotFoundException('The Project record does not exist');
+      }
+
+      if(!empty($project)) {
+        // Insert a record into the job table.
+        // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI?
+        $job_id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job',
+          'user_id' => $this->getUser()->getId(),
+          'values' => array(
+            'project_id' => (int)$project['project_repository_id'],
+            'job_label' => 'Metadata Import: "' . $project['project_name'] . '"',
+            'job_type' => 'metadata import',
+            'job_status' => 'in progress',
+            'date_completed' => null,
+            'qa_required' => 0,
+            'qa_approved_time' => null,
+          )
+        ));
+      }
+
+      return $this->json(array('jobId' => (int)$job_id));
+    }
 }
