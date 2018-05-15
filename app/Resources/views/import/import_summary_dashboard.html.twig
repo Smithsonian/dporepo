@@ -65,7 +65,10 @@
               <!-- File Drag and Drop zone -->
               <!-- panel -->
               <div class="panel panel-default panel-uploads" data-set-number="1" data-file-count="0">
-                <div class="panel-heading">Uploads</div>
+                <div class="panel-heading">
+                  <p>Uploads Stage</p>
+                  <p style="font-size: 1.3rem; font-weight: normal;">Drag and drop files onto this page or click the "Add Files" button.</p>
+                </div>
                 <!-- panel-body -->
                 <div class="panel-body" style="height: 40rem; overflow: scroll;">
                   <!-- Template Begins -->
@@ -115,7 +118,10 @@
             <div class="col-sm-6 col-md-6">
               <div class="panel panel-default panel-validation-results">
                 <!-- Panel contents -->
-                <div class="panel-heading">Pre-Validation Results</div>
+                <div class="panel-heading">
+                  <p>Pre-Validation Results</p>
+                  <p style="font-size: 1.3rem; font-weight: normal;">To revalidate, click the "Clear Upload Stage" button and add files back to the Uploads Stage.</p>
+                </div>
                 <div class="panel-body">
                 </div>
               </div>
@@ -130,9 +136,9 @@
               <!-- The fileinput-button span is used to style the file input field as button -->
               <span class="btn btn-success fileinput-button dz-clickable">
                   <i class="glyphicon glyphicon-plus"></i>
-                  <span>Add Files...</span>
+                  <span>Add Files</span>
               </span>
-              <button type="submit" class="btn btn-primary start hidden">
+              <button type="submit" class="btn btn-primary start">
                   <i class="glyphicon glyphicon-upload"></i>
                   <span>Start Upload</span>
               </button>
@@ -244,7 +250,8 @@
     previewNode.parentNode.removeChild(previewNode);
 
     // TEMPORARY HACK - faking the jobId.
-    var jobId = Math.floor(Math.random() * 2000) + 1;
+    // var jobId = Math.floor(Math.random() * 2000) + 1;
+    var jobId;
 
     // See: http://www.dropzonejs.com/#configuration-options
     var myDropzone = new Dropzone(document.body, { // Make the whole body a dropzone
@@ -267,16 +274,11 @@
 
       if(typeof file.fullPath !== 'undefined'){
 
-        // console.log(file.fullPath);
-        // console.log(file.name);
-
         let directoryStructure = file.fullPath.replace('/' + file.name, '');
             directoryStructureDiv = $('<div />').addClass('directory-structure').attr('style', 'font-weight: bold; margin-bottom: 0.75rem;'),
             spanIcon = $('<span />').addClass('glyphicon glyphicon-folder-close').attr('style', 'margin-right: 4px;');
 
         directoryStructureDiv.append(spanIcon, directoryStructure);
-
-        // console.log(directoryStructure);
         $(file.previewTemplate).before(directoryStructureDiv);
 
       }
@@ -286,98 +288,109 @@
 
     $('.prevalidate-trigger').on('click', function(e) {
 
-      // // Parent record ID value.
-      // let parentRecordId = $('#uploads_parent_picker_form_parent_picker').val();
-      // // If there is no parent ID selected, then display an alert.
-      // if(!parentRecordId.length) {
-      //   swal({
-      //     title: 'Select Parent Record',
-      //     text: 'Please select a parent record before running the validation.',
-      //     type: 'warning',
-      //   });
-      //   return false;
-      // }
+      // Set the parentRecordId.
+      let parentRecordId = parentRecordChecker();
+      // Check if the parent record has been selected.
+      if(!parentRecordId) return;
 
-      let parentRecordId = 2;
-
+      // Get queued files.
       let queuedFiles = myDropzone.getAcceptedFiles();
-      for (var i = 0; i < queuedFiles.length; i++) {
+      // Check if files have been added to the queue.
+      if(!queuedFilesChecker(queuedFiles)) return;
+      
 
-        let fileNameArray = queuedFiles[i].name.split('.'),
-            fileExtension = fileNameArray[fileNameArray.length-1].toLowerCase();
 
-        // Pre-validate CSV files, files count, and file names.
-        if((fileExtension === 'csv') || (fileExtension === 'txt')){
-          // console.log(queuedFiles[i].name);
-          // Set a custom parameter, 'prevalidate', so it can be used within the 'success' function.
-          queuedFiles[i].prevalidate = true;
+      setTimeout(function() {
+
+        for (var i = 0; i < queuedFiles.length; i++) {
+
           // Set a custom parameter, 'parentRecordId', so it can be passed to the back-end.
           queuedFiles[i].parentRecordId = parentRecordId;
-          // Start the upload.
-          myDropzone.enqueueFile(queuedFiles[i]);
-          // Don't display the progress bar.
-          document.querySelector("#total-progress").style.opacity = "0";
-        }
 
-        // Pre-validate files count and names.
-        if(queuedFiles[i].name === 'manifest-sha1.txt') {
+          let fileExtension = getExtension(queuedFiles[i].name);
 
-          let allManifestFiles = [],
-              allAcceptedFiles = [],
-              reader = new FileReader();
+          // Pre-validate CSV files, files count, and file names.
+          if(fileExtension === 'csv'){
+            // Set a custom parameter, 'prevalidate', so it can be used within the 'success' function.
+            queuedFiles[i].prevalidate = true;
+            // Start the upload.
+            myDropzone.enqueueFile(queuedFiles[i]);
+            // Don't display the progress bar.
+            document.querySelector("#total-progress").style.opacity = "0";
+          }
 
-          // Read the manifest file.
-          reader.readAsText(queuedFiles[i]);
-          reader.addEventListener('loadend', function(event) {
-            let manifest = event.target.result,
-                manifestArray = manifest.split(/\r?\n/),
-                acceptedFiles = myDropzone.getAcceptedFiles();
+          // Pre-validate files count and names.
+          if(queuedFiles[i].name === 'manifest-sha1.txt') {
 
-            // Process the manifest to get all of the files count and names.
-            for (var i = 0; i < manifestArray.length; i++) {
-              if(manifestArray[i].length) {
-                let currentLineArray = manifestArray[i].split(' ');
-                    currentFullFilePath = currentLineArray[1].split('/');
-                // Add the file to the allManifestFiles array.
-                allManifestFiles.push(currentFullFilePath[currentFullFilePath.length - 1]);
+            let allManifestFiles = [],
+                allAcceptedFiles = [],
+                reader = new FileReader();
+
+            // Read the manifest file.
+            reader.readAsText(queuedFiles[i]);
+            reader.addEventListener('loadend', function(event) {
+              let manifest = event.target.result,
+                  manifestArray = manifest.split(/\r?\n/),
+                  acceptedFiles = myDropzone.getAcceptedFiles();
+
+              // Process the manifest to get all of the files count and names.
+              for (var i = 0; i < manifestArray.length; i++) {
+                if(manifestArray[i].length) {
+                  let currentLineArray = manifestArray[i].split(' ');
+                      currentFullFilePath = currentLineArray[1].split('/');
+                  // Add the file to the allManifestFiles array.
+                  allManifestFiles.push(currentFullFilePath[currentFullFilePath.length - 1]);
+                }
               }
-            }
 
-            // Process the acceptedFiles to get all of the file names.
-            for (var i = 0; i < acceptedFiles.length; i++) {
-              if((acceptedFiles[i].name.indexOf('.txt') === -1) && (acceptedFiles[i].name.indexOf('.csv') === -1)) {
-                allAcceptedFiles.push(acceptedFiles[i].name);
+              // Process the acceptedFiles to get all of the file names.
+              for (var i = 0; i < acceptedFiles.length; i++) {
+                if((acceptedFiles[i].name.indexOf('.txt') === -1) && (acceptedFiles[i].name.indexOf('.csv') === -1)) {
+                  allAcceptedFiles.push(acceptedFiles[i].name);
+                }
               }
-            }
 
-            // Get the difference between the two arrays of files, 
-            // using the manifest as the authoritative source.
-            var diff = $(allManifestFiles).not(allAcceptedFiles).get();
+              // Get the difference between the two arrays of files, 
+              // using the manifest as the authoritative source.
+              var diff = $(allManifestFiles).not(allAcceptedFiles).get();
+              // If there are file-based errors, populate the panel-body.
+              if(diff.length) {
+                let headingFiles = $('<h4 />').text('File Validation Errors');
+                let orderedFilesList = $('<ol />');
+                // Build-out the list items of missing files.
+                for (var i = 0; i < diff.length; i++) {
+                  listFileItem = $('<li />').text('Missing file: ' + diff[i]);
+                  orderedFilesList.append(listFileItem);
+                }
+                // Append the ordered list to the panel-body container.
+                $('.panel-validation-results').find('.panel-body').append(headingFiles, orderedFilesList);
+              }
 
-            // Loop through the errors and populate the panel-body.
-            let headingFiles = $('<h4 />').text('File Validation Errors');
-            let orderedFilesList = $('<ol />');
-            // Build-out the list items of missing files.
-            for (var i = 0; i < diff.length; i++) {
-              listFileItem = $('<li />').text('Missing file: ' + diff[i]);
-              orderedFilesList.append(listFileItem);
-            }
-            // Append the ordered list to the panel-body container.
-            $('.panel-validation-results').find('.panel-body').append(headingFiles, orderedFilesList);
+              // If no errors are returned, display a message.
+              if(!diff.length) {
+                // The message.
+                let message = $('<div />').addClass('alert alert-success files-validation-alert').attr('role', 'alert').html('<strong>Files Validation:</strong> No file validation errors found.');
+                // Append the message to the panel-body container.
+                $('.panel-validation-results').find('.panel-body').append(message);
+              }
 
-          });
+            });
+            
+          }
           
         }
-        
-      }
+
+      }, 1500);
 
     });
 
     myDropzone.on("success", function(file, responseText) {
 
+      let fileExtension = getExtension(file.name);
+
       // If the uploaded file is being pre-validated,
       // set the file status back to 'added', prevalidate to false , and reset progress bars.
-      if((typeof file.prevalidate !== 'undefined') && file.prevalidate) {
+      if((typeof file.prevalidate !== 'undefined') && file.prevalidate && (fileExtension === 'csv')) {
 
         file.status = 'added';
         file.prevalidate = false;
@@ -386,15 +399,13 @@
         document.querySelector("#total-progress").style.opacity = "0";
         $(file.previewElement).find('.progress-bar').attr('style', 'width: 0;');
 
-        // // If no errors are returned, display a message.
-        // if(responseText && (typeof responseText.error === 'undefined')) {
-        //   // Clear any previous data.
-        //   $('.panel-validation-results').find('.panel-body').empty();
-        //   // The message.
-        //   let message = $('<div />').addClass('alert alert-success').attr('role', 'alert').html('<strong>Validation Passed!</strong> No validation errors found.');
-        //   // Append the message to the panel-body container.
-        //   $('.panel-validation-results').find('.panel-body').append(message);
-        // }
+        // If no errors are returned, display a message.
+        if(responseText && (typeof responseText.error === 'undefined')) {
+          // The message.
+          let message = $('<div />').addClass('alert alert-success cvs-validation-success').attr('role', 'alert').html('<strong>' + file.name + '</strong>: No CSV validation errors found.');
+          // Append the message to the panel-body container.
+          $('.panel-validation-results').find('.panel-body').append(message);
+        }
 
         // If errors are returned, populate the Pre-Validation Results container.
         if(responseText && (typeof responseText.error !== 'undefined')) {
@@ -402,21 +413,20 @@
           let validationErrors = JSON.parse(responseText.error);
 
           // Display a general summary of validation errors.
-          // Clear any previous data.
-          // $('.panel-validation-results').find('.panel-body').empty();
-
           if(validationErrors.length) {
-            // Loop through the errors and populate the panel-body.
-            let headingCsv = $('<h4 />').text('CSV Validation Errors');
-            let pCsv = $('<p />').text('(See spreadsheet below)');
+            // The message.
+            let message = $('<div />').addClass('alert alert-danger cvs-validation-success').attr('role', 'alert').html('<p><strong>' + file.name + '</strong>: Validation errors found (also, see spreadsheet below).</p>');
+            // Ordered list.
             let orderedList = $('<ol />');
-            // Build-out the list items containing the error messages.
+            // Loop through the errors and append to the message.
             for (var i = 0; i < validationErrors.length; i++) {
               listItem = $('<li />').text(validationErrors[i].row + ': ' + validationErrors[i].error);
               orderedList.append(listItem);
             }
-            // Append the ordered list to the panel-body container.
-            $('.panel-validation-results').find('.panel-body').append(headingCsv, pCsv, orderedList);
+            // Append the ordered list to the message.
+            message.append(orderedList);
+            // Append the message to the panel-body container.
+            $('.panel-validation-results').find('.panel-body').append(message);
           }
 
           // Display the CSV within a spreadsheet interface, highlighting errors.
@@ -484,6 +494,7 @@
     });
 
     myDropzone.on("sending", function(file, xhr, formData) {
+
       // Show the total progress bar when upload starts
       document.querySelector("#total-progress").style.opacity = "1";
 
@@ -496,6 +507,7 @@
       // See: https://github.com/enyo/dropzone/issues/1075
 
       // Add the jobId to the formData
+      jobId = $('.prevalidate-trigger').attr('data-jobid');
       formData.append('jobId', jobId);
 
       // Add the prevalidate value to the formData
@@ -512,6 +524,7 @@
       if(file.fullPath){
         formData.append('fullPath', file.fullPath);
       }
+
     });
 
     // Hide the total progress bar when nothing's uploading anymore
@@ -524,11 +537,69 @@
     // The "add files" button doesn't need to be setup because the config
     // `clickable` has already been specified.
     document.querySelector("#actions .start").onclick = function() {
+
+      // Check if the parent record has been selected.
+      parentRecordChecker();
+
       myDropzone.enqueueFiles(myDropzone.getFilesWithStatus(Dropzone.ADDED));
     };
     document.querySelector("#actions .cancel").onclick = function() {
       myDropzone.removeAllFiles(true);
       $('.directory-structure').remove();
+      // Clear previous validation results from the validation panel.
+      $('.panel-validation-results').find('.panel-body').empty();
     };
+
+    function parentRecordChecker() {
+      // Parent record ID value.
+      let parentRecordId = $('#uploads_parent_picker_form_parent_picker').val();
+      // If there is no parent ID selected, then display an alert.
+      if(!parentRecordId.length) {
+        swal({
+          title: 'Select Parent Record',
+          text: 'Please select a parent record.',
+          type: 'warning',
+        });
+        return false;
+      } else {
+
+        // Generate a jobId.
+        // TODO: If the jobId is never used, 
+        // then it will need to be removed from the database.
+        if(typeof $('.prevalidate-trigger').attr('data-jobid') === 'undefined') {
+          $.ajax({
+            'type': 'GET'
+            ,'global': false
+            ,'dataType': 'text'
+            ,'url': '/admin/import/create_job/' + parentRecordId
+            ,success: function(result) {
+              if(result) {
+                var res = JSON.parse(result);
+                $('.prevalidate-trigger').attr('data-jobid', res.jobId);
+              }
+            }
+          });
+        }
+
+        return parentRecordId;
+      }
+    }
+
+    function queuedFilesChecker(files) {
+      if(!files.length) {
+        swal({
+          title: 'No Files Found',
+          text: 'Please add files to the upload queue.',
+          type: 'warning',
+        });
+        return false;
+      }
+      return true;
+    }
+
+    function getExtension(fileName) {
+      let fileNameArray = fileName.split('.');
+      return fileNameArray[fileNameArray.length-1].toLowerCase();
+    }
   </script>
 {% endblock %}
