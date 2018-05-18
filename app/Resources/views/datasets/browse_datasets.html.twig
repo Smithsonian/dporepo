@@ -84,6 +84,9 @@
                 <th class="text-center"></th>
                 <th class="text-center"></th>
                 <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
               </tr>
             </thead>
           </table>
@@ -106,6 +109,9 @@
                 <th class="text-center">Model File Type</th>
                 <th class="text-center">Derived From</th>
                 <th class="text-center">Creation Method</th>
+                <th class="text-center">Processing Step</th>
+                <th class="text-center">Processing Status</th>
+                <th class="text-center">Processing Detail</th>
                 <th class="text-center">Last Modified</th>
               </tr>
             </thead>
@@ -142,7 +148,7 @@
           { "data": "capture_dataset_name", "title": "Capture Dataset Name" },
           { "data": "collected_by", "title": "Collected By" },
           { "data": "date_of_capture", "title": "Date of Capture" },
-          { "data": "capture_dataset_description", "title": "Capture Dataset Descriptio" },
+          { "data": "capture_dataset_description", "title": "Capture Dataset Description" },
           { "data": "collection_notes", "title": "Collection Notes" },
           { "data": "support_equipment", "title": "Support Equipment" },
           { "data": "item_position_type", "title": "Item Position Type" },
@@ -157,7 +163,10 @@
           { "data": "resource_capture_datasets", "title": "Resource Capture Datasets" },
           { "data": "calibration_object_used", "title": "Calibration Object Used" },
           { "data": "date_created", "title": "Date Created" },
-          { "data": "last_modified", "title": "Last Modified" },
+          { "data": "workflow_processing_step", "title": "Processing Step" },
+          { "data": "workflow_status", "title": "Processing Status" },
+          { "data": "workflow_status_detail", "title": "Processing Detail" },
+          { "data": "last_modified", "title": "Last Modified" }
         ],
         // "dom": 'Bfrtipt',
         "dom": 'lfip<"datatables_bulk_actions"B>tip',
@@ -266,6 +275,9 @@
             { "data": "model_file_type" },
             { "data": "derived_from" },
             { "data": "creation_method" },
+            { "data": "workflow_processing_step" },
+            { "data": "workflow_status" },
+            { "data": "workflow_status_detail" },
             { "data": "last_modified" }
           ],
         "dom": 'lfip<"datatables_bulk_actions">tip',

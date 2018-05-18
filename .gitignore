@@ -16,6 +16,8 @@
 /vendor/
 /web/bundles/
 
+web/json
+web/uploads
 web/JobBox/*
 web/JobBoxProcess/*
 web/webready1/*
