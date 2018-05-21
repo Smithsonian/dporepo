@@ -298,7 +298,7 @@ class UploadListener
           'values' => array(
             'job_id' => $data->job_id,
             'job_log_status' => 'start',
-            'job_log_label' => 'Import VZ subjects',
+            'job_log_label' => 'Import subjects',
             'job_log_description' => 'Import started',
           )
         ));
@@ -342,7 +342,7 @@ class UploadListener
           'values' => array(
             'job_id' => $data->job_id,
             'job_log_status' => 'finish',
-            'job_log_label' => 'Import VZ subjects',
+            'job_log_label' => 'Import subjects',
             'job_log_description' => 'Import finished',
           )
         ));
@@ -358,7 +358,7 @@ class UploadListener
           'values' => array(
             'job_id' => $data->job_id,
             'job_log_status' => 'start',
-            'job_log_label' => 'Import VZ items',
+            'job_log_label' => 'Import items',
             'job_log_description' => 'Import started',
           )
         ));
@@ -399,26 +399,13 @@ class UploadListener
           'values' => array(
             'job_id' => $data->job_id,
             'job_log_status' => 'finish',
-            'job_log_label' => 'Import VZ items',
+            'job_log_label' => 'Import items',
             'job_log_description' => 'Import finished',
           )
         ));
         break;
 
     }
-
-    // Update the record in the job table.
-    $this->repo_storage_controller->execute('saveRecord', array(
-      'base_table' => 'job',
-      'record_id' => $data->job_id,
-      'user_id' => $data->user_id,
-      'values' => array(
-        'job_status' => 'complete',
-        'date_completed' => date('Y-m-d h:i:s'),
-        'qa_required' => 0,
-        'qa_approved_time' => null,
-      )
-    ));
 
   }
 
