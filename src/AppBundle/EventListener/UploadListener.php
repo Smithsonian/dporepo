@@ -92,6 +92,13 @@ class UploadListener
         case 'csv':
           // Run the CSV validation.
           $validation_results = $this->validate_metadata($data->job_id, $data->job_id_directory, $file->getBasename()); // , $this->container, $items
+          // Remove the CSV file.
+          $finder = new Finder();
+          $finder->files()->in($data->job_id_directory . '/');
+          $finder->files()->name($file->getBasename());
+          foreach ($finder as $file) {
+            unlink($file->getPathname());
+          }
           break;
       }
       
