@@ -16,6 +16,20 @@ use JsonSchema\{
 class RepoValidateData implements RepoValidate {
 
   /**
+   * @var string $schema_dir
+   */
+  public $schema_dir;
+
+  /**
+   * Constructor
+   * @param object  $u  Utility functions object
+   */
+  public function __construct()
+  {
+    $this->schema_dir = __DIR__ . '/../../../web/json/schemas/repository/';
+  }
+
+  /**
    * @param null $data The data to validate.
    * @param string $schema The schema to validate against (optional).
    * @param array $blacklisted_fields An array of fields to ignore (optional).
@@ -36,11 +50,10 @@ class RepoValidateData implements RepoValidate {
     // If data is passed, go ahead and process.
     if(!empty($data)) {
 
-      $schema_dir = __DIR__ . '/../../../web/json/schemas/repository/';
-      $jsonSchemaObject = json_decode(file_get_contents($schema_dir . $schema_definitions_dir . $schema . '.json'));
+      $jsonSchemaObject = json_decode(file_get_contents($this->schema_dir . $schema_definitions_dir . $schema . '.json'));
 
       $schemaStorage = new SchemaStorage();
-      $schemaStorage->addSchema('file://' . $schema_dir . $schema_definitions_dir, $jsonSchemaObject);
+      $schemaStorage->addSchema('file://' . $this->schema_dir . $schema_definitions_dir, $jsonSchemaObject);
 
       $jsonValidator = new Validator( new Factory($schemaStorage) );
       $jsonValidator->validate($data, $jsonSchemaObject, Constraint::CHECK_MODE_APPLY_DEFAULTS);
@@ -55,10 +68,9 @@ class RepoValidateData implements RepoValidate {
           // Ignore blacklisted field.
           // TODO: Loop through blacklisted fields (right now, only using the first one, $blacklisted_fields[0]).
           // if(!strstr($error['property'], $blacklisted_fields[0])) {
-            // $row = str_replace('[', '', $error['property']);
-            // $row = str_replace(']', '', $row);
-            // $row = str_replace('.', ' - Field: ', $row);
-            $row = str_replace('.', ' Field: ', $error['property']);
+            $row = str_replace('[', 'Row ', $error['property']);
+            $row = str_replace(']', '', $row);
+            $row = str_replace('.', ' - Field: ', $row);
             $return['messages'][] = array('row' => $row, 'error' => $error['message']);
           // }
         }
