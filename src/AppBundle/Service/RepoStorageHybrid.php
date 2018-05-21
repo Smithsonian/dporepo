@@ -3652,7 +3652,7 @@ class RepoStorageHybrid implements RepoStorage {
       //@todo other checks? Like > 0 ?
       if(array_key_exists('limit_start', $limit) && is_numeric($limit['limit_start'])) {
         $limit_start = $limit['limit_start'];
-        if(array_key_exists('limit_start', $limit) && is_numeric($limit['limit_start'])) {
+        if(array_key_exists('limit_stop', $limit) && is_numeric($limit['limit_stop'])) {
           $limit_stop = $limit['limit_stop'];
         }
         if(NULL !== $limit_stop) {
