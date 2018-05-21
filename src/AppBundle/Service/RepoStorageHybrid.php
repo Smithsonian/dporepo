@@ -950,8 +950,15 @@ class RepoStorageHybrid implements RepoStorage {
    * @return array Import result and/or any messages
    */
   public function getImportedItems($params) {
-    $sql = "SELECT SUM(case when job_import_record.record_table = 'item' then 1 else 0 end) AS items_total
+    $sql = "SELECT SUM(case when job_import_record.record_table = 'item' then 1 else 0 end) AS items_total,
+      job.job_label,
+      job.date_created,
+      job.date_completed,
+      job.job_status,
+      fos_user.username
       FROM job_import_record
+      LEFT JOIN job ON job.job_id = job_import_record.job_id
+      LEFT JOIN fos_user ON fos_user.id = job.created_by_user_account_id
       WHERE job_import_record.job_id = :job_id
       GROUP BY job_import_record.job_id";
     $statement = $this->connection->prepare($sql);
