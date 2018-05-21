@@ -8,7 +8,7 @@ namespace AppBundle\Service;
 
 interface RepoValidate {
 
-  /***
+  /**
    * @param $data The data to validate.
    * @param $schema The schema to validate against (optional).
    * @param $blacklisted_fields An array of fields to ignore (optional).
