@@ -1,4 +1,5 @@
 <?php
+
 namespace AppBundle\EventListener;
 
 use Doctrine\Common\Persistence\ObjectManager;
