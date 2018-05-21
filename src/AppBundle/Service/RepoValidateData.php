@@ -26,6 +26,7 @@ class RepoValidateData implements RepoValidate {
    */
   public function __construct()
   {
+    // TODO: move this to parameters.yml and bind in services.yml?
     $this->schema_dir = __DIR__ . '/../../../web/json/schemas/repository/';
   }
 
