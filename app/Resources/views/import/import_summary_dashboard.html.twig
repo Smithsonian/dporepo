@@ -201,13 +201,13 @@
         "columns": [
           { "data": "project_name",
             "render": function (data, type, row, meta) {
-                return "<a href='/admin/projects/subjects/" + row.project_repository_id + "'>" + row.project_name + "</a>";
+              return "<a href='/admin/projects/subjects/" + row.project_repository_id + "'>" + row.project_name + "</a>";
             }
           },
           { "data": "date_created" },
           { "data": "items_total" ,
             "render": function (data, type, row, meta) {
-                return "<a href='/admin/import/" + row.job_id + "'>" + row.items_total + "</a>";
+              return "<a href='/admin/import/" + row.job_id + "/" + row.project_id + "'>" + row.items_total + "</a>";
             }
           },
           { "data": "username" },
@@ -216,7 +216,7 @@
         //"dom": 'lfip<"datatables_bulk_actions">tip',
         "pagingType": "simple_numbers",
         "stateSave": true,
-        "order": [[0,"desc"]],
+        "order": [[1,"desc"]],
         // Show processing throbber.
         "processing": true,
         // All data management will be done on the server side.
@@ -369,7 +369,7 @@
               // If no errors are returned, display a message.
               if(!diff.length) {
                 // The message.
-                let message = $('<div />').addClass('alert alert-success files-validation-alert').attr('role', 'alert').html('<strong>Files Validation:</strong> No file validation errors found.');
+                let message = $('<div />').addClass('alert alert-success files-validation-alert').attr('role', 'alert').html('<strong>Files Pre-validation:</strong> No file validation errors found.');
                 // Append the message to the panel-body container.
                 $('.panel-validation-results').find('.panel-body').append(message);
               }
@@ -380,7 +380,7 @@
           
         }
 
-      }, 1500);
+      }, 2000);
 
     });
 
@@ -531,6 +531,14 @@
     myDropzone.on("queuecomplete", function(progress) {
       document.querySelector("#total-progress").style.opacity = "0";
       $(".file-row").find('.progress').removeClass('progress-striped active').addClass('progress-bar-success');
+
+      // Redirect to the Upload overview page
+      setTimeout(function() {
+        let parentRecordId = parentRecordChecker();
+        jobId = $('.prevalidate-trigger').attr('data-jobid');
+        document.location.href = '/admin/import/' + jobId + '/' + parentRecordId + '?uploaded=1';
+      }, 1500);
+      
     });
 
     // Setup the buttons for all transfers
@@ -543,6 +551,7 @@
 
       myDropzone.enqueueFiles(myDropzone.getFilesWithStatus(Dropzone.ADDED));
     };
+
     document.querySelector("#actions .cancel").onclick = function() {
       myDropzone.removeAllFiles(true);
       $('.directory-structure').remove();
@@ -571,7 +580,7 @@
             'type': 'GET'
             ,'global': false
             ,'dataType': 'text'
-            ,'url': '/admin/import/create_job/' + parentRecordId
+            ,'url': '/admin/create_job/' + parentRecordId
             ,success: function(result) {
               if(result) {
                 var res = JSON.parse(result);

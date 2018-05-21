@@ -7,11 +7,17 @@
 {% endblock %}
 
 {% block content %}
+
+  {% if first %}
+    <div class="alert alert-success" role="alert">
+      <strong>Upload Succeeded!</strong> Files will be validated shortly. Please check back.
+    </div>
+  {% endif %}
   
   <ol class="breadcrumb">
     <li><a href="/admin">Dashboard</a></li>
     <li><a href="/admin/import">Uploads</a></li>
-    <li class="active">{{project.project_name}}</li>
+    <li class="active">{{ project.project_name }}</li>
   </ol>
 
   <div class="panel panel-default">
@@ -23,8 +29,12 @@
               <dd>{{ project.project_name }}</dd>
             <dt>Date Uploaded:</dt>
               <dd>{{ project.date_created }}</dd>
-            <dt>Total Items #:</dt>
+            <dt>Total Items:</dt>
               <dd>{{ project.items_total|default('0') }}</dd>
+            {% if project.job_status is defined %}
+              <dt>Job Status:</dt>
+                <dd>{{ project.job_status }}</dd>
+            {% endif %}
           </dl>
         </div>
         <div class="col-sm-6 col-md-6">
@@ -35,12 +45,17 @@
               <dd>{{ project.item_failed|default('0') }}</dd>
             <dt>In Progress #:</dt>
               <dd>{{ project.item_in_progress|default('0') }}</dd>
+            {% if project.username is defined %}
+              <dt>Uploaded By:</dt>
+                <dd>{{ project.username }}</dd>
+            {% endif %}
           </dl>
         </div>
       </div>
     </div>
   </div>
 
+  <h3>Uploaded Metadata</h3>
   <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
     <thead>
       <tr>
@@ -50,6 +65,43 @@
       </tr>
     </thead>
   </table>
+
+  {% if project.files is defined %}
+    <div class="row">
+      <div class="col-sm-6 col-md-6">
+        <div class="panel panel-default">
+          <div class="panel-body">
+            <h3>Uploaded Files</h3>
+            <ol>
+              {% for file in project.files %}
+                <li>{{ file|e }}</li>
+              {% else %}
+                <em>No files found.</em>
+              {% endfor %}
+            </ol>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-md-6">
+        <div class="panel panel-default">
+          <div class="panel-body">
+            <h3>File Validation Errors</h3>
+            {% if project.job_status is defined and project.job_status == 'in progress' %}
+              <p class="text-info"><span class="glyphicon glyphicon-time"></span> Validation pending. Please check back shortly.</p>
+            {% else %}
+              <ul class="list-unstyled">
+                {% for file_validation_error in project.file_validation_errors %}
+                  <li class="text-danger"><strong>{{ file_validation_error.job_log_label }}</strong>: {{ file_validation_error.job_log_description }}</li>
+                {% else %}
+                  <li class="text-success"><strong>No validation errors found.</strong></li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
 
 {% endblock %}
 

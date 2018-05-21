@@ -6,6 +6,7 @@ use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
 use Doctrine\DBAL\Driver\Connection;
+use Symfony\Component\Finder\Finder;
 
 use AppBundle\Form\UploadsParentPickerForm;
 use AppBundle\Entity\UploadsParentPicker;
@@ -30,6 +31,9 @@ class ImportController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController();
+
+        // TODO: move this to parameters.yml and bind in services.yml.
+        $this->uploads_directory = __DIR__ . '/../../../web/uploads/repository/';
     }
 
     /**
@@ -311,31 +315,88 @@ class ImportController extends Controller
     }
     
     /**
-     * @Route("/admin/import/{id}", name="import_summary_details", methods="GET")
+     * @Route("/admin/import/{id}/{project_id}", name="import_summary_details", methods="GET")
      *
      * @param int $id Project ID
      * @param object $conn Database connection object
      * @param object $project ProjectsController class
      * @param object $request Symfony's request object
      */
-    public function importSummaryDetails($id, Connection $conn, ProjectsController $project, Request $request)
+    public function importSummaryDetails($id, $project_id, Connection $conn, ProjectsController $project, Request $request)
     {
 
-      if(!empty($id)) {
+      $project = [];
+      $project['file_validation_errors'] = [];
+      $project['first'] = false;
+      $this->repo_storage_controller->setContainer($this->container);
+
+      if(!empty($project_id)) {
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $this->repo_storage_controller->setContainer($this->container);
-        $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $id));
+        $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $project_id));
         if(!$project) throw $this->createNotFoundException('The Project record does not exist');
       }
 
       // Get the total number of Item records for the import.
-      $items_total = $this->repo_storage_controller->execute('getImportedItems', array('job_id' => (int)$id));
-      $project = array_merge($project, $items_total);
+      if(!empty($id)) {
+        // Get project data.
+        $items_total = $this->repo_storage_controller->execute('getImportedItems', array('job_id' => (int)$id));
+        if($items_total) {
+          // Merge items_total into $project.
+          $project = array_merge($project, $items_total);
+          // Get the uploaded files.
+          $project['files'] = $this->get_directory_contents($id);
+          // Get errors if they exist.
+          $project['file_validation_errors'] = $this->repo_storage_controller->execute('getRecords', array(
+              'base_table' => 'job_log',
+              'fields' => array(),
+              'search_params' => array(
+                0 => array(
+                  'field_names' => array(
+                    'job_id'
+                  ),
+                  'search_values' => array(
+                    (int)$id
+                  ),
+                  'comparison' => '='
+                ),
+                1 => array(
+                  'field_names' => array(
+                    'job_log_status'
+                  ),
+                  'search_values' => array(
+                    'error'
+                  ),
+                  'comparison' => '='
+                ),
+                2 => array(
+                  'field_names' => array(
+                    'job_log_label'
+                  ),
+                  'search_values' => array(
+                    'BagIt Validation'
+                  ),
+                  'comparison' => '='
+                )
+              ),
+              'search_type' => 'AND',
+              'sort_fields' => array(
+                0 => array('field_name' => 'date_created')
+              ),
+              'omit_active_field' => true,
+            )
+          );
+        }
+
+        // $this->u->dumper($project);
+      }
 
       return $this->render('import/import_summary_item.html.twig', array(
-        'page_title' => 'Uploads: ' . $project['project_name'],
+        'page_title' => $items_total ? $project['job_label'] : 'Uploads: ' . $project['project_name'],
         'project' => $project,
         'id' => $id,
+        // If coming from the Uploads interface after an upload, 
+        // set the 'first' variable so a message can be triggered and displayed.
+        'first' => (bool)$request->query->get('first') ? true : false,
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
       ));
     }
@@ -379,6 +440,28 @@ class ImportController extends Controller
     }
 
     /**
+     * Create an array of all direcories and files found.
+     *
+     * @param int $job_id The Job ID.
+     * @return array $data An array of all files found for a job.
+     */
+    private function get_directory_contents($job_id = null) {
+
+      $data = [];
+
+      if(!empty($job_id)) {
+        $finder = new Finder();
+        $finder->files()->in($this->uploads_directory . $job_id . '/');
+
+        foreach ($finder as $file) {
+          $data[] = str_replace($this->uploads_directory . $job_id . '/', '', $file->getPathname());
+        }
+      }
+
+      return $data;
+    }
+
+    /**
      * @Route("/admin/import/get_parent_records", name="get_parent_records", methods="POST")
      *
      * @param ProjectsController $project ProjectsController class
@@ -410,10 +493,10 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/import/create_job/{project_id}", name="create_job", methods="GET")
+     * @Route("/admin/create_job/{project_id}", name="create_job", methods="GET")
      *
      * @param $project_id The project ID
-     * @return int
+     * @return JSON
      */
     public function createJob($project_id, Request $request)
     {
