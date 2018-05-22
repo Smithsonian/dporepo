@@ -324,7 +324,7 @@ class BagitController extends Controller
       if (count($validation) > 0) {
         // We can only validate if we have a manifest.
         foreach ($validation as $message) {
-          $full_message = 'Missing file: ';
+          $full_message = 'Missing file - ';
           foreach ($message as $k => $value) {
             $full_message .= ' ' . $value;
           }

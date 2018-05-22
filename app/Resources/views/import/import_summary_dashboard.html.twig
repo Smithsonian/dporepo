@@ -105,12 +105,6 @@
                 <!-- // panel-body -->
               </div>
               <!-- // panel -->
-              
-              <div class="row">
-                <div class="col-sm-12 col-md-12">
-                  <a href="javascript:void(0);" class="btn btn-default pull-right prevalidate-trigger" role="button"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> Pre-Validate Scans and CSV Files</a>
-                </div>
-              </div>
 
             </div>
             <!-- // column 1 -->
@@ -138,13 +132,17 @@
                   <i class="glyphicon glyphicon-plus"></i>
                   <span>Add Files</span>
               </span>
-              <button type="submit" class="btn btn-primary start">
-                  <i class="glyphicon glyphicon-upload"></i>
-                  <span>Start Upload</span>
-              </button>
               <button type="reset" class="btn btn-warning cancel">
                   <i class="glyphicon glyphicon-ban-circle"></i>
                   <span>Clear Upload Stage</span>
+              </button>
+              <span class="btn btn-default prevalidate-trigger">
+                  <i class="glyphicon glyphicon-cog"></i>
+                  <span>Pre-Validate Scans and CSV Files</span>
+              </span>
+              <button type="submit" class="btn btn-primary start hidden">
+                  <i class="glyphicon glyphicon-upload"></i>
+                  <span>Start Upload</span>
               </button>
             </div>
             <!-- // column 1 -->
@@ -165,7 +163,7 @@
           <div class="col-sm-12 col-md-12">
             <div class="panel panel-default panel-spreadsheet hidden">
               <!-- Panel contents -->
-              <div class="panel-heading">CVS Results</div>
+              <div class="panel-heading">CVS Results <span style="font-size: 1.5rem; font-weight: normal;"><i class="glyphicon glyphicon-info-sign"></i> For now, only for representation of the data. The goal is to allow for edits and resubmission.</span></div>
               <div id="csv-spreadsheet" class="panel-body">
               </div>
             </div>
@@ -179,6 +177,27 @@
     <!-- // column -->
   </div>
   <!-- // row -->
+
+  <!-- Uploading Modal -->
+  <div class="modal fade" id="uploading-modal" tabindex="-1" role="dialog" aria-labelledby="uploadingLabel" backdrop="static" keyboard="false">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="uploadingLabel"><i class="glyphicon glyphicon-time"></i> <span id="uploading-modal-title"></span></h2>
+        </div>
+        <div class="modal-body" style="min-height: 24rem;">
+          <div class="text-center">
+            <span id="uploading-modal-message"></span>
+          </div>
+          <div class="center-block" style="width: 140px; margin-top: 3rem;">
+            <img src="/lib/images/spinner.gif" alt="loading animation" style="width: 140px;">
+          </div>
+        </div>
+        <div class="modal-footer">
+        </div>
+      </div>
+    </div>
+  </div>
 
 {% endblock %}
 
@@ -238,7 +257,8 @@
     // $('form[name="uploads_parent_picker_form"]').find('#uploads_parent_picker_form_parent_picker_text').focus();
     // console.log($('form[name="uploads_parent_picker_form"]').find('#uploads_parent_picker_form_parent_picker_text'));
 
-    var resultsContainer = $('.panel-spreadsheet').find('.panel-body'),
+    var jobId,
+        resultsContainer = $('.panel-spreadsheet').find('.panel-body'),
         loadingGif = $('<img />').attr('src', '/lib/images/spinner.gif').attr('alt', 'loading animation').attr('style', 'width: 140px;'),
         loadingGifContainer = $('<div />').addClass('center-block').attr('style', 'width: 140px;').append(loadingGif);
 
@@ -248,10 +268,6 @@
     previewNode.id = "";
     var previewTemplate = previewNode.parentNode.innerHTML;
     previewNode.parentNode.removeChild(previewNode);
-
-    // TEMPORARY HACK - faking the jobId.
-    // var jobId = Math.floor(Math.random() * 2000) + 1;
-    var jobId;
 
     // See: http://www.dropzonejs.com/#configuration-options
     var myDropzone = new Dropzone(document.body, { // Make the whole body a dropzone
@@ -286,7 +302,15 @@
       // file.previewElement.querySelector(".start").onclick = function() { myDropzone.enqueueFile(file); };
     });
 
+    // Prevalidate click handler.
     $('.prevalidate-trigger').on('click', function(e) {
+
+      // Display the progress modal.
+      $('#uploading-modal-title').empty();
+      $('#uploading-modal-title').append('Pre-Validating...');
+      $('#uploading-modal-message').empty();
+      $('#uploading-modal-message').append('Pre-validation in progress');
+      $('#uploading-modal').modal('show');
 
       // Set the parentRecordId.
       let parentRecordId = parentRecordChecker();
@@ -298,15 +322,14 @@
       // Check if files have been added to the queue.
       if(!queuedFilesChecker(queuedFiles)) return;
       
-
-
+      // Give some time (2 seconds) to create the job record in the database.
       setTimeout(function() {
 
         for (var i = 0; i < queuedFiles.length; i++) {
 
           // Set a custom parameter, 'parentRecordId', so it can be passed to the back-end.
           queuedFiles[i].parentRecordId = parentRecordId;
-
+          // Get the extension of the file.
           let fileExtension = getExtension(queuedFiles[i].name);
 
           // Pre-validate CSV files, files count, and file names.
@@ -353,23 +376,20 @@
               // Get the difference between the two arrays of files, 
               // using the manifest as the authoritative source.
               var diff = $(allManifestFiles).not(allAcceptedFiles).get();
+
               // If there are file-based errors, populate the panel-body.
               if(diff.length) {
-                let headingFiles = $('<h4 />').text('File Validation Errors');
-                let orderedFilesList = $('<ol />');
-                // Build-out the list items of missing files.
                 for (var i = 0; i < diff.length; i++) {
-                  listFileItem = $('<li />').text('Missing file: ' + diff[i]);
-                  orderedFilesList.append(listFileItem);
+                  let fileMessage = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<strong>Files Pre-validation:</strong> Missing file: ' + diff[i]);
+                  // Append the message to the panel-body container.
+                  $('.panel-validation-results').find('.panel-body').append(fileMessage);
                 }
-                // Append the ordered list to the panel-body container.
-                $('.panel-validation-results').find('.panel-body').append(headingFiles, orderedFilesList);
               }
 
-              // If no errors are returned, display a message.
+              // If there are no file-based errors, display a message.
               if(!diff.length) {
                 // The message.
-                let message = $('<div />').addClass('alert alert-success files-validation-alert').attr('role', 'alert').html('<strong>Files Pre-validation:</strong> No file validation errors found.');
+                let message = $('<div />').addClass('alert alert-success files-validation-success').attr('role', 'alert').html('<strong>Files Pre-validation:</strong> No file validation errors found.');
                 // Append the message to the panel-body container.
                 $('.panel-validation-results').find('.panel-body').append(message);
               }
@@ -380,7 +400,24 @@
           
         }
 
+        // Hide the progress modal.
+        $('#uploading-modal').modal('hide');
+
       }, 2000);
+
+      // If there are no errors, change the states of the action buttons.
+      setTimeout(function() {
+        // Check to see if there are errors.
+        let fileErrors = $('.panel-validation-results .panel-body').find('.files-validation-error'),
+            csvErrors = $('.panel-validation-results .panel-body').find('.cvs-validation-error');
+        // No errors? Change the states of the action buttons.
+        if(!fileErrors.length && !csvErrors.length) {
+          // Disable the "Pre-Validate" and "Clear Upload Stage" buttons.
+          $('.fileinput-button, .cancel, .prevalidate-trigger').attr('disabled', 'disabled');
+          // Reveal the "Start Upload" button.
+          $('.start').removeClass('hidden');
+        }
+      }, 5000);
 
     });
 
@@ -415,7 +452,7 @@
           // Display a general summary of validation errors.
           if(validationErrors.length) {
             // The message.
-            let message = $('<div />').addClass('alert alert-danger cvs-validation-success').attr('role', 'alert').html('<p><strong>' + file.name + '</strong>: Validation errors found (also, see spreadsheet below).</p>');
+            let message = $('<div />').addClass('alert alert-danger cvs-validation-error').attr('role', 'alert').html('<p><strong>' + file.name + '</strong>: Validation errors found (also, see spreadsheet below).</p>');
             // Ordered list.
             let orderedList = $('<ol />');
             // Loop through the errors and append to the message.
@@ -430,9 +467,10 @@
           }
 
           // Display the CSV within a spreadsheet interface, highlighting errors.
+          // TODO: Make it possible to edit the spreadsheet and resubmit for pre-validation.
           // See: Handsontable
           // https://github.com/handsontable/handsontable
-          
+
           // Show the panel-spreadsheet container.
           $('.panel-spreadsheet').removeClass('hidden');
           // Clear any previous data.
@@ -540,8 +578,7 @@
         // Process and import the CSV files.
         $.ajax({
           'type': 'GET'
-          ,'global': false
-          ,'dataType': 'text'
+          ,'dataType': 'json'
           ,'url': '/admin/import_csv/' + jobId + '/' + parentRecordId
           ,success: function(result) {
             if(result && result.length) {
@@ -558,14 +595,18 @@
     // The "add files" button doesn't need to be setup because the config
     // `clickable` has already been specified.
     document.querySelector("#actions .start").onclick = function() {
-
       // Check if the parent record has been selected.
       parentRecordChecker();
-
       myDropzone.enqueueFiles(myDropzone.getFilesWithStatus(Dropzone.ADDED));
+      $('#uploading-modal-title').empty();
+      $('#uploading-modal-title').append('Uploading...');
+      $('#uploading-modal-message').empty();
+      $('#uploading-modal-message').append('Upload in progress. This page will redirect once the upload process is complete.');
+      $('#uploading-modal').modal('show');
     };
 
     document.querySelector("#actions .cancel").onclick = function() {
+      // Remove files from Dropzone.
       myDropzone.removeAllFiles(true);
       $('.directory-structure').remove();
       // Clear previous validation results from the validation panel.
@@ -597,6 +638,7 @@
             ,success: function(result) {
               if(result) {
                 var res = JSON.parse(result);
+                // Add the job ID as a data attribute of the prevalidate-trigger.
                 $('.prevalidate-trigger').attr('data-jobid', res.jobId);
               }
             }
