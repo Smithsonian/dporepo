@@ -536,7 +536,20 @@
       setTimeout(function() {
         let parentRecordId = parentRecordChecker();
         jobId = $('.prevalidate-trigger').attr('data-jobid');
-        document.location.href = '/admin/import/' + jobId + '/' + parentRecordId + '?uploaded=1';
+
+        // Process and import the CSV files.
+        $.ajax({
+          'type': 'GET'
+          ,'global': false
+          ,'dataType': 'text'
+          ,'url': '/admin/import_csv/' + jobId + '/' + parentRecordId
+          ,success: function(result) {
+            if(result && result.length) {
+              document.location.href = '/admin/import/' + jobId + '/' + parentRecordId + '?first=1';
+            }
+          }
+        });
+        
       }, 1500);
       
     });

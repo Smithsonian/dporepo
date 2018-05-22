@@ -7,6 +7,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
 use Doctrine\DBAL\Driver\Connection;
 use Symfony\Component\Finder\Finder;
+use Symfony\Component\HttpFoundation\Session\Session;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 use AppBundle\Form\UploadsParentPickerForm;
 use AppBundle\Entity\UploadsParentPicker;
@@ -21,16 +23,19 @@ class ImportController extends Controller
      */
     public $u;
     private $repo_storage_controller;
+    private $tokenStorage;
 
     /**
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u)
+    public function __construct(AppUtilities $u, RepoStorageHybridController $repo_storage_controller, TokenStorageInterface $tokenStorage)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
-        $this->repo_storage_controller = new RepoStorageHybridController();
+        $this->repo_storage_controller = $repo_storage_controller;
+        $this->tokenStorage = $tokenStorage;
+        // $this->repo_storage_controller = new RepoStorageHybridController();
 
         // TODO: move this to parameters.yml and bind in services.yml.
         $this->uploads_directory = __DIR__ . '/../../../web/uploads/repository/';
@@ -54,8 +59,6 @@ class ImportController extends Controller
           $id = isset($post['parentRecordId']) ? $post['parentRecordId'] : $id;
         }
 
-        // $this->u->dumper($post);
-
         if(!empty($id)) {
           // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
           $this->repo_storage_controller->setContainer($this->container);
@@ -72,6 +75,281 @@ class ImportController extends Controller
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
         ));
     }
+
+    /**
+     * @Route("/admin/import_csv/{job_id}/{parent_record_id}", name="import_csv", defaults={"job_id" = null, "parent_record_id" = null}, methods="GET")
+     *
+     * @param int $job_id Job ID
+     * @param int $parent_record_id Project ID
+     * @param object $request Symfony's request object
+     * @param object $validate ValidateMetadataController class
+     */
+    public function import_csv($job_id, $parent_record_id, Request $request, ValidateMetadataController $validate, ItemsController $items)
+    {
+      $job_log_ids = array();      
+
+      if(!empty($job_id) && !empty($parent_record_id)) {
+        // Prepare the data.
+        $data = $this->prepare_data($this->uploads_directory . $job_id, $this->container, $items);
+        // $this->u->dumper($data);
+        if(!empty($data)) {
+          foreach($data as $csv_key => $csv_value) {
+            $job_log_ids = $this->ingest_csv_data($csv_value, $job_id, $parent_record_id);
+          }
+        }
+      }
+
+      return $this->json($job_log_ids);
+    }
+
+    /**
+     * @param string $job_upload_directory The upload directory
+     * @return array Import result and/or any messages
+     */
+    public function prepare_data($job_upload_directory = null, $thisContainer, $itemsController)
+    {
+
+      $data = array();
+
+      if(!empty($job_upload_directory)) {
+
+        $finder = new Finder();
+        $finder->files()->in($job_upload_directory);
+
+        // Assign keys to each CSV, with projects first, subjects second, and items third.
+        foreach ($finder as $file) {
+          if(stristr($file->getRealPath(), 'projects')) {
+            $csv[0]['type'] = 'project';
+            $csv[0]['data'] = $file->getContents();
+          }
+          if(stristr($file->getRealPath(), 'subjects')) {
+            $csv[1]['type'] = 'subject';
+            $csv[1]['data'] = $file->getContents();
+          }
+          if(stristr($file->getRealPath(), 'items')) {
+            $csv[2]['type'] = 'item';
+            $csv[2]['data'] = $file->getContents();
+          }
+        }
+
+        // Sort the CSV array by key.
+        ksort($csv);
+        // Re-index the CSV array.
+        $csv = array_values($csv);
+
+        foreach ($csv as $csv_key => $csv_value) {
+
+          // Convert the CSV to JSON.
+          $array = array_map('str_getcsv', explode("\n", $csv_value['data']));
+          $json = json_encode($array);
+
+          // Convert the JSON to a PHP array.
+          $json_array = json_decode($json, false);
+          // Add the type to the array.
+          $json_array['type'] = $csv_value['type'];
+
+          // Read the first key from the array, which is the column headers.
+          $target_fields = $json_array[0];
+
+          // TODO: move into a vz-specific method?
+          // [VZ IMPORT ONLY] Convert field names to satisfy the validator.
+          foreach ($target_fields as $tfk => $tfv) {
+            // [VZ IMPORT ONLY] Convert the 'import_subject_id' field name to 'subject_repository_id'.
+            if($tfv === 'import_subject_id') {
+              $target_fields[$tfk] = 'subject_repository_id';
+            }
+          }
+
+          // Remove the column headers from the array.
+          array_shift($json_array);
+
+          foreach ($json_array as $key => $value) {
+            // Replace numeric keys with field names.
+            if(is_numeric($key)) {
+              foreach ($value as $k => $v) {
+                $field_name = $target_fields[$k];
+                unset($json_array[$key][$k]);
+                // If present, bring the project_repository_id into the array.
+                $json_array[$key][$field_name] = ($field_name === 'project_repository_id') ? (int)$id : null;
+                // TODO: move into a vz-specific method?
+                // [VZ IMPORT ONLY] Strip 'USNM ' from the 'subject_repository_id' field.
+                $json_array[$key][$field_name] = ($field_name === 'subject_repository_id') ? (int)str_replace('USNM ', '', $v) : $v;
+                // Look-up the ID for the 'item_type' (not when validating data, only when importing data).
+                if ((debug_backtrace()[1]['function'] !== 'validate_metadata') && ($field_name === 'item_type')) {
+                  $item_type_lookup_options = $itemsController->get_item_types($thisContainer);
+                  $json_array[$key][$field_name] = (int)$item_type_lookup_options[$v];
+                }
+              }
+              // Convert the array to an object.
+              $data[$csv_key]['csv'][] = (object)$json_array[$key];
+            }
+
+            if(!is_numeric($key)) {
+              $data[$csv_key]['type'] = $value;
+            }
+          }
+
+        }
+
+      }
+
+      return $data;
+    }
+
+    /**
+   * @param string $data  Data object
+   * @param int $job_id  Job ID
+   * @param int $parent_record_id  Parent record ID
+   * @return array  An array of job log IDs
+   */
+  public function ingest_csv_data($data = null, $job_id = null, $parent_record_id = null) {
+
+    $session = new Session();
+    $data = (object)$data;
+    $job_log_ids = array();
+    // User data.
+    $user = $this->tokenStorage->getToken()->getUser();
+    $data->user_id = $user->getId();
+    // Job ID and parent record ID
+    $data->job_id = !empty($job_id) ? $job_id : false;
+    $data->parent_record_id = !empty($parent_record_id) ? $parent_record_id : false;
+
+    // Just in case: throw a 404 if either job ID or parent record ID aren't passed.
+    if(!$data->job_id) throw $this->createNotFoundException('Job ID not provided.');
+    if(!$data->parent_record_id) throw $this->createNotFoundException('Parent record ID not provided.');
+
+    // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
+    if(!empty($data->parent_record_id)) {
+      $this->repo_storage_controller->setContainer($this->container);
+      $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $data->parent_record_id));
+      // If no project is returned, throw a createNotFoundException (404).
+      if(!$project) throw $this->createNotFoundException('The Project record doesn\'t exist');
+    }
+
+    $this->repo_storage_controller->setContainer($this->container);
+
+    switch ($data->type) {
+      // Ingest subjects
+      case 'subject':
+        // Insert into the job_log table
+        // TODO: Feed the 'job_log_label' to the log leveraging fields from a form submission in the UI.
+        $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_log',
+          'user_id' => $data->user_id,
+          'values' => array(
+            'job_id' => $data->job_id,
+            'job_log_status' => 'start',
+            'job_log_label' => 'Import subjects',
+            'job_log_description' => 'Import started',
+          )
+        ));
+
+        $subject_repository_ids = array();
+
+        foreach ($data->csv as $subject_key => $subject) {
+          // Set the project_repository_id
+          $subject->project_repository_id = (int)$data->parent_record_id;
+          // Insert into the subject table
+          $subject_repository_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'subject',
+            'user_id' => $data->user_id,
+            'values' => (array)$subject
+          ));
+          $subject_repository_ids[$subject->subject_repository_id] = $subject_repository_id;
+
+          // Insert into the job_import_record table
+          $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'job_import_record',
+            'user_id' => $data->user_id,
+            'values' => array(
+              'job_id' => $data->job_id,
+              'record_id' => $subject_repository_id,
+              'project_id' => (int)$data->parent_record_id,
+              'record_table' => 'subject',
+              'description' => $subject->local_subject_id . ' - ' . $subject->subject_display_name,
+            )
+          ));
+
+        }
+
+        // Set the session variable 'subject_repository_ids'.
+        $session->set('subject_repository_ids', $subject_repository_ids);
+
+        // Insert into the job_log table
+        // TODO: Feed the 'job_log_label' to the log leveraging fields from a form submission in the UI.
+        $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_log',
+          'user_id' => $data->user_id,
+          'values' => array(
+            'job_id' => $data->job_id,
+            'job_log_status' => 'finish',
+            'job_log_label' => 'Import subjects',
+            'job_log_description' => 'Import finished',
+          )
+        ));
+        break;
+
+      // Ingest items
+      case 'item':
+        // Insert into the job_log table
+        // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI.
+        $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_log',
+          'user_id' => $data->user_id,
+          'values' => array(
+            'job_id' => $data->job_id,
+            'job_log_status' => 'start',
+            'job_log_label' => 'Import items',
+            'job_log_description' => 'Import started',
+          )
+        ));
+
+        $subject_repository_ids = $session->get('subject_repository_ids');
+
+        foreach ($data->csv as $item_key => $item) {
+          // Set the subject_repository_id
+          $item->subject_repository_id = $subject_repository_ids[$item->subject_repository_id];
+          // Insert into the item table
+          $item_repository_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'item',
+            'user_id' => $data->user_id,
+            'values' => (array)$item
+          ));
+          
+          // Insert into the job_import_record table
+          $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'job_import_record',
+            'user_id' => $data->user_id,
+            'values' => array(
+              'job_id' => $data->job_id,
+              'record_id' => $item_repository_id,
+              'project_id' => (int)$data->parent_record_id,
+              'record_table' => 'item',
+              'description' => $item->item_display_name,
+            )
+          ));
+        }
+
+        // Set the session variable 'subject_repository_ids'.
+        $session->remove('subject_repository_ids');
+
+        // Insert into the job_log table
+        $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_log',
+          'user_id' => $data->user_id,
+          'values' => array(
+            'job_id' => $data->job_id,
+            'job_log_status' => 'finish',
+            'job_log_label' => 'Import items',
+            'job_log_description' => 'Import finished',
+          )
+        ));
+        break;
+    }
+
+    // TODO: return something more than job log IDs?
+    return $job_log_ids;
+  }
 
     /**
      * @Route("/admin/import_metadata/{id}", name="import_metadata", defaults={"id" = null}, methods="GET")
@@ -193,8 +471,6 @@ class ImportController extends Controller
                 'job_log_description' => 'Import started',
               )
             ));
-
-            // $this->u->dumper($subject_repository_ids);
 
             foreach ($csv_value as $item_key => $item) {
               // Set the subject_repository_id
@@ -387,7 +663,6 @@ class ImportController extends Controller
           );
         }
 
-        // $this->u->dumper($project);
       }
 
       return $this->render('import/import_summary_item.html.twig', array(
