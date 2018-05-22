@@ -305,17 +305,17 @@
     // Prevalidate click handler.
     $('.prevalidate-trigger').on('click', function(e) {
 
+      // Set the parentRecordId.
+      let parentRecordId = parentRecordChecker();
+      // Check if the parent record has been selected.
+      if(!parentRecordId) return;
+
       // Display the progress modal.
       $('#uploading-modal-title').empty();
       $('#uploading-modal-title').append('Pre-Validating...');
       $('#uploading-modal-message').empty();
       $('#uploading-modal-message').append('Pre-validation in progress');
       $('#uploading-modal').modal('show');
-
-      // Set the parentRecordId.
-      let parentRecordId = parentRecordChecker();
-      // Check if the parent record has been selected.
-      if(!parentRecordId) return;
 
       // Get queued files.
       let queuedFiles = myDropzone.getAcceptedFiles();
