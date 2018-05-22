@@ -2,10 +2,6 @@
 
 namespace AppBundle\Controller;
 
-// use Symfony\Component\HttpFoundation\Request;
-// use Symfony\Component\HttpFoundation\Response;
-// use Symfony\Component\HttpFoundation\JsonResponse;
-
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\Finder\Finder;
@@ -52,7 +48,7 @@ class BagitController extends Controller
    */
   public function __construct(TokenStorageInterface $token_storage)
   {
-    // Usage: $this->u->dumper($variable);
+
     $this->u = new AppUtilities();
     $this->repo_storage_controller = new RepoStorageHybridController;
     $this->token_storage = $token_storage;
@@ -404,11 +400,6 @@ class BagitController extends Controller
       $return['result'] = 'fail';
     }
 
-    // // User data.
-    // $user = $this->token_storage->getToken()->getUser();
-    // $data->user_id = $user->getId();
-    // $this->u->dumper($this->token_storage);
-
     // Log errors to the database.
     if(isset($return['errors']) && !empty($return['errors'])) {
       $this->log_errors(
@@ -452,9 +443,6 @@ class BagitController extends Controller
     $finder = new Finder();
     $finder->files()->in($localpath . '/');
     $finder->files()->name('*.txt');
-    // $finder->depth('< 10');
-
-    // $this->u->dumper($localpath);
 
     // Create an array of all .txt files found.
     foreach ($finder as $file) {

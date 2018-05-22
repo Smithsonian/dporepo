@@ -52,8 +52,9 @@ class BagitValidationCommand extends ContainerAwareCommand
     // Outputs multiple lines to the console (adding "\n" at the end of each line).
     $output->writeln([
       '',
-      '<bg=green;options=bold>  BagIt Validator  </>',
-      '<bg=green;options=bold>  ===============  </>',
+      '<bg=green;options=bold>  =================  </>',
+      '<bg=green;options=bold>   BagIt Validator   </>',
+      '<bg=green;options=bold>  =================  </>',
       '',
     ]);
 

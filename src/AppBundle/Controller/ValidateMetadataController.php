@@ -116,8 +116,6 @@ class ValidateMetadataController extends Controller
 
       }
 
-      // $this->u->dumper($json_object);
-
       return $json_object;
     }
 
@@ -132,8 +130,6 @@ class ValidateMetadataController extends Controller
      */
     public function validate_metadata($id = null, $thisContainer, $itemsController)
     {
-
-      // $this->u->dumper($id);
 
       $blacklisted_fields = $csv_data = $json_validation_result = array();
 
