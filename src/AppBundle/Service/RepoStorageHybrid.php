@@ -3692,7 +3692,7 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     // Search values
-    if(isset($query_parameters['omit_active_field']) && !$query_parameters['omit_active_field']) {
+    if(!isset($query_parameters['omit_active_field'])) {
       // If not explicitly omitted, add a search against the 'active' field = 1
       $query_parameters['search_params'][] = array('field_names' => array($base_table . '.active'), 'search_values' => array(1), 'comparison' => '=');
     } else {
