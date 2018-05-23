@@ -449,7 +449,14 @@ class BagitController extends Controller
       // Since it's allowed to upload recursive directory structures, a bag can be found anywhere.
       // Get the path to the bag.
       $path_to_bag = str_replace($localpath . '/', '', $file->getPathname());
-      $data['path_to_bag'] = str_replace(basename($file->getRealPath()), '', $path_to_bag);
+      // Path on Unix, Linux, Mac.
+      if(DIRECTORY_SEPARATOR === '/') {
+        $data['path_to_bag'] = $localpath . '/' . str_replace(basename($file->getRealPath()), '', $path_to_bag);
+      }
+      // Path on Windows.
+      if(DIRECTORY_SEPARATOR === '\\') {
+        $data['path_to_bag'] = str_replace(basename($file->getRealPath()), '', $path_to_bag);
+      }
       // Create an array of all BagIt .txt files found.
       $bag_files_found[] = basename($file->getRealPath());
     }
