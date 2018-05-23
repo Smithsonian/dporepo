@@ -729,7 +729,12 @@ class ImportController extends Controller
         $finder->files()->in($this->uploads_directory . $job_id . '/');
 
         foreach ($finder as $file) {
-          $data[] = str_replace($this->uploads_directory . $job_id . '/', '', $file->getPathname());
+          $this_file = str_replace($this->uploads_directory . $job_id, '', $file->getPathname());
+          // The following rigmarole is due to slash differences between Windows and Unix-based systems.
+          $this_file = ltrim($this_file, '\\');
+          $this_file = ltrim($this_file, '/');
+          // The simplified path to the file (minus absolute path structures).
+          $data[] = str_replace('\\' . $file->getPathname(), '', $this_file);
         }
       }
 
