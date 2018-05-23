@@ -253,7 +253,7 @@ class ItemsController extends Controller
             $data[$key] = array(
                 'id' => 'itemId-' . $value['item_repository_id'],
                 'children' => count($dataset_data) ? true : false,
-                'text' => $value['local_item_id'],
+                'text' => $value['item_display_name'],
                 'a_attr' => array('href' => '/admin/projects/datasets/' . $value['project_repository_id'] . '/' . $value['subject_repository_id'] . '/' . $value['item_repository_id']),
             );
         }

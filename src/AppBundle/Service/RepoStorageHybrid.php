@@ -895,6 +895,10 @@ class RepoStorageHybrid implements RepoStorage {
           'table_name' => 'item',
           'field_name' => 'status_type_repository_id',
         ),
+        13 => array(
+          'table_name' => 'item',
+          'field_name' => 'item_display_name',
+        ),
       ),
       'sort_fields' => array(
         0 => array('field_name' => 'item.local_item_id')
