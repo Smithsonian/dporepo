@@ -255,9 +255,9 @@ class SubjectsController extends Controller
           );
           
           if($request->attributes->get('number_first') === 'true') {
-              $data[$key]['text'] = $value['local_subject_id'] . ' - ' . $value['subject_name'];
+              $data[$key]['text'] = $value['local_subject_id'] . ' - ' . $value['subject_display_name'];
           } else {
-              $data[$key]['text'] = $value['subject_name'] . ' - ' . $value['local_subject_id'];
+              $data[$key]['text'] = $value['subject_display_name'] . ' - ' . $value['local_subject_id'];
           }
       }
 
