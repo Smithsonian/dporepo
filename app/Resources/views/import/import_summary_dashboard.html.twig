@@ -157,18 +157,12 @@
             </div>
             <!-- // column 2 -->
           </div>
-          <!-- // row -->
-        </div>
-        <div class="row">
-          <div class="col-sm-12 col-md-12">
-            <div class="panel panel-default panel-spreadsheet hidden">
-              <!-- Panel contents -->
-              <div class="panel-heading">CVS Results <span style="font-size: 1.5rem; font-weight: normal;"><i class="glyphicon glyphicon-info-sign"></i> For now, only for representation of the data. The goal is to allow for edits and resubmission.</span></div>
-              <div id="csv-spreadsheet" class="panel-body">
-              </div>
+          <div class="row hidden" id="panel-spreadsheets">
+            <div class="col-sm-12 col-md-12">
+              <!-- Spreadsheets container (Handsontable) -->
             </div>
           </div>
-          <!-- // column 2 -->
+          <!-- // row -->
         </div>
         <!-- // tab-pane 2 -->
       </div>
@@ -258,7 +252,7 @@
     // console.log($('form[name="uploads_parent_picker_form"]').find('#uploads_parent_picker_form_parent_picker_text'));
 
     var jobId,
-        resultsContainer = $('.panel-spreadsheet').find('.panel-body'),
+        resultsContainer = $('#panel-spreadsheets').find('.col-md-12'),
         loadingGif = $('<img />').attr('src', '/lib/images/spinner.gif').attr('alt', 'loading animation').attr('style', 'width: 140px;'),
         loadingGifContainer = $('<div />').addClass('center-block').attr('style', 'width: 140px;').append(loadingGif);
 
@@ -420,6 +414,9 @@
       }, 5000);
 
     });
+    
+    // Set the spreadsheet count so unique IDs can be assigned to the Handsontable containers.
+    let spreadsheetCount = 1;
 
     myDropzone.on("success", function(file, responseText) {
 
@@ -470,18 +467,29 @@
           // TODO: Make it possible to edit the spreadsheet and resubmit for pre-validation.
           // See: Handsontable
           // https://github.com/handsontable/handsontable
+          let container,
+              hotVarName = 'hot',
+              panel = $('<div />').addClass('panel panel-default panel-spreadsheet'),
+              panelHeading = $('<div />').addClass('panel-heading').text(file.name),
+              panelHeadingContent = $('<span />')
+                .attr('style', 'font-size: 1.5rem; font-weight: normal;')
+                .html('<i class="glyphicon glyphicon-info-sign" style="margin-left: 1.5rem;"></i> For now, only for representation of the data. The goal is to allow for edits and resubmission.'),
+              panelBody = $('<div />').addClass('panel-body').attr('id', 'csv-spreadsheet-' + spreadsheetCount);
 
           // Show the panel-spreadsheet container.
-          $('.panel-spreadsheet').removeClass('hidden');
-          // Clear any previous data.
-          $('.panel-spreadsheet').find('.panel-body').empty();
-          // Add the loading gif.
-          resultsContainer.append(loadingGifContainer);
-          // Then call destroy(), which removes the grid from the DOM.
-          if(typeof hot !== 'undefined') hot.destroy();
+          $('#panel-spreadsheets').removeClass('hidden');
+          // Populate the panel with the heading and body.
+          panelHeading.append(panelHeadingContent);
+          panel.append(panelHeading, panelBody);
+          // Add the panel to the results container.
+          resultsContainer.append(panel);
 
-          var container = document.getElementById('csv-spreadsheet');
-          var hot = new Handsontable(container, {
+          // Initialize Handsontable.
+          container = document.getElementById('csv-spreadsheet-' + spreadsheetCount);
+          // Note: window[hotVarName + spreadsheetCount] is a dynamic variable.
+          // This basically allows for multiple Handsontable instances.
+          // See: https://stackoverflow.com/a/28130158/1298317
+          window[hotVarName + spreadsheetCount] = new Handsontable(container, {
             data: JSON.parse(responseText.csv),
             rowHeaders: true,
             colHeaders: true,
@@ -499,9 +507,9 @@
               let row = validationErrors[i].row.match(/\d/g);
               row = row.join('');
               // Select the rows with errors.
-              hot.selectRows(parseInt(row));
+              window[hotVarName + spreadsheetCount].selectRows(parseInt(row));
 
-              var selected = hot.getSelected();
+              var selected = window[hotVarName + spreadsheetCount].getSelected();
 
               for (var index = 0; index < selected.length; index += 1) {
                 var item = selected[index];
@@ -513,17 +521,19 @@
                 for (var rowIndex = startRow; rowIndex <= endRow; rowIndex += 1) {
                   for (var columnIndex = startCol; columnIndex <= endCol; columnIndex += 1) {
                     // Set the text-danger CSS class on the row containing the error.
-                    hot.setCellMeta(rowIndex, columnIndex, 'className', 'text-danger');
+                    window[hotVarName + spreadsheetCount].setCellMeta(rowIndex, columnIndex, 'className', 'text-danger');
                   }
                 }
               }
 
             }
-            hot.deselectCell();
-            hot.render();
+            window[hotVarName + spreadsheetCount].deselectCell();
+            window[hotVarName + spreadsheetCount].render();
           }
         }
       }
+
+      spreadsheetCount++;
     });
 
     // Update the total progress bar
@@ -618,6 +628,8 @@
       $('.directory-structure').remove();
       // Clear previous validation results from the validation panel.
       $('.panel-validation-results').find('.panel-body').empty();
+      // Remove spreadsheets.
+      resultsContainer.empty();
     };
 
     function parentRecordChecker() {
