@@ -264,7 +264,7 @@
     previewNode.parentNode.removeChild(previewNode);
 
     // See: http://www.dropzonejs.com/#configuration-options
-    var myDropzone = new Dropzone(document.body, { // Make the whole body a dropzone
+    var uploadsDropzone = new Dropzone(document.body, { // Make the whole body a dropzone
       url: "{{ oneup_uploader_endpoint('repository') }}", // Set the url
       parallelUploads: 1,
       previewTemplate: previewTemplate,
@@ -280,7 +280,7 @@
       dictInvalidFileType: "File type not allowed"
     });
 
-    myDropzone.on("addedfile", function(file) {
+    uploadsDropzone.on("addedfile", function(file) {
 
       if(typeof file.fullPath !== 'undefined'){
 
@@ -293,7 +293,7 @@
 
       }
       // Hookup the start button
-      // file.previewElement.querySelector(".start").onclick = function() { myDropzone.enqueueFile(file); };
+      // file.previewElement.querySelector(".start").onclick = function() { uploadsDropzone.enqueueFile(file); };
     });
 
     // Prevalidate click handler.
@@ -305,7 +305,7 @@
       if(!parentRecordId) return;
 
       // Get queued files.
-      let queuedFiles = myDropzone.getAcceptedFiles();
+      let queuedFiles = uploadsDropzone.getAcceptedFiles();
       // Check if files have been added to the queue.
       if(!queuedFilesChecker(queuedFiles)) return;
 
@@ -331,7 +331,7 @@
             // Set a custom parameter, 'prevalidate', so it can be used within the 'success' function.
             queuedFiles[i].prevalidate = true;
             // Start the upload.
-            myDropzone.enqueueFile(queuedFiles[i]);
+            uploadsDropzone.enqueueFile(queuedFiles[i]);
             // Don't display the progress bar.
             document.querySelector("#total-progress").style.opacity = "0";
           }
@@ -348,7 +348,7 @@
             reader.addEventListener('loadend', function(event) {
               let manifest = event.target.result,
                   manifestArray = manifest.split(/\r?\n/),
-                  acceptedFiles = myDropzone.getAcceptedFiles();
+                  acceptedFiles = uploadsDropzone.getAcceptedFiles();
 
               // Process the manifest to get all of the files count and names.
               for (var i = 0; i < manifestArray.length; i++) {
@@ -418,7 +418,7 @@
     // Set the spreadsheet count so unique IDs can be assigned to the Handsontable containers.
     let spreadsheetCount = 1;
 
-    myDropzone.on("success", function(file, responseText) {
+    uploadsDropzone.on("success", function(file, responseText) {
 
       let fileExtension = getExtension(file.name);
 
@@ -537,11 +537,11 @@
     });
 
     // Update the total progress bar
-    myDropzone.on("totaluploadprogress", function(progress) {
+    uploadsDropzone.on("totaluploadprogress", function(progress) {
       document.querySelector("#total-progress .progress-bar").style.width = progress + "%";
     });
 
-    myDropzone.on("sending", function(file, xhr, formData) {
+    uploadsDropzone.on("sending", function(file, xhr, formData) {
 
       // Show the total progress bar when upload starts
       document.querySelector("#total-progress").style.opacity = "1";
@@ -576,7 +576,7 @@
     });
 
     // Hide the total progress bar when nothing's uploading anymore
-    myDropzone.on("queuecomplete", function(progress) {
+    uploadsDropzone.on("queuecomplete", function(progress) {
       document.querySelector("#total-progress").style.opacity = "0";
       $(".file-row").find('.progress').removeClass('progress-striped active').addClass('progress-bar-success');
 
@@ -610,7 +610,7 @@
       // Check if the parent record has been selected.
       let parentRecordId = parentRecordChecker();
       // Begin the uploading process.
-      myDropzone.enqueueFiles(myDropzone.getFilesWithStatus(Dropzone.ADDED));
+      uploadsDropzone.enqueueFiles(uploadsDropzone.getFilesWithStatus(Dropzone.ADDED));
       // Prepare and display the modal.
       $('#uploading-modal-title').empty();
       $('#uploading-modal-title').append('Uploading and Importing Data');
@@ -624,7 +624,7 @@
 
     document.querySelector("#actions .cancel").onclick = function() {
       // Remove files from Dropzone.
-      myDropzone.removeAllFiles(true);
+      uploadsDropzone.removeAllFiles(true);
       $('.directory-structure').remove();
       // Clear previous validation results from the validation panel.
       $('.panel-validation-results').find('.panel-body').empty();
