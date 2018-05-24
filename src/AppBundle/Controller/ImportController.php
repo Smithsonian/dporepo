@@ -175,10 +175,10 @@ class ImportController extends Controller
                 // [VZ IMPORT ONLY] Strip 'USNM ' from the 'subject_repository_id' field.
                 $json_array[$key][$field_name] = ($field_name === 'subject_repository_id') ? (int)str_replace('USNM ', '', $v) : $v;
                 // Look-up the ID for the 'item_type' (not when validating data, only when importing data).
-                if ((debug_backtrace()[1]['function'] !== 'validate_metadata') && ($field_name === 'item_type')) {
-                  $item_type_lookup_options = $itemsController->get_item_types($thisContainer);
-                  $json_array[$key][$field_name] = (int)$item_type_lookup_options[$v];
-                }
+                // if ((debug_backtrace()[1]['function'] !== 'validate_metadata') && ($field_name === 'item_type')) {
+                //   $item_type_lookup_options = $itemsController->get_item_types($thisContainer);
+                //   $json_array[$key][$field_name] = (int)$item_type_lookup_options[$v];
+                // }
               }
               // Convert the array to an object.
               $data[$csv_key]['csv'][] = (object)$json_array[$key];

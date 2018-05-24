@@ -309,6 +309,9 @@
       // Check if files have been added to the queue.
       if(!queuedFilesChecker(queuedFiles)) return;
 
+      // Generate a temporary job ID.
+      generateJobId(parentRecordId, true);
+
       // Display the progress modal.
       $('#uploading-modal-title').empty();
       $('#uploading-modal-title').append('Pre-Validating...');
@@ -316,88 +319,80 @@
       $('#uploading-modal-message').append('Pre-validation in progress');
       $('#uploading-modal').modal('show');
       
-      // Give some time (2 seconds) to create the job record in the database.
-      setTimeout(function() {
+      for (var i = 0; i < queuedFiles.length; i++) {
 
-        for (var i = 0; i < queuedFiles.length; i++) {
+        // Set a custom parameter, 'parentRecordId', so it can be passed to the back-end.
+        queuedFiles[i].parentRecordId = parentRecordId;
+        // Get the extension of the file.
+        let fileExtension = getExtension(queuedFiles[i].name);
 
-          // Set a custom parameter, 'parentRecordId', so it can be passed to the back-end.
-          queuedFiles[i].parentRecordId = parentRecordId;
-          // Get the extension of the file.
-          let fileExtension = getExtension(queuedFiles[i].name);
-
-          // Pre-validate CSV files, files count, and file names.
-          if(fileExtension === 'csv'){
-            // Set a custom parameter, 'prevalidate', so it can be used within the 'success' function.
-            queuedFiles[i].prevalidate = true;
-            // Start the upload.
-            uploadsDropzone.enqueueFile(queuedFiles[i]);
-            // Don't display the progress bar.
-            document.querySelector("#total-progress").style.opacity = "0";
-          }
-
-          // Pre-validate files count and names.
-          if(queuedFiles[i].name === 'manifest-sha1.txt') {
-
-            let allManifestFiles = [],
-                allAcceptedFiles = [],
-                reader = new FileReader();
-
-            // Read the manifest file.
-            reader.readAsText(queuedFiles[i]);
-            reader.addEventListener('loadend', function(event) {
-              let manifest = event.target.result,
-                  manifestArray = manifest.split(/\r?\n/),
-                  acceptedFiles = uploadsDropzone.getAcceptedFiles();
-
-              // Process the manifest to get all of the files count and names.
-              for (var i = 0; i < manifestArray.length; i++) {
-                if(manifestArray[i].length) {
-                  let currentLineArray = manifestArray[i].split(' ');
-                      currentFullFilePath = currentLineArray[1].split('/');
-                  // Add the file to the allManifestFiles array.
-                  allManifestFiles.push(currentFullFilePath[currentFullFilePath.length - 1]);
-                }
-              }
-
-              // Process the acceptedFiles to get all of the file names.
-              for (var i = 0; i < acceptedFiles.length; i++) {
-                if((acceptedFiles[i].name.indexOf('.txt') === -1) && (acceptedFiles[i].name.indexOf('.csv') === -1)) {
-                  allAcceptedFiles.push(acceptedFiles[i].name);
-                }
-              }
-
-              // Get the difference between the two arrays of files, 
-              // using the manifest as the authoritative source.
-              var diff = $(allManifestFiles).not(allAcceptedFiles).get();
-
-              // If there are file-based errors, populate the panel-body.
-              if(diff.length) {
-                for (var i = 0; i < diff.length; i++) {
-                  let fileMessage = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<strong>Files Pre-validation:</strong> Missing file: ' + diff[i]);
-                  // Append the message to the panel-body container.
-                  $('.panel-validation-results').find('.panel-body').append(fileMessage);
-                }
-              }
-
-              // If there are no file-based errors, display a message.
-              if(!diff.length) {
-                // The message.
-                let message = $('<div />').addClass('alert alert-success files-validation-success').attr('role', 'alert').html('<strong>Files Pre-validation:</strong> No file validation errors found.');
-                // Append the message to the panel-body container.
-                $('.panel-validation-results').find('.panel-body').append(message);
-              }
-
-            });
-            
-          }
-          
+        // Pre-validate CSV files, files count, and file names.
+        if(fileExtension === 'csv'){
+          // Set a custom parameter, 'prevalidate', so it can be used within the 'success' function.
+          queuedFiles[i].prevalidate = true;
+          // Start the upload.
+          uploadsDropzone.enqueueFile(queuedFiles[i]);
+          // Don't display the progress bar.
+          document.querySelector("#total-progress").style.opacity = "0";
         }
 
-        // Hide the progress modal.
-        $('#uploading-modal').modal('hide');
+        // Pre-validate files count and names.
+        if(queuedFiles[i].name === 'manifest-sha1.txt') {
 
-      }, 2000);
+          let allManifestFiles = [],
+              allAcceptedFiles = [],
+              reader = new FileReader();
+
+          // Read the manifest file.
+          reader.readAsText(queuedFiles[i]);
+          reader.addEventListener('loadend', function(event) {
+            let manifest = event.target.result,
+                manifestArray = manifest.split(/\r?\n/),
+                acceptedFiles = uploadsDropzone.getAcceptedFiles();
+
+            // Process the manifest to get all of the files count and names.
+            for (var i = 0; i < manifestArray.length; i++) {
+              if(manifestArray[i].length) {
+                let currentLineArray = manifestArray[i].split(' ');
+                    currentFullFilePath = currentLineArray[1].split('/');
+                // Add the file to the allManifestFiles array.
+                allManifestFiles.push(currentFullFilePath[currentFullFilePath.length - 1]);
+              }
+            }
+
+            // Process the acceptedFiles to get all of the file names.
+            for (var i = 0; i < acceptedFiles.length; i++) {
+              if((acceptedFiles[i].name.indexOf('.txt') === -1) && (acceptedFiles[i].name.indexOf('.csv') === -1)) {
+                allAcceptedFiles.push(acceptedFiles[i].name);
+              }
+            }
+
+            // Get the difference between the two arrays of files, 
+            // using the manifest as the authoritative source.
+            var diff = $(allManifestFiles).not(allAcceptedFiles).get();
+
+            // If there are file-based errors, populate the panel-body.
+            if(diff.length) {
+              for (var i = 0; i < diff.length; i++) {
+                let fileMessage = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<strong>Files Pre-validation:</strong> Missing file: ' + diff[i]);
+                // Append the message to the panel-body container.
+                $('.panel-validation-results').find('.panel-body').append(fileMessage);
+              }
+            }
+
+            // If there are no file-based errors, display a message.
+            if(!diff.length) {
+              // The message.
+              let message = $('<div />').addClass('alert alert-success files-validation-success').attr('role', 'alert').html('<strong>Files Pre-validation:</strong> No file validation errors found.');
+              // Append the message to the panel-body container.
+              $('.panel-validation-results').find('.panel-body').append(message);
+            }
+
+          });
+          
+        }
+        
+      }
 
       // If there are no errors, change the states of the action buttons.
       setTimeout(function() {
@@ -411,7 +406,12 @@
           // Reveal the "Start Upload" button.
           $('.start').removeClass('hidden');
         }
-      }, 5000);
+      }, 2000);
+
+      // Hide the progress modal.
+      setTimeout(function() {
+        $('#uploading-modal').modal('hide');
+      }, 3000);
 
     });
     
@@ -605,21 +605,32 @@
     // The "add files" button doesn't need to be setup because the config
     // `clickable` has already been specified.
     document.querySelector("#actions .start").onclick = function() {
-      // Get the job ID from the data attribute of the prevalidate-trigger.
-      let jobId = $('.prevalidate-trigger').attr('data-jobid');
+
       // Check if the parent record has been selected.
       let parentRecordId = parentRecordChecker();
-      // Begin the uploading process.
-      uploadsDropzone.enqueueFiles(uploadsDropzone.getFilesWithStatus(Dropzone.ADDED));
-      // Prepare and display the modal.
-      $('#uploading-modal-title').empty();
-      $('#uploading-modal-title').append('Uploading and Importing Data');
-      $('#uploading-modal-message').empty();
-      let p1 = $('<p />').text('Upload and import in progress...');
-      let p2 = $('<p />').text('This page will redirect once the upload process is complete. So, kick back and relax while the system shuffles things into place.');
-      let p3 = $('<p />').html('This job\'s <a href="/admin/import/' + jobId + '/' + parentRecordId + '" target="_blank">upload/import details page</a> (opens in a new tab/window).');
-      $('#uploading-modal-message').append(p1, p2, p3);
-      $('#uploading-modal').modal('show');
+
+      // Generate a real job ID.
+      generateJobId(parentRecordId, false);
+
+      // Give some time (2 seconds) to create the job record in the database.
+      setTimeout(function() {
+
+        // Get the job ID from the data attribute of the prevalidate-trigger.
+        let jobId = $('.prevalidate-trigger').attr('data-jobid');
+        // Begin the uploading process.
+        uploadsDropzone.enqueueFiles(uploadsDropzone.getFilesWithStatus(Dropzone.ADDED));
+        // Prepare and display the modal.
+        $('#uploading-modal-title').empty();
+        $('#uploading-modal-title').append('Uploading and Importing Data');
+        $('#uploading-modal-message').empty();
+        let p1 = $('<p />').text('Upload and import in progress...');
+        let p2 = $('<p />').text('This page will redirect once the upload process is complete. So, kick back and relax while the system shuffles things into place.');
+        let p3 = $('<p />').html('This job\'s <a href="/admin/import/' + jobId + '/' + parentRecordId + '" target="_blank">upload/import details page</a> (opens in a new tab/window).');
+        $('#uploading-modal-message').append(p1, p2, p3);
+        $('#uploading-modal').modal('show');
+
+      }, 2000);
+
     };
 
     document.querySelector("#actions .cancel").onclick = function() {
@@ -644,26 +655,6 @@
         });
         return false;
       } else {
-
-        // Generate a jobId.
-        // TODO: If the jobId is never used, 
-        // then it will need to be removed from the database.
-        if(typeof $('.prevalidate-trigger').attr('data-jobid') === 'undefined') {
-          $.ajax({
-            'type': 'GET'
-            ,'global': false
-            ,'dataType': 'text'
-            ,'url': '/admin/create_job/' + parentRecordId
-            ,success: function(result) {
-              if(result) {
-                var res = JSON.parse(result);
-                // Add the job ID as a data attribute of the prevalidate-trigger.
-                $('.prevalidate-trigger').attr('data-jobid', res.jobId);
-              }
-            }
-          });
-        }
-
         return parentRecordId;
       }
     }
@@ -678,6 +669,32 @@
         return false;
       }
       return true;
+    }
+
+    function generateJobId(parentRecordId, temporary) {
+
+      if((typeof temporary !== 'undefined') && temporary) {
+        // Generate a temporary jobId.
+        var tempJobId = 'temp-' + Math.floor(Math.random() * 2000) + 1;
+        // Add the job ID as a data attribute of the prevalidate-trigger.
+        $('.prevalidate-trigger').attr('data-jobid', tempJobId);
+      } else {
+        // Generate a real jobId.
+        $.ajax({
+          'type': 'GET'
+          ,'global': false
+          ,'dataType': 'text'
+          ,'url': '/admin/create_job/' + parentRecordId
+          ,success: function(result) {
+            if(result) {
+              var res = JSON.parse(result);
+              // Add the job ID as a data attribute of the prevalidate-trigger.
+              $('.prevalidate-trigger').attr('data-jobid', res.jobId);
+            }
+          }
+        });
+      }
+
     }
 
     function getExtension(fileName) {
