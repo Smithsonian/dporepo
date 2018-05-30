@@ -743,30 +743,94 @@ class ImportController extends Controller
     /**
      * @Route("/admin/import/get_parent_records", name="get_parent_records", methods="POST")
      *
-     * @param ProjectsController $project ProjectsController class
      * @param Request $request Symfony's request object
      * @return \Symfony\Component\HttpFoundation\JsonResponse The query result
      */
-    public function getParentRecords(ProjectsController $project, Request $request)
+    public function getParentRecords(Request $request)
     {
-      $data = array();
+      $data = $params = array();
 
       $req = $request->request->all();
       $params['query'] = !empty($req['query']) ? $req['query'] : false;
       $params['limit'] = !empty($req['limit']) ? $req['limit'] : false;
       $params['render'] = !empty($req['render']) ? $req['render'] : false;
       $params['property'] = !empty($req['property']) ? $req['property'] : false;
+      // $params['record_type'] = !empty($req['recordType']) ? $req['recordType'] : 'project';
 
-      // Query the database.
-      $results = $project->get_projects($this->container, $params);
+      $record_types = array(
+        'project',
+        'subject',
+        'item',
+        'capture_dataset',
+      );
 
-      // Format the $data array for the typeahead-bundle.
-      if(!empty($results)) {
-        foreach ($results as $key => $value) {
-          $data[] = array('id' => $value['project_repository_id'], 'value' => $value['project_name']);
+      // switch($params['record_type']) {
+      //   case 'subject':
+      //     $params['field_name'] = 'subject_display_name';
+      //     $params['id_field_name'] = 'subject_repository_id';
+      //     break;
+      //   case 'item':
+      //     $params['field_name'] = 'item_display_name';
+      //     $params['id_field_name'] = 'item_repository_id';
+      //     break;
+      //   case 'capture_dataset':
+      //     $params['field_name'] = 'capture_dataset_name';
+      //     $params['id_field_name'] = 'capture_dataset_repository_id';
+      //     break;
+      //   default: // project
+      //     $params['field_name'] = 'project_name';
+      //     $params['id_field_name'] = 'project_repository_id';
+      // }
+
+      foreach ($record_types as $key => $value) {
+
+        $params['record_type'] = $value;
+
+        switch($value) {
+          case 'subject':
+            $params['field_name'] = 'subject_display_name';
+            $params['id_field_name'] = 'subject_repository_id';
+            break;
+          case 'item':
+            $params['field_name'] = 'item_display_name';
+            $params['id_field_name'] = 'item_repository_id';
+            break;
+          case 'capture_dataset':
+            $params['field_name'] = 'capture_dataset_name';
+            $params['id_field_name'] = 'capture_dataset_repository_id';
+            break;
+          default: // project
+            $params['field_name'] = 'project_name';
+            $params['id_field_name'] = 'project_repository_id';
+        }
+
+        $this->repo_storage_controller->setContainer($this->container);
+
+        // Query the database.
+        $results = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => $params['record_type'],
+          'fields' => array(),
+          'limit' => (int)$params['limit'],
+          'search_params' => array(
+            // Lots of variables going on. Here's an example of what it looks like without variables:
+            // 0 => array('field_names' => array('project.active'), 'search_values' => array(1), 'comparison' => '='),
+            // 1 => array('field_names' => array('project.project_name'), 'search_values' => $params['query'], 'comparison' => 'LIKE')
+            0 => array('field_names' => array($params['record_type'] . '.active'), 'search_values' => array(1), 'comparison' => '='),
+            1 => array('field_names' => array($params['record_type'] . '.' . $params['field_name']), 'search_values' => $params['query'], 'comparison' => 'LIKE')
+          ),
+          'search_type' => 'AND',
+          )
+        );
+
+        // Format the $data array for the typeahead-bundle.
+        // TODO: Add the project ID to the returned array so it can be passed to the 'job' database table.
+        if(!empty($results)) {
+          foreach ($results as $key => $value) {
+            $data[] = array('id' => $value[ $params['id_field_name'] ], 'value' => $value[ $params['field_name'] ] . ' [ ' . strtoupper(str_replace('_', ' ', $params['record_type'])) . ' ]');
+          }
         }
       }
-      
+
       // Return data as JSON
       return $this->json($data);
     }

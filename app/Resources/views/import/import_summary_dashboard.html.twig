@@ -53,6 +53,21 @@
               <!-- Typeahead form element -->
               {{ form_start(form) }}
               <h3>Choose a Parent Record</h3>
+              {# <p><strong>Search By:</strong></p>
+              <div class="form-group">
+                <label class="radio-inline">
+                  <input type="radio" name="recordType" id="inlineRadio1" value="project" checked="checked"> Project
+                </label>
+                <label class="radio-inline">
+                  <input type="radio" name="recordType" id="inlineRadio2" value="subject"> Subject
+                </label>
+                <label class="radio-inline">
+                  <input type="radio" name="recordType" id="inlineRadio3" value="item"> Item
+                </label>
+                <label class="radio-inline">
+                  <input type="radio" name="recordType" id="inlineRadio4" value="capture_dataset"> Capture Dataset
+                </label>
+              </div> #}
               {{ form_row(form.parent_picker) }}
               {{ form_end(form) }}
             </div>
@@ -642,6 +657,27 @@
       // Remove spreadsheets.
       resultsContainer.empty();
     };
+
+    // // Typeahead - Custom Source Callback
+    // // https://github.com/lifo101/typeahead-bundle#custom-source-callback
+    // function get_parent_records(query, process) {
+
+    //   let recordType = $('[name="recordType"]:checked').val();
+
+    //   $.post('/admin/import/get_parent_records', {query: query, recordType: recordType}, 'json')
+    //     .success(function (data) {
+    //       // Must convert the data array into a flat list of strings. 
+    //       // If your lookup function already returns a flat list, then $.map() is not needed.
+    //       process($.map(data, function(a){
+            
+    //         $('#uploads_parent_picker_form_parent_picker').attr('data-suck', 'dick');
+    //         return a.value;
+    //       }));
+    //     });
+        
+    //     let thisVal = $('#uploads_parent_picker_form_parent_picker_text').val();
+    //     $('#uploads_parent_picker_form_parent_picker').val(thisVal);
+    // }
 
     function parentRecordChecker() {
       // Parent record ID value.
