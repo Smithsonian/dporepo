@@ -724,7 +724,7 @@ class ImportController extends Controller
 
       $data = [];
 
-      if(!empty($job_id)) {
+      if(!empty($job_id) && is_dir($this->uploads_directory . $job_id . '/')) {
         $finder = new Finder();
         $finder->files()->in($this->uploads_directory . $job_id . '/');
 
