@@ -88,7 +88,7 @@ class ImportController extends Controller
     {
       $job_log_ids = array();      
 
-      if(!empty($job_id) && !empty($parent_record_id)) {
+      if(!empty($job_id) && !empty($parent_record_id) && !empty($record_type)) {
         // Prepare the data.
         $data = $this->prepare_data($this->uploads_directory . $job_id, $this->container, $items);
         // $this->u->dumper($data);
@@ -97,6 +97,22 @@ class ImportController extends Controller
             $job_log_ids = $this->ingest_csv_data($csv_value, $job_id, $parent_record_id);
           }
         }
+      }
+
+      // Update the job table to indicate that the CSV import failed.
+      if(!empty($job_id) && empty($job_log_ids)) {
+        $this->repo_storage_controller->setContainer($this->container);
+        $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job',
+          'record_id' => $job_id,
+          'user_id' => $this->getUser()->getId(),
+          'values' => array(
+            'job_status' => 'failed',
+            'date_completed' => date('Y-m-d H:i:s'),
+            'qa_required' => 0,
+            'qa_approved_time' => null,
+          )
+        ));
       }
 
       return $this->json($job_log_ids);

@@ -608,6 +608,16 @@
           ,success: function(result) {
             if(result && result.length) {
               document.location.href = '/admin/import/' + jobId + '/' + parentRecordId + '?first=1';
+            } else {
+              $('#uploading-modal').modal('hide');
+
+              swal({
+                title: 'Error',
+                text: 'CSV import failed',
+                type: 'warning',
+              });
+
+              $('.start').attr('disabled', 'disabled');
             }
           }
         });
