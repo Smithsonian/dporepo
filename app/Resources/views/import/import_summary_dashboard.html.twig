@@ -674,7 +674,7 @@
     //         return a.value;
     //       }));
     //     });
-        
+
     //     let thisVal = $('#uploads_parent_picker_form_parent_picker_text').val();
     //     $('#uploads_parent_picker_form_parent_picker').val(thisVal);
     // }
@@ -693,6 +693,18 @@
       } else {
         return parentRecordId;
       }
+    }
+
+    function getRecordType() {
+      // Parent record text value.
+      let parentRecordText = $('#uploads_parent_picker_form_parent_picker_text').val();
+      // Get the string found between the brackets (e.g. [ subject ] would return 'subject').
+      parentRecordText = parentRecordText.substring(parentRecordText.lastIndexOf("[")+1,parentRecordText.lastIndexOf("]"));
+      // Clean it up...
+      parentRecordText = parentRecordText.toLowerCase();
+      parentRecordText = parentRecordText.trim();
+      parentRecordText = parentRecordText.replace(' ', '_');
+      return parentRecordText;
     }
 
     function queuedFilesChecker(files) {
@@ -715,12 +727,16 @@
         // Add the job ID as a data attribute of the prevalidate-trigger.
         $('.prevalidate-trigger').attr('data-jobid', tempJobId);
       } else {
+
+        // Get the parent record type.
+        let recordType = getRecordType();
+
         // Generate a real jobId.
         $.ajax({
           'type': 'GET'
           ,'global': false
           ,'dataType': 'text'
-          ,'url': '/admin/create_job/' + parentRecordId
+          ,'url': '/admin/create_job/' + parentRecordId + '/' + recordType
           ,success: function(result) {
             if(result) {
               var res = JSON.parse(result);

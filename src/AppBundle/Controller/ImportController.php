@@ -836,19 +836,31 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/create_job/{project_id}", name="create_job", methods="GET")
+     * @Route("/admin/create_job/{base_record_id}/{record_type}", name="create_job", defaults={"base_record_id" = null, "record_type" = null}, methods="GET")
      *
-     * @param $project_id The project ID
+     * @param int $project_id The project ID
+     * @param string $record_type The record type (e.g. subject)
      * @return JSON
      */
-    public function createJob($project_id, Request $request)
+    public function createJob($base_record_id, $record_type, Request $request)
     {
       $job_id = null;
+      $parent_records = [];
+      $this->repo_storage_controller->setContainer($this->container);
 
-      if(!empty($project_id)) {
+      if(!empty($base_record_id) && !empty($record_type)) {
+        $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
+          'base_record_id' => $base_record_id,
+          'record_type' => $record_type,
+        ));
+      }
+
+      // If there are no results for a parent Project record ID, throw a createNotFoundException (404).
+      if(empty($parent_records)) throw $this->createNotFoundException('Could not establish the parent project ID');
+
+      if(!empty($parent_records) && isset($parent_records['project_repository_id'])) {
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $this->repo_storage_controller->setContainer($this->container);
-        $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $project_id));
+        $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $parent_records['project_repository_id']));
         if(!$project) throw $this->createNotFoundException('The Project record does not exist');
       }
 
