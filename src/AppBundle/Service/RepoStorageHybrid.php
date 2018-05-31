@@ -3168,7 +3168,65 @@ class RepoStorageHybrid implements RepoStorage {
 
     return array('return' => 'success'); //, 'data' => $return);
 
-}
+  }
+
+  /**
+   * Get Parent Records
+   *
+   * @param array $params An array of parameters, namely 'base_record_id' and 'record_type'.
+   * @return array An array of parent records.
+   */
+  public function getParentRecords($params = array()) {
+
+    $data = array();
+
+    if(isset($params['base_record_id']) && isset($params['record_type'])) {
+
+      switch($params['record_type']) {
+
+        case 'item':
+          $params['id_field_name'] = 'item.item_repository_id';
+          $params['select'] = 'project.project_repository_id, subject.subject_repository_id, item.item_repository_id';
+          $params['left_joins'] = 'LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
+              LEFT JOIN project ON project.project_repository_id = subject.project_repository_id';
+          break;
+
+        case 'capture_dataset':
+          $params['id_field_name'] = 'capture_dataset.capture_dataset_repository_id';
+          $params['select'] = 'project.project_repository_id, subject.subject_repository_id, item.item_repository_id, capture_dataset.capture_dataset_repository_id';
+          $params['left_joins'] = 'LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
+              LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
+              LEFT JOIN project ON project.project_repository_id = subject.project_repository_id';
+          break;
+
+        case 'capture_dataset_element':
+          $params['id_field_name'] = 'capture_data_element.capture_data_element_repository_id';
+          $params['select'] = 'project.project_repository_id, subject.subject_repository_id, item.item_repository_id, capture_dataset.capture_dataset_repository_id, capture_data_element.capture_data_element_repository_id';
+          $params['left_joins'] = 'LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
+              LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
+              LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
+              LEFT JOIN project ON project.project_repository_id = subject.project_repository_id';
+          break;
+
+        default: // subject
+          $params['id_field_name'] = 'subject.subject_repository_id';
+          $params['select'] = 'project.project_repository_id, subject.subject_repository_id';
+          $params['left_joins'] = 'LEFT JOIN project ON project.project_repository_id = subject.project_repository_id';
+
+      }
+
+      $sql = "SELECT " . $params['select'] . "
+              FROM " . $params['record_type']
+               . ' ' . $params['left_joins'] .
+              " WHERE " . $params['id_field_name'] . " = :base_record_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":base_record_id", $params['base_record_id'], PDO::PARAM_INT);
+      $statement->execute();
+      $data = $statement->fetch(PDO::FETCH_ASSOC);
+    }
+
+    return $data;
+  }
 
   public function markSubjectInactive($params) {
 
