@@ -77,24 +77,25 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/import_csv/{job_id}/{parent_record_id}", name="import_csv", defaults={"job_id" = null, "parent_record_id" = null}, methods="GET")
+     * @Route("/admin/import_csv/{job_id}/{parent_project_id}/{parent_record_id}", name="import_csv", defaults={"job_id" = null, "parent_project_id" = null, "parent_record_id" = null}, methods="GET")
      *
      * @param int $job_id Job ID
-     * @param int $parent_record_id Project ID
+     * @param int $parent_project_id Project ID
+     * @param int $parent_record_id Parent record ID
      * @param object $request Symfony's request object
      * @param object $validate ValidateMetadataController class
      */
-    public function import_csv($job_id, $parent_record_id, Request $request, ValidateMetadataController $validate, ItemsController $items)
+    public function import_csv($job_id, $parent_project_id, $parent_record_id, Request $request, ValidateMetadataController $validate, ItemsController $items)
     {
       $job_log_ids = array();      
 
-      if(!empty($job_id) && !empty($parent_record_id) && !empty($record_type)) {
+      if(!empty($job_id) && !empty($parent_project_id) && !empty($parent_record_id)) {
         // Prepare the data.
         $data = $this->prepare_data($this->uploads_directory . $job_id, $this->container, $items);
-        // $this->u->dumper($data);
+
         if(!empty($data)) {
           foreach($data as $csv_key => $csv_value) {
-            $job_log_ids = $this->ingest_csv_data($csv_value, $job_id, $parent_record_id);
+            $job_log_ids = $this->ingest_csv_data($csv_value, $job_id, $parent_project_id, $parent_record_id);
           }
         }
       }
@@ -146,9 +147,14 @@ class ImportController extends Controller
             $csv[2]['type'] = 'item';
             $csv[2]['data'] = $file->getContents();
           }
+          if(stristr($file->getRealPath(), 'capture_datasets')) {
+            $csv[2]['type'] = 'capture_dataset';
+            $csv[2]['data'] = $file->getContents();
+          }
         }
 
         // Sort the CSV array by key.
+
         ksort($csv);
         // Re-index the CSV array.
         $csv = array_values($csv);
@@ -218,7 +224,7 @@ class ImportController extends Controller
    * @param int $parent_record_id  Parent record ID
    * @return array  An array of job log IDs
    */
-  public function ingest_csv_data($data = null, $job_id = null, $parent_record_id = null) {
+  public function ingest_csv_data($data = null, $job_id = null, $parent_project_id = null, $parent_record_id = null) {
 
     $session = new Session();
     $data = (object)$data;
@@ -228,16 +234,18 @@ class ImportController extends Controller
     $data->user_id = $user->getId();
     // Job ID and parent record ID
     $data->job_id = !empty($job_id) ? $job_id : false;
+    $data->parent_project_id = !empty($parent_project_id) ? $parent_project_id : false;
     $data->parent_record_id = !empty($parent_record_id) ? $parent_record_id : false;
 
     // Just in case: throw a 404 if either job ID or parent record ID aren't passed.
     if(!$data->job_id) throw $this->createNotFoundException('Job ID not provided.');
+    if(!$data->parent_project_id) throw $this->createNotFoundException('Parent Project record ID not provided.');
     if(!$data->parent_record_id) throw $this->createNotFoundException('Parent record ID not provided.');
 
-    // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-    if(!empty($data->parent_record_id)) {
+    // Check to see if the parent project record exists/active, and if it doesn't, throw a createNotFoundException (404).
+    if(!empty($data->parent_project_id)) {
       $this->repo_storage_controller->setContainer($this->container);
-      $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $data->parent_record_id));
+      $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $data->parent_project_id));
       // If no project is returned, throw a createNotFoundException (404).
       if(!$project) throw $this->createNotFoundException('The Project record doesn\'t exist');
     }
@@ -320,6 +328,7 @@ class ImportController extends Controller
           )
         ));
 
+        $item_repository_ids = array();
         $subject_repository_ids = $session->get('subject_repository_ids');
 
         foreach ($data->csv as $item_key => $item) {
@@ -331,6 +340,7 @@ class ImportController extends Controller
             'user_id' => $data->user_id,
             'values' => (array)$item
           ));
+          $item_repository_ids[$item->item_repository_id] = $item_repository_id;
           
           // Insert into the job_import_record table
           $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
@@ -346,8 +356,10 @@ class ImportController extends Controller
           ));
         }
 
-        // Set the session variable 'subject_repository_ids'.
+        // Unset the session variable 'subject_repository_ids'.
         $session->remove('subject_repository_ids');
+        // Set the session variable 'item_repository_ids'.
+        $session->set('item_repository_ids', $item_repository_ids);
 
         // Insert into the job_log table
         $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
@@ -361,6 +373,84 @@ class ImportController extends Controller
           )
         ));
         break;
+
+
+
+
+
+
+      // Ingest capture datasets
+      case 'capture_dataset':
+
+        // $this->u->dumper($data);
+
+        // Insert into the job_log table
+        // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI.
+        $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_log',
+          'user_id' => $data->user_id,
+          'values' => array(
+            'job_id' => $data->job_id,
+            'job_log_status' => 'start',
+            'job_log_label' => 'Import capture datasets',
+            'job_log_description' => 'Import started',
+          )
+        ));
+
+        $item_repository_ids = $session->get('item_repository_ids');
+
+        foreach ($data->csv as $capture_dataset_key => $capture_dataset) {
+
+
+          
+
+          $this->u->dumper((array)$capture_dataset);
+
+
+          
+
+          // Set the item_repository_id
+          $capture_dataset->item_repository_id = $item_repository_ids[$capture_dataset->item_repository_id];
+          // Insert into the item table
+          $capture_dataset_repository_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'capture_dataset_name',
+            'user_id' => $data->user_id,
+            'values' => (array)$capture_dataset
+          ));
+          
+          // Insert into the job_import_record table
+          $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'job_import_record',
+            'user_id' => $data->user_id,
+            'values' => array(
+              'job_id' => $data->job_id,
+              'record_id' => $item_repository_id,
+              'project_id' => (int)$data->parent_project_id,
+              'record_table' => 'capture_dataset',
+              'description' => $capture_dataset->capture_dataset_name,
+            )
+          ));
+        }
+
+        // Unset the session variable 'item_repository_ids'.
+        $session->remove('item_repository_ids');
+
+        // Insert into the job_log table
+        $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_log',
+          'user_id' => $data->user_id,
+          'values' => array(
+            'job_id' => $data->job_id,
+            'job_log_status' => 'finish',
+            'job_log_label' => 'Import items',
+            'job_log_description' => 'Import finished',
+          )
+        ));
+        break;
+
+
+
+
     }
 
     // TODO: return something more than job log IDs?
