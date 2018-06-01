@@ -53,6 +53,36 @@ class RepoValidateData implements RepoValidate {
 
       $jsonSchemaObject = json_decode(file_get_contents($this->schema_dir . $schema_definitions_dir . $schema . '.json'));
 
+      // TEMPORARY: Keep conditional and var_dump() here for debugging during development.
+      // Once everything is humming along, go ahead and remove this.
+      // if($schema === 'capture_dataset') {
+
+        // Convert the CSV's integer-based fields to integers... 
+        // because out of the box, all of the CSV's array values are strings.
+
+        // First, reference the JSON schema to gather all of the field names with the type of integer.
+        $schema_properties = $jsonSchemaObject->items->properties;
+        foreach ($schema_properties as $key => $value) {
+          if(isset($value->type) && ($value->type === 'integer')) {
+            $integer_field_types[] = $key;
+          }
+        }
+
+        // Convert field values from strings to integers.
+        foreach ($data as $data_key => $data_value) {
+          foreach ($data_value as $dv_key => $dv_value) {
+            if(in_array($dv_key, $integer_field_types)) {
+              $data[$data_key]->$dv_key = (int)$dv_value;
+            }
+          }
+        }
+
+        // echo '<pre>';
+        // var_dump($data);
+        // echo '</pre>';
+        // die();
+      // }
+
       $schemaStorage = new SchemaStorage();
       $schemaStorage->addSchema('file://' . $this->schema_dir . $schema_definitions_dir, $jsonSchemaObject);
 
