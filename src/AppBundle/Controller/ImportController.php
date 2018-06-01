@@ -864,6 +864,7 @@ class ImportController extends Controller
       $parent_records = [];
       $this->repo_storage_controller->setContainer($this->container);
 
+      // Get the parent Project's record ID.
       if(!empty($base_record_id) && !empty($record_type)) {
         $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
           'base_record_id' => $base_record_id,
@@ -898,6 +899,6 @@ class ImportController extends Controller
         ));
       }
 
-      return $this->json(array('jobId' => (int)$job_id));
+      return $this->json(array('jobId' => (int)$job_id, 'projectId' => (int)$project['project_repository_id']));
     }
 }

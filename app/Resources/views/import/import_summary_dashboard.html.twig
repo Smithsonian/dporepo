@@ -291,7 +291,7 @@
       ignoreHiddenFiles: true,
       chunking: true,
       chunkSize: 20000000, // chunk size in bytes (20 MB)
-      acceptedFiles: "image/*,application/text,application/json,.csv,.txt,.jpg,.tif,.png,.dng,.obj,.ply",
+      acceptedFiles: "image/*,application/text,application/json,.csv,.txt,.jpg,.tif,.png,.dng,.obj,.ply,.mtl",
       dictInvalidFileType: "File type not allowed"
     });
 
@@ -598,13 +598,14 @@
       // Redirect to the Upload overview page
       setTimeout(function() {
         let parentRecordId = parentRecordChecker();
+        let parentProjectId = $('#uploads_parent_picker_form_parent_picker').attr('data-project-id');
         jobId = $('.prevalidate-trigger').attr('data-jobid');
 
         // Process and import the CSV files.
         $.ajax({
           'type': 'GET'
           ,'dataType': 'json'
-          ,'url': '/admin/import_csv/' + jobId + '/' + parentRecordId
+          ,'url': '/admin/import_csv/' + jobId + '/' + parentProjectId + '/' + parentRecordId
           ,success: function(result) {
             if(result && result.length) {
               document.location.href = '/admin/import/' + jobId + '/' + parentRecordId + '?first=1';
@@ -752,6 +753,8 @@
               var res = JSON.parse(result);
               // Add the job ID as a data attribute of the prevalidate-trigger.
               $('.prevalidate-trigger').attr('data-jobid', res.jobId);
+              // Add the parent Project's id as a data attribute of the prevalidate-trigger.
+              $('#uploads_parent_picker_form_parent_picker').attr('data-project-id', res.projectId);
             }
           }
         });
