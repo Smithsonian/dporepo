@@ -146,7 +146,7 @@ class UploadListener
    */
   public function validate_metadata($job_id = null, $job_id_directory = null, $filename = null) // , $thisContainer, $itemsController
   {
-
+    $schema = false;
     $blacklisted_fields = array();
     $data = (object)[];
 
@@ -162,15 +162,31 @@ class UploadListener
 
     if(!empty($data->csv)) {
       // Set the schema to validate against.
-      if(stristr($filename, 'projects')) {
-        $schema = 'project';
+      switch (true) {
+        case stristr($filename, 'projects'):
+          $schema = 'project';
+          break;
+        case stristr($filename, 'subjects'):
+          $schema = 'subject';
+          break;
+        case stristr($filename, 'items'):
+          $schema = 'item';
+          break;
+        case stristr($filename, 'capture_datasets'):
+          $schema = 'capture_dataset';
+          break;
+        default:
+          $schema = false;
       }
-      if(stristr($filename, 'subjects')) {
-        $schema = 'subject';
-      }
-      if(stristr($filename, 'items')) {
-        $schema = 'item';
-      }
+
+      // Could simply use the substr function and stripm off the last 5 characters of the CSV's file name 
+      // as long as all CSV filenames followed a strict naming convention.
+      // Example: projects.csv, subjects.csv, items.csv, capture_datasets.csv, capture_dataset_elements.csv
+      // $schema = substr($filename, 0, -5);
+
+      // TODO: Error handling if there is no $schema
+      // if(!$schema) // Do something
+
       // Instantiate the RepoValidateData class.
       $repoValidate = new RepoValidateData();
       // Execute the validation.
