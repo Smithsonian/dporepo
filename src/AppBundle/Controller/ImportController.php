@@ -35,7 +35,6 @@ class ImportController extends Controller
         $this->u = $u;
         $this->repo_storage_controller = $repo_storage_controller;
         $this->tokenStorage = $tokenStorage;
-        // $this->repo_storage_controller = new RepoStorageHybridController();
 
         // TODO: move this to parameters.yml and bind in services.yml.
         $this->uploads_directory = __DIR__ . '/../../../web/uploads/repository/';
@@ -48,9 +47,8 @@ class ImportController extends Controller
      * @param object $conn Database connection object
      * @param object $request Symfony's request object
      * @param object $validate ValidateMetadataController class
-     * @param object $items ItemsController class
      */
-    public function importValidation($id, Connection $conn, Request $request, ValidateMetadataController $validate, ItemsController $items)
+    public function importValidation($id, Connection $conn, Request $request, ValidateMetadataController $validate)
     {
         $project = array();
         $post = $request->request->all();
@@ -66,7 +64,7 @@ class ImportController extends Controller
           if(!$project) throw $this->createNotFoundException('The Project record does not exist');
         }
 
-        $validation_results = $validate->validate_metadata($id, $this->container, $items);
+        $validation_results = $validate->validate_metadata($id, $this->container);
 
         return $this->render('import/import_validation.html.twig', array(
             'page_title' => !empty($project) ? 'Import Validation: ' . $project['project_name'] : 'Import Validation',
@@ -85,13 +83,13 @@ class ImportController extends Controller
      * @param object $request Symfony's request object
      * @param object $validate ValidateMetadataController class
      */
-    public function import_csv($job_id, $parent_project_id, $parent_record_id, Request $request, ValidateMetadataController $validate, ItemsController $items)
+    public function import_csv($job_id, $parent_project_id, $parent_record_id, Request $request, ValidateMetadataController $validate, ItemsController $itemsController, DatasetsController $datasetsController)
     {
       $job_log_ids = array();      
 
       if(!empty($job_id) && !empty($parent_project_id) && !empty($parent_record_id)) {
         // Prepare the data.
-        $data = $this->prepare_data($this->uploads_directory . $job_id, $this->container, $items);
+        $data = $this->prepare_data($this->uploads_directory . $job_id, $itemsController, $datasetsController);
 
         if(!empty($data)) {
           foreach($data as $csv_key => $csv_value) {
@@ -123,7 +121,7 @@ class ImportController extends Controller
      * @param string $job_upload_directory The upload directory
      * @return array Import result and/or any messages
      */
-    public function prepare_data($job_upload_directory = null, $thisContainer, $itemsController)
+    public function prepare_data($job_upload_directory = null, $itemsController, $datasetsController)
     {
 
       $data = array();
@@ -196,11 +194,58 @@ class ImportController extends Controller
                 // TODO: move into a vz-specific method?
                 // [VZ IMPORT ONLY] Strip 'USNM ' from the 'subject_repository_id' field.
                 $json_array[$key][$field_name] = ($field_name === 'subject_repository_id') ? (int)str_replace('USNM ', '', $v) : $v;
-                // Look-up the ID for the 'item_type' (not when validating data, only when importing data).
-                // if ((debug_backtrace()[1]['function'] !== 'validate_metadata') && ($field_name === 'item_type')) {
-                //   $item_type_lookup_options = $itemsController->get_item_types($thisContainer);
-                //   $json_array[$key][$field_name] = (int)$item_type_lookup_options[$v];
-                // }
+
+
+                // Look-up the ID for the 'item_type'.
+                if ($field_name === 'item_type') {
+                  $item_type_lookup_options = $itemsController->get_item_types($this->container);
+                  $json_array[$key][$field_name] = (int)$item_type_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'capture_method'.
+                if ($field_name === 'capture_method') {
+                  $capture_method_lookup_options = $datasetsController->get_capture_methods($this->container);
+                  $json_array[$key][$field_name] = (int)$capture_method_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'capture_dataset_type'.
+                if ($field_name === 'capture_dataset_type') {
+                  $capture_dataset_type_lookup_options = $datasetsController->get_dataset_types($this->container);
+                  $json_array[$key][$field_name] = (int)$capture_dataset_type_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'item_position_type'.
+                if ($field_name === 'item_position_type') {
+                  $item_position_type_lookup_options = $datasetsController->get_item_position_types($this->container);
+                  $json_array[$key][$field_name] = (int)$item_position_type_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'focus_type'.
+                if ($field_name === 'focus_type') {
+                  $focus_type_lookup_options = $datasetsController->get_focus_types($this->container);
+                  $json_array[$key][$field_name] = (int)$focus_type_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'light_source_type'.
+                if ($field_name === 'light_source_type') {
+                  $light_source_type_lookup_options = $datasetsController->get_light_source_types($this->container);
+                  $json_array[$key][$field_name] = (int)$light_source_type_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'background_removal_method'.
+                if ($field_name === 'background_removal_method') {
+                  $background_removal_method_lookup_options = $datasetsController->get_background_removal_methods($this->container);
+                  $json_array[$key][$field_name] = (int)$background_removal_method_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'cluster_type'.
+                if ($field_name === 'cluster_type') {
+                  $camera_cluster_types_lookup_options = $datasetsController->get_camera_cluster_types($this->container);
+                  $json_array[$key][$field_name] = (int)$camera_cluster_types_lookup_options[$v];
+                }
+
+
+
               }
               // Convert the array to an object.
               $data[$csv_key]['csv'][] = (object)$json_array[$key];
@@ -229,6 +274,9 @@ class ImportController extends Controller
     $session = new Session();
     $data = (object)$data;
     $job_log_ids = array();
+    $subject_repository_ids = NULL;
+    $item_repository_ids = NULL;
+
     // User data.
     $user = $this->tokenStorage->getToken()->getUser();
     $data->user_id = $user->getId();
@@ -267,8 +315,6 @@ class ImportController extends Controller
             'job_log_description' => 'Import started',
           )
         ));
-
-        $subject_repository_ids = array();
 
         foreach ($data->csv as $subject_key => $subject) {
           // Set the project_repository_id
@@ -328,7 +374,6 @@ class ImportController extends Controller
           )
         ));
 
-        $item_repository_ids = array();
         $subject_repository_ids = $session->get('subject_repository_ids');
 
         foreach ($data->csv as $item_key => $item) {
@@ -401,19 +446,24 @@ class ImportController extends Controller
 
         foreach ($data->csv as $capture_dataset_key => $capture_dataset) {
 
+          // $this->u->dumper($data->parent_project_id,0);
+          // $this->u->dumper($data->parent_record_id,0);
 
-          
-
-          $this->u->dumper((array)$capture_dataset);
-
-
-          
+          // Remove the import_item_id
+          unset($capture_dataset->import_item_id);
 
           // Set the item_repository_id
-          $capture_dataset->item_repository_id = $item_repository_ids[$capture_dataset->item_repository_id];
+          if (!empty($item_repository_ids)) {
+            $capture_dataset->parent_item_repository_id = $item_repository_ids[$capture_dataset->item_repository_id];
+          } else {
+            $capture_dataset->parent_item_repository_id = $data->parent_record_id;
+          }
+
+          // $this->u->dumper((array)$capture_dataset);
+
           // Insert into the item table
           $capture_dataset_repository_id = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => 'capture_dataset_name',
+            'base_table' => 'capture_dataset',
             'user_id' => $data->user_id,
             'values' => (array)$capture_dataset
           ));
@@ -424,7 +474,7 @@ class ImportController extends Controller
             'user_id' => $data->user_id,
             'values' => array(
               'job_id' => $data->job_id,
-              'record_id' => $item_repository_id,
+              'record_id' => $capture_dataset_repository_id,
               'project_id' => (int)$data->parent_project_id,
               'record_table' => 'capture_dataset',
               'description' => $capture_dataset->capture_dataset_name,
@@ -433,7 +483,9 @@ class ImportController extends Controller
         }
 
         // Unset the session variable 'item_repository_ids'.
-        $session->remove('item_repository_ids');
+        if (!empty($item_repository_ids)) {
+          $session->remove('item_repository_ids');
+        }
 
         // Insert into the job_log table
         $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
@@ -442,7 +494,7 @@ class ImportController extends Controller
           'values' => array(
             'job_id' => $data->job_id,
             'job_log_status' => 'finish',
-            'job_log_label' => 'Import items',
+            'job_log_label' => 'Import capture datasets',
             'job_log_description' => 'Import finished',
           )
         ));
@@ -667,11 +719,9 @@ class ImportController extends Controller
      * Run a query to retrieve all imports in the database.
      *
      * @param Request $request Symfony's request object
-     * @param SubjectsController $subject
-     * @param ItemsController $items
      * @return \Symfony\Component\HttpFoundation\JsonResponse The query result
      */
-    public function datatables_browse_imports(Request $request, SubjectsController $subject, ItemsController $items)
+    public function datatables_browse_imports(Request $request)
     {
       $req = $request->request->all();
       $search = !empty($req['search']['value']) ? $req['search']['value'] : false;

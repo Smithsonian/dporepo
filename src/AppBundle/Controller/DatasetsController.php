@@ -167,13 +167,13 @@ class DatasetsController extends Controller
         $dataset->parent_item_repository_id = !empty($request->attributes->get('parent_item_repository_id')) ? $request->attributes->get('parent_item_repository_id') : false;
 
         // Get data from lookup tables.
-        $dataset->capture_methods_lookup_options = $this->get_capture_methods();
-        $dataset->dataset_types_lookup_options = $this->get_dataset_types();
-        $dataset->item_position_types_lookup_options = $this->get_item_position_types();
-        $dataset->focus_types_lookup_options = $this->get_focus_types();
-        $dataset->light_source_types_lookup_options = $this->get_light_source_types();
-        $dataset->background_removal_methods_lookup_options = $this->get_background_removal_methods();
-        $dataset->camera_cluster_types_lookup_options = $this->get_camera_cluster_types();
+        $dataset->capture_methods_lookup_options = $this->get_capture_methods($this->container);
+        $dataset->dataset_types_lookup_options = $this->get_dataset_types($this->container);
+        $dataset->item_position_types_lookup_options = $this->get_item_position_types($this->container);
+        $dataset->focus_types_lookup_options = $this->get_focus_types($this->container);
+        $dataset->light_source_types_lookup_options = $this->get_light_source_types($this->container);
+        $dataset->background_removal_methods_lookup_options = $this->get_background_removal_methods($this->container);
+        $dataset->camera_cluster_types_lookup_options = $this->get_camera_cluster_types($this->container);
         $dataset->calibration_object_type_options = $this->get_calibration_object_types();
 
         // Create the form
@@ -279,10 +279,10 @@ class DatasetsController extends Controller
      * Get capture_methods
      * @return  array|bool  The query result
      */
-    public function get_capture_methods()
+    public function get_capture_methods($this_container)
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this->container);
+      $this->repo_storage_controller->setContainer($this_container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'capture_method',
           'sort_fields' => array(
@@ -292,7 +292,8 @@ class DatasetsController extends Controller
       );
 
       foreach ($temp as $key => $value) {
-        $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        // $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        $label = $value['label'];
         $data[$label] = $value['capture_method_repository_id'];
       }
 
@@ -303,10 +304,10 @@ class DatasetsController extends Controller
      * Get dataset_types
      * @return  array|bool  The query result
      */
-    public function get_dataset_types()
+    public function get_dataset_types($this_container)
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this->container);
+      $this->repo_storage_controller->setContainer($this_container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'dataset_type',
           'sort_fields' => array(
@@ -316,7 +317,8 @@ class DatasetsController extends Controller
       );
 
       foreach ($temp as $key => $value) {
-        $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        // $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        $label = $value['label'];
         $data[$label] = $value['dataset_type_repository_id'];
       }
 
@@ -327,10 +329,10 @@ class DatasetsController extends Controller
      * Get item_position_types
      * @return  array|bool  The query result
      */
-    public function get_item_position_types()
+    public function get_item_position_types($this_container)
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this->container);
+      $this->repo_storage_controller->setContainer($this_container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'item_position_type',
           'sort_fields' => array(
@@ -340,7 +342,8 @@ class DatasetsController extends Controller
       );
 
       foreach ($temp as $key => $value) {
-        $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        // $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        $label = $value['label'];
         $data[$label] = $value['item_position_type_repository_id'];
       }
 
@@ -351,10 +354,10 @@ class DatasetsController extends Controller
      * Get focus_types
      * @return  array|bool  The query result
      */
-    public function get_focus_types()
+    public function get_focus_types($this_container)
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this->container);
+      $this->repo_storage_controller->setContainer($this_container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'focus_type',
           'sort_fields' => array(
@@ -364,7 +367,8 @@ class DatasetsController extends Controller
       );
 
       foreach ($temp as $key => $value) {
-        $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        // $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        $label = $value['label'];
         $data[$label] = $value['focus_type_repository_id'];
       }
 
@@ -375,10 +379,10 @@ class DatasetsController extends Controller
      * Get light_source_types
      * @return  array|bool  The query result
      */
-    public function get_light_source_types()
+    public function get_light_source_types($this_container)
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this->container);
+      $this->repo_storage_controller->setContainer($this_container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'light_source_type',
           'sort_fields' => array(
@@ -388,7 +392,8 @@ class DatasetsController extends Controller
       );
 
       foreach ($temp as $key => $value) {
-        $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        // $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        $label = $value['label'];
         $data[$label] = $value['light_source_type_repository_id'];
       }
 
@@ -399,10 +404,10 @@ class DatasetsController extends Controller
      * Get background_removal_methods
      * @return  array|bool  The query result
      */
-    public function get_background_removal_methods()
+    public function get_background_removal_methods($this_container)
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this->container);
+      $this->repo_storage_controller->setContainer($this_container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'background_removal_method',
           'sort_fields' => array(
@@ -412,7 +417,7 @@ class DatasetsController extends Controller
       );
 
       foreach ($temp as $key => $value) {
-        $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        $label = $value['label'];
         $data[$label] = $value['background_removal_method_repository_id'];
       }
 
@@ -423,10 +428,10 @@ class DatasetsController extends Controller
      * Get camera_cluster_types
      * @return  array|bool  The query result
      */
-    public function get_camera_cluster_types()
+    public function get_camera_cluster_types($this_container)
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this->container);
+      $this->repo_storage_controller->setContainer($this_container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'camera_cluster_type',
           'sort_fields' => array(
@@ -436,7 +441,7 @@ class DatasetsController extends Controller
       );
 
       foreach ($temp as $key => $value) {
-        $label = $this->u->removeUnderscoresTitleCase($value['label']);
+        $label = $value['label'];
         $data[$label] = $value['camera_cluster_type_repository_id'];
       }
 
