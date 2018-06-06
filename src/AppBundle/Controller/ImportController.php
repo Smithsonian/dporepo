@@ -114,6 +114,8 @@ class ImportController extends Controller
         ));
       }
 
+      $this->addFlash('message', '<strong>Upload Succeeded!</strong> Files will be validated shortly. The validation scheduled task runs every 5 minutes, but it may take time to grind through the validation process. Please check back!');
+
       return $this->json($job_log_ids);
     }
 

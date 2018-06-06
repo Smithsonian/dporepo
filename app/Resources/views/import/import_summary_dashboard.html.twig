@@ -608,7 +608,8 @@
           ,'url': '/admin/import_csv/' + jobId + '/' + parentProjectId + '/' + parentRecordId
           ,success: function(result) {
             if(result && result.length) {
-              document.location.href = '/admin/import/' + jobId + '/' + parentRecordId + '?first=1';
+              // Redirect to the Upload overview page.
+              document.location.href = '/admin/import/' + jobId + '/' + parentProjectId;
             } else {
               $('#uploading-modal').modal('hide');
 
