@@ -277,41 +277,48 @@ class BagitController extends Controller
     // and filesystem state were out of sync. ('job_status' was 'in progress', but filesystem had no bag)
     // OR ---
     // Should the bag be automatically created???
-    if(!isset($validate_folder['path_to_bag'])) {
+    // if(!isset($validate_folder['path_to_bag'])) {
 
-      // // Scenario #1: Return error.
-      // $return['errors'][] = 'Error: Path to bag not found.';
-      // return $return;
+    //   // Scenario #1: Return error.
+    //   // $return['errors'][] = 'Error: Path to bag not found.';
+    //   // return $return;
 
-      // Scenario #2: Create the bag.
-      $params = array(
-        'localpath' => $data->localpath,
-        'job_id' => $data->job_id,
-      );
-      $bag_results = $this->bagit_create($params, $container);
+    //   // Scenario #2: Create the bag.
+    //   $params = array(
+    //     'localpath' => $data->localpath,
+    //     'job_id' => $data->job_id,
+    //   );
+    //   $bag_results = $this->bagit_create($params, $container);
 
-      if(isset($bag_results['result']) && ($bag_results['result'] !== 'success')) {
-        // If the bagit_create method failed, return the errors the method produced.
-        foreach ($bag_results['errors'] as $bkey => $bvalue) {
-          $return['errors'][] = $bvalue;
-        }
-      } else {
-        // If all 4 BagIt-based files were missing, they were just created, so go ahead and unset the 'missing_files' variable.
-        if(isset($validate_folder['missing_files']) && (count($validate_folder['missing_files']) === 4)) {
-          unset($validate_folder['missing_files']);
-        }
-        // Set the path to the bag (without the trailing forward slash).
-        $return['path_to_bag'] = substr($bag_results['manifest']['bagit_package_path'], 0, -1);
-      }
+    //   if(isset($bag_results['result']) && ($bag_results['result'] !== 'success')) {
+    //     // If the bagit_create method failed, return the errors the method produced.
+    //     foreach ($bag_results['errors'] as $bkey => $bvalue) {
+    //       $return['errors'][] = $bvalue;
+    //     }
+    //   } else {
+    //     // If all 4 BagIt-based files were missing, they were just created, so go ahead and unset the 'missing_files' variable.
+    //     if(isset($validate_folder['missing_files']) && (count($validate_folder['missing_files']) === 4)) {
+    //       unset($validate_folder['missing_files']);
+    //     }
+    //     // Set the path to the bag (without the trailing forward slash).
+    //     $return['path_to_bag'] = substr($bag_results['manifest']['bagit_package_path'], 0, -1);
+    //   }
 
-    } else {
+    // } else {
+    //   // The directory path to the bag.
+    //   $return['path_to_bag'] = $validate_folder['path_to_bag'];
+    // }
+
+    if (isset($validate_folder['path_to_bag'])) {
       // The directory path to the bag.
       $return['path_to_bag'] = $validate_folder['path_to_bag'];
     }
 
     // If there are missing BagIt files, add them to $return['errors'].
-    if(isset($validate_folder['missing_files']) && (count($validate_folder['missing_files']) > 0)) {
-      $return['errors'][] = $validate_folder['missing_files'];
+    if (isset($validate_folder['missing_files']) && (count($validate_folder['missing_files']) > 0)) {
+      foreach ($validate_folder['missing_files'] as $mkey => $mvalue) {
+        $return['errors'][] = $mvalue;
+      }
     }
 
     // If we have the manifest and other files, validate the manifest.
