@@ -759,8 +759,19 @@ class ImportController extends Controller
 
       $project = [];
       $project['file_validation_errors'] = [];
-      $project['first'] = false;
       $this->repo_storage_controller->setContainer($this->container);
+
+      if(!empty($id)) {
+        // Check to see if the job exists. If it doesn't, throw a createNotFoundException (404).
+        $job_data = $this->repo_storage_controller->execute('getRecord', array(
+            'base_table' => 'job',
+            'id_field' => 'job_id',
+            'id_value' => $id,
+            'omit_active_field' => true,
+          )
+        );
+        if(empty($job_data)) throw $this->createNotFoundException('The Job record does not exist');
+      }
 
       if(!empty($project_id)) {
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
