@@ -8,11 +8,7 @@
 
 {% block content %}
 
-  {% if first %}
-    <div class="alert alert-success" role="alert">
-      <strong>Upload Succeeded!</strong> Files will be validated shortly. The validation scheduled task runs every 5 minutes, but it may take time to grind through the validation process. Please check back!
-    </div>
-  {% endif %}
+  {# {{ dump() }} #}
   
   <ol class="breadcrumb">
     <li><a href="/admin">Dashboard</a></li>
@@ -29,7 +25,7 @@
               <dd>{{ project.project_name }}</dd>
             <dt>Date Uploaded:</dt>
               <dd>{{ project.date_created }}</dd>
-            <dt>Total Items:</dt>
+            <dt>Total # Records:</dt>
               <dd>{{ project.items_total|default('0') }}</dd>
             {% if project.job_status is defined %}
               <dt>Job Status:</dt>
@@ -59,9 +55,13 @@
   <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
     <thead>
       <tr>
-        <th class="text-center">Subject</th>
-        <th class="text-center">Item</th>
-        {# <th class="text-center">Status</th> #}
+        {% if job_data.job_type == 'subjects metadata import' %}
+          <th class="text-center">Subject</th>
+          <th class="text-center">Item</th>
+        {% elseif job_data.job_type == 'capture datasets metadata import' %}
+          <th class="text-center">Item</th>
+          <th class="text-center">Capture Dataset</th>
+        {% endif %}
       </tr>
     </thead>
   </table>
@@ -120,14 +120,26 @@
     $(document).ready(function() {
 
       var id = "{{ id }}",
-          details_page = "/admin/projects/datasets/";
+          job_type = "{{ job_data.job_type }}",
+          columns = [],
+          details_page;
 
-      $('#browse').dataTable({
-        "columns": [
+      if(job_type === 'subjects metadata import') {
+        columns = [
           { "data": "subject_display_name" },
           { "data": "item_display_name" }
-          // { "data": "status" }
-        ],
+        ];
+      }
+
+      if(job_type === 'capture datasets metadata import') {
+        columns = [
+          { "data": "item_display_name" },
+          { "data": "capture_dataset_name" }
+        ];
+      }
+
+      $('#browse').dataTable({
+        "columns": columns,
         //"dom": 'lfip<"datatables_bulk_actions">tip',
         "pagingType": "simple_numbers",
         "stateSave": true,
@@ -149,6 +161,8 @@
         ],
         "fnRowCallback":function(nRow, aData, iDisplayIndex) {
 
+          console.log(aData);
+
           // This table row.
           var thisTableRow = $(nRow);
 
@@ -159,7 +173,16 @@
             // Don't do anything if the table cell has the 'manage_column' CSS class.
             if(thisTableCell.hasClass('manage_column')) return;
             // Send to the details page.
-            window.location.href = details_page + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
+
+            if(job_type === 'subjects metadata import') {
+              details_page = '/admin/projects/datasets/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
+            }
+
+            if(job_type === 'capture datasets metadata import') {
+              details_page = '/admin/projects/dataset_elements/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id + '/' + aData.capture_dataset_repository_id;
+            }
+
+            window.location.href = details_page;
           });
 
         }

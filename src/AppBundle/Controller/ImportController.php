@@ -835,10 +835,8 @@ class ImportController extends Controller
       return $this->render('import/import_summary_item.html.twig', array(
         'page_title' => $items_total ? $project['job_label'] : 'Uploads: ' . $project['project_name'],
         'project' => $project,
+        'job_data' => $job_data,
         'id' => $id,
-        // If coming from the Uploads interface after an upload, 
-        // set the 'first' variable so a message can be triggered and displayed.
-        'first' => (bool)$request->query->get('first') ? true : false,
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
       ));
     }
