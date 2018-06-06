@@ -863,19 +863,32 @@ class ImportController extends Controller
       $start_record = !empty($req['start']) ? $req['start'] : 0;
       $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
+      $this->repo_storage_controller->setContainer($this->container);
+
+      // Determine what was ingested (e.g. subjects, items, capture datasets).
+      $job_data = $this->repo_storage_controller->execute('getRecord', array(
+          'base_table' => 'job',
+          'id_field' => 'job_id',
+          'id_value' => $id,
+          'omit_active_field' => true,
+        )
+      );
+
+      // TODO: ^^^ error handling if job is not found? ^^^
+
       $query_params = array(
         'sort_field' => $sort_field,
         'sort_order' => $sort_order,
         'start_record' => $start_record,
         'stop_record' => $stop_record,
         'id' => $id,
+        'job_type' => $job_data['job_type'],
       );
 
       if ($search) {
         $query_params['search_value'] = $search;
       }
 
-      $this->repo_storage_controller->setContainer($this->container);
       $data = $this->repo_storage_controller->execute('getDatatableImportDetails', $query_params);
 
       return $this->json($data);
@@ -1002,6 +1015,35 @@ class ImportController extends Controller
       return $this->json($data);
     }
 
+    
+    /**
+     * @param string $parent_record_type The record type (e.g. subject)
+     * @return string
+     */
+    public function getJobType($parent_record_type = null)
+    {
+
+      switch ($parent_record_type) {
+        case 'project':
+          $data = 'subjects';
+          break;
+
+        case 'subject':
+          $data = 'items';
+          break;
+
+        case 'item':
+          $data = 'capture datasets';
+          break;
+        
+        default:
+          $data = null;
+          break;
+      }
+
+      return $data;
+    }
+
     /**
      * @Route("/admin/create_job/{base_record_id}/{record_type}", name="create_job", defaults={"base_record_id" = null, "record_type" = null}, methods="GET")
      *
@@ -1033,6 +1075,8 @@ class ImportController extends Controller
       }
 
       if(!empty($project)) {
+        // Get the job type (what's being ingested?).
+        $job_type = $this->getJobType($record_type);
         // Insert a record into the job table.
         // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI?
         $job_id = $this->repo_storage_controller->execute('saveRecord', array(
@@ -1041,7 +1085,7 @@ class ImportController extends Controller
           'values' => array(
             'project_id' => (int)$project['project_repository_id'],
             'job_label' => 'Metadata Import: "' . $project['project_name'] . '"',
-            'job_type' => 'metadata import',
+            'job_type' => $job_type . ' metadata import',
             'job_status' => 'in progress',
             'date_completed' => null,
             'qa_required' => 0,

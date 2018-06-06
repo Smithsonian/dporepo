@@ -3007,6 +3007,16 @@ class RepoStorageHybrid implements RepoStorage {
     $date_range_start = array_key_exists('date_range_start', $params) ? $params['date_range_start'] : NULL;
     $date_range_end = array_key_exists('date_range_end', $params) ? $params['date_range_end'] : NULL;
 
+    // Determine what was ingested via $job_data['job_type'] (e.g. subjects, items, capture datasets).
+    $job_data = $this->getRecord(array(
+        'base_table' => 'job',
+        'id_field' => 'job_id',
+        'id_value' => $job_id,
+        'omit_active_field' => true,
+      )
+    );
+    // TODO: ^^^ error handling if job is not found? ^^^
+
     $query_params = array(
       'distinct' => true, // @todo Do we always want this to be true?
       'base_table' => $record_type,
@@ -3044,26 +3054,7 @@ class RepoStorageHybrid implements RepoStorage {
       'base_join_table' => 'job',
       'base_join_field' => 'project_id',
     );
-    $query_params['related_tables'][] = array(
-      'table_name' => 'subject',
-      'table_join_field' => 'subject_repository_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'job_import_record',
-      'base_join_field' => 'record_id',
-    );
-    $query_params['related_tables'][] = array(
-      'table_name' => 'item',
-      'table_join_field' => 'subject_repository_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'subject',
-      'base_join_field' => 'subject_repository_id',
-    );
 
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => $record_type . '_id',
-      'field_alias' => 'manage',
-    );
     $query_params['fields'][] = array(
       'table_name' => 'project',
       'field_name' => 'project_repository_id',
@@ -3088,13 +3079,94 @@ class RepoStorageHybrid implements RepoStorage {
       'table_name' => 'item',
       'field_name' => 'item_display_name',
     );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => $record_type . '_id',
-      'field_alias' => 'DT_RowId',
-    );
 
-    $query_params['search_params'][0] = array('field_names' => array('job_import_record.record_table'), 'search_values' => array('subject'), 'comparison' => '=');
+    // If subjects were ingested...
+    if ($job_data['job_type'] === 'subjects metadata import') {
+
+      $record_table = 'subject';
+
+      $query_params['related_tables'][] = array(
+        'table_name' => 'subject',
+        'table_join_field' => 'subject_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'job_import_record',
+        'base_join_field' => 'record_id',
+      );
+      $query_params['related_tables'][] = array(
+        'table_name' => 'item',
+        'table_join_field' => 'subject_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'subject',
+        'base_join_field' => 'subject_repository_id',
+      );
+
+      if (NULL !== $search_value) {
+        $query_params['search_params'][3] = array(
+          'field_names' => array(
+            'subject_display_name',
+            'item_display_name',
+          ),
+          'search_values' => array($search_value),
+          'comparison' => 'LIKE',
+        );
+      }
+
+    }
+    
+
+    // If items were ingested...
+    // PLACEHOLDER (TODO)
+
+
+    // If capture datasets were ingested...
+    if ($job_data['job_type'] === 'capture datasets metadata import') {
+
+      $record_table = 'capture_dataset';
+
+      $query_params['related_tables'][] = array(
+        'table_name' => 'capture_dataset',
+        'table_join_field' => 'capture_dataset_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'job_import_record',
+        'base_join_field' => 'record_id',
+      );
+      $query_params['related_tables'][] = array(
+        'table_name' => 'item',
+        'table_join_field' => 'item_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'capture_dataset',
+        'base_join_field' => 'parent_item_repository_id',
+      );
+      $query_params['related_tables'][] = array(
+        'table_name' => 'subject',
+        'table_join_field' => 'subject_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'item',
+        'base_join_field' => 'subject_repository_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'capture_dataset',
+        'field_name' => 'capture_dataset_repository_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'capture_dataset',
+        'field_name' => 'capture_dataset_name',
+      );
+
+      if (NULL !== $search_value) {
+        $query_params['search_params'][3] = array(
+          'field_names' => array(
+            'item_display_name',
+            'capture_dataset_name',
+          ),
+          'search_values' => array($search_value),
+          'comparison' => 'LIKE',
+        );
+      }
+
+    }
+
+    $query_params['search_params'][0] = array('field_names' => array('job_import_record.record_table'), 'search_values' => array($record_table), 'comparison' => '=');
     $query_params['search_type'] = 'AND';
 
     $query_params['search_params'][1] = array('field_names' => array('job_import_record.job_id'), 'search_values' => array((int)$job_id),'comparison' => '=');
@@ -3103,16 +3175,16 @@ class RepoStorageHybrid implements RepoStorage {
     $query_params['search_params'][2] = array('field_names' => array('item.item_repository_id'), 'search_values' => array(''), 'comparison' => 'IS NOT NULL');
     $query_params['search_type'] = 'AND';
 
-    if (NULL !== $search_value) {
-      $query_params['search_params'][3] = array(
-        'field_names' => array(
-          'subject_display_name',
-          'item_display_name',
-        ),
-        'search_values' => array($search_value),
-        'comparison' => 'LIKE',
-      );
-    }
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => $record_type . '_id',
+      'field_alias' => 'manage',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => $record_type . '_id',
+      'field_alias' => 'DT_RowId',
+    );
 
     if(NULL !== $date_range_start) {
       $c = count($query_params['search_params']);
