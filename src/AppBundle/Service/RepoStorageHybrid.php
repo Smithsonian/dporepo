@@ -3672,11 +3672,18 @@ class RepoStorageHybrid implements RepoStorage {
       'fields' => array(),
       'base_table' => $base_table,
       'search_params' => array(
-        0 => array('field_names' => array('active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array($id_field), 'search_values' => array($id_value), 'comparison' => '=')
+        0 => array('field_names' => array($id_field), 'search_values' => array($id_value), 'comparison' => '='),
+        1 => array('field_names' => array('active'), 'search_values' => array(1), 'comparison' => '='),
       ),
       'search_type' => 'AND'
     );
+
+    // If the 'omit_active_field' parameter is set, unset the $query_params['search_params'][1] variable 
+    // and pass the 'omit_active_field' parameter onto the getRecords() method.
+    if (isset($parameters['omit_active_field'])) {
+      unset($query_params['search_params'][1]);
+      $query_params['omit_active_field'] = true;
+    }
 
     $return_data = array();
     $ret = $this->getRecords($query_params);
