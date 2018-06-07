@@ -3202,8 +3202,8 @@ class RepoStorageHybrid implements RepoStorage {
     $query_params['search_params'][1] = array('field_names' => array('job_import_record.job_id'), 'search_values' => array((int)$job_id),'comparison' => '=');
     $query_params['search_type'] = 'AND';
 
-    $query_params['search_params'][2] = array('field_names' => array('item.item_repository_id'), 'search_values' => array(''), 'comparison' => 'IS NOT NULL');
-    $query_params['search_type'] = 'AND';
+    // $query_params['search_params'][2] = array('field_names' => array('item.item_repository_id'), 'search_values' => array(''), 'comparison' => 'IS NOT NULL');
+    // $query_params['search_type'] = 'AND';
 
     $query_params['fields'][] = array(
       'table_name' => $record_type,

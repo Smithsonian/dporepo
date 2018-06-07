@@ -9,6 +9,7 @@ use Doctrine\DBAL\Driver\Connection;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+// use Psr\Log\LoggerInterface;
 
 use AppBundle\Form\UploadsParentPickerForm;
 use AppBundle\Entity\UploadsParentPicker;
@@ -29,12 +30,15 @@ class ImportController extends Controller
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, RepoStorageHybridController $repo_storage_controller, TokenStorageInterface $tokenStorage)
+    public function __construct(AppUtilities $u, RepoStorageHybridController $repo_storage_controller, TokenStorageInterface $tokenStorage, LoggerInterface $logger)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = $repo_storage_controller;
         $this->tokenStorage = $tokenStorage;
+        // $this->logger = $logger;
+        // Usage:
+        // $this->logger->info('Import started. Job ID: ' . $job_id);
 
         // TODO: move this to parameters.yml and bind in services.yml.
         $this->uploads_directory = __DIR__ . '/../../../web/uploads/repository/';
@@ -119,7 +123,7 @@ class ImportController extends Controller
         ));
       }
 
-      $this->addFlash('message', '<strong>Upload Succeeded!</strong> Files will be validated shortly. The validation scheduled task runs every 5 minutes, but it may take time to grind through the validation process. Please check back!');
+      $this->addFlash('message', '<strong>Upload Succeeded!</strong> Files will be validated shortly. The validation scheduled task runs every 30 seconds, but it may take time to grind through the validation process. Please check back!');
 
       return $this->json($job_log_ids);
     }
@@ -153,8 +157,8 @@ class ImportController extends Controller
             $csv[2]['data'] = $file->getContents();
           }
           if(stristr($file->getRealPath(), 'capture_datasets')) {
-            $csv[2]['type'] = 'capture_dataset';
-            $csv[2]['data'] = $file->getContents();
+            $csv[3]['type'] = 'capture_dataset';
+            $csv[3]['data'] = $file->getContents();
           }
         }
 
@@ -201,7 +205,6 @@ class ImportController extends Controller
                 // TODO: move into a vz-specific method?
                 // [VZ IMPORT ONLY] Strip 'USNM ' from the 'subject_repository_id' field.
                 $json_array[$key][$field_name] = ($field_name === 'subject_repository_id') ? (int)str_replace('USNM ', '', $v) : $v;
-
 
                 // Look-up the ID for the 'item_type'.
                 if ($field_name === 'item_type') {
@@ -250,8 +253,6 @@ class ImportController extends Controller
                   $camera_cluster_types_lookup_options = $datasetsController->get_camera_cluster_types($this->container);
                   $json_array[$key][$field_name] = (int)$camera_cluster_types_lookup_options[$v];
                 }
-
-
 
               }
               // Convert the array to an object.
@@ -388,17 +389,12 @@ class ImportController extends Controller
 
         foreach ($data->csv as $item_key => $item) {
 
-          // Remove the import_id
-          unset($item->import_id);
-
           // Set the subject_repository_id
           if (!empty($subject_repository_ids)) {
             $item->subject_repository_id = $subject_repository_ids[$item->subject_repository_id];
           } else {
             $item->subject_repository_id = $data->parent_record_id;
           }
-
-          // $this->u->dumper((array)$item);
 
           // Insert into the item table
           $item_repository_id = $this->repo_storage_controller->execute('saveRecord', array(
@@ -407,8 +403,8 @@ class ImportController extends Controller
             'values' => (array)$item
           ));
 
-          // TODO: Not sure what to do here. Differs from VZ import exercise.
-          $item_repository_ids[] = $item_repository_id;
+          // Map the import_item_id to the newly created item_repository_id.
+          $item_repository_ids[] = array('import_item_id' => $item->import_item_id, 'item_repository_id' => $item_repository_id);
           
           // Insert into the job_import_record table
           $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
@@ -424,7 +420,7 @@ class ImportController extends Controller
           ));
         }
 
-        // Unset the session variable 'subject_repository_ids'.
+        // Remove the session variable 'subject_repository_ids'.
         $session->remove('subject_repository_ids');
 
         // Set the session variable 'item_repository_ids'.
@@ -446,8 +442,6 @@ class ImportController extends Controller
       // Ingest capture datasets
       case 'capture_dataset':
 
-        // $this->u->dumper($data);
-
         // Insert into the job_log table
         // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI.
         $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
@@ -465,20 +459,12 @@ class ImportController extends Controller
 
         foreach ($data->csv as $capture_dataset_key => $capture_dataset) {
 
-          // $this->u->dumper($data->parent_project_id,0);
-          // $this->u->dumper($data->parent_record_id,0);
-
-          // Remove the import_id
-          unset($capture_dataset->import_id);
-
           // Set the parent_item_repository_id
           if (!empty($item_repository_ids)) {
-            $capture_dataset->parent_item_repository_id = $item_repository_ids[$capture_dataset->item_repository_id];
+            $capture_dataset->parent_item_repository_id = $item_repository_ids[$capture_dataset->import_item_id]['item_repository_id'];
           } else {
             $capture_dataset->parent_item_repository_id = $data->parent_record_id;
           }
-
-          // $this->u->dumper((array)$capture_dataset);
 
           // Insert into the capture_dataset table
           $capture_dataset_repository_id = $this->repo_storage_controller->execute('saveRecord', array(
@@ -501,7 +487,7 @@ class ImportController extends Controller
           ));
         }
 
-        // Unset the session variable 'item_repository_ids'.
+        // Remove the session variable 'item_repository_ids'.
         if (!empty($item_repository_ids)) {
           $session->remove('item_repository_ids');
         }
@@ -1070,12 +1056,15 @@ class ImportController extends Controller
       $parent_records = [];
       $this->repo_storage_controller->setContainer($this->container);
 
-      // Get the parent Project's record ID.
-      if(!empty($base_record_id) && !empty($record_type)) {
+      // Get the parent Project's record ID (unless it's a project to begin with).
+      if(!empty($base_record_id) && !empty($record_type) && ($record_type !== 'project')) {
         $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
           'base_record_id' => $base_record_id,
           'record_type' => $record_type,
         ));
+      } else {
+        // If the $record_type is a 'project', just use the $base_record_id, since that's the project ID.
+        $parent_records['project_repository_id'] = $base_record_id;
       }
 
       // If there are no results for a parent Project record ID, throw a createNotFoundException (404).
