@@ -58,6 +58,9 @@
         {% if job_data.job_type == 'subjects metadata import' %}
           <th class="text-center">Subject</th>
           <th class="text-center">Item</th>
+        {% elseif job_data.job_type == 'items metadata import' %}
+          <th class="text-center">Subject</th>
+          <th class="text-center">Item</th>
         {% elseif job_data.job_type == 'capture datasets metadata import' %}
           <th class="text-center">Item</th>
           <th class="text-center">Capture Dataset</th>
@@ -131,6 +134,13 @@
         ];
       }
 
+      if(job_type === 'items metadata import') {
+        columns = [
+          { "data": "subject_display_name" },
+          { "data": "item_display_name" }
+        ];
+      }
+
       if(job_type === 'capture datasets metadata import') {
         columns = [
           { "data": "item_display_name" },
@@ -161,7 +171,7 @@
         ],
         "fnRowCallback":function(nRow, aData, iDisplayIndex) {
 
-          console.log(aData);
+          // console.log(aData);
 
           // This table row.
           var thisTableRow = $(nRow);
@@ -175,6 +185,10 @@
             // Send to the details page.
 
             if(job_type === 'subjects metadata import') {
+              details_page = '/admin/projects/datasets/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
+            }
+
+            if(job_type === 'items metadata import') {
               details_page = '/admin/projects/datasets/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
             }
 

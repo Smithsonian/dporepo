@@ -3080,7 +3080,7 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'item_display_name',
     );
 
-    // If subjects were ingested...
+    // If subjects were ingested (with a project as the parent record)...
     if ($job_data['job_type'] === 'subjects metadata import') {
 
       $record_table = 'subject';
@@ -3114,11 +3114,41 @@ class RepoStorageHybrid implements RepoStorage {
     }
     
 
-    // If items were ingested...
-    // PLACEHOLDER (TODO)
+    // If items were ingested (with a subject as the parent record)...
+    if ($job_data['job_type'] === 'items metadata import') {
+
+      $record_table = 'item';
+
+      $query_params['related_tables'][] = array(
+        'table_name' => 'item',
+        'table_join_field' => 'item_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'job_import_record',
+        'base_join_field' => 'record_id',
+      );
+      $query_params['related_tables'][] = array(
+        'table_name' => 'subject',
+        'table_join_field' => 'subject_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'item',
+        'base_join_field' => 'subject_repository_id',
+      );
+
+      if (NULL !== $search_value) {
+        $query_params['search_params'][3] = array(
+          'field_names' => array(
+            'subject_display_name',
+            'item_display_name',
+          ),
+          'search_values' => array($search_value),
+          'comparison' => 'LIKE',
+        );
+      }
+
+    }
 
 
-    // If capture datasets were ingested...
+    // If capture datasets were ingested (with an item as the parent record)...
     if ($job_data['job_type'] === 'capture datasets metadata import') {
 
       $record_table = 'capture_dataset';

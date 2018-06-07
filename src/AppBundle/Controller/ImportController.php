@@ -85,7 +85,12 @@ class ImportController extends Controller
      */
     public function import_csv($job_id, $parent_project_id, $parent_record_id, Request $request, ValidateMetadataController $validate, ItemsController $itemsController, DatasetsController $datasetsController)
     {
-      $job_log_ids = array();      
+      // Clear session data.
+      $session = new Session();
+      $session->remove('subject_repository_ids');
+      $session->remove('item_repository_ids');
+
+      $job_log_ids = array();  
 
       if(!empty($job_id) && !empty($parent_project_id) && !empty($parent_record_id)) {
         // Prepare the data.
@@ -265,7 +270,7 @@ class ImportController extends Controller
       return $data;
     }
 
-    /**
+  /**
    * @param string $data  Data object
    * @param int $job_id  Job ID
    * @param int $parent_record_id  Parent record ID
@@ -303,6 +308,7 @@ class ImportController extends Controller
     $this->repo_storage_controller->setContainer($this->container);
 
     switch ($data->type) {
+
       // Ingest subjects
       case 'subject':
         // Insert into the job_log table
@@ -327,6 +333,8 @@ class ImportController extends Controller
             'user_id' => $data->user_id,
             'values' => (array)$subject
           ));
+
+          // TODO: Not sure what to do here. Differs from VZ import exercise.
           $subject_repository_ids[$subject->subject_repository_id] = $subject_repository_id;
 
           // Insert into the job_import_record table
@@ -379,15 +387,28 @@ class ImportController extends Controller
         $subject_repository_ids = $session->get('subject_repository_ids');
 
         foreach ($data->csv as $item_key => $item) {
+
+          // Remove the import_id
+          unset($item->import_id);
+
           // Set the subject_repository_id
-          $item->subject_repository_id = $subject_repository_ids[$item->subject_repository_id];
+          if (!empty($subject_repository_ids)) {
+            $item->subject_repository_id = $subject_repository_ids[$item->subject_repository_id];
+          } else {
+            $item->subject_repository_id = $data->parent_record_id;
+          }
+
+          // $this->u->dumper((array)$item);
+
           // Insert into the item table
           $item_repository_id = $this->repo_storage_controller->execute('saveRecord', array(
             'base_table' => 'item',
             'user_id' => $data->user_id,
             'values' => (array)$item
           ));
-          $item_repository_ids[$item->item_repository_id] = $item_repository_id;
+
+          // TODO: Not sure what to do here. Differs from VZ import exercise.
+          $item_repository_ids[] = $item_repository_id;
           
           // Insert into the job_import_record table
           $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
@@ -405,6 +426,7 @@ class ImportController extends Controller
 
         // Unset the session variable 'subject_repository_ids'.
         $session->remove('subject_repository_ids');
+
         // Set the session variable 'item_repository_ids'.
         $session->set('item_repository_ids', $item_repository_ids);
 
@@ -420,11 +442,6 @@ class ImportController extends Controller
           )
         ));
         break;
-
-
-
-
-
 
       // Ingest capture datasets
       case 'capture_dataset':
@@ -451,10 +468,10 @@ class ImportController extends Controller
           // $this->u->dumper($data->parent_project_id,0);
           // $this->u->dumper($data->parent_record_id,0);
 
-          // Remove the import_item_id
-          unset($capture_dataset->import_item_id);
+          // Remove the import_id
+          unset($capture_dataset->import_id);
 
-          // Set the item_repository_id
+          // Set the parent_item_repository_id
           if (!empty($item_repository_ids)) {
             $capture_dataset->parent_item_repository_id = $item_repository_ids[$capture_dataset->item_repository_id];
           } else {
@@ -463,7 +480,7 @@ class ImportController extends Controller
 
           // $this->u->dumper((array)$capture_dataset);
 
-          // Insert into the item table
+          // Insert into the capture_dataset table
           $capture_dataset_repository_id = $this->repo_storage_controller->execute('saveRecord', array(
             'base_table' => 'capture_dataset',
             'user_id' => $data->user_id,
@@ -501,10 +518,6 @@ class ImportController extends Controller
           )
         ));
         break;
-
-
-
-
     }
 
     // TODO: return something more than job log IDs?
