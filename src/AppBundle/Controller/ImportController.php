@@ -30,7 +30,7 @@ class ImportController extends Controller
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, RepoStorageHybridController $repo_storage_controller, TokenStorageInterface $tokenStorage, LoggerInterface $logger)
+    public function __construct(AppUtilities $u, RepoStorageHybridController $repo_storage_controller, TokenStorageInterface $tokenStorage) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
