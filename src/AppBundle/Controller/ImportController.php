@@ -934,32 +934,12 @@ class ImportController extends Controller
       $params['limit'] = !empty($req['limit']) ? $req['limit'] : false;
       $params['render'] = !empty($req['render']) ? $req['render'] : false;
       $params['property'] = !empty($req['property']) ? $req['property'] : false;
-      // $params['record_type'] = !empty($req['recordType']) ? $req['recordType'] : 'project';
 
       $record_types = array(
         'project',
         'subject',
         'item',
-        'capture_dataset',
       );
-
-      // switch($params['record_type']) {
-      //   case 'subject':
-      //     $params['field_name'] = 'subject_display_name';
-      //     $params['id_field_name'] = 'subject_repository_id';
-      //     break;
-      //   case 'item':
-      //     $params['field_name'] = 'item_display_name';
-      //     $params['id_field_name'] = 'item_repository_id';
-      //     break;
-      //   case 'capture_dataset':
-      //     $params['field_name'] = 'capture_dataset_name';
-      //     $params['id_field_name'] = 'capture_dataset_repository_id';
-      //     break;
-      //   default: // project
-      //     $params['field_name'] = 'project_name';
-      //     $params['id_field_name'] = 'project_repository_id';
-      // }
 
       foreach ($record_types as $key => $value) {
 
@@ -973,10 +953,6 @@ class ImportController extends Controller
           case 'item':
             $params['field_name'] = 'item_display_name';
             $params['id_field_name'] = 'item_repository_id';
-            break;
-          case 'capture_dataset':
-            $params['field_name'] = 'capture_dataset_name';
-            $params['id_field_name'] = 'capture_dataset_repository_id';
             break;
           default: // project
             $params['field_name'] = 'project_name';
@@ -1002,7 +978,6 @@ class ImportController extends Controller
         );
 
         // Format the $data array for the typeahead-bundle.
-        // TODO: Add the project ID to the returned array so it can be passed to the 'job' database table.
         if(!empty($results)) {
           foreach ($results as $key => $value) {
             $data[] = array('id' => $value[ $params['id_field_name'] ], 'value' => $value[ $params['field_name'] ] . ' [ ' . strtoupper(str_replace('_', ' ', $params['record_type'])) . ' ]');
