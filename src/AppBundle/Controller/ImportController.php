@@ -398,7 +398,7 @@ class ImportController extends Controller
      * @param object $conn Database connection object
      * @param object $request Symfony's request object
      */
-    public function importSummaryDashboard(Connection $conn, Request $request)
+    public function import_summary_dashboard(Connection $conn, Request $request)
     {
         $obj = new UploadsParentPicker();
 
@@ -455,7 +455,7 @@ class ImportController extends Controller
      * @param object $project ProjectsController class
      * @param object $request Symfony's request object
      */
-    public function importSummaryDetails($id, $project_id, Connection $conn, ProjectsController $project, Request $request)
+    public function import_summary_details($id, $project_id, Connection $conn, ProjectsController $project, Request $request)
     {
 
       $project = [];
@@ -625,7 +625,7 @@ class ImportController extends Controller
      * @param Request $request Symfony's request object
      * @return \Symfony\Component\HttpFoundation\JsonResponse The query result
      */
-    public function getParentRecords(Request $request)
+    public function get_parent_records(Request $request)
     {
       $data = $params = array();
 
@@ -694,7 +694,7 @@ class ImportController extends Controller
      * @param string $parent_record_type The record type (e.g. subject)
      * @return string
      */
-    public function getJobType($parent_record_type = null)
+    public function get_job_type($parent_record_type = null)
     {
 
       switch ($parent_record_type) {
@@ -725,7 +725,7 @@ class ImportController extends Controller
      * @param string $record_type The record type (e.g. subject)
      * @return JSON
      */
-    public function createJob($base_record_id, $record_type, Request $request)
+    public function create_job($base_record_id, $record_type, Request $request)
     {
       $job_id = null;
       $parent_records = [];
@@ -753,7 +753,7 @@ class ImportController extends Controller
 
       if(!empty($project)) {
         // Get the job type (what's being ingested?).
-        $job_type = $this->getJobType($record_type);
+        $job_type = $this->get_job_type($record_type);
         // Insert a record into the job table.
         // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI?
         $job_id = $this->repo_storage_controller->execute('saveRecord', array(
