@@ -322,6 +322,7 @@
       // Get queued files.
       let queuedFiles = uploadsDropzone.getAcceptedFiles();
       // Check if files have been added to the queue.
+      // Also check to see if there are actual files (e.g. photogrammetry scans, models), and not just CSVs.
       if(!queuedFilesChecker(queuedFiles)) return;
 
       // Generate a temporary job ID.
@@ -635,6 +636,11 @@
 
       // Check if the parent record has been selected.
       let parentRecordId = parentRecordChecker();
+      // Get queued files.
+      let queuedFiles = uploadsDropzone.getAcceptedFiles();
+      // Check if files have been added to the queue.
+      // Also check to see if there are actual files (e.g. photogrammetry scans, models), and not just CSVs.
+      if(!queuedFilesChecker(queuedFiles)) return;
 
       // Generate a real job ID.
       generateJobId(parentRecordId, false);
@@ -720,14 +726,38 @@
     }
 
     function queuedFilesChecker(files) {
+
+      // Display an alert if there are no files queued.
       if(!files.length) {
         swal({
           title: 'No Files Found',
           text: 'Please add files to the upload queue.',
-          type: 'warning',
+          icon: 'warning',
         });
         return false;
       }
+
+      // Display an alert if the 'manifest-sha1.txt' file isn't found in the queue.
+      let filenames = [];
+      // Build-out an array of files present.
+      for (var i = 0; i < files.length; i++) {
+        // Get the extension of the file.
+        let fname = files[i].name;
+        // Add it to the filenames array.
+        filenames.push(fname);
+      }
+
+      if(filenames.indexOf('manifest-sha1.txt') === -1) {
+        var span = document.createElement('span');
+        span.innerHTML = 'Please add bagged (via BagIt) files to the upload queue. Learn more on the <a href="https://en.wikipedia.org/wiki/BagIt" target="_blank">BagIt Wikipedia page</a>';
+        swal({
+          title: 'File bag not found',
+          content: span,
+          icon: "warning",
+        });
+        return false;
+      }
+
       return true;
     }
 
