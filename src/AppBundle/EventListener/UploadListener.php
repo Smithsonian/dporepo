@@ -163,9 +163,6 @@ class UploadListener
     if(!empty($data->csv)) {
       // Set the schema to validate against.
       switch (true) {
-        case stristr($filename, 'projects'):
-          $schema = 'project';
-          break;
         case stristr($filename, 'subjects'):
           $schema = 'subject';
           break;
@@ -187,10 +184,12 @@ class UploadListener
       // TODO: Error handling if there is no $schema
       // if(!$schema) // Do something
 
-      // Instantiate the RepoValidateData class.
-      $repoValidate = new RepoValidateData();
-      // Execute the validation.
-      $data->results = (object)$repoValidate->validateData($data->csv, $schema, $blacklisted_fields);
+      if($schema) {
+        // Instantiate the RepoValidateData class.
+        $repoValidate = new RepoValidateData();
+        // Execute the validation.
+        $data->results = (object)$repoValidate->validateData($data->csv, $schema, $blacklisted_fields);
+      }
     }
 
     return $data;
