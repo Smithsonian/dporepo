@@ -131,28 +131,6 @@
         }
       });
 
-
-      /**
-       * Upload Metadata button click handler
-       */
-      $('#upload-metadata').on('click', function(e) {
-
-        // Validate that this is really the record.
-        swal({
-          title: "Validate and Upload Metadata",
-          text: "This is a placeholder for the actual upload functionality. For the VZ Model Migration the CSV files are already on the server. Clicking 'Go!' will run the validation against the JSON schema and bring us to the next step.",
-          type: 'warning',
-          showCancelButton: true,
-          confirmButtonColor: '#DD6B55',
-          confirmButtonText: 'Go!',
-          closeOnConfirm: true,
-        },
-        function(){
-          window.location.href = '/admin/import_validation/' + project_repository_id;
-        });
-
-      });
-
     });
   </script>
 {% endblock %}
