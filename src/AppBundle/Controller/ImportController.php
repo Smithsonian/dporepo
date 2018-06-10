@@ -72,18 +72,18 @@ class ImportController extends Controller
         )
       );
       // Throw a 404 if the job record doesn't exist.
-      if(!$job_data) throw $this->createNotFoundException('The Job record doesn\'t exist');
+      if (!$job_data) throw $this->createNotFoundException('The Job record doesn\'t exist');
 
-      if(!empty($job_id) && !empty($parent_project_id) && !empty($parent_record_id)) {
+      if (!empty($job_id) && !empty($parent_project_id) && !empty($parent_record_id)) {
 
         // Remove 'metadata import' from the $job_data['job_type'].
         $job_type = str_replace(' metadata import', '', $job_data['job_type']);
 
-        if(!empty($job_type)) {
+        if (!empty($job_type)) {
           // Prepare the data.
           $data = $this->prepare_data($job_type, $this->uploads_directory . $job_id, $itemsController, $datasetsController);
           // Ingest data.
-          if(!empty($data)) {
+          if (!empty($data)) {
             foreach($data as $csv_key => $csv_value) {
               $job_log_ids = $this->ingest_csv_data($csv_value, $job_id, $parent_project_id, $parent_record_id);
             }
@@ -92,7 +92,7 @@ class ImportController extends Controller
       }
 
       // Update the job table to indicate that the CSV import failed.
-      if(!empty($job_id) && empty($job_log_ids)) {
+      if (!empty($job_id) && empty($job_log_ids)) {
         $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'job',
           'record_id' => $job_id,
@@ -121,7 +121,7 @@ class ImportController extends Controller
 
       $data = array();
 
-      if(!empty($job_upload_directory)) {
+      if (!empty($job_upload_directory)) {
 
         $finder = new Finder();
         $finder->files()->in($job_upload_directory);
@@ -129,15 +129,15 @@ class ImportController extends Controller
         // Prevent additional CSVs from being imported according to the $job_type.
         // Assign keys to each CSV, with projects first, subjects second, and items third.
         foreach ($finder as $file) {
-          if(($job_type === 'subjects') && stristr($file->getRealPath(), 'subjects')) {
+          if (($job_type === 'subjects') && stristr($file->getRealPath(), 'subjects')) {
             $csv[0]['type'] = 'subject';
             $csv[0]['data'] = $file->getContents();
           }
-          if((($job_type === 'subjects') || ($job_type === 'items')) && stristr($file->getRealPath(), 'items')) {
+          if ((($job_type === 'subjects') || ($job_type === 'items')) && stristr($file->getRealPath(), 'items')) {
             $csv[1]['type'] = 'item';
             $csv[1]['data'] = $file->getContents();
           }
-          if((($job_type === 'subjects') || ($job_type === 'items') || ($job_type === 'capture datasets')) && stristr($file->getRealPath(), 'capture_datasets')) {
+          if ((($job_type === 'subjects') || ($job_type === 'items') || ($job_type === 'capture datasets')) && stristr($file->getRealPath(), 'capture_datasets')) {
             $csv[2]['type'] = 'capture_dataset';
             $csv[2]['data'] = $file->getContents();
           }
@@ -168,7 +168,7 @@ class ImportController extends Controller
 
           foreach ($json_array as $key => $value) {
             // Replace numeric keys with field names.
-            if(is_numeric($key)) {
+            if (is_numeric($key)) {
               foreach ($value as $k => $v) {
 
                 $field_name = $target_fields[$k];
@@ -234,7 +234,7 @@ class ImportController extends Controller
               $data[$csv_key]['csv'][] = (object)$json_array[$key];
             }
 
-            if(!is_numeric($key)) {
+            if (!is_numeric($key)) {
               $data[$csv_key]['type'] = $value;
             }
           }
@@ -269,16 +269,16 @@ class ImportController extends Controller
     $data->parent_record_id = !empty($parent_record_id) ? $parent_record_id : false;
 
     // Just in case: throw a 404 if either job ID or parent record ID aren't passed.
-    if(!$data->job_id) throw $this->createNotFoundException('Job ID not provided.');
-    if(!$data->parent_project_id) throw $this->createNotFoundException('Parent Project record ID not provided.');
-    if(!$data->parent_record_id) throw $this->createNotFoundException('Parent record ID not provided.');
+    if (!$data->job_id) throw $this->createNotFoundException('Job ID not provided.');
+    if (!$data->parent_project_id) throw $this->createNotFoundException('Parent Project record ID not provided.');
+    if (!$data->parent_record_id) throw $this->createNotFoundException('Parent record ID not provided.');
 
     // Check to see if the parent project record exists/active, and if it doesn't, throw a createNotFoundException (404).
-    if(!empty($data->parent_project_id)) {
+    if (!empty($data->parent_project_id)) {
       $this->repo_storage_controller->setContainer($this->container);
       $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $data->parent_project_id));
       // If no project is returned, throw a createNotFoundException (404).
-      if(!$project) throw $this->createNotFoundException('The Project record doesn\'t exist');
+      if (!$project) throw $this->createNotFoundException('The Project record doesn\'t exist');
     }
 
     $this->repo_storage_controller->setContainer($this->container);
@@ -460,7 +460,7 @@ class ImportController extends Controller
       $project['file_validation_errors'] = [];
       $this->repo_storage_controller->setContainer($this->container);
 
-      if(!empty($id)) {
+      if (!empty($id)) {
         // Check to see if the job exists. If it doesn't, throw a createNotFoundException (404).
         $job_data = $this->repo_storage_controller->execute('getRecord', array(
             'base_table' => 'job',
@@ -469,20 +469,20 @@ class ImportController extends Controller
             'omit_active_field' => true,
           )
         );
-        if(empty($job_data)) throw $this->createNotFoundException('The Job record does not exist');
+        if (empty($job_data)) throw $this->createNotFoundException('The Job record does not exist');
       }
 
-      if(!empty($project_id)) {
+      if (!empty($project_id)) {
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
         $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $project_id));
-        if(!$project) throw $this->createNotFoundException('The Project record does not exist');
+        if (!$project) throw $this->createNotFoundException('The Project record does not exist');
       }
 
       // Get the total number of Item records for the import.
-      if(!empty($id)) {
+      if (!empty($id)) {
         // Get project data.
         $items_total = $this->repo_storage_controller->execute('getImportedItems', array('job_id' => (int)$id));
-        if($items_total) {
+        if ($items_total) {
           // Merge items_total into $project.
           $project = array_merge($project, $items_total);
           // Get the uploaded files.
@@ -601,7 +601,7 @@ class ImportController extends Controller
 
       $data = [];
 
-      if(!empty($job_id) && is_dir($this->uploads_directory . $job_id . '/')) {
+      if (!empty($job_id) && is_dir($this->uploads_directory . $job_id . '/')) {
         $finder = new Finder();
         $finder->files()->in($this->uploads_directory . $job_id . '/');
 
@@ -676,7 +676,7 @@ class ImportController extends Controller
         );
 
         // Format the $data array for the typeahead-bundle.
-        if(!empty($results)) {
+        if (!empty($results)) {
           foreach ($results as $key => $value) {
             $data[] = array('id' => $value[ $params['id_field_name'] ], 'value' => $value[ $params['field_name'] ] . ' [ ' . strtoupper(str_replace('_', ' ', $params['record_type'])) . ' ]');
           }
@@ -730,7 +730,7 @@ class ImportController extends Controller
       $this->repo_storage_controller->setContainer($this->container);
 
       // Get the parent Project's record ID (unless it's a project to begin with).
-      if(!empty($base_record_id) && !empty($record_type) && ($record_type !== 'project')) {
+      if (!empty($base_record_id) && !empty($record_type) && ($record_type !== 'project')) {
         $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
           'base_record_id' => $base_record_id,
           'record_type' => $record_type,
@@ -741,15 +741,15 @@ class ImportController extends Controller
       }
 
       // If there are no results for a parent Project record ID, throw a createNotFoundException (404).
-      if(empty($parent_records)) throw $this->createNotFoundException('Could not establish the parent project ID');
+      if (empty($parent_records)) throw $this->createNotFoundException('Could not establish the parent project ID');
 
-      if(!empty($parent_records) && isset($parent_records['project_repository_id'])) {
+      if (!empty($parent_records) && isset($parent_records['project_repository_id'])) {
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
         $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $parent_records['project_repository_id']));
-        if(!$project) throw $this->createNotFoundException('The Project record does not exist');
+        if (!$project) throw $this->createNotFoundException('The Project record does not exist');
       }
 
-      if(!empty($project)) {
+      if (!empty($project)) {
         // Get the job type (what's being ingested?).
         $job_type = $this->get_job_type($record_type);
         // Insert a record into the job table.
