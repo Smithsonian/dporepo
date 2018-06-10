@@ -57,8 +57,7 @@ class ImportController extends Controller
     {
       // Clear session data.
       $session = new Session();
-      $session->remove('subject_repository_ids');
-      $session->remove('item_repository_ids');
+      $session->remove('new_repository_ids');
 
       $job_log_ids = array();
 
@@ -314,7 +313,7 @@ class ImportController extends Controller
           break;
         case 'item':
           // Set the subject_repository_id
-          if (!empty($new_repository_ids)) {
+          if (!empty($new_repository_ids) && !empty($csv_val->import_parent_id)) {
             $csv_val->subject_repository_id = $new_repository_ids[$csv_val->import_parent_id];
           } else {
             $csv_val->subject_repository_id = $data->parent_record_id;
@@ -322,7 +321,7 @@ class ImportController extends Controller
           break;
         case 'capture_dataset':
           // Set the parent_item_repository_id
-          if (!empty($new_repository_ids)) {
+          if (!empty($new_repository_ids) && !empty($csv_val->import_parent_id)) {
             $csv_val->parent_item_repository_id = $new_repository_ids[$csv_val->import_parent_id];
           } else {
             $csv_val->parent_item_repository_id = $data->parent_record_id;
@@ -338,7 +337,6 @@ class ImportController extends Controller
       ));
 
       // Create an array of all of the newly created repository IDs.
-      $new_repository_ids = array();
       $new_repository_ids[$csv_val->import_row_id] = $this_id;
 
       // Set the description for the job log.
