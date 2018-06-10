@@ -114,8 +114,6 @@ class ImportController extends Controller
         // Remove 'metadata import' from the $job_data['job_type'].
         $job_type = str_replace(' metadata import', '', $job_data['job_type']);
 
-        // $this->u->dumper($job_type);
-
         if(!empty($job_type)) {
           // Prepare the data.
           $data = $this->prepare_data($job_type, $this->uploads_directory . $job_id, $itemsController, $datasetsController);
@@ -200,13 +198,6 @@ class ImportController extends Controller
           // Read the first key from the array, which is the column headers.
           $target_fields = $json_array[0];
 
-          // // Convert the 'import_subject_id' field name to 'subject_repository_id' to satisfy the validator.
-          // foreach ($target_fields as $tfk => $tfv) {
-          //   if($tfv === 'import_subject_id') {
-          //     $target_fields[$tfk] = 'subject_repository_id';
-          //   }
-          // }
-
           // Remove the column headers from the array.
           array_shift($json_array);
 
@@ -222,9 +213,7 @@ class ImportController extends Controller
                 // If present, bring the project_repository_id into the array.
                 $json_array[$key][$field_name] = ($field_name === 'project_repository_id') ? (int)$id : null;
 
-                // TODO: move into a vz-specific method?
-                // [VZ IMPORT ONLY] Strip 'USNM ' from the 'subject_repository_id' field.
-                // $json_array[$key][$field_name] = ($field_name === 'subject_repository_id') ? (int)str_replace('USNM ', '', $v) : $v;
+                // Set the value of the field name.
                 $json_array[$key][$field_name] = $v;
 
                 // Look-up the ID for the 'item_type'.
@@ -329,207 +318,109 @@ class ImportController extends Controller
 
     $this->repo_storage_controller->setContainer($this->container);
 
+    // $data->type is referred to extensively throughout the logic.
     // $data->type can be one of: subject, item, capture_dataset
-    switch ($data->type) {
 
-      // Ingest subjects
-      case 'subject':
-        // Insert into the job_log table
-        // TODO: Feed the 'job_log_label' to the log leveraging fields from a form submission in the UI.
-        $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
-          'base_table' => 'job_log',
-          'user_id' => $data->user_id,
-          'values' => array(
-            'job_id' => $data->job_id,
-            'job_log_status' => 'start',
-            'job_log_label' => 'Import ' . $data->type,
-            'job_log_description' => 'Import started',
-          )
-        ));
+    // Insert into the job_log table
+    $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
+      'base_table' => 'job_log',
+      'user_id' => $data->user_id,
+      'values' => array(
+        'job_id' => $data->job_id,
+        'job_log_status' => 'start',
+        'job_log_label' => 'Import ' . $data->type,
+        'job_log_description' => 'Import started',
+      )
+    ));
 
-        foreach ($data->csv as $csv_key => $csv_val) {
+    // If data type is not a 'subject', set the array of $new_repository_ids.
+    if ($data->type !== 'subject') {
+      $new_repository_ids = $session->get('new_repository_ids');
+    }
 
-          // $this->u->dumper($csv_val);
+    foreach ($data->csv as $csv_key => $csv_val) {
 
+      // Set the parent record's repository ID.
+      switch ($data->type) {
+        case 'subject':
           // Set the project_repository_id
           $csv_val->project_repository_id = (int)$data->parent_project_id;
-          // Insert into the subject table
-          $this_id = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => $data->type,
-            'user_id' => $data->user_id,
-            'values' => (array)$csv_val
-          ));
-
-          // Create an array of all of the newly created repository IDs.
-          $subject_repository_ids[$csv_val->import_row_id] = $this_id;
-
-          // Insert into the job_import_record table
-          $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => 'job_import_record',
-            'user_id' => $data->user_id,
-            'values' => array(
-              'job_id' => $data->job_id,
-              'record_id' => $this_id,
-              'project_id' => (int)$data->parent_record_id,
-              'record_table' => $data->type,
-              'description' => $csv_val->local_subject_id . ' - ' . $csv_val->subject_display_name,
-            )
-          ));
-
-        }
-
-        // Set the session variable 'subject_repository_ids'.
-        $session->set('subject_repository_ids', $subject_repository_ids);
-
-        // Insert into the job_log table
-        // TODO: Feed the 'job_log_label' to the log leveraging fields from a form submission in the UI.
-        $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
-          'base_table' => 'job_log',
-          'user_id' => $data->user_id,
-          'values' => array(
-            'job_id' => $data->job_id,
-            'job_log_status' => 'finish',
-            'job_log_label' => 'Import ' . $data->type,
-            'job_log_description' => 'Import finished',
-          )
-        ));
-        break;
-
-      // Ingest items
-      case 'item':
-        // Insert into the job_log table
-        // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI.
-        $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
-          'base_table' => 'job_log',
-          'user_id' => $data->user_id,
-          'values' => array(
-            'job_id' => $data->job_id,
-            'job_log_status' => 'start',
-            'job_log_label' => 'Import ' . $data->type,
-            'job_log_description' => 'Import started',
-          )
-        ));
-
-        $subject_repository_ids = $session->get('subject_repository_ids');
-
-        foreach ($data->csv as $item_key => $item) {
-
+          break;
+        case 'item':
           // Set the subject_repository_id
-          if (!empty($subject_repository_ids)) {
-            $item->subject_repository_id = $subject_repository_ids[$item->import_parent_id];
+          if (!empty($new_repository_ids)) {
+            $csv_val->subject_repository_id = $new_repository_ids[$csv_val->import_parent_id];
           } else {
-            $item->subject_repository_id = $data->parent_record_id;
+            $csv_val->subject_repository_id = $data->parent_record_id;
           }
-
-          // Insert into the item table
-          $this_id = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => $data->type,
-            'user_id' => $data->user_id,
-            'values' => (array)$item
-          ));
-
-          // Map the import_row_id to the newly created item_repository_id.
-          $item_repository_ids[] = $this_id;
-          
-          // Insert into the job_import_record table
-          $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => 'job_import_record',
-            'user_id' => $data->user_id,
-            'values' => array(
-              'job_id' => $data->job_id,
-              'record_id' => $this_id,
-              'project_id' => (int)$data->parent_record_id,
-              'record_table' => $data->type,
-              'description' => $item->item_display_name,
-            )
-          ));
-        }
-
-        // Remove the session variable 'subject_repository_ids'.
-        $session->remove('subject_repository_ids');
-
-        // Set the session variable 'item_repository_ids'.
-        $session->set('item_repository_ids', $item_repository_ids);
-
-        // Insert into the job_log table
-        $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
-          'base_table' => 'job_log',
-          'user_id' => $data->user_id,
-          'values' => array(
-            'job_id' => $data->job_id,
-            'job_log_status' => 'finish',
-            'job_log_label' => 'Import ' . $data->type,
-            'job_log_description' => 'Import finished',
-          )
-        ));
-        break;
-
-      // Ingest capture datasets
-      case 'capture_dataset':
-
-        // Insert into the job_log table
-        // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI.
-        $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
-          'base_table' => 'job_log',
-          'user_id' => $data->user_id,
-          'values' => array(
-            'job_id' => $data->job_id,
-            'job_log_status' => 'start',
-            'job_log_label' => 'Import ' . $data->type,
-            'job_log_description' => 'Import started',
-          )
-        ));
-
-        $item_repository_ids = $session->get('item_repository_ids');
-
-        foreach ($data->csv as $capture_dataset_key => $capture_dataset) {
-
+          break;
+        case 'capture_dataset':
           // Set the parent_item_repository_id
-          if (!empty($item_repository_ids)) {
-            $capture_dataset->parent_item_repository_id = $item_repository_ids[$capture_dataset->import_parent_id];
+          if (!empty($new_repository_ids)) {
+            $csv_val->parent_item_repository_id = $new_repository_ids[$csv_val->import_parent_id];
           } else {
-            $capture_dataset->parent_item_repository_id = $data->parent_record_id;
+            $csv_val->parent_item_repository_id = $data->parent_record_id;
           }
+          break;
+      }
 
-          // Insert into the capture_dataset table
-          $this_id = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => $data->type,
-            'user_id' => $data->user_id,
-            'values' => (array)$capture_dataset
-          ));
-          
-          // Insert into the job_import_record table
-          $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => 'job_import_record',
-            'user_id' => $data->user_id,
-            'values' => array(
-              'job_id' => $data->job_id,
-              'record_id' => $this_id,
-              'project_id' => (int)$data->parent_project_id,
-              'record_table' => $data->type,
-              'description' => $capture_dataset->capture_dataset_name,
-            )
-          ));
-        }
+      // Insert data from the CSV into the appropriate database table, using the $data->type as the table name.
+      $this_id = $this->repo_storage_controller->execute('saveRecord', array(
+        'base_table' => $data->type,
+        'user_id' => $data->user_id,
+        'values' => (array)$csv_val
+      ));
 
-        // Remove the session variable 'item_repository_ids'.
-        if (!empty($item_repository_ids)) {
-          $session->remove('item_repository_ids');
-        }
+      // Create an array of all of the newly created repository IDs.
+      $new_repository_ids = array();
+      $new_repository_ids[$csv_val->import_row_id] = $this_id;
 
-        // Insert into the job_log table
-        $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
-          'base_table' => 'job_log',
-          'user_id' => $data->user_id,
-          'values' => array(
-            'job_id' => $data->job_id,
-            'job_log_status' => 'finish',
-            'job_log_label' => 'Import capture datasets',
-            'job_log_description' => 'Import finished',
-          )
-        ));
-        break;
+      // Set the description for the job log.
+      switch ($data->type) {
+        case 'subject':
+          $data->description = $csv_val->local_subject_id . ' - ' . $csv_val->subject_display_name;
+          break;
+        case 'item':
+          $data->description = $csv_val->item_display_name;
+          break;
+        case 'capture_dataset':
+          $data->description = $csv_val->capture_dataset_name;
+          break;
+      }
+
+      // Insert into the job_import_record table
+      $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+        'base_table' => 'job_import_record',
+        'user_id' => $data->user_id,
+        'values' => array(
+          'job_id' => $data->job_id,
+          'record_id' => $this_id,
+          'project_id' => (int)$data->parent_record_id,
+          'record_table' => $data->type,
+          'description' => $data->description,
+        )
+      ));
+
     }
+
+    // Remove the session variable 'new_repository_ids'.
+    $session->remove('new_repository_ids');
+
+    // Set the session variable 'new_repository_ids'.
+    $session->set('new_repository_ids', $new_repository_ids);
+
+    // Insert into the job_log table
+    // TODO: Feed the 'job_log_label' to the log leveraging fields from a form submission in the UI.
+    $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
+      'base_table' => 'job_log',
+      'user_id' => $data->user_id,
+      'values' => array(
+        'job_id' => $data->job_id,
+        'job_log_status' => 'finish',
+        'job_log_label' => 'Import ' . $data->type,
+        'job_log_description' => 'Import finished',
+      )
+    ));
 
     // TODO: return something more than job log IDs?
     return $job_log_ids;
