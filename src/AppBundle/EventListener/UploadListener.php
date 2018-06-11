@@ -82,8 +82,10 @@ class UploadListener
       if(count((array)$validation_results) && isset($validation_results->results->messages)) {
         // TODO: Remember to remove the already uploaded file?
         $response['error'] = json_encode($validation_results->results->messages);
-        $response['csv'] = json_encode($validation_results->csv);
       }
+
+      // Return the CSV so it can be displayed as a spreadsheet in the UI.
+      $response['csv'] = json_encode($validation_results->csv);
     }
 
     return $response;
@@ -204,7 +206,7 @@ class UploadListener
    * @param string $filename  The file name
    * @return array  Import result and/or any messages
    */
-  public function construct_import_data($job_id_directory = null, $filename = null) // , $thisContainer, $itemsController
+  public function construct_import_data($job_id_directory = null, $filename = null)
   {
 
     $json_object = array();
@@ -230,15 +232,6 @@ class UploadListener
       // Read the first key from the array, which is the column headers.
       $target_fields = $json_array[0];
 
-      // TODO: move into a vz-specific method?
-      // [VZ IMPORT ONLY] Convert field names to satisfy the validator.
-      foreach ($target_fields as $tfk => $tfv) {
-        // [VZ IMPORT ONLY] Convert the 'import_subject_id' field name to 'subject_repository_id'.
-        if($tfv === 'import_subject_id') {
-          $target_fields[$tfk] = 'subject_repository_id';
-        }
-      }
-
       // Remove the column headers from the array.
       array_shift($json_array);
 
@@ -247,19 +240,7 @@ class UploadListener
         foreach ($value as $k => $v) {
           $field_name = $target_fields[$k];
           unset($json_array[$key][$k]);
-          // // If present, bring the project_repository_id into the array.
-          // $json_array[$key][$field_name] = ($field_name === 'project_repository_id') ? (int)$id : null;
-          // TODO: move into a vz-specific method?
-          // [VZ IMPORT ONLY] Strip 'USNM ' from the 'subject_repository_id' field.
-          $json_array[$key][$field_name] = ($field_name === 'subject_repository_id') ? (int)str_replace('USNM ', '', $v) : $v;
-
-          // TODO: figure out a way to tap into the ItemsController.
-          // Look-up the ID for the 'item_type' (not when validating data, only when importing data).
-          // if ((debug_backtrace()[1]['function'] !== 'validate_metadata') && ($field_name === 'item_type')) {
-          //   $item_type_lookup_options = $itemsController->get_item_types($thisContainer);
-          //   $json_array[$key][$field_name] = (int)$item_type_lookup_options[$v];
-          // }
-
+          $json_array[$key][$field_name] = $v;
         }
         // Convert the array to an object.
         $json_object[] = (object)$json_array[$key];
