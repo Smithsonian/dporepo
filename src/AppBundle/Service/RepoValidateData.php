@@ -33,13 +33,14 @@ class RepoValidateData implements RepoValidate {
   /**
    * @param null $data The data to validate.
    * @param string $schema The schema to validate against (optional).
+   * @param string $parent_record_type The parent record type - can be one of: project, subject, item, capture dataset.
    * @param array $blacklisted_fields An array of fields to ignore (optional).
    * Validates incoming data against JSON Schema Draft 7. See:
    * http://json-schema.org/specification.html
    * JSON Schema for PHP Documentation: https://github.com/justinrainbow/json-schema
    * @return mixed array containing success/fail value, and any messages.
    */
-  public function validateData($data = NULL, $schema = 'project', $blacklisted_fields = array()) {
+  public function validateData($data = NULL, $schema = 'project', $parent_record_type = NULL, $blacklisted_fields = array()) {
 
     $schema_definitions_dir = ($schema !== 'project') ? 'definitions/' : '';
 
