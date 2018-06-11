@@ -173,6 +173,9 @@ class UploadListener
         case stristr($filename, 'capture_datasets'):
           $schema = 'capture_dataset';
           break;
+        case stristr($filename, 'models'):
+          $schema = 'model';
+          break;
         default:
           $schema = false;
       }

@@ -954,7 +954,9 @@ class RepoStorageHybrid implements RepoStorage {
    * @return array Import result and/or any messages
    */
   public function getImportedItems($params) {
-    $sql = "SELECT SUM(case when job_import_record.record_table = 'item' then 1 else 0 end) AS items_total,
+    $sql = "SELECT SUM(case when job_import_record.record_table = 'subject' then 1 else 0 end) AS subjects_total,
+      SUM(case when job_import_record.record_table = 'item' then 1 else 0 end) AS items_total,
+      SUM(case when job_import_record.record_table = 'capture_dataset' then 1 else 0 end) AS capture_datasets_total,
       job.job_label,
       job.date_created,
       job.date_completed,
@@ -2917,8 +2919,16 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'project_repository_id',
     );
     $query_params['fields'][] = array(
+      'field_name' => "SUM(case when job_import_record.record_table = 'subject' then 1 else 0 end)",
+      'field_alias' => 'subjects_total',
+    );
+    $query_params['fields'][] = array(
       'field_name' => "SUM(case when job_import_record.record_table = 'item' then 1 else 0 end)",
       'field_alias' => 'items_total',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => "SUM(case when job_import_record.record_table = 'capture_dataset' then 1 else 0 end)",
+      'field_alias' => 'capture_datasets_total',
     );
     $query_params['fields'][] = array(
       'table_name' => 'project',
@@ -3195,6 +3205,75 @@ class RepoStorageHybrid implements RepoStorage {
       }
 
     }
+
+
+    // If models were ingested (with a capture dataset as the parent record)...
+    if ($job_data['job_type'] === 'models metadata import') {
+
+      $record_table = 'model';
+
+      $query_params['related_tables'][] = array(
+        'table_name' => 'model',
+        'table_join_field' => 'model_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'job_import_record',
+        'base_join_field' => 'record_id',
+      );
+      $query_params['related_tables'][] = array(
+        'table_name' => 'capture_dataset',
+        'table_join_field' => 'capture_dataset_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'model',
+        'base_join_field' => 'parent_capture_dataset_repository_id',
+      );
+      $query_params['related_tables'][] = array(
+        'table_name' => 'item',
+        'table_join_field' => 'item_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'capture_dataset',
+        'base_join_field' => 'parent_item_repository_id',
+      );
+      $query_params['related_tables'][] = array(
+        'table_name' => 'subject',
+        'table_join_field' => 'subject_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'item',
+        'base_join_field' => 'subject_repository_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'capture_dataset',
+        'field_name' => 'capture_dataset_repository_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'capture_dataset',
+        'field_name' => 'capture_dataset_name',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'model',
+        'field_name' => 'model_repository_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'model',
+        'field_name' => 'model_file_type',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'model',
+        'field_name' => 'date_of_creation',
+      );
+
+      if (NULL !== $search_value) {
+        $query_params['search_params'][3] = array(
+          'field_names' => array(
+            'item_display_name',
+            'capture_dataset_name',
+          ),
+          'search_values' => array($search_value),
+          'comparison' => 'LIKE',
+        );
+      }
+
+    }
+
 
     $query_params['search_params'][0] = array('field_names' => array('job_import_record.record_table'), 'search_values' => array($record_table), 'comparison' => '=');
     $query_params['search_type'] = 'AND';

@@ -111,7 +111,7 @@ class ModelController extends Controller
         }
 
         // Get data from lookup tables.
-        $data->unit_options = $this->get_unit();
+        $data->unit_options = $this->get_unit($this->container);
 
         // Create the form
         $form = $this->createForm(ModelForm::class, $data);
@@ -154,10 +154,10 @@ class ModelController extends Controller
      * Get Unit
      * @return  array|bool  The query result
      */
-    public function get_unit()
+    public function get_unit($this_container)
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this->container);
+      $this->repo_storage_controller->setContainer($this_container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'unit',
           'sort_fields' => array(
