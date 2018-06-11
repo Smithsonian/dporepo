@@ -52,18 +52,24 @@ class ImportController extends Controller
      * @param int $parent_record_id Parent record ID
      * @param object $request Symfony's request object
      * @param object $validate ValidateMetadataController class
+     * @param object $validate ItemsController class
+     * @param object $validate DatasetsController class
+     * @param object $validate ModelController class
      */
-    public function import_csv($job_id, $parent_project_id, $parent_record_id, Request $request, ValidateMetadataController $validate, ItemsController $itemsController, DatasetsController $datasetsController)
+    public function import_csv($job_id, $parent_project_id, $parent_record_id, Request $request, ValidateMetadataController $validate, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController)
     {
       // Clear session data.
       $session = new Session();
-      $session->remove('new_repository_ids');
+      $session->remove('new_repository_ids_1');
+      $session->remove('new_repository_ids_2');
+      $session->remove('new_repository_ids_3');
+      $session->remove('new_repository_ids_4');
 
       $job_log_ids = array();
 
       $this->repo_storage_controller->setContainer($this->container);
 
-      // Set the job type (e.g. subjects metadata import, items metadata import, capture datasets metadata import).
+      // Set the job type (e.g. subjects metadata import, items metadata import, capture datasets metadata import, models metadata import).
       $job_data = $this->repo_storage_controller->execute('getRecord', array(
           'base_table' => 'job',
           'id_field' => 'job_id',
@@ -81,11 +87,13 @@ class ImportController extends Controller
 
         if (!empty($job_type)) {
           // Prepare the data.
-          $data = $this->prepare_data($job_type, $this->uploads_directory . $job_id, $itemsController, $datasetsController);
+          $data = $this->prepare_data($job_type, $this->uploads_directory . $job_id, $itemsController, $datasetsController, $modelsController);
           // Ingest data.
           if (!empty($data)) {
+            $i = 1;
             foreach($data as $csv_key => $csv_value) {
-              $job_log_ids = $this->ingest_csv_data($csv_value, $job_id, $parent_project_id, $parent_record_id);
+              $job_log_ids = $this->ingest_csv_data($csv_value, $job_id, $parent_project_id, $parent_record_id, $i);
+              $i++;
             }
           }
         }
@@ -112,11 +120,11 @@ class ImportController extends Controller
     }
 
     /**
-     * @param string $job_type The job type (One of: subjects, items, capture datasets)
+     * @param string $job_type The job type (One of: subjects, items, capture datasets, models)
      * @param string $job_upload_directory The upload directory
      * @return array Import result and/or any messages
      */
-    public function prepare_data($job_type = null, $job_upload_directory = null, $itemsController, $datasetsController)
+    public function prepare_data($job_type = null, $job_upload_directory = null, $itemsController, $datasetsController, $modelsController)
     {
 
       $data = array();
@@ -140,6 +148,10 @@ class ImportController extends Controller
           if ((($job_type === 'subjects') || ($job_type === 'items') || ($job_type === 'capture datasets')) && stristr($file->getRealPath(), 'capture_datasets')) {
             $csv[2]['type'] = 'capture_dataset';
             $csv[2]['data'] = $file->getContents();
+          }
+          if ((($job_type === 'subjects') || ($job_type === 'items') || ($job_type === 'capture datasets') || ($job_type === 'models')) && stristr($file->getRealPath(), 'models')) {
+            $csv[3]['type'] = 'model';
+            $csv[3]['data'] = $file->getContents();
           }
         }
 
@@ -181,12 +193,14 @@ class ImportController extends Controller
                 // Set the value of the field name.
                 $json_array[$key][$field_name] = $v;
 
+                // ITEM LOOKUPS
                 // Look-up the ID for the 'item_type'.
                 if ($field_name === 'item_type') {
                   $item_type_lookup_options = $itemsController->get_item_types($this->container);
                   $json_array[$key][$field_name] = (int)$item_type_lookup_options[$v];
                 }
 
+                // CAPTURE DATASET LOOKUPS
                 // Look-up the ID for the 'capture_method'.
                 if ($field_name === 'capture_method') {
                   $capture_method_lookup_options = $datasetsController->get_capture_methods($this->container);
@@ -229,6 +243,36 @@ class ImportController extends Controller
                   $json_array[$key][$field_name] = (int)$camera_cluster_types_lookup_options[$v];
                 }
 
+                // MODEL LOOKUPS
+                // TODO:
+                // Model lookup options not in database! Need to either
+                // 1) place into database and create a way to manage
+                // 2) convert all lookups to draw from the JSON schema (preferred!)
+
+                // Look-up the ID for the 'creation_method'.
+                if ($field_name === 'creation_method') {
+                  $creation_method_lookup_options = array('scan-to-mesh' => 1, 'CAD' => 2);
+                  $json_array[$key][$field_name] = (int)$creation_method_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'model_modality'.
+                if ($field_name === 'model_modality') {
+                  $model_modality_lookup_options = array('point cloud' => 1, 'mesh' => 2);
+                  $json_array[$key][$field_name] = (int)$model_modality_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'units'.
+                if ($field_name === 'units') {
+                  $units_lookup_options = $modelsController->get_unit($this->container);
+                  $json_array[$key][$field_name] = (int)$units_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'model_purpose'.
+                if ($field_name === 'model_purpose') {
+                  $model_purpose_lookup_options = array('master' => 1, 'delivery web' => 2, 'delivery print' => 3, 'intermediate processing step' => 4);
+                  $json_array[$key][$field_name] = (int)$model_purpose_lookup_options[$v];
+                }
+
               }
               // Convert the array to an object.
               $data[$csv_key]['csv'][] = (object)$json_array[$key];
@@ -252,7 +296,7 @@ class ImportController extends Controller
    * @param int $parent_record_id  Parent record ID
    * @return array  An array of job log IDs
    */
-  public function ingest_csv_data($data = null, $job_id = null, $parent_project_id = null, $parent_record_id = null) {
+  public function ingest_csv_data($data = null, $job_id = null, $parent_project_id = null, $parent_record_id = null, $i = 1) {
 
     $session = new Session();
     $data = (object)$data;
@@ -284,7 +328,7 @@ class ImportController extends Controller
     $this->repo_storage_controller->setContainer($this->container);
 
     // $data->type is referred to extensively throughout the logic.
-    // $data->type can be one of: subject, item, capture_dataset
+    // $data->type can be one of: subject, item, capture_dataset, model
 
     // Insert into the job_log table
     $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
@@ -300,7 +344,7 @@ class ImportController extends Controller
 
     // If data type is not a 'subject', set the array of $new_repository_ids.
     if ($data->type !== 'subject') {
-      $new_repository_ids = $session->get('new_repository_ids');
+      $new_repository_ids[$i] = $session->get('new_repository_ids_' . ($i-1));
     }
 
     foreach ($data->csv as $csv_key => $csv_val) {
@@ -312,22 +356,37 @@ class ImportController extends Controller
           $csv_val->project_repository_id = (int)$data->parent_project_id;
           break;
         case 'item':
+
+          // $this->u->dumper($csv_val->import_parent_id,0);
+          // $this->u->dumper($new_repository_ids,0);
+
           // Set the subject_repository_id
-          if (!empty($new_repository_ids) && !empty($csv_val->import_parent_id)) {
-            $csv_val->subject_repository_id = $new_repository_ids[$csv_val->import_parent_id];
+          if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
+            $csv_val->subject_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
           } else {
             $csv_val->subject_repository_id = $data->parent_record_id;
           }
           break;
         case 'capture_dataset':
           // Set the parent_item_repository_id
-          if (!empty($new_repository_ids) && !empty($csv_val->import_parent_id)) {
-            $csv_val->parent_item_repository_id = $new_repository_ids[$csv_val->import_parent_id];
+          if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
+            $csv_val->parent_item_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
           } else {
             $csv_val->parent_item_repository_id = $data->parent_record_id;
           }
+        case 'model':
+          // Set the parent_capture_dataset_repository_id
+          if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
+            $csv_val->parent_capture_dataset_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+          } else {
+            $csv_val->parent_capture_dataset_repository_id = $data->parent_record_id;
+          }
           break;
       }
+
+      // if(isset($csv_val->subject_repository_id)) {
+      //   $this->u->dumper($csv_val->subject_repository_id,0);
+      // }
 
       // Insert data from the CSV into the appropriate database table, using the $data->type as the table name.
       $this_id = $this->repo_storage_controller->execute('saveRecord', array(
@@ -337,7 +396,7 @@ class ImportController extends Controller
       ));
 
       // Create an array of all of the newly created repository IDs.
-      $new_repository_ids[$csv_val->import_row_id] = $this_id;
+      $new_new_repository_ids[$csv_val->import_row_id] = $this_id;
 
       // Set the description for the job log.
       switch ($data->type) {
@@ -348,7 +407,10 @@ class ImportController extends Controller
           $data->description = $csv_val->item_display_name;
           break;
         case 'capture_dataset':
-          $data->description = $csv_val->capture_dataset_name;
+          $data->description = $data->for_model_description = $csv_val->capture_dataset_name;
+          break;
+        case 'model':
+          $data->description = $project['project_name'] . ' - ' . $csv_val->model_file_type;
           break;
       }
 
@@ -368,10 +430,10 @@ class ImportController extends Controller
     }
 
     // Remove the session variable 'new_repository_ids'.
-    $session->remove('new_repository_ids');
+    // $session->remove('new_repository_ids_' . $i);
 
     // Set the session variable 'new_repository_ids'.
-    $session->set('new_repository_ids', $new_repository_ids);
+    $session->set('new_repository_ids_' . $i, $new_new_repository_ids);
 
     // Insert into the job_log table
     // TODO: Feed the 'job_log_label' to the log leveraging fields from a form submission in the UI.
@@ -385,6 +447,8 @@ class ImportController extends Controller
         'job_log_description' => 'Import finished',
       )
     ));
+
+    // if($i === 2) die();
 
     // TODO: return something more than job log IDs?
     return $job_log_ids;
@@ -480,11 +544,12 @@ class ImportController extends Controller
 
       // Get the total number of Item records for the import.
       if (!empty($id)) {
-        // Get project data.
-        $items_total = $this->repo_storage_controller->execute('getImportedItems', array('job_id' => (int)$id));
-        if ($items_total) {
-          // Merge items_total into $project.
-          $project = array_merge($project, $items_total);
+        // Get job import data (query the 'job_import_record' table).
+        $job_record_data = $this->repo_storage_controller->execute('getImportedItems', array('job_id' => (int)$id));
+        // If a record is found within the 'job_import_record' table, fetch the remaining data (uploaded files, file validation errors).
+        if ($job_record_data) {
+          // Merge job_record_data into $project.
+          $project = array_merge($project, $job_record_data);
           // Get the uploaded files.
           $project['files'] = $this->get_directory_contents($id);
           // Get errors if they exist.
@@ -532,7 +597,7 @@ class ImportController extends Controller
       }
 
       return $this->render('import/import_summary_item.html.twig', array(
-        'page_title' => $items_total ? $project['job_label'] : 'Uploads: ' . $project['project_name'],
+        'page_title' => $job_record_data ? $project['job_label'] : 'Uploads: ' . $project['project_name'],
         'project' => $project,
         'job_data' => $job_data,
         'id' => $id,
@@ -562,7 +627,7 @@ class ImportController extends Controller
 
       $this->repo_storage_controller->setContainer($this->container);
 
-      // Determine what was ingested (e.g. subjects, items, capture datasets).
+      // Determine what was ingested (e.g. subjects, items, capture datasets, models).
       $job_data = $this->repo_storage_controller->execute('getRecord', array(
           'base_table' => 'job',
           'id_field' => 'job_id',
@@ -637,6 +702,7 @@ class ImportController extends Controller
         'project',
         'subject',
         'item',
+        'capture_dataset',
       );
 
       foreach ($record_types as $key => $value) {
@@ -651,6 +717,10 @@ class ImportController extends Controller
           case 'item':
             $params['field_name'] = 'item_display_name';
             $params['id_field_name'] = 'item_repository_id';
+            break;
+          case 'capture_dataset':
+            $params['field_name'] = 'capture_dataset_name';
+            $params['id_field_name'] = 'capture_dataset_repository_id';
             break;
           default: // project
             $params['field_name'] = 'project_name';
@@ -706,6 +776,10 @@ class ImportController extends Controller
 
         case 'item':
           $data = 'capture datasets';
+          break;
+
+        case 'capture_dataset':
+          $data = 'models';
           break;
         
         default:
