@@ -49,6 +49,7 @@ class UploadListener
     $data->full_path = !empty($post['fullPath']) ? $post['fullPath'] : false;
     $data->job_id = !empty($post['jobId']) ? $post['jobId'] : false;
     $data->parent_record_id = !empty($post['parentRecordId']) ? $post['parentRecordId'] : false;
+    $data->parent_record_type = !empty($post['parentRecordType']) ? $post['parentRecordType'] : false;
     $data->prevalidate = (!empty($post['prevalidate']) && ($post['prevalidate'] === 'true')) ? true : false;
     // User data.
     $user = $this->tokenStorage->getToken()->getUser();
@@ -61,12 +62,12 @@ class UploadListener
     }
 
     // Pre-validate
-    if ($data->prevalidate && $data->job_id) {
+    if ($data->prevalidate && $data->job_id && $data->parent_record_type) {
 
       switch ($file->getExtension()) {
         case 'csv':
           // Run the CSV validation.
-          $validation_results = $this->validate_metadata($data->job_id, $data->job_id_directory, $file->getBasename()); // , $this->container, $items
+          $validation_results = $this->validate_metadata($data->job_id, $data->job_id_directory, $data->parent_record_type, $file->getBasename());
           // Remove the CSV file.
           $finder = new Finder();
           $finder->files()->in($data->job_id_directory . '/');
@@ -144,7 +145,7 @@ class UploadListener
    * @param int $job_id_directory  The job directory
    * @return json
    */
-  public function validate_metadata($job_id = null, $job_id_directory = null, $filename = null) // , $thisContainer, $itemsController
+  public function validate_metadata($job_id = null, $job_id_directory = null, $parent_record_type = null, $filename = null)
   {
     $schema = false;
     $blacklisted_fields = array();
@@ -188,7 +189,7 @@ class UploadListener
         // Instantiate the RepoValidateData class.
         $repoValidate = new RepoValidateData();
         // Execute the validation.
-        $data->results = (object)$repoValidate->validateData($data->csv, $schema, $blacklisted_fields);
+        $data->results = (object)$repoValidate->validateData($data->csv, $schema, $parent_record_type, $blacklisted_fields);
       }
     }
 
