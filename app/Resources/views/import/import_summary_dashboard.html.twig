@@ -36,10 +36,12 @@
             <thead>
               <tr>
                 <th class="text-center">Project</th>
-                <th class="text-center">Date Uploaded</th>
-                <th class="text-center">Total # Records</th>
-                <th class="text-center">Uploaded By</th>
                 <th class="text-center">Status</th>
+                <th class="text-center">Total Subjects</th>
+                <th class="text-center">Total Items</th>
+                <th class="text-center">Total Capture Datasets</th>
+                <th class="text-center">Date Uploaded</th>
+                <th class="text-center">Uploaded By</th>
               </tr>
             </thead>
           </table>
@@ -53,21 +55,6 @@
               <!-- Typeahead form element -->
               {{ form_start(form) }}
               <h3>Choose a Parent Record</h3>
-              {# <p><strong>Search By:</strong></p>
-              <div class="form-group">
-                <label class="radio-inline">
-                  <input type="radio" name="recordType" id="inlineRadio1" value="project" checked="checked"> Project
-                </label>
-                <label class="radio-inline">
-                  <input type="radio" name="recordType" id="inlineRadio2" value="subject"> Subject
-                </label>
-                <label class="radio-inline">
-                  <input type="radio" name="recordType" id="inlineRadio3" value="item"> Item
-                </label>
-                <label class="radio-inline">
-                  <input type="radio" name="recordType" id="inlineRadio4" value="capture_dataset"> Capture Dataset
-                </label>
-              </div> #}
               {{ form_row(form.parent_picker) }}
               {{ form_end(form) }}
             </div>
@@ -223,28 +210,23 @@
   <script type="text/javascript" src="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.js') }}"></script>
   <script type="text/javascript">
     $(document).ready(function() {
+
       var details_page = "/admin/projects/subjects/";
       
       $('#browse').dataTable({
         "columns": [
-          { "data": "project_name",
-            "render": function (data, type, row, meta) {
-              return "<a href='/admin/projects/subjects/" + row.project_repository_id + "'>" + row.project_name + "</a>";
-            }
-          },
+          { "data": "project_name" },
+          { "data": "job_status" },
+          { "data": "subjects_total" },
+          { "data": "items_total" },
+          { "data": "capture_datasets_total" },
           { "data": "date_created" },
-          { "data": "items_total" ,
-            "render": function (data, type, row, meta) {
-              return "<a href='/admin/import/" + row.job_id + "/" + row.project_id + "'>" + row.items_total + "</a>";
-            }
-          },
-          { "data": "username" },
-          { "data": "job_status" }
+          { "data": "username" }       
         ],
         //"dom": 'lfip<"datatables_bulk_actions">tip',
         "pagingType": "simple_numbers",
         "stateSave": true,
-        "order": [[1,"desc"]],
+        "order": [[5,"desc"]],
         // Show processing throbber.
         "processing": true,
         // All data management will be done on the server side.
@@ -259,6 +241,20 @@
           {"sWidth":"425px","aTargets":[0]},
           {"bSortable":false,"aTargets":[0,4]}
         ],
+        "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+          // This table row.
+          var thisTableRow = $(nRow);
+          // Send to details page when clicked.
+          thisTableRow.find('td').click(function() {
+            // This table cell.
+            var thisTableCell = $(this);
+            // Don't do anything if the table cell has the 'manage_column' CSS class.
+            if(thisTableCell.hasClass('manage_column')) return;
+            // Send to the details page.
+            window.location.href = '/admin/import/' + aData.job_id + '/' + aData.project_id;
+          });
+
+        }
       });
     });
 
@@ -328,6 +324,9 @@
       // Generate a temporary job ID.
       generateJobId(parentRecordId, true);
 
+      // Get the parent record type.
+      let parentRecordType = getRecordType();
+
       // Display the progress modal.
       $('#uploading-modal-title').empty();
       $('#uploading-modal-title').append('Pre-Validating...');
@@ -339,6 +338,10 @@
 
         // Set a custom parameter, 'parentRecordId', so it can be passed to the back-end.
         queuedFiles[i].parentRecordId = parentRecordId;
+
+        // Set a custom parameter, 'parentRecordType', so it can be passed to the back-end.
+        queuedFiles[i].parentRecordType = parentRecordType;
+
         // Get the extension of the file.
         let fileExtension = getExtension(queuedFiles[i].name);
 
@@ -436,6 +439,8 @@
 
     uploadsDropzone.on("success", function(file, responseText) {
 
+      // console.log(file);
+
       let fileExtension = getExtension(file.name);
 
       // If the uploaded file is being pre-validated,
@@ -448,6 +453,30 @@
         // Set the display state of progress bars.
         document.querySelector("#total-progress").style.opacity = "0";
         $(file.previewElement).find('.progress-bar').attr('style', 'width: 0;');
+
+        // Subject import limitation message, based on the 'subject' parent record type.
+        if((file.parentRecordType === 'subject') && (file.name === 'subjects.csv')) {
+          // The message.
+          let subjectImportMessage = $('<div />').addClass('alert alert-warning cvs-validation-error').attr('role', 'alert').html('<strong>' + file.name + '</strong>: Warning! The chosen parent record type is a "' + file.parentRecordType + '", therefore data within the "' + file.name + '" file will not be imported.');
+          // Append the message to the panel-body container.
+          $('.panel-validation-results').find('.panel-body').append(subjectImportMessage);
+        }
+
+        // Subject and Item import limitation message, based on the 'item' parent record type.
+        if((file.parentRecordType === 'item') && ((file.name === 'subjects.csv') || (file.name === 'items.csv'))) {
+          // The message.
+          let itemImportMessage = $('<div />').addClass('alert alert-warning cvs-validation-error').attr('role', 'alert').html('<strong>' + file.name + '</strong>: Warning! The chosen parent record type is a "' + file.parentRecordType + '", therefore data within the "' + file.name + '" file will not be imported.');
+          // Append the message to the panel-body container.
+          $('.panel-validation-results').find('.panel-body').append(itemImportMessage);
+        }
+
+        // Subject, Item, and Capture Dataset import limitation message, based on the 'capture_dataset' parent record type.
+        if((file.parentRecordType === 'capture_dataset') && ((file.name === 'subjects.csv') || (file.name === 'items.csv') || (file.name === 'capture_datasets.csv'))) {
+          // The message.
+          let captureDatasetImportMessage = $('<div />').addClass('alert alert-warning cvs-validation-error').attr('role', 'alert').html('<strong>' + file.name + '</strong>: Warning! The chosen parent record type is a "' + file.parentRecordType + '", therefore data within the "' + file.name + '" file will not be imported.');
+          // Append the message to the panel-body container.
+          $('.panel-validation-results').find('.panel-body').append(captureDatasetImportMessage);
+        }
 
         // If no errors are returned, display a message.
         if(responseText && (typeof responseText.error === 'undefined')) {
@@ -479,74 +508,76 @@
             $('.panel-validation-results').find('.panel-body').append(message);
           }
 
-          // Display the CSV within a spreadsheet interface, highlighting errors.
-          // TODO: Make it possible to edit the spreadsheet and resubmit for pre-validation.
-          // See: Handsontable
-          // https://github.com/handsontable/handsontable
-          let container,
-              hotVarName = 'hot',
-              panel = $('<div />').addClass('panel panel-default panel-spreadsheet'),
-              panelHeading = $('<div />').addClass('panel-heading').text(file.name),
-              panelHeadingContent = $('<span />')
-                .attr('style', 'font-size: 1.5rem; font-weight: normal;')
-                .html('<i class="glyphicon glyphicon-info-sign" style="margin-left: 1.5rem;"></i> For now, only for representation of the data. The goal is to allow for edits and resubmission.'),
-              panelBody = $('<div />').addClass('panel-body').attr('id', 'csv-spreadsheet-' + spreadsheetCount);
+        }
 
-          // Show the panel-spreadsheet container.
-          $('#panel-spreadsheets').removeClass('hidden');
-          // Populate the panel with the heading and body.
-          panelHeading.append(panelHeadingContent);
-          panel.append(panelHeading, panelBody);
-          // Add the panel to the results container.
-          resultsContainer.append(panel);
+        // Display the CSV within a spreadsheet interface, highlighting errors.
+        // TODO: Make it possible to edit the spreadsheet and resubmit for pre-validation.
+        // See: Handsontable
+        // https://github.com/handsontable/handsontable
+        let container,
+            hotVarName = 'hot',
+            panel = $('<div />').addClass('panel panel-default panel-spreadsheet'),
+            panelHeading = $('<div />').addClass('panel-heading').text(file.name),
+            panelHeadingContent = $('<span />')
+              .attr('style', 'font-size: 1.5rem; font-weight: normal;')
+              .html('<i class="glyphicon glyphicon-info-sign" style="margin-left: 1.5rem;"></i> For now, only for representation of the data. The goal is to allow for edits and resubmission.'),
+            panelBody = $('<div />').addClass('panel-body').attr('id', 'csv-spreadsheet-' + spreadsheetCount);
 
-          // Initialize Handsontable.
-          container = document.getElementById('csv-spreadsheet-' + spreadsheetCount);
-          // Note: window[hotVarName + spreadsheetCount] is a dynamic variable.
-          // This basically allows for multiple Handsontable instances.
-          // See: https://stackoverflow.com/a/28130158/1298317
-          window[hotVarName + spreadsheetCount] = new Handsontable(container, {
-            data: JSON.parse(responseText.csv),
-            rowHeaders: true,
-            colHeaders: true,
-            outsideClickDeselects: false,
-            selectionMode: 'multiple',
-          });
+        // Show the panel-spreadsheet container.
+        $('#panel-spreadsheets').removeClass('hidden');
+        // Populate the panel with the heading and body.
+        panelHeading.append(panelHeadingContent);
+        panel.append(panelHeading, panelBody);
+        // Add the panel to the results container.
+        resultsContainer.append(panel);
 
-          // Style rows which have errors.
-          // https://docs.handsontable.com/2.0.0/demo-selecting-ranges.html#page-styling
-          // First, make sure there are errors to parse.
-          if(validationErrors.length) {
-            for (var i = 0; i < validationErrors.length; i++) {
-              // validationErrors[i].row
-              // validationErrors[i].error
-              let row = validationErrors[i].row.match(/\d/g);
-              row = row.join('');
-              // Select the rows with errors.
-              window[hotVarName + spreadsheetCount].selectRows(parseInt(row));
+        // Initialize Handsontable.
+        container = document.getElementById('csv-spreadsheet-' + spreadsheetCount);
+        // Note: window[hotVarName + spreadsheetCount] is a dynamic variable.
+        // This basically allows for multiple Handsontable instances.
+        // See: https://stackoverflow.com/a/28130158/1298317
+        window[hotVarName + spreadsheetCount] = new Handsontable(container, {
+          data: JSON.parse(responseText.csv),
+          rowHeaders: true,
+          colHeaders: true,
+          outsideClickDeselects: false,
+          selectionMode: 'multiple',
+        });
 
-              var selected = window[hotVarName + spreadsheetCount].getSelected();
+        // Style rows which have errors.
+        // https://docs.handsontable.com/2.0.0/demo-selecting-ranges.html#page-styling
+        // First, make sure there are errors to parse.
+        if((typeof validationErrors !== 'undefined') && validationErrors.length) {
+          for (var i = 0; i < validationErrors.length; i++) {
+            // validationErrors[i].row
+            // validationErrors[i].error
+            let row = validationErrors[i].row.match(/\d/g);
+            row = row.join('');
+            // Select the rows with errors.
+            window[hotVarName + spreadsheetCount].selectRows(parseInt(row));
 
-              for (var index = 0; index < selected.length; index += 1) {
-                var item = selected[index];
-                var startRow = Math.min(item[0], item[2]);
-                var endRow = Math.max(item[0], item[2]);
-                var startCol = Math.min(item[1], item[3]);
-                var endCol = Math.max(item[1], item[3]);
+            var selected = window[hotVarName + spreadsheetCount].getSelected();
 
-                for (var rowIndex = startRow; rowIndex <= endRow; rowIndex += 1) {
-                  for (var columnIndex = startCol; columnIndex <= endCol; columnIndex += 1) {
-                    // Set the text-danger CSS class on the row containing the error.
-                    window[hotVarName + spreadsheetCount].setCellMeta(rowIndex, columnIndex, 'className', 'text-danger');
-                  }
+            for (var index = 0; index < selected.length; index += 1) {
+              var item = selected[index];
+              var startRow = Math.min(item[0], item[2]);
+              var endRow = Math.max(item[0], item[2]);
+              var startCol = Math.min(item[1], item[3]);
+              var endCol = Math.max(item[1], item[3]);
+
+              for (var rowIndex = startRow; rowIndex <= endRow; rowIndex += 1) {
+                for (var columnIndex = startCol; columnIndex <= endCol; columnIndex += 1) {
+                  // Set the text-danger CSS class on the row containing the error.
+                  window[hotVarName + spreadsheetCount].setCellMeta(rowIndex, columnIndex, 'className', 'text-danger');
                 }
               }
-
             }
-            window[hotVarName + spreadsheetCount].deselectCell();
-            window[hotVarName + spreadsheetCount].render();
+
           }
+          window[hotVarName + spreadsheetCount].deselectCell();
+          window[hotVarName + spreadsheetCount].render();
         }
+
       }
 
       spreadsheetCount++;
@@ -582,6 +613,11 @@
       // Add the parentRecordId value to the formData
       if((typeof file.parentRecordId !== 'undefined') && file.parentRecordId) {
         formData.append('parentRecordId', file.parentRecordId);
+      }
+
+      // Add the parentRecordType value to the formData
+      if((typeof file.parentRecordType !== 'undefined') && file.parentRecordType) {
+        formData.append('parentRecordType', file.parentRecordType);
       }
 
       // If the file is actually a folder, add the fullPath to the formData.
