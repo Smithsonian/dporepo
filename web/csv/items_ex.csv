@@ -1,0 +1,9 @@
+import_row_id,import_parent_id,local_item_id,item_guid,item_display_name,item_description,item_type
+1,1,Local Item ID 1,Item GUID 1,Item Display Name 1,Item Description 1,object
+2,1,Local Item ID 2,Item GUID 2,Item Display Name 2,Item Description 2,location
+3,1,Local Item ID 3,Item GUID 3,Item Display Name 3,Item Description 3,object
+4,2,Local Item ID 4,Item GUID 4,Item Display Name 4,Item Description 4,location
+5,2,Local Item ID 5,Item GUID 5,Item Display Name 5,Item Description 5,object
+6,3,Local Item ID 6,Item GUID 6,Item Display Name 6,Item Description 6,object
+7,4,Local Item ID 7,Item GUID 7,Item Display Name 7,Item Description 7,object
+8,5,Local Item ID 8,Item GUID 8,Item Display Name 8,Item Description 8,object
