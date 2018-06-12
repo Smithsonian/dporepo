@@ -65,7 +65,8 @@ class ImportController extends Controller
       $session->remove('new_repository_ids_3');
       $session->remove('new_repository_ids_4');
 
-      $job_log_ids = array();
+      $job_log_ids = $csv_types = array();
+      $model_maps_to_item = false;
 
       $this->repo_storage_controller->setContainer($this->container);
 
@@ -82,17 +83,38 @@ class ImportController extends Controller
 
       if (!empty($job_id) && !empty($parent_project_id) && !empty($parent_record_id)) {
 
+        $ids = (object)array(
+          'job_id' => $job_id,
+          'parent_project_id' => $parent_project_id,
+          'parent_record_id' => $parent_record_id,
+        );
+
         // Remove 'metadata import' from the $job_data['job_type'].
         $job_type = str_replace(' metadata import', '', $job_data['job_type']);
 
         if (!empty($job_type)) {
           // Prepare the data.
-          $data = $this->prepare_data($job_type, $this->uploads_directory . $job_id, $itemsController, $datasetsController, $modelsController);
+          $data = $this->prepare_data($job_type, $this->uploads_directory . $ids->job_id, $itemsController, $datasetsController, $modelsController);
+
           // Ingest data.
           if (!empty($data)) {
+
+            // Associate a Model to an Item
+            // In order to associate a Model to an Item (normally a Model is associated to a Capture Dataset), need to:
+            // 1) Get 'type' field values in the $data array.
+            // 2) Then determine if there's an 'item' type and a 'model' type, but no 'capture_dataset' type.
+            foreach ($data as $csv_key => $csv_value) {
+              $csv_types[] = $csv_value['type'];
+            }
+            // If there's a 'model' type, but no 'capture_dataset' type, set the 'model_maps_to_item' key.
+            if (in_array('model', $csv_types) && !in_array('capture_dataset', $csv_types)) {
+              $model_maps_to_item = true;
+            }
+            
+            // Execute the ingest.
             $i = 1;
-            foreach($data as $csv_key => $csv_value) {
-              $job_log_ids = $this->ingest_csv_data($csv_value, $job_id, $parent_project_id, $parent_record_id, $i);
+            foreach ($data as $csv_key => $csv_value) {
+              $job_log_ids = $this->ingest_csv_data($csv_value, $ids, $model_maps_to_item, $i);
               $i++;
             }
           }
@@ -296,21 +318,20 @@ class ImportController extends Controller
    * @param int $parent_record_id  Parent record ID
    * @return array  An array of job log IDs
    */
-  public function ingest_csv_data($data = null, $job_id = null, $parent_project_id = null, $parent_record_id = null, $i = 1) {
+  public function ingest_csv_data($data = null, $ids = array(), $model_maps_to_item = false, $i = 1) {
 
     $session = new Session();
     $data = (object)$data;
     $job_log_ids = array();
-    $subject_repository_ids = NULL;
-    $item_repository_ids = NULL;
+    $this->repo_storage_controller->setContainer($this->container);
 
     // User data.
     $user = $this->tokenStorage->getToken()->getUser();
     $data->user_id = $user->getId();
     // Job ID and parent record ID
-    $data->job_id = !empty($job_id) ? $job_id : false;
-    $data->parent_project_id = !empty($parent_project_id) ? $parent_project_id : false;
-    $data->parent_record_id = !empty($parent_record_id) ? $parent_record_id : false;
+    $data->job_id = isset($ids->job_id) ? $ids->job_id : false;
+    $data->parent_project_id = isset($ids->parent_project_id) ? $ids->parent_project_id : false;
+    $data->parent_record_id = isset($ids->parent_record_id) ? $ids->parent_record_id : false;
 
     // Just in case: throw a 404 if either job ID or parent record ID aren't passed.
     if (!$data->job_id) throw $this->createNotFoundException('Job ID not provided.');
@@ -319,13 +340,10 @@ class ImportController extends Controller
 
     // Check to see if the parent project record exists/active, and if it doesn't, throw a createNotFoundException (404).
     if (!empty($data->parent_project_id)) {
-      $this->repo_storage_controller->setContainer($this->container);
       $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $data->parent_project_id));
       // If no project is returned, throw a createNotFoundException (404).
       if (!$project) throw $this->createNotFoundException('The Project record doesn\'t exist');
     }
-
-    $this->repo_storage_controller->setContainer($this->container);
 
     // $data->type is referred to extensively throughout the logic.
     // $data->type can be one of: subject, item, capture_dataset, model
@@ -360,7 +378,7 @@ class ImportController extends Controller
           // $this->u->dumper($csv_val->import_parent_id,0);
           // $this->u->dumper($new_repository_ids,0);
 
-          // Set the subject_repository_id
+          // Set the subject_repository_id.
           if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
             $csv_val->subject_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
           } else {
@@ -368,18 +386,28 @@ class ImportController extends Controller
           }
           break;
         case 'capture_dataset':
-          // Set the parent_item_repository_id
+          // Set the parent_item_repository_id.
           if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
             $csv_val->parent_item_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
           } else {
             $csv_val->parent_item_repository_id = $data->parent_record_id;
           }
         case 'model':
-          // Set the parent_capture_dataset_repository_id
+          // Set the parent_capture_dataset_repository_id or parent_item_repository_id (when a model is associated to an item).
           if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
-            $csv_val->parent_capture_dataset_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+            // If a model maps to an item, set the value for the 'parent_item_repository_id' field.
+            if ($model_maps_to_item) {
+              $csv_val->parent_item_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+            } else { // Otherwise, set the value for the 'parent_capture_dataset_repository_id' field.
+              $csv_val->parent_capture_dataset_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+            }
           } else {
-            $csv_val->parent_capture_dataset_repository_id = $data->parent_record_id;
+            // If a model maps to an item, set the value for the 'parent_item_repository_id' field.
+            if ($model_maps_to_item) {
+              $csv_val->parent_item_repository_id = $data->parent_record_id;
+            } else { // Otherwise, set the value for the 'parent_capture_dataset_repository_id' field.
+              $csv_val->parent_capture_dataset_repository_id = $data->parent_record_id;
+            }
           }
           break;
       }
