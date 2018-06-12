@@ -54,11 +54,33 @@ class UploadListener
     // User data.
     $user = $this->tokenStorage->getToken()->getUser();
     $data->user_id = $user->getId();
+    // Set container.
+    $this->repo_storage_controller->setContainer($this->container);
 
     // Move uploaded files into the original directory structures, under a parent directory the jobId.
     if ($data->job_id && $data->parent_record_id) {
+
       // Move the files.
-      $this->move_files($file, $data);    
+      $file_data = $this->move_files($file, $data);
+
+      // Log the file to the 'file_uploads' table.
+      if(!$file_data->prevalidate) {
+        $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'file_upload',
+          'user_id' => $file_data->user_id,
+          'values' => array(
+            'job_id' => $file_data->job_id,
+            'parent_record_id' => $file_data->parent_record_id,
+            'parent_record_type' => $file_data->parent_record_type,
+            'file_name' => $file->getBasename(),
+            'path' => '/uploads/repository/' . $file_data->job_id . '/' . $file_data->full_path,
+            'file_size' => filesize($file_data->job_id_directory . '/' . $file_data->full_path),
+            'file_type' => $file->getExtension(), // $file->getMimeType()
+            'file_hash' => '',
+          )
+        ));
+      }
+
     }
 
     // Pre-validate
@@ -94,6 +116,7 @@ class UploadListener
   /**
    * @param object $data  Data object.
    * @param object $file  File object.
+   * @return array
    */
   public function move_files($file = null, $data = null)
   {
@@ -140,6 +163,8 @@ class UploadListener
       }
 
     }
+
+    return $data;
   }
 
   /**
