@@ -98,7 +98,6 @@ class ImportController extends Controller
 
           // Ingest data.
           if (!empty($data)) {
-
             // Associate a Model to an Item
             // In order to associate a Model to an Item (normally a Model is associated to a Capture Dataset), need to:
             // 1) Get 'type' field values in the $data array.
@@ -110,7 +109,7 @@ class ImportController extends Controller
             if (in_array('model', $csv_types) && !in_array('capture_dataset', $csv_types)) {
               $model_maps_to_item = true;
             }
-            
+
             // Execute the ingest.
             $i = 1;
             foreach ($data as $csv_key => $csv_value) {
@@ -374,10 +373,6 @@ class ImportController extends Controller
           $csv_val->project_repository_id = (int)$data->parent_project_id;
           break;
         case 'item':
-
-          // $this->u->dumper($csv_val->import_parent_id,0);
-          // $this->u->dumper($new_repository_ids,0);
-
           // Set the subject_repository_id.
           if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
             $csv_val->subject_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
@@ -411,10 +406,6 @@ class ImportController extends Controller
           }
           break;
       }
-
-      // if(isset($csv_val->subject_repository_id)) {
-      //   $this->u->dumper($csv_val->subject_repository_id,0);
-      // }
 
       // Insert data from the CSV into the appropriate database table, using the $data->type as the table name.
       $this_id = $this->repo_storage_controller->execute('saveRecord', array(
@@ -457,9 +448,6 @@ class ImportController extends Controller
 
     }
 
-    // Remove the session variable 'new_repository_ids'.
-    // $session->remove('new_repository_ids_' . $i);
-
     // Set the session variable 'new_repository_ids'.
     $session->set('new_repository_ids_' . $i, $new_new_repository_ids);
 
@@ -475,8 +463,6 @@ class ImportController extends Controller
         'job_log_description' => 'Import finished',
       )
     ));
-
-    // if($i === 2) die();
 
     // TODO: return something more than job log IDs?
     return $job_log_ids;
