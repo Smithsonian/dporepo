@@ -193,8 +193,18 @@ class UploadListener
       if($schema) {
         // Instantiate the RepoValidateData class.
         $repoValidate = new RepoValidateData();
-        // Execute the validation.
+
+        // Check to see if a CSV's 'import_row_id' has gaps or is not sequential.
+        $data->row_ids_results = $repoValidate->validateRowIds($data->csv, $schema);
+
+        // Execute the validation against the JSON schema.
         $data->results = (object)$repoValidate->validateData($data->csv, $schema, $parent_record_type, $blacklisted_fields);
+
+        // Merge all messages.
+        if(isset($data->row_ids_results['messages'])) {
+          unset($data->row_ids_results['is_valid']);
+          $data->results = (object)array_merge_recursive($data->row_ids_results, (array)$data->results);
+        }
       }
     }
 
