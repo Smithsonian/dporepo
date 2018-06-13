@@ -897,9 +897,9 @@ class ImportController extends Controller
         }
 
         // Remove the job directory.
-        if (is_dir($this->uploads_directory . '/' . $job_id)) {
+        if (is_dir($this->uploads_directory . DIRECTORY_SEPARATOR . $job_id)) {
           $fileSystem = new Filesystem();
-          $fileSystem->remove($this->uploads_directory . '/' . $job_id);
+          $fileSystem->remove($this->uploads_directory . DIRECTORY_SEPARATOR . $job_id);
         }
 
         // The message
