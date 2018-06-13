@@ -865,6 +865,7 @@ class ImportController extends Controller
     /**
      * @Route("/admin/purge_import/{job_id}", name="purge_imported_data_and_files", defaults={"job_id" = null}, methods="GET")
      *
+     * @param int $job_id The Job ID
      * @param object $conn Database connection object
      * @param object $request Symfony's request object
      * @return array
