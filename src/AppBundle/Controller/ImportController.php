@@ -9,6 +9,8 @@ use Doctrine\DBAL\Driver\Connection;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 // use Psr\Log\LoggerInterface;
 
 use AppBundle\Form\UploadsParentPickerForm;
@@ -858,5 +860,52 @@ class ImportController extends Controller
       }
 
       return $this->json(array('jobId' => (int)$job_id, 'projectId' => (int)$project['project_repository_id']));
+    }
+
+    /**
+     * @Route("/admin/purge_import/{job_id}", name="purge_imported_data_and_files", defaults={"job_id" = null}, methods="GET")
+     *
+     * @param object $conn Database connection object
+     * @param object $request Symfony's request object
+     * @return array
+     */
+    public function purge_imported_data_and_files($job_id, Connection $conn, Request $request)
+    {
+      if (empty($job_id)) throw $this->createNotFoundException('Job ID not provided');
+
+      if (!empty($job_id)) {
+
+        // Set container.
+        $this->repo_storage_controller->setContainer($this->container);
+
+        // Check to see if the job record exists, and if it doesn't, throw a createNotFoundException (404).
+        $job_data = $this->repo_storage_controller->execute('getRecord', array(
+            'base_table' => 'job',
+            'id_field' => 'job_id',
+            'id_value' => $job_id,
+            'omit_active_field' => true,
+          )
+        );
+        if (!$job_data) throw $this->createNotFoundException('The Job record does not exist');
+
+        // Remove imported data.
+        $results = $this->repo_storage_controller->execute('purgeImportedData', array('job_id' => (int)$job_id));
+        // Create a summary of rows deleted.
+        $data = '';
+        foreach ($results as $key => $value) {
+          $data .= '<p><strong>Table:</strong> ' . $key . '&nbsp;&nbsp;&nbsp;<strong>Rows Deleted:</strong> ' . $value . '</p>';
+        }
+
+        // Remove the job directory.
+        if (is_dir($this->uploads_directory . '/' . $job_id)) {
+          $fileSystem = new Filesystem();
+          $fileSystem->remove($this->uploads_directory . '/' . $job_id);
+        }
+
+        // The message
+        $this->addFlash('message', '<h4>Job data and files have been successfully removed</h4>' . $data);
+        // Redirect to the main Uploads page.
+        return $this->redirect('/admin/import');
+      }
     }
 }

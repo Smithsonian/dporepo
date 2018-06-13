@@ -25,6 +25,10 @@
               <dd>{{ project.project_name }}</dd>
             <dt>Date Uploaded:</dt>
               <dd>{{ project.date_created }}</dd>
+            {% if project.username is defined %}
+              <dt>Uploaded By:</dt>
+                <dd>{{ project.username }}</dd>
+            {% endif %}
             {% if project.job_status is defined %}
               <dt>Job Status:</dt>
                 <dd>{{ project.job_status }}</dd>
@@ -51,10 +55,8 @@
                 <dd>Capture Datasets: {{ project.capture_datasets_total|default('0') }}</dd>
               {% endif %}
             {% endif %}
-            {% if project.username is defined %}
-              <dt>Uploaded By:</dt>
-                <dd>{{ project.username }}</dd>
-            {% endif %}
+            <dt>Remove Data and Files</dt>
+              <dd><a href="javascript:void(0);" id="purge-data" class="text-danger"><span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> Purge This Import's Data and Files</a></dd>
           </dl>
         </div>
       </div>
@@ -229,6 +231,32 @@
 
         }
         
+      });
+
+      /**
+       * Purge Import button click handler
+       */
+      $('#purge-data').on('click', function(e) {
+        
+        swal("Remove this Import's Data and Files?", {
+          buttons: {
+            cancel: "No",
+            catch: {
+              text: "Yes",
+              value: "yes",
+            }
+          },
+        })
+        .then((value) => {
+          switch (value) {
+            case "yes":
+              window.location.href = '/admin/purge_import/' + id;
+              break;
+            default:
+              swal("No action taken. Imported data and files unaffected.");
+          }
+        });
+
       });
 
     });

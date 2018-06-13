@@ -973,6 +973,70 @@ class RepoStorageHybrid implements RepoStorage {
     return $statement->fetch();
   }
 
+  /**
+   * @param int $job_id The job ID
+   * @return array Results from the database
+   */
+  public function purgeImportedData($params = array()) {
+
+    $data = array();
+
+    if (!empty($params) && !empty($params['job_id'])) {
+
+      $table_names = array(
+        'data_tables' => array(
+          'subject',
+          'item',
+          'capture_dataset',
+          'model'
+        ),
+        'job_and_file_tables' => array(
+          'job',
+          'job_import_record',
+          'job_log',
+          'file_upload'
+        )
+      );
+
+      // Remove data from tables containing repository data.
+      foreach ($table_names['data_tables'] as $data_table_name) {
+        // Remove records.
+        $sql_data = "DELETE FROM {$data_table_name}
+          WHERE {$data_table_name}.{$data_table_name}_repository_id IN (SELECT record_id
+          FROM job_import_record
+          WHERE job_import_record.job_id = :job_id
+          AND job_import_record.record_table = '{$data_table_name}')";
+        $statement = $this->connection->prepare($sql_data);
+        $statement->bindValue(":job_id", $params['job_id'], PDO::PARAM_INT);
+        $statement->execute();
+        $data[ $data_table_name ] = $statement->rowCount();
+        // Reset the auto increment value.
+        $sql_data_reset = "ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_repository_id INT(11) UNSIGNED;
+        ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_repository_id INT(11) UNSIGNED AUTO_INCREMENT";
+        $statement = $this->connection->prepare($sql_data_reset);
+        $statement->execute();
+      }
+
+      // Remove data from tables containing job-based data.
+      foreach ($table_names['job_and_file_tables'] as $job_table_name) {
+        // Remove records.
+        $sql_job = "DELETE FROM {$job_table_name} WHERE {$job_table_name}.job_id = :job_id";
+        $statement = $this->connection->prepare($sql_job);
+        $statement->bindValue(":job_id", $params['job_id'], PDO::PARAM_INT);
+        $statement->execute();
+        $data[ $job_table_name ] = $statement->rowCount();
+        // Reset the auto increment value.
+        $sql_job_reset = "ALTER TABLE {$job_table_name} MODIFY {$job_table_name}.{$job_table_name}_id INT(11) UNSIGNED;
+        ALTER TABLE {$job_table_name} MODIFY {$job_table_name}.{$job_table_name}_id INT(11) UNSIGNED AUTO_INCREMENT";
+        $statement = $this->connection->prepare($sql_job_reset);
+        $statement->execute();
+      }
+
+    }
+
+    return $data;
+  }
+
   public function getStakeholderGuids() {
     $sql = "
       SELECT project.project_repository_id
