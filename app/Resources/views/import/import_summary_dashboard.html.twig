@@ -325,6 +325,9 @@
       dictInvalidFileType: "File type not allowed"
     });
 
+    // Add the ability to select directories from a file selection dialog window (when clicking the "Add Files" button).
+    $('body').find('input.dz-hidden-input').attr('webkitdirectory', '').attr('directory', '');
+
     uploadsDropzone.on("addedfile", function(file) {
 
       if(typeof file.fullPath !== 'undefined'){
