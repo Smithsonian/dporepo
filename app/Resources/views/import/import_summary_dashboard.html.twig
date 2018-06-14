@@ -718,23 +718,21 @@
       // Generate a real job ID.
       generateJobId(parentRecordId, false);
 
+      // Prepare and display the modal.
+      $('#uploading-modal-title').empty();
+      $('#uploading-modal-title').append('Uploading and Importing Data');
+      $('#uploading-modal-message').empty();
+      let p1 = $('<p />').text('Upload and import in progress...');
+      let p2 = $('<p />').text('The system is shuffling everything into place. This page will automatically redirect to the Uploads Detail page once the upload process is complete.');
+      $('#uploading-modal-message').append(p1, p2);
+      $('#uploading-modal').modal('show');
+
       // Give some time (2 seconds) to create the job record in the database.
       setTimeout(function() {
-
         // Get the job ID from the data attribute of the prevalidate-trigger.
         let jobId = $('.prevalidate-trigger').attr('data-jobid');
         // Begin the uploading process.
         uploadsDropzone.enqueueFiles(uploadsDropzone.getFilesWithStatus(Dropzone.ADDED));
-        // Prepare and display the modal.
-        $('#uploading-modal-title').empty();
-        $('#uploading-modal-title').append('Uploading and Importing Data');
-        $('#uploading-modal-message').empty();
-        let p1 = $('<p />').text('Upload and import in progress...');
-        let p2 = $('<p />').text('This page will redirect once the upload process is complete. So, kick back and relax while the system shuffles things into place.');
-        let p3 = $('<p />').html('This job\'s <a href="/admin/import/' + jobId + '/' + parentRecordId + '" target="_blank">upload/import details page</a> (opens in a new tab/window).');
-        $('#uploading-modal-message').append(p1, p2, p3);
-        $('#uploading-modal').modal('show');
-
       }, 2000);
 
     };
