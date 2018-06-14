@@ -1010,11 +1010,11 @@ class RepoStorageHybrid implements RepoStorage {
         $statement->bindValue(":job_id", $params['job_id'], PDO::PARAM_INT);
         $statement->execute();
         $data[ $data_table_name ] = $statement->rowCount();
-        // // Reset the auto increment value.
-        // $sql_data_reset = "ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_repository_id INT(11) UNSIGNED;
-        // ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_repository_id INT(11) UNSIGNED AUTO_INCREMENT";
-        // $statement = $this->connection->prepare($sql_data_reset);
-        // $statement->execute();
+        // Reset the auto increment value.
+        $sql_data_reset = "ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_repository_id INT(11) UNSIGNED;
+        ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_repository_id INT(11) UNSIGNED AUTO_INCREMENT";
+        $statement = $this->connection->prepare($sql_data_reset);
+        $statement->execute();
       }
 
       // Remove data from tables containing job-based data.
@@ -1025,11 +1025,11 @@ class RepoStorageHybrid implements RepoStorage {
         $statement->bindValue(":job_id", $params['job_id'], PDO::PARAM_INT);
         $statement->execute();
         $data[ $job_table_name ] = $statement->rowCount();
-        // // Reset the auto increment value.
-        // $sql_job_reset = "ALTER TABLE {$job_table_name} MODIFY {$job_table_name}.{$job_table_name}_id INT(11) UNSIGNED;
-        // ALTER TABLE {$job_table_name} MODIFY {$job_table_name}.{$job_table_name}_id INT(11) UNSIGNED AUTO_INCREMENT";
-        // $statement = $this->connection->prepare($sql_job_reset);
-        // $statement->execute();
+        // Reset the auto increment value.
+        $sql_job_reset = "ALTER TABLE {$job_table_name} MODIFY {$job_table_name}.{$job_table_name}_id INT(11) UNSIGNED;
+        ALTER TABLE {$job_table_name} MODIFY {$job_table_name}.{$job_table_name}_id INT(11) UNSIGNED AUTO_INCREMENT";
+        $statement = $this->connection->prepare($sql_job_reset);
+        $statement->execute();
       }
 
     }
