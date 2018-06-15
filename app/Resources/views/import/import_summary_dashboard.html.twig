@@ -563,11 +563,19 @@
         }
 
         // If no errors are returned, display a message.
-        if(responseText && (typeof responseText.error === 'undefined')) {
+        if(responseText && JSON.parse(responseText.csv).length && (typeof responseText.error === 'undefined')) {
           // The message.
           let message = $('<div />').addClass('alert alert-success cvs-validation-success').attr('role', 'alert').html('<strong>' + file.name + '</strong>: No CSV validation errors found.');
           // Append the message to the panel-body container.
           $('.panel-validation-results').find('.panel-body').append(message);
+        }
+
+        if(!JSON.parse(responseText.csv).length) {
+          swal({
+            title: 'Error',
+            text: 'CSV is empty',
+            icon: 'warning',
+          });
         }
 
         // If errors are returned, populate the Pre-Validation Results container.
@@ -594,72 +602,74 @@
 
         }
 
-        // Display the CSV within a spreadsheet interface, highlighting errors.
-        // TODO: Make it possible to edit the spreadsheet and resubmit for pre-validation.
-        // See: Handsontable
-        // https://github.com/handsontable/handsontable
-        let container,
-            hotVarName = 'hot',
-            panel = $('<div />').addClass('panel panel-default panel-spreadsheet'),
-            panelHeading = $('<div />').addClass('panel-heading').text(file.name),
-            panelHeadingContent = $('<span />')
-              .attr('style', 'font-size: 1.5rem; font-weight: normal;')
-              .html('<i class="glyphicon glyphicon-info-sign" style="margin-left: 1.5rem;"></i> For now, only for representation of the data. The goal is to allow for edits and resubmission.'),
-            panelBody = $('<div />').addClass('panel-body').attr('id', 'csv-spreadsheet-' + spreadsheetCount);
+        if(JSON.parse(responseText.csv).length) {
+          // Display the CSV within a spreadsheet interface, highlighting errors.
+          // TODO: Make it possible to edit the spreadsheet and resubmit for pre-validation.
+          // See: Handsontable
+          // https://github.com/handsontable/handsontable
+          let container,
+              hotVarName = 'hot',
+              panel = $('<div />').addClass('panel panel-default panel-spreadsheet'),
+              panelHeading = $('<div />').addClass('panel-heading').text(file.name),
+              panelHeadingContent = $('<span />')
+                .attr('style', 'font-size: 1.5rem; font-weight: normal;')
+                .html('<i class="glyphicon glyphicon-info-sign" style="margin-left: 1.5rem;"></i> For now, only for representation of the data. The goal is to allow for edits and resubmission.'),
+              panelBody = $('<div />').addClass('panel-body').attr('id', 'csv-spreadsheet-' + spreadsheetCount);
 
-        // Show the panel-spreadsheet container.
-        $('#panel-spreadsheets').removeClass('hidden');
-        // Populate the panel with the heading and body.
-        panelHeading.append(panelHeadingContent);
-        panel.append(panelHeading, panelBody);
-        // Add the panel to the results container.
-        resultsContainer.append(panel);
+          // Show the panel-spreadsheet container.
+          $('#panel-spreadsheets').removeClass('hidden');
+          // Populate the panel with the heading and body.
+          panelHeading.append(panelHeadingContent);
+          panel.append(panelHeading, panelBody);
+          // Add the panel to the results container.
+          resultsContainer.append(panel);
 
-        // Initialize Handsontable.
-        container = document.getElementById('csv-spreadsheet-' + spreadsheetCount);
-        // Note: window[hotVarName + spreadsheetCount] is a dynamic variable.
-        // This basically allows for multiple Handsontable instances.
-        // See: https://stackoverflow.com/a/28130158/1298317
-        window[hotVarName + spreadsheetCount] = new Handsontable(container, {
-          data: JSON.parse(responseText.csv),
-          rowHeaders: true,
-          colHeaders: true,
-          outsideClickDeselects: false,
-          selectionMode: 'multiple',
-        });
+          // Initialize Handsontable.
+          container = document.getElementById('csv-spreadsheet-' + spreadsheetCount);
+          // Note: window[hotVarName + spreadsheetCount] is a dynamic variable.
+          // This basically allows for multiple Handsontable instances.
+          // See: https://stackoverflow.com/a/28130158/1298317
+          window[hotVarName + spreadsheetCount] = new Handsontable(container, {
+            data: JSON.parse(responseText.csv),
+            rowHeaders: true,
+            colHeaders: true,
+            outsideClickDeselects: false,
+            selectionMode: 'multiple',
+          });
 
-        // Style rows which have errors.
-        // https://docs.handsontable.com/2.0.0/demo-selecting-ranges.html#page-styling
-        // First, make sure there are errors to parse.
-        if((typeof validationErrors !== 'undefined') && validationErrors.length) {
-          for (var i = 0; i < validationErrors.length; i++) {
-            // validationErrors[i].row
-            // validationErrors[i].error
-            let row = validationErrors[i].row.match(/\d/g);
-            row = row.join('');
-            // Select the rows with errors.
-            window[hotVarName + spreadsheetCount].selectRows(parseInt(row));
+          // Style rows which have errors.
+          // https://docs.handsontable.com/2.0.0/demo-selecting-ranges.html#page-styling
+          // First, make sure there are errors to parse.
+          if((typeof validationErrors !== 'undefined') && validationErrors.length) {
+            for (var i = 0; i < validationErrors.length; i++) {
+              // validationErrors[i].row
+              // validationErrors[i].error
+              let row = validationErrors[i].row.match(/\d/g);
+              row = row.join('');
+              // Select the rows with errors.
+              window[hotVarName + spreadsheetCount].selectRows(parseInt(row));
 
-            var selected = window[hotVarName + spreadsheetCount].getSelected();
+              var selected = window[hotVarName + spreadsheetCount].getSelected();
 
-            for (var index = 0; index < selected.length; index += 1) {
-              var item = selected[index];
-              var startRow = Math.min(item[0], item[2]);
-              var endRow = Math.max(item[0], item[2]);
-              var startCol = Math.min(item[1], item[3]);
-              var endCol = Math.max(item[1], item[3]);
+              for (var index = 0; index < selected.length; index += 1) {
+                var item = selected[index];
+                var startRow = Math.min(item[0], item[2]);
+                var endRow = Math.max(item[0], item[2]);
+                var startCol = Math.min(item[1], item[3]);
+                var endCol = Math.max(item[1], item[3]);
 
-              for (var rowIndex = startRow; rowIndex <= endRow; rowIndex += 1) {
-                for (var columnIndex = startCol; columnIndex <= endCol; columnIndex += 1) {
-                  // Set the text-danger CSS class on the row containing the error.
-                  window[hotVarName + spreadsheetCount].setCellMeta(rowIndex, columnIndex, 'className', 'text-danger');
+                for (var rowIndex = startRow; rowIndex <= endRow; rowIndex += 1) {
+                  for (var columnIndex = startCol; columnIndex <= endCol; columnIndex += 1) {
+                    // Set the text-danger CSS class on the row containing the error.
+                    window[hotVarName + spreadsheetCount].setCellMeta(rowIndex, columnIndex, 'className', 'text-danger');
+                  }
                 }
               }
-            }
 
+            }
+            window[hotVarName + spreadsheetCount].deselectCell();
+            window[hotVarName + spreadsheetCount].render();
           }
-          window[hotVarName + spreadsheetCount].deselectCell();
-          window[hotVarName + spreadsheetCount].render();
         }
 
       }

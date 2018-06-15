@@ -188,6 +188,12 @@ class UploadListener
     // Construct the data.
     $data->csv = $this->construct_import_data($job_id_directory, $filename); // , $thisContainer, $itemsController
 
+    // if(empty($data->csv)) {
+    //   unset($data->row_ids_results['is_valid']);
+    //   unset($data->results['is_valid']);
+    //   $data->results['messages'][0] = array('row' => 'CSV', 'error' => 'CSV is empty');
+    // }
+
     if(!empty($data->csv)) {
       // Set the schema to validate against.
       switch (true) {
