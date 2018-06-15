@@ -60,8 +60,9 @@
             </div>
             <div class="col-sm-6 col-md-6">
               <h3><span class="glyphicon glyphicon-save-file" aria-hidden="true"></span> CSV Templates</h3>
-              <p>Please use these templates to ingest data into the repository. <em class="text-muted">Templates last updated: 6/12/2018</em></p>
-              <h5>Blank</h5>
+              <p>Please use these templates to import data into the repository.</p>
+              <p>Before importing data to the repository, check out the <a href="javascript:void(0);" class="csv-modal-trigger">CSV Guide</a>. <em class="text-muted">Templates last updated: 6/12/2018</em></p>
+              <h5>Blank Templates</h5>
               <div class="row">
                 <div class="col-sm-3 col-md-3">
                   <a href="/csv/subjects.csv" download="subjects.csv">subjects.csv</a>
@@ -76,7 +77,7 @@
                   <a href="/csv/models.csv" download="models.csv">models.csv</a>
                 </div>
               </div>
-              <h5>With Example Data</h5>
+              <h5>Templates With Example Data</h5>
               <div class="row">
                 <div class="col-sm-3 col-md-3">
                   <a href="/csv/subjects_ex.csv" download="subjects_ex.csv">subjects_ex.csv</a>
@@ -229,6 +230,48 @@
     </div>
   </div>
 
+  <!-- CSV Help Modal -->
+  <div class="modal fade" id="csv-modal" tabindex="-1" role="dialog" aria-labelledby="csvLabel">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="csvLabel"><i class="glyphicon glyphicon-info-sign"></i> CSV Guide</h2>
+        </div>
+        <div class="modal-body" style="min-height: 24rem;">
+          <h4>The import_row_id and import_parent_id Fields</h4>
+
+          <p>There are 2 integral fields which every CSV contains, except for <span class="text-warning">subjects.csv</span>, which only utilizes the 'import_row_id' field.</p>
+
+          <ol>
+            <li>import_row_id</li>
+            <li>import_parent_id</li>
+          </ol>
+
+          <h4>Single Record Imports VS Multiple Record Imports</h4>
+
+          <p>In order to acheive certain results when importing data, CSV files can be structured in 2 ways.</p>
+
+          <ol>
+            <li>For single record imports, the 'import_parent_id' field should have no value assigned to it, and be left blank.</li>
+            <li>For multiple record imports, across more than one record type, the 'import_parent_id' field is required to be mapped to the parent record's ID, which is the 'import_row_id'. Again, the only CSV file which this does not apply to is the subjects.csv file.</li>
+          </ol>
+
+          <p>Keep the following in mind:</p>
+
+          <h4>import_row_id</h4>
+
+          <p>The 'import_row_id' field should simply be a sequential number. During the Pre-validation process, if it is detected that the 'import_row_id' is not sequential, or contains gaps (no values), the Pre-validation will fail.<p>
+
+          <h4>import_parent_id</h4>
+
+          <p>As stated earlier, the 'import_parent_id' field is leveraged to map to the parent record's ID. For instance, if a row in subjects.csv contains the 'import_row_id' of 22, and the goal is to associate an item or series of items to that subject, the 'import_parent_id' for the targeted item(s) will need to contain the value from the 'import_row_id' field from the corresponding row in the subjects.csv file (in this case, 22).</p>
+        </div>
+        <div class="modal-footer">
+        </div>
+      </div>
+    </div>
+  </div>
+
 {% endblock %}
 
 {% block js_bottom %}
@@ -342,6 +385,10 @@
       }
       // Hookup the start button
       // file.previewElement.querySelector(".start").onclick = function() { uploadsDropzone.enqueueFile(file); };
+    });
+
+    $('.csv-modal-trigger').on('click', function(e) {
+      $('#csv-modal').modal('show');
     });
 
     // Prevalidate click handler.
