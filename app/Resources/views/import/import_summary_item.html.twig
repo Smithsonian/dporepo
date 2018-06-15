@@ -43,7 +43,7 @@
               <dd>{{ project.item_failed|default('0') }}</dd>
             <dt>In Progress #:</dt>
               <dd>{{ project.item_in_progress|default('0') }}</dd> #}
-            {% if project.subjects_total or project.items_total or project.capture_datasets_total %}
+            {% if project.subjects_total is defined or project.items_total is defined or project.capture_datasets_total is defined %}
             <dt>Total # Records:</dt>
               {% if project.subjects_total != 0 %}
                 <dd>Subjects: {{ project.subjects_total|default('0') }}</dd>
