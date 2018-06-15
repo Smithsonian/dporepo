@@ -115,7 +115,12 @@ class ImportController extends Controller
             // Execute the ingest.
             $i = 1;
             foreach ($data as $csv_key => $csv_value) {
-              $job_log_ids = $this->ingest_csv_data($csv_value, $ids, $model_maps_to_item, $i);
+
+              // Don't perform an ingest without CSV data (an empty CSV).
+              if(isset($csv_value['csv'])) {
+                $job_log_ids = $this->ingest_csv_data($csv_value, $ids, $model_maps_to_item, $i);
+              }
+
               $i++;
             }
           }
