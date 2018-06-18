@@ -238,25 +238,18 @@
           <h2 class="modal-title" id="csvLabel"><i class="glyphicon glyphicon-info-sign"></i> CSV Guide</h2>
         </div>
         <div class="modal-body" style="min-height: 24rem;">
-          <h4>The import_row_id and import_parent_id Fields</h4>
+          <h4>The import_row_id and import_parent_id fields</h4>
 
-          <p>There are 2 integral fields which every CSV contains, except for <span class="text-warning">subjects.csv</span>, which only utilizes the 'import_row_id' field.</p>
+          <p>There are 2 integral fields which every CSV contains:</p>
 
           <ol>
             <li>import_row_id</li>
             <li>import_parent_id</li>
           </ol>
 
-          <h4>Single Record Imports VS Multiple Record Imports</h4>
+          <p><span class="text-warning"><strong>subjects.csv</strong></span> is the exception. In the case of Subjects, the parent Project is always known so there is no need to specify an import_parent_id. Only import_row_id is used.</p>
 
-          <p>In order to acheive certain results when importing data, CSV files can be structured in 2 ways.</p>
-
-          <ol>
-            <li>For single record imports, the 'import_parent_id' field should have no value assigned to it, and be left blank.</li>
-            <li>For multiple record imports, across more than one record type, the 'import_parent_id' field is required to be mapped to the parent record's ID, which is the 'import_row_id'. Again, the only CSV file which this does not apply to is the subjects.csv file.</li>
-          </ol>
-
-          <p>Keep the following in mind:</p>
+          <hr>
 
           <h4>import_row_id</h4>
 
@@ -264,7 +257,20 @@
 
           <h4>import_parent_id</h4>
 
-          <p>As stated earlier, the 'import_parent_id' field is leveraged to map to the parent record's ID. For instance, if a row in subjects.csv contains the 'import_row_id' of 22, and the goal is to associate an item or series of items to that subject, the 'import_parent_id' for the targeted item(s) will need to contain the value from the 'import_row_id' field from the corresponding row in the subjects.csv file (in this case, 22).</p>
+          <p>The 'import_parent_id' field is leveraged to map to the parent record's ID. For instance, if a row in subjects.csv contains an 'import_row_id' of 22 for a Subject, the 'import_parent_id' for the corresponding Item(s) will be 22.</p>
+
+          <hr>
+
+          <h4>Single Record Imports vs Multiple Record Imports</h4>
+
+          <p>In order to acheive certain results when importing data, CSV files can be structured in 2 ways.</p>
+
+          <ol>
+            <li>For <strong>single record imports</strong>, the 'import_parent_id' field should have no value assigned to it - should be left blank. The parent is specified by selecting the parent record in the UI.</li>
+            <li>For <strong>multiple record imports</strong> where multiple types of records are imported (e.g. subjects, items, capture datasets), the 'import_parent_id' field is required to be mapped to the parent record's ID. Again, the only CSV file which this does not apply to is the <span class="text-warning"><strong>subjects.csv</strong></span> file.</li>
+          </ol>
+
+          <p>For detailed examples, please see the provided example CSV files.</p>
         </div>
         <div class="modal-footer">
         </div>
