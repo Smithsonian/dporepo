@@ -268,7 +268,7 @@
           <ol>
             <li>For <strong>single record imports</strong>, the 'import_parent_id' field should have no value assigned to it - should be left blank. The parent is specified by selecting the parent record in the UI.</li>
             <li>For <strong>multiple record imports</strong> where multiple types of records are imported (e.g. subjects, items, capture datasets), the 'import_parent_id' field is required to be mapped to the parent record's ID. Again, the only CSV file which this does not apply to is the <span class="text-warning"><strong>subjects.csv</strong></span> file.</li>
-            <li>For multiple record imports where the parent record is chosen via "Choose a Parent Record" AND the parent record is the same for the first level of CSV data, the 'import_parent_id' field is NOT required.</li>
+            <li>For multiple record imports where the parent record is chosen via "Choose a Parent Record" AND the parent record is intended to remain the same for the first level of CSV data, the 'import_parent_id' field is NOT required. Should a value be found within the 'import_parent_id' field, it will be ignored.</li>
           </ol>
 
           <p>For detailed examples, please see the provided example CSV files.</p>
