@@ -152,6 +152,19 @@ class ImportController extends Controller
             'qa_approved_time' => null,
           )
         ));
+      } else {
+        // Update the job table to set the status from 'uploading' to 'in progress'.
+        $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job',
+          'record_id' => $job_id,
+          'user_id' => $this->getUser()->getId(),
+          'values' => array(
+            'job_status' => 'in progress',
+            'date_completed' => date('Y-m-d H:i:s'),
+            'qa_required' => 0,
+            'qa_approved_time' => null,
+          )
+        ));
       }
 
       $this->addFlash('message', '<strong>Upload Succeeded!</strong> Files will be validated shortly. The validation scheduled task runs every 30 seconds, but it may take time to grind through the validation process. Please check back!');
@@ -868,7 +881,7 @@ class ImportController extends Controller
             'project_id' => (int)$project['project_repository_id'],
             'job_label' => 'Metadata Import: "' . $project['project_name'] . '"',
             'job_type' => $job_type . ' metadata import',
-            'job_status' => 'in progress',
+            'job_status' => 'uploading',
             'date_completed' => null,
             'qa_required' => 0,
             'qa_approved_time' => null,
