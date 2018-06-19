@@ -112,6 +112,18 @@ class ImportController extends Controller
               $model_maps_to_item = true;
             }
 
+            // Set the job_status to 'model' if that's the only CSV type being imported.
+            if((count($csv_types) === 1) && in_array('model', $csv_types)) {
+              $this->repo_storage_controller->execute('saveRecord', array(
+                'base_table' => 'job',
+                'record_id' => $ids->job_id,
+                'user_id' => 0,
+                'values' => array(
+                  'job_type' => 'models metadata import',
+                )
+              ));
+            }
+
             // Execute the ingest.
             $i = 1;
             foreach ($data as $csv_key => $csv_value) {
@@ -173,7 +185,7 @@ class ImportController extends Controller
             $csv[1]['type'] = 'item';
             $csv[1]['data'] = $file->getContents();
           }
-          if ((($job_type === 'subjects') || ($job_type === 'items') || ($job_type === 'capture datasets')) && stristr($file->getRealPath(), 'capture_datasets')) {
+          if ((($job_type === 'subjects') || ($job_type === 'items') || ($job_type === 'capture datasets') || ($job_type === 'models')) && stristr($file->getRealPath(), 'capture_datasets')) {
             $csv[2]['type'] = 'capture_dataset';
             $csv[2]['data'] = $file->getContents();
           }
@@ -447,7 +459,7 @@ class ImportController extends Controller
         'values' => array(
           'job_id' => $data->job_id,
           'record_id' => $this_id,
-          'project_id' => (int)$data->parent_record_id,
+          'project_id' => (int)$data->parent_project_id,
           'record_table' => $data->type,
           'description' => $data->description,
         )

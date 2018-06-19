@@ -957,6 +957,8 @@ class RepoStorageHybrid implements RepoStorage {
     $sql = "SELECT SUM(case when job_import_record.record_table = 'subject' then 1 else 0 end) AS subjects_total,
       SUM(case when job_import_record.record_table = 'item' then 1 else 0 end) AS items_total,
       SUM(case when job_import_record.record_table = 'capture_dataset' then 1 else 0 end) AS capture_datasets_total,
+      SUM(case when job_import_record.record_table = 'model' then 1 else 0 end) AS models_total,
+      job_import_record.record_table,
       job.job_label,
       job.date_created,
       job.date_completed,
@@ -3294,7 +3296,7 @@ class RepoStorageHybrid implements RepoStorage {
         'table_name' => 'item',
         'table_join_field' => 'item_repository_id',
         'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'capture_dataset',
+        'base_join_table' => 'model',
         'base_join_field' => 'parent_item_repository_id',
       );
       $query_params['related_tables'][] = array(

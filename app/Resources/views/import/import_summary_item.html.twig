@@ -54,6 +54,9 @@
               {% if project.capture_datasets_total != 0 %}
                 <dd>Capture Datasets: {{ project.capture_datasets_total|default('0') }}</dd>
               {% endif %}
+              {% if project.models_total != 0 %}
+                <dd>Models: {{ project.models_total|default('0') }}</dd>
+              {% endif %}
             {% endif %}
             <dt>Remove Data and Files</dt>
               <dd><a href="javascript:void(0);" id="purge-data" class="text-danger"><span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> Purge This Import's Data and Files</a></dd>
@@ -78,6 +81,7 @@
           <th class="text-center">Capture Dataset</th>
         {% elseif job_data.job_type == 'models metadata import' %}
           <th class="text-center">Capture Dataset</th>
+          <th class="text-center">Item</th>
           <th class="text-center">Model Type</th>
           <th class="text-center">Model Date of Creation</th>
         {% endif %}
@@ -167,6 +171,7 @@
       if(job_type === 'models metadata import') {
         columns = [
           { "data": "capture_dataset_name" },
+          { "data": "item_display_name" },
           { "data": "model_file_type" },
           { "data": "date_of_creation" }
         ];
@@ -190,12 +195,10 @@
         "lengthMenu":[10,50,100,500],
         // Set some widths.
         "columnDefs":[
-          {"sWidth":"400px","aTargets":[0]}
+          {"sWidth":"22%","aTargets":[0,1]}
           // {"bSortable":false,"aTargets":[0,1]}
         ],
         "fnRowCallback":function(nRow, aData, iDisplayIndex) {
-
-          // console.log(aData);
 
           // This table row.
           var thisTableRow = $(nRow);
@@ -220,10 +223,11 @@
               details_page = '/admin/projects/dataset_elements/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id + '/' + aData.capture_dataset_repository_id;
             }
 
-            if(job_type === 'models metadata import') {
+            if(job_type === 'models metadata import') {              
               // TODO: Not sure what to link to. Capture Dataset or Model? Probably Model...
               // details_page = '/admin/projects/dataset_elements/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id + '/' + aData.capture_dataset_repository_id;
-              details_page = '/admin/projects/model/manage/' + aData.capture_dataset_repository_id + '/' + aData.model_repository_id;
+              let parent_repository_id = aData.capture_dataset_repository_id ? aData.capture_dataset_repository_id : aData.item_repository_id;
+              details_page = '/admin/projects/model/manage/' + parent_repository_id + '/' + aData.model_repository_id;
             }
 
             window.location.href = details_page;
