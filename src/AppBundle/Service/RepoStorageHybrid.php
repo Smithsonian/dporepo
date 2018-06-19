@@ -2997,6 +2997,10 @@ class RepoStorageHybrid implements RepoStorage {
       'field_alias' => 'capture_datasets_total',
     );
     $query_params['fields'][] = array(
+      'field_name' => "SUM(case when job_import_record.record_table = 'model' then 1 else 0 end)",
+      'field_alias' => 'models_total',
+    );
+    $query_params['fields'][] = array(
       'table_name' => 'project',
       'field_name' => 'project_name',
     );
