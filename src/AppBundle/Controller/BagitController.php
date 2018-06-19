@@ -353,10 +353,8 @@ class BagitController extends Controller
       }
 
       // Is the manifest empty? If so, return this as a warning.
-      if(empty($manifest_contents)) {
-        if(count($package_data_files) > 0) {
-          $return['errors'][] = 'The Bagit manifest is empty but the data directory for the package is not.';
-        }
+      if(empty($manifest_contents) && (count($package_data_files) > 0)) {
+        $return['errors'][] = 'The Bagit manifest is empty but the data directory for the package is not.';
       }
       else {
         // Are there other files in the package that aren't Bagit files and aren't in the manifest?
