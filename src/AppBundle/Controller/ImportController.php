@@ -420,6 +420,10 @@ class ImportController extends Controller
             $csv_val->parent_item_repository_id = $data->parent_record_id;
           }
         case 'model':
+          // Append the job ID to the file path.
+          if(!empty($csv_val->file_path)) {
+            $csv_val->file_path = '/' . $data->job_id . $csv_val->file_path;
+          }
           // Set the parent_capture_dataset_repository_id or parent_item_repository_id (when a model is associated to an item).
           if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
             // If a model maps to an item, set the value for the 'parent_item_repository_id' field.
