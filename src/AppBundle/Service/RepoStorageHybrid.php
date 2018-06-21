@@ -294,6 +294,14 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'model_maps',
     );
     $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'file_path',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'file_checksum',
+    );
+    $query_params['fields'][] = array(
       'table_name' => 'capture_dataset',
       'field_name' => 'parent_item_repository_id',
     );
@@ -1489,6 +1497,14 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
+          'field_name' => 'file_path',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'file_checksum',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
           'field_name' => 'workflow_id',
         );
         $query_params['fields'][] = array(
@@ -1541,6 +1557,8 @@ class RepoStorageHybrid implements RepoStorage {
               $record_type . '.has_vertex_color',
               $record_type . '.has_uv_space',
               $record_type . '.model_maps',
+              $record_type . '.file_path',
+              $record_type . '.file_checksum',
             ),
             'search_values' => array($search_value),
             'comparison' => 'LIKE',

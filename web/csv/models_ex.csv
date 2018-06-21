@@ -1,7 +1,3 @@
-import_row_id,import_parent_id,date_of_creation,model_file_type,derived_from,creation_method,model_modality,units,is_watertight,model_purpose,point_count,has_normals,face_count,vertices_count,has_vertex_color,has_uv_space,model_maps
-1,1,"2018-05-22 00:00:00",".ply",22,"scan-to-mesh","mesh","inch",1,"master",123456,1,654321,432234,0,0,22
-2,1,"2018-06-01 00:00:00",".obj",44,"scan-to-mesh","mesh","inch",0,"delivery web",789102,0,201987,234432,1,1,33
-3,2,"2018-05-22 00:00:00",".ply",22,"CAD","point cloud","foot",1,"master",123456,1,654321,432234,0,0,22
-4,2,"2018-06-01 00:00:00",".obj",44,"CAD","point cloud","foot",0,"delivery web",789102,0,201987,234432,1,1,33
-5,3,"2018-02-03 00:00:00",".ply",33,"scan-to-mesh","mesh","meter",1,"master",123456,1,654321,432234,0,0,22
-6,3,"2018-02-03 00:00:00",".ply",55,"scan-to-mesh","mesh","meter",0,"delivery print",789102,0,201987,234432,1,1,33
+import_row_id,import_parent_id,date_of_creation,model_file_type,derived_from,creation_method,model_modality,units,is_watertight,model_purpose,point_count,has_normals,face_count,vertices_count,has_vertex_color,has_uv_space,model_maps,file_path,file_checksum
+1,1,"2018-05-22 00:00:00",".ply",22,"scan-to-mesh","mesh","inch",1,"master",123456,1,654321,432234,0,0,22,"/testupload10/data/1/model.ply",
+2,1,"2018-06-01 00:00:00",".obj",44,"scan-to-mesh","mesh","inch",0,"delivery web",789102,0,201987,234432,1,1,33,"/testupload10/data/2/model.obj",

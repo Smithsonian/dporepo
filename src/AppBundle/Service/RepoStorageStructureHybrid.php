@@ -382,6 +382,8 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             `has_vertex_color` tinyint(1) NOT NULL,
             `has_uv_space` tinyint(1) NOT NULL,
             `model_maps` varchar(255) DEFAULT NULL,
+            `file_path` varchar(8000) CHARACTER SET utf8 COLLATE utf8_unicode_ci DEFAULT NULL,
+            `file_checksum` varchar(1000) CHARACTER SET utf8 COLLATE utf8_unicode_ci DEFAULT NULL,
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
