@@ -453,7 +453,7 @@
         }
 
         // Pre-validate files count and names.
-        if(queuedFiles[i].name === 'manifest-sha1.txt') {
+        if((queuedFiles[i].name === 'manifest-sha1.txt') || (queuedFiles[i].name === 'manifest-md5.txt')) {
 
           let allManifestFiles = [],
               allAcceptedFiles = [],
@@ -878,7 +878,7 @@
         return false;
       }
 
-      // Display an alert if the 'manifest-sha1.txt' file isn't found in the queue.
+      // Display an alert if the 'manifest-sha1.txt' or 'manifest-md5.txt' file isn't found in the queue.
       let filenames = [];
       // Build-out an array of files present.
       for (var i = 0; i < files.length; i++) {
@@ -889,6 +889,7 @@
       }
 
       if(filenames.indexOf('manifest-sha1.txt') === -1) {
+      if((filenames.indexOf('manifest-sha1.txt') === -1) && (filenames.indexOf('manifest-md5.txt') === -1)) {
         var span = document.createElement('span');
         span.innerHTML = 'Please add bagged (via BagIt) files to the upload queue. Learn more on the <a href="https://en.wikipedia.org/wiki/BagIt" target="_blank">BagIt Wikipedia page</a>';
         swal({
