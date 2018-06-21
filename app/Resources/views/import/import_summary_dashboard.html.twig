@@ -469,7 +469,7 @@
             // Process the manifest to get all of the files count and names.
             for (var i = 0; i < manifestArray.length; i++) {
               if(manifestArray[i].length) {
-                let currentLineArray = manifestArray[i].split(' ');
+                let currentLineArray = manifestArray[i].trim().split(/\s+/),
                     currentFullFilePath = currentLineArray[1].split('/');
                 // Add the file to the allManifestFiles array.
                 allManifestFiles.push(currentFullFilePath[currentFullFilePath.length - 1]);
@@ -888,7 +888,6 @@
         filenames.push(fname);
       }
 
-      if(filenames.indexOf('manifest-sha1.txt') === -1) {
       if((filenames.indexOf('manifest-sha1.txt') === -1) && (filenames.indexOf('manifest-md5.txt') === -1)) {
         var span = document.createElement('span');
         span.innerHTML = 'Please add bagged (via BagIt) files to the upload queue. Learn more on the <a href="https://en.wikipedia.org/wiki/BagIt" target="_blank">BagIt Wikipedia page</a>';
