@@ -490,9 +490,12 @@
             // If there are file-based errors, populate the panel-body.
             if(diff.length) {
               for (var i = 0; i < diff.length; i++) {
-                let fileMessage = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<strong>Files Pre-validation:</strong> Missing file: ' + diff[i]);
-                // Append the message to the panel-body container.
-                $('.panel-validation-results').find('.panel-body').append(fileMessage);
+                if(diff[i] !== '.DS_Store') {
+                  let fileMessage = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<strong>Files Pre-validation:</strong> Missing file: ' + diff[i]);
+                  // Append the message to the panel-body container.
+                  $('.panel-validation-results').find('.panel-body').append(fileMessage);
+                }
+                if(diff[i] === '.DS_Store') diff.splice(i, 1);
               }
             }
 
