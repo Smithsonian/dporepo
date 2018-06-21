@@ -25,6 +25,7 @@ class ModelController extends Controller
      */
     public $u;
     private $repo_storage_controller;
+    private $uploads_path;
 
     /**
      * Constructor
@@ -35,6 +36,7 @@ class ModelController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController();
+        $this->uploads_path = '/uploads/repository';
     }
 
     /**
@@ -144,6 +146,7 @@ class ModelController extends Controller
         return $this->render('datasets/model_form.html.twig', array(
             'page_title' => !empty($id) ? 'Model: ' . $data->model_guid : 'Create Model',
             'data' => $data,
+            'uploads_path' => $this->uploads_path,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
             'back_link' => $back_link,
