@@ -28,6 +28,11 @@ class DatasetElementsController extends Controller
     private $repo_storage_controller;
 
     /**
+     * @var string $uploads_path
+     */
+    private $uploads_path;
+
+    /**
     * Constructor
     * @param object  $u  Utility functions object
     */
@@ -36,6 +41,7 @@ class DatasetElementsController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController();
+        $this->uploads_path = '/uploads/repository';
     }
 
     /**
@@ -62,6 +68,11 @@ class DatasetElementsController extends Controller
         $item_data = $items->get_item($this->container, (int)$item_repository_id);
         $dataset_element_data = $this->get_dataset_element($this->container, (int)$id);
 
+        // Construct a directory listing of all uploaded files.
+        if(!empty($dataset_data['directory_path'])) {
+          $dataset_data['directory_listing'] = $this->get_uploaded_files($dataset_data['directory_path'], (int)$id);
+        }
+
         // Truncate the item_description.
         $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
         $item_data['item_description_truncated'] = substr($item_data['item_description'], 0, 50) . $more_indicator;
@@ -77,6 +88,7 @@ class DatasetElementsController extends Controller
             'item_data' => $item_data,
             'dataset_data' => $dataset_data,
             'dataset_element_data' => $dataset_element_data,
+            'uploads_path' => $this->uploads_path,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
@@ -317,8 +329,62 @@ class DatasetElementsController extends Controller
       $referer = $request->headers->get('referer');
       return $this->redirect($referer);
 
-//      return $this->redirectToRoute('dataset_elements_browse', array('project_repository_id' => $project_repository_id, 'subject_repository_id' => $subject_repository_id,
-//          'item_repository_id' => $item_repository_id, 'capture_dataset_repository_id' => $capture_dataset_repository_id));
+     // return $this->redirectToRoute('dataset_elements_browse', array('project_repository_id' => $project_repository_id, 'subject_repository_id' => $subject_repository_id, 'item_repository_id' => $item_repository_id, 'capture_dataset_repository_id' => $capture_dataset_repository_id));
+    }
+
+    /**
+     * Get Uploaded Files
+     * Construct a directory listing of all uploaded files.
+     *
+     * @param string $directory_path The directory path
+     * @param object $record_id The record ID
+     * @return string
+     */
+    public function get_uploaded_files($directory_path = null, $record_id = null) {
+
+      $data = null;
+
+      if(!empty($directory_path) && !empty($record_id)) {
+
+        $this->repo_storage_controller->setContainer($this->container);
+        
+        // Get the job ID so it can be added to the uploaded files path.
+        $job_data = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'job_import_record',
+          'fields' => array(),
+          'limit' => 1,
+          'search_params' => array(
+            0 => array('field_names' => array('job_import_record.record_id'), 'search_values' => array((int)$record_id), 'comparison' => '='),
+            1 => array('field_names' => array('job_import_record.record_table'), 'search_values' => array('capture_dataset'), 'comparison' => '=')
+          ),
+          'search_type' => 'AND',
+          'omit_active_field' => true,
+          )
+        );
+
+        // If data is returned, proceed with parsing a list of uploaded files.
+        if ($job_data && !empty($job_data)) {
+          // The target directory.
+          $dir = dirname($_SERVER['DOCUMENT_ROOT']) . '/web' . $this->uploads_path . '/' . $job_data[0]['job_id'] . $directory_path;
+          $g = glob($dir . "*");
+          usort($g,function($a,$b) {
+            if(is_dir($a) == is_dir($b))
+              return strnatcasecmp($a,$b);
+            else
+              return is_dir($a) ? -1 : 1;
+          });
+          $data = implode("<br>",array_map(function($a) {
+            $this_file_path = str_replace(dirname($_SERVER['DOCUMENT_ROOT']) . '/web', '', $a);
+            $this_pretty_file_path = str_replace(dirname($_SERVER['DOCUMENT_ROOT']) . '/web' . $this->uploads_path . '/', '', $a);
+            $this_pretty_file_path_array = explode('/', $this_pretty_file_path);
+            $this_file_name = array_pop($this_pretty_file_path_array);
+            return '<a href="' . $this_file_path . '" download="' . $this_file_name . '" title="Download ' . $this_file_name . '">' . $this_pretty_file_path . '</a>';
+          },$g));
+        }
+
+      }
+
+      return $data;
     }
 
 }

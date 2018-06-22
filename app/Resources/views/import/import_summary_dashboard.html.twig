@@ -112,12 +112,14 @@
                   <p style="font-size: 1.3rem; font-weight: normal;">Drag and drop files onto this page or click the "Add Files" button.</p>
                 </div>
                 <!-- panel-body -->
-                <div class="panel-body" style="height: 40rem; overflow: scroll;">
+                <div class="panel-body" style="height: 40rem; overflow: scroll; padding: 0;">
                   <!-- Template Begins -->
                   <!-- HTML heavily inspired by http://blueimp.github.io/jQuery-File-Upload/ -->
                   <div class="table table-striped" class="files" id="previews">
+                    <ul style="padding-left: 0;">
+                    </ul>
                     <div id="template" class="row file-row">
-                      <div class="col-sm-7 col-md-7">
+                      {# <div class="col-sm-7 col-md-7">
                         <div class="pull-left"><span class="name" data-dz-name></span>, <span class="size" data-dz-size></span></div>
                         <div class="pull-right"><strong class="error text-danger" data-dz-errormessage></strong></div>
                       </div>
@@ -125,7 +127,7 @@
                         <div class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                           <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress></div>
                         </div>
-                      </div>
+                      </div> #}
                       {# <div>
                         <button class="btn btn-primary start" style="display: none;">
                             <i class="glyphicon glyphicon-upload"></i>
@@ -359,16 +361,16 @@
 
     // Dropzone.js
     // Get the template HTML and remove it from the document.
-    var previewNode = document.querySelector("#template");
-    previewNode.id = "";
-    var previewTemplate = previewNode.parentNode.innerHTML;
-    previewNode.parentNode.removeChild(previewNode);
+    // var previewNode = document.querySelector("#template");
+    // previewNode.id = "";
+    // var previewTemplate = previewNode.parentNode.innerHTML;
+    // previewNode.parentNode.removeChild(previewNode);
 
     // See: http://www.dropzonejs.com/#configuration-options
     var uploadsDropzone = new Dropzone(document.body, { // Make the whole body a dropzone
       url: "{{ oneup_uploader_endpoint('repository') }}", // Set the url
       parallelUploads: 1,
-      previewTemplate: previewTemplate,
+      // previewTemplate: previewTemplate,
       autoQueue: false, // Make sure the files aren't queued until manually added
       previewsContainer: "#previews", // Define the container to display the previews
       clickable: ".fileinput-button", // Define the element that should be used as click trigger to select files.
@@ -377,25 +379,59 @@
       ignoreHiddenFiles: true,
       chunking: true,
       chunkSize: 20000000, // chunk size in bytes (20 MB)
-      acceptedFiles: "image/*,application/text,application/json,.csv,.txt,.jpg,.tif,.png,.dng,.obj,.ply,.mtl",
+      acceptedFiles: "image/*,application/text,application/json,.csv,.txt,.jpg,.tif,.png,.dng,.obj,.ply,.mtl,.zip",
       dictInvalidFileType: "File type not allowed"
     });
 
     // Add the ability to select directories from a file selection dialog window (when clicking the "Add Files" button).
     $('body').find('input.dz-hidden-input').attr('webkitdirectory', '').attr('directory', '');
 
-    uploadsDropzone.on("addedfile", function(file) {
-
-      if(typeof file.fullPath !== 'undefined'){
-
-        let directoryStructure = file.fullPath.replace('/' + file.name, '');
-            directoryStructureDiv = $('<div />').addClass('directory-structure').attr('style', 'font-weight: bold; margin-bottom: 0.75rem;'),
-            spanIcon = $('<span />').addClass('glyphicon glyphicon-folder-close').attr('style', 'margin-right: 4px;');
-
-        directoryStructureDiv.append(spanIcon, directoryStructure);
-        $(file.previewTemplate).before(directoryStructureDiv);
-
+    uploadsDropzone.on("drop", function(ev) {
+      if (ev.dataTransfer.items) {
+        // Use DataTransferItemList interface to access the file(s)
+        for (var i = 0; i < ev.dataTransfer.items.length; i++) {
+          // Get the item's properties via webkitGetAsEntry().
+          let item = ev.dataTransfer.items[i].webkitGetAsEntry();
+              listing = $('#previews ul');
+          // console.log('itemitemitemitem');
+          // console.log(item);
+          // Add the file size and modified date to 'item'.
+          item.detail = ev.dataTransfer.files[i];
+          // Recursively scan files and add to the DOM.
+          scanFiles(i, item, listing);
+        }
       }
+    });
+
+    uploadsDropzone.on("uploadprogress", function(file) {
+      // console.log('filefilefilefilefile');
+      // console.log(file.name);
+      // console.log(file.upload);
+      let fileListItem = $('#previews').find('[data-file-name="' + file.name + '"]');
+      // console.log('Math.floor(file.upload.progress)');
+      // console.log(Math.floor(file.upload.progress));
+      // console.log('file.upload.totalChunkCount');
+      // console.log(file.upload.totalChunkCount);
+      if ((typeof file.upload.chunks !== 'undefined') && (file.upload.chunks.length < file.upload.totalChunkCount) && (file.upload.totalChunkCount > 1) && (Math.floor(file.upload.progress) !== 100)) {
+        fileListItem.find('.badge').text(Math.floor(file.upload.progress) + '%');
+      } else {
+        fileListItem.find('.badge').text(Math.floor(file.upload.progress) + '%');
+      }
+    });
+
+    uploadsDropzone.on("addedfile", function(file) {
+      // console.log(file);
+
+      // if(typeof file.fullPath !== 'undefined'){
+
+      //   let directoryStructure = file.fullPath.replace('/' + file.name, '');
+      //       directoryStructureDiv = $('<div />').addClass('directory-structure').attr('style', 'font-weight: bold; margin-bottom: 0.75rem;'),
+      //       spanIcon = $('<span />').addClass('glyphicon glyphicon-folder-close').attr('style', 'margin-right: 4px;');
+
+      //   directoryStructureDiv.append(spanIcon, directoryStructure);
+      //   $(file.previewTemplate).before(directoryStructureDiv);
+
+      // }
       // Hookup the start button
       // file.previewElement.querySelector(".start").onclick = function() { uploadsDropzone.enqueueFile(file); };
     });
@@ -746,13 +782,15 @@
       setTimeout(function() {
         let parentRecordId = parentRecordChecker();
         let parentProjectId = $('#uploads_parent_picker_form_parent_picker').attr('data-project-id');
+        // Get the parent record type.
+        let parentRecordType = getRecordType();
         jobId = $('.prevalidate-trigger').attr('data-jobid');
 
         // Process and import the CSV files.
         $.ajax({
           'type': 'GET'
           ,'dataType': 'json'
-          ,'url': '/admin/import_csv/' + jobId + '/' + parentProjectId + '/' + parentRecordId
+          ,'url': '/admin/import_csv/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType
           ,success: function(result) {
             if(result && result.length) {
               // Redirect to the Upload overview page.
@@ -798,7 +836,7 @@
       let p1 = $('<p />').text('Upload and import in progress...');
       let p2 = $('<p />').text('The system is shuffling everything into place. This page will automatically redirect to the Uploads Detail page once the upload process is complete.');
       $('#uploading-modal-message').append(p1, p2);
-      $('#uploading-modal').modal('show');
+      // $('#uploading-modal').modal('show');
 
       // Give some time (2 seconds) to create the job record in the database.
       setTimeout(function() {
@@ -941,5 +979,49 @@
       let fileNameArray = fileName.split('.');
       return fileNameArray[fileNameArray.length-1].toLowerCase();
     }
+
+
+    function scanFiles(i, item, container, existingCount) {
+
+      // console.log(item);
+
+      let itemIcon = item.isDirectory ? 'folder-close' : 'file',
+          spanIcon = $('<span />').addClass('glyphicon glyphicon-' + itemIcon).attr('style', 'margin-right: 4px;'),
+          allItemsCount = $('#previews').find('li.list-group-item').length,
+          thisCount = (allItemsCount+1),
+          // progressParent = $('<div />')
+          //     .addClass('progress progress-striped active')
+          //     .attr('role', 'progressbar')
+          //     .attr('aria-valuemin', '0')
+          //     .attr('aria-valuemax', '100')
+          //     .attr('aria-valuenow', '0'),
+          // progressChild = $('<div />')
+          //     .addClass('progress-bar progress-bar-success')
+          //     .attr('style', 'width:0%;')
+          //     .attr('data-dz-uploadprogress', ''),
+          listItem = $('<li />').addClass('list-group-item').attr('data-count', thisCount).attr('data-file-name', item.name).text(item.name);
+          // listItem = $('<li />').addClass('list-group-item').attr('data-count', i).text(item.name + ' | File Type: ' + item.detail.type  + ' | File Size: ' + item.detail.size + ' | Last Modified: ' + item.detail.lastModified + '');
+
+      listItem.prepend(spanIcon);
+
+      // progressParent.append(progressChild);
+      listItem.append('<span class="badge"></span>');
+      container.append(listItem);
+      
+      // Directory handler
+      if (item.isDirectory) {
+        let directoryReader = item.createReader();
+        let directoryContainer = $('<ul />');
+        container.append(directoryContainer);
+        
+        directoryReader.readEntries(function(entries) {
+            entries.forEach(function(entry) {
+              scanFiles(i++, entry, directoryContainer, existingCount);
+          });
+        });
+      }
+
+    }
+
   </script>
 {% endblock %}

@@ -367,3 +367,8 @@ dd {
 .panel-spreadsheet .panel-body {
   padding: 0;
 }
+
+
+.dz-preview {
+  display: none;
+}

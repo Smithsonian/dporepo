@@ -162,6 +162,10 @@ class Dataset extends AbstractType
                 'data' => $data['calibration_object_used'],
                 'attr' => array('class' => 'default-chosen-select'),
               ))
+            ->add('directory_path', null, array(
+                'label' => 'Directory Path',
+                'required' => false,
+              ))
             ->add('save', SubmitType::class, array(
                 'label' => 'Save Edits',
                 'attr' => array('class' => 'btn btn-primary'),

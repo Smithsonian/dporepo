@@ -107,6 +107,7 @@
                 <th class="text-center">Model Guid</th>
                 <th class="text-center">Date of Creation</th>
                 <th class="text-center">Model File Type</th>
+                <th class="text-center">Model File</th>
                 <th class="text-center">Derived From</th>
                 <th class="text-center">Creation Method</th>
                 <th class="text-center">Processing Step</th>
@@ -273,6 +274,13 @@
             { "data": "model_guid" },
             { "data": "date_of_creation" },
             { "data": "model_file_type" },
+            { "data": "file_path",
+              "render": function (data, type, row, meta) {
+                let thisPathArray = row.file_path.split('/'),
+                    thisFileName = thisPathArray[thisPathArray.length - 1];
+                return '<a href="{{ uploads_path }}' + row.file_path + '" download="model' + row.model_file_type + '" title="Download this model">Download ' + thisFileName + '</a>';
+              }
+            },
             { "data": "derived_from" },
             { "data": "creation_method" },
             { "data": "workflow_processing_step" },
@@ -315,6 +323,9 @@
           thisTableRow.find('td:eq(0)')
             .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
             .addClass("manage_column");
+          // Add the class to the model download link.
+          thisTableRow.find('td:eq(4)')
+            .addClass("download");
 
           // Send to details page when clicked.
           thisTableRow.find('td').click(function() {
@@ -322,6 +333,8 @@
             var thisTableCell = $(this);
             // Don't do anything if the table cell has the 'manage_column' CSS class.
             if(thisTableCell.hasClass('manage_column')) return;
+            // Don't do anything if the table cell has the 'download' CSS class.
+            if(thisTableCell.hasClass('download')) return;
             // Send to the details page.
             var this_id = thisTableCell.closest("tr").attr('id');
             window.location.href = '/admin/projects/model/manage' + '/' + item_repository_id + '/' + this_id;

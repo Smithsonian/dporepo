@@ -163,4 +163,9 @@ class Datasets
      */
     public $calibration_object_used;
 
+    /**
+     * @var string
+     */
+    public $directory_path;
+
 }

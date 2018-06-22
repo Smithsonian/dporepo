@@ -374,6 +374,7 @@ class RepoStorageHybrid implements RepoStorage {
           ,capture_dataset.cluster_geometry_field_id
           ,capture_dataset.resource_capture_datasets
           ,capture_dataset.calibration_object_used
+          ,capture_dataset.directory_path
           ,capture_dataset.date_created
           ,capture_dataset.created_by_user_account_id
           ,capture_dataset.last_modified
@@ -2522,6 +2523,7 @@ class RepoStorageHybrid implements RepoStorage {
           'capture_dataset.cluster_geometry_field_id',
           'capture_dataset.resource_capture_datasets',
           'capture_dataset.calibration_object_used',
+          'capture_dataset.directory_path',
           'capture_dataset.workflow_status',
           'capture_dataset.workflow_status_detail',
           'capture_dataset.workflow_processing_step',
@@ -2595,6 +2597,9 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'field_name' => 'calibration_object_used',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'directory_path',
     );
 
     $query_params['fields'][] = array(

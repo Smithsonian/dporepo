@@ -38,6 +38,11 @@ class DatasetsController extends Controller
     private $file_processing_path;
 
     /**
+     * @var string
+     */
+    private $uploads_path;
+
+    /**
     * Constructor
     * @param object  $u  Utility functions object
     */
@@ -49,6 +54,8 @@ class DatasetsController extends Controller
 
         $this->file_upload_path = $file_upload_path;
         $this->file_processing_path = $file_processing_path;
+
+        $this->uploads_path = '/uploads/repository';
     }
 
     /**
@@ -91,6 +98,7 @@ class DatasetsController extends Controller
             'item_data' => $item->item_data,
             'destination' => $project_repository_id . '|' . $subject_repository_id . '|' . $item_repository_id,
             'include_directory_button' => !in_array($item->item_data->item_guid, $jobBoxDirectoryContents) && !in_array($item->item_data->item_guid, $jobBoxProcessedDirectoryContents) ? true : false,
+            'uploads_path' => $this->uploads_path,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
