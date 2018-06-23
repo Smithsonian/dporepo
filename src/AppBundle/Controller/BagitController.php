@@ -33,9 +33,14 @@ class BagitController extends Controller
   private $repo_storage_controller;
 
   /**
-   * @var array $bag_files
+   * @var array $bag_files_sha1
    */
-  private $bag_files;
+  private $bag_files_sha1;
+
+  /**
+   * @var array $bag_files_md5
+   */
+  private $bag_files_md5;
 
   /**
    * @var array $token_storage
@@ -58,11 +63,18 @@ class BagitController extends Controller
     // TODO: move this to parameters.yml and bind in services.yml.
     $this->uploads_directory = __DIR__ . '/../../../web/uploads/repository/';
 
-    $this->bag_files = array(
+    $this->bag_files_sha1 = array(
       'bag-info.txt',
       'bagit.txt',
       'manifest-sha1.txt',
       'tagmanifest-sha1.txt',
+    );
+
+    $this->bag_files_md5 = array(
+      'bag-info.txt',
+      'bagit.txt',
+      'manifest-md5.txt',
+      'tagmanifest-md5.txt',
     );
   }
 
@@ -269,7 +281,7 @@ class BagitController extends Controller
     $data->job_id = array_pop($dir_array);
 
     // Validate that all of the BagIt files exist.
-    // (bag-info.txt, bagit.txt, manifest-sha1.txt, tagmanifest-sha1.txt)
+    // (bag-info.txt, bagit.txt, manifest-sha1.txt, tagmanifest-md5.txt)
     $validate_folder = $this->validate_folder($data->localpath);
 
     // If no 'path_to_bag' is returned, something went wrong. Return early.
@@ -466,8 +478,18 @@ class BagitController extends Controller
       $bag_files_found[] = basename($file->getRealPath());
     }
 
+    $bag_files = $this->bag_files_sha1;
+
+    // Choose the correct bag files array.
+    foreach ($bag_files_found as $bfkey => $bfvalue) {
+      if(strstr($bfvalue, 'md5')) {
+        $bag_files = $this->bag_files_md5;
+        break;
+      }
+    }
+
     // Create an array of missing BagIt .txt files.
-    foreach ($this->bag_files as $key => $value) {
+    foreach ($bag_files as $key => $value) {
       if(!in_array($value, $bag_files_found)) {
         $data['missing_files'][] = $message_prefix . $value;
       }
@@ -518,7 +540,7 @@ class BagitController extends Controller
 
     // Shuffle into it anything that isn't a BagIt-based file or CSV file.
     foreach($package_files as $filename) {
-      if(!in_array($filename, $this->bag_files) && !strstr($filename, '.csv')) {
+      if((!in_array($filename, $this->bag_files_sha1) || !in_array($filename, $this->bag_files_md5)) && !strstr($filename, '.csv')) {
         rename($package_dir . '/' . $filename, $package_dir . '/data/' . $filename);
       }
     }
