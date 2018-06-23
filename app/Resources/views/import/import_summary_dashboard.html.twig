@@ -387,6 +387,7 @@
     $('body').find('input.dz-hidden-input').attr('webkitdirectory', '').attr('directory', '');
 
     uploadsDropzone.on("drop", function(ev) {
+      // Format directories and files hierarchically.
       if (ev.dataTransfer.items) {
         // Use DataTransferItemList interface to access the file(s)
         for (var i = 0; i < ev.dataTransfer.items.length; i++) {
@@ -398,44 +399,29 @@
           // Add the file size and modified date to 'item'.
           item.detail = ev.dataTransfer.files[i];
           // Recursively scan files and add to the DOM.
-          scanFiles(i, item, listing);
+          scanFiles(i, item, listing, uploadsDropzone.options);
         }
       }
     });
 
     uploadsDropzone.on("uploadprogress", function(file) {
-      // console.log('filefilefilefilefile');
-      // console.log(file.name);
-      // console.log(file.upload);
+      // Find the list item for this file.
       let fileListItem = $('#previews').find('[data-file-name="' + file.name + '"]');
-      // console.log('Math.floor(file.upload.progress)');
-      // console.log(Math.floor(file.upload.progress));
-      // console.log('file.upload.totalChunkCount');
-      // console.log(file.upload.totalChunkCount);
-      if ((typeof file.upload.chunks !== 'undefined') && (file.upload.chunks.length < file.upload.totalChunkCount) && (file.upload.totalChunkCount > 1) && (Math.floor(file.upload.progress) !== 100)) {
+      // Update the progress indicator for a chunked file upload while uploading (while progress is < 100%).
+      if (file.upload.chunked && (Math.floor(file.upload.progress) !== 100)) {
         fileListItem.find('.badge').text(Math.floor(file.upload.progress) + '%');
-      } else {
+      }
+      // Update the progress indicator for a chunked file upload once it reaches 100%.
+      if (file.upload.chunked && (file.upload.chunks.length === file.upload.totalChunkCount) && (Math.floor(file.upload.progress) === 100)) {
+        fileListItem.find('.badge').text(Math.floor(file.upload.progress) + '%');
+      }
+      // Update the progress indicator for a non-chunked file upload.
+      if (!file.upload.chunked) {
         fileListItem.find('.badge').text(Math.floor(file.upload.progress) + '%');
       }
     });
 
-    uploadsDropzone.on("addedfile", function(file) {
-      // console.log(file);
-
-      // if(typeof file.fullPath !== 'undefined'){
-
-      //   let directoryStructure = file.fullPath.replace('/' + file.name, '');
-      //       directoryStructureDiv = $('<div />').addClass('directory-structure').attr('style', 'font-weight: bold; margin-bottom: 0.75rem;'),
-      //       spanIcon = $('<span />').addClass('glyphicon glyphicon-folder-close').attr('style', 'margin-right: 4px;');
-
-      //   directoryStructureDiv.append(spanIcon, directoryStructure);
-      //   $(file.previewTemplate).before(directoryStructureDiv);
-
-      // }
-      // Hookup the start button
-      // file.previewElement.querySelector(".start").onclick = function() { uploadsDropzone.enqueueFile(file); };
-    });
-
+    // CSV Help Dialog modal trigger.
     $('.csv-modal-trigger').on('click', function(e) {
       $('#csv-modal').modal('show');
     });
@@ -479,7 +465,10 @@
         let fileExtension = getExtension(queuedFiles[i].name);
 
         // Pre-validate CSV files, files count, and file names.
-        if(fileExtension === 'csv'){
+        if(fileExtension === 'csv') {
+          // Hide upload progress badges.
+          // - Don't want the end-user to get the wrong impression that the upload is taking place.
+          $('#previews').find('.badge').removeClass('badge').addClass('badge-temp');
           // Set a custom parameter, 'prevalidate', so it can be used within the 'success' function.
           queuedFiles[i].prevalidate = true;
           // Start the upload.
@@ -582,6 +571,9 @@
       // If the uploaded file is being pre-validated,
       // set the file status back to 'added', prevalidate to false , and reset progress bars.
       if((typeof file.prevalidate !== 'undefined') && file.prevalidate && (fileExtension === 'csv')) {
+
+        // Bring back the progress badges.
+        $('#previews').find('.badge-temp').removeClass('badge-temp').addClass('badge');
 
         file.status = 'added';
         file.prevalidate = false;
@@ -739,8 +731,10 @@
       // Show the total progress bar when upload starts
       document.querySelector("#total-progress").style.opacity = "1";
 
-      // And disable the start button
-      // file.previewElement.querySelector(".start").setAttribute("disabled", "disabled");
+      if((typeof file.prevalidate !== 'undefined') && !file.prevalidate) {
+        // If not prevalidating, disable the start button
+        document.querySelector(".start").setAttribute("disabled", "disabled");
+      }
 
       // Append custom data to formData.
       // NOTE: can't console.log formData after appending.
@@ -981,42 +975,45 @@
     }
 
 
-    function scanFiles(i, item, container, existingCount) {
+    function scanFiles(i, item, container, dzOptions, existingCount) {
 
-      // console.log(item);
+      // TODO: Add error dialog to files which aren't accepted file types.
+      // The comma-delimited list is stored in: dzOptions.acceptedFiles
+      // Place the error dialog into the 'errorMessageContainer'.
+
+      // Ignore hidden files if Dropzone's 'ignoreHiddenFiles' option is set to true.
+      if (dzOptions.ignoreHiddenFiles && item.name.substring(0, 1) === '.') {
+        return;
+      }
 
       let itemIcon = item.isDirectory ? 'folder-close' : 'file',
           spanIcon = $('<span />').addClass('glyphicon glyphicon-' + itemIcon).attr('style', 'margin-right: 4px;'),
           allItemsCount = $('#previews').find('li.list-group-item').length,
           thisCount = (allItemsCount+1),
-          // progressParent = $('<div />')
-          //     .addClass('progress progress-striped active')
-          //     .attr('role', 'progressbar')
-          //     .attr('aria-valuemin', '0')
-          //     .attr('aria-valuemax', '100')
-          //     .attr('aria-valuenow', '0'),
-          // progressChild = $('<div />')
-          //     .addClass('progress-bar progress-bar-success')
-          //     .attr('style', 'width:0%;')
-          //     .attr('data-dz-uploadprogress', ''),
-          listItem = $('<li />').addClass('list-group-item').attr('data-count', thisCount).attr('data-file-name', item.name).text(item.name);
-          // listItem = $('<li />').addClass('list-group-item').attr('data-count', i).text(item.name + ' | File Type: ' + item.detail.type  + ' | File Size: ' + item.detail.size + ' | Last Modified: ' + item.detail.lastModified + '');
+          listItem = $('<li />')
+              .addClass('list-group-item')
+              .attr('data-count', thisCount)
+              .attr('data-file-name', item.name)
+              .attr('style', 'border-left: none; border-right: none; border-top-left-radius: 0; border-top-right-radius: 0;')
+              .text(item.name),
+          progressBadge = '<span class="badge"></span>',
+          errorMessageContainer = '<div class="pull-right"><strong class="error text-danger"></strong></div>';
 
-      listItem.prepend(spanIcon);
-
-      // progressParent.append(progressChild);
-      listItem.append('<span class="badge"></span>');
+      // Add elements to the list item.
+      listItem.prepend(spanIcon).append(errorMessageContainer, progressBadge);
+      // Add the list item to the container.
       container.append(listItem);
       
       // Directory handler
       if (item.isDirectory) {
         let directoryReader = item.createReader();
-        let directoryContainer = $('<ul />');
+        let directoryContainer = $('<ul />').attr('style', 'padding-left: 15px;').attr('data-file-name', item.name);
+        // Add an unordered list to serve as the directory container.
         container.append(directoryContainer);
-        
+        // Read file entries within a directory.
         directoryReader.readEntries(function(entries) {
             entries.forEach(function(entry) {
-              scanFiles(i++, entry, directoryContainer, existingCount);
+              scanFiles(i++, entry, directoryContainer, dzOptions, existingCount);
           });
         });
       }
