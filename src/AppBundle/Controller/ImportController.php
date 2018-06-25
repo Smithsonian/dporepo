@@ -423,18 +423,39 @@ class ImportController extends Controller
             $csv_val->parent_item_repository_id = $data->parent_record_id;
           }
         case 'model':
-          // Append the job ID to the file path.
+          // 1) Append the job ID to the file path
+          // 2) Add the file's checksum to the $csv_val object.
           if(!empty($csv_val->file_path)) {
+            // Append the job ID to the file path.
             $csv_val->file_path = '/' . $data->job_id . $csv_val->file_path;
+            // Get the file's checksum from the BagIt manifest.
+            $finder = new Finder();
+            $finder->files()->in($this->uploads_directory . $data->job_id . '/');
+            $finder->files()->name('manifest*.txt');
+            // Find the manifest file.
+            foreach ($finder as $file) {
+              $manifest_contents = $file->getContents();
+              $manifest_lines = preg_split('/\r\n|\n|\r/', trim($manifest_contents));
+              foreach ($manifest_lines as $mkey => $mvalue) {
+                $manifest_line_array = preg_split('/\s+/', $mvalue);
+                // If there's a match against file paths, add the checksum to the $csv_val object.
+                if (strstr($csv_val->file_path, $manifest_line_array[1])) {
+                  $csv_val->file_checksum = $manifest_line_array[0];
+                  break;
+                }
+              }
+            }
           }
           // Set the parent_capture_dataset_repository_id or parent_item_repository_id (when a model is associated to an item).
+          // TODO: add previous_parent_record_type to the mix, 
+          // so the system will automatically detect what to associate a model to (to make it a bit more bullet-proof).
           if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
             // If a model maps to an item, set the value for the 'parent_item_repository_id' field.
             if ($data->parent_record_type === 'item') {
               $csv_val->parent_item_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
             }
             // Otherwise, set the value for the 'parent_capture_dataset_repository_id' field.
-            if ($data->parent_record_type === 'capture_dataset') {
+            else {
               $csv_val->parent_capture_dataset_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
             }
           } else {
@@ -443,7 +464,7 @@ class ImportController extends Controller
               $csv_val->parent_item_repository_id = $data->parent_record_id;
             }
             // Otherwise, set the value for the 'parent_capture_dataset_repository_id' field.
-            if ($data->parent_record_type === 'capture_dataset') {
+            else {
               $csv_val->parent_capture_dataset_repository_id = $data->parent_record_id;
             }
           }
