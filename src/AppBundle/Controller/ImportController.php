@@ -326,9 +326,7 @@ class ImportController extends Controller
 
               // If an array of data contains 1 or fewer keys, then it means the row is empty.
               // Unset the empty row, so it doesn't get inserted into the database.
-              if (count(array_keys((array)$json_array[$key])) <= 1) {
-                unset($json_array[$key]);
-              } else {
+              if (count(array_keys((array)$json_array[$key])) > 1) {
                 // Convert the array to an object.
                 $data[$csv_key]['csv'][] = (object)$json_array[$key];
               }
