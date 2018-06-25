@@ -75,8 +75,10 @@
                 <dd>{{ dataset_data.capture_dataset_description|e|nl2br }}</dd>
                 <dt>Dataset Collection Notes</dt>
                 <dd>{{ dataset_data.collection_notes|e|nl2br }}</dd>
-                <dt>Uploaded Files</dt>
-                <dd>{{ dataset_data.directory_listing|raw }}</dd>
+                {% if dataset_data.directory_listing is defined %}
+                  <dt>Uploaded Files</dt>
+                  <dd>{{ dataset_data.directory_listing|raw }}</dd>
+              {% endif %}
             </dl>
         </div>
 
