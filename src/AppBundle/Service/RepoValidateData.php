@@ -36,7 +36,7 @@ class RepoValidateData implements RepoValidate {
    * Check to see if a CSV's 'import_row_id' has gaps or is not sequential.
    * @return mixed array containing success/fail value, and any messages.
    */
-  public function validateRowIds($data = NULL, $schema = 'project') {
+  public function validateRowIds(&$data = NULL, $schema = 'project') {
 
     $import_row_ids = $duplicate_keys = array();
     $return = array('is_valid' => false);
@@ -46,21 +46,26 @@ class RepoValidateData implements RepoValidate {
 
     // If data is passed, go ahead and process.
     if(!empty($data)) {
-      // Convert field values from string to integer or boolean.
+      // Loop through the data.
       foreach ($data as $data_key => $data_value) {
-        foreach ($data_value as $dv_key => $dv_value) {
-          
-          // If the value is empty, add a message.
-          if(($dv_key === 'import_row_id') && empty($dv_value)) {
-            $return['messages'][($data_key+1)] = array('row' => 'Row ' . ($data_key+1) . ' - Field: import_row_id', 'error' => 'Must be at least 1 characters long');
+        // If an array of data contains 1 or fewer keys, then it means the row is empty.
+        // Unset the empty row, so it doesn't get passed onto the JSON validator.
+        if (count(array_keys((array)$data_value)) <= 1) {
+          unset($data[$data_key]);
+        } else {
+          // Check for empty import_row_id values and duplicate import_row_id values.
+          foreach ($data_value as $dv_key => $dv_value) {
+            // If the value is empty, add a message.
+            if(($dv_key === 'import_row_id') && empty($dv_value)) {
+              $return['messages'][($data_key+1)] = array('row' => 'Row ' . ($data_key+1) . ' - Field: import_row_id', 'error' => 'Must be at least 1 characters long');
+            }
+            // Collect all of the 'import_row_id' values to check for duplicate values.
+            if(($dv_key === 'import_row_id') && !empty($dv_value)) {
+              $import_row_ids[] = $dv_value;
+            }
           }
-
-          // Collect all of the 'import_row_id' values to check for duplicate values.
-          if(($dv_key === 'import_row_id') && !empty($dv_value)) {
-            $import_row_ids[] = $dv_value;
-          }
-
         }
+
       }
     }
 
