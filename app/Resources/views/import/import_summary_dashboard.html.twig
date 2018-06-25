@@ -466,9 +466,6 @@
 
         // Pre-validate CSV files, files count, and file names.
         if(fileExtension === 'csv') {
-          // Hide upload progress badges.
-          // - Don't want the end-user to get the wrong impression that the upload is taking place.
-          $('#previews').find('.badge').removeClass('badge').addClass('badge-temp');
           // Set a custom parameter, 'prevalidate', so it can be used within the 'success' function.
           queuedFiles[i].prevalidate = true;
           // Start the upload.
@@ -514,20 +511,24 @@
 
             // If there are file-based errors, populate the panel-body.
             if(diff.length) {
+              let fileMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>BagIt Manifest Pre-validation</h4>');
+              let fileMessageOrderedList = $('<ol />');
               for (var i = 0; i < diff.length; i++) {
                 if(diff[i] !== '.DS_Store') {
-                  let fileMessage = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<strong>Files Pre-validation:</strong> Missing file: ' + diff[i]);
-                  // Append the message to the panel-body container.
-                  $('.panel-validation-results').find('.panel-body').append(fileMessage);
+                  fileMessageOrderedList.append('<li>Missing file: ' + diff[i] + '</li>');
                 }
                 if(diff[i] === '.DS_Store') diff.splice(i, 1);
               }
+              // Append the ordered list to the fileMessageContainer.
+              fileMessageContainer.append(fileMessageOrderedList);
+              // Append the fileMessageContainer to the panel-body container.
+              $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
             }
 
             // If there are no file-based errors, display a message.
             if(!diff.length) {
               // The message.
-              let message = $('<div />').addClass('alert alert-success files-validation-success').attr('role', 'alert').html('<strong>Files Pre-validation:</strong> No file validation errors found.');
+              let message = $('<div />').addClass('alert alert-success files-validation-success').attr('role', 'alert').html('<h4>BagIt Manifest Pre-validation</h4><p>No file validation errors found.</p>');
               // Append the message to the panel-body container.
               $('.panel-validation-results').find('.panel-body').append(message);
             }
@@ -572,9 +573,6 @@
       // set the file status back to 'added', prevalidate to false , and reset progress bars.
       if((typeof file.prevalidate !== 'undefined') && file.prevalidate && (fileExtension === 'csv')) {
 
-        // Bring back the progress badges.
-        $('#previews').find('.badge-temp').removeClass('badge-temp').addClass('badge');
-
         file.status = 'added';
         file.prevalidate = false;
 
@@ -609,7 +607,7 @@
         // If no errors are returned, display a message.
         if(responseText && JSON.parse(responseText.csv).length && (typeof responseText.error === 'undefined')) {
           // The message.
-          let message = $('<div />').addClass('alert alert-success cvs-validation-success').attr('role', 'alert').html('<strong>' + file.name + '</strong>: No CSV validation errors found.');
+          let message = $('<div />').addClass('alert alert-success cvs-validation-success').attr('role', 'alert').html('<h4>CSV Pre-validation</h4><p><strong>' + file.name + '</strong></p><p>No CSV validation errors found.</p>');
           // Append the message to the panel-body container.
           $('.panel-validation-results').find('.panel-body').append(message);
         }
@@ -629,19 +627,17 @@
 
           // Display a general summary of validation errors.
           if(validationErrors.length) {
-            // The message.
-            let message = $('<div />').addClass('alert alert-danger cvs-validation-error').attr('role', 'alert').html('<p><strong>' + file.name + '</strong>: Validation errors found (also, see spreadsheet below).</p>');
-            // Ordered list.
-            let orderedList = $('<ol />');
+            let csvMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>CSV Pre-validation</h4><p><strong>' + file.name + '</strong></p>');
+            let csvMessageOrderedList = $('<ol />');
             // Loop through the errors and append to the message.
             for (var i = 0; i < validationErrors.length; i++) {
               listItem = $('<li />').text(validationErrors[i].row + ': ' + validationErrors[i].error);
-              orderedList.append(listItem);
+              csvMessageOrderedList.append(listItem);
             }
-            // Append the ordered list to the message.
-            message.append(orderedList);
-            // Append the message to the panel-body container.
-            $('.panel-validation-results').find('.panel-body').append(message);
+            // Append the ordered list to the csvMessageContainer.
+            csvMessageContainer.append(csvMessageOrderedList);
+            // Append the csvMessageContainer to the panel-body container.
+            $('.panel-validation-results').find('.panel-body').append(csvMessageContainer);
           }
 
         }
@@ -834,6 +830,8 @@
 
       // Give some time (2 seconds) to create the job record in the database.
       setTimeout(function() {
+        // Bring back the progress badges.
+        $('#previews').find('.badge-temp').removeClass('badge-temp').addClass('badge');
         // Get the job ID from the data attribute of the prevalidate-trigger.
         let jobId = $('.prevalidate-trigger').attr('data-jobid');
         // Begin the uploading process.
@@ -996,7 +994,7 @@
               .attr('data-file-name', item.name)
               .attr('style', 'border-left: none; border-right: none; border-top-left-radius: 0; border-top-right-radius: 0;')
               .text(item.name),
-          progressBadge = '<span class="badge"></span>',
+          progressBadge = '<span class="badge-temp"></span>',
           errorMessageContainer = '<div class="pull-right"><strong class="error text-danger"></strong></div>';
 
       // Add elements to the list item.
