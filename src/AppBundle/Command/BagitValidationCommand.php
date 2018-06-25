@@ -77,7 +77,6 @@ class BagitValidationCommand extends ContainerAwareCommand
       );
 
       // Run the validation.
-      // If no BagIt-based files are found, then they will be generated.
       $result = $this->bagit->bagit_validate($params, $container);
 
       // Output validation results.
