@@ -116,7 +116,7 @@
                   <!-- Template Begins -->
                   <!-- HTML heavily inspired by http://blueimp.github.io/jQuery-File-Upload/ -->
                   <div class="table table-striped" class="files" id="previews">
-                    <ul style="padding-left: 0;">
+                    <ul class="directory-structure" style="padding-left: 0;">
                     </ul>
                     <div id="template" class="row file-row">
                       {# <div class="col-sm-7 col-md-7">
@@ -845,7 +845,7 @@
     document.querySelector("#actions .cancel").onclick = function() {
       // Remove files from Dropzone.
       uploadsDropzone.removeAllFiles(true);
-      $('.directory-structure').remove();
+      $('#previews ul.directory-structure').empty();
       // Clear previous validation results from the validation panel.
       $('.panel-validation-results').find('.panel-body').empty();
       // Remove spreadsheets.
