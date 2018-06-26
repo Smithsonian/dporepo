@@ -75,15 +75,19 @@
                 <dd>{{ dataset_data.capture_dataset_description|e|nl2br }}</dd>
                 <dt>Dataset Collection Notes</dt>
                 <dd>{{ dataset_data.collection_notes|e|nl2br }}</dd>
-                {% if dataset_data.directory_listing is defined %}
-                  <dt>Uploaded Files</dt>
-                  <dd>{{ dataset_data.directory_listing|raw }}</dd>
-              {% endif %}
             </dl>
+            <hr>
+            <h4>Uploaded Files</h4>
+            <form action="/admin/get_uploaded_files" method="POST" class="dropzone" id="my-dropzone">
+              <div class="table table-striped" class="files" id="previews">
+                <ul class="directory-structure" style="padding-left: 0;">
+                </ul>
+              </div>
+            </form>
         </div>
 
         <div class="col-sm-12 col-md-12">
-            <a href="javascript:void(0);" class="view-hidden-content" role="button"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span> <span class="view-hidden-content-text">Expand Details and View Uploaded Files</span></a>
+            <a href="javascript:void(0);" class="view-hidden-content" role="button" data-original-text="Expand Details and View Uploaded Files"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span> <span class="view-hidden-content-text">Expand Details and View Uploaded Files</span></a>
             <hr>
         </div>
 
@@ -206,13 +210,80 @@
     <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
+    <script type="text/javascript" src="{{ asset('lib/javascripts/dropzone.js') }}"></script>
+    <script type="text/javascript">
+      function scanFiles(i, item, container, dzOptions, existingCount) {
+
+        // Ignore hidden files if Dropzone's 'ignoreHiddenFiles' option is set to true.
+        if (dzOptions.ignoreHiddenFiles && item.name.substring(0, 1) === '.') {
+          return;
+        }
+
+        let itemIcon = item.isDirectory ? 'folder-close' : 'file',
+            spanIcon = $('<span />').addClass('glyphicon glyphicon-' + itemIcon).attr('style', 'margin-right: 4px;'),
+            allItemsCount = $('#previews').find('li.list-group-item').length,
+            thisCount = (allItemsCount+1),
+            listItem = $('<li />')
+                .addClass('list-group-item')
+                .attr('data-count', thisCount)
+                .attr('data-file-name', item.name)
+                .attr('style', 'border-left: none; border-right: none; border-top-left-radius: 0; border-top-right-radius: 0;')
+                .html('<a href="' + item.url + '" download="' + item.name + '">' + item.name + '</a>');
+
+        // Add elements to the list item.
+        listItem.prepend(spanIcon);
+        // Add the list item to the container.
+        container.append(listItem);
+        
+        // // Directory handler
+        // if (item.isDirectory) {
+        //   let directoryReader = item.createReader();
+        //   let directoryContainer = $('<ul />').attr('style', 'padding-left: 15px;').attr('data-file-name', item.name);
+        //   // Add an unordered list to serve as the directory container.
+        //   container.append(directoryContainer);
+        //   // Read file entries within a directory.
+        //   directoryReader.readEntries(function(entries) {
+        //       entries.forEach(function(entry) {
+        //         scanFiles(i++, entry, directoryContainer, dzOptions, existingCount);
+        //     });
+        //   });
+        // }
+
+      }
+    </script>
     <script type="text/javascript">
       $(document).ready(function() {
         var project_repository_id = "{{ project_repository_id }}",
           subject_repository_id = "{{ subject_repository_id }}",
           item_repository_id = "{{ item_repository_id }}",
           capture_dataset_repository_id =  "{{ capture_dataset_repository_id }}",
-          details_page = "/admin/projects/dataset_element/";
+          details_page = "/admin/projects/dataset_element/",
+          directory_path = "{{ dataset_data.directory_path }}";
+
+        // Build-out the listing of uploaded files.
+        Dropzone.options.myDropzone = {
+          clickable: false,
+          paramName: "file", // The name that will be used to transfer the file
+          init: function () {
+            thisDropzone = this;
+            // Get the uploaded files via AJAX.
+            $.get('/admin/get_uploaded_files?path=' + directory_path + '&id=' + capture_dataset_repository_id, function (data) {
+              if (data == null) {
+                return;
+              }
+              // Construct the uploaded files on the client side.
+              $.each(data, function (key, value) {
+                var item = { name: value.name, size: value.size, url: value.url };
+                thisDropzone.emit("addedfile", item);
+                let container = $('#previews ul');
+                scanFiles(key, item, container, thisDropzone.options);
+                thisDropzone.emit("complete", item);
+              });
+            });
+            $('form#my-dropzone').find('div.dz-message').remove();
+          }
+        };
+
         $('#browse').dataTable( {
           "columns": [
             { "data": "manage" },
