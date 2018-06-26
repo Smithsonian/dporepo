@@ -514,15 +514,19 @@
               let fileMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>BagIt Manifest Pre-validation</h4>');
               let fileMessageOrderedList = $('<ol />');
               for (var i = 0; i < diff.length; i++) {
+                // Ignore hidden files. For now, just Apple's .DS_Store.
+                // TODO: Add more hidden file types?
                 if(diff[i] !== '.DS_Store') {
                   fileMessageOrderedList.append('<li>Missing file: ' + diff[i] + '</li>');
                 }
                 if(diff[i] === '.DS_Store') diff.splice(i, 1);
               }
               // Append the ordered list to the fileMessageContainer.
-              fileMessageContainer.append(fileMessageOrderedList);
-              // Append the fileMessageContainer to the panel-body container.
-              $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
+              if(fileMessageOrderedList.find('li').length) {
+                fileMessageContainer.append(fileMessageOrderedList);
+                // Append the fileMessageContainer to the panel-body container.
+                $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
+              }
             }
 
             // If there are no file-based errors, display a message.
