@@ -76,6 +76,7 @@
                 <dt>Dataset Collection Notes</dt>
                 <dd>{{ dataset_data.collection_notes|e|nl2br }}</dd>
             </dl>
+            {% if dataset_data.directory_path is defined and dataset_data.directory_path %}
             <hr>
             <h4>Uploaded Files</h4>
             <form action="/admin/get_uploaded_files" method="POST" class="dropzone" id="my-dropzone">
@@ -84,6 +85,7 @@
                 </ul>
               </div>
             </form>
+            {% endif %}
         </div>
 
         <div class="col-sm-12 col-md-12">

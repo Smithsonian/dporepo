@@ -365,16 +365,16 @@ class DatasetElementsController extends Controller
             // If data is returned, proceed with parsing a list of uploaded files.
             if ($job_data && !empty($job_data)) {
                 // The target directory.
-                $dir = dirname($_SERVER['DOCUMENT_ROOT']) . '/web' . $this->uploads_path . '/' . $job_data[0]['job_id'] . $directory_path;
+                $dir = $this->get('kernel')->getProjectDir() . DIRECTORY_SEPARATOR . 'web' . $this->uploads_path . DIRECTORY_SEPARATOR . $job_data[0]['job_id'] . str_replace('/', DIRECTORY_SEPARATOR, $directory_path);
 
                 $finder = new Finder();
                 $finder->files()->in($dir);
                 foreach ($finder as $file) {
-                    $this_file_path = str_replace(dirname($_SERVER['DOCUMENT_ROOT']) . '/web', '', $file->getPathname());
-                    $this_pretty_file_path = str_replace(dirname($_SERVER['DOCUMENT_ROOT']) . '/web' . $this->uploads_path . '/', '', $file->getPathname());
-                    $this_pretty_file_path_array = explode('/', $this_pretty_file_path);
+                    $this_file_path = str_replace($this->get('kernel')->getProjectDir() . DIRECTORY_SEPARATOR . 'web', '', $file->getPathname());
+                    $this_pretty_file_path = str_replace($this->get('kernel')->getProjectDir() . DIRECTORY_SEPARATOR . 'web' . $this->uploads_path . DIRECTORY_SEPARATOR, '', $file->getPathname());
+                    $this_pretty_file_path_array = explode(DIRECTORY_SEPARATOR, $this_pretty_file_path);
                     $this_file_name = array_pop($this_pretty_file_path_array);
-                    $data[] = array('name' => $this_file_name, 'size' => filesize($file->getPathname()), 'url' => $this_file_path, 'isDirectory' => false);
+                    $data[] = array('name' => $this_file_name, 'size' => filesize($file->getPathname()), 'url' => str_replace('\\', '/', $this_file_path), 'isDirectory' => false);
                 }
             }
 
