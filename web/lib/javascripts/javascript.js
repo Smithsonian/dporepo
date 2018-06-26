@@ -191,7 +191,8 @@ jQuery(document).ready(function($) {
   $('body').on('click', '.view-hidden-content', function(e) {
 
     var viewHiddenContentButton = $(this),
-        toggleableContainers = viewHiddenContentButton.parent().find('.col-hidden-toggle');
+        toggleableContainers = viewHiddenContentButton.parent().find('.col-hidden-toggle')
+        originalText = (typeof viewHiddenContentButton.attr('data-original-text') !== 'undefined') ? viewHiddenContentButton.attr('data-original-text') : 'Expand Details';
 
     if(!toggleableContainers.length) toggleableContainers = $('.col-hidden-toggle');
 
@@ -205,7 +206,7 @@ jQuery(document).ready(function($) {
           .removeClass('glyphicon-chevron-down')
           .addClass('glyphicon-chevron-up');
       } else {
-        viewHiddenContentButton.find('.view-hidden-content-text').text('Expand Details');
+        viewHiddenContentButton.find('.view-hidden-content-text').text(originalText);
         viewHiddenContentButton.find('.glyphicon')
           .removeClass('glyphicon-chevron-up')
           .addClass('glyphicon-chevron-down');
