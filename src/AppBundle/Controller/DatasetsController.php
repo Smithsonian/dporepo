@@ -208,6 +208,8 @@ class DatasetsController extends Controller
             $this->addFlash('message', 'Capture Dataset successfully updated.');
             return $this->redirect('/admin/projects/dataset_elements/' . $dataset->parent_project_repository_id . '/' . $dataset->parent_subject_repository_id . '/' . $dataset->parent_item_repository_id . '/' . $id);
         }
+        
+        $dataset->capture_dataset_repository_id = !empty($id) ? $id : false;
 
         return $this->render('datasets/dataset_form.html.twig', array(
             'page_title' => !empty($id) ? 'Dataset: ' . $dataset->capture_dataset_name : 'Create Dataset',
