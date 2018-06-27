@@ -80,7 +80,7 @@
             <hr>
             <h4>Uploaded Files</h4>
             <form action="/admin/get_uploaded_files" method="POST" class="dropzone" id="my-dropzone">
-              <div class="table table-striped" class="files" id="previews">
+              <div class="table table-striped files" id="previews">
                 <ul class="directory-structure" style="padding-left: 0;">
                 </ul>
               </div>
@@ -275,7 +275,7 @@
               }
               // Construct the uploaded files on the client side.
               $.each(data, function (key, value) {
-                var item = { name: value.name, size: value.size, url: value.url };
+                var item = { name: value.name, size: value.size, url: value.url, isDirectory: value.isDirectory };
                 thisDropzone.emit("addedfile", item);
                 let container = $('#previews ul');
                 scanFiles(key, item, container, thisDropzone.options);
