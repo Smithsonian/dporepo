@@ -60,13 +60,9 @@
     <div class="col-sm-6 col-md-6">
       {% if dataset_data.directory_path is defined and dataset_data.directory_path %}
       <hr>
-      <h4>Uploaded Files</h4>
-      <form action="/admin/get_uploaded_files" method="POST" class="dropzone" id="my-dropzone">
-        <div class="table table-striped files" id="previews">
-          <ul class="directory-structure" style="padding-left: 0;">
-          </ul>
-        </div>
-      </form>
+      <h3>Uploaded Files</h3>
+      <div id="jstreeContainer"></div>
+      <hr>
       {% endif %}
     </div>
   </div>
@@ -76,78 +72,44 @@
 {% block javascripts %}
   {{ parent() }}
   <script src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/js/bootstrap-datepicker.min.js"></script>
-  <script type="text/javascript" src="{{ asset('lib/javascripts/dropzone.js') }}"></script>
-  <script type="text/javascript">
-    function scanFiles(i, item, container, dzOptions, existingCount) {
-
-      // Ignore hidden files if Dropzone's 'ignoreHiddenFiles' option is set to true.
-      if (dzOptions.ignoreHiddenFiles && item.name.substring(0, 1) === '.') {
-        return;
-      }
-
-      let itemIcon = item.isDirectory ? 'folder-close' : 'file',
-          spanIcon = $('<span />').addClass('glyphicon glyphicon-' + itemIcon).attr('style', 'margin-right: 4px;'),
-          allItemsCount = $('#previews').find('li.list-group-item').length,
-          thisCount = (allItemsCount+1),
-          listItem = $('<li />')
-              .addClass('list-group-item')
-              .attr('data-count', thisCount)
-              .attr('data-file-name', item.name)
-              .attr('style', 'border-left: none; border-right: none; border-top-left-radius: 0; border-top-right-radius: 0;')
-              .html('<a href="' + item.url + '" download="' + item.name + '">' + item.name + '</a>');
-
-      // Add elements to the list item.
-      listItem.prepend(spanIcon);
-      // Add the list item to the container.
-      container.append(listItem);
-      
-      // // Directory handler
-      // if (item.isDirectory) {
-      //   // let directoryReader = item.createReader();
-      //   let directoryContainer = $('<ul />').attr('style', 'padding-left: 15px;').attr('data-file-name', item.name);
-      //   // Add an unordered list to serve as the directory container.
-      //   container.append(directoryContainer);
-      //   // // Read file entries within a directory.
-      //   // directoryReader.readEntries(function(entries) {
-      //   //     entries.forEach(function(entry) {
-      //   //       scanFiles(i++, entry, directoryContainer, dzOptions, existingCount);
-      //   //   });
-      //   // });
-      // }
-
-    }
-  </script>
   <script type="text/javascript">
     // Datepicker
     $(document).ready(function(){
 
       var capture_dataset_repository_id =  "{{ dataset_data.capture_dataset_repository_id }}",
-          directory_path = "{{ dataset_data.directory_path }}",
-          reader = new FileReader();
+          directory_path = "{{ dataset_data.directory_path }}";
 
-      // Build-out the listing of uploaded files.
-      Dropzone.options.myDropzone = {
-        clickable: false,
-        paramName: "file", // The name that will be used to transfer the file
-        init: function () {
-          thisDropzone = this;
-          // Get the uploaded files via AJAX.
-          $.get('/admin/get_uploaded_files?path=' + directory_path + '&id=' + capture_dataset_repository_id, function (data) {
-            if (data == null) {
-              return;
+      // Initialize jsTree.
+      // See: https://www.jstree.com/
+      $('#jstreeContainer').jstree({
+        'cache': false,
+        'state': { 'key': 'dpoJsTreeFiles' },
+        'plugins' : [
+          // 'wholerow'
+        ],
+        'core' : {
+          'data' : {
+            'url' : function (node) {
+              return '/admin/get_uploaded_files';
+            },
+            'data' : function (node) {
+              return { 'path': directory_path, 'id': capture_dataset_repository_id };
+            },
+            'complete': function(result) {
+              if(result.status === 200) {
+                return result.responseJSON;
+              } else {
+                console.log('Not found. Status code: ' + result.status);
+              }
             }
-            // Construct the uploaded files on the client side.
-            $.each(data, function (key, value) {
-              var item = { name: value.name, size: value.size, url: value.url, isDirectory: value.isDirectory };
-              thisDropzone.emit("addedfile", item);
-              let container = $('#previews ul');
-              scanFiles(key, item, container, thisDropzone.options);
-              thisDropzone.emit("complete", item);
-            });
-          });
-          $('form#my-dropzone').find('div.dz-message').remove();
+          }
         }
-      };
+      });
+
+      // jsTree prevents the default anchor href action, so it need to be overridden.
+      $('#jstreeContainer').on('click', 'a', function(e) {
+        document.location.href = this.href;
+      });
 
       // Datepicker
       var dateInput = $('input[name="dataset[date_of_capture]"]');

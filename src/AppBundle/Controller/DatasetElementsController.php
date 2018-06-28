@@ -54,6 +54,40 @@ class DatasetElementsController extends Controller
         $this->repo_storage_controller->setContainer($this->container);
         $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'dataset_element'));
 
+        // $json_array = '[
+        //       {
+        //           "text" : "Root node",
+        //           "state" : {"opened" : true },
+        //           "children": [
+        //             {
+        //               "text": "One",
+        //               "id": "2",
+        //               "a_attr": {
+        //                 "href": "\/admin\/projects\/items\/2\/793"
+        //               },
+        //               "children": [
+        //                 {
+        //                   "text": "One: Child 1",
+        //                   "id": "4",
+        //                   "a_attr": {
+        //                     "href": "\/admin\/projects\/items\/2\/793"
+        //                   }
+        //                 }
+        //               ]
+        //             },
+        //             {
+        //               "text": "Two",
+        //               "id": "3",
+        //               "a_attr": {
+        //                 "href": "\/admin\/projects\/items\/2\/793"
+        //               }
+        //             }
+        //           ]
+        //         }
+        //       ]';
+
+        // $this->u->dumper(json_decode($json_array, true));
+
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
         $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
@@ -340,7 +374,7 @@ class DatasetElementsController extends Controller
      */
     public function get_uploaded_files(Request $request) {
 
-        $data = array();
+        $items = array();
         $directory_path = !empty($request->get('path')) ? $request->get('path') : false;
         $record_id = !empty($request->get('id')) ? $request->get('id') : false;
 
@@ -367,21 +401,72 @@ class DatasetElementsController extends Controller
                 // The target directory.
                 $dir = $this->get('kernel')->getProjectDir() . DIRECTORY_SEPARATOR . 'web' . $this->uploads_path . DIRECTORY_SEPARATOR . $job_data[0]['job_id'] . str_replace('/', DIRECTORY_SEPARATOR, $directory_path);
 
-                $finder = new Finder();
-                $finder->in($dir);
-                $finder->sortByName();
-                foreach ($finder as $file) {
-                    $this_file_path = str_replace($this->get('kernel')->getProjectDir() . DIRECTORY_SEPARATOR . 'web', '', $file->getPathname());
-                    $this_pretty_file_path = str_replace($this->get('kernel')->getProjectDir() . DIRECTORY_SEPARATOR . 'web' . $this->uploads_path . DIRECTORY_SEPARATOR, '', $file->getPathname());
-                    $this_pretty_file_path_array = explode(DIRECTORY_SEPARATOR, $this_pretty_file_path);
-                    $this_file_name = array_pop($this_pretty_file_path_array);
-                    $data[] = array('name' => $this_file_name, 'size' => filesize($file->getPathname()), 'url' => str_replace('\\', '/', $this_file_path), 'isDirectory' => is_dir($file->getPathname()));
-                }
+                // The target directory.
+                // $dir = $this->get('kernel')->getProjectDir() . DIRECTORY_SEPARATOR . 'web' . $this->uploads_path . DIRECTORY_SEPARATOR . $job_data[0]['job_id'];
+
+                // Construct the JSON for the tree.
+                $data = $this->get_tree($dir);
             }
 
         }
 
         return $this->json($data);
+    }
+
+    public function get_tree($dir) {
+
+        $items = array();
+
+        if(is_dir($dir)) {
+
+            $finder = new Finder();
+            $finder->in($dir);
+            $finder->sortByName();
+
+            foreach ($finder as $file) {
+
+                $item = array();
+                $this_file_path = str_replace($this->get('kernel')->getProjectDir() . DIRECTORY_SEPARATOR . 'web', '', $file->getPathname());
+                $this_pretty_file_path = str_replace($this->get('kernel')->getProjectDir() . DIRECTORY_SEPARATOR . 'web' . $this->uploads_path . DIRECTORY_SEPARATOR, '', $file->getPathname());
+                $this_pretty_file_path_array = explode(DIRECTORY_SEPARATOR, $this_pretty_file_path);
+                $this_file_name = array_pop($this_pretty_file_path_array);
+
+                
+                // If FOLDER, then go inside and repeat the loop
+                if(is_dir($file->getPathname())) {
+                    $folder = array('text' => $this_file_name, 'icon' => 'glyphicon glyphicon-folder-close', 'a_attr' => array('href' => $this_file_path, 'path' => $this_pretty_file_path, 'size' => filesize($file->getPathname()), 'download' => $this_file_name));
+                    $children = $this->get_tree($file->getPathname());                    
+                    $folder['children'] = $children;
+                    $item = $folder;
+                }
+                // If FILE
+                if(!is_dir($file->getPathname())) {
+                    $file = array('text' => $this_file_name . '&nbsp;&nbsp;&nbsp;(' . $this->byteConvert(filesize($file->getPathname())) . ')', 'icon' => 'glyphicon glyphicon-file', 'a_attr' => array('href' => $this_file_path, 'path' => $this_pretty_file_path, 'size' => filesize($file->getPathname()), 'download' => $this_file_name));
+                    $item = $file;
+                }
+
+                $items[] = $item;
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * Byte Convert
+     * Converts bytes to human readable file size.
+     *
+     * @param int $bytes Bytes
+     * @return string
+     */
+    public function byteConvert($bytes) {
+        if ($bytes == 0)
+            return "0.00 B";
+
+        $s = array('B', 'KB', 'MB', 'GB', 'TB', 'PB');
+        $e = floor(log($bytes, 1024));
+
+        return round($bytes/pow(1024, $e), 2).$s[$e];
     }
 
 }
