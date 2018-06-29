@@ -425,27 +425,37 @@ class DatasetElementsController extends Controller
 
             foreach ($finder as $file) {
 
+                $previous_file_name = (isset($previous_file_name) && !empty($previous_file_name)) ? $previous_file_name : 'fakefile';
+
                 $item = array();
                 $this_file_path = str_replace($this->get('kernel')->getProjectDir() . DIRECTORY_SEPARATOR . 'web', '', $file->getPathname());
                 $this_pretty_file_path = str_replace($this->get('kernel')->getProjectDir() . DIRECTORY_SEPARATOR . 'web' . $this->uploads_path . DIRECTORY_SEPARATOR, '', $file->getPathname());
                 $this_pretty_file_path_array = explode(DIRECTORY_SEPARATOR, $this_pretty_file_path);
                 $this_file_name = array_pop($this_pretty_file_path_array);
 
-                
                 // If FOLDER, then go inside and repeat the loop
                 if(is_dir($file->getPathname())) {
+                  if (!strstr($this_pretty_file_path, $previous_file_name)) {
                     $folder = array('text' => $this_file_name, 'icon' => 'glyphicon glyphicon-folder-close', 'a_attr' => array('href' => $this_file_path, 'path' => $this_pretty_file_path, 'size' => filesize($file->getPathname()), 'download' => $this_file_name));
                     $children = $this->get_tree($file->getPathname());                    
                     $folder['children'] = $children;
                     $item = $folder;
+                  }
                 }
                 // If FILE
                 if(!is_dir($file->getPathname())) {
+                  if (!strstr($this_pretty_file_path, $previous_file_name)) {
                     $file = array('text' => $this_file_name . '&nbsp;&nbsp;&nbsp;(' . $this->byteConvert(filesize($file->getPathname())) . ')', 'icon' => 'glyphicon glyphicon-file', 'a_attr' => array('href' => $this_file_path, 'path' => $this_pretty_file_path, 'size' => filesize($file->getPathname()), 'download' => $this_file_name));
                     $item = $file;
+                  }
                 }
 
-                $items[] = $item;
+                // To avoid duplicates, set the $previous_file_name to $this_file_name.
+                $previous_file_name = $this_file_name;
+
+                if (!empty($item)) {
+                  $items[] = $item;
+                }
             }
         }
 
