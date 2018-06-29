@@ -25,8 +25,20 @@ class ImportController extends Controller
      * @var object $u
      */
     public $u;
+
+    /**
+     * @var string $uploads_directory
+     */
+    private $uploads_directory;
+
+    /**
+     * @var string $uploads_path
+     */
+    private $uploads_path;
+
     private $repo_storage_controller;
     private $tokenStorage;
+
 
     /**
      * Constructor
@@ -44,6 +56,7 @@ class ImportController extends Controller
 
         // TODO: move this to parameters.yml and bind in services.yml.
         $this->uploads_directory = __DIR__ . '/../../../web/uploads/repository/';
+        $this->uploads_path = '/uploads/repository';
     }
 
     /**
@@ -595,7 +608,7 @@ class ImportController extends Controller
      * @param object $project ProjectsController class
      * @param object $request Symfony's request object
      */
-    public function import_summary_details($id, $project_id, Connection $conn, ProjectsController $project, Request $request)
+    public function import_summary_details($id, $project_id, Connection $conn, ProjectsController $project, Request $request, DatasetElementsController $data_elements_controller)
     {
 
       $project = [];
@@ -629,7 +642,18 @@ class ImportController extends Controller
           // Merge job_record_data into $project.
           $project = array_merge($project, $job_record_data);
           // Get the uploaded files.
-          $project['files'] = $this->get_directory_contents($id);
+          $uploaded_files_directory = is_dir($this->uploads_directory . (int)$id . '/') ? (int)$id . '/' : false;
+          $uploaded_files_directory = $this->get('kernel')->getProjectDir() . DIRECTORY_SEPARATOR . 'web' . $this->uploads_path . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $uploaded_files_directory);
+
+          $uploaded_files_directory_array = $data_elements_controller->get_tree($uploaded_files_directory, $this->get('kernel')->getProjectDir());
+
+          // die('here');
+          // $this->u->dumper($uploaded_files_directory_array);
+          // $this->u->dumper($job_record_data);
+
+          $project['uploaded_files_directory_json'] = json_encode($uploaded_files_directory_array);
+          // $project['uploaded_files_directory_json'] = $this->json($uploaded_files_directory_array);
+
           // Get errors if they exist.
           $project['file_validation_errors'] = $this->repo_storage_controller->execute('getRecords', array(
               'base_table' => 'job_log',

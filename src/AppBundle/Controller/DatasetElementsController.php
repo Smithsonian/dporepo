@@ -405,7 +405,10 @@ class DatasetElementsController extends Controller
                 // $dir = $this->get('kernel')->getProjectDir() . DIRECTORY_SEPARATOR . 'web' . $this->uploads_path . DIRECTORY_SEPARATOR . $job_data[0]['job_id'];
 
                 // Construct the JSON for the tree.
+                // $data = $this->u->get_directory_tree($dir);
                 $data = $this->get_tree($dir);
+
+                // $this->u->dumper($data);
             }
 
         }
@@ -413,11 +416,18 @@ class DatasetElementsController extends Controller
         return $this->json($data);
     }
 
-    public function get_tree($dir) {
+    public function get_tree($dir = null, $project_dir = null, $previous_file_paths = array(), $previous_dirs = array()) {
+
+        // $this->u->dumper('previous_file_paths',0);
+        // $this->u->dumper($previous_file_paths,0);
 
         $items = array();
 
-        if(is_dir($dir)) {
+        if (empty($project_dir)) {
+          $project_dir = $this->get('kernel')->getProjectDir();
+        }
+
+        if(!empty($dir) && is_dir($dir)) {
 
             $finder = new Finder();
             $finder->in($dir);
@@ -425,37 +435,34 @@ class DatasetElementsController extends Controller
 
             foreach ($finder as $file) {
 
-                $previous_file_name = (isset($previous_file_name) && !empty($previous_file_name)) ? $previous_file_name : 'fakefile';
-
                 $item = array();
-                $this_file_path = str_replace($this->get('kernel')->getProjectDir() . DIRECTORY_SEPARATOR . 'web', '', $file->getPathname());
-                $this_pretty_file_path = str_replace($this->get('kernel')->getProjectDir() . DIRECTORY_SEPARATOR . 'web' . $this->uploads_path . DIRECTORY_SEPARATOR, '', $file->getPathname());
+                $this_file_path = str_replace($project_dir . DIRECTORY_SEPARATOR . 'web', '', $file->getPathname());
+                $this_pretty_file_path = str_replace($project_dir . DIRECTORY_SEPARATOR . 'web' . $this->uploads_path . DIRECTORY_SEPARATOR, '', $file->getPathname());
                 $this_pretty_file_path_array = explode(DIRECTORY_SEPARATOR, $this_pretty_file_path);
                 $this_file_name = array_pop($this_pretty_file_path_array);
 
-                // If FOLDER, then go inside and repeat the loop
-                if(is_dir($file->getPathname())) {
-                  if (!strstr($this_pretty_file_path, $previous_file_name)) {
-                    $folder = array('text' => $this_file_name, 'icon' => 'glyphicon glyphicon-folder-close', 'a_attr' => array('href' => $this_file_path, 'path' => $this_pretty_file_path, 'size' => filesize($file->getPathname()), 'download' => $this_file_name));
-                    $children = $this->get_tree($file->getPathname());                    
-                    $folder['children'] = $children;
-                    $item = $folder;
-                  }
-                }
                 // If FILE
-                if(!is_dir($file->getPathname())) {
-                  if (!strstr($this_pretty_file_path, $previous_file_name)) {
-                    $file = array('text' => $this_file_name . '&nbsp;&nbsp;&nbsp;(' . $this->byteConvert(filesize($file->getPathname())) . ')', 'icon' => 'glyphicon glyphicon-file', 'a_attr' => array('href' => $this_file_path, 'path' => $this_pretty_file_path, 'size' => filesize($file->getPathname()), 'download' => $this_file_name));
-                    $item = $file;
-                  }
+                if(!is_dir($file->getPathname()) && !in_array($file->getPathname(), $previous_file_paths)) {
+                    $file_entry = array('text' => $this_file_name . '&nbsp;&nbsp;&nbsp;(' . $this->byteConvert(filesize($file->getPathname())) . ')', 'icon' => 'glyphicon glyphicon-file', 'a_attr' => array('href' => $this_file_path, 'path' => $this_pretty_file_path, 'size' => filesize($file->getPathname()), 'download' => $this_file_name));
+                    $item = $file_entry;
+                    array_push($previous_file_paths, $file->getPathname());
                 }
 
-                // To avoid duplicates, set the $previous_file_name to $this_file_name.
-                $previous_file_name = $this_file_name;
+                // If FOLDER, then go inside and repeat the loop
+                if(is_dir($file->getPathname()) && !in_array($file->getPathname(), $previous_file_paths)) {
+                    $folder = array('text' => $this_file_name, 'icon' => 'glyphicon glyphicon-folder-close', 'path' => $this_pretty_file_path, 'size' => filesize($file->getPathname()));
+                    $children = $this->get_tree($file->getPathname(), $project_dir, $previous_file_paths, $previous_dirs);
+                    $folder['children'] = $children;
+                    $item = $folder;
+                    array_push($previous_file_paths, $file->getPathname());
+                }
+                
 
                 if (!empty($item)) {
                   $items[] = $item;
                 }
+
+                
             }
         }
 
