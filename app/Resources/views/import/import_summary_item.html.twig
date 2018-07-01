@@ -87,18 +87,13 @@
     </thead>
   </table>
 
-  {% if project.uploaded_files_directory_json is defined %}
+  {% if project.uploaded_files %}
     <div class="row">
       <div class="col-sm-6 col-md-6">
         <div class="panel panel-default">
           <div class="panel-body">
             <h3>Uploaded Files</h3>
-            <div class="alert alert-danger files-validation-error" role="alert"><p><strong>Note:</strong> Needs more work...</p></div>
-            {% if project.uploaded_files_directory_json %}
             <div id="jstreeContainer"></div>
-            {% else %}
-              <p>No files found</p>
-            {% endif %}
           </div>
         </div>
       </div>
@@ -232,16 +227,34 @@
         
       });
 
-      var uploadedFiles = '{{ project.uploaded_files_directory_json | raw }}';
-
       // Initialize jsTree.
       // See: https://www.jstree.com/
       $('#jstreeContainer').jstree({
         'cache': false,
         'state': { 'key': 'dpoJsTreeFiles' },
         'core' : {
-          'data' : JSON.parse(uploadedFiles)
-        }
+          // 'data' : JSON.parse(uploadedFiles)
+          'data' : {
+            'url' : '/admin/get_directory_contents/' + id,
+            'data' : function (node) {
+              return { 'id' : node.id };
+            },
+            'force_text' : true
+          },
+        },
+        'sort' : function(a, b) {
+            return this.get_type(a) === this.get_type(b) ? (this.get_text(a) > this.get_text(b) ? 1 : -1) : (this.get_type(a) >= this.get_type(b) ? 1 : -1);
+          },
+          'types' : {
+            'default' : { 'icon' : 'glyphicon glyphicon-folder-close' },
+            'file' : { 'valid_children' : [], 'icon' : 'file' }
+          },
+          'unique' : {
+            'duplicate' : function (name, counter) {
+              return name + ' ' + counter;
+            }
+          },
+          'plugins' : ['sort','types','unique']
       });
 
       // jsTree prevents the default anchor href action, so it need to be overridden.

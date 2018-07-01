@@ -639,20 +639,13 @@ class ImportController extends Controller
         $job_record_data = $this->repo_storage_controller->execute('getImportedItems', array('job_id' => (int)$id));
         // If a record is found within the 'job_import_record' table, fetch the remaining data (uploaded files, file validation errors).
         if ($job_record_data) {
+
           // Merge job_record_data into $project.
           $project = array_merge($project, $job_record_data);
-          // Get the uploaded files.
-          $uploaded_files_directory = is_dir($this->uploads_directory . (int)$id . '/') ? (int)$id . '/' : false;
-          $uploaded_files_directory = $this->get('kernel')->getProjectDir() . DIRECTORY_SEPARATOR . 'web' . $this->uploads_path . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $uploaded_files_directory);
 
-          $uploaded_files_directory_array = $data_elements_controller->get_tree($uploaded_files_directory, $this->get('kernel')->getProjectDir());
-
-          // die('here');
-          // $this->u->dumper($uploaded_files_directory_array);
-          // $this->u->dumper($job_record_data);
-
-          $project['uploaded_files_directory_json'] = json_encode($uploaded_files_directory_array);
-          // $project['uploaded_files_directory_json'] = $this->json($uploaded_files_directory_array);
+          // Check for uploaded files.
+          $dir = $this->uploads_directory . (int)$id . '/';
+          $project['uploaded_files'] = (is_dir($dir) && is_readable($dir)) ? true : false;
 
           // Get errors if they exist.
           $project['file_validation_errors'] = $this->repo_storage_controller->execute('getRecords', array(
