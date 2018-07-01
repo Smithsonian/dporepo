@@ -752,32 +752,6 @@ class ImportController extends Controller
     }
 
     /**
-     * Create an array of all direcories and files found.
-     *
-     * @param int $job_id The Job ID.
-     * @return array $data An array of all files found for a job.
-     */
-    private function get_directory_contents($job_id = null) {
-
-      $data = [];
-
-      if (!empty($job_id) && is_dir($this->uploads_directory . $job_id . '/')) {
-        $finder = new Finder();
-        $finder->files()->in($this->uploads_directory . $job_id . '/');
-
-        foreach ($finder as $file) {
-          $this_file = str_replace($this->uploads_directory . $job_id, '', $file->getPathname());
-          // The following rigmarole is due to slash differences between Windows and Unix-based systems.
-          $this_file = ltrim($this_file, DIRECTORY_SEPARATOR);
-          // The simplified path to the file (minus absolute path structures).
-          $data[] = str_replace('\\' . $file->getPathname(), '', $this_file);
-        }
-      }
-
-      return $data;
-    }
-
-    /**
      * @Route("/admin/import/get_parent_records", name="get_parent_records", methods="POST")
      *
      * @param Request $request Symfony's request object
