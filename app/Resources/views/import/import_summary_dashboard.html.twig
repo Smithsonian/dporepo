@@ -398,11 +398,49 @@
           // console.log(item);
           // Add the file size and modified date to 'item'.
           item.detail = ev.dataTransfer.files[i];
+
+          // console.log(item);
+
           // Recursively scan files and add to the DOM.
           scanFiles(i, item, listing, uploadsDropzone.options);
         }
       }
     });
+
+    uploadsDropzone.on("addedfiles", function(files) {
+
+      var fileInput = $('body').find('.dz-hidden-input'),
+          items = fileInput[0].files;
+
+      // console.log(items);
+
+      simulateDrop({ 
+          dataTransfer: { items: [ items ] },
+          preventDefault: function () {}
+      });
+    });
+
+    function simulateDrop(ev) {
+      ev.preventDefault();
+
+      // console.log(ev.dataTransfer);
+
+      // Format directories and files hierarchically.
+      if (ev.dataTransfer.items[0].length) {
+        // Use DataTransferItemList interface to access the file(s)
+        for (var i = 0; i < ev.dataTransfer.items[0].length; i++) {
+
+          // Get the item's properties via webkitGetAsEntry().
+          let item = ev.dataTransfer.items[0][i],
+              listing = $('#previews ul');
+
+          // console.log(item);
+
+          // Recursively scan files and add to the DOM.
+          scanFiles(i, item, listing, uploadsDropzone.options);
+        }
+      }
+    }
 
     uploadsDropzone.on("uploadprogress", function(file) {
       // Find the list item for this file.
