@@ -647,6 +647,20 @@ class ImportController extends Controller
           $dir = $this->uploads_directory . (int)$id . '/';
           $project['uploaded_files'] = (is_dir($dir) && is_readable($dir)) ? true : false;
 
+          // Get CSV data.
+          $project['csv'] = array();
+          $finder = new Finder();
+          $finder->files()->name('*.csv');
+          foreach ($finder->in($dir) as $file) {
+            $project['csv'][$file->getBasename()] = $this->construct_import_data($dir, $file->getBasename());
+            $project['csv_row_count'][$file->getBasename()] = count($project['csv'][$file->getBasename()]);
+          }
+          // If there's csv data, encode to JSON so it can be passed on to Handsontables (JavaScript).
+          if(isset($project['csv'])) {
+            $project['csv'] = json_encode($project['csv']);
+            $project['csv_row_count'] = json_encode($project['csv_row_count']);
+          }
+
           // Get errors if they exist.
           $project['file_validation_errors'] = $this->repo_storage_controller->execute('getRecords', array(
               'base_table' => 'job_log',
@@ -913,6 +927,56 @@ class ImportController extends Controller
       }
 
       return $this->json(array('jobId' => (int)$job_id, 'projectId' => (int)$project['project_repository_id']));
+    }
+
+    /**
+     * @param string $job_id_directory  The upload directory
+     * @param string $filename  The file name
+     * @return array  Import result and/or any messages
+     */
+    public function construct_import_data($job_id_directory = null, $filename = null)
+    {
+
+      $json_object = array();
+
+      if(!empty($job_id_directory)) {
+
+        $finder = new Finder();
+        $finder->files()->in($job_id_directory . '/');
+        $finder->files()->name($filename);
+
+        foreach ($finder as $file) {
+          // Get the contents of the CSV.
+          $csv = $file->getContents();
+        }
+
+        // Convert the CSV to JSON.
+        $array = array_map('str_getcsv', explode("\n", $csv));
+        $json = json_encode($array);
+
+        // Convert the JSON to a PHP array.
+        $json_array = json_decode($json, false);
+
+        // Read the first key from the array, which is the column headers.
+        $target_fields = $json_array[0];
+
+        // Remove the column headers from the array.
+        array_shift($json_array);
+
+        foreach ($json_array as $key => $value) {
+          // Replace numeric keys with field names.
+          foreach ($value as $k => $v) {
+            $field_name = $target_fields[$k];
+            unset($json_array[$key][$k]);
+            $json_array[$key][$field_name] = $v;
+          }
+          // Convert the array to an object.
+          $json_object[] = (object)$json_array[$key];
+        }
+
+      }
+
+      return $json_object;
     }
 
     /**

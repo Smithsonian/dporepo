@@ -11,6 +11,7 @@ use Psr\Container\ContainerInterface;
 use Oneup\UploaderBundle\Event\PostPersistEvent;
 use AppBundle\Service\RepoValidateData;
 use AppBundle\Controller\RepoStorageHybridController;
+use AppBundle\Controller\ImportController;
 
 class UploadListener
 {
@@ -20,12 +21,18 @@ class UploadListener
   private $repo_storage_controller;
   private $tokenStorage;
   private $container;
+  private $import_controller;
 
-  public function __construct(RepoStorageHybridController $repo_storage_controller, TokenStorageInterface $tokenStorage, ContainerInterface $container)
+  public function __construct(
+    RepoStorageHybridController $repo_storage_controller,
+    TokenStorageInterface $tokenStorage,
+    ContainerInterface $container,
+    ImportController $import_controller)
   {
     $this->repo_storage_controller = $repo_storage_controller;
     $this->tokenStorage = $tokenStorage;
     $this->container = $container;
+    $this->import_controller = $import_controller;
   }
   
   /**
@@ -186,7 +193,7 @@ class UploadListener
     }
 
     // Construct the data.
-    $data->csv = $this->construct_import_data($job_id_directory, $filename); // , $thisContainer, $itemsController
+    $data->csv = $this->import_controller->construct_import_data($job_id_directory, $filename); // , $thisContainer, $itemsController
 
     // if(empty($data->csv)) {
     //   unset($data->row_ids_results['is_valid']);
@@ -240,58 +247,6 @@ class UploadListener
     }
 
     return $data;
-  }
-
-  /**
-   * @param string $job_id_directory  The upload directory
-   * @param string $filename  The file name
-   * @return array  Import result and/or any messages
-   */
-  public function construct_import_data($job_id_directory = null, $filename = null)
-  {
-
-    $json_object = array();
-
-    if(!empty($job_id_directory)) {
-
-      $finder = new Finder();
-      $finder->files()->in($job_id_directory . '/');
-      $finder->files()->name($filename);
-
-      foreach ($finder as $file) {
-        // Get the contents of the CSV.
-        $csv = $file->getContents();
-      }
-
-      // Convert the CSV to JSON.
-      $array = array_map('str_getcsv', explode("\n", $csv));
-      $json = json_encode($array);
-
-      // Convert the JSON to a PHP array.
-      $json_array = json_decode($json, false);
-
-      // Read the first key from the array, which is the column headers.
-      $target_fields = $json_array[0];
-
-      // Remove the column headers from the array.
-      array_shift($json_array);
-
-      foreach ($json_array as $key => $value) {
-        // Replace numeric keys with field names.
-        foreach ($value as $k => $v) {
-          $field_name = $target_fields[$k];
-          unset($json_array[$key][$k]);
-          $json_array[$key][$field_name] = $v;
-        }
-        // Convert the array to an object.
-        $json_object[] = (object)$json_array[$key];
-      }
-
-    }
-
-    // $this->dumper($json_object);
-
-    return $json_object;
   }
 
   public function dumper($data = false, $die = true, $ip_address=false){
