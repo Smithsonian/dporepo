@@ -360,7 +360,6 @@ dd {
 }
 
 .panel-spreadsheet .panel-body {
-  height: 80rem;
   overflow: scroll;
 }
 

@@ -4,6 +4,7 @@
   {{ parent() }}
   <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
   <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.css') }}" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -120,6 +121,14 @@
     </div>
   {% endif %}
 
+  {% if project.uploaded_files %}
+    <div class="row hidden" id="panel-spreadsheets">
+      <div class="col-sm-12 col-md-12">
+        <!-- Spreadsheets container (Handsontable) -->
+      </div>
+    </div>
+  {% endif %}
+
 {% endblock %}
 
 {% block js_bottom %}
@@ -129,6 +138,7 @@
   <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.js') }}"></script>
   <script type="text/javascript">
     $(document).ready(function() {
 
@@ -289,6 +299,62 @@
         });
 
       });
+
+      /**
+       * Display CSV Data
+       */
+      let resultsContainer = $('#panel-spreadsheets').find('.col-md-12'),
+          csvs = '{{ project.csv | raw }}',
+          csvsParsed = JSON.parse(csvs),
+          csvsRowCount = '{{ project.csv_row_count | raw }}',
+          csvsRowCountParsed = JSON.parse(csvsRowCount),
+          spreadsheetCount = 1;
+
+      if(Object.keys(csvsParsed).length) {
+        // Loop through the CSVs.
+        for (var key in csvsParsed) {
+          // Display the CSV within a spreadsheet interface.
+          // See: Handsontable
+          // https://github.com/handsontable/handsontable
+          let container,
+              hotVarName = 'hot',
+              panel = $('<div />').addClass('panel panel-default panel-spreadsheet'),
+              panelHeading = $('<div />').addClass('panel-heading').text(key),
+              panelBody = $('<div />').addClass('panel-body')
+                  .attr('id', 'csv-spreadsheet-' + spreadsheetCount)
+                  .attr('style', 'height: ' + (csvsRowCountParsed[key]*40) + 'px');
+
+          // Unset the 'row_count'.
+          // delete csvsParsed[key]['row_count'];
+
+          // console.log(csvsParsed[key]);
+
+          // Show the panel-spreadsheet container.
+          $('#panel-spreadsheets').removeClass('hidden');
+          // Populate the panel with the heading and body.
+          panel.append(panelHeading, panelBody);
+          // Add the panel to the results container.
+          resultsContainer.append(panel);
+
+          // Initialize Handsontable.
+          container = document.getElementById('csv-spreadsheet-' + spreadsheetCount);
+          // Note: window[hotVarName + spreadsheetCount] is a dynamic variable.
+          // This basically allows for multiple Handsontable instances.
+          // See: https://stackoverflow.com/a/28130158/1298317
+          window[hotVarName + spreadsheetCount] = new Handsontable(container, {
+            data: csvsParsed[key],
+            rowHeaders: true,
+            colHeaders: true,
+            outsideClickDeselects: false,
+            selectionMode: 'multiple',
+          });
+
+          // TODO: Hook up the capability to export data via getData().
+          console.log(window[hotVarName + spreadsheetCount].getData());
+
+          spreadsheetCount++;
+        }
+      }
 
     });
   </script>
