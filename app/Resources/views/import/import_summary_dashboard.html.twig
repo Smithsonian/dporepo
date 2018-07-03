@@ -109,7 +109,7 @@
               <div class="panel panel-default panel-uploads" data-set-number="1" data-file-count="0">
                 <div class="panel-heading">
                   <p><span class="glyphicon glyphicon-upload" aria-hidden="true"></span> Uploads Stage</p>
-                  <p style="font-size: 1.3rem; font-weight: normal;">Drag and drop files onto this page or click the "Add Files" button.</p>
+                  <p style="font-size: 1.3rem; font-weight: normal;">Drag and drop files onto this page.</p> <!-- or click the "Add Files" button -->
                 </div>
                 <!-- panel-body -->
                 <div class="panel-body" style="height: 40rem; overflow: scroll; padding: 0;">
@@ -172,10 +172,12 @@
             <!-- column 1 -->
             <div class="col-sm-7 col-md-7">
               <!-- The fileinput-button span is used to style the file input field as button -->
+              {% if app.user.username == 'ghalusa' or app.user.username == 'halusag' %}
               <span class="btn btn-success fileinput-button dz-clickable">
                   <i class="glyphicon glyphicon-plus"></i>
                   <span>Add Files</span>
               </span>
+              {% endif %}
               <button type="reset" class="btn btn-warning cancel">
                   <i class="glyphicon glyphicon-ban-circle"></i>
                   <span>Clear Upload Stage</span>
