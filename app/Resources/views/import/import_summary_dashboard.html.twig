@@ -733,35 +733,42 @@
           // Style rows which have errors.
           // https://docs.handsontable.com/2.0.0/demo-selecting-ranges.html#page-styling
           // First, make sure there are errors to parse.
-          if((typeof validationErrors !== 'undefined') && validationErrors.length) {
-            for (var i = 0; i < validationErrors.length; i++) {
-              // validationErrors[i].row
-              // validationErrors[i].error
-              let row = validationErrors[i].row.match(/\d/g);
-              row = row.join('');
-              // Select the rows with errors.
-              window[hotVarName + spreadsheetCount].selectRows(parseInt(row));
+          // If errors are returned, populate the Pre-Validation Results container.
+          if(responseText && (typeof responseText.error !== 'undefined')) {
 
-              var selected = window[hotVarName + spreadsheetCount].getSelected();
+            let validationErrors = JSON.parse(responseText.error);
 
-              for (var index = 0; index < selected.length; index += 1) {
-                var item = selected[index];
-                var startRow = Math.min(item[0], item[2]);
-                var endRow = Math.max(item[0], item[2]);
-                var startCol = Math.min(item[1], item[3]);
-                var endCol = Math.max(item[1], item[3]);
+            if((typeof validationErrors !== 'undefined') && validationErrors.length) {
 
-                for (var rowIndex = startRow; rowIndex <= endRow; rowIndex += 1) {
-                  for (var columnIndex = startCol; columnIndex <= endCol; columnIndex += 1) {
-                    // Set the text-danger CSS class on the row containing the error.
-                    window[hotVarName + spreadsheetCount].setCellMeta(rowIndex, columnIndex, 'className', 'text-danger');
+              for (var i = 0; i < validationErrors.length; i++) {
+                // validationErrors[i].row
+                // validationErrors[i].error
+                let row = validationErrors[i].row.match(/\d/g);
+                row = row.join('');
+                // Select the rows with errors.
+                window[hotVarName + spreadsheetCount].selectRows(parseInt(row)+1);
+
+                var selected = window[hotVarName + spreadsheetCount].getSelected();
+
+                for (var index = 0; index < selected.length; index += 1) {
+                  var item = selected[index];
+                  var startRow = Math.min(item[0], item[2]);
+                  var endRow = Math.max(item[0], item[2]);
+                  var startCol = Math.min(item[1], item[3]);
+                  var endCol = Math.max(item[1], item[3]);
+
+                  for (var rowIndex = startRow; rowIndex <= endRow; rowIndex += 1) {
+                    for (var columnIndex = startCol; columnIndex <= endCol; columnIndex += 1) {
+                      // Set the text-danger CSS class on the row containing the error.
+                      window[hotVarName + spreadsheetCount].setCellMeta(rowIndex, columnIndex, 'className', 'text-danger');
+                    }
                   }
                 }
-              }
 
+              }
+              window[hotVarName + spreadsheetCount].deselectCell();
+              window[hotVarName + spreadsheetCount].render();
             }
-            window[hotVarName + spreadsheetCount].deselectCell();
-            window[hotVarName + spreadsheetCount].render();
           }
         }
 
