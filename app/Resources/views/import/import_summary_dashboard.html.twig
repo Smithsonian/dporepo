@@ -306,7 +306,7 @@
 
       var details_page = "/admin/projects/subjects/";
       
-      $('#browse').dataTable({
+      var table = $('#browse').DataTable({
         "columns": [
           { "data": "project_name" },
           { "data": "job_status" },
@@ -350,6 +350,15 @@
 
         }
       });
+
+      /**
+       * Browse Ingests tab click handler
+       * (refreshes DataTables)
+       */
+      $('#browse-tab').on('click', function(e) {
+        table.clear().draw();
+      });
+
     });
 
     // // Place focus on the parent record picker.
