@@ -124,6 +124,7 @@
   {% if project.uploaded_files %}
     <div class="row hidden" id="panel-spreadsheets">
       <div class="col-sm-12 col-md-12">
+        <h3>Uploaded CSV Files</h3>
         <!-- Spreadsheets container (Handsontable) -->
       </div>
     </div>
@@ -347,6 +348,7 @@
             colHeaders: true,
             outsideClickDeselects: false,
             selectionMode: 'multiple',
+            readOnly: true
           });
 
           // TODO: Hook up the capability to export data via getData().
