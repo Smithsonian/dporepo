@@ -707,7 +707,13 @@
               panelHeadingContent = $('<span />')
                 .attr('style', 'font-size: 1.5rem; font-weight: normal;')
                 .html('<i class="glyphicon glyphicon-info-sign" style="margin-left: 1.5rem;"></i> For now, only for representation of the data. The goal is to allow for edits and resubmission.'),
-              panelBody = $('<div />').addClass('panel-body').attr('id', 'csv-spreadsheet-' + spreadsheetCount);
+              csvsRowCount = responseText.csv_row_count,
+              csvsRowCountParsed = JSON.parse(csvsRowCount),
+              panelBody = $('<div />')
+                  .addClass('panel-body')
+                  .attr('id', 'csv-spreadsheet-' + spreadsheetCount)
+                  .attr('style', 'height: ' + (csvsRowCountParsed*40) + 'px');
+              
 
           // Show the panel-spreadsheet container.
           $('#panel-spreadsheets').removeClass('hidden');

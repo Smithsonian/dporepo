@@ -115,6 +115,7 @@ class UploadListener
 
       // Return the CSV so it can be displayed as a spreadsheet in the UI.
       $response['csv'] = json_encode($validation_results->csv);
+      $response['csv_row_count'] = count($validation_results->csv);
     }
 
     return $response;
