@@ -950,18 +950,14 @@ class ImportController extends Controller
           $csv = $file->getContents();
         }
 
-        // Convert the CSV to JSON.
-        $array = array_map('str_getcsv', explode("\n", $csv));
-        $json = json_encode($array);
+        $csv = explode("\r\n", $csv);
 
-        // Convert the JSON to a PHP array.
-        $json_array = json_decode($json, false);
+        foreach ($csv as $key => $line) {
+          $json_array[$key] = str_getcsv($line);
+        }
 
         // Read the first key from the array, which is the column headers.
         $target_fields = $json_array[0];
-
-        // Remove the column headers from the array.
-        array_shift($json_array);
 
         foreach ($json_array as $key => $value) {
           // Replace numeric keys with field names.

@@ -195,6 +195,11 @@ class UploadListener
     // Construct the data.
     $data->csv = $this->import_controller->construct_import_data($job_id_directory, $filename); // , $thisContainer, $itemsController
 
+    // Remove the column headers from the array.
+    $column_headers = $data->csv['0'];
+    unset($data->csv['0']);
+    $data->csv = array_values($data->csv);
+
     // if(empty($data->csv)) {
     //   unset($data->row_ids_results['is_valid']);
     //   unset($data->results['is_valid']);
@@ -237,6 +242,9 @@ class UploadListener
 
         // Execute the validation against the JSON schema.
         $data->results = (object)$repoValidate->validateData($data->csv, $schema, $parent_record_type, $blacklisted_fields);
+
+        // Add the column headers back to the array.
+        array_unshift($data->csv, $column_headers);
 
         // Merge all messages.
         if(isset($data->row_ids_results['messages'])) {
