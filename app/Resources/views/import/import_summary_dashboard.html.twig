@@ -989,7 +989,7 @@
 
       if((filenames.indexOf('manifest-sha1.txt') === -1) && (filenames.indexOf('manifest-md5.txt') === -1)) {
         var span = document.createElement('span');
-        span.innerHTML = 'Please add bagged (via BagIt) files to the upload queue. Learn more on the <a href="https://en.wikipedia.org/wiki/BagIt" target="_blank">BagIt Wikipedia page</a>';
+        span.innerHTML = 'Please add bagged (via BagIt) capture datasets and/or model files to the upload queue.';
         swal({
           title: 'File bag not found',
           content: span,
