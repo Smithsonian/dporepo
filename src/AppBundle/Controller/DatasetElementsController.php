@@ -8,7 +8,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
-use Symfony\Component\Finder\Finder;
 
 use AppBundle\Controller\RepoStorageHybridController;
 use Symfony\Component\DependencyInjection\Container;
@@ -53,40 +52,6 @@ class DatasetElementsController extends Controller
         // Database tables are only created if not present.
         $this->repo_storage_controller->setContainer($this->container);
         $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'dataset_element'));
-
-        // $json_array = '[
-        //       {
-        //           "text" : "Root node",
-        //           "state" : {"opened" : true },
-        //           "children": [
-        //             {
-        //               "text": "One",
-        //               "id": "2",
-        //               "a_attr": {
-        //                 "href": "\/admin\/projects\/items\/2\/793"
-        //               },
-        //               "children": [
-        //                 {
-        //                   "text": "One: Child 1",
-        //                   "id": "4",
-        //                   "a_attr": {
-        //                     "href": "\/admin\/projects\/items\/2\/793"
-        //                   }
-        //                 }
-        //               ]
-        //             },
-        //             {
-        //               "text": "Two",
-        //               "id": "3",
-        //               "a_attr": {
-        //                 "href": "\/admin\/projects\/items\/2\/793"
-        //               }
-        //             }
-        //           ]
-        //         }
-        //       ]';
-
-        // $this->u->dumper(json_decode($json_array, true));
 
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
