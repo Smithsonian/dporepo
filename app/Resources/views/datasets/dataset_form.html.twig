@@ -82,28 +82,30 @@
       // Initialize jsTree.
       // See: https://www.jstree.com/
       $('#jstreeContainer').jstree({
-        'cache': false,
-        'state': { 'key': 'dpoJsTreeFiles' },
-        'plugins' : [
-          // 'wholerow'
-        ],
-        'core' : {
-          'data' : {
-            'url' : function (node) {
-              return '/admin/get_uploaded_files';
+          'cache': false,
+          'state': { 'key': 'dpoJsTreeFiles' },
+          'core': {
+            'data': {
+              'url': '/admin/get_directory_contents/false?path=' + directory_path + '&record_id=' + capture_dataset_repository_id,
+              'data': function (node) {
+                  return { 'id' : node.id };
+              },
+              'force_text' : true
             },
-            'data' : function (node) {
-              return { 'path': directory_path, 'id': capture_dataset_repository_id };
-            },
-            'complete': function(result) {
-              if(result.status === 200) {
-                return result.responseJSON;
-              } else {
-                console.log('Not found. Status code: ' + result.status);
+          },
+          'sort': function(a, b) {
+              return this.get_type(a) === this.get_type(b) ? (this.get_text(a) > this.get_text(b) ? 1 : -1) : (this.get_type(a) >= this.get_type(b) ? 1 : -1);
+          },
+          'types': {
+              'default' : { 'icon' : 'glyphicon glyphicon-folder-close' },
+              'file' : { 'valid_children' : [], 'icon' : 'file' }
+          },
+          'unique': {
+              'duplicate' : function (name, counter) {
+                  return name + ' ' + counter;
               }
-            }
-          }
-        }
+          },
+          'plugins': ['sort','types','unique']
       });
 
       // jsTree prevents the default anchor href action, so it need to be overridden.
