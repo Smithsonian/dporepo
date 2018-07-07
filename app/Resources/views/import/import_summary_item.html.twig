@@ -279,7 +279,7 @@
        */
       $('#purge-data').on('click', function(e) {
         
-        swal("Remove this Import's Data and Files?", {
+        swal("Remove this Import's Data and Files? This action is destructive, and cannot be undone.", {
           buttons: {
             cancel: "No",
             catch: {
@@ -291,6 +291,7 @@
         .then((value) => {
           switch (value) {
             case "yes":
+              $('.overlay').removeClass('hidden');
               window.location.href = '/admin/purge_import/' + id;
               break;
             default:
@@ -351,7 +352,7 @@
           });
 
           // TODO: Hook up the capability to export data via getData().
-          console.log(window[hotVarName + spreadsheetCount].getData());
+          // console.log(window[hotVarName + spreadsheetCount].getData());
 
           spreadsheetCount++;
         }
