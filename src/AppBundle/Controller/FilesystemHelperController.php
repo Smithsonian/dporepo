@@ -99,8 +99,10 @@ class FilesystemHelperController extends Controller
     // Set the directory opened state.
     $directory_opened_state = (empty($job_data) && !empty($request->get('id')) && ($request->get('id') === '#')) ? true : false;
 
-    if ($job_data && !empty($job_data) && empty($id)) {
+     if ($job_data && !empty($job_data) && empty($id)) {
       $target_directory = $project_dir . $job_id . $directory_path . DIRECTORY_SEPARATOR;
+    } elseif ($job_data && !empty($job_data) && !empty($id) && (DIRECTORY_SEPARATOR === '\\')) {
+      $target_directory = ltrim($id, '\\') . DIRECTORY_SEPARATOR;
     } else {
       $target_directory = $project_dir . $job_id . $id . DIRECTORY_SEPARATOR;
     }
