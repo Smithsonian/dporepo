@@ -384,3 +384,23 @@ dd {
 .dz-preview {
   display: none;
 }
+
+
+.overlay-uploading {
+  position: absolute;
+  text-align: right;
+  top: 2rem;
+  left: 1.5rem;
+  right: 1.5rem;
+  bottom: 42rem;
+  background-color: rgba(0,0,0,0.5);
+  z-index: 5;
+  color: #ffffff;
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+}
+
+.overlay-uploading span {
+  font-size: 1.8rem;
+  font-weight: normal;
+}

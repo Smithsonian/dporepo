@@ -110,6 +110,10 @@
                 <div class="panel-heading">
                   <p><span class="glyphicon glyphicon-upload" aria-hidden="true"></span> Uploads Stage</p>
                   <p style="font-size: 1.3rem; font-weight: normal;">Drag and drop files onto this page.</p> <!-- or click the "Add Files" button -->
+                  <div class="overlay-uploading hidden">
+                    <span>Upload in progress...</span>
+                    <img src="/lib/images/spinner-dark-background.gif" alt="loading animation" style="width: 86px;">
+                  </div>
                 </div>
                 <!-- panel-body -->
                 <div class="panel-body" style="height: 40rem; overflow: scroll; padding: 0;">
@@ -195,11 +199,11 @@
             <!-- column 2 -->
             <div class="col-sm-5 col-md-5">
               <!-- The global file processing state -->
-              <span class="fileupload-process">
+              {# <span class="fileupload-process">
                 <div id="total-progress" class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                   <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress=""></div>
                 </div>
-              </span>
+              </span> #}
             </div>
             <!-- // column 2 -->
           </div>
@@ -520,8 +524,8 @@
           queuedFiles[i].prevalidate = true;
           // Start the upload.
           uploadsDropzone.enqueueFile(queuedFiles[i]);
-          // Don't display the progress bar.
-          document.querySelector("#total-progress").style.opacity = "0";
+          // // Don't display the progress bar.
+          // document.querySelector("#total-progress").style.opacity = "0";
         }
 
         // Pre-validate files count and names.
@@ -630,9 +634,9 @@
         file.status = 'added';
         file.prevalidate = false;
 
-        // Set the display state of progress bars.
-        document.querySelector("#total-progress").style.opacity = "0";
-        $(file.previewElement).find('.progress-bar').attr('style', 'width: 0;');
+        // // Set the display state of progress bars.
+        // document.querySelector("#total-progress").style.opacity = "0";
+        // $(file.previewElement).find('.progress-bar').attr('style', 'width: 0;');
 
         // Subject import limitation message, based on the 'subject' parent record type.
         if((file.parentRecordType === 'subject') && (file.name === 'subjects.csv')) {
@@ -784,15 +788,15 @@
       spreadsheetCount++;
     });
 
-    // Update the total progress bar
-    uploadsDropzone.on("totaluploadprogress", function(progress) {
-      document.querySelector("#total-progress .progress-bar").style.width = progress + "%";
-    });
+    // // Update the total progress bar
+    // uploadsDropzone.on("totaluploadprogress", function(progress) {
+    //   document.querySelector("#total-progress .progress-bar").style.width = progress + "%";
+    // });
 
     uploadsDropzone.on("sending", function(file, xhr, formData) {
 
-      // Show the total progress bar when upload starts
-      document.querySelector("#total-progress").style.opacity = "1";
+      // // Show the total progress bar when upload starts
+      // document.querySelector("#total-progress").style.opacity = "1";
 
       if((typeof file.prevalidate !== 'undefined') && !file.prevalidate) {
         // If not prevalidating, disable the start button
@@ -832,8 +836,8 @@
 
     // Hide the total progress bar when nothing's uploading anymore
     uploadsDropzone.on("queuecomplete", function(progress) {
-      document.querySelector("#total-progress").style.opacity = "0";
-      $(".file-row").find('.progress').removeClass('progress-striped active').addClass('progress-bar-success');
+      // document.querySelector("#total-progress").style.opacity = "0";
+      // $(".file-row").find('.progress').removeClass('progress-striped active').addClass('progress-bar-success');
 
       // Redirect to the Upload overview page
       setTimeout(function() {
@@ -887,13 +891,16 @@
       generateJobId(parentRecordId, false);
 
       // Prepare and display the modal.
-      $('#uploading-modal-title').empty();
-      $('#uploading-modal-title').append('Uploading and Importing Data');
-      $('#uploading-modal-message').empty();
-      let p1 = $('<p />').text('Upload and import in progress...');
-      let p2 = $('<p />').text('The system is shuffling everything into place. This page will automatically redirect to the Uploads Detail page once the upload process is complete.');
-      $('#uploading-modal-message').append(p1, p2);
+      // $('#uploading-modal-title').empty();
+      // $('#uploading-modal-title').append('Uploading and Importing Data');
+      // $('#uploading-modal-message').empty();
+      // let p1 = $('<p />').text('Upload and import in progress...');
+      // let p2 = $('<p />').text('The system is shuffling everything into place. This page will automatically redirect to the Uploads Detail page once the upload process is complete.');
+      // $('#uploading-modal-message').append(p1, p2);
       // $('#uploading-modal').modal('show');
+
+      // Display the uploading overlay.
+      $('.overlay-uploading').removeClass('hidden');
 
       // Give some time (2 seconds) to create the job record in the database.
       setTimeout(function() {
