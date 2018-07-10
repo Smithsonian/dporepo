@@ -758,7 +758,7 @@
                 let row = validationErrors[i].row.match(/\d/g);
                 row = row.join('');
                 // Select the rows with errors.
-                window[hotVarName + spreadsheetCount].selectRows(parseInt(row)+1);
+                window[hotVarName + spreadsheetCount].selectRows(parseInt(row));
 
                 var selected = window[hotVarName + spreadsheetCount].getSelected();
 
