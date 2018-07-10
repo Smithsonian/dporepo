@@ -109,7 +109,8 @@
               <div class="panel panel-default panel-uploads" data-set-number="1" data-file-count="0">
                 <div class="panel-heading">
                   <p><span class="glyphicon glyphicon-upload" aria-hidden="true"></span> Uploads Stage</p>
-                  <p style="font-size: 1.3rem; font-weight: normal;">Drag and drop files onto this page.</p> <!-- or click the "Add Files" button -->
+                  <p class="panel-uploads-info" style="font-size: 1.3rem; font-weight: normal;">Drag and drop files onto this page.</p> <!-- or click the "Add Files" button -->
+                  <p class="panel-uploads-info" style="font-size: 1.3rem; font-weight: normal;">Accepted file types: {{ accepted_file_types | e }}</p>
                   <div class="overlay-uploading hidden">
                     <span>Upload in progress...</span>
                     <img src="/lib/images/spinner-dark-background.gif" alt="loading animation" style="width: 86px;">
@@ -395,7 +396,7 @@
       ignoreHiddenFiles: true,
       chunking: true,
       chunkSize: 20000000, // chunk size in bytes (20 MB)
-      acceptedFiles: "image/*,application/text,application/json,.csv,.txt,.jpg,.tif,.png,.dng,.obj,.ply,.mtl,.zip,.cr2",
+      acceptedFiles: "{{ accepted_file_types }}",
       dictInvalidFileType: "File type not allowed"
     });
 
