@@ -557,10 +557,12 @@ class ImportController extends Controller
 
         // Create the parent record picker typeahead form.
         $form = $this->createForm(UploadsParentPickerForm::class, $obj);
+        $accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
 
         return $this->render('import/import_summary_dashboard.html.twig', array(
             'page_title' => 'Uploads',
             'form' => $form->createView(),
+            'accepted_file_types' => $accepted_file_types,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
         ));
     }
