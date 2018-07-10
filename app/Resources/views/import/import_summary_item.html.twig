@@ -88,7 +88,7 @@
     </thead>
   </table>
 
-  {% if project.uploaded_files %}
+  {% if project.uploaded_files is defined %}
     <div class="row">
       <div class="col-sm-6 col-md-6">
         <div class="panel panel-default">
@@ -121,7 +121,7 @@
     </div>
   {% endif %}
 
-  {% if project.uploaded_files %}
+  {% if project.uploaded_files is defined %}
     <div class="row hidden" id="panel-spreadsheets">
       <div class="col-sm-12 col-md-12">
         <h3>Uploaded CSV Files</h3>
@@ -305,9 +305,9 @@
        * Display CSV Data
        */
       let resultsContainer = $('#panel-spreadsheets').find('.col-md-12'),
-          csvs = '{{ project.csv | raw }}',
+          csvs = '{% if project.csv is defined %}{{ project.csv | raw }}{% endif %}',
           csvsParsed = JSON.parse(csvs),
-          csvsRowCount = '{{ project.csv_row_count | raw }}',
+          csvsRowCount = '{% if project.csv_row_count is defined %}{{ project.csv_row_count | raw }}{% endif %}',
           csvsRowCountParsed = JSON.parse(csvsRowCount),
           spreadsheetCount = 1;
 
