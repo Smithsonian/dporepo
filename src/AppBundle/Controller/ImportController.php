@@ -319,7 +319,7 @@ class ImportController extends Controller
 
                 // Look-up the ID for the 'model_modality'.
                 if ($field_name === 'model_modality') {
-                  $model_modality_lookup_options = array('point cloud' => 1, 'mesh' => 2);
+                  $model_modality_lookup_options = array('point_cloud' => 1, 'mesh' => 2);
                   $json_array[$key][$field_name] = (int)$model_modality_lookup_options[$v];
                 }
 
@@ -331,7 +331,7 @@ class ImportController extends Controller
 
                 // Look-up the ID for the 'model_purpose'.
                 if ($field_name === 'model_purpose') {
-                  $model_purpose_lookup_options = array('master' => 1, 'delivery web' => 2, 'delivery print' => 3, 'intermediate processing step' => 4);
+                  $model_purpose_lookup_options = array('master' => 1, 'delivery_web' => 2, 'delivery_print' => 3, 'intermediate_processing_step' => 4);
                   $json_array[$key][$field_name] = (int)$model_purpose_lookup_options[$v];
                 }
 
