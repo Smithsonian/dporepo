@@ -1052,6 +1052,9 @@
 
     function scanFiles(i, item, container, dzOptions, existingCount) {
 
+      // console.log(item);
+      // console.log(dzOptions.acceptedFiles.split(', '));
+
       // TODO: Add error dialog to files which aren't accepted file types.
       // The comma-delimited list is stored in: dzOptions.acceptedFiles
       // Place the error dialog into the 'errorMessageContainer'.
@@ -1062,6 +1065,8 @@
       }
 
       let itemIcon = item.isDirectory ? 'folder-close' : 'file',
+          itemExtension = !item.isDirectory ? item.name.split('.').pop() : false,
+          fileTypeWarning = (itemExtension && (dzOptions.acceptedFiles.indexOf(itemExtension) === -1)) ? ' <span style="color: red;>Invalid file type</span>"' : '',
           spanIcon = $('<span />').addClass('glyphicon glyphicon-' + itemIcon).attr('style', 'margin-right: 4px;'),
           allItemsCount = $('#previews').find('li.list-group-item').length,
           thisCount = (allItemsCount+1),
@@ -1070,9 +1075,12 @@
               .attr('data-count', thisCount)
               .attr('data-file-name', item.name)
               .attr('style', 'border-left: none; border-right: none; border-top-left-radius: 0; border-top-right-radius: 0;')
-              .text(item.name),
+              .html(item.name + fileTypeWarning),
           progressBadge = '<span class="badge-temp"></span>',
           errorMessageContainer = '<div class="pull-right"><strong class="error text-danger"></strong></div>';
+
+          console.log(itemExtension);
+          console.log(dzOptions.acceptedFiles.indexOf(itemExtension) === -1);
 
       // Add elements to the list item.
       listItem.prepend(spanIcon).append(errorMessageContainer, progressBadge);
