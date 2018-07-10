@@ -606,7 +606,7 @@
         // No errors? Change the states of the action buttons.
         if(!fileErrors.length && !csvErrors.length) {
           // Disable the "Pre-Validate" and "Clear Upload Stage" buttons.
-          $('.fileinput-button, .cancel, .prevalidate-trigger').attr('disabled', 'disabled');
+          // $('.fileinput-button, .cancel, .prevalidate-trigger').attr('disabled', 'disabled');
           // Reveal the "Start Upload" button.
           $('.start').removeClass('hidden');
         }
@@ -921,6 +921,8 @@
       $('#previews ul.directory-structure').empty();
       // Clear previous validation results from the validation panel.
       $('.panel-validation-results').find('.panel-body').empty();
+      // Hide the Start button.
+      $('.start').addClass('hidden');
       // Remove spreadsheets.
       resultsContainer.empty();
     };
