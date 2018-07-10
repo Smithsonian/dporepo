@@ -674,7 +674,7 @@
         if(!JSON.parse(responseText.csv).length) {
           swal({
             title: 'Error',
-            text: 'CSV is empty',
+            text: file.name + ': CSV is empty',
             icon: 'warning',
           });
         }
