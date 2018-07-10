@@ -80,7 +80,7 @@ class RepoValidateData implements RepoValidate {
     // Loop through 'import_row_id' keys containing duplicate values and add messages.
     if (!empty($duplicate_keys)) {
       foreach ($duplicate_keys as $dup_key => $dup_value) {
-        $return['messages'][$dup_value] = array('row' => 'Row ' . $dup_value . ' - Field: import_row_id', 'error' => 'Contains a duplicate key');
+        $return['messages'][$dup_value] = array('row' => 'Row ' . ($dup_value+1) . ' - Field: import_row_id', 'error' => 'Contains a duplicate key');
       }
     }
 
@@ -180,6 +180,10 @@ class RepoValidateData implements RepoValidate {
             $row = str_replace('[', 'Row ', $error['property']);
             $row = str_replace(']', '', $row);
             $row = str_replace('.', ' - Field: ', $row);
+            // Fix "Row 0..." (increment by 1).
+            $pattern = '/([0-9])/';
+            $replacement = ((int)'$3'+1);
+            $row = preg_replace($pattern, $replacement, $row);
             $return['messages'][] = array('row' => $row, 'error' => $error['message']);
           // }
         }
