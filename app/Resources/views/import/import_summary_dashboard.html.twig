@@ -492,6 +492,8 @@
     // Prevalidate click handler.
     $('.prevalidate-trigger').on('click', function(e) {
 
+      let csvList = [];
+
       // Set the parentRecordId.
       let parentRecordId = parentRecordChecker();
       // Check if the parent record has been selected.
@@ -535,6 +537,7 @@
           uploadsDropzone.enqueueFile(queuedFiles[i]);
           // // Don't display the progress bar.
           // document.querySelector("#total-progress").style.opacity = "0";
+          csvList.push(queuedFiles[i].name)
         }
 
         // Pre-validate files count and names.
@@ -605,6 +608,9 @@
         }
         
       }
+
+      // Run the required CSV validation.
+      requiredCsvValidation(parentRecordType, csvList);
 
       // If there are no errors, change the states of the action buttons.
       setTimeout(function() {
@@ -1061,6 +1067,74 @@
             .html('<strong>' + fileName + '</strong>: Warning! The chosen parent record type is a "' + parentRecordType + '", therefore data within the "' + fileName + '" file will not be imported.');
         // Append the message to the panel-body container.
         $('.panel-validation-results').find('.panel-body').append(importLimitationMessage);
+      }
+
+    }
+
+    // Required CSV validation
+    function requiredCsvValidation(parentRecordType, csvList) {
+
+      let generateWarning = false;
+          csvTargetFile = '';
+
+      if (parentRecordType.length && csvList.length) {
+
+        if (parentRecordType === 'project') {
+          requiredCsvs = 'subjects.csv, items.csv, capture_datasets.csv';
+        }
+        if (parentRecordType === 'subject') {
+          requiredCsvs = 'items.csv, capture_datasets.csv';
+        }
+        if (parentRecordType === 'item') {
+          requiredCsvs = 'capture_datasets.csv';
+        }
+
+        // Project as parent record - no subjects.csv found
+        if ( (parentRecordType === 'project') && (csvList.indexOf('subjects.csv') === -1) ) {
+          csvTargetFile = 'subjects.csv';
+          generateWarning = true;
+        }
+
+        // Project as parent record - no items.csv found
+        if ( (parentRecordType === 'project') && (csvList.indexOf('items.csv') === -1) ) {
+          csvTargetFile = 'items.csv';
+          generateWarning = true;
+        }
+
+        // Project as parent record - no capture_datasets.csv found
+        if ( (parentRecordType === 'project') && (csvList.indexOf('capture_datasets.csv') === -1) ) {
+          csvTargetFile = 'capture_datasets.csv';
+          generateWarning = true;
+        }
+
+        // Subject as parent record- no items.csv found
+        if ( (parentRecordType === 'subject') && (csvList.indexOf('items.csv') === -1) ) {
+          csvTargetFile = 'items.csv';
+          generateWarning = true;
+        }
+
+        // Subject as parent record- no capture_datasets.csv found
+        if ( (parentRecordType === 'subject') && (csvList.indexOf('capture_datasets.csv') === -1) ) {
+          csvTargetFile = 'capture_datasets.csv';
+          generateWarning = true;
+        }
+
+        // Item as parent record - no capture_datasets.csv found
+        if ( (parentRecordType === 'item') && (csvList.indexOf('capture_datasets.csv') === -1) ) {
+          csvTargetFile = 'capture_datasets.csv';
+          generateWarning = true;
+        }
+
+        if (generateWarning) {
+          // The message.
+          let requiredCsvMessage = $('<div />')
+              .addClass('alert alert-danger cvs-validation-error')
+              .attr('role', 'alert')
+              .html('<strong>Error: ' + csvTargetFile + ' not found</strong>: Required CSV files: ' + requiredCsvs);
+          // Append the message to the panel-body container.
+          $('.panel-validation-results').find('.panel-body').append(requiredCsvMessage);
+        }
+
       }
 
     }
