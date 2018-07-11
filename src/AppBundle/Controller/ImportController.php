@@ -787,7 +787,7 @@ class ImportController extends Controller
         'project',
         'subject',
         'item',
-        'capture_dataset',
+        // 'capture_dataset',
       );
 
       foreach ($record_types as $key => $value) {
