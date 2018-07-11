@@ -24,7 +24,8 @@ class UploadsParentPickerForm extends AbstractType
                 'class'  => null,
                 'render' => 'parent_record_name',
                 'minLength' => 2,
-                'items' => 20,
+                'items' => 50,
+                'delay' => 50,
                 // Hack - shouldn't need to pass the 'route' since a Custom Source Callback is being passed via 'source'.
                 // https://github.com/lifo101/typeahead-bundle#custom-source-callback
                 // Report this as a GitHub issue?
