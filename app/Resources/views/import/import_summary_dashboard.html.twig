@@ -357,6 +357,14 @@
       });
 
       /**
+       * [name="frmSave"]
+       * If the enter key is pressed before the dropdown populates, prevent the form from submitting.
+       */
+      $('form[name="uploads_parent_picker_form"]').submit(function(e){
+        e.preventDefault();
+      });
+
+      /**
        * Browse Ingests tab click handler
        * (refreshes DataTables)
        */
