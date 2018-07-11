@@ -13,12 +13,15 @@ use JsonSchema\{
     Constraints\Constraint
 };
 
+use AppBundle\Controller\RepoStorageHybridController;
+
 class RepoValidateData implements RepoValidate {
 
   /**
    * @var string $schema_dir
    */
   public $schema_dir;
+  private $repo_storage_controller;
 
   /**
    * Constructor
@@ -28,6 +31,7 @@ class RepoValidateData implements RepoValidate {
   {
     // TODO: move this to parameters.yml and bind in services.yml?
     $this->schema_dir = __DIR__ . '/../../../web/json/schemas/repository/';
+    $this->repo_storage_controller = new RepoStorageHybridController();
   }
 
   /**
@@ -193,6 +197,71 @@ class RepoValidateData implements RepoValidate {
     }
 
     return $return;
+  }
+
+  /**
+   * Validate capture_dataset_field_id
+   * @param null $data The data to validate.
+   * @return mixed array containing success/fail value, and any messages.
+   */
+  public function validateCaptureDatasetFieldId($data = NULL, $container) {
+
+    $return = array('is_valid' => false);
+    $results = array();
+
+    // If no data is passed, set a message.
+    if(empty($data)) $return['messages'][] = 'Nothing to validate. Please provide an object to validate.';
+
+    // If data is passed, go ahead and perform the validation.
+    if(!empty($data)) {
+
+      $this->repo_storage_controller->setContainer($container);
+
+      foreach($data as $key => $value) {
+        if(!empty($value->capture_dataset_field_id)) {
+          // Check the database to see if there is a capture_dataset_field_id with the same value as what's in the CSV.
+          $result = $this->repo_storage_controller->execute('getRecords', array(
+              'base_table' => 'capture_dataset',
+              'fields' => array(
+                0 => array(
+                  'table_name' => 'capture_dataset',
+                  'field_name' => 'capture_dataset_name',
+                ),
+              ),
+              'search_params' => array(
+                0 => array(
+                  'field_names' => array(
+                    'capture_dataset_field_id'
+                  ),
+                  'search_values' => array(
+                    $value->capture_dataset_field_id
+                  ),
+                  'comparison' => '='
+                )
+              ),
+              'search_type' => 'AND',
+              'limit' => array('limit_start' => 1),
+            )
+          );
+          // If a matching capture_dataset_field_id is found, add to the messages array.
+          if(!empty($result)) {
+            $return['messages'][] = array('row' => 'Row ' . ($key+1) . ' - Field: capture_dataset_field_id', 'error' => 'The "' . $result[0]['capture_dataset_name'] . '" Capture Dataset with the capture_dataset_field_id value (' . $value->capture_dataset_field_id . ') already exists.');
+          }
+        }
+      }
+
+    }
+
+    return $return;
+  }
+
+  public function dumper($data = false, $die = true, $ip_address=false){
+    if(!$ip_address || $ip_address == $_SERVER["REMOTE_ADDR"]){
+      echo '<pre>';
+      var_dump($data);
+      echo '</pre>';
+      if($die) die();
+    }
   }
 
 }

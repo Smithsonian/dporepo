@@ -241,16 +241,27 @@ class UploadListener
         // Check to see if a CSV's 'import_row_id' has gaps or is not sequential.
         $data->row_ids_results = $repoValidate->validateRowIds($data->csv, $schema);
 
+        // Validate that the values within the capture_dataset_field_id fields are not already in the database.
+        if($schema === 'capture_dataset') {
+          $data->capture_dataset_field_id_results = $repoValidate->validateCaptureDatasetFieldId($data->csv, $this->container);
+        }
+
         // Execute the validation against the JSON schema.
         $data->results = (object)$repoValidate->validateData($data->csv, $schema, $parent_record_type, $blacklisted_fields);
 
         // Add the column headers back to the array.
         array_unshift($data->csv, $column_headers);
 
-        // Merge all messages.
+        // Merge row_ids_results messages.
         if(isset($data->row_ids_results['messages'])) {
           unset($data->row_ids_results['is_valid']);
           $data->results = (object)array_merge_recursive($data->row_ids_results, (array)$data->results);
+        }
+
+        // Merge capture_dataset_field_id_results messages.
+        if(isset($data->capture_dataset_field_id_results['messages'])) {
+          unset($data->capture_dataset_field_id_results['is_valid']);
+          $data->results = (object)array_merge_recursive($data->capture_dataset_field_id_results, (array)$data->results);
         }
       }
     }
