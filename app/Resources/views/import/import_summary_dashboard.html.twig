@@ -1052,21 +1052,14 @@
 
     function scanFiles(i, item, container, dzOptions, existingCount) {
 
-      // console.log(item);
-      // console.log(dzOptions.acceptedFiles.split(', '));
-
-      // TODO: Add error dialog to files which aren't accepted file types.
-      // The comma-delimited list is stored in: dzOptions.acceptedFiles
-      // Place the error dialog into the 'errorMessageContainer'.
-
       // Ignore hidden files if Dropzone's 'ignoreHiddenFiles' option is set to true.
       if (dzOptions.ignoreHiddenFiles && item.name.substring(0, 1) === '.') {
         return;
       }
 
       let itemIcon = item.isDirectory ? 'folder-close' : 'file',
-          itemExtension = !item.isDirectory ? item.name.split('.').pop() : false,
-          fileTypeWarning = (itemExtension && (dzOptions.acceptedFiles.indexOf(itemExtension) === -1)) ? ' <span style="color: red;>Invalid file type</span>"' : '',
+          itemExtension = !item.isDirectory ? item.name.split('.').pop() : '',
+          fileTypeWarning = (itemExtension.length && (dzOptions.acceptedFiles.indexOf(itemExtension) === -1)) ? 'Invalid file type. This file will not be uploaded.' : '',
           spanIcon = $('<span />').addClass('glyphicon glyphicon-' + itemIcon).attr('style', 'margin-right: 4px;'),
           allItemsCount = $('#previews').find('li.list-group-item').length,
           thisCount = (allItemsCount+1),
@@ -1075,12 +1068,9 @@
               .attr('data-count', thisCount)
               .attr('data-file-name', item.name)
               .attr('style', 'border-left: none; border-right: none; border-top-left-radius: 0; border-top-right-radius: 0;')
-              .html(item.name + fileTypeWarning),
+              .text(item.name),
           progressBadge = '<span class="badge-temp"></span>',
-          errorMessageContainer = '<div class="pull-right"><strong class="error text-danger"></strong></div>';
-
-          console.log(itemExtension);
-          console.log(dzOptions.acceptedFiles.indexOf(itemExtension) === -1);
+          errorMessageContainer = '<div class="pull-right text-danger" style="font-size: 1.3rem;">' + fileTypeWarning + '</div>';
 
       // Add elements to the list item.
       listItem.prepend(spanIcon).append(errorMessageContainer, progressBadge);
