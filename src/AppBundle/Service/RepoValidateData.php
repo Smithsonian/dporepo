@@ -177,7 +177,9 @@ class RepoValidateData implements RepoValidate {
         foreach ($jsonValidator->getErrors() as $error_key => $error) {
           // Ignore blacklisted field.
           // if(!strstr($error['property'], $blacklisted_fields)) {
-            $return['messages'][] = array('row' => 'Row ' . ($error_key+1), 'error' => $error['message']);
+            $row = preg_replace("/[^0-9]+/", '', $error['property']);
+            $property_parts = explode('.', $error['property']);
+            $return['messages'][] = array('row' => 'Row ' . ($row+1) . ' - ' . $property_parts[1], 'error' => $error['message']);
           // }
         }
 
