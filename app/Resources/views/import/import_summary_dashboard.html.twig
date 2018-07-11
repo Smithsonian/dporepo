@@ -636,39 +636,23 @@
 
       let fileExtension = getExtension(file.name);
 
-      // If the uploaded file is being pre-validated,
-      // set the file status back to 'added', prevalidate to false , and reset progress bars.
+      // If the uploaded file is being pre-validated...
       if((typeof file.prevalidate !== 'undefined') && file.prevalidate && (fileExtension === 'csv')) {
 
+        // Set the file status back to 'added' and prevalidate to false.
         file.status = 'added';
         file.prevalidate = false;
 
-        // // Set the display state of progress bars.
-        // document.querySelector("#total-progress").style.opacity = "0";
-        // $(file.previewElement).find('.progress-bar').attr('style', 'width: 0;');
+        // Import limitation validation
+        importLimitationValidation(file.parentRecordType, file.name);
 
-        // Subject import limitation message, based on the 'subject' parent record type.
-        if((file.parentRecordType === 'subject') && (file.name === 'subjects.csv')) {
-          // The message.
-          let subjectImportMessage = $('<div />').addClass('alert alert-warning cvs-validation-error').attr('role', 'alert').html('<strong>' + file.name + '</strong>: Warning! The chosen parent record type is a "' + file.parentRecordType + '", therefore data within the "' + file.name + '" file will not be imported.');
-          // Append the message to the panel-body container.
-          $('.panel-validation-results').find('.panel-body').append(subjectImportMessage);
-        }
-
-        // Subject and Item import limitation message, based on the 'item' parent record type.
-        if((file.parentRecordType === 'item') && ((file.name === 'subjects.csv') || (file.name === 'items.csv'))) {
-          // The message.
-          let itemImportMessage = $('<div />').addClass('alert alert-warning cvs-validation-error').attr('role', 'alert').html('<strong>' + file.name + '</strong>: Warning! The chosen parent record type is a "' + file.parentRecordType + '", therefore data within the "' + file.name + '" file will not be imported.');
-          // Append the message to the panel-body container.
-          $('.panel-validation-results').find('.panel-body').append(itemImportMessage);
-        }
-
-        // Subject, Item, and Capture Dataset import limitation message, based on the 'capture_dataset' parent record type.
-        if((file.parentRecordType === 'capture_dataset') && ((file.name === 'subjects.csv') || (file.name === 'items.csv') || (file.name === 'capture_datasets.csv'))) {
-          // The message.
-          let captureDatasetImportMessage = $('<div />').addClass('alert alert-warning cvs-validation-error').attr('role', 'alert').html('<strong>' + file.name + '</strong>: Warning! The chosen parent record type is a "' + file.parentRecordType + '", therefore data within the "' + file.name + '" file will not be imported.');
-          // Append the message to the panel-body container.
-          $('.panel-validation-results').find('.panel-body').append(captureDatasetImportMessage);
+        // Empty CSV warning
+        if(!JSON.parse(responseText.csv).length) {
+          swal({
+            title: 'Error',
+            text: file.name + ': CSV is empty',
+            icon: 'warning',
+          });
         }
 
         // If no errors are returned, display a message.
@@ -677,14 +661,6 @@
           let message = $('<div />').addClass('alert alert-success cvs-validation-success').attr('role', 'alert').html('<h4>CSV Pre-validation</h4><p><strong>' + file.name + '</strong></p><p>No CSV validation errors found.</p>');
           // Append the message to the panel-body container.
           $('.panel-validation-results').find('.panel-body').append(message);
-        }
-
-        if(!JSON.parse(responseText.csv).length) {
-          swal({
-            title: 'Error',
-            text: file.name + ': CSV is empty',
-            icon: 'warning',
-          });
         }
 
         // If errors are returned, populate the Pre-Validation Results container.
@@ -1057,6 +1033,37 @@
       return fileNameArray[fileNameArray.length-1].toLowerCase();
     }
 
+    // Import limitation validation
+    function importLimitationValidation(parentRecordType, fileName) {
+
+      let generateWarning = false;
+
+      // Subject import limitation message, based on the 'subject' parent record type.
+      if((parentRecordType === 'subject') && (fileName === 'subjects.csv')) {
+        generateWarning = true;
+      }
+
+      // Subject and Item import limitation message, based on the 'item' parent record type.
+      if((parentRecordType === 'item') && ((fileName === 'subjects.csv') || (fileName === 'items.csv'))) {
+        generateWarning = true;
+      }
+
+      // Subject, Item, and Capture Dataset import limitation message, based on the 'capture_dataset' parent record type.
+      if((parentRecordType === 'capture_dataset') && ((fileName === 'subjects.csv') || (fileName === 'items.csv') || (fileName === 'capture_datasets.csv'))) {
+        generateWarning = true;
+      }
+
+      if(generateWarning) {
+        // The message.
+        let importLimitationMessage = $('<div />')
+            .addClass('alert alert-warning cvs-validation-error')
+            .attr('role', 'alert')
+            .html('<strong>' + fileName + '</strong>: Warning! The chosen parent record type is a "' + parentRecordType + '", therefore data within the "' + fileName + '" file will not be imported.');
+        // Append the message to the panel-body container.
+        $('.panel-validation-results').find('.panel-body').append(importLimitationMessage);
+      }
+
+    }
 
     function scanFiles(i, item, container, dzOptions, existingCount) {
 
