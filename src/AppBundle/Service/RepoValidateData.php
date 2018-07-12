@@ -239,6 +239,29 @@ class RepoValidateData implements RepoValidate {
                   'comparison' => '='
                 )
               ),
+              // 'related_tables' => array(
+              //   array(
+              //     'table_name' => 'item',
+              //     'table_join_field' => 'item_repository_id',
+              //     'join_type' => 'LEFT JOIN',
+              //     'base_join_table' => 'capture_dataset',
+              //     'base_join_field' => 'parent_item_repository_id',
+              //   ),
+              //   array(
+              //     'table_name' => 'subject',
+              //     'table_join_field' => 'subject_repository_id',
+              //     'join_type' => 'LEFT JOIN',
+              //     'base_join_table' => 'item',
+              //     'base_join_field' => 'subject_repository_id',
+              //   ),
+              //   array(
+              //     'table_name' => 'project',
+              //     'table_join_field' => 'project_repository_id',
+              //     'join_type' => 'LEFT JOIN',
+              //     'base_join_table' => 'subject',
+              //     'base_join_field' => 'project_repository_id',
+              //   )
+              // )
               'search_type' => 'AND',
               'limit' => array('limit_start' => 1),
             )

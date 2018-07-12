@@ -242,7 +242,7 @@ class UploadListener
         $data->row_ids_results = $repoValidate->validateRowIds($data->csv, $schema);
 
         // Validate that the values within the capture_dataset_field_id fields are not already in the database.
-        if($schema === 'capture_dataset') {
+        if($schema === 'capture_dataset' && ($parent_record_type !== 'project')) {
           $data->capture_dataset_field_id_results = $repoValidate->validateCaptureDatasetFieldId($data->csv, $this->container);
         }
 
