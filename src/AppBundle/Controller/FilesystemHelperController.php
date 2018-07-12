@@ -67,6 +67,7 @@ class FilesystemHelperController extends Controller
   public function get_directory_contents(Request $request) {
 
     $data = $job_data = [];
+    $data_directory_path = '';
 
     // The uploads directory path.
     $project_dir = $this->get('kernel')->getProjectDir() . $this->uploads_directory;
@@ -99,13 +100,32 @@ class FilesystemHelperController extends Controller
     // Set the directory opened state.
     $directory_opened_state = (empty($job_data) && !empty($request->get('id')) && ($request->get('id') === '#')) ? true : false;
 
-     if ($job_data && !empty($job_data) && empty($id)) {
-      $target_directory = $project_dir . $job_id . $directory_path . DIRECTORY_SEPARATOR;
+    // Retrieve a specific listing from what's been entered in the directory_path field.
+    if ($job_data && !empty($job_data) && empty($id)) {
+      $search_directory = $project_dir . $job_id . DIRECTORY_SEPARATOR;
+
+      // Search for the data directory.
+      $finder = new Finder();
+      $finder->path('data');
+      $finder->in($search_directory);
+
+      foreach ($finder as $file) {
+
+        $path_array = explode(DIRECTORY_SEPARATOR, $file->getPathname());
+        $last_path_array_item = array_pop($path_array);
+
+        if (is_dir($file->getPathname()) && ($last_path_array_item === 'data')) {
+          $target_directory = $file->getPathname() . $directory_path;
+        }
+      }
+
     } elseif ($job_data && !empty($job_data) && !empty($id) && (DIRECTORY_SEPARATOR === '\\')) {
       $target_directory = ltrim($id, '\\') . DIRECTORY_SEPARATOR;
     } else {
       $target_directory = $project_dir . $job_id . $id . DIRECTORY_SEPARATOR;
     }
+
+    // $this->u->dumper($target_directory);
 
     if (!empty($job_id) && is_dir($target_directory)) {
 
