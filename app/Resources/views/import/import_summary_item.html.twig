@@ -150,21 +150,21 @@
 
       if(job_type === 'subjects metadata import') {
         columns = [
-          { "data": "subject_display_name" },
-          { "data": "item_display_name" }
+          { "data": "subject_name" },
+          { "data": "item_description" }
         ];
       }
 
       if(job_type === 'items metadata import') {
         columns = [
-          { "data": "subject_display_name" },
-          { "data": "item_display_name" }
+          { "data": "subject_name" },
+          { "data": "item_description" }
         ];
       }
 
       if(job_type === 'capture datasets metadata import') {
         columns = [
-          { "data": "item_display_name" },
+          { "data": "item_description" },
           { "data": "capture_dataset_name" }
         ];
       }
@@ -172,7 +172,7 @@
       if(job_type === 'models metadata import') {
         columns = [
           { "data": "capture_dataset_name" },
-          { "data": "item_display_name" },
+          { "data": "item_description" },
           { "data": "model_file_type" },
           { "data": "date_of_creation" }
         ];

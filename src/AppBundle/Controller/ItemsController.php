@@ -189,8 +189,12 @@ class ItemsController extends Controller
 
         }
 
+        // Truncate the item_description.
+        $more_indicator = (strlen($item->item_description) > 50) ? '...' : '';
+        $item->item_description_truncated = substr($item->item_description, 0, 50) . $more_indicator;
+
         return $this->render('items/item_form.html.twig', array(
-            'page_title' => ((int)$id && isset($item->item_display_name)) ? 'Item: ' . $item->item_display_name : 'Add Item',
+            'page_title' => ((int)$id && isset($item->item_description_truncated)) ? 'Item: ' . $item->item_description_truncated : 'Add Item',
             'item_data' => $item,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
@@ -248,12 +252,17 @@ class ItemsController extends Controller
         $items = $this->get_items($this->container, $subject_repository_id);
 
         foreach ($items as $key => $value) {
+
+            // Truncate the item_description.
+            $more_indicator = (strlen($value['item_description']) > 38) ? '...' : '';
+            $value['item_description_truncated'] = substr($value['item_description'], 0, 38) . $more_indicator;
+
             // Check for child dataset records so the 'children' key can be set accordingly.
             $dataset_data = $datasets->get_datasets($this->container, (int)$value['item_repository_id']);
             $data[$key] = array(
                 'id' => 'itemId-' . $value['item_repository_id'],
                 'children' => count($dataset_data) ? true : false,
-                'text' => $value['item_display_name'],
+                'text' => $value['item_description_truncated'],
                 'a_attr' => array('href' => '/admin/projects/datasets/' . $value['project_repository_id'] . '/' . $value['subject_repository_id'] . '/' . $value['item_repository_id']),
             );
         }

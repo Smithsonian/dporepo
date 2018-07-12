@@ -497,10 +497,10 @@ class ImportController extends Controller
       // Set the description for the job log.
       switch ($data->type) {
         case 'subject':
-          $data->description = $csv_val->local_subject_id . ' - ' . $csv_val->subject_display_name;
+          $data->description = $csv_val->local_subject_id . ' - ' . $csv_val->subject_name;
           break;
         case 'item':
-          $data->description = $csv_val->item_display_name;
+          $data->description = $csv_val->item_description;
           break;
         case 'capture_dataset':
           $data->description = $data->for_model_description = $csv_val->capture_dataset_name;
@@ -651,6 +651,7 @@ class ImportController extends Controller
 
           // Get CSV data.
           $project['csv'] = array();
+          $project['csv_row_count'] = '';
           $finder = new Finder();
           $finder->files()->name('*.csv');
           foreach ($finder->in($dir) as $file) {
@@ -796,11 +797,11 @@ class ImportController extends Controller
 
         switch($value) {
           case 'subject':
-            $params['field_name'] = 'subject_display_name';
+            $params['field_name'] = 'subject_name';
             $params['id_field_name'] = 'subject_repository_id';
             break;
           case 'item':
-            $params['field_name'] = 'item_display_name';
+            $params['field_name'] = 'item_description';
             $params['id_field_name'] = 'item_repository_id';
             break;
           case 'capture_dataset':
@@ -833,7 +834,11 @@ class ImportController extends Controller
         // Format the $data array for the typeahead-bundle.
         if (!empty($results)) {
           foreach ($results as $key => $value) {
-            $data[] = array('id' => $value[ $params['id_field_name'] ], 'value' => $value[ $params['field_name'] ] . ' [ ' . strtoupper(str_replace('_', ' ', $params['record_type'])) . ' ]');
+            // Truncate long field values.
+            $more_indicator = (strlen($value[ $params['field_name'] ]) > 38) ? '...' : '';
+            $truncated_value = substr($value[ $params['field_name'] ], 0, 38) . $more_indicator;
+            // Add to the $data array.
+            $data[] = array('id' => $value[ $params['id_field_name'] ], 'value' => $truncated_value . ' [ ' . strtoupper(str_replace('_', ' ', $params['record_type'])) . ' ]');
           }
         }
       }

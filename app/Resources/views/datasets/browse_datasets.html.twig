@@ -12,8 +12,8 @@
     <li><a href="/admin">Dashboard</a></li>
     <li><a href="/admin/workspace">Browse Projects</a></li>
     <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ project_repository_id }}">{{ project_data.project_name|e }}</a></li>
-    <li><strong>Subject:</strong> <a href="/admin/projects/items/{{ project_repository_id }}/{{ subject_repository_id }}">{{ subject_data.subject_display_name|e }}</a></li>
-    <li class="active"><strong>Item:</strong> {{ item_data.item_display_name|e }}</li>
+    <li><strong>Subject:</strong> <a href="/admin/projects/items/{{ project_repository_id }}/{{ subject_repository_id }}">{{ subject_data.subject_name|e }}</a></li>
+    <li class="active"><strong>Item:</strong> {{ item_data.item_description_truncated|e }}</li>
   </ol>
 
   <div class="row">

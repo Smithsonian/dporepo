@@ -221,7 +221,7 @@ class SubjectsController extends Controller
           'base_table' => 'subject',
           'fields' => array(),
           'sort_fields' => array(
-            0 => array('field_name' => 'subject_display_name')
+            0 => array('field_name' => 'subject_name')
           ),
           'search_params' => array(
             0 => array('field_names' => array('project_repository_id'), 'search_values' => array($project_repository_id), 'comparison' => '=')
@@ -255,9 +255,9 @@ class SubjectsController extends Controller
           );
           
           if($request->attributes->get('number_first') === 'true') {
-              $data[$key]['text'] = $value['local_subject_id'] . ' - ' . $value['subject_display_name'];
+              $data[$key]['text'] = $value['local_subject_id'] . ' - ' . $value['subject_name'];
           } else {
-              $data[$key]['text'] = $value['subject_display_name'] . ' - ' . $value['local_subject_id'];
+              $data[$key]['text'] = $value['subject_name'] . ' - ' . $value['local_subject_id'];
           }
       }
 

@@ -906,7 +906,7 @@ class RepoStorageHybrid implements RepoStorage {
         ),
         13 => array(
           'table_name' => 'item',
-          'field_name' => 'item_display_name',
+          'field_name' => 'item_description',
         ),
       ),
       'sort_fields' => array(
@@ -2178,6 +2178,10 @@ class RepoStorageHybrid implements RepoStorage {
         'field_name' => 'subject_repository_id',
       );
       $query_params['fields'][] = array(
+        'table_name' => 'subject',
+        'field_name' => 'project_repository_id',
+      );
+      $query_params['fields'][] = array(
         'field_name' => 'holding_entity_guid',
       );
       $query_params['fields'][] = array(
@@ -3172,7 +3176,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'subject',
-      'field_name' => 'subject_display_name',
+      'field_name' => 'subject_name',
     );
     $query_params['fields'][] = array(
       'table_name' => 'item',
@@ -3180,7 +3184,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'item',
-      'field_name' => 'item_display_name',
+      'field_name' => 'item_description',
     );
 
     // If subjects were ingested (with a project as the parent record)...
@@ -3206,8 +3210,8 @@ class RepoStorageHybrid implements RepoStorage {
       if (NULL !== $search_value) {
         $query_params['search_params'][3] = array(
           'field_names' => array(
-            'subject_display_name',
-            'item_display_name',
+            'subject_name',
+            'item_description',
           ),
           'search_values' => array($search_value),
           'comparison' => 'LIKE',
@@ -3240,8 +3244,8 @@ class RepoStorageHybrid implements RepoStorage {
       if (NULL !== $search_value) {
         $query_params['search_params'][3] = array(
           'field_names' => array(
-            'subject_display_name',
-            'item_display_name',
+            'subject_name',
+            'item_description',
           ),
           'search_values' => array($search_value),
           'comparison' => 'LIKE',
@@ -3289,7 +3293,7 @@ class RepoStorageHybrid implements RepoStorage {
       if (NULL !== $search_value) {
         $query_params['search_params'][3] = array(
           'field_names' => array(
-            'item_display_name',
+            'item_description',
             'capture_dataset_name',
           ),
           'search_values' => array($search_value),
@@ -3357,7 +3361,7 @@ class RepoStorageHybrid implements RepoStorage {
       if (NULL !== $search_value) {
         $query_params['search_params'][3] = array(
           'field_names' => array(
-            'item_display_name',
+            'item_description',
             'capture_dataset_name',
           ),
           'search_values' => array($search_value),

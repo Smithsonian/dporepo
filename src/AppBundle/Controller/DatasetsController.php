@@ -88,8 +88,12 @@ class DatasetsController extends Controller
         $jobBoxDirectoryContents = is_dir($this->file_upload_path) ? scandir($this->file_upload_path) : array();
         $jobBoxProcessedDirectoryContents = is_dir($this->file_processing_path) ? scandir($this->file_processing_path) : array();
 
+        // Truncate the item_description so the breadcrumb don't blow up.
+        $more_indicator = (strlen($item->item_data->item_description) > 50) ? '...' : '';
+        $item->item_data->item_description_truncated = substr($item->item_data->item_description, 0, 50) . $more_indicator;
+
         return $this->render('datasets/browse_datasets.html.twig', array(
-            'page_title' => isset($item->item_data->item_display_name) ? 'Item: ' . $item->item_data->item_display_name : 'Item',
+            'page_title' => isset($item->item_data->item_description_truncated) ? 'Item: ' . $item->item_data->item_description_truncated : 'Item',
             'project_repository_id' => $project_repository_id,
             'subject_repository_id' => $subject_repository_id,
             'item_repository_id' => $item_repository_id,
