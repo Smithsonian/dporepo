@@ -651,7 +651,7 @@ class ImportController extends Controller
 
           // Get CSV data.
           $project['csv'] = array();
-          $project['csv_row_count'] = '';
+          $project['csv_row_count'] = array();
           $finder = new Finder();
           $finder->files()->name('*.csv');
           foreach ($finder->in($dir) as $file) {
