@@ -23,11 +23,6 @@ class Items
     /**
      * @var string
      */
-    public $item_display_name;
-
-    /**
-     * @var string
-     */
     public $item_description;
 
     /**

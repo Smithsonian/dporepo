@@ -341,7 +341,6 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             `subject_repository_id` int(11) NOT NULL,
             `local_item_id` varchar(255) DEFAULT '',
             `item_guid` varchar(255) DEFAULT '',
-            `item_display_name` varchar(255) DEFAULT NULL,
             `item_description` mediumtext,
             `item_type` varchar(255) DEFAULT NULL,
             `date_created` datetime NOT NULL,
