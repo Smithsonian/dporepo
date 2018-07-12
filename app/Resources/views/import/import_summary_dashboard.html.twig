@@ -1148,7 +1148,7 @@
 
       let itemIcon = item.isDirectory ? 'folder-close' : 'file',
           itemExtension = !item.isDirectory ? item.name.split('.').pop() : '',
-          fileTypeWarning = (itemExtension.length && (dzOptions.acceptedFiles.indexOf(itemExtension) === -1)) ? 'Invalid file type. This file will not be uploaded.' : '',
+          fileTypeWarning = (itemExtension.length && (dzOptions.acceptedFiles.indexOf(itemExtension.toLowerCase()) === -1)) ? 'Invalid file type. This file will not be uploaded.' : '',
           spanIcon = $('<span />').addClass('glyphicon glyphicon-' + itemIcon).attr('style', 'margin-right: 4px;'),
           allItemsCount = $('#previews').find('li.list-group-item').length,
           thisCount = (allItemsCount+1),
