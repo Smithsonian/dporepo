@@ -790,8 +790,8 @@
       // document.querySelector("#total-progress").style.opacity = "1";
 
       if((typeof file.prevalidate !== 'undefined') && !file.prevalidate) {
-        // If not prevalidating, disable the start button
-        document.querySelector(".start").setAttribute("disabled", "disabled");
+        // If not prevalidating, disable all actionable buttons.
+        $('.start, .cancel, .prevalidate-trigger').attr('disabled', 'disabled');
       }
 
       // Append custom data to formData.
