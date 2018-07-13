@@ -120,9 +120,18 @@ class FilesystemHelperController extends Controller
       }
 
     } elseif ($job_data && !empty($job_data) && !empty($id) && (DIRECTORY_SEPARATOR === '\\')) {
-      $target_directory = ltrim($id, '\\') . DIRECTORY_SEPARATOR;
+      $target_directory = $project_dir . $job_id . DIRECTORY_SEPARATOR . ltrim($id, '\\') . DIRECTORY_SEPARATOR;
     } else {
       $target_directory = $project_dir . $job_id . $id . DIRECTORY_SEPARATOR;
+    }
+    
+    // If on a Windows based system, replace forward slashes with backslashes.
+    if (DIRECTORY_SEPARATOR === '\\') {
+      $target_directory = str_replace('/', '\\', $target_directory);
+    }
+    // If on a *nix based system, replace backslashes with forward slashes.
+    if (DIRECTORY_SEPARATOR === '/') {
+      $target_directory = str_replace('\\', '/', $target_directory);
     }
 
     // $this->u->dumper($target_directory);
