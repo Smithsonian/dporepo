@@ -201,10 +201,11 @@ class RepoValidateData implements RepoValidate {
 
   /**
    * Validate capture_dataset_field_id
-   * @param null $data The data to validate.
+   * @param array $data The data to validate.
+   * @param array $parent_record_id The parent record ID.
    * @return mixed array containing success/fail value, and any messages.
    */
-  public function validateCaptureDatasetFieldId($data = NULL, $container) {
+  public function validateCaptureDatasetFieldId($data = array(), $parent_records = array(), $container) {
 
     $return = array('is_valid' => false);
     $results = array();
@@ -213,7 +214,7 @@ class RepoValidateData implements RepoValidate {
     if(empty($data)) $return['messages'][] = 'Nothing to validate. Please provide an object to validate.';
 
     // If data is passed, go ahead and perform the validation.
-    if(!empty($data)) {
+    if(!empty($data) && !empty($parent_records)) {
 
       $this->repo_storage_controller->setContainer($container);
 
@@ -229,7 +230,7 @@ class RepoValidateData implements RepoValidate {
                 ),
               ),
               'search_params' => array(
-                0 => array(
+                array(
                   'field_names' => array(
                     'capture_dataset_field_id'
                   ),
@@ -237,31 +238,26 @@ class RepoValidateData implements RepoValidate {
                     $value->capture_dataset_field_id
                   ),
                   'comparison' => '='
+                ),
+                array(
+                  'field_names' => array(
+                    'parent_project_repository_id'
+                  ),
+                  'search_values' => array(
+                    $parent_records['project_repository_id']
+                  ),
+                  'comparison' => '='
+                ),
+                array(
+                  'field_names' => array(
+                    'parent_item_repository_id'
+                  ),
+                  'search_values' => array(
+                    $parent_records['item_repository_id']
+                  ),
+                  'comparison' => '='
                 )
               ),
-              // 'related_tables' => array(
-              //   array(
-              //     'table_name' => 'item',
-              //     'table_join_field' => 'item_repository_id',
-              //     'join_type' => 'LEFT JOIN',
-              //     'base_join_table' => 'capture_dataset',
-              //     'base_join_field' => 'parent_item_repository_id',
-              //   ),
-              //   array(
-              //     'table_name' => 'subject',
-              //     'table_join_field' => 'subject_repository_id',
-              //     'join_type' => 'LEFT JOIN',
-              //     'base_join_table' => 'item',
-              //     'base_join_field' => 'subject_repository_id',
-              //   ),
-              //   array(
-              //     'table_name' => 'project',
-              //     'table_join_field' => 'project_repository_id',
-              //     'join_type' => 'LEFT JOIN',
-              //     'base_join_table' => 'subject',
-              //     'base_join_field' => 'project_repository_id',
-              //   )
-              // )
               'search_type' => 'AND',
               'limit' => array('limit_start' => 1),
             )

@@ -96,7 +96,7 @@ class UploadListener
       switch ($file->getExtension()) {
         case 'csv':
           // Run the CSV validation.
-          $validation_results = $this->validate_metadata($data->job_id, $data->job_id_directory, $data->parent_record_type, $file->getBasename());
+          $validation_results = $this->validate_metadata($data->job_id, $data->job_id_directory, $data->parent_record_type, $file_data->parent_record_id, $file->getBasename());
           // Remove the CSV file.
           $finder = new Finder();
           $finder->files()->in($data->job_id_directory . '/');
@@ -180,7 +180,7 @@ class UploadListener
    * @param int $job_id_directory  The job directory
    * @return json
    */
-  public function validate_metadata($job_id = null, $job_id_directory = null, $parent_record_type = null, $filename = null)
+  public function validate_metadata($job_id = null, $job_id_directory = null, $parent_record_type = null, $parent_record_id, $filename = null)
   {
     $schema = false;
     $blacklisted_fields = array();
@@ -242,8 +242,22 @@ class UploadListener
         $data->row_ids_results = $repoValidate->validateRowIds($data->csv, $schema);
 
         // Validate that the values within the capture_dataset_field_id fields are not already in the database.
-        if($schema === 'capture_dataset' && ($parent_record_type !== 'project')) {
-          $data->capture_dataset_field_id_results = $repoValidate->validateCaptureDatasetFieldId($data->csv, $this->container);
+        if($schema === 'capture_dataset') {
+
+          switch($parent_record_type) {
+            case 'item':
+              // Get the parent records.
+              $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
+                'base_record_id' => $parent_record_id,
+                'record_type' => $parent_record_type,
+              ));
+              // Validate that the 'capture_dataset_field_id' value is unique for datasets that share the same Project and Item.
+              if (!empty($parent_records)) {
+                $data->capture_dataset_field_id_results = $repoValidate->validateCaptureDatasetFieldId($data->csv, $parent_records, $this->container);
+              }
+              break;
+          }
+
         }
 
         // Execute the validation against the JSON schema.
