@@ -435,6 +435,16 @@ class ImportController extends Controller
           } else {
             $csv_val->parent_item_repository_id = $data->parent_record_id;
           }
+
+          // Get the parent project ID.
+          $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
+            'base_record_id' => $csv_val->parent_item_repository_id,
+            'record_type' => 'item',
+          ));
+          if (!empty($parent_records)) {
+            $csv_val->parent_project_repository_id = $parent_records['project_repository_id'];
+          }
+
         case 'model':
           // 1) Append the job ID to the file path
           // 2) Add the file's checksum to the $csv_val object.
