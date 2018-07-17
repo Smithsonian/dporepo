@@ -11,7 +11,7 @@
   <ol class="breadcrumb">
     <li><a href="/admin">Dashboard</a></li>
     <li><a href="/admin/workspace">Browse Projects</a></li>
-    <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ project_repository_id }}">{{ project_data.projects_label|default('')|e }}</a></li>
+    <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ project_repository_id }}">{{ project_data.project_name|default('')|e }}</a></li>
     <li class="active"><strong>Subject:</strong> {{ subject_data.subject_name|e }}</li>
   </ol>
 
