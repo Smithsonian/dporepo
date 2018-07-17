@@ -143,6 +143,10 @@ body {
   cursor: pointer;
 }
 
+.datatables_bulk_actions div.dt-buttons {
+  margin-left: 0.5rem;
+}
+
 /*
  * jQuery UI Resizable
  */

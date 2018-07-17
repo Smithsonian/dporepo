@@ -1426,7 +1426,19 @@ class RepoStorageHybrid implements RepoStorage {
         $query_params['fields'][] = array(
           'table_name' => $record_type,
           'field_name' => $record_type . '_repository_id',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
           'field_alias' => 'manage',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'parent_capture_dataset_repository_id',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'parent_item_repository_id',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
@@ -1522,7 +1534,19 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
+          'field_name' => 'date_created',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'created_by_user_account_id',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
           'field_name' => 'last_modified',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'last_modified_user_account_id',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
