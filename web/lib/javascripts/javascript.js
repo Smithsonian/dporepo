@@ -35,7 +35,11 @@ jQuery(document).ready(function($) {
     var allCheckedCheckboxes = $(this).parent().parent().find('input[name=manage_checkbox]:checkbox:checked');
 
     if(!allCheckedCheckboxes.length) {
-      swal('No Records Selected', 'Please choose at least one record.');
+      swal({
+        title: 'No Records Selected',
+        text: 'Please choose at least one record.',
+        icon: 'warning'
+      });
       return;
     }
 
@@ -46,46 +50,54 @@ jQuery(document).ready(function($) {
     returnPath = $(this).parent().parent().parent().find('#return-path').val();
 
     swal({
-      title: 'Remove Records',
-      text: 'Are you sure you want to remove these records?',
-      type: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#DD6B55',
-      confirmButtonText: 'Yes, Remove',
-      closeOnConfirm: true
-    },
-    function(){
-
-      var recordIds = [];
-
-      allCheckedCheckboxes.each(function(e) {
-        var thisCheckbox = $(this);
-        recordIds.push(thisCheckbox.val());
-      });
-
-      var recordIdsString = JSON.stringify(recordIds).replace('[','').replace(']','').replace(/"/g,''),
-          urlSlash = ((currentPath.join('/') !== 'admin/workspace/') && (currentPath.indexOf('resources') !== 1)) ? '/' : '';
-
-      var returnPathString;
-      if(null != returnPath) {
-        returnPathString = '&returnpath=' . returnPath;
-      }
-
-      var deleteUrl;
-      if(null != deletePath) {
-        deleteUrl = window.location.origin + '/' + deletePath + '?ids=' + recordIdsString;
-      }
-      else {
-        deleteUrl = window.location.origin + '/' + currentPath.join('/') + urlSlash + 'delete?ids=' + recordIdsString;
-      }
-
-      if(null != deleteUrl) {
-        if(null != returnPathString) {
-          deleteUrl += returnPathString;
+      title: 'Remove Records?',
+      text: 'Are you sure you want to remove the selected record(s)?',
+      icon: 'warning',
+      buttons: {
+        cancel: "No",
+        catch: {
+          text: "Yes",
+          value: "yes",
         }
+      },
+    })
+    .then((value) => {
+      switch (value) {
+        case "yes":
+          var recordIds = [];
+
+          allCheckedCheckboxes.each(function(e) {
+            var thisCheckbox = $(this);
+            recordIds.push(thisCheckbox.val());
+          });
+
+          var recordIdsString = JSON.stringify(recordIds).replace('[','').replace(']','').replace(/"/g,''),
+              urlSlash = ((currentPath.join('/') !== 'admin/workspace/') && (currentPath.indexOf('resources') !== 1)) ? '/' : '';
+
+          var returnPathString;
+          if(null != returnPath) {
+            returnPathString = '&returnpath=' . returnPath;
+          }
+
+          var deleteUrl;
+          if(null != deletePath) {
+            deleteUrl = window.location.origin + '/' + deletePath + '?ids=' + recordIdsString;
+          }
+          else {
+            deleteUrl = window.location.origin + '/' + currentPath.join('/') + urlSlash + 'delete?ids=' + recordIdsString;
+          }
+
+          if(null != deleteUrl) {
+            if(null != returnPathString) {
+              deleteUrl += returnPathString;
+            }
+          }
+          // console.log(window.location.origin + '/' + currentPath.join('/') + urlSlash + 'delete?ids=' + recordIdsString);
+          document.location.href = deleteUrl;
+          break;
+        default:
+          return;
       }
-      // console.log(window.location.origin + '/' + currentPath.join('/') + urlSlash + 'delete?ids=' + recordIdsString);
-      document.location.href = deleteUrl;
     });
 
   });
