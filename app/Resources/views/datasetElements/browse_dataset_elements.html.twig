@@ -457,9 +457,46 @@
           ],
           "dom": 'lfip<"datatables_bulk_actions"B>tip',
           buttons: [
-            'csv', 'excel', 'pdf', 'print',
             {
-                extend: 'colvis',
+                extend: 'collection',
+                text: 'Export',
+                buttons: [
+                    {
+                        extend: 'csvHtml5',
+                        exportOptions: {
+                            columns: ':visible'
+                        }
+                    },
+                    {
+                        extend: 'excelHtml5',
+                        exportOptions: {
+                            columns: ':visible'
+                        }
+                    },
+                    {
+                        extend: 'print',
+                        exportOptions: {
+                            columns: ':visible'
+                        }
+                    },
+                    {
+                        extend: 'pdfHtml5',
+                        text: 'PDF',
+                        orientation: 'landscape',
+                        pageSize: 'TABLOID',
+                        filename: 'models_export_' + getFormattedDate(),
+                        exportOptions: {
+                            columns: ':visible'
+                        }
+                    },
+                'copy'
+                ]
+            },
+            
+            {
+                extend: 'collection',
+                text: 'Toggle Column Visibility',
+                buttons: [ 'columnsToggle' ],
                 postfixButtons: [ 'colvisRestore' ]
             }
           ],

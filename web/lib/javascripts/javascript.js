@@ -284,3 +284,16 @@ jQuery(document).ready(function($) {
   });
 
 });
+
+function getFormattedDate() {
+  var date = new Date()
+      ,day = date.getDate().toString()
+      ,month = ("0" + (date.getMonth()+1)).slice(-2)
+      ,year = date.getFullYear().toString()
+      ,hour = ("0" + date.getHours()).slice(-2)
+      ,minutes = date.getMinutes().toString()
+      ,seconds = ("0" + date.getSeconds()).slice(-2)
+      ,date_formatted = month+"-"+day+"-"+year+" "+hour+":"+minutes+":"+seconds;
+
+  return date_formatted;
+}
