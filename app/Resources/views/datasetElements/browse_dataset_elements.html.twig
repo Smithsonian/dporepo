@@ -459,37 +459,49 @@
           buttons: [
             {
                 extend: 'collection',
-                text: 'Export',
+                text: 'Export Metadata',
                 buttons: [
                     {
                         extend: 'csvHtml5',
+                        filename: 'models_export_' + getFormattedDate(),
                         exportOptions: {
-                            columns: ':visible'
+                            columns: ':not(:first-child)',
+                            modifier: {
+                                search: 'none'
+                            }
                         }
                     },
                     {
                         extend: 'excelHtml5',
-                        exportOptions: {
-                            columns: ':visible'
-                        }
-                    },
-                    {
-                        extend: 'print',
-                        exportOptions: {
-                            columns: ':visible'
-                        }
-                    },
-                    {
-                        extend: 'pdfHtml5',
-                        text: 'PDF',
-                        orientation: 'landscape',
-                        pageSize: 'TABLOID',
                         filename: 'models_export_' + getFormattedDate(),
+                        title: '',
                         exportOptions: {
-                            columns: ':visible'
+                            columns: ':not(:first-child)',
+                            modifier: {
+                                search: 'none'
+                            }
                         }
                     },
-                'copy'
+                    {
+                        extend: 'copy',
+                        title: '',
+                        exportOptions: {
+                            columns: ':not(:first-child)',
+                            modifier: {
+                                search: 'none'
+                            }
+                        }
+                    },
+                    // {
+                    //     extend: 'print'
+                    // },
+                    // {
+                    //     extend: 'pdfHtml5',
+                    //     text: 'PDF',
+                    //     orientation: 'landscape',
+                    //     pageSize: 'TABLOID',
+                    //     filename: 'models_export_' + getFormattedDate()
+                    // },
                 ]
             },
             

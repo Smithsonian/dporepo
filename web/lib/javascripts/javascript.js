@@ -293,7 +293,7 @@ function getFormattedDate() {
       ,hour = ("0" + date.getHours()).slice(-2)
       ,minutes = date.getMinutes().toString()
       ,seconds = ("0" + date.getSeconds()).slice(-2)
-      ,date_formatted = month+"-"+day+"-"+year+" "+hour+":"+minutes+":"+seconds;
+      ,date_formatted = month+"-"+day+"-"+year+"-"+hour+"_"+minutes+"_"+seconds;
 
   return date_formatted;
 }
