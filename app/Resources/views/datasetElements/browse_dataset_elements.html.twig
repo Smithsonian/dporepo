@@ -463,7 +463,7 @@
                 buttons: [
                     {
                         extend: 'csvHtml5',
-                        filename: 'models_export_' + getFormattedDate(),
+                        filename: '{{subject_data.subject_name|e}}-{{dataset_data.capture_dataset_name|e}}-models_' + getFormattedDate(),
                         exportOptions: {
                             columns: ':not(:first-child)',
                             modifier: {
@@ -473,7 +473,7 @@
                     },
                     {
                         extend: 'excelHtml5',
-                        filename: 'models_export_' + getFormattedDate(),
+                        filename: '{{subject_data.subject_name|e}}-{{dataset_data.capture_dataset_name|e}}-models_' + getFormattedDate(),
                         title: '',
                         exportOptions: {
                             columns: ':not(:first-child)',
@@ -500,7 +500,7 @@
                     //     text: 'PDF',
                     //     orientation: 'landscape',
                     //     pageSize: 'TABLOID',
-                    //     filename: 'models_export_' + getFormattedDate()
+                    //     filename: '{{subject_data.subject_name|e}}-{{dataset_data.capture_dataset_name|e}}-models_' + getFormattedDate(),
                     // },
                 ]
             },
@@ -573,6 +573,10 @@
           .attr('href', '/admin/projects/model/manage/' + capture_dataset_repository_id)
           .html('<span class="glyphicon glyphicon-plus"></span> Add a Model');
         $('#browse_models_wrapper').find('.datatables_bulk_actions').prepend(models_add_button);
+        // Hide the Export Metadata dropdown menu on menu item click.
+        $('.datatables_bulk_actions').on('click', '.buttons-html5', function(){
+            $(this).parent().hide();
+        });
 
         $('#browse_uv_maps').dataTable( {
           "columns": [
