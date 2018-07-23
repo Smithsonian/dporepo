@@ -68,8 +68,6 @@ class FilesValidationCommand extends ContainerAwareCommand
       $directory_to_validate = $this->validate_images->needs_validation_checker($container);
     }
 
-    var_dump($directory_to_validate); die();
-
     if (!empty($directory_to_validate)) {
 
       // Parameters to pass to the validate_images method.
@@ -81,31 +79,24 @@ class FilesValidationCommand extends ContainerAwareCommand
       $result = $this->validate_images->validate($params, $container);
 
       // Output validation results.
-      if (isset($result['result'])) {
-        $output->writeln('<comment>Validation Result:</comment>' . "\n");
+      if (!empty($result)) {
+        $output->writeln('<comment>Validated Files:</comment>' . "\n");
         foreach ($result as $key => $value) {
           $output->writeln('---------------------------' . "\n");
-          $output->writeln('File Name: ' . $value['file_name'] . "\n");
           foreach ($value as $k => $v) {
-            $output->writeln($k . ': ' . $v . "\n");
+            if ($k !== 'errors') {
+              $output->writeln($k . ': ' . $v . "\n");
+            } else {
+              if (!empty($v)) {
+                foreach ($v as $ek => $ev) {
+                  $output->writeln('<error>' . $ev . '</error>' . "\n");
+                }
+              }
+            }
           }
         }
       }
 
-      // Output errors.
-      if (isset($result['errors'])) {
-        foreach ($result['errors'] as $key => $value) {
-          $output->writeln('<error>' . $value . '</error>');
-        }
-        foreach ($result as $key => $value) {
-          $output->writeln('---------------------------' . "\n");
-          $output->writeln('Errors' . "\n");
-          $output->writeln('File Name: ' . $value['file_name'] . "\n");
-          foreach ($value['errors'] as $k => $v) {
-            $output->writeln($v . "\n");
-          }
-        }
-      }
     }
 
     // If there's no $directory_to_validate, display a message.

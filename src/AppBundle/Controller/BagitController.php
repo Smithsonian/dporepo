@@ -262,7 +262,7 @@ class BagitController extends Controller
     $data = (object)[];
     $return = array();
     $manifest_contents = NULL;
-    $data->job_status = 'complete';
+    $data->job_status = 'bagit validation completed';
 
     // Include the BagIt PHP library
     require_once $this->bagit_path;
