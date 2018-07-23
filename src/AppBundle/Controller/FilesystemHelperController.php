@@ -110,12 +110,8 @@ class FilesystemHelperController extends Controller
       $finder->in($search_directory);
 
       foreach ($finder as $file) {
-
-        $path_array = explode(DIRECTORY_SEPARATOR, $file->getPathname());
-        $last_path_array_item = array_pop($path_array);
-
-        if (is_dir($file->getPathname()) && ($last_path_array_item === 'data')) {
-          $target_directory = $file->getPathname() . $directory_path;
+        if (is_dir($file->getPathname()) && ($file->getFilename() === 'data')) {
+          $target_directory = $file->getFilename() . $directory_path;
         }
       }
 
