@@ -67,12 +67,11 @@ class ImportController extends Controller
      * @param int $parent_record_id Parent record ID
      * @param string $parent_record_type Parent record type
      * @param object $request Symfony's request object
-     * @param object $validate ValidateMetadataController class
-     * @param object $validate ItemsController class
-     * @param object $validate DatasetsController class
-     * @param object $validate ModelController class
+     * @param object $itemsController ItemsController class
+     * @param object $datasetsController DatasetsController class
+     * @param object $modelsController ModelController class
      */
-    public function import_csv($job_id, $parent_project_id, $parent_record_id, $parent_record_type, Request $request, ValidateMetadataController $validate, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController)
+    public function import_csv($job_id, $parent_project_id, $parent_record_id, $parent_record_type, Request $request, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController)
     {
       // Clear session data.
       $session = new Session();
@@ -620,7 +619,7 @@ class ImportController extends Controller
      * @param object $project ProjectsController class
      * @param object $request Symfony's request object
      */
-    public function import_summary_details($id, $project_id, Connection $conn, ProjectsController $project, Request $request, DatasetElementsController $data_elements_controller)
+    public function import_summary_details($id, $project_id, Connection $conn, ProjectsController $project, Request $request, DatasetElementsController $data_elements_controller, ValidateImagesController $images)
     {
 
       $project = [];
