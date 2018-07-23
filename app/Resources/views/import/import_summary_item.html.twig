@@ -30,7 +30,11 @@
             {% endif %}
             {% if project.job_status is defined %}
               <dt>Job Status:</dt>
-                <dd>{{ project.job_status }}</dd>
+              {% if project.job_status == 'failed' %}
+                <dd class="text-danger"><strong>{{ project.job_status }}</strong> (see below for details)</dd>
+              {% else %}
+                <dd class="text-success"><strong>{{ project.job_status }}</strong></dd>
+              {% endif %}
             {% endif %}
           </dl>
         </div>
@@ -102,17 +106,29 @@
         {% if project.job_status is defined and project.job_status != 'complete' %}
           <div class="panel panel-default">
             <div class="panel-body">
-              <h3>File Validation Errors</h3>
-              {% if project.job_status == 'in progress' %}
+              <h3>BagIt Validation Errors</h3>
+              {% if project.bagit_validation_errors is not defined %}
                 <p class="text-info"><span class="glyphicon glyphicon-time"></span> Validation pending. Please check back shortly.</p>
               {% else %}
-                <ul class="list-unstyled">
-                  {% for file_validation_error in project.file_validation_errors %}
-                    <li class="text-danger"><strong>{{ file_validation_error.job_log_label }}</strong>: {{ file_validation_error.job_log_description }}</li>
+                <ol class="list-unstyled">
+                  {% for bagit_validation_error in project.bagit_validation_errors %}
+                    <li class="text-danger"><strong>{{ bagit_validation_error.job_log_description }}</li>
                   {% else %}
-                    <li class="text-success"><strong>No validation errors found.</strong></li>
+                    <li class="text-success"><strong>No BagIt validation errors found.</strong></li>
                   {% endfor %}
-                </ul>
+                </ol>
+              {% endif %}
+              <h3>Image Validation Errors</h3>
+              {% if project.image_validation_errors is not defined %}
+                <p class="text-info"><span class="glyphicon glyphicon-time"></span> Image validation pending. Please check back shortly.</p>
+              {% else %}
+                <ol class="list-unstyled">
+                  {% for image_validation_error in project.image_validation_errors %}
+                    <li class="text-danger"><strong>{{ image_validation_error.job_log_description }}</li>
+                  {% else %}
+                    <li class="text-success"><strong>No image validation errors found.</strong></li>
+                  {% endfor %}
+                </ol>
               {% endif %}
             </div>
           </div>

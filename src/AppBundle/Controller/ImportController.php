@@ -673,12 +673,12 @@ class ImportController extends Controller
             $project['csv_row_count'] = json_encode($project['csv_row_count']);
           }
 
-          // Get errors if they exist.
-          $project['file_validation_errors'] = $this->repo_storage_controller->execute('getRecords', array(
+          // Get bagit validation errors if they exist.
+          $project['bagit_validation_errors'] = $this->repo_storage_controller->execute('getRecords', array(
               'base_table' => 'job_log',
               'fields' => array(),
               'search_params' => array(
-                0 => array(
+                array(
                   'field_names' => array(
                     'job_id'
                   ),
@@ -687,7 +687,7 @@ class ImportController extends Controller
                   ),
                   'comparison' => '='
                 ),
-                1 => array(
+                array(
                   'field_names' => array(
                     'job_log_status'
                   ),
@@ -696,12 +696,53 @@ class ImportController extends Controller
                   ),
                   'comparison' => '='
                 ),
-                2 => array(
+                array(
                   'field_names' => array(
                     'job_log_label'
                   ),
                   'search_values' => array(
                     'BagIt Validation'
+                  ),
+                  'comparison' => '='
+                )
+              ),
+              'search_type' => 'AND',
+              'sort_fields' => array(
+                0 => array('field_name' => 'date_created')
+              ),
+              'omit_active_field' => true,
+            )
+          );
+
+          // Get image validation errors if they exist.
+          $project['image_validation_errors'] = $this->repo_storage_controller->execute('getRecords', array(
+              'base_table' => 'job_log',
+              'fields' => array(),
+              'search_params' => array(
+                array(
+                  'field_names' => array(
+                    'job_id'
+                  ),
+                  'search_values' => array(
+                    (int)$id
+                  ),
+                  'comparison' => '='
+                ),
+                array(
+                  'field_names' => array(
+                    'job_log_status'
+                  ),
+                  'search_values' => array(
+                    'error'
+                  ),
+                  'comparison' => '='
+                ),
+                array(
+                  'field_names' => array(
+                    'job_log_label'
+                  ),
+                  'search_values' => array(
+                    'Image Validation'
                   ),
                   'comparison' => '='
                 )
