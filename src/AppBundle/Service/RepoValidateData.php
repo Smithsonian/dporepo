@@ -119,8 +119,6 @@ class RepoValidateData implements RepoValidate {
    */
   public function validateData($data = NULL, $schema = 'project', $parent_record_type = NULL, $blacklisted_fields = array()) {
 
-    $schema_definitions_dir = ($schema !== 'project') ? 'definitions/' : '';
-
     $return = array('is_valid' => false);
 
     // If no data is passed, set a message.
@@ -131,7 +129,7 @@ class RepoValidateData implements RepoValidate {
 
       $integer_field_types = $boolean_field_types = array();
 
-      $jsonSchemaObject = json_decode(file_get_contents($this->schema_dir . $schema_definitions_dir . $schema . '.json'));
+      $jsonSchemaObject = json_decode(file_get_contents($this->schema_dir . $schema . '.json'));
 
       // Convert the CSV's integer-based fields to integers... 
       // Convert the CSV's boolean-based fields to booleans... 
@@ -167,7 +165,7 @@ class RepoValidateData implements RepoValidate {
       }
 
       $schemaStorage = new SchemaStorage();
-      $schemaStorage->addSchema('file://' . $this->schema_dir . $schema_definitions_dir, $jsonSchemaObject);
+      $schemaStorage->addSchema('file://' . $this->schema_dir, $jsonSchemaObject);
 
       $jsonValidator = new Validator( new Factory($schemaStorage) );
       $jsonValidator->validate($data, $jsonSchemaObject, Constraint::CHECK_MODE_APPLY_DEFAULTS);
