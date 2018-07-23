@@ -7,6 +7,7 @@ use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\ArrayInput;
 
 use AppBundle\Controller\BagitController;
 
@@ -90,6 +91,16 @@ class BagitValidationCommand extends ContainerAwareCommand
           $output->writeln('<error>' . $value . '</error>');
         }
       }
+
+      $command = $this->getApplication()->find('app:files-validate');
+
+      $arguments = array(
+          'command' => 'app:files-validate',
+          'localpath'    => $directory_to_validate
+      );
+
+      $greetInput = new ArrayInput($arguments);
+      $returnCode = $command->run($greetInput, $output);
     }
 
     // If there's no $directory_to_validate, display a message.
