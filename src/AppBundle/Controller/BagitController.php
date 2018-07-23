@@ -61,7 +61,9 @@ class BagitController extends Controller
     $this->bagit_path = __DIR__ . '/../../../vendor/scholarslab/bagit/lib/bagit.php';
 
     // TODO: move this to parameters.yml and bind in services.yml.
-    $this->uploads_directory = __DIR__ . '/../../../web/uploads/repository/';
+    $ds = DIRECTORY_SEPARATOR;
+    // $this->uploads_directory = $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
+    $this->uploads_directory = __DIR__ . '' . $ds . '..' . $ds . '..' . $ds . '..' . $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
 
     $this->bag_files_sha1 = array(
       'bag-info.txt',
