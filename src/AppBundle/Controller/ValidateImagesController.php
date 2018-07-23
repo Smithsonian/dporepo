@@ -113,7 +113,7 @@ class ValidateImagesController extends Controller
         // $this->u->dumper($file->getMTime());
 
         // Get the job ID, so errors can be logged to the database.
-        $dir_array = explode('/', $localpath);
+        $dir_array = explode(DIRECTORY_SEPARATOR, $localpath);
         $job_id = array_pop($dir_array);
 
         if($file->getSize() === 0) {
@@ -148,7 +148,7 @@ class ValidateImagesController extends Controller
         // Log the errors to the database.
         $this->log_errors(
           array(
-            'job_id' => $job_id,
+            'job_id' => (int)$job_id,
             'user_id' => 0,
             'errors' => $data[$i]['errors'],
           ),
@@ -163,7 +163,7 @@ class ValidateImagesController extends Controller
     $this->repo_storage_controller->setContainer($container);
     $this->repo_storage_controller->execute('saveRecord', array(
       'base_table' => 'job',
-      'record_id' => $job_id,
+      'record_id' => (int)$job_id,
       'user_id' => 0,
       'values' => array(
         'job_status' => $job_status,

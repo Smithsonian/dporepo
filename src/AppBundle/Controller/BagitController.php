@@ -277,7 +277,7 @@ class BagitController extends Controller
     }
 
     // Get the job ID, so errors can be logged to the database.
-    $dir_array = explode('/', $data->localpath);
+    $dir_array = explode(DIRECTORY_SEPARATOR, $data->localpath);
     $data->job_id = array_pop($dir_array);
 
     // Validate that all of the BagIt files exist.
