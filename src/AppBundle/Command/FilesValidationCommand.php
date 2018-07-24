@@ -29,15 +29,12 @@ class FilesValidationCommand extends ContainerAwareCommand
       // The name of the command (the part after "bin/console").
       ->setName('app:files-validate')
       // The short description shown while running "php bin/console list".
-      ->setDescription('Validates files.')
+      ->setDescription('Validate uploaded files.')
       // The full command description shown when running the command with
       // the "--help" option.
-      ->setHelp('This command allows you to validate files.')
+      ->setHelp('This command validates the integrity of uploaded files.')
       // Add arguments...
       ->addArgument('localpath', InputArgument::OPTIONAL, 'The path to the directory to validate.');
-      // ->addArgument('create_data_dir', InputArgument::OPTIONAL, 'Create a data directory? Default: true')
-      // ->addArgument('overwrite_manifest', InputArgument::OPTIONAL, 'Overwrite the manifest? Default: false')
-      // ->addArgument('flag_warnings_as_errors', InputArgument::OPTIONAL, 'Flag warnings as errors. Default: false');
   }
 
   /**
@@ -52,27 +49,17 @@ class FilesValidationCommand extends ContainerAwareCommand
     // Outputs multiple lines to the console (adding "\n" at the end of each line).
     $output->writeln([
       '',
-      '<bg=green;options=bold>  =================  </>',
-      '<bg=green;options=bold>   Files Validator   </>',
-      '<bg=green;options=bold>  =================  </>',
+      '<bg=blue;options=bold>                   </>',
+      '<bg=blue;options=bold> Files Validator   </>',
+      '<bg=blue;options=bold> ================= </>',
       '',
     ]);
 
-    // If a localpath is passed, use it as the path to the files to validate.
-    if ( !empty($input->getArgument('localpath')) ) {
-      $directory_to_validate = $input->getArgument('localpath');
-    }
-
-    // If a localpath is NOT passed, check the database for a job with the 'job_status' set to 'in progress'.
-    if ( empty($input->getArgument('localpath')) ) {
-      $directory_to_validate = $this->validate_images->needs_validation_checker($container);
-    }
-
-    if (!empty($directory_to_validate)) {
+    if (!empty($input->getArgument('localpath'))) {
 
       // Parameters to pass to the validate_images method.
       $params = array(
-        'localpath' => $directory_to_validate,
+        'localpath' => $input->getArgument('localpath'),
       );
 
       // Run the validation.
@@ -99,8 +86,8 @@ class FilesValidationCommand extends ContainerAwareCommand
 
     }
 
-    // If there's no $directory_to_validate, display a message.
-    if(empty($directory_to_validate)) {
+    // If there's no $input->getArgument('localpath'), display a message.
+    if(empty($input->getArgument('localpath'))) {
       $output->writeln('<comment>No jobs found to validate</comment>');
     }   
   }

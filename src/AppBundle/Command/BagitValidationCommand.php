@@ -30,15 +30,12 @@ class BagitValidationCommand extends ContainerAwareCommand
       // The name of the command (the part after "bin/console").
       ->setName('app:bagit-validate')
       // The short description shown while running "php bin/console list".
-      ->setDescription('Validates a bag.')
+      ->setDescription('Validate a bag created via BagIt.')
       // The full command description shown when running the command with
       // the "--help" option.
-      ->setHelp('This command allows you to validate a BagIt "bag", which consists of a "payload" (the arbitrary content) and "tags", which are metadata files intended to document the storage and transfer of the "bag".')
+      ->setHelp('This command validates a BagIt "bag", which consists of a "payload" (the arbitrary content) and "tags", which are metadata files intended to document the storage and transfer of the "bag".')
       // Add arguments...
       ->addArgument('localpath', InputArgument::OPTIONAL, 'The path to the directory to validate.');
-      // ->addArgument('create_data_dir', InputArgument::OPTIONAL, 'Create a data directory? Default: true')
-      // ->addArgument('overwrite_manifest', InputArgument::OPTIONAL, 'Overwrite the manifest? Default: false')
-      // ->addArgument('flag_warnings_as_errors', InputArgument::OPTIONAL, 'Flag warnings as errors. Default: false');
   }
 
   /**
@@ -53,27 +50,17 @@ class BagitValidationCommand extends ContainerAwareCommand
     // Outputs multiple lines to the console (adding "\n" at the end of each line).
     $output->writeln([
       '',
-      '<bg=green;options=bold>  =================  </>',
-      '<bg=green;options=bold>   BagIt Validator   </>',
-      '<bg=green;options=bold>  =================  </>',
+      '<bg=blue;options=bold>                   </>',
+      '<bg=blue;options=bold> BagIt Validator   </>',
+      '<bg=blue;options=bold> ================= </>',
       '',
     ]);
 
-    // If a localpath is passed, use it as the path to the files to validate.
-    if ( !empty($input->getArgument('localpath')) ) {
-      $directory_to_validate = $input->getArgument('localpath');
-    }
-
-    // If a localpath is NOT passed, check the database for a job with the 'job_status' set to 'in progress'.
-    if ( empty($input->getArgument('localpath')) ) {
-      $directory_to_validate = $this->bagit->needs_validation_checker($container);
-    }
-
-    if (!empty($directory_to_validate)) {
+    if (!empty($input->getArgument('localpath'))) {
 
       // Parameters to pass to the bagit_validate method.
       $params = array(
-        'localpath' => $directory_to_validate,
+        'localpath' => $input->getArgument('localpath'),
         'flag_warnings_as_errors' => false,
       );
 
@@ -92,19 +79,10 @@ class BagitValidationCommand extends ContainerAwareCommand
         }
       }
 
-      $command = $this->getApplication()->find('app:files-validate');
-
-      $arguments = array(
-          'command' => 'app:files-validate',
-          'localpath'    => $directory_to_validate
-      );
-
-      $greetInput = new ArrayInput($arguments);
-      $returnCode = $command->run($greetInput, $output);
     }
 
-    // If there's no $directory_to_validate, display a message.
-    if(empty($directory_to_validate)) {
+    // If there's no $input->getArgument('localpath'), display a message.
+    if(empty($input->getArgument('localpath'))) {
       $output->writeln('<comment>No jobs found to validate</comment>');
     }   
   }
