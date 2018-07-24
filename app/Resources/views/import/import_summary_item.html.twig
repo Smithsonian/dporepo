@@ -112,7 +112,7 @@
               {% else %}
                 <ol class="list-unstyled">
                   {% for bagit_validation_error in project.bagit_validation_errors %}
-                    <li class="text-danger"><strong>{{ bagit_validation_error.job_log_description }}</li>
+                    <li class="text-danger"><strong>{{ bagit_validation_error.job_log_description }}</strong></li>
                   {% else %}
                     <li class="text-success"><strong><span class="glyphicon glyphicon-ok"></span> No BagIt validation errors found.</strong></li>
                   {% endfor %}
@@ -125,7 +125,7 @@
               {% else %}
                 <ol class="list-unstyled">
                   {% for image_validation_error in project.image_validation_errors %}
-                    <li class="text-danger"><strong>{{ image_validation_error.job_log_description }}</li>
+                    <li class="text-danger"><strong>{{ image_validation_error.job_log_description }}</strong></li>
                   {% else %}
                     <li class="text-success"><strong><span class="glyphicon glyphicon-ok"></span> No image validation errors found.</strong></li>
                   {% endfor %}
