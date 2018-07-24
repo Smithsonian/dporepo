@@ -28,13 +28,15 @@
               <dt>Uploaded By:</dt>
                 <dd>{{ project.username }}</dd>
             {% endif %}
+            <dt>Job Status:</dt>
             {% if project.job_status is defined %}
-              <dt>Job Status:</dt>
               {% if project.job_status == 'failed' %}
                 <dd class="text-danger"><strong>{{ project.job_status }}</strong> (see below for details)</dd>
               {% else %}
                 <dd class="text-success"><strong>{{ project.job_status }}</strong></dd>
               {% endif %}
+            {% else %}
+              <dd>in progress</dd>
             {% endif %}
           </dl>
         </div>

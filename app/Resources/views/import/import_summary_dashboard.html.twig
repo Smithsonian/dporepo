@@ -831,37 +831,40 @@
       // $(".file-row").find('.progress').removeClass('progress-striped active').addClass('progress-bar-success');
 
       // Redirect to the Upload overview page
-      setTimeout(function() {
-        let parentRecordId = parentRecordChecker();
-        let parentProjectId = $('#uploads_parent_picker_form_parent_picker').attr('data-project-id');
-        // Get the parent record type.
-        let parentRecordType = getRecordType();
-        jobId = $('.prevalidate-trigger').attr('data-jobid');
-
-        // Process and import the CSV files.
-        $.ajax({
-          'type': 'GET'
-          ,'dataType': 'json'
-          ,'url': '/admin/import_csv/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType
-          ,success: function(result) {
-            if(result && result.length) {
-              // Redirect to the Upload overview page.
-              document.location.href = '/admin/import/' + jobId + '/' + parentProjectId;
-            } else {
-              $('#uploading-modal').modal('hide');
-
-              swal({
-                title: 'Error',
-                text: 'CSV import failed',
-                icon: 'warning',
-              });
-
-              $('.start').attr('disabled', 'disabled');
-            }
-          }
-        });
+      // setTimeout(function() {
         
-      }, 1500);
+        let jobId = $('.prevalidate-trigger').attr('data-jobid'),
+            parentProjectId = $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
+            parentRecordId = parentRecordChecker(),
+            parentRecordType = getRecordType();
+        
+        // Redirect to the Upload overview page.
+        document.location.href = '/admin/import/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
+
+        // // Process and import the CSV files.
+        // $.ajax({
+        //   'type': 'GET'
+        //   ,'dataType': 'json'
+        //   ,'url': '/admin/import_csv/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType
+        //   ,success: function(result) {
+        //     if(result && result.length) {
+        //       // Redirect to the Upload overview page.
+        //       document.location.href = '/admin/import/' + jobId + '/' + parentProjectId;
+        //     } else {
+        //       $('#uploading-modal').modal('hide');
+
+        //       swal({
+        //         title: 'Error',
+        //         text: 'CSV import failed',
+        //         icon: 'warning',
+        //       });
+
+        //       $('.start').attr('disabled', 'disabled');
+        //     }
+        //   }
+        // });
+        
+      // }, 1500);
       
     });
 

@@ -612,15 +612,20 @@ class ImportController extends Controller
     }
     
     /**
-     * @Route("/admin/import/{id}/{project_id}", name="import_summary_details", methods="GET")
+     * @Route("/admin/import/{id}/{project_id}/{parent_record_id}/{parent_record_type}", name="import_summary_details", defaults={"id" = null, "project_id" = null, "parent_record_id" = null, "parent_record_type" = null}, methods="GET")
      *
      * @param int $id Project ID
      * @param object $conn Database connection object
      * @param object $project ProjectsController class
      * @param object $request Symfony's request object
      */
-    public function import_summary_details($id, $project_id, Connection $conn, ProjectsController $project, Request $request, DatasetElementsController $data_elements_controller, ValidateImagesController $images)
+    public function import_summary_details($id, $project_id, $parent_record_id, $parent_record_type, Connection $conn, ProjectsController $project, Request $request, DatasetElementsController $data_elements_controller, ValidateImagesController $images)
     {
+
+      // $this->u->dumper($id,0);
+      // $this->u->dumper($project_id,0);
+      // $this->u->dumper($parent_record_id,0);
+      // $this->u->dumper($parent_record_type);
 
       $project = [];
       $project['file_validation_errors'] = [];
@@ -648,113 +653,118 @@ class ImportController extends Controller
       if (!empty($id)) {
         // Get job import data (query the 'job_import_record' table).
         $job_record_data = $this->repo_storage_controller->execute('getImportedItems', array('job_id' => (int)$id));
-        // If a record is found within the 'job_import_record' table, fetch the remaining data (uploaded files, file validation errors).
-        if ($job_record_data) {
 
+        // If a record is NOT found within the 'job_import_record' table, add a message.
+        if (!$job_record_data) {
+          $this->addFlash('message', '<span class="glyphicon glyphicon-ok"></span> Files have been successfully uploaded. Validations and metadata ingests are currently in progress.');
+        }
+
+        // If a record is found within the 'job_import_record' table, add it to the $project array.
+        if ($job_record_data) {
           // Merge job_record_data into $project.
           $project = array_merge($project, $job_record_data);
-
-          // Check for uploaded files.
-          $dir = $this->uploads_directory . (int)$id . '/';
-          $project['uploaded_files'] = (is_dir($dir) && is_readable($dir)) ? true : false;
-
-          // Get CSV data.
-          $project['csv'] = array();
-          $project['csv_row_count'] = array();
-          $finder = new Finder();
-          $finder->files()->name('*.csv');
-          foreach ($finder->in($dir) as $file) {
-            $project['csv'][$file->getBasename()] = $this->construct_import_data($dir, $file->getBasename());
-            $project['csv_row_count'][$file->getBasename()] = count($project['csv'][$file->getBasename()]);
-          }
-          // If there's csv data, encode to JSON so it can be passed on to Handsontables (JavaScript).
-          if(isset($project['csv'])) {
-            $project['csv'] = json_encode($project['csv']);
-            $project['csv_row_count'] = json_encode($project['csv_row_count']);
-          }
-
-          // Get bagit validation errors if they exist.
-          $project['bagit_validation_errors'] = $this->repo_storage_controller->execute('getRecords', array(
-              'base_table' => 'job_log',
-              'fields' => array(),
-              'search_params' => array(
-                array(
-                  'field_names' => array(
-                    'job_id'
-                  ),
-                  'search_values' => array(
-                    (int)$id
-                  ),
-                  'comparison' => '='
-                ),
-                array(
-                  'field_names' => array(
-                    'job_log_status'
-                  ),
-                  'search_values' => array(
-                    'error'
-                  ),
-                  'comparison' => '='
-                ),
-                array(
-                  'field_names' => array(
-                    'job_log_label'
-                  ),
-                  'search_values' => array(
-                    'BagIt Validation'
-                  ),
-                  'comparison' => '='
-                )
-              ),
-              'search_type' => 'AND',
-              'sort_fields' => array(
-                0 => array('field_name' => 'date_created')
-              ),
-              'omit_active_field' => true,
-            )
-          );
-
-          // Get image validation errors if they exist.
-          $project['image_validation_errors'] = $this->repo_storage_controller->execute('getRecords', array(
-              'base_table' => 'job_log',
-              'fields' => array(),
-              'search_params' => array(
-                array(
-                  'field_names' => array(
-                    'job_id'
-                  ),
-                  'search_values' => array(
-                    (int)$id
-                  ),
-                  'comparison' => '='
-                ),
-                array(
-                  'field_names' => array(
-                    'job_log_status'
-                  ),
-                  'search_values' => array(
-                    'error'
-                  ),
-                  'comparison' => '='
-                ),
-                array(
-                  'field_names' => array(
-                    'job_log_label'
-                  ),
-                  'search_values' => array(
-                    'Image Validation'
-                  ),
-                  'comparison' => '='
-                )
-              ),
-              'search_type' => 'AND',
-              'sort_fields' => array(
-                0 => array('field_name' => 'date_created')
-              ),
-              'omit_active_field' => true,
-            )
-          );
         }
+
+        // Check for uploaded files.
+        $dir = $this->uploads_directory . (int)$id . '/';
+        $project['uploaded_files'] = (is_dir($dir) && is_readable($dir)) ? true : false;
+
+        // Get CSV data.
+        $project['csv'] = array();
+        $project['csv_row_count'] = array();
+        $finder = new Finder();
+        $finder->files()->name('*.csv');
+        foreach ($finder->in($dir) as $file) {
+          $project['csv'][$file->getBasename()] = $this->construct_import_data($dir, $file->getBasename());
+          $project['csv_row_count'][$file->getBasename()] = count($project['csv'][$file->getBasename()]);
+        }
+        // If there's csv data, encode to JSON so it can be passed on to Handsontables (JavaScript).
+        if(isset($project['csv'])) {
+          $project['csv'] = json_encode($project['csv']);
+          $project['csv_row_count'] = json_encode($project['csv_row_count']);
+        }
+
+        // Get bagit validation errors if they exist.
+        $project['bagit_validation_errors'] = $this->repo_storage_controller->execute('getRecords', array(
+            'base_table' => 'job_log',
+            'fields' => array(),
+            'search_params' => array(
+              array(
+                'field_names' => array(
+                  'job_id'
+                ),
+                'search_values' => array(
+                  (int)$id
+                ),
+                'comparison' => '='
+              ),
+              array(
+                'field_names' => array(
+                  'job_log_status'
+                ),
+                'search_values' => array(
+                  'error'
+                ),
+                'comparison' => '='
+              ),
+              array(
+                'field_names' => array(
+                  'job_log_label'
+                ),
+                'search_values' => array(
+                  'BagIt Validation'
+                ),
+                'comparison' => '='
+              )
+            ),
+            'search_type' => 'AND',
+            'sort_fields' => array(
+              0 => array('field_name' => 'date_created')
+            ),
+            'omit_active_field' => true,
+          )
+        );
+
+        // Get image validation errors if they exist.
+        $project['image_validation_errors'] = $this->repo_storage_controller->execute('getRecords', array(
+            'base_table' => 'job_log',
+            'fields' => array(),
+            'search_params' => array(
+              array(
+                'field_names' => array(
+                  'job_id'
+                ),
+                'search_values' => array(
+                  (int)$id
+                ),
+                'comparison' => '='
+              ),
+              array(
+                'field_names' => array(
+                  'job_log_status'
+                ),
+                'search_values' => array(
+                  'error'
+                ),
+                'comparison' => '='
+              ),
+              array(
+                'field_names' => array(
+                  'job_log_label'
+                ),
+                'search_values' => array(
+                  'Image Validation'
+                ),
+                'comparison' => '='
+              )
+            ),
+            'search_type' => 'AND',
+            'sort_fields' => array(
+              0 => array('field_name' => 'date_created')
+            ),
+            'omit_active_field' => true,
+          )
+        );
 
       }
 
