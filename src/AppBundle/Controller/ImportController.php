@@ -87,6 +87,8 @@ class ImportController extends Controller
     public function import_csv($params = array())
     {
 
+      // $this->u->dumper($params);
+
       $return = $csv_types = array();
 
       // If $params are empty, return an error.
@@ -105,7 +107,18 @@ class ImportController extends Controller
       // TODO: insert errors into the database (job_log table).
       if (!empty($return['errors'])) return $return;
 
-      // $this->u->dumper($params);
+      $this->repo_storage_controller->setContainer($this->container);
+      
+      $job_data = $this->repo_storage_controller->execute('getRecord', array(
+          'base_table' => 'job',
+          'id_field' => 'job_id',
+          'id_value' => $params['job_id'],
+          'omit_active_field' => true,
+        )
+      );
+
+      // Don't perform the metadata ingest if the job_status has been set to 'failed'.
+      if ($job_data['job_status'] === 'failed') return $return;
 
       // Clear session data.
       $session = new Session();
@@ -113,8 +126,6 @@ class ImportController extends Controller
       $session->remove('new_repository_ids_2');
       $session->remove('new_repository_ids_3');
       $session->remove('new_repository_ids_4');
-
-      $this->repo_storage_controller->setContainer($this->container);
 
       // Set the job type (e.g. subjects metadata import, items metadata import, capture datasets metadata import, models metadata import).
       $job_data = $this->repo_storage_controller->execute('getRecord', array(
@@ -686,21 +697,16 @@ class ImportController extends Controller
 
       // Get the total number of Item records for the import.
       if (!empty($job_id)) {
+
         // Get job import data (query the 'job_import_record' table).
         $job_record_data = $this->repo_storage_controller->execute('getImportedItems', array('job_id' => (int)$job_id));
 
-        // If a record is NOT found within the 'job_import_record' table, add a message.
-        if (!$job_record_data || ($job_data['job_status'] !== 'complete')) {
+        // If a record is NOT found within the 'job_import_record' table, add a message and execute validations and metadata ingests.
+        if (!$job_record_data && ($job_data['job_status'] !== 'failed') && ($job_data['job_status'] !== 'complete')) {
+
           $this->addFlash('message', '<span class="glyphicon glyphicon-ok"></span> Files have been successfully uploaded. Validations and metadata ingests are currently in progress.');
 
-          // Kick off validations and metadata ingests.
-          // $params = array(
-          //   'job_id' => $job_id,
-          //   'parent_project_id' => $parent_project_id,
-          //   'parent_record_id' => $parent_record_id,
-          //   'parent_record_type' => $parent_record_type
-          // );
-
+          // Execute validations and metadata ingests.
           $application = new Application($kernel);
           $application->setAutoExit(false);
 
@@ -729,7 +735,20 @@ class ImportController extends Controller
           // $this->u->dumper($res);
         }
 
-        // If a record is found within the 'job_import_record' table, add it to the $project array.
+        // If a query result is produced against the 'job_import_record' table, add to the $project array.
+        // Example query result:
+        // {
+        //     "subjects_total": "5",
+        //     "items_total": "8",
+        //     "capture_datasets_total": "3",
+        //     "models_total": "2",
+        //     "record_table": "subject",
+        //     "job_label": "Metadata Import: \"Space Shuttle Discovery\"",
+        //     "date_created": "2018-07-25 18:03:36",
+        //     "date_completed": "2018-07-25 18:03:40",
+        //     "job_status": "complete",
+        //     "username": "ghalusa"
+        // }
         if ($job_record_data) {
           // Merge job_record_data into $project.
           $project = array_merge($project, $job_record_data);

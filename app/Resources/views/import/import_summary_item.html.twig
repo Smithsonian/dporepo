@@ -29,13 +29,13 @@
                 <dd>{{ project.username }}</dd>
             {% endif %}
             <dt>Job Status:</dt>
-            {% if project.job_status is defined %}
-              {% if project.job_status == 'failed' %}
-                <dd class="text-danger"><strong>{{ project.job_status }}</strong> (see below for details)</dd>
-              {% elseif project.job_status == 'complete' %}
-                <dd class="text-success"><strong>{{ project.job_status }}</strong></dd>
+            {% if job_data.job_status is defined %}
+              {% if job_data.job_status == 'failed' %}
+                <dd class="text-danger"><strong>{{ job_data.job_status }}</strong> (see below for details)</dd>
+              {% elseif job_data.job_status == 'complete' %}
+                <dd class="text-success"><strong>{{ job_data.job_status }}</strong></dd>
               {% else %}
-                <dd>{{ project.job_status }}</dd>
+                <dd>{{ job_data.job_status }}</dd>
               {% endif %}
             {% endif %}
           </dl>
@@ -105,11 +105,11 @@
         </div>
       </div>
       <div class="col-sm-6 col-md-6">
-        {% if project.job_status is defined %}
+        {% if job_data.job_status is defined %}
           <div class="panel panel-default">
             <div class="panel-body">
               <h3>BagIt Validation Results</h3>
-              {% if not project.bagit_validation_errors and project.job_status == 'in progress' %}
+              {% if not project.bagit_validation_errors and job_data.job_status == 'in progress' %}
                 <p><span class="glyphicon glyphicon-time"></span> Validation pending. Please check back shortly.</p>
               {% else %}
                 <ol class="list-unstyled">
@@ -122,7 +122,7 @@
               {% endif %}
               <hr>
               <h3>Image Validation Results</h3>
-              {% if not project.image_validation_errors and project.job_status == 'in progress' or project.job_status == 'bagit validation completed' %}
+              {% if not project.image_validation_errors and job_data.job_status == 'in progress' or job_data.job_status == 'bagit validation completed' %}
                 <p><span class="glyphicon glyphicon-time"></span> Image validation pending. Please check back shortly.</p>
               {% else %}
                 <ol class="list-unstyled">
