@@ -8,6 +8,7 @@ use Symfony\Component\Finder\Finder;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 use AppBundle\Controller\RepoStorageHybridController;
+use AppBundle\Service\RepoValidateData;
 
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
@@ -33,6 +34,11 @@ class BagitController extends Controller
   private $repo_storage_controller;
 
   /**
+   * @var object $repoValidate
+   */
+  private $repoValidate;
+
+  /**
    * @var array $bag_files_sha1
    */
   private $bag_files_sha1;
@@ -56,6 +62,7 @@ class BagitController extends Controller
 
     $this->u = new AppUtilities();
     $this->repo_storage_controller = new RepoStorageHybridController;
+    $this->repoValidate = new RepoValidateData();
     $this->token_storage = $token_storage;
 
     $this->bagit_path = __DIR__ . '/../../../vendor/scholarslab/bagit/lib/bagit.php';
@@ -78,46 +85,6 @@ class BagitController extends Controller
       'manifest-md5.txt',
       'tagmanifest-md5.txt',
     );
-  }
-
-  /**
-   * @param object $container The container.
-   * @return array The next directory to validate.
-   */
-  public function needs_validation_checker($container) {
-
-    $directory = null;
-
-    // Check the database to find the next job which hasn't had a BagIt validation performed against it.
-    $this->repo_storage_controller->setContainer($container);
-    $data = $this->repo_storage_controller->execute('getRecords', array(
-        'base_table' => 'job',
-        'fields' => array(),
-        'search_params' => array(
-          0 => array(
-            'field_names' => array(
-              'job_status'
-            ),
-            'search_values' => array(
-              'in progress'
-            ),
-            'comparison' => '='
-          )
-        ),
-        'search_type' => 'AND',
-        'sort_fields' => array(
-          0 => array('field_name' => 'date_created')
-        ),
-        'limit' => array('limit_start' => 1),
-        'omit_active_field' => true,
-      )
-    );
-
-    if(!empty($data)) {
-      $directory = $this->uploads_directory . $data[0]['job_id'];
-    }
-
-    return $directory;
   }
 
   /**
@@ -236,10 +203,11 @@ class BagitController extends Controller
 
     // Log errors to the database.
     if(isset($return['errors']) && !empty($return['errors'])) {
-      $this->log_errors(
+      $this->repoValidate->log_errors(
         array(
           'job_id' => $data->job_id,
           'user_id' => 0,
+          'job_log_label' => 'BagIt Validation',
           'errors' => $return['errors'],
         ),
         $container
@@ -421,7 +389,7 @@ class BagitController extends Controller
 
     // Log errors to the database.
     if(isset($return['errors']) && !empty($return['errors'])) {
-      $this->log_errors(
+      $this->repoValidate->log_errors(
         array(
           'job_id' => $data->job_id,
           'user_id' => 0,
@@ -544,31 +512,6 @@ class BagitController extends Controller
     foreach($package_files as $filename) {
       if((!in_array($filename, $this->bag_files_sha1) || !in_array($filename, $this->bag_files_md5)) && !strstr($filename, '.csv')) {
         rename($package_dir . '/' . $filename, $package_dir . '/data/' . $filename);
-      }
-    }
-
-  }
-
-  /**
-   * @param array $params Parameters for inserting into the database.
-   * @param object $container The container.
-   * @return null
-   */
-  public function log_errors($params = array(), $container) {
-
-    if(!empty($params)) {
-      foreach ($params['errors'] as $ekey => $error) {
-        $this->repo_storage_controller->setContainer($container);
-        $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
-          'base_table' => 'job_log',
-          'user_id' => $params['user_id'],
-          'values' => array(
-            'job_id' => $params['job_id'],
-            'job_log_status' => 'error',
-            'job_log_label' => 'BagIt Validation',
-            'job_log_description' => $error,
-          )
-        ));
       }
     }
 

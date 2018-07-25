@@ -272,6 +272,73 @@ class RepoValidateData implements RepoValidate {
     return $return;
   }
 
+  /**
+   * @param string $status The status text to check for.
+   * @param string $uploads_directory The uploads directory.
+   * @param object $container The container.
+   * @return array The next directory to validate.
+   */
+  public function needs_validation_checker($status = null, $uploads_directory = null, $container) {
+
+    $directory = null;
+
+    // Check the database to find the next job which hasn't had a BagIt validation performed against it.
+    $this->repo_storage_controller->setContainer($container);
+    $data = $this->repo_storage_controller->execute('getRecords', array(
+        'base_table' => 'job',
+        'fields' => array(),
+        'search_params' => array(
+          0 => array(
+            'field_names' => array(
+              'job_status'
+            ),
+            'search_values' => array(
+              $status
+            ),
+            'comparison' => '='
+          )
+        ),
+        'search_type' => 'AND',
+        'sort_fields' => array(
+          0 => array('field_name' => 'date_created')
+        ),
+        'limit' => array('limit_start' => 1),
+        'omit_active_field' => true,
+      )
+    );
+
+    if(!empty($data)) {
+      $directory = $uploads_directory . $data[0]['job_id'];
+    }
+
+    return $directory;
+  }
+
+  /**
+   * @param array $params Parameters for inserting into the database.
+   * @param object $container The container.
+   * @return null
+   */
+  public function log_errors($params = array(), $container) {
+
+    if(!empty($params)) {
+      foreach ($params['errors'] as $ekey => $error) {
+        $this->repo_storage_controller->setContainer($container);
+        $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_log',
+          'user_id' => $params['user_id'],
+          'values' => array(
+            'job_id' => $params['job_id'],
+            'job_log_status' => 'error',
+            'job_log_label' => 'Image Validation',// $params['job_log_label']
+            'job_log_description' => $error,
+          )
+        ));
+      }
+    }
+
+  }
+
   public function dumper($data = false, $die = true, $ip_address=false){
     if(!$ip_address || $ip_address == $_SERVER["REMOTE_ADDR"]){
       echo '<pre>';

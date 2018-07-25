@@ -11,6 +11,19 @@ use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
+// For running a console command from a controller.
+// See: https://symfony.com/doc/3.4/console/command_in_controller.html
+use Symfony\Bundle\FrameworkBundle\Console\Application;
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Output\NullOutput;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\KernelInterface;
+// use Symfony\Component\Console\Output\BufferedOutput;
+
+use AppBundle\Controller\ItemsController;
+use AppBundle\Controller\DatasetsController;
+use AppBundle\Controller\ModelController;
+
 // use Psr\Log\LoggerInterface;
 
 use AppBundle\Form\UploadsParentPickerForm;
@@ -38,18 +51,25 @@ class ImportController extends Controller
 
     private $repo_storage_controller;
     private $tokenStorage;
-
+    private $itemsController;
+    private $datasetsController;
+    private $modelsController;
 
     /**
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, RepoStorageHybridController $repo_storage_controller, TokenStorageInterface $tokenStorage) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, RepoStorageHybridController $repo_storage_controller, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = $repo_storage_controller;
         $this->tokenStorage = $tokenStorage;
+
+        $this->itemsController = $itemsController;
+        $this->datasetsController = $datasetsController;
+        $this->modelsController = $modelsController;
+
         // $this->logger = $logger;
         // Usage:
         // $this->logger->info('Import started. Job ID: ' . $job_id);
@@ -60,19 +80,33 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/import_csv/{job_id}/{parent_project_id}/{parent_record_id}/{parent_record_type}", name="import_csv", defaults={"job_id" = null, "parent_project_id" = null, "parent_record_id" = null, "parent_record_type" = null}, methods="GET")
+     * Import CSV
      *
-     * @param int $job_id Job ID
-     * @param int $parent_project_id Project ID
-     * @param int $parent_record_id Parent record ID
-     * @param string $parent_record_type Parent record type
-     * @param object $request Symfony's request object
-     * @param object $itemsController ItemsController class
-     * @param object $datasetsController DatasetsController class
-     * @param object $modelsController ModelController class
+     * @param array $params Parameters: job_id, project_id, parent_record_id, parent_record_type
      */
-    public function import_csv($job_id, $parent_project_id, $parent_record_id, $parent_record_type, Request $request, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController)
+    public function import_csv($params = array())
     {
+
+      $return = $csv_types = array();
+
+      // If $params are empty, return an error.
+      if(empty($params)) {
+        $return['errors'][] = 'Parameters are empty';
+      } else {
+        // If $params values are empty, return errors.
+        foreach ($params as $pkey => $pvalue) {
+          if (empty($pvalue)) {
+            $return['errors'][] = $pkey . ' is empty';
+          }
+        }
+      }
+
+      // If there are errors, return now.
+      // TODO: insert errors into the database (job_log table).
+      if (!empty($return['errors'])) return $return;
+
+      // $this->u->dumper($params);
+
       // Clear session data.
       $session = new Session();
       $session->remove('new_repository_ids_1');
@@ -80,27 +114,25 @@ class ImportController extends Controller
       $session->remove('new_repository_ids_3');
       $session->remove('new_repository_ids_4');
 
-      $job_log_ids = $csv_types = array();
-
       $this->repo_storage_controller->setContainer($this->container);
 
       // Set the job type (e.g. subjects metadata import, items metadata import, capture datasets metadata import, models metadata import).
       $job_data = $this->repo_storage_controller->execute('getRecord', array(
           'base_table' => 'job',
           'id_field' => 'job_id',
-          'id_value' => $job_id,
+          'id_value' => $params['job_id'],
           'omit_active_field' => true,
         )
       );
       // Throw a 404 if the job record doesn't exist.
       if (!$job_data) throw $this->createNotFoundException('The Job record doesn\'t exist');
 
-      if (!empty($job_id) && !empty($parent_project_id) && !empty($parent_record_id) && !empty($parent_record_type)) {
+      if (!empty($params['job_id']) && !empty($params['parent_project_id']) && !empty($params['parent_record_id']) && !empty($params['parent_record_type'])) {
 
         $ids = (object)array(
-          'job_id' => $job_id,
-          'parent_project_id' => $parent_project_id,
-          'parent_record_id' => $parent_record_id,
+          'job_id' => $params['job_id'],
+          'parent_project_id' => $params['parent_project_id'],
+          'parent_record_id' => $params['parent_record_id'],
         );
 
         // Remove 'metadata import' from the $job_data['job_type'].
@@ -108,7 +140,7 @@ class ImportController extends Controller
 
         if (!empty($job_type)) {
           // Prepare the data.
-          $data = $this->prepare_data($job_type, $this->uploads_directory . $ids->job_id, $itemsController, $datasetsController, $modelsController);
+          $data = $this->prepare_data($job_type, $this->uploads_directory . $ids->job_id, $this->itemsController, $this->datasetsController, $this->modelsController);
 
           // Ingest data.
           if (!empty($data)) {
@@ -138,7 +170,7 @@ class ImportController extends Controller
 
               // Don't perform an ingest without CSV data (an empty CSV).
               if(isset($csv_value['csv'])) {
-                $job_log_ids = $this->ingest_csv_data($csv_value, $ids, $parent_record_type, $i);
+                $return['job_log_ids'] = $this->ingest_csv_data($csv_value, $ids, $params['parent_record_type'], $i);
               }
 
               $i++;
@@ -148,10 +180,10 @@ class ImportController extends Controller
       }
 
       // Update the job table to indicate that the CSV import failed.
-      if (!empty($job_id) && empty($job_log_ids)) {
+      if (!empty($params['job_id']) && empty($return['job_log_ids'])) {
         $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'job',
-          'record_id' => $job_id,
+          'record_id' => $params['job_id'],
           'user_id' => $this->getUser()->getId(),
           'values' => array(
             'job_status' => 'failed',
@@ -161,13 +193,13 @@ class ImportController extends Controller
           )
         ));
       } else {
-        // Update the job table to set the status from 'uploading' to 'in progress'.
+        // Update the job table to set the status from 'uploading' to 'complete'.
         $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'job',
-          'record_id' => $job_id,
+          'record_id' => $params['job_id'],
           'user_id' => $this->getUser()->getId(),
           'values' => array(
-            'job_status' => 'in progress',
+            'job_status' => 'complete',
             'date_completed' => date('Y-m-d H:i:s'),
             'qa_required' => 0,
             'qa_approved_time' => null,
@@ -175,9 +207,9 @@ class ImportController extends Controller
         ));
       }
 
-      $this->addFlash('message', '<strong>Upload Succeeded!</strong> Files will be validated shortly. The validation scheduled task runs every 30 seconds, but it may take time to grind through the validation process. Please check back!');
+      // $this->addFlash('message', '<strong>Upload Succeeded!</strong> Files will be validated shortly. The validation scheduled task runs every 30 seconds, but it may take time to grind through the validation process. Please check back!');
 
-      return $this->json($job_log_ids);
+      return $return;
     }
 
     /**
@@ -612,18 +644,21 @@ class ImportController extends Controller
     }
     
     /**
-     * @Route("/admin/import/{id}/{project_id}/{parent_record_id}/{parent_record_type}", name="import_summary_details", defaults={"id" = null, "project_id" = null, "parent_record_id" = null, "parent_record_type" = null}, methods="GET")
+     * @Route("/admin/import/{job_id}/{parent_project_id}/{parent_record_id}/{parent_record_type}", name="import_summary_details", defaults={"job_id" = null, "parent_project_id" = null, "parent_record_id" = null, "parent_record_type" = null}, methods="GET")
      *
-     * @param int $id Project ID
+     * @param int $job_id Job ID
+     * @param int $parent_project_id Parent Project ID
+     * @param int $parent_record_id Parent Record ID
+     * @param int $parent_record_type Parent Record Type
      * @param object $conn Database connection object
      * @param object $project ProjectsController class
      * @param object $request Symfony's request object
      */
-    public function import_summary_details($id, $project_id, $parent_record_id, $parent_record_type, Connection $conn, ProjectsController $project, Request $request, DatasetElementsController $data_elements_controller, ValidateImagesController $images)
+    public function import_summary_details($job_id, $parent_project_id, $parent_record_id, $parent_record_type, Connection $conn, ProjectsController $project, Request $request, DatasetElementsController $data_elements_controller, ValidateImagesController $images, KernelInterface $kernel)
     {
 
-      // $this->u->dumper($id,0);
-      // $this->u->dumper($project_id,0);
+      // $this->u->dumper($job_id,0);
+      // $this->u->dumper($parent_project_id,0);
       // $this->u->dumper($parent_record_id,0);
       // $this->u->dumper($parent_record_type);
 
@@ -631,32 +666,67 @@ class ImportController extends Controller
       $project['file_validation_errors'] = [];
       $this->repo_storage_controller->setContainer($this->container);
 
-      if (!empty($id)) {
+      if (!empty($job_id)) {
         // Check to see if the job exists. If it doesn't, throw a createNotFoundException (404).
         $job_data = $this->repo_storage_controller->execute('getRecord', array(
             'base_table' => 'job',
             'id_field' => 'job_id',
-            'id_value' => $id,
+            'id_value' => $job_id,
             'omit_active_field' => true,
           )
         );
         if (empty($job_data)) throw $this->createNotFoundException('The Job record does not exist');
       }
 
-      if (!empty($project_id)) {
+      if (!empty($parent_project_id)) {
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $project_id));
+        $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $parent_project_id));
         if (!$project) throw $this->createNotFoundException('The Project record does not exist');
       }
 
       // Get the total number of Item records for the import.
-      if (!empty($id)) {
+      if (!empty($job_id)) {
         // Get job import data (query the 'job_import_record' table).
-        $job_record_data = $this->repo_storage_controller->execute('getImportedItems', array('job_id' => (int)$id));
+        $job_record_data = $this->repo_storage_controller->execute('getImportedItems', array('job_id' => (int)$job_id));
 
         // If a record is NOT found within the 'job_import_record' table, add a message.
-        if (!$job_record_data) {
+        if (!$job_record_data || ($job_data['job_status'] !== 'complete')) {
           $this->addFlash('message', '<span class="glyphicon glyphicon-ok"></span> Files have been successfully uploaded. Validations and metadata ingests are currently in progress.');
+
+          // Kick off validations and metadata ingests.
+          // $params = array(
+          //   'job_id' => $job_id,
+          //   'parent_project_id' => $parent_project_id,
+          //   'parent_record_id' => $parent_record_id,
+          //   'parent_record_type' => $parent_record_type
+          // );
+
+          $application = new Application($kernel);
+          $application->setAutoExit(false);
+
+          $input = new ArrayInput(array(
+            'command' => 'app:validate',
+            'job_id' => $job_id,
+            'parent_project_id' => $parent_project_id,
+            'parent_record_id' => $parent_record_id,
+            'parent_record_type' => $parent_record_type
+          ));
+
+          // Use NullOutput() if you don't need the output
+          new NullOutput();
+          $application->run($input);
+
+          // // You can use NullOutput() if you don't need the output
+          // $output = new BufferedOutput();
+          // $application->run($input, $output);
+
+          // // return the output, don't use if you used NullOutput()
+          // $content = $output->fetch();
+
+          // // return new Response(""), if you used NullOutput()
+          // $res = new Response($content);
+
+          // $this->u->dumper($res);
         }
 
         // If a record is found within the 'job_import_record' table, add it to the $project array.
@@ -666,7 +736,7 @@ class ImportController extends Controller
         }
 
         // Check for uploaded files.
-        $dir = $this->uploads_directory . (int)$id . '/';
+        $dir = $this->uploads_directory . (int)$job_id . '/';
         $project['uploaded_files'] = (is_dir($dir) && is_readable($dir)) ? true : false;
 
         // Get CSV data.
@@ -694,7 +764,7 @@ class ImportController extends Controller
                   'job_id'
                 ),
                 'search_values' => array(
-                  (int)$id
+                  (int)$job_id
                 ),
                 'comparison' => '='
               ),
@@ -735,7 +805,7 @@ class ImportController extends Controller
                   'job_id'
                 ),
                 'search_values' => array(
-                  (int)$id
+                  (int)$job_id
                 ),
                 'comparison' => '='
               ),
@@ -772,7 +842,7 @@ class ImportController extends Controller
         'page_title' => $job_record_data ? $project['job_label'] : 'Uploads: ' . $project['project_name'],
         'project' => $project,
         'job_data' => $job_data,
-        'id' => $id,
+        'id' => $job_id,
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
       ));
     }
@@ -893,12 +963,15 @@ class ImportController extends Controller
 
         // Format the $data array for the typeahead-bundle.
         if (!empty($results)) {
+
+          // $this->u->dumper($results);
+
           foreach ($results as $key => $value) {
             // Truncate long field values.
             $more_indicator = (strlen($value[ $params['field_name'] ]) > 38) ? '...' : '';
             $truncated_value = substr($value[ $params['field_name'] ], 0, 38) . $more_indicator;
             // Add to the $data array.
-            $data[] = array('id' => $value[ $params['id_field_name'] ], 'value' => $truncated_value . ' [ ' . strtoupper(str_replace('_', ' ', $params['record_type'])) . ' ]');
+            $data[] = array('id' => $value[ $params['id_field_name'] ], 'value' => $truncated_value . ' [ ' . strtoupper(str_replace('_', ' ', $params['record_type'])) . ' ]'); // ', Project: ' . $value['project_name'] . ']'
           }
         }
       }
@@ -994,6 +1067,38 @@ class ImportController extends Controller
       }
 
       return $this->json(array('jobId' => (int)$job_id, 'projectId' => (int)$project['project_repository_id']));
+    }
+
+    /**
+     * Set Job Status
+     * @Route("/admin/set_job_status/{job_id}/{status}", name="set_job_status", defaults={"job_id" = null, "status" = null}, methods="GET")
+     *
+     * @param string $job_id  The job ID
+     * @param string $status  The status text
+     * @return bool
+     */
+    public function set_job_status($job_id, $status, Request $request)
+    {
+
+      // If $job_id is empty, throw a createNotFoundException (404).
+      if (empty($job_id)) throw $this->createNotFoundException('Job ID is empty');
+      // If $status is empty, throw a createNotFoundException (404).
+      if (empty($status)) throw $this->createNotFoundException('Status text is empty');
+
+      $this->repo_storage_controller->setContainer($this->container);
+
+      // Update the record in the job table.
+      // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI?
+      $result = $this->repo_storage_controller->execute('saveRecord', array(
+        'base_table' => 'job',
+        'record_id' => $job_id,
+        'user_id' => $this->getUser()->getId(),
+        'values' => array(
+          'job_status' => $status,
+        )
+      ));
+
+      return $this->json(array('statusSet' => $result));
     }
 
     /**

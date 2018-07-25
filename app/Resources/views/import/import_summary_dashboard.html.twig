@@ -832,14 +832,26 @@
 
       // Redirect to the Upload overview page
       // setTimeout(function() {
-        
+
         let jobId = $('.prevalidate-trigger').attr('data-jobid'),
             parentProjectId = $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
             parentRecordId = parentRecordChecker(),
             parentRecordType = getRecordType();
-        
-        // Redirect to the Upload overview page.
-        document.location.href = '/admin/import/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
+
+        // Set the status of the job from 'uploading' to 'uploaded'.
+        $.ajax({
+          'type': 'GET'
+          ,'dataType': 'json'
+          ,'url': '/admin/set_job_status/' + jobId + '/uploaded'
+          ,success: function(result) {
+            if(result && result.statusSet.length) {
+              // Redirect to the Upload overview page.
+              document.location.href = '/admin/import/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
+            } else {
+              // TODO: catch error?
+            }
+          }
+        });
 
         // // Process and import the CSV files.
         // $.ajax({

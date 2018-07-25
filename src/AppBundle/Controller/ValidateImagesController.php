@@ -12,6 +12,7 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 use finfo;
 
 use AppBundle\Controller\RepoStorageHybridController;
+use AppBundle\Service\RepoValidateData;
 
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
@@ -39,14 +40,19 @@ class ValidateImagesController extends Controller
   private $valid_image_mimetypes;
 
   /**
+   * @var array $token_storage
+   */
+  private $token_storage;
+
+  /**
    * @var object $repo_storage_controller
    */
   private $repo_storage_controller;
 
   /**
-   * @var array $token_storage
+   * @var object $repoValidate
    */
-  private $token_storage;
+  private $repoValidate;
 
   /**
   * Constructor
@@ -56,8 +62,9 @@ class ValidateImagesController extends Controller
   {
     // Usage: $this->u->dumper($variable);
     $this->u = new AppUtilities();
-    $this->repo_storage_controller = new RepoStorageHybridController;
     $this->token_storage = $token_storage;
+    $this->repo_storage_controller = new RepoStorageHybridController;
+    $this->repoValidate = new RepoValidateData();
     // TODO: move this to parameters.yml and bind in services.yml.
     $ds = DIRECTORY_SEPARATOR;
     // $this->uploads_directory = $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
@@ -89,7 +96,7 @@ class ValidateImagesController extends Controller
   {
 
     $data = array();
-    $job_status = 'complete';
+    $job_status = 'image validation completed';
     $localpath = !empty($params['localpath']) ? $params['localpath'] : false;
 
     // Throw an exception if the job record doesn't exist.
@@ -146,10 +153,11 @@ class ValidateImagesController extends Controller
         // Set the job_status to 'failed', if not already set.
         if ($job_status !== 'failed') $job_status = 'failed';
         // Log the errors to the database.
-        $this->log_errors(
+        $this->repoValidate->log_errors(
           array(
             'job_id' => (int)$job_id,
             'user_id' => 0,
+            'job_log_label' => 'Image Validation',
             'errors' => $data[$i]['errors'],
           ),
           $container
@@ -188,71 +196,6 @@ class ValidateImagesController extends Controller
       $buffer = file_get_contents($filename);
       $finfo = new finfo(FILEINFO_MIME_TYPE);
       return $finfo->buffer($buffer);
-    }
-
-  }
-
-  /**
-   * @param object $container The container.
-   * @return array The next directory to validate.
-   */
-  public function needs_validation_checker($container) {
-
-    $directory = null;
-
-    // Check the database to find the next job which hasn't had a BagIt validation performed against it.
-    $this->repo_storage_controller->setContainer($container);
-    $data = $this->repo_storage_controller->execute('getRecords', array(
-        'base_table' => 'job',
-        'fields' => array(),
-        'search_params' => array(
-          0 => array(
-            'field_names' => array(
-              'job_status'
-            ),
-            'search_values' => array(
-              'bagit validation completed'
-            ),
-            'comparison' => '='
-          )
-        ),
-        'search_type' => 'AND',
-        'sort_fields' => array(
-          0 => array('field_name' => 'date_created')
-        ),
-        'limit' => array('limit_start' => 1),
-        'omit_active_field' => true,
-      )
-    );
-
-    if(!empty($data)) {
-      $directory = $this->uploads_directory . $data[0]['job_id'];
-    }
-
-    return $directory;
-  }
-
-  /**
-   * @param array $params Parameters for inserting into the database.
-   * @param object $container The container.
-   * @return null
-   */
-  public function log_errors($params = array(), $container) {
-
-    if(!empty($params)) {
-      foreach ($params['errors'] as $ekey => $error) {
-        $this->repo_storage_controller->setContainer($container);
-        $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
-          'base_table' => 'job_log',
-          'user_id' => $params['user_id'],
-          'values' => array(
-            'job_id' => $params['job_id'],
-            'job_log_status' => 'error',
-            'job_log_label' => 'Image Validation',
-            'job_log_description' => $error,
-          )
-        ));
-      }
     }
 
   }

@@ -4480,7 +4480,13 @@ class RepoStorageHybrid implements RepoStorage {
           $statement->bindValue(":id", $record_values['id']['field_value'], PDO::PARAM_INT);
           $statement->execute();
 
-          $last_inserted_id = $record_values['id']['field_value'];
+          // If the number of rows affected by the last SQL statement is zero, return fail.
+          // See: http://php.net/manual/en/pdostatement.rowcount.php
+          if($statement->rowCount() === 0) {
+            return array('return' => 'fail', 'messages' => 'UPDATE `' . $base_table . '` failed.');
+          } else {
+            $last_inserted_id = $record_values['id']['field_value'];
+          }
 
         }
         else {
@@ -4496,7 +4502,7 @@ class RepoStorageHybrid implements RepoStorage {
           $last_inserted_id = $this->connection->lastInsertId();
 
           if(!$last_inserted_id) {
-            return array('return' => 'fail', 'messages' => 'INSERT INTO `' . $this->table_name . '` failed.');
+            return array('return' => 'fail', 'messages' => 'INSERT INTO `' . $base_table . '` failed.');
           }
         }
 
