@@ -31,11 +31,11 @@
             <dt>Job Status:</dt>
             {% if job_data.job_status is defined %}
               {% if job_data.job_status == 'failed' %}
-                <dd class="text-danger"><strong>{{ job_data.job_status }}</strong> (see below for details)</dd>
+                <dd class="status-target text-danger"><span class="glyphicon glyphicon-exclamation-sign"></span> <strong>{{ job_data.job_status }}</strong> (see below for details)</dd>
               {% elseif job_data.job_status == 'complete' %}
-                <dd class="text-success"><strong>{{ job_data.job_status }}</strong></dd>
+                <dd class="status-target text-success"><span class="glyphicon glyphicon-ok"></span> <strong>{{ job_data.job_status }}</strong></dd>
               {% else %}
-                <dd>{{ job_data.job_status }}</dd>
+                <dd class="status-target"><span class="in-progress"><img src="/lib/images/spinner-40px.gif" alt="Visual job status indicator" width="26" height="26"> In Progress:</span> <span class="status">{{ job_data.job_status }}</span></dd>
               {% endif %}
             {% endif %}
           </dl>
@@ -164,6 +164,7 @@
 
       var id = "{{ id }}",
           job_type = "{{ job_data.job_type }}",
+          job_status = "{{ job_data.job_status }}",
           columns = [],
           details_page;
 
@@ -375,6 +376,49 @@
 
           spreadsheetCount++;
         }
+      }
+
+      /**
+       * Job Status Checker
+       * Endpoint/example: /admin/get_job_status/3
+       */
+      // Poll every 10 seconds to get the status of the job.
+      var checkerId = setInterval(checkStatus, 10000);
+
+      function checkStatus() {
+
+        if (job_status === 'complete') {
+          clearInterval(checkerId);
+        } else {
+          $.ajax({
+            'type': 'GET'
+            ,'dataType': 'json'
+            ,'url': '/admin/get_job_status/' + id
+            ,success: function(result) {
+              if(result) {
+                $('.status-target span.status').empty().text(result);
+                if (result === 'complete') {
+                  clearInterval(checkerId);
+                  $('.status-target span.in-progress').remove();
+                  $('.status-target').addClass('text-success');
+                  $('.status-target span.status').wrap( "<strong></strong>" );
+                  $('.status-target span.status').prepend('<span class="glyphicon glyphicon-ok"></span> ');
+                }
+                if (result === 'failed') {
+                  clearInterval(checkerId);
+                  $('.status-target span.in-progress').remove();
+                  $('.status-target').addClass('text-danger');
+                  $('.status-target span.status').wrap( "<strong></strong>" );
+                  $('.status-target span.status').prepend('<span class="glyphicon glyphicon-exclamation-sign"></span> ');
+                }
+              } else {
+                $('.status-target span.status').empty().text('Error: Could not get status');
+                clearInterval(checkerId);
+              }
+            }
+          });
+        }
+
       }
 
     });

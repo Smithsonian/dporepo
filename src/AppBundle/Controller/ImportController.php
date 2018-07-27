@@ -1094,6 +1094,7 @@ class ImportController extends Controller
      *
      * @param string $job_id  The job ID
      * @param string $status  The status text
+     * @param object $request Symfony's request object
      * @return bool
      */
     public function set_job_status($job_id, $status, Request $request)
@@ -1118,6 +1119,43 @@ class ImportController extends Controller
       ));
 
       return $this->json(array('statusSet' => $result));
+    }
+
+    /**
+     * Get Job Status
+     * @Route("/admin/get_job_status/{job_id}", name="get_job_status", defaults={"job_id" = null}, methods="GET")
+     *
+     * @param string $job_id  The job ID
+     * @param object $request Symfony's request object
+     * @return string
+     */
+    public function get_job_status($job_id = null, Request $request)
+    {
+      $result = array();
+
+      // If $job_id is empty, throw a createNotFoundException (404).
+      if (empty($job_id)) throw $this->createNotFoundException('Job ID is empty');
+
+      // Check the database to find the next job which hasn't had a BagIt validation performed against it.
+      $this->repo_storage_controller->setContainer($this->container);
+      $result = $this->repo_storage_controller->execute('getRecord', array(
+          'base_table' => 'job',
+          'id_field' => 'job_id',
+          'id_value' => (int)$job_id,
+          // 'fields' => array(
+          //   array(
+          //     'table_name' => 'job',
+          //     'field_name' => 'job_status',
+          //   )
+          // ),
+          'omit_active_field' => true,
+        )
+      );
+
+      // If $result is empty, throw a createNotFoundException (404).
+      if (empty($result)) throw $this->createNotFoundException('Job status not found (404)');
+      // If $result is not empty, limit to only returning the 'job_status'.
+      if (!empty($result)) return $this->json($result['job_status']); 
     }
 
     /**
