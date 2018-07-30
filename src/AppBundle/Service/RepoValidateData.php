@@ -198,6 +198,29 @@ class RepoValidateData implements RepoValidate {
   }
 
   /**
+   * Validate capture_dataset_field_id in CSV
+   * @return mixed array containing success/fail value, and any messages.
+   */
+  public function validateCaptureDatasetFieldIdInCsv($data = array()) {
+
+    $return = $field_ids = array();
+
+    // If no data is passed, set a message.
+    if(empty($data)) $return['messages'][] = 'Nothing to validate. Please provide an object to validate.';
+
+    foreach ($data as $key => $value) {
+      if (!empty($value->capture_dataset_field_id)) {
+        if (in_array($value->capture_dataset_field_id, $field_ids)) {
+          $return['messages'][] = array('row' => 'Row ' . ($key+1) . ' - Field: capture_dataset_field_id', 'error' => 'Illegal duplicate "capture_dataset_field_id" value found (' . $value->capture_dataset_field_id . ').');
+        }
+        $field_ids[] = $value->capture_dataset_field_id;
+      }
+    }
+
+    return $return;
+  }
+
+  /**
    * Validate capture_dataset_field_id
    * @param array $data The data to validate.
    * @param array $parent_record_id The parent record ID.
@@ -205,8 +228,7 @@ class RepoValidateData implements RepoValidate {
    */
   public function validateCaptureDatasetFieldId($data = array(), $parent_records = array(), $container) {
 
-    $return = array('is_valid' => false);
-    $results = array();
+    $return = array();
 
     // If no data is passed, set a message.
     if(empty($data)) $return['messages'][] = 'Nothing to validate. Please provide an object to validate.';

@@ -245,13 +245,17 @@ class UploadListener
         if($schema === 'capture_dataset') {
 
           switch($parent_record_type) {
+            case 'subject':
+              // Validate that the 'capture_dataset_field_id' value is unique within the CSV when the parent record is a subject.
+              $data->capture_dataset_field_id_results = $repoValidate->validateCaptureDatasetFieldIdInCsv($data->csv);
+              break;
             case 'item':
               // Get the parent records.
               $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
                 'base_record_id' => $parent_record_id,
                 'record_type' => $parent_record_type,
               ));
-              // Validate that the 'capture_dataset_field_id' value is unique for datasets that share the same Project and Item.
+              // Validate that the 'capture_dataset_field_id' value is unique for datasets that share the same Project and Item (within the database).
               if (!empty($parent_records)) {
                 $data->capture_dataset_field_id_results = $repoValidate->validateCaptureDatasetFieldId($data->csv, $parent_records, $this->container);
               }
