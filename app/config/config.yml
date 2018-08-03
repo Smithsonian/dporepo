@@ -17,7 +17,7 @@ framework:
         strict_requirements: ~
     form: ~
     csrf_protection: ~
-    validation: { enable_annotations: true }
+    validation: { enable_annotations: false }
     #serializer: { enable_annotations: true }
     default_locale: '%locale%'
     trusted_hosts: ~
@@ -78,6 +78,10 @@ swiftmailer:
     username: '%mailer_user%'
     password: '%mailer_password%'
     spool: { type: memory }
+
+sensio_framework_extra:
+    router:
+        annotations: false
 
 # DebugBundle Configuration
 # http://symfony.com/doc/3.4/reference/configuration/debug.html
