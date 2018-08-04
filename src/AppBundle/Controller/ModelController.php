@@ -31,11 +31,11 @@ class ModelController extends Controller
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u)
+    public function __construct(AppUtilities $u, Connection $conn)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
-        $this->repo_storage_controller = new RepoStorageHybridController();
+        $this->repo_storage_controller = new RepoStorageHybridController($conn);
         $this->uploads_path = '/uploads/repository';
     }
 
@@ -67,7 +67,6 @@ class ModelController extends Controller
           $query_params['search_value'] = $search;
         }
 
-        $this->repo_storage_controller->setContainer($this->container);
         $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
         return $this->json($data);
@@ -93,7 +92,6 @@ class ModelController extends Controller
         if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
-        $this->repo_storage_controller->setContainer($this->container);
         if(!empty($id) && empty($post)) {
           $rec = $this->repo_storage_controller->execute('getModel', array(
             'model_repository_id' => $id));
@@ -113,7 +111,7 @@ class ModelController extends Controller
         }
 
         // Get data from lookup tables.
-        $data->unit_options = $this->get_unit($this->container);
+        $data->unit_options = $this->get_unit();
 
         // Create the form
         $form = $this->createForm(ModelForm::class, $data);
@@ -157,10 +155,9 @@ class ModelController extends Controller
      * Get Unit
      * @return  array|bool  The query result
      */
-    public function get_unit($this_container)
+    public function get_unit()
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this_container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'unit',
           'sort_fields' => array(
@@ -189,8 +186,6 @@ class ModelController extends Controller
 
             // Create the array of ids.
             $ids_array = explode(',', $request->query->get('ids'));
-
-            $this->repo_storage_controller->setContainer($this->container);
 
             // Loop thorough the ids.
             foreach ($ids_array as $key => $id) {

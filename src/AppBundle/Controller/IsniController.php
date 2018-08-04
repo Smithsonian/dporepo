@@ -7,6 +7,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Doctrine\DBAL\Driver\Connection;
 
 use AppBundle\Controller\RepoStorageHybridController;
 use Symfony\Component\DependencyInjection\Container;
@@ -26,11 +27,11 @@ class IsniController extends Controller
     * Constructor
     * @param object  $u  Utility functions object
     */
-    public function __construct(AppUtilities $u)
+    public function __construct(AppUtilities $u, Connection $conn)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
-        $this->repo_storage_controller = new RepoStorageHybridController();
+        $this->repo_storage_controller = new RepoStorageHybridController($conn);
     }
 
      /**

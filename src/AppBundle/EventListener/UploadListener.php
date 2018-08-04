@@ -12,6 +12,7 @@ use Oneup\UploaderBundle\Event\PostPersistEvent;
 use AppBundle\Service\RepoValidateData;
 use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Controller\ImportController;
+use Doctrine\DBAL\Driver\Connection;
 
 class UploadListener
 {
@@ -24,15 +25,16 @@ class UploadListener
   private $import_controller;
 
   public function __construct(
-    RepoStorageHybridController $repo_storage_controller,
+    Connection $conn,
     TokenStorageInterface $tokenStorage,
     ContainerInterface $container,
     ImportController $import_controller)
   {
-    $this->repo_storage_controller = $repo_storage_controller;
+    $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->tokenStorage = $tokenStorage;
     $this->container = $container;
     $this->import_controller = $import_controller;
+    $this->connection = $conn;
   }
   
   /**
@@ -236,7 +238,7 @@ class UploadListener
 
       if($schema) {
         // Instantiate the RepoValidateData class.
-        $repoValidate = new RepoValidateData();
+        $repoValidate = new RepoValidateData($this->connection);
 
         // Check to see if a CSV's 'import_row_id' has gaps or is not sequential.
         $data->row_ids_results = $repoValidate->validateRowIds($data->csv, $schema);

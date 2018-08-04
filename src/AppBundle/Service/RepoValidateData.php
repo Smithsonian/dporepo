@@ -27,11 +27,11 @@ class RepoValidateData implements RepoValidate {
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct()
+  public function __construct(Connection $conn)
   {
     // TODO: move this to parameters.yml and bind in services.yml?
     $this->schema_dir = __DIR__ . '/../../../web/json/schemas/repository/';
-    $this->repo_storage_controller = new RepoStorageHybridController();
+    $this->repo_storage_controller = new RepoStorageHybridController($conn);
   }
 
   /**
@@ -226,7 +226,7 @@ class RepoValidateData implements RepoValidate {
    * @param array $parent_record_id The parent record ID.
    * @return mixed array containing success/fail value, and any messages.
    */
-  public function validateCaptureDatasetFieldId($data = array(), $parent_records = array(), $container) {
+  public function validateCaptureDatasetFieldId($data = array(), $parent_records = array()) {
 
     $return = array();
 
@@ -236,7 +236,7 @@ class RepoValidateData implements RepoValidate {
     // If data is passed, go ahead and perform the validation.
     if(!empty($data) && !empty($parent_records)) {
 
-      $this->repo_storage_controller->setContainer($container);
+      // $this->repo_storage_controller->setContainer($container);
 
       foreach($data as $key => $value) {
         if(!empty($value->capture_dataset_field_id)) {
@@ -300,12 +300,12 @@ class RepoValidateData implements RepoValidate {
    * @param object $container The container.
    * @return array The next directory to validate.
    */
-  public function needs_validation_checker($status = null, $uploads_directory = null, $container) {
+  public function needs_validation_checker($status = null, $uploads_directory = null) {
 
     $directory = null;
 
     // Check the database to find the next job which hasn't had a BagIt validation performed against it.
-    $this->repo_storage_controller->setContainer($container);
+    // $this->repo_storage_controller->setContainer($container);
     $data = $this->repo_storage_controller->execute('getRecords', array(
         'base_table' => 'job',
         'fields' => array(),
@@ -341,11 +341,11 @@ class RepoValidateData implements RepoValidate {
    * @param object $container The container.
    * @return null
    */
-  public function log_errors($params = array(), $container) {
+  public function log_errors($params = array()) {
 
     if(!empty($params)) {
       foreach ($params['errors'] as $ekey => $error) {
-        $this->repo_storage_controller->setContainer($container);
+        // $this->repo_storage_controller->setContainer($container);
         $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'job_log',
           'user_id' => $params['user_id'],

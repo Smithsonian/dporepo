@@ -78,7 +78,7 @@ class ValidateCommand extends ContainerAwareCommand
 
     // If a localpath is NOT passed, check the database for a job with the 'job_status' set to 'uploaded'.
     if ( empty($input->getArgument('localpath')) ) {
-      $directory_to_validate = $this->repoValidate->needs_validation_checker('uploaded', $this->uploads_directory, $container);
+      $directory_to_validate = $this->repoValidate->needs_validation_checker('uploaded', $this->uploads_directory);
     }
 
     if (!empty($directory_to_validate)) {

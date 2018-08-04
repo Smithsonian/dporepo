@@ -7,6 +7,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\DependencyInjection\Container;
+use Doctrine\DBAL\Driver\Connection;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use finfo;
@@ -58,13 +59,13 @@ class ValidateImagesController extends Controller
   * Constructor
   * @param object  $u  Utility functions object
   */
-  public function __construct(TokenStorageInterface $token_storage)
+  public function __construct(TokenStorageInterface $token_storage, Connection $conn)
   {
     // Usage: $this->u->dumper($variable);
     $this->u = new AppUtilities();
     $this->token_storage = $token_storage;
-    $this->repo_storage_controller = new RepoStorageHybridController;
-    $this->repoValidate = new RepoValidateData();
+    $this->repo_storage_controller = new RepoStorageHybridController($conn);
+    $this->repoValidate = new RepoValidateData($conn);
     // TODO: move this to parameters.yml and bind in services.yml.
     $ds = DIRECTORY_SEPARATOR;
     // $this->uploads_directory = $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;

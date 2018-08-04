@@ -5,6 +5,7 @@ namespace AppBundle\Controller;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Doctrine\DBAL\Driver\Connection;
 
 use AppBundle\Controller\RepoStorageHybridController;
 
@@ -22,9 +23,9 @@ class WorkflowController extends Controller {
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(AppUtilities $u)
+  public function __construct(AppUtilities $u, Connection $conn)
   {
-    $this->repo_storage_controller = new RepoStorageHybridController();
+    $this->repo_storage_controller = new RepoStorageHybridController($conn);
   }
 
 

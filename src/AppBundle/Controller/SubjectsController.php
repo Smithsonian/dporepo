@@ -31,11 +31,11 @@ class SubjectsController extends Controller
     * Constructor
     * @param object  $u  Utility functions object
     */
-    public function __construct(AppUtilities $u)
+    public function __construct(AppUtilities $u, Connection $conn)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
-        $this->repo_storage_controller = new RepoStorageHybridController();
+        $this->repo_storage_controller = new RepoStorageHybridController($conn);
     }
 
     /**
@@ -44,7 +44,6 @@ class SubjectsController extends Controller
     public function browse_subjects(Connection $conn, Request $request, ProjectsController $projects)
     {
         // Database tables are only created if not present.
-        $this->repo_storage_controller->setContainer($this->container);
         $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'subject'));
 
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
@@ -55,7 +54,7 @@ class SubjectsController extends Controller
         if(!$project_data) throw $this->createNotFoundException('The record does not exist');
 
         // Check to see if there are any subjects, to present the Upload Metadata button or not.
-        $subjects = $this->get_subjects($this->container, (int)$project_data['project_repository_id']);
+        $subjects = $this->get_subjects((int)$project_data['project_repository_id']);
 
         return $this->render('subjects/browse_subjects.html.twig', array(
             'page_title' => 'Project: ' . $project_data['project_name'],
@@ -98,7 +97,6 @@ class SubjectsController extends Controller
           $query_params['search_value'] = $search;
         }
 
-        $this->repo_storage_controller->setContainer($this->container);
         $data = $this->repo_storage_controller->execute('getDatatableSubject', $query_params);
 
         // Convert status to human readable words.
@@ -121,7 +119,7 @@ class SubjectsController extends Controller
                 $data['aaData'][$key]['active'] = '<span class="label label-' . $label . '"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span> ' . $text . '</span>';
 
                 // Get the items count
-                $subject_items = $items->get_items($this->container, $value['subject_repository_id']);
+                $subject_items = $items->get_items($value['subject_repository_id']);
                 $data['aaData'][$key]['items_count'] = count($subject_items);
             }
         }
@@ -147,7 +145,6 @@ class SubjectsController extends Controller
         $subject->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
 
         // Retrieve data from the database.
-        $this->repo_storage_controller->setContainer($this->container);
         if(!empty($id) && empty($post)) {
           $rec = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'subject',
@@ -195,9 +192,8 @@ class SubjectsController extends Controller
      * @param   int $subject_id  The subject ID
      * @return  array|bool       The query result
      */
-    public function get_subject($container, $subject_id)
+    public function get_subject($subject_id)
     {
-        $this->repo_storage_controller->setContainer($container);
         $data = $this->repo_storage_controller->execute('getRecordById', array(
           'record_type' => 'subject',
           'record_id' => (int)$subject_id));
@@ -209,14 +205,12 @@ class SubjectsController extends Controller
      *
      * Run a query to retrieve all subjects from the database.
      *
-     * @param   $container  The Symfony container, passed from the caller.
      * @param   int $project_repository_id  The project ID
      * @return  array|bool  The query result
      */
-    public function get_subjects($container, $project_repository_id = false)
+    public function get_subjects($project_repository_id = false)
     {
 
-      $this->repo_storage_controller->setContainer($container);
       $data = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'subject',
           'fields' => array(),
@@ -241,12 +235,12 @@ class SubjectsController extends Controller
     public function get_subjects_tree_browser(Request $request, ItemsController $items)
     {      
       $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
-      $subjects = $this->get_subjects($this->container, $project_repository_id);
+      $subjects = $this->get_subjects($project_repository_id);
 
       foreach ($subjects as $key => $value) {
 
           // Check for child dataset records so the 'children' key can be set accordingly.
-          $item_data = $items->get_items($this->container, (int)$value['subject_repository_id']);
+          $item_data = $items->get_items((int)$value['subject_repository_id']);
 
           $data[$key] = array(
             'id' => 'subjectId-' . $value['subject_repository_id'],
@@ -284,7 +278,6 @@ class SubjectsController extends Controller
 
           $ids_array = explode(',', $ids);
 
-          $this->repo_storage_controller->setContainer($this->container);
           foreach ($ids_array as $key => $id) {
             $ret = $this->repo_storage_controller->execute('markSubjectInactive', array(
               'record_id' => $id,

@@ -59,11 +59,11 @@ class ImportController extends Controller
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, RepoStorageHybridController $repo_storage_controller, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
-        $this->repo_storage_controller = $repo_storage_controller;
+        $this->repo_storage_controller = new RepoStorageHybridController($conn);
         $this->tokenStorage = $tokenStorage;
 
         $this->itemsController = $itemsController;
@@ -83,11 +83,10 @@ class ImportController extends Controller
      * Import CSV
      *
      * @param array $params Parameters: job_id, project_id, parent_record_id, parent_record_type
+     * @return array
      */
     public function import_csv($params = array())
     {
-
-      // $this->u->dumper($params);
 
       $return = $csv_types = array();
 
@@ -106,8 +105,6 @@ class ImportController extends Controller
       // If there are errors, return now.
       // TODO: insert errors into the database (job_log table).
       if (!empty($return['errors'])) return $return;
-
-      $this->repo_storage_controller->setContainer($this->container);
       
       $job_data = $this->repo_storage_controller->execute('getRecord', array(
           'base_table' => 'job',
@@ -151,7 +148,7 @@ class ImportController extends Controller
 
         if (!empty($job_type)) {
           // Prepare the data.
-          $data = $this->prepare_data($job_type, $this->uploads_directory . $ids->job_id, $this->itemsController, $this->datasetsController, $this->modelsController);
+          $data = $this->prepare_data($job_type, $this->uploads_directory . $ids->job_id);
 
           // Ingest data.
           if (!empty($data)) {
@@ -203,6 +200,8 @@ class ImportController extends Controller
             'qa_approved_time' => null,
           )
         ));
+        // Populate the errors array to return to front end.
+        $return['errors'][] = 'Metadata ingest failed. Job ID: ' . $params['job_id'];
       } else {
         // Update the job table to set the status from 'uploading' to 'complete'.
         $this->repo_storage_controller->execute('saveRecord', array(
@@ -228,7 +227,7 @@ class ImportController extends Controller
      * @param string $job_upload_directory The upload directory
      * @return array Import result and/or any messages
      */
-    public function prepare_data($job_type = null, $job_upload_directory = null, $itemsController, $datasetsController, $modelsController)
+    public function prepare_data($job_type = null, $job_upload_directory = null)
     {
 
       $data = array();
@@ -300,50 +299,50 @@ class ImportController extends Controller
                 // ITEM LOOKUPS
                 // Look-up the ID for the 'item_type'.
                 if ($field_name === 'item_type') {
-                  $item_type_lookup_options = $itemsController->get_item_types($this->container);
+                  $item_type_lookup_options = $this->itemsController->get_item_types();
                   $json_array[$key][$field_name] = (int)$item_type_lookup_options[$v];
                 }
 
                 // CAPTURE DATASET LOOKUPS
                 // Look-up the ID for the 'capture_method'.
                 if ($field_name === 'capture_method') {
-                  $capture_method_lookup_options = $datasetsController->get_capture_methods($this->container);
+                  $capture_method_lookup_options = $this->datasetsController->get_capture_methods();
                   $json_array[$key][$field_name] = (int)$capture_method_lookup_options[$v];
                 }
 
                 // Look-up the ID for the 'capture_dataset_type'.
                 if ($field_name === 'capture_dataset_type') {
-                  $capture_dataset_type_lookup_options = $datasetsController->get_dataset_types($this->container);
+                  $capture_dataset_type_lookup_options = $this->datasetsController->get_dataset_types();
                   $json_array[$key][$field_name] = (int)$capture_dataset_type_lookup_options[$v];
                 }
 
                 // Look-up the ID for the 'item_position_type'.
                 if ($field_name === 'item_position_type') {
-                  $item_position_type_lookup_options = $datasetsController->get_item_position_types($this->container);
+                  $item_position_type_lookup_options = $this->datasetsController->get_item_position_types();
                   $json_array[$key][$field_name] = (int)$item_position_type_lookup_options[$v];
                 }
 
                 // Look-up the ID for the 'focus_type'.
                 if ($field_name === 'focus_type') {
-                  $focus_type_lookup_options = $datasetsController->get_focus_types($this->container);
+                  $focus_type_lookup_options = $this->datasetsController->get_focus_types();
                   $json_array[$key][$field_name] = (int)$focus_type_lookup_options[$v];
                 }
 
                 // Look-up the ID for the 'light_source_type'.
                 if ($field_name === 'light_source_type') {
-                  $light_source_type_lookup_options = $datasetsController->get_light_source_types($this->container);
+                  $light_source_type_lookup_options = $this->datasetsController->get_light_source_types();
                   $json_array[$key][$field_name] = (int)$light_source_type_lookup_options[$v];
                 }
 
                 // Look-up the ID for the 'background_removal_method'.
                 if ($field_name === 'background_removal_method') {
-                  $background_removal_method_lookup_options = $datasetsController->get_background_removal_methods($this->container);
+                  $background_removal_method_lookup_options = $this->datasetsController->get_background_removal_methods();
                   $json_array[$key][$field_name] = (int)$background_removal_method_lookup_options[$v];
                 }
 
                 // Look-up the ID for the 'cluster_type'.
                 if ($field_name === 'cluster_type') {
-                  $camera_cluster_types_lookup_options = $datasetsController->get_camera_cluster_types($this->container);
+                  $camera_cluster_types_lookup_options = $this->datasetsController->get_camera_cluster_types();
                   $json_array[$key][$field_name] = (int)$camera_cluster_types_lookup_options[$v];
                 }
 
@@ -367,7 +366,7 @@ class ImportController extends Controller
 
                 // Look-up the ID for the 'units'.
                 if ($field_name === 'units') {
-                  $units_lookup_options = $modelsController->get_unit($this->container);
+                  $units_lookup_options = $this->modelsController->get_unit();
                   $json_array[$key][$field_name] = (int)$units_lookup_options[$v];
                 }
 
@@ -411,11 +410,15 @@ class ImportController extends Controller
     $session = new Session();
     $data = (object)$data;
     $job_log_ids = array();
-    $this->repo_storage_controller->setContainer($this->container);
 
-    // User data.
-    $user = $this->tokenStorage->getToken()->getUser();
-    $data->user_id = $user->getId();
+    if( method_exists($this->tokenStorage, 'getUser')) {
+      // User data.
+      $user = $this->tokenStorage->getToken()->getUser();
+      $data->user_id = $user->getId();
+    } else {
+      $data->user_id = 0;
+    }
+
     // Job ID and parent record ID
     $data->job_id = isset($ids->job_id) ? $ids->job_id : false;
     $data->parent_project_id = isset($ids->parent_project_id) ? $ids->parent_project_id : false;
@@ -648,7 +651,6 @@ class ImportController extends Controller
         $query_params['search_value'] = $search;
       }
 
-      $this->repo_storage_controller->setContainer($this->container);
       $data = $this->repo_storage_controller->execute('getDatatableImports', $query_params);
 
       return $this->json($data);
@@ -675,7 +677,6 @@ class ImportController extends Controller
 
       $project = [];
       $project['file_validation_errors'] = [];
-      $this->repo_storage_controller->setContainer($this->container);
 
       if (!empty($job_id)) {
         // Check to see if the job exists. If it doesn't, throw a createNotFoundException (404).
@@ -886,8 +887,6 @@ class ImportController extends Controller
       $start_record = !empty($req['start']) ? $req['start'] : 0;
       $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
-      $this->repo_storage_controller->setContainer($this->container);
-
       // Determine what was ingested (e.g. subjects, items, capture datasets, models).
       $job_data = $this->repo_storage_controller->execute('getRecord', array(
           'base_table' => 'job',
@@ -961,8 +960,6 @@ class ImportController extends Controller
             $params['field_name'] = 'project_name';
             $params['id_field_name'] = 'project_repository_id';
         }
-
-        $this->repo_storage_controller->setContainer($this->container);
 
         // Query the database.
         $results = $this->repo_storage_controller->execute('getRecords', array(
@@ -1043,7 +1040,6 @@ class ImportController extends Controller
     {
       $job_id = null;
       $parent_records = [];
-      $this->repo_storage_controller->setContainer($this->container);
 
       // Get the parent Project's record ID (unless it's a project to begin with).
       if (!empty($base_record_id) && !empty($record_type) && ($record_type !== 'project')) {
@@ -1105,8 +1101,6 @@ class ImportController extends Controller
       // If $status is empty, throw a createNotFoundException (404).
       if (empty($status)) throw $this->createNotFoundException('Status text is empty');
 
-      $this->repo_storage_controller->setContainer($this->container);
-
       // Update the record in the job table.
       // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI?
       $result = $this->repo_storage_controller->execute('saveRecord', array(
@@ -1137,7 +1131,6 @@ class ImportController extends Controller
       if (empty($job_id)) throw $this->createNotFoundException('Job ID is empty');
 
       // Check the database to find the next job which hasn't had a BagIt validation performed against it.
-      $this->repo_storage_controller->setContainer($this->container);
       $result = $this->repo_storage_controller->execute('getRecord', array(
           'base_table' => 'job',
           'id_field' => 'job_id',
@@ -1217,9 +1210,6 @@ class ImportController extends Controller
       if (empty($job_id)) throw $this->createNotFoundException('Job ID not provided');
 
       if (!empty($job_id)) {
-
-        // Set container.
-        $this->repo_storage_controller->setContainer($this->container);
 
         // Check to see if the job record exists, and if it doesn't, throw a createNotFoundException (404).
         $job_data = $this->repo_storage_controller->execute('getRecord', array(

@@ -46,11 +46,11 @@ class DatasetsController extends Controller
     * Constructor
     * @param object  $u  Utility functions object
     */
-    public function __construct(AppUtilities $u, $file_upload_path, $file_processing_path)
+    public function __construct(AppUtilities $u, $file_upload_path, $file_processing_path, Connection $conn)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
-        $this->repo_storage_controller = new RepoStorageHybridController();
+        $this->repo_storage_controller = new RepoStorageHybridController($conn);
 
         $this->file_upload_path = $file_upload_path;
         $this->file_processing_path = $file_processing_path;
@@ -64,8 +64,6 @@ class DatasetsController extends Controller
     public function browse_datasets(Connection $conn, Request $request, ProjectsController $projects, SubjectsController $subjects)
     {
         // Database tables are only created if not present.
-        $this->repo_storage_controller->setContainer($this->container);
-
         $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'capture_dataset'));
 
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
@@ -84,7 +82,7 @@ class DatasetsController extends Controller
         if(!isset($item->item_data->item_repository_id)) throw $this->createNotFoundException('The record does not exist');
 
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$project_repository_id));
-        $subject_data = $subjects->get_subject($this->container, (int)$subject_repository_id);
+        $subject_data = $subjects->get_subject((int)$subject_repository_id);
         $jobBoxDirectoryContents = is_dir($this->file_upload_path) ? scandir($this->file_upload_path) : array();
         $jobBoxProcessedDirectoryContents = is_dir($this->file_processing_path) ? scandir($this->file_processing_path) : array();
 
@@ -139,7 +137,6 @@ class DatasetsController extends Controller
           $query_params['search_value'] = $search;
         }
 
-        $this->repo_storage_controller->setContainer($this->container);
         $data = $this->repo_storage_controller->execute('getDatatableCaptureDataset', $query_params);
 
         return $this->json($data);
@@ -159,8 +156,6 @@ class DatasetsController extends Controller
         $post = $request->request->all();
         $id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
 
-        $this->repo_storage_controller->setContainer($this->container);
-
         // Retrieve data from the database.
         if (!empty($id) && empty($post)) {
             $dataset_array = $this->repo_storage_controller->execute('getCaptureDataset', array(
@@ -179,21 +174,19 @@ class DatasetsController extends Controller
         $dataset->parent_item_repository_id = !empty($request->attributes->get('parent_item_repository_id')) ? $request->attributes->get('parent_item_repository_id') : false;
 
         // Get data from lookup tables.
-        $dataset->capture_methods_lookup_options = $this->get_capture_methods($this->container);
-        $dataset->dataset_types_lookup_options = $this->get_dataset_types($this->container);
-        $dataset->item_position_types_lookup_options = $this->get_item_position_types($this->container);
-        $dataset->focus_types_lookup_options = $this->get_focus_types($this->container);
-        $dataset->light_source_types_lookup_options = $this->get_light_source_types($this->container);
-        $dataset->background_removal_methods_lookup_options = $this->get_background_removal_methods($this->container);
-        $dataset->camera_cluster_types_lookup_options = $this->get_camera_cluster_types($this->container);
+        $dataset->capture_methods_lookup_options = $this->get_capture_methods();
+        $dataset->dataset_types_lookup_options = $this->get_dataset_types();
+        $dataset->item_position_types_lookup_options = $this->get_item_position_types();
+        $dataset->focus_types_lookup_options = $this->get_focus_types();
+        $dataset->light_source_types_lookup_options = $this->get_light_source_types();
+        $dataset->background_removal_methods_lookup_options = $this->get_background_removal_methods();
+        $dataset->camera_cluster_types_lookup_options = $this->get_camera_cluster_types();
         $dataset->calibration_object_type_options = $this->get_calibration_object_types();
 
         // Create the form
         $form = $this->createForm(Dataset::class, $dataset);
         // Handle the request
         $form->handleRequest($request);
-
-        $this->repo_storage_controller->setContainer($this->container);
 
         // If form is submitted and passes validation, insert/update the database record.
         if ($form->isSubmitted() && $form->isValid()) {
@@ -232,13 +225,12 @@ class DatasetsController extends Controller
      * @param       int $item_repository_id    The item ID
      * @return      array|bool       The query result
      */
-    public function get_datasets($container, $item_repository_id = false)
+    public function get_datasets($item_repository_id = false)
     {
 
       $query_params = array(
         'item_repository_id' => $item_repository_id,
       );
-      $this->repo_storage_controller->setContainer($container);
       $data = $this->repo_storage_controller->execute('getDatasets', $query_params);
 
       return $data;
@@ -253,12 +245,12 @@ class DatasetsController extends Controller
     public function get_datasets_tree_browser(Request $request, DatasetElementsController $dataset_elements)
     {      
         $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;        
-        $datasets = $this->get_datasets($this->container, $item_repository_id);
+        $datasets = $this->get_datasets($item_repository_id);
 
         foreach ($datasets as $key => $value) {
 
             // Check for child dataset records so the 'children' key can be set accordingly.
-            $dataset_elements_data = $dataset_elements->get_dataset_elements($this->container, (int)$value['capture_dataset_repository_id']);
+            $dataset_elements_data = $dataset_elements->get_dataset_elements((int)$value['capture_dataset_repository_id']);
             $data[$key] = array(
                 'id' => 'datasetId-' . $value['capture_dataset_repository_id'],
                 'children' => count($dataset_elements_data) ? true : false,
@@ -279,12 +271,11 @@ class DatasetsController extends Controller
      * @param       int $capture_dataset_repository_id    The data value
      * @return      array|bool              The query result
      */
-    public function get_dataset($container, $capture_dataset_repository_id = false)
+    public function get_dataset($capture_dataset_repository_id = false)
     {
       $query_params = array(
         'capture_dataset_repository_id' => $capture_dataset_repository_id,
       );
-      $this->repo_storage_controller->setContainer($container);
       $data = $this->repo_storage_controller->execute('getCaptureDataset', $query_params);
       return $data;
     }
@@ -293,10 +284,9 @@ class DatasetsController extends Controller
      * Get capture_methods
      * @return  array|bool  The query result
      */
-    public function get_capture_methods($this_container)
+    public function get_capture_methods()
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this_container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'capture_method',
           'sort_fields' => array(
@@ -318,10 +308,9 @@ class DatasetsController extends Controller
      * Get dataset_types
      * @return  array|bool  The query result
      */
-    public function get_dataset_types($this_container)
+    public function get_dataset_types()
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this_container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'dataset_type',
           'sort_fields' => array(
@@ -343,10 +332,9 @@ class DatasetsController extends Controller
      * Get item_position_types
      * @return  array|bool  The query result
      */
-    public function get_item_position_types($this_container)
+    public function get_item_position_types()
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this_container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'item_position_type',
           'sort_fields' => array(
@@ -368,10 +356,9 @@ class DatasetsController extends Controller
      * Get focus_types
      * @return  array|bool  The query result
      */
-    public function get_focus_types($this_container)
+    public function get_focus_types()
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this_container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'focus_type',
           'sort_fields' => array(
@@ -393,10 +380,9 @@ class DatasetsController extends Controller
      * Get light_source_types
      * @return  array|bool  The query result
      */
-    public function get_light_source_types($this_container)
+    public function get_light_source_types()
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this_container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'light_source_type',
           'sort_fields' => array(
@@ -418,10 +404,9 @@ class DatasetsController extends Controller
      * Get background_removal_methods
      * @return  array|bool  The query result
      */
-    public function get_background_removal_methods($this_container)
+    public function get_background_removal_methods()
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this_container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'background_removal_method',
           'sort_fields' => array(
@@ -442,10 +427,9 @@ class DatasetsController extends Controller
      * Get camera_cluster_types
      * @return  array|bool  The query result
      */
-    public function get_camera_cluster_types($this_container)
+    public function get_camera_cluster_types()
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this_container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'camera_cluster_type',
           'sort_fields' => array(
@@ -470,7 +454,6 @@ class DatasetsController extends Controller
     {
         $data = array();
 
-        $this->repo_storage_controller->setContainer($this->container);
         $records = $this->repo_storage_controller->execute('getRecords',
           array(
             'base_table' => 'calibration_object_type',
@@ -505,7 +488,6 @@ class DatasetsController extends Controller
 
           $ids_array = explode(',', $ids);
 
-          $this->repo_storage_controller->setContainer($this->container);
           foreach ($ids_array as $key => $id) {
             $ret = $this->repo_storage_controller->execute('markCaptureDatasetInactive', array(
               'record_id' => $id,

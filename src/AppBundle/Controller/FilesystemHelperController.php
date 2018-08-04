@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\Finder\Finder;
+use Doctrine\DBAL\Driver\Connection;
 
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
@@ -38,11 +39,11 @@ class FilesystemHelperController extends Controller
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct()
+  public function __construct(Connection $conn)
   {
     // Usage: $this->u->dumper($variable);
     $this->u = new AppUtilities();
-    $this->repo_storage_controller = new RepoStorageHybridController();
+    $this->repo_storage_controller = new RepoStorageHybridController($conn);
 
     // TODO: move this to parameters.yml and bind in services.yml.
     $ds = DIRECTORY_SEPARATOR;

@@ -6,6 +6,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Doctrine\DBAL\Driver\Connection;
 
 use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Service\RepoValidateData;
@@ -57,12 +58,12 @@ class BagitController extends Controller
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(TokenStorageInterface $token_storage)
+  public function __construct(TokenStorageInterface $token_storage, Connection $conn)
   {
 
     $this->u = new AppUtilities();
-    $this->repo_storage_controller = new RepoStorageHybridController;
-    $this->repoValidate = new RepoValidateData();
+    $this->repo_storage_controller = new RepoStorageHybridController($conn);
+    $this->repoValidate = new RepoValidateData($conn);
     $this->token_storage = $token_storage;
 
     $this->bagit_path = __DIR__ . '/../../../vendor/scholarslab/bagit/lib/bagit.php';
@@ -99,7 +100,7 @@ class BagitController extends Controller
    * create_data_dir
    * flag_warnings_as_errors
    */
-  public function bagit_create($params = array(), $container) {
+  public function bagit_create($params = array()) {
 
     $data = (object)[];
     $return = array();
@@ -209,8 +210,7 @@ class BagitController extends Controller
           'user_id' => 0,
           'job_log_label' => 'BagIt Validation',
           'errors' => $return['errors'],
-        ),
-        $container
+        )
       );
     }
 
@@ -219,7 +219,6 @@ class BagitController extends Controller
 
   /**
    * @param array $params Parameters sent to the function.
-   * @param object $container The container.
    * @return array Results from the BagIt validation process.
    *
    * Parameters include:
@@ -227,7 +226,7 @@ class BagitController extends Controller
    * localpath
    * flag_warnings_as_errors
    */
-  public function bagit_validate($params = array(), $container) {
+  public function bagit_validate($params = array()) {
 
     $data = (object)[];
     $return = array();
@@ -357,15 +356,13 @@ class BagitController extends Controller
           'job_id' => $data->job_id,
           'user_id' => 0,
           'errors' => $return['errors'],
-        ),
-        $container
+        )
       );
       // Set the job_status to 'failed'.
       $data->job_status = 'failed';
     }
 
     // Update the 'job_status' in the 'job' table accordingly.
-    $this->repo_storage_controller->setContainer($container);
     $this->repo_storage_controller->execute('saveRecord', array(
       'base_table' => 'job',
       'record_id' => $data->job_id,

@@ -29,11 +29,11 @@ class DatasetTypesController extends Controller
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u)
+    public function __construct(AppUtilities $u, Connection $conn)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
-        $this->repo_storage_controller = new RepoStorageHybridController();
+        $this->repo_storage_controller = new RepoStorageHybridController($conn);
 
         // Table name and field names.
         $this->table_name = 'dataset_type';
