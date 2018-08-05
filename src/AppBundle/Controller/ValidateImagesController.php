@@ -6,7 +6,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Symfony\Component\DependencyInjection\Container;
 use Doctrine\DBAL\Driver\Connection;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
@@ -93,7 +92,7 @@ class ValidateImagesController extends Controller
    * @param array  $params  Parameters. For now, only 'localpath' is being sent.
    * @return array 
    */
-  public function validate($params = array(), $container)
+  public function validate($params = array())
   {
 
     $data = array();
@@ -160,8 +159,7 @@ class ValidateImagesController extends Controller
             'user_id' => 0,
             'job_log_label' => 'Image Validation',
             'errors' => $data[$i]['errors'],
-          ),
-          $container
+          )
         );
       }
 
@@ -169,7 +167,6 @@ class ValidateImagesController extends Controller
     }
 
     // Update the 'job_status' in the 'job' table accordingly.
-    $this->repo_storage_controller->setContainer($container);
     $this->repo_storage_controller->execute('saveRecord', array(
       'base_table' => 'job',
       'record_id' => (int)$job_id,

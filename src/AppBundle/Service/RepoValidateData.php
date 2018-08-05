@@ -236,7 +236,6 @@ class RepoValidateData implements RepoValidate {
     // If data is passed, go ahead and perform the validation.
     if(!empty($data) && !empty($parent_records)) {
 
-      // $this->repo_storage_controller->setContainer($container);
 
       foreach($data as $key => $value) {
         if(!empty($value->capture_dataset_field_id)) {
@@ -297,7 +296,6 @@ class RepoValidateData implements RepoValidate {
   /**
    * @param string $status The status text to check for.
    * @param string $uploads_directory The uploads directory.
-   * @param object $container The container.
    * @return array The next directory to validate.
    */
   public function needs_validation_checker($status = null, $uploads_directory = null) {
@@ -305,7 +303,6 @@ class RepoValidateData implements RepoValidate {
     $directory = null;
 
     // Check the database to find the next job which hasn't had a BagIt validation performed against it.
-    // $this->repo_storage_controller->setContainer($container);
     $data = $this->repo_storage_controller->execute('getRecords', array(
         'base_table' => 'job',
         'fields' => array(),
@@ -338,14 +335,12 @@ class RepoValidateData implements RepoValidate {
 
   /**
    * @param array $params Parameters for inserting into the database.
-   * @param object $container The container.
    * @return null
    */
   public function log_errors($params = array()) {
 
     if(!empty($params)) {
       foreach ($params['errors'] as $ekey => $error) {
-        // $this->repo_storage_controller->setContainer($container);
         $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'job_log',
           'user_id' => $params['user_id'],

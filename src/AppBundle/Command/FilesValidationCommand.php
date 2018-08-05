@@ -3,17 +3,15 @@
 namespace AppBundle\Command;
 
 use Symfony\Component\Console\Command\Command;
-use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 
 use AppBundle\Controller\ValidateImagesController;
 
-class FilesValidationCommand extends ContainerAwareCommand
+class FilesValidationCommand extends Command
 {
   private $validate_images;
-  protected $container;
 
   public function __construct(ValidateImagesController $validate_images)
   {
@@ -44,7 +42,6 @@ class FilesValidationCommand extends ContainerAwareCommand
   protected function execute(InputInterface $input, OutputInterface $output)
   {
     $result = '';
-    $container = $this->getContainer();
 
     // Outputs multiple lines to the console (adding "\n" at the end of each line).
     $output->writeln([
@@ -63,7 +60,7 @@ class FilesValidationCommand extends ContainerAwareCommand
       );
 
       // Run the validation.
-      $result = $this->validate_images->validate($params, $container);
+      $result = $this->validate_images->validate($params);
 
       // Output validation results.
       if (!empty($result)) {

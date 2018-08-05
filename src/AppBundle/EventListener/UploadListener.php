@@ -7,7 +7,6 @@ use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\File\Exception\UploadException;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\HttpFoundation\Session\Session;
-use Psr\Container\ContainerInterface;
 use Oneup\UploaderBundle\Event\PostPersistEvent;
 use AppBundle\Service\RepoValidateData;
 use AppBundle\Controller\RepoStorageHybridController;
@@ -21,18 +20,15 @@ class UploadListener
    */
   private $repo_storage_controller;
   private $tokenStorage;
-  private $container;
   private $import_controller;
 
   public function __construct(
     Connection $conn,
     TokenStorageInterface $tokenStorage,
-    ContainerInterface $container,
     ImportController $import_controller)
   {
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->tokenStorage = $tokenStorage;
-    $this->container = $container;
     $this->import_controller = $import_controller;
     $this->connection = $conn;
   }
@@ -62,9 +58,7 @@ class UploadListener
     $data->prevalidate = (!empty($post['prevalidate']) && ($post['prevalidate'] === 'true')) ? true : false;
     // User data.
     $user = $this->tokenStorage->getToken()->getUser();
-    $data->user_id = $user->getId();
-    // Set container.
-    $this->repo_storage_controller->setContainer($this->container);
+    $data->user_id = $user->getId();    
 
     // Move uploaded files into the original directory structures, under a parent directory the jobId.
     if ($data->job_id && $data->parent_record_id) {
@@ -196,7 +190,7 @@ class UploadListener
     }
 
     // Construct the data.
-    $data->csv = $this->import_controller->construct_import_data($job_id_directory, $filename); // , $thisContainer, $itemsController
+    $data->csv = $this->import_controller->construct_import_data($job_id_directory, $filename); // $itemsController
 
     // Remove the column headers from the array.
     $column_headers = $data->csv['0'];
@@ -259,7 +253,7 @@ class UploadListener
               ));
               // Validate that the 'capture_dataset_field_id' value is unique for datasets that share the same Project and Item (within the database).
               if (!empty($parent_records)) {
-                $data->capture_dataset_field_id_results = $repoValidate->validateCaptureDatasetFieldId($data->csv, $parent_records, $this->container);
+                $data->capture_dataset_field_id_results = $repoValidate->validateCaptureDatasetFieldId($data->csv, $parent_records);
               }
               break;
           }

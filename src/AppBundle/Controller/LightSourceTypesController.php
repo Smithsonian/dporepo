@@ -9,7 +9,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
 use AppBundle\Controller\RepoStorageHybridController;
-use Symfony\Component\DependencyInjection\Container;
 use PDO;
 use GUMP;
 
@@ -49,7 +48,7 @@ class LightSourceTypesController extends Controller
     public function browse(Connection $conn, Request $request)
     {
         // Database tables are only created if not present.
-        $this->repo_storage_controller->setContainer($this->container);
+        
         $ret = $this->repo_storage_controller->build('createTable', array('table_name' => $this->table_name));
 
         return $this->render('resources/browse_light_source_types.html.twig', array(
@@ -96,7 +95,7 @@ class LightSourceTypesController extends Controller
           $query_params['search_value'] = $search;
         }
 
-        $this->repo_storage_controller->setContainer($this->container);
+        
         $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
         return $this->json($data);
@@ -120,7 +119,7 @@ class LightSourceTypesController extends Controller
         $post = $request->request->all();
       $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
-        $this->repo_storage_controller->setContainer($this->container);
+        
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'light_source_type',
@@ -184,7 +183,7 @@ class LightSourceTypesController extends Controller
 
         $ids_array = explode(',', $ids);
 
-        $this->repo_storage_controller->setContainer($this->container);
+        
 
         // Loop thorough the ids.
         foreach ($ids_array as $key => $id) {

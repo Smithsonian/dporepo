@@ -3,7 +3,6 @@
 namespace AppBundle\Command;
 
 use Symfony\Component\Console\Command\Command;
-use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
@@ -11,10 +10,9 @@ use Symfony\Component\Console\Input\ArrayInput;
 
 use AppBundle\Controller\BagitController;
 
-class BagitValidationCommand extends ContainerAwareCommand
+class BagitValidationCommand extends Command
 {
   private $bagit;
-  protected $container;
 
   public function __construct(BagitController $bagit)
   {
@@ -45,7 +43,6 @@ class BagitValidationCommand extends ContainerAwareCommand
   protected function execute(InputInterface $input, OutputInterface $output)
   {
     $result = '';
-    $container = $this->getContainer();
 
     // Outputs multiple lines to the console (adding "\n" at the end of each line).
     $output->writeln([
@@ -65,7 +62,7 @@ class BagitValidationCommand extends ContainerAwareCommand
       );
 
       // Run the validation.
-      $result = $this->bagit->bagit_validate($params, $container);
+      $result = $this->bagit->bagit_validate($params);
 
       // Output validation results.
       if (isset($result['result'])) {

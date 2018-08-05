@@ -3,7 +3,6 @@
 namespace AppBundle\Command;
 
 use Symfony\Component\Console\Command\Command;
-use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
@@ -13,9 +12,8 @@ use AppBundle\Controller\BagitController;
 use AppBundle\Controller\ImportController;
 use AppBundle\Service\RepoValidateData;
 
-class ValidateCommand extends ContainerAwareCommand
+class ValidateCommand extends Command
 {
-  protected $container;
   private $bagit;
   private $import;
 
@@ -60,7 +58,6 @@ class ValidateCommand extends ContainerAwareCommand
   protected function execute(InputInterface $input, OutputInterface $output)
   {
     $result = '';
-    $container = $this->getContainer();
 
     // Outputs multiple lines to the console (adding "\n" at the end of each line).
     $output->writeln([
@@ -105,7 +102,7 @@ class ValidateCommand extends ContainerAwareCommand
       );
 
       $input_files = new ArrayInput($arguments_files);
-      $return_files = $command_files->run($input_files, $output);
+      $return_files = $command_files->run($input_files, $output);      
 
       // Run the metadata ingest.
       $params = array(
@@ -118,11 +115,19 @@ class ValidateCommand extends ContainerAwareCommand
       // var_dump($params); die();
 
       $import_results = $this->import->import_csv($params);
+      
+      // echo '<pre>';
+      // var_dump($import_results);
+      // echo '</pre>';
+      // die();
 
       if (isset($import_results['errors'])) {
         $output->writeln('<comment>Metadata ingest failed. Job log IDs: ' . implode(', ', $import_results['errors']) . '</comment>');
       } else {
         $output->writeln('<comment>Metadata ingest complete. Job log IDs: ' . implode(', ', $import_results['job_log_ids']) . '</comment>');
+
+        // Transfer files to Drastic
+
       }
 
     }

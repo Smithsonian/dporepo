@@ -9,7 +9,6 @@ use PDO;
 class RepoStorageHybrid implements RepoStorage {
 
   private $connection;
-  protected $container;
 
   public function __construct($connection) {
     $this->connection = $connection;

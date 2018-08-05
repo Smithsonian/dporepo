@@ -9,7 +9,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
 use AppBundle\Controller\RepoStorageHybridController;
-use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 use AppBundle\Form\CaptureDeviceComponentForm;
@@ -64,7 +63,6 @@ class CaptureDeviceComponentController extends Controller
           $query_params['search_value'] = $search;
         }
 
-        $this->repo_storage_controller->setContainer($this->container);
         $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
         return $this->json($data);
@@ -90,7 +88,6 @@ class CaptureDeviceComponentController extends Controller
         if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
-        $this->repo_storage_controller->setContainer($this->container);
         if(!empty($id) && empty($post)) {
           $rec = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'capture_device_component',
@@ -145,8 +142,6 @@ class CaptureDeviceComponentController extends Controller
 
             // Create the array of ids.
             $ids_array = explode(',', $request->query->get('ids'));
-
-            $this->repo_storage_controller->setContainer($this->container);
 
             // Loop thorough the ids.
             foreach ($ids_array as $key => $id) {

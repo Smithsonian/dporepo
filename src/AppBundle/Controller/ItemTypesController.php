@@ -9,7 +9,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
 use AppBundle\Controller\RepoStorageHybridController;
-use Symfony\Component\DependencyInjection\Container;
 use PDO;
 use GUMP;
 
@@ -49,8 +48,7 @@ class ItemTypesController extends Controller
     public function browse(Connection $conn, Request $request)
     {
         // Database tables are only created if not present.
-        $this->repo_storage_controller->setContainer($this->container);
-        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => $this->table_name));
+                 $ret = $this->repo_storage_controller->build('createTable', array('table_name' => $this->table_name));
 
         return $this->render('resources/browse_item_types.html.twig', array(
             'page_title' => "Browse Item Types",
@@ -100,8 +98,7 @@ class ItemTypesController extends Controller
           $query_params['search_value'] = $search;
         }
 
-        $this->repo_storage_controller->setContainer($this->container);
-        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
+                 $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
         return $this->json($data);
     }
@@ -124,8 +121,7 @@ class ItemTypesController extends Controller
         $post = $request->request->all();
         $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
-        $this->repo_storage_controller->setContainer($this->container);
-        if(empty($post)) {
+                 if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'item_type',
             'record_id' => (int)$id));
@@ -190,8 +186,7 @@ class ItemTypesController extends Controller
 
         $ids_array = explode(',', $ids);
 
-        $this->repo_storage_controller->setContainer($this->container);
-
+         
         // Loop thorough the ids.
         foreach ($ids_array as $key => $id) {
           // Run the query against a single record.

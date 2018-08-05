@@ -78,9 +78,7 @@ class FilesystemHelperController extends Controller
     $directory_path = !empty($request->get('path')) ? $request->get('path') : '';
     $record_id = !empty($request->get('record_id')) ? $request->get('record_id') : false;
 
-    if(!empty($directory_path) && !empty($record_id)) {
-      // Set the container.
-      $this->repo_storage_controller->setContainer($this->container);
+    if(!empty($directory_path) && !empty($record_id)) {      
       // Get the job ID so it can be added to the uploaded files path.
       $job_data = $this->repo_storage_controller->execute('getRecords', array(
         'base_table' => 'job_import_record',
