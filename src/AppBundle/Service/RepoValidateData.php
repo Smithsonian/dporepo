@@ -298,7 +298,7 @@ class RepoValidateData implements RepoValidate {
    * @param string $uploads_directory The uploads directory.
    * @return array The next directory to validate.
    */
-  public function needs_validation_checker($status = null, $uploads_directory = null) {
+  public function needsValidationChecker($status = null, $uploads_directory = null) {
 
     $directory = null;
 
@@ -337,7 +337,7 @@ class RepoValidateData implements RepoValidate {
    * @param array $params Parameters for inserting into the database.
    * @return null
    */
-  public function log_errors($params = array()) {
+  public function logErrors($params = array()) {
 
     if(!empty($params)) {
       foreach ($params['errors'] as $ekey => $error) {

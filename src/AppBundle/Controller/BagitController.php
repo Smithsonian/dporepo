@@ -204,7 +204,7 @@ class BagitController extends Controller
 
     // Log errors to the database.
     if(isset($return['errors']) && !empty($return['errors'])) {
-      $this->repoValidate->log_errors(
+      $this->repoValidate->logErrors(
         array(
           'job_id' => $data->job_id,
           'user_id' => 0,
@@ -351,7 +351,7 @@ class BagitController extends Controller
 
     // Log errors to the database.
     if(isset($return['errors']) && !empty($return['errors'])) {
-      $this->repoValidate->log_errors(
+      $this->repoValidate->logErrors(
         array(
           'job_id' => $data->job_id,
           'user_id' => 0,

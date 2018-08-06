@@ -153,7 +153,7 @@ class ValidateImagesController extends Controller
         // Set the job_status to 'failed', if not already set.
         if ($job_status !== 'failed') $job_status = 'failed';
         // Log the errors to the database.
-        $this->repoValidate->log_errors(
+        $this->repoValidate->logErrors(
           array(
             'job_id' => (int)$job_id,
             'user_id' => 0,
