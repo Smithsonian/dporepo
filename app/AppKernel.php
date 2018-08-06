@@ -21,6 +21,7 @@ class AppKernel extends Kernel
             new FR3D\LdapBundle\FR3DLdapBundle(),
             new Lifo\TypeaheadBundle\LifoTypeaheadBundle(),
             new Oneup\UploaderBundle\OneupUploaderBundle(),
+            new Oneup\FlysystemBundle\OneupFlysystemBundle(),
         ];
 
         if (in_array($this->getEnvironment(), ['dev', 'test'], true)) {

@@ -19,8 +19,7 @@ services:
             $edan_auth_token: '%edan_auth_token%'
             $edan_version: '%edan_version%'
             $edan_search_endpoint: '%edan_search_endpoint%'
-            $file_upload_path: '%file_upload_path%'
-            $file_processing_path: '%file_processing_path%'
+            $uploads_directory: '%uploads_directory%'
 
     # makes classes in src/AppBundle available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
@@ -61,8 +60,18 @@ services:
     app.file_namer:
         public: true
         class: AppBundle\Uploader\FileNamer
+
     app.upload_listener:
         public: true
         class: AppBundle\EventListener\UploadListener
         tags:
             - { name: kernel.event_listener, event: oneup_uploader.post_persist, method: onUpload }
+
+    app.sabredav_client:
+        class: Sabre\DAV\Client
+        arguments:
+            $settings:
+                baseUri: '%external_file_storage_location%'
+                userName: '%external_file_storage_username%'
+                password: '%external_file_storage_password%'
+                authType: '%external_file_storage_auth_type%'
