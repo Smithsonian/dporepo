@@ -86,7 +86,7 @@ class ValidateCommand extends Command
       $command_bagit = $this->getApplication()->find('app:bagit-validate');
 
       $arguments_bagit = array(
-          'command' => 'app:files-validate',
+          'command' => 'app:bagit-validate',
           'localpath' => $directory_to_validate
       );
 
@@ -111,8 +111,6 @@ class ValidateCommand extends Command
         'parent_record_id' => $input->getArgument('parent_record_id'),
         'parent_record_type' => $input->getArgument('parent_record_type'),
       );
-
-      // var_dump($params); die();
 
       $import_results = $this->import->import_csv($params);
       
