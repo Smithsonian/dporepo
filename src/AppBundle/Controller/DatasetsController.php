@@ -26,15 +26,6 @@ class DatasetsController extends Controller
      */
     public $u;
     private $repo_storage_controller;
-    /**
-     * @var string
-     */
-    private $file_upload_path;
-
-    /**
-     * @var string
-     */
-    private $file_processing_path;
 
     /**
      * @var string
@@ -45,16 +36,12 @@ class DatasetsController extends Controller
     * Constructor
     * @param object  $u  Utility functions object
     */
-    public function __construct(AppUtilities $u, $file_upload_path, $file_processing_path, Connection $conn)
+    public function __construct(AppUtilities $u, string $uploads_directory, Connection $conn)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
-
-        $this->file_upload_path = $file_upload_path;
-        $this->file_processing_path = $file_processing_path;
-
-        $this->uploads_path = '/uploads/repository';
+        $this->uploads_path = str_replace('web', '', $uploads_directory);
     }
 
     /**
@@ -82,8 +69,6 @@ class DatasetsController extends Controller
 
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$project_repository_id));
         $subject_data = $subjects->get_subject((int)$subject_repository_id);
-        $jobBoxDirectoryContents = is_dir($this->file_upload_path) ? scandir($this->file_upload_path) : array();
-        $jobBoxProcessedDirectoryContents = is_dir($this->file_processing_path) ? scandir($this->file_processing_path) : array();
 
         // Truncate the item_description so the breadcrumb don't blow up.
         $more_indicator = (strlen($item->item_data->item_description) > 50) ? '...' : '';
@@ -98,7 +83,6 @@ class DatasetsController extends Controller
             'subject_data' => $subject_data,
             'item_data' => $item->item_data,
             'destination' => $project_repository_id . '|' . $subject_repository_id . '|' . $item_repository_id,
-            'include_directory_button' => !in_array($item->item_data->item_guid, $jobBoxDirectoryContents) && !in_array($item->item_data->item_guid, $jobBoxProcessedDirectoryContents) ? true : false,
             'uploads_path' => $this->uploads_path,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));

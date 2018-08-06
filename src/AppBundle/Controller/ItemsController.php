@@ -25,28 +25,16 @@ class ItemsController extends Controller
      */
     public $u;
     private $repo_storage_controller;
-    /**
-     * @var string
-     */
-    private $file_upload_path;
-    /**
-     * @var string
-     */
-    private $file_processing_path;
 
     /**
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, $file_upload_path, $file_processing_path, Connection $conn)
+    public function __construct(AppUtilities $u, Connection $conn)
     {
       // Usage: $this->u->dumper($variable);
       $this->u = $u;
       $this->repo_storage_controller = new RepoStorageHybridController($conn);
-
-      // Establish paths.
-      $this->file_upload_path = $file_upload_path;
-      $this->file_processing_path = $file_processing_path;
     }
 
     /**
@@ -359,54 +347,6 @@ class ItemsController extends Controller
         }
 
         return $updated;
-    }
-
-    /**
-     * @Route("/admin/projects/create_directory_in_jobbox/{item_guid}/{destination}", name="create_directory_in_jobbox", methods={"GET"}, defaults={"item_guid" = false, "destination" = false})
-     *
-     * Create Direcory in JobBox
-     *
-     * @param   object  Request  Request object
-     * @return  void
-     */
-    function create_directory_in_jobbox(Request $request)
-    {
-      //@todo revisit this and browse_datasets.html.twig that references this route.
-      // Move to Workflow Service.
-        $data = false;
-        $directoryContents = array();
-        $itemguid = !empty($request->attributes->get('item_guid')) ? $request->attributes->get('item_guid') : false;
-        $destination = !empty($request->attributes->get('destination')) ? $request->attributes->get('destination') : false;
-        $ids = explode('|', $destination);
-        $message = 'The directory could not be created (' . $itemguid . '). If this persists, please contact the administrator.';
- 
-        if($itemguid && !empty($itemguid)) {
-
-            $directoryContents = is_dir($this->file_upload_path) ? scandir($this->file_upload_path) : array();
-
-            if(!in_array($itemguid, $directoryContents)) {
-                // Create the directory.
-                mkdir($this->file_upload_path . '/' . $itemguid, 0775);
-                // Check to see if the directory was created.
-                if(is_dir($this->file_upload_path . '/' . $itemguid)) {
-                    $message = 'The directory has been created (' . $itemguid . ').';
-                }
-                
-            } else {
-                // The directory already exists, so don't overwrite it. Just send a mesaage.
-                $message = 'The directory already exists (' . $itemguid . ').';
-            }
-
-        }
-
-        // If the endpoint is accessed from within the application, redirect to the destination.
-        // If there is no destination, return a message in JSON format.
-        if($destination) {
-            $this->addFlash('message', $message);
-            return $this->redirectToRoute('datasets_browse', array('project_repository_id' => $ids[0], 'subject_repository_id' => $ids[1], 'item_repository_id' => $ids[2]));
-        } else {
-            return $this->json(array('message' => $message));
-        }
     }
 
 }
