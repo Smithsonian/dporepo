@@ -3,8 +3,10 @@
 namespace AppBundle\Service;
 
 use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\Finder\Finder;
 
-// Custom utility bundles
+use AppBundle\Service\RepoValidateData;
+use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Utils\AppUtilities;
 
 class RepoFileTransfer implements RepoFileTransferInterface {
@@ -30,65 +32,160 @@ class RepoFileTransfer implements RepoFileTransferInterface {
   private $uploads_directory;
 
   /**
-   * Constructor
-   * @param object  $u  Utility functions object
+   * @var string $external_file_storage_path
    */
-  // , string $external_file_storage_location, string $external_file_storage_protocol, string $external_file_storage_username, string $external_file_storage_password
-  public function __construct(KernelInterface $kernel, string $uploads_directory)
+  private $external_file_storage_path;
+
+  /**
+   * @var object $conn
+   */
+  private $conn;
+
+  /**
+   * @var object $repoValidate
+   */
+  private $repoValidate;
+
+  /**
+   * @var object $repo_storage_controller
+   */
+  private $repo_storage_controller;
+
+  /**
+   * Constructor
+   * @param object  $kernel  Symfony's kernel object
+   * @param string  $uploads_directory  Uploads directory path
+   * @param string  $external_file_storage_path  External file storage path
+   * @param string  $conn  The database connection
+   */
+  public function __construct(KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn)
   {
     $this->u = new AppUtilities();
     $this->kernel = $kernel;
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
     $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+    $this->external_file_storage_path = $external_file_storage_path;
+    $this->conn = $conn;
+    $this->repoValidate = new RepoValidateData($conn);
+    $this->repo_storage_controller = new RepoStorageHybridController($conn);
   }
+
+  /**
+   * Working with Flysystem
+   * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
+   *
+   * Create Directories
+   * $response = $filesystem->createDir('data');
+   * $this->u->dumper($response);
+   *
+   * Check if a file exists
+   * $exists = $filesystem->has('data');
+   * $this->u->dumper($exists);
+   *
+   * createDir
+   * write
+   * read
+   * update
+   * listContents
+   * delete
+   * getTimestamp
+   */
 
   /**
    * @param $target_directory The directory which contains files to be transferred.
    * @param $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
+   * @param $conn The database connection.
    * @return mixed array containing success/fail value, and any messages.
    */
-  // Create Directories
-  // $response = $filesystem->createDir('data2');
-  // $this->u->dumper($response);
-  // Check if a file exists
-  // $exists = $filesystem->has('data2');
-  // $this->u->dumper($exists);
-  //
-  // createDir
-  // write
-  // read
-  // update
-  // listContents
-  // delete
-  // getTimestamp
-  public function transferFiles($target_directory = null, $filesystem = null)
+  public function transferFiles($target_directory = null, $filesystem = null, $conn = null)
   {
+    $data = array();
+    $job_status = 'complete';
 
-    $file_path = $target_directory . DIRECTORY_SEPARATOR . 'data2' . DIRECTORY_SEPARATOR . '_RA_7654.jpg';
-    $path = $this->project_directory . $this->uploads_directory . $file_path;
+    // Absolute local path.
+    $path = $this->project_directory . $this->uploads_directory . $target_directory;
 
-    // If a file exists, catch the error.
-    if ($filesystem->has($path)) {
-      $this->u->dumper('Error: file already exists');
+    if (!is_dir($path)) {
+      $data[0]['errors'][] = 'Target directory not found - ' . $path;
     }
 
-    // If a file does not exist, write the file.
-    if (!$filesystem->has($path)) {
+    if (is_dir($path)) {
 
-      $fh = fopen($path, 'rb');
-      // Write the file
-      $response = $filesystem->write($path, $fh);
-      fclose($fh);
-      // Catch error.
-      if (!$response) {
-        $this->u->dumper('Error: could not not transfer file');
-      } else {
-        $this->u->dumper('Success: file has been transferred');
+      $finder = new Finder();
+      $finder->in($path);
+      $finder->sortByName();
+
+      // Traverse the local path and upload files.
+      $i = 0;
+      foreach ($finder as $file) {
+
+        // Make sure the asset is a file and not a directory (directories are automatically detected by WebDAV).
+        if ($file->isFile()) {
+
+          // Remove the absolute local path to format into the absolute external path.
+          $path_external = str_replace($this->project_directory . $this->uploads_directory, $this->external_file_storage_path, $file->getPathname());
+
+          // If a file exists, catch the error.
+          if ($filesystem->has($path_external)) {
+            $data[$i]['errors'][] = 'File already exists. Path: ' . $path_external;
+          }
+
+          // If a file does not exist, write the file.
+          if (!$filesystem->has($path_external)) {
+
+            $stream = fopen($file->getPathname(), 'r+');
+            // Write the file
+            $response = $filesystem->writeStream($path_external, $stream);
+            // Before calling fclose on the resource, check if it’s still valid using is_resource.
+            // See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
+            if (is_resource($stream)) fclose($stream);
+            // Catch error.
+            if (!$response) {
+              $data[$i]['errors'][] = 'Could not not transfer file(s)';
+            }
+
+          }
+
+          $data[$i]['file_name'] = $file->getFilename();
+          $data[$i]['file_size'] = $file->getSize();
+          $data[$i]['file_extension'] = $file->getExtension();
+
+          if (!empty($data[$i]['errors'])) {
+            // Set the job_status to 'failed', if not already set.
+            if ($job_status !== 'failed') $job_status = 'failed';
+            // Log the errors to the database.
+            $this->repoValidate->logErrors(
+              array(
+                'job_id' => (int)$target_directory,
+                'user_id' => 0,
+                'job_log_label' => 'File Transfer',
+                'errors' => $data[$i]['errors'],
+              )
+            );
+          }
+
+          $i++;
+        }
+
       }
 
     }
 
+    // Update the 'job_status' in the 'job' table accordingly.
+    $this->repo_storage_controller->execute('saveRecord', array(
+      'base_table' => 'job',
+      'record_id' => (int)$target_directory,
+      'user_id' => 0,
+      'values' => array(
+        'job_status' => $job_status,
+        'date_completed' => date('Y-m-d h:i:s'),
+        'qa_required' => 0,
+        'qa_approved_time' => null,
+      )
+    ));
+
+    return $data;
   }
 
 }
