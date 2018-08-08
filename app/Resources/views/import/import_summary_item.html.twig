@@ -133,6 +133,19 @@
                   {% endfor %}
                 </ol>
               {% endif %}
+              <hr>
+              <h3>File Transfer Results</h3>
+              {% if not project.file_transfer_errors and job_data.job_status == 'in progress' or job_data.job_status == 'bagit validation completed' %}
+                <p><span class="glyphicon glyphicon-time"></span> File transfers pending. Please check back shortly.</p>
+              {% else %}
+                <ol class="list-unstyled">
+                  {% for file_transfer_error in project.file_transfer_errors %}
+                    <li class="text-danger" style="border-bottom: 1px solid #dddddd; padding: 0.5rem 0 0.5rem 0.5rem;"><strong>{{ file_transfer_error.job_log_description }}</strong></li>
+                  {% else %}
+                    <li class="text-success"><strong><span class="glyphicon glyphicon-ok"></span> No file transfer errors found.</strong></li>
+                  {% endfor %}
+                </ol>
+              {% endif %}
             </div>
           </div>
         {% endif %}
