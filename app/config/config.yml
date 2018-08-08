@@ -150,7 +150,6 @@ oneup_flysystem:
     filesystems:
         assets:
             adapter: assets_adapter
-            # optional - defines the default visibility of the filesystem: `public` or `private`(default)
             cache: ~
             alias: ~
             mount: ~

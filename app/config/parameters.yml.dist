@@ -37,8 +37,8 @@ parameters:
 
     # External file storage parameters
     # See: vendor/sabre/dav/lib/DAV/Client.php
-    external_file_storage_protocol: ~
     external_file_storage_location: ~
     external_file_storage_auth_type: ~
     external_file_storage_username: ~
     external_file_storage_password: ~
+    external_file_storage_path: ~
