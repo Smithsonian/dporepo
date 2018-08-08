@@ -203,13 +203,13 @@ class ImportController extends Controller
         // Populate the errors array to return to front end.
         $return['errors'][] = 'Metadata ingest failed. Job ID: ' . $params['job_id'];
       } else {
-        // Update the job table to set the status from 'uploading' to 'complete'.
+        // Update the job table to set the status from 'image validation completed' to 'metadata ingest complete'.
         $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'job',
           'record_id' => $params['job_id'],
           'user_id' => $this->getUser()->getId(),
           'values' => array(
-            'job_status' => 'complete',
+            'job_status' => 'metadata ingest complete',
             'date_completed' => date('Y-m-d H:i:s'),
             'qa_required' => 0,
             'qa_approved_time' => null,
