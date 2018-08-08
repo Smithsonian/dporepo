@@ -8,23 +8,20 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\ArrayInput;
 
-use AppBundle\Controller\BagitController;
 use AppBundle\Controller\ImportController;
 use AppBundle\Service\RepoValidateData;
 
 class ValidateCommand extends Command
 {
-  private $bagit;
   private $import;
+  private $validate;
 
-  public function __construct(BagitController $bagit, ImportController $import, RepoValidateData $repoValidate)
+  public function __construct(ImportController $import, RepoValidateData $validate)
   {
-    // BagIt controller
-    $this->bagit = $bagit;
     // Import controller
     $this->import = $import;
     // Repo Validate Data service
-    $this->repoValidate = $repoValidate;
+    $this->validate = $validate;
     // TODO: move this to parameters.yml and bind in services.yml.
     $ds = DIRECTORY_SEPARATOR;
     // $this->uploads_directory = $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
@@ -75,7 +72,7 @@ class ValidateCommand extends Command
 
     // If a localpath is NOT passed, check the database for a job with the 'job_status' set to 'uploaded'.
     if ( empty($input->getArgument('localpath')) ) {
-      $directory_to_validate = $this->repoValidate->needsValidationChecker('uploaded', $this->uploads_directory);
+      $directory_to_validate = $this->validate->needsValidationChecker('uploaded', $this->uploads_directory);
     }
 
     if (!empty($directory_to_validate)) {
@@ -124,8 +121,16 @@ class ValidateCommand extends Command
       } else {
         $output->writeln('<comment>Metadata ingest complete. Job log IDs: ' . implode(', ', $import_results['job_log_ids']) . '</comment>');
 
-        // Transfer files to Drastic
+        // Transfer files.
+        $command_file_transfer = $this->getApplication()->find('app:transfer-files');
 
+        $arguments_file_transfer = array(
+            'command' => 'app:transfer-files',
+            'job_id' => $input->getArgument('job_id')
+        );
+
+        $input_file_transfer = new ArrayInput($arguments_file_transfer);
+        $return_file_transfer = $command_file_transfer->run($input_file_transfer, $output);
       }
 
     }
