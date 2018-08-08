@@ -347,7 +347,7 @@ class RepoValidateData implements RepoValidate {
           'values' => array(
             'job_id' => $params['job_id'],
             'job_log_status' => 'error',
-            'job_log_label' => 'Image Validation',// $params['job_log_label']
+            'job_log_label' => $params['job_log_label'],
             'job_log_description' => $error,
           )
         ));
