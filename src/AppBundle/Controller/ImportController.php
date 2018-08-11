@@ -32,6 +32,8 @@ use AppBundle\Entity\UploadsParentPicker;
 // Custom utility bundle
 use AppBundle\Utils\AppUtilities;
 
+use AppBundle\Service\RepoFileTransfer;
+
 class ImportController extends Controller
 {
     /**
@@ -54,12 +56,13 @@ class ImportController extends Controller
     private $itemsController;
     private $datasetsController;
     private $modelsController;
+    private $fileTransfer;
 
     /**
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, RepoFileTransfer $fileTransfer) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
@@ -69,6 +72,7 @@ class ImportController extends Controller
         $this->itemsController = $itemsController;
         $this->datasetsController = $datasetsController;
         $this->modelsController = $modelsController;
+        $this->fileTransfer = $fileTransfer;
 
         // $this->logger = $logger;
         // Usage:
@@ -1274,6 +1278,20 @@ class ImportController extends Controller
         if (is_dir($this->uploads_directory . DIRECTORY_SEPARATOR . $job_id)) {
           $fileSystem = new Filesystem();
           $fileSystem->remove($this->uploads_directory . DIRECTORY_SEPARATOR . $job_id);
+        }
+
+        // Remove files from external storage.
+        $flysystem = $this->container->get('oneup_flysystem.assets_filesystem');
+        $result = $this->fileTransfer->removeFiles($job_id, $flysystem);
+        // Return errors from the file removal process.
+        if (!empty($result)) {
+          foreach ($result as $key => $value) {
+            if (isset($value['errors'])) {
+              foreach ($value['errors'] as $ekey => $evalue) {
+                $this->addFlash('error', '<h4>External File Removal - ' . $evalue . '</h4>');
+              }
+            }
+          }
         }
 
         // The message
