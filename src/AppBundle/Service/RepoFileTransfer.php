@@ -180,4 +180,29 @@ class RepoFileTransfer implements RepoFileTransferInterface {
     return $data;
   }
 
+  /**
+   * @param $target_directory The directory which contains files to be transferred.
+   * @param $filesystem Filesystem object (via Flysystem).
+   * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
+   * @return mixed array containing success/fail value, and any messages.
+   */
+  public function removeFiles($target_directory = null, $filesystem = null)
+  {
+    $data = array();
+
+    // Absolute external path.
+    $path = $this->external_file_storage_path . $target_directory;
+
+    // Remove file(s).
+    try {
+      $response = $filesystem->delete($path);
+    }
+    // Catch the error.
+    catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
+      $data[0]['errors'][] = $e->getMessage();
+    }
+    
+    return $data;
+  }
+
 }
