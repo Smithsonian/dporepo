@@ -126,27 +126,19 @@ class RepoFileTransfer implements RepoFileTransferInterface {
           // Remove the absolute local path to format into the absolute external path.
           $path_external = str_replace($this->project_directory . $this->uploads_directory, $this->external_file_storage_path, $file->getPathname());
 
-          // If a file exists, catch the error.
-          if ($filesystem->has($path_external)) {
-            $data[$i]['errors'][] = 'File already exists. Path: ' . $path_external;
-          }
-
-          // If a file does not exist, write the file.
-          if (!$filesystem->has($path_external)) {
-
+          // Write the file.
+          try {
             $stream = fopen($file->getPathname(), 'r+');
-            // Write the file
-            $response = $filesystem->writeStream($path_external, $stream);
+            $filesystem->putStream($path_external, $stream);
             // Before calling fclose on the resource, check if it’s still valid using is_resource.
-            // See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
             if (is_resource($stream)) fclose($stream);
-            // Catch error.
-            if (!$response) {
-              $data[$i]['errors'][] = 'Could not not transfer file(s)';
-            }
-
+          }
+          // Catch the error.
+          catch(\League\Flysystem\FileExistsException | \League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
+            $data[$i]['errors'][] = $e->getMessage();
           }
 
+          // Return some information about the file.
           $data[$i]['file_name'] = $file->getFilename();
           $data[$i]['file_size'] = $file->getSize();
           $data[$i]['file_extension'] = $file->getExtension();
