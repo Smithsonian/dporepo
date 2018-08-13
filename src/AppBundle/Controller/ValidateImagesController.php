@@ -155,7 +155,7 @@ class ValidateImagesController extends Controller
         // Log the errors to the database.
         $this->repoValidate->logErrors(
           array(
-            'job_id' => (int)$job_id,
+            'job_id' => $job_id,
             'user_id' => 0,
             'job_log_label' => 'Image Validation',
             'errors' => $data[$i]['errors'],
@@ -167,17 +167,13 @@ class ValidateImagesController extends Controller
     }
 
     // Update the 'job_status' in the 'job' table accordingly.
-    $this->repo_storage_controller->execute('saveRecord', array(
-      'base_table' => 'job',
-      'record_id' => (int)$job_id,
-      'user_id' => 0,
-      'values' => array(
-        'job_status' => $job_status,
-        'date_completed' => date('Y-m-d h:i:s'),
-        'qa_required' => 0,
-        'qa_approved_time' => null,
+    $this->repo_storage_controller->execute('setJobStatus', 
+      array(
+        'job_id' => $job_id, 
+        'status' => $job_status, 
+        'date_completed' => date('Y-m-d h:i:s')
       )
-    ));
+    );
 
     return $data;
   }

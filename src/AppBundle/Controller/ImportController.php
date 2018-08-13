@@ -110,13 +110,10 @@ class ImportController extends Controller
       // TODO: insert errors into the database (job_log table).
       if (!empty($return['errors'])) return $return;
       
-      $job_data = $this->repo_storage_controller->execute('getRecord', array(
-          'base_table' => 'job',
-          'id_field' => 'job_id',
-          'id_value' => $params['job_id'],
-          'omit_active_field' => true,
-        )
-      );
+      $job_data = $this->repo_storage_controller->execute('getJobData', $params['uuid']);
+
+      // Throw a 404 if the job record doesn't exist.
+      if (!$job_data) throw $this->createNotFoundException('The Job record doesn\'t exist');
 
       // Don't perform the metadata ingest if the job_status has been set to 'failed'.
       if ($job_data['job_status'] === 'failed') return $return;
@@ -129,20 +126,13 @@ class ImportController extends Controller
       $session->remove('new_repository_ids_4');
 
       // Set the job type (e.g. subjects metadata import, items metadata import, capture datasets metadata import, models metadata import).
-      $job_data = $this->repo_storage_controller->execute('getRecord', array(
-          'base_table' => 'job',
-          'id_field' => 'job_id',
-          'id_value' => $params['job_id'],
-          'omit_active_field' => true,
-        )
-      );
-      // Throw a 404 if the job record doesn't exist.
-      if (!$job_data) throw $this->createNotFoundException('The Job record doesn\'t exist');
+      // $job_data = $this->repo_storage_controller->execute('getJobData', $params['uuid']);
 
-      if (!empty($params['job_id']) && !empty($params['parent_project_id']) && !empty($params['parent_record_id']) && !empty($params['parent_record_type'])) {
+      if (!empty($params['uuid']) && !empty($params['parent_project_id']) && !empty($params['parent_record_id']) && !empty($params['parent_record_type'])) {
 
         $ids = (object)array(
-          'job_id' => $params['job_id'],
+          'job_id' => $job_data['job_id'],
+          'uuid' => $params['uuid'],
           'parent_project_id' => $params['parent_project_id'],
           'parent_record_id' => $params['parent_record_id'],
         );
@@ -152,7 +142,7 @@ class ImportController extends Controller
 
         if (!empty($job_type)) {
           // Prepare the data.
-          $data = $this->prepare_data($job_type, $this->uploads_directory . $ids->job_id);
+          $data = $this->prepare_data($job_type, $this->uploads_directory . $ids->uuid);
 
           // Ingest data.
           if (!empty($data)) {
@@ -192,10 +182,10 @@ class ImportController extends Controller
       }
 
       // Update the job table to indicate that the CSV import failed.
-      if (!empty($params['job_id']) && empty($return['job_log_ids'])) {
+      if (!empty($params['uuid']) && empty($return['job_log_ids'])) {
         $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'job',
-          'record_id' => $params['job_id'],
+          'record_id' => $job_data['job_id'],
           'user_id' => $this->getUser()->getId(),
           'values' => array(
             'job_status' => 'failed',
@@ -205,12 +195,12 @@ class ImportController extends Controller
           )
         ));
         // Populate the errors array to return to front end.
-        $return['errors'][] = 'Metadata ingest failed. Job ID: ' . $params['job_id'];
+        $return['errors'][] = 'Metadata ingest failed. Job ID: ' . $job_data['job_id'];
       } else {
         // Update the job table to set the status from 'image validation completed' to 'metadata ingest complete'.
         $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'job',
-          'record_id' => $params['job_id'],
+          'record_id' => $job_data['job_id'],
           'user_id' => $this->getUser()->getId(),
           'values' => array(
             'job_status' => 'metadata ingest complete',
@@ -295,7 +285,7 @@ class ImportController extends Controller
                 unset($json_array[$key][$k]);
 
                 // If present, bring the project_repository_id into the array.
-                $json_array[$key][$field_name] = ($field_name === 'project_repository_id') ? (int)$id : null;
+                // $json_array[$key][$field_name] = ($field_name === 'project_repository_id') ? (int)$id : null;
 
                 // Set the value of the field name.
                 $json_array[$key][$field_name] = $v;
@@ -425,12 +415,14 @@ class ImportController extends Controller
 
     // Job ID and parent record ID
     $data->job_id = isset($ids->job_id) ? $ids->job_id : false;
+    $data->uuid = isset($ids->uuid) ? $ids->uuid : false;
     $data->parent_project_id = isset($ids->parent_project_id) ? $ids->parent_project_id : false;
     $data->parent_record_id = isset($ids->parent_record_id) ? $ids->parent_record_id : false;
     $data->parent_record_type = isset($parent_record_type) ? $parent_record_type : false;
 
     // Just in case: throw a 404 if either job ID or parent record ID aren't passed.
     if (!$data->job_id) throw $this->createNotFoundException('Job ID not provided.');
+    if (!$data->uuid) throw $this->createNotFoundException('UUID not provided.');
     if (!$data->parent_project_id) throw $this->createNotFoundException('Parent Project record ID not provided.');
     if (!$data->parent_record_id) throw $this->createNotFoundException('Parent record ID not provided.');
 
@@ -499,10 +491,10 @@ class ImportController extends Controller
           // 2) Add the file's checksum to the $csv_val object.
           if(!empty($csv_val->file_path)) {
             // Append the job ID to the file path.
-            $csv_val->file_path = '/' . $data->job_id . $csv_val->file_path;
+            $csv_val->file_path = '/' . $data->uuid . $csv_val->file_path;
             // Get the file's checksum from the BagIt manifest.
             $finder = new Finder();
-            $finder->files()->in($this->uploads_directory . $data->job_id . '/');
+            $finder->files()->in($this->uploads_directory . $data->uuid . '/');
             $finder->files()->name('manifest*.txt');
             // Find the manifest file.
             foreach ($finder as $file) {
@@ -661,9 +653,9 @@ class ImportController extends Controller
     }
     
     /**
-     * @Route("/admin/import/{job_id}/{parent_project_id}/{parent_record_id}/{parent_record_type}", name="import_summary_details", defaults={"job_id" = null, "parent_project_id" = null, "parent_record_id" = null, "parent_record_type" = null}, methods="GET")
+     * @Route("/admin/import/{uuid}/{parent_project_id}/{parent_record_id}/{parent_record_type}", name="import_summary_details", defaults={"uuid" = null, "parent_project_id" = null, "parent_record_id" = null, "parent_record_type" = null}, methods="GET")
      *
-     * @param int $job_id Job ID
+     * @param int $uuid Job ID
      * @param int $parent_project_id Parent Project ID
      * @param int $parent_record_id Parent Record ID
      * @param int $parent_record_type Parent Record Type
@@ -671,10 +663,10 @@ class ImportController extends Controller
      * @param object $project ProjectsController class
      * @param object $request Symfony's request object
      */
-    public function import_summary_details($job_id, $parent_project_id, $parent_record_id, $parent_record_type, Connection $conn, ProjectsController $project, Request $request, DatasetElementsController $data_elements_controller, ValidateImagesController $images, KernelInterface $kernel)
+    public function import_summary_details($uuid, $parent_project_id, $parent_record_id, $parent_record_type, Connection $conn, ProjectsController $project, Request $request, DatasetElementsController $data_elements_controller, ValidateImagesController $images, KernelInterface $kernel)
     {
 
-      // $this->u->dumper($job_id,0);
+      // $this->u->dumper($uuid,0);
       // $this->u->dumper($parent_project_id,0);
       // $this->u->dumper($parent_record_id,0);
       // $this->u->dumper($parent_record_type);
@@ -682,15 +674,9 @@ class ImportController extends Controller
       $project = [];
       $project['file_validation_errors'] = [];
 
-      if (!empty($job_id)) {
+      if (!empty($uuid)) {
         // Check to see if the job exists. If it doesn't, throw a createNotFoundException (404).
-        $job_data = $this->repo_storage_controller->execute('getRecord', array(
-            'base_table' => 'job',
-            'id_field' => 'job_id',
-            'id_value' => $job_id,
-            'omit_active_field' => true,
-          )
-        );
+        $job_data = $this->repo_storage_controller->execute('getJobData', $uuid);
         if (empty($job_data)) throw $this->createNotFoundException('The Job record does not exist');
       }
 
@@ -701,10 +687,10 @@ class ImportController extends Controller
       }
 
       // Get the total number of Item records for the import.
-      if (!empty($job_id)) {
+      if (!empty($uuid)) {
 
         // Get job import data (query the 'job_import_record' table).
-        $job_record_data = $this->repo_storage_controller->execute('getImportedItems', array('job_id' => (int)$job_id));
+        $job_record_data = $this->repo_storage_controller->execute('getImportedItems', array('job_id' => $job_data['job_id']));
 
         // If a record is NOT found within the 'job_import_record' table, add a message and execute validations and metadata ingests.
         if (!$job_record_data && ($job_data['job_status'] !== 'failed') && ($job_data['job_status'] !== 'complete')) {
@@ -717,7 +703,7 @@ class ImportController extends Controller
 
           $input = new ArrayInput(array(
             'command' => 'app:validate',
-            'job_id' => $job_id,
+            'uuid' => $job_data['uuid'],
             'parent_project_id' => $parent_project_id,
             'parent_record_id' => $parent_record_id,
             'parent_record_type' => $parent_record_type
@@ -760,7 +746,7 @@ class ImportController extends Controller
         }
 
         // Check for uploaded files.
-        $dir = $this->uploads_directory . (int)$job_id . '/';
+        $dir = $this->uploads_directory . $job_data['uuid'] . '/';
         $project['uploaded_files'] = (is_dir($dir) && is_readable($dir)) ? true : false;
 
         // Get CSV data.
@@ -788,7 +774,7 @@ class ImportController extends Controller
                   'job_id'
                 ),
                 'search_values' => array(
-                  (int)$job_id
+                  $job_data['job_id']
                 ),
                 'comparison' => '='
               ),
@@ -829,7 +815,7 @@ class ImportController extends Controller
                   'job_id'
                 ),
                 'search_values' => array(
-                  (int)$job_id
+                  $job_data['job_id']
                 ),
                 'comparison' => '='
               ),
@@ -870,7 +856,7 @@ class ImportController extends Controller
                   'job_id'
                 ),
                 'search_values' => array(
-                  (int)$job_id
+                  $job_data['job_id']
                 ),
                 'comparison' => '='
               ),
@@ -907,23 +893,23 @@ class ImportController extends Controller
         'page_title' => $job_record_data ? $project['job_label'] : 'Uploads: ' . $project['project_name'],
         'project' => $project,
         'job_data' => $job_data,
-        'id' => $job_id,
+        'id' => $job_data['job_id'],
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
       ));
     }
 
     /**
-     * @Route("/admin/import/{id}/datatables_browse_import_details", name="import_details_browse_datatables", methods="POST")
+     * @Route("/admin/import/{uuid}/datatables_browse_import_details", name="import_details_browse_datatables", methods="POST")
      *
      * Browse Import Details
      *
      * Run a query to retrieve the details of an import.
      *
-     * @param  int $id The job ID
+     * @param  int $uuid The job's UUID
      * @param Request $request Symfony's request object
      * @return \Symfony\Component\HttpFoundation\JsonResponse The query result
      */
-    public function datatables_browse_import_details($id, Request $request)
+    public function datatables_browse_import_details($uuid, Request $request)
     {
       $req = $request->request->all();
       $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -933,13 +919,10 @@ class ImportController extends Controller
       $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
       // Determine what was ingested (e.g. subjects, items, capture datasets, models).
-      $job_data = $this->repo_storage_controller->execute('getRecord', array(
-          'base_table' => 'job',
-          'id_field' => 'job_id',
-          'id_value' => $id,
-          'omit_active_field' => true,
-        )
-      );
+      $job_data = $this->repo_storage_controller->execute('getJobData', $uuid);
+
+      // If there are no results, throw a createNotFoundException (404).
+      if (empty($job_data)) throw $this->createNotFoundException('No records found');
 
       // TODO: ^^^ error handling if job is not found? ^^^
 
@@ -948,7 +931,7 @@ class ImportController extends Controller
         'sort_order' => $sort_order,
         'start_record' => $start_record,
         'stop_record' => $stop_record,
-        'id' => $id,
+        'id' => $job_data['job_id'],
         'job_type' => $job_data['job_type'],
       );
 
@@ -1109,12 +1092,14 @@ class ImportController extends Controller
       if (!empty($project)) {
         // Get the job type (what's being ingested?).
         $job_type = $this->get_job_type($record_type);
+        $uuid = uniqid('3df_', true);
         // Insert a record into the job table.
         // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI?
         $job_id = $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'job',
           'user_id' => $this->getUser()->getId(),
           'values' => array(
+            'uuid' => $uuid,
             'project_id' => (int)$project['project_repository_id'],
             'job_label' => 'Metadata Import: "' . $project['project_name'] . '"',
             'job_type' => $job_type . ' metadata import',
@@ -1126,7 +1111,7 @@ class ImportController extends Controller
         ));
       }
 
-      return $this->json(array('jobId' => (int)$job_id, 'projectId' => (int)$project['project_repository_id']));
+      return $this->json(array('jobId' => (int)$job_id, 'uuid' => $uuid, 'projectId' => (int)$project['project_repository_id']));
     }
 
     /**
@@ -1148,47 +1133,28 @@ class ImportController extends Controller
 
       // Update the record in the job table.
       // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI?
-      $result = $this->repo_storage_controller->execute('saveRecord', array(
-        'base_table' => 'job',
-        'record_id' => $job_id,
-        'user_id' => $this->getUser()->getId(),
-        'values' => array(
-          'job_status' => $status,
-        )
-      ));
+      $result = $this->repo_storage_controller->execute('setJobStatus', array('job_id' => $job_id, 'status' => $status));
 
       return $this->json(array('statusSet' => $result));
     }
 
     /**
      * Get Job Status
-     * @Route("/admin/get_job_status/{job_id}", name="get_job_status", defaults={"job_id" = null}, methods="GET")
+     * @Route("/admin/get_job_status/{uuid}", name="get_job_status", defaults={"uuid" = null}, methods="GET")
      *
-     * @param string $job_id  The job ID
+     * @param string $uuid  The job ID
      * @param object $request Symfony's request object
      * @return string
      */
-    public function get_job_status($job_id = null, Request $request)
+    public function get_job_status($uuid = null, Request $request)
     {
       $result = array();
 
-      // If $job_id is empty, throw a createNotFoundException (404).
-      if (empty($job_id)) throw $this->createNotFoundException('Job ID is empty');
+      // If $uuid is empty, throw a createNotFoundException (404).
+      if (empty($uuid)) throw $this->createNotFoundException('Job ID is empty');
 
       // Check the database to find the next job which hasn't had a BagIt validation performed against it.
-      $result = $this->repo_storage_controller->execute('getRecord', array(
-          'base_table' => 'job',
-          'id_field' => 'job_id',
-          'id_value' => (int)$job_id,
-          // 'fields' => array(
-          //   array(
-          //     'table_name' => 'job',
-          //     'field_name' => 'job_status',
-          //   )
-          // ),
-          'omit_active_field' => true,
-        )
-      );
+      $result = $this->repo_storage_controller->execute('getJobData', $uuid);
 
       // If $result is empty, throw a createNotFoundException (404).
       if (empty($result)) throw $this->createNotFoundException('Job status not found (404)');
@@ -1243,31 +1209,25 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/purge_import/{job_id}", name="purge_imported_data_and_files", defaults={"job_id" = null}, methods="GET")
+     * @Route("/admin/purge_import/{uuid}", name="purge_imported_data_and_files", defaults={"uuid" = null}, methods="GET")
      *
-     * @param int $job_id The Job ID
+     * @param int $uuid The job's UUID
      * @param object $conn Database connection object
      * @param object $request Symfony's request object
      * @return array
      */
-    public function purge_imported_data_and_files($job_id, Connection $conn, Request $request)
+    public function purge_imported_data_and_files($uuid, Connection $conn, Request $request)
     {
-      if (empty($job_id)) throw $this->createNotFoundException('Job ID not provided');
+      if (empty($uuid)) throw $this->createNotFoundException('UUID not provided');
 
-      if (!empty($job_id)) {
+      if (!empty($uuid)) {
 
         // Check to see if the job record exists, and if it doesn't, throw a createNotFoundException (404).
-        $job_data = $this->repo_storage_controller->execute('getRecord', array(
-            'base_table' => 'job',
-            'id_field' => 'job_id',
-            'id_value' => $job_id,
-            'omit_active_field' => true,
-          )
-        );
+        $job_data = $this->repo_storage_controller->execute('getJobData', $uuid);
         if (!$job_data) throw $this->createNotFoundException('The Job record does not exist');
 
         // Remove imported data.
-        $results = $this->repo_storage_controller->execute('purgeImportedData', array('job_id' => (int)$job_id));
+        $results = $this->repo_storage_controller->execute('purgeImportedData', array('uuid' => $uuid));
         // Create a summary of rows deleted.
         $data = '';
         foreach ($results as $key => $value) {
@@ -1275,14 +1235,14 @@ class ImportController extends Controller
         }
 
         // Remove the job directory.
-        if (is_dir($this->uploads_directory . DIRECTORY_SEPARATOR . $job_id)) {
+        if (is_dir($this->uploads_directory . DIRECTORY_SEPARATOR . $uuid)) {
           $fileSystem = new Filesystem();
-          $fileSystem->remove($this->uploads_directory . DIRECTORY_SEPARATOR . $job_id);
+          $fileSystem->remove($this->uploads_directory . DIRECTORY_SEPARATOR . $uuid);
         }
 
         // Remove files from external storage.
         $flysystem = $this->container->get('oneup_flysystem.assets_filesystem');
-        $result = $this->fileTransfer->removeFiles($job_id, $flysystem);
+        $result = $this->fileTransfer->removeFiles($uuid, $flysystem);
         // Return errors from the file removal process.
         if (!empty($result)) {
           foreach ($result as $key => $value) {

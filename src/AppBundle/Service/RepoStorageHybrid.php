@@ -955,6 +955,66 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   /**
+   * @param string $uuid The upload directory
+   * @return array
+   */
+  public function getJobData($uuid = null) {
+
+    $data = array();
+
+    if (!empty($uuid)) {
+      // Query the database.
+      $result = $this->getRecords(array(
+        'base_table' => 'job',
+        'fields' => array(),
+        'limit' => 1,
+        'search_params' => array(
+          0 => array('field_names' => array('uuid'), 'search_values' => array($uuid), 'comparison' => '='),
+        ),
+        'search_type' => 'AND',
+        'omit_active_field' => true,
+        )
+      );
+    }
+
+    if (!empty($result)) {
+      $data = $result[0];
+    }
+
+    return $data;
+  }
+
+  /**
+   * @param string $params Possible params: job_id (uuid), status, date_completed.
+   * @return bool
+   */
+  public function setJobStatus($params = array()) {
+
+    $data = false;
+
+    if (!empty($params['job_id']) && !empty($params['status']) && empty($params['date_completed'])) {
+      $sql ="UPDATE job SET job_status = :status WHERE uuid = :job_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":job_id", $params['job_id'], PDO::PARAM_STR);
+      $statement->bindValue(":status", $params['status'], PDO::PARAM_STR);
+      $statement->execute();
+      if($statement->rowCount() === 1) $data = true;
+    }
+
+    if (!empty($params['job_id']) && !empty($params['status']) && !empty($params['date_completed'])) {
+      $sql ="UPDATE job SET job_status = :status, date_completed = :date_completed WHERE uuid = :job_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":job_id", $params['job_id'], PDO::PARAM_STR);
+      $statement->bindValue(":status", $params['status'], PDO::PARAM_STR);
+      $statement->bindValue(":date_completed", $params['date_completed'], PDO::PARAM_STR);
+      $statement->execute();
+      if($statement->rowCount() === 1) $data = true;
+    }
+
+    return $data;
+  }
+
+  /**
    * @param string $uploads_directory The upload directory
    * @return array Import result and/or any messages
    */
@@ -988,55 +1048,62 @@ class RepoStorageHybrid implements RepoStorage {
 
     $data = array();
 
-    if (!empty($params) && !empty($params['job_id'])) {
+    if (!empty($params) && !empty($params['uuid'])) {
 
-      $table_names = array(
-        'data_tables' => array(
-          'subject',
-          'item',
-          'capture_dataset',
-          'model'
-        ),
-        'job_and_file_tables' => array(
-          'job',
-          'job_import_record',
-          'job_log',
-          'file_upload'
-        )
-      );
+      // Get tje job's data via job.uuid.
+      $job_data = $this->getJobData($params['uuid']);
 
-      // Remove data from tables containing repository data.
-      foreach ($table_names['data_tables'] as $data_table_name) {
-        // Remove records.
-        $sql_data = "DELETE FROM {$data_table_name}
-          WHERE {$data_table_name}.{$data_table_name}_repository_id IN (SELECT record_id
-          FROM job_import_record
-          WHERE job_import_record.job_id = :job_id
-          AND job_import_record.record_table = '{$data_table_name}')";
-        $statement = $this->connection->prepare($sql_data);
-        $statement->bindValue(":job_id", $params['job_id'], PDO::PARAM_INT);
-        $statement->execute();
-        $data[ $data_table_name ] = $statement->rowCount();
-        // Reset the auto increment value.
-        $sql_data_reset = "ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_repository_id INT(11) UNSIGNED;
-        ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_repository_id INT(11) UNSIGNED AUTO_INCREMENT";
-        $statement = $this->connection->prepare($sql_data_reset);
-        $statement->execute();
-      }
+      if (!empty($job_data)) {
 
-      // Remove data from tables containing job-based data.
-      foreach ($table_names['job_and_file_tables'] as $job_table_name) {
-        // Remove records.
-        $sql_job = "DELETE FROM {$job_table_name} WHERE {$job_table_name}.job_id = :job_id";
-        $statement = $this->connection->prepare($sql_job);
-        $statement->bindValue(":job_id", $params['job_id'], PDO::PARAM_INT);
-        $statement->execute();
-        $data[ $job_table_name ] = $statement->rowCount();
-        // Reset the auto increment value.
-        $sql_job_reset = "ALTER TABLE {$job_table_name} MODIFY {$job_table_name}.{$job_table_name}_id INT(11) UNSIGNED;
-        ALTER TABLE {$job_table_name} MODIFY {$job_table_name}.{$job_table_name}_id INT(11) UNSIGNED AUTO_INCREMENT";
-        $statement = $this->connection->prepare($sql_job_reset);
-        $statement->execute();
+        $table_names = array(
+          'data_tables' => array(
+            'subject',
+            'item',
+            'capture_dataset',
+            'model'
+          ),
+          'job_and_file_tables' => array(
+            'job',
+            'job_import_record',
+            'job_log',
+            'file_upload'
+          )
+        );
+
+        // Remove data from tables containing repository data.
+        foreach ($table_names['data_tables'] as $data_table_name) {
+          // Remove records.
+          $sql_data = "DELETE FROM {$data_table_name}
+            WHERE {$data_table_name}.{$data_table_name}_repository_id IN (SELECT record_id
+            FROM job_import_record
+            WHERE job_import_record.job_id = :job_id
+            AND job_import_record.record_table = '{$data_table_name}')";
+          $statement = $this->connection->prepare($sql_data);
+          $statement->bindValue(":job_id", $job_data['job_id'], PDO::PARAM_INT);
+          $statement->execute();
+          $data[ $data_table_name ] = $statement->rowCount();
+          // Reset the auto increment value.
+          $sql_data_reset = "ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_repository_id INT(11) UNSIGNED;
+          ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_repository_id INT(11) UNSIGNED AUTO_INCREMENT";
+          $statement = $this->connection->prepare($sql_data_reset);
+          $statement->execute();
+        }
+
+        // Remove data from tables containing job-based data.
+        foreach ($table_names['job_and_file_tables'] as $job_table_name) {
+          // Remove records.
+          $sql_job = "DELETE FROM {$job_table_name} WHERE {$job_table_name}.job_id = :job_id";
+          $statement = $this->connection->prepare($sql_job);
+          $statement->bindValue(":job_id", $job_data['job_id'], PDO::PARAM_INT);
+          $statement->execute();
+          $data[ $job_table_name ] = $statement->rowCount();
+          // Reset the auto increment value.
+          $sql_job_reset = "ALTER TABLE {$job_table_name} MODIFY {$job_table_name}.{$job_table_name}_id INT(11) UNSIGNED;
+          ALTER TABLE {$job_table_name} MODIFY {$job_table_name}.{$job_table_name}_id INT(11) UNSIGNED AUTO_INCREMENT";
+          $statement = $this->connection->prepare($sql_job_reset);
+          $statement->execute();
+        }
+
       }
 
     }
@@ -3054,6 +3121,10 @@ class RepoStorageHybrid implements RepoStorage {
     $query_params['fields'][] = array(
       'table_name' => $record_type,
       'field_name' => 'date_created',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'job',
+      'field_name' => 'uuid',
     );
     $query_params['fields'][] = array(
       'table_name' => 'job',

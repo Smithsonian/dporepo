@@ -129,7 +129,7 @@ class RepoFileTransfer implements RepoFileTransferInterface {
           // Write the file.
           try {
             $stream = fopen($file->getPathname(), 'r+');
-            $filesystem->putStream($path_external, $stream);
+            $filesystem->writeStream($path_external, $stream);
             // Before calling fclose on the resource, check if it’s still valid using is_resource.
             if (is_resource($stream)) fclose($stream);
           }
@@ -149,7 +149,7 @@ class RepoFileTransfer implements RepoFileTransferInterface {
             // Log the errors to the database.
             $this->repoValidate->logErrors(
               array(
-                'job_id' => (int)$target_directory,
+                'job_id' => $target_directory,
                 'user_id' => 0,
                 'job_log_label' => 'File Transfer',
                 'errors' => $data[$i]['errors'],
@@ -165,17 +165,13 @@ class RepoFileTransfer implements RepoFileTransferInterface {
     }
 
     // Update the 'job_status' in the 'job' table accordingly.
-    $this->repo_storage_controller->execute('saveRecord', array(
-      'base_table' => 'job',
-      'record_id' => (int)$target_directory,
-      'user_id' => 0,
-      'values' => array(
-        'job_status' => $job_status,
-        'date_completed' => date('Y-m-d h:i:s'),
-        'qa_required' => 0,
-        'qa_approved_time' => null,
+    $this->repo_storage_controller->execute('setJobStatus', 
+      array(
+        'job_id' => $target_directory, 
+        'status' => $job_status, 
+        'date_completed' => date('Y-m-d h:i:s')
       )
-    ));
+    );
 
     return $data;
   }

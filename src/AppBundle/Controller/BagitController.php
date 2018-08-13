@@ -363,17 +363,13 @@ class BagitController extends Controller
     }
 
     // Update the 'job_status' in the 'job' table accordingly.
-    $this->repo_storage_controller->execute('saveRecord', array(
-      'base_table' => 'job',
-      'record_id' => $data->job_id,
-      'user_id' => 0,
-      'values' => array(
-        'job_status' => $data->job_status,
-        'date_completed' => date('Y-m-d h:i:s'),
-        'qa_required' => 0,
-        'qa_approved_time' => null,
+    $this->repo_storage_controller->execute('setJobStatus', 
+      array(
+        'job_id' => $data->job_id, 
+        'status' => $data->job_status, 
+        'date_completed' => date('Y-m-d h:i:s')
       )
-    ));
+    );
 
     return $return;
   }

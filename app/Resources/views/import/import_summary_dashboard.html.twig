@@ -350,7 +350,7 @@
             // Don't do anything if the table cell has the 'manage_column' CSS class.
             if(thisTableCell.hasClass('manage_column')) return;
             // Send to the details page.
-            window.location.href = '/admin/import/' + aData.job_id + '/' + aData.project_id;
+            window.location.href = '/admin/import/' + aData.uuid + '/' + aData.project_id;
           });
 
         }
@@ -844,7 +844,7 @@
           ,'dataType': 'json'
           ,'url': '/admin/set_job_status/' + jobId + '/uploaded'
           ,success: function(result) {
-            if(result && result.statusSet.length) {
+            if(result && result.statusSet) {
               // Redirect to the Upload overview page.
               document.location.href = '/admin/import/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
             } else {
@@ -1039,7 +1039,7 @@
             if(result) {
               var res = JSON.parse(result);
               // Add the job ID as a data attribute of the prevalidate-trigger.
-              $('.prevalidate-trigger').attr('data-jobid', res.jobId);
+              $('.prevalidate-trigger').attr('data-jobid', res.uuid);
               // Add the parent Project's id as a data attribute of the prevalidate-trigger.
               $('#uploads_parent_picker_form_parent_picker').attr('data-project-id', res.projectId);
             }

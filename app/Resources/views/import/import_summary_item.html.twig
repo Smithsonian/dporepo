@@ -176,6 +176,7 @@
     $(document).ready(function() {
 
       var id = "{{ id }}",
+          uuid = "{{ job_data.uuid }}",
           job_type = "{{ job_data.job_type }}",
           job_status = "{{ job_data.job_status }}",
           columns = [],
@@ -222,7 +223,7 @@
         // All data management will be done on the server side.
         "serverSide": true,
         // Path to the file that is going to handle the queries.
-        "ajax": "/admin/import/" + id + "/datatables_browse_import_details",
+        "ajax": "/admin/import/" + uuid + "/datatables_browse_import_details",
         // Method type.
         "serverMethod": "POST",
         // Values in the length dropdown.
@@ -278,7 +279,7 @@
         'state': { 'key': 'dpoJsTreeFiles' },
         'core' : {
           'data' : {
-            'url' : '/admin/get_directory_contents/' + id,
+            'url' : '/admin/get_directory_contents/' + uuid,
             'data' : function (node) {
               return { 'id' : node.id };
             },
@@ -325,7 +326,7 @@
           switch (value) {
             case "yes":
               $('.overlay').removeClass('hidden');
-              window.location.href = '/admin/purge_import/' + id;
+              window.location.href = '/admin/purge_import/' + uuid;
               break;
             default:
               swal("No action taken. Imported data and files unaffected.");
@@ -406,7 +407,7 @@
           $.ajax({
             'type': 'GET'
             ,'dataType': 'json'
-            ,'url': '/admin/get_job_status/' + id
+            ,'url': '/admin/get_job_status/' + uuid
             ,success: function(result) {
               if(result) {
                 $('.status-target span.status').empty().text(result);
@@ -416,6 +417,7 @@
                   $('.status-target').addClass('text-success');
                   $('.status-target span.status').wrap( "<strong></strong>" );
                   $('.status-target span.status').prepend('<span class="glyphicon glyphicon-ok"></span> ');
+                  location.reload();
                 }
                 if (result === 'failed') {
                   clearInterval(checkerId);

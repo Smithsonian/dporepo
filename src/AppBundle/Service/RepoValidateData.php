@@ -327,7 +327,7 @@ class RepoValidateData implements RepoValidate {
     );
 
     if(!empty($data)) {
-      $directory = $uploads_directory . $data[0]['job_id'];
+      $directory = $uploads_directory . $data[0]['uuid'];
     }
 
     return $directory;

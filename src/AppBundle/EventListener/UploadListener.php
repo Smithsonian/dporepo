@@ -58,7 +58,18 @@ class UploadListener
     $data->prevalidate = (!empty($post['prevalidate']) && ($post['prevalidate'] === 'true')) ? true : false;
     // User data.
     $user = $this->tokenStorage->getToken()->getUser();
-    $data->user_id = $user->getId();    
+    $data->user_id = $user->getId();
+
+    if (!$data->prevalidate) {
+      $job_data = $this->repo_storage_controller->execute('getJobData', $data->job_id);
+
+      // TODO: Error handling...
+      if (!empty($job_data)) {
+        $data->job_id = $job_data['job_id'];
+        $data->uuid = $job_data['uuid'];
+      }
+      
+    }
 
     // Move uploaded files into the original directory structures, under a parent directory the jobId.
     if ($data->job_id && $data->parent_record_id) {
@@ -76,7 +87,7 @@ class UploadListener
             'parent_record_id' => $file_data->parent_record_id,
             'parent_record_type' => $file_data->parent_record_type,
             'file_name' => $file->getBasename(),
-            'file_path' => '/uploads/repository/' . $file_data->job_id . '/' . $file_data->full_path,
+            'file_path' => '/uploads/repository/' . $file_data->target_directory . '/' . $file_data->full_path,
             'file_size' => filesize($file_data->job_id_directory . '/' . $file_data->full_path),
             'file_type' => $file->getExtension(), // $file->getMimeType()
             'file_hash' => '',
@@ -126,7 +137,9 @@ class UploadListener
   {
     if (!empty($file) && !empty($data) && $data->job_id && $data->parent_record_id) {
 
-      $data->job_id_directory = str_replace($file->getBasename(), '', $file->getPathname()) . $data->job_id;
+      // If pre-validating, the target directory is a temporary directory. Otherwise, it's the job's UUID.
+      $data->target_directory = $data->prevalidate ? $data->job_id : $data->uuid;
+      $data->job_id_directory = str_replace($file->getBasename(), '', $file->getPathname()) . $data->target_directory;
 
       // Create a directory with the job ID as the name if not present.
       if (!file_exists($data->job_id_directory)) {

@@ -41,7 +41,7 @@ class ValidateCommand extends Command
       // the "--help" option.
       ->setHelp('This command will 1) validate a BagIt "bag", which consists of a "payload" (the arbitrary content) and "tags", which are metadata files intended to document the storage and transfer of the "bag", and 2) validate the integrity of uploaded files.')
       // Add arguments...
-      ->addArgument('job_id', InputArgument::OPTIONAL, 'Job ID.')
+      ->addArgument('uuid', InputArgument::OPTIONAL, 'Job UUID.')
       ->addArgument('parent_project_id', InputArgument::OPTIONAL, 'parent_project_id.')
       ->addArgument('parent_record_id', InputArgument::OPTIONAL, 'parent_record_id.')
       ->addArgument('parent_record_type', InputArgument::OPTIONAL, 'parent_record_type.')
@@ -103,7 +103,7 @@ class ValidateCommand extends Command
 
       // Run the metadata ingest.
       $params = array(
-        'job_id' => $input->getArgument('job_id'),
+        'uuid' => $input->getArgument('uuid'),
         'parent_project_id' => $input->getArgument('parent_project_id'),
         'parent_record_id' => $input->getArgument('parent_record_id'),
         'parent_record_type' => $input->getArgument('parent_record_type'),
@@ -126,7 +126,7 @@ class ValidateCommand extends Command
 
         $arguments_file_transfer = array(
             'command' => 'app:transfer-files',
-            'job_id' => $input->getArgument('job_id')
+            'uuid' => $input->getArgument('uuid')
         );
 
         $input_file_transfer = new ArrayInput($arguments_file_transfer);

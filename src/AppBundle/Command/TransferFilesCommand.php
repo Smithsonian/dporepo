@@ -34,7 +34,7 @@ class TransferFilesCommand extends ContainerAwareCommand
       // the "--help" option.
       ->setHelp('This command transfers uploaded files to an external storage location.')
       // Add arguments...
-      ->addArgument('job_id', InputArgument::REQUIRED, 'Job ID.');
+      ->addArgument('uuid', InputArgument::REQUIRED, 'Job UUID.');
   }
 
   /**
@@ -54,7 +54,7 @@ class TransferFilesCommand extends ContainerAwareCommand
       '',
     ]);
 
-    if (!empty($input->getArgument('job_id'))) {
+    if (!empty($input->getArgument('uuid'))) {
 
       // Transfer files to external storage.
       // Set up flysystem.
@@ -62,7 +62,7 @@ class TransferFilesCommand extends ContainerAwareCommand
       $flysystem = $container->get('oneup_flysystem.assets_filesystem');
       $conn = $container->get('doctrine.dbal.default_connection');
       // Transfer files.
-      $result = $this->fileTransfer->transferFiles($input->getArgument('job_id'), $flysystem, $conn);
+      $result = $this->fileTransfer->transferFiles($input->getArgument('uuid'), $flysystem, $conn);
 
       // Output validation results.
       if (!empty($result)) {
