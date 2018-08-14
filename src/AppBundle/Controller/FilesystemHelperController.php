@@ -67,7 +67,7 @@ class FilesystemHelperController extends Controller
    */
   public function get_directory_contents(Request $request) {
 
-    $data = $job_data = [];
+    $data = $job_data = $parent_job_data = [];
     $data_directory_path = '';
 
     // The uploads directory path.
@@ -92,10 +92,18 @@ class FilesystemHelperController extends Controller
         'omit_active_field' => true,
         )
       );
+
+      $parent_job_data = $this->repo_storage_controller->execute('getRecord', array(
+          'base_table' => 'job',
+          'id_field' => 'job_id',
+          'id_value' => $job_data[0]['job_id'],
+          'omit_active_field' => true,
+        )
+      );
     }
 
     // Overwrite the $job_id if pulling data from the 'job_import_record' table.
-    $job_id = ($job_data && !empty($job_data)) ? $job_data[0]['job_id'] : $job_id;
+    $job_id = (!empty($job_data) && !empty($parent_job_data)) ? $parent_job_data['uuid'] : $job_id;
     // Set the directory opened state.
     $directory_opened_state = (empty($job_data) && !empty($request->get('id')) && ($request->get('id') === '#')) ? true : false;
 
@@ -110,7 +118,7 @@ class FilesystemHelperController extends Controller
 
       foreach ($finder as $file) {
         if (is_dir($file->getPathname()) && ($file->getFilename() === 'data')) {
-          $target_directory = $file->getFilename() . $directory_path;
+          $target_directory = $file->getPathname() . $directory_path;
         }
       }
 
@@ -128,8 +136,6 @@ class FilesystemHelperController extends Controller
     if (DIRECTORY_SEPARATOR === '/') {
       $target_directory = str_replace('\\', '/', $target_directory);
     }
-
-    // $this->u->dumper($target_directory);
 
     if (!empty($job_id) && is_dir($target_directory)) {
 
