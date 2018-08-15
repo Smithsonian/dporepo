@@ -9,6 +9,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\Finder\Finder;
 use Doctrine\DBAL\Driver\Connection;
+use Symfony\Component\HttpKernel\KernelInterface;
 
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
@@ -21,14 +22,29 @@ class FilesystemHelperController extends Controller
   public $u;
 
   /**
+   * @var object $kernel
+   */
+  public $kernel;
+
+  /**
    * @var object $repo_storage_controller
    */
   private $repo_storage_controller;
 
   /**
+   * @var string $project_directory
+   */
+  private $project_directory;
+
+  /**
    * @var string $uploads_directory
    */
   private $uploads_directory;
+
+  /**
+   * @var string $external_file_storage_path
+   */
+  private $external_file_storage_path;
 
   /**
    * @var string $uploads_directory
@@ -39,18 +55,20 @@ class FilesystemHelperController extends Controller
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(Connection $conn)
+  public function __construct(KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, Connection $conn)
   {
     // Usage: $this->u->dumper($variable);
     $this->u = new AppUtilities();
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
 
-    // TODO: move this to parameters.yml and bind in services.yml.
-    $ds = DIRECTORY_SEPARATOR;
-    $this->uploads_directory = $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
+    $this->kernel = $kernel;
+    $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+    $this->external_file_storage_path = $external_file_storage_path;
 
     // Remove Symfony's 'web' directory for the browser path.
-    $this->browser_path = str_replace('web' . $ds, '', $this->uploads_directory);
+    // $this->browser_path = str_replace('web' . $ds, '', $this->uploads_directory);
+    $this->browser_path = 'http://si-drastic01.si.edu/api/cdmi';
   }
 
   /**
@@ -71,7 +89,7 @@ class FilesystemHelperController extends Controller
     $data_directory_path = '';
 
     // The uploads directory path.
-    $project_dir = $this->get('kernel')->getProjectDir() . $this->uploads_directory;
+    $project_dir = $this->project_directory . $this->uploads_directory;
     // URL attributes
     $job_id = (!empty($request->attributes->get('job_id')) && ($request->attributes->get('job_id') !== 'false')) ? $request->attributes->get('job_id') : false;
     $id = (!empty($request->get('id')) && ($request->get('id') !== '#')) ? DIRECTORY_SEPARATOR . $request->get('id') : '';
@@ -147,13 +165,14 @@ class FilesystemHelperController extends Controller
       foreach ($finder as $file) {
 
         $this_file_path = str_replace($project_dir, '', $file->getPathname());
-        $this_file_path = $this->browser_path . $this_file_path;
+        $this_file_path = $this->browser_path . $this->external_file_storage_path . $this_file_path;
         $this_file_path_array = explode(DIRECTORY_SEPARATOR, $this_file_path);
         $this_file_name = array_pop($this_file_path_array);
         $this_file_id = str_replace($project_dir . $job_id . DIRECTORY_SEPARATOR, '', $file->getPathname());
 
         // $this->u->dumper($project_dir,0);
         // $this->u->dumper($this_file_id,0);
+        // $this->u->dumper($this_file_path,0);
         // $this->u->dumper(is_dir($file->getPathname()),0);
         // $this->u->dumper($directory_opened_state);
 
