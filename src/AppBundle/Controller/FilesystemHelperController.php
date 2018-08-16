@@ -63,7 +63,7 @@ class FilesystemHelperController extends Controller
 
     $this->kernel = $kernel;
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
-    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_directory) : $uploads_directory;
     $this->external_file_storage_path = $external_file_storage_path;
 
     // Remove Symfony's 'web' directory for the browser path.
