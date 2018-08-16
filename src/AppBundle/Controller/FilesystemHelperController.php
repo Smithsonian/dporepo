@@ -48,11 +48,6 @@ class FilesystemHelperController extends Controller
   private $external_file_storage_path;
 
   /**
-   * @var string $uploads_directory
-   */
-  private $browser_path;
-
-  /**
    * Constructor
    * @param object  $u  Utility functions object
    */
@@ -66,10 +61,6 @@ class FilesystemHelperController extends Controller
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
     $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_directory) : $uploads_directory;
     $this->external_file_storage_path = $external_file_storage_path;
-
-    // Remove Symfony's 'web' directory for the browser path.
-    // $this->browser_path = str_replace('web' . $ds, '', $this->uploads_directory);
-    $this->browser_path = 'http://si-drastic01.si.edu/api/cdmi';
   }
 
   /**
