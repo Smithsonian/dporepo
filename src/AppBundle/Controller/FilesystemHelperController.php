@@ -170,6 +170,7 @@ class FilesystemHelperController extends Controller
         $this_file_path_array = explode(DIRECTORY_SEPARATOR, $this_file_path);
         $this_file_name = array_pop($this_file_path_array);
         $this_file_id = str_replace($project_dir . $job_id . DIRECTORY_SEPARATOR, '', $file->getPathname());
+        $this_external_file_path = str_replace(DIRECTORY_SEPARATOR, '/', $this_file_path);
 
         // $this->u->dumper($project_dir,0);
         // $this->u->dumper($this_file_id,0);
@@ -194,7 +195,7 @@ class FilesystemHelperController extends Controller
             'id' => $this_file_id,
             'type' => 'file',
             'icon' => 'glyphicon glyphicon-file',
-            'a_attr' => array('href' => '/admin/get_file?path=' . ltrim($this_file_path, DIRECTORY_SEPARATOR), 'download' => $this_file_name)
+            'a_attr' => array('href' => '/admin/get_file?path=' . ltrim($this_external_file_path, '/'), 'download' => $this_file_name)
           );
         }
       }
