@@ -4,6 +4,7 @@ namespace AppBundle\Controller;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
@@ -165,7 +166,7 @@ class FilesystemHelperController extends Controller
       foreach ($finder as $file) {
 
         $this_file_path = str_replace($project_dir, '', $file->getPathname());
-        $this_file_path = $this->browser_path . $this->external_file_storage_path . $this_file_path;
+        $this_file_path = $this->external_file_storage_path . $this_file_path;
         $this_file_path_array = explode(DIRECTORY_SEPARATOR, $this_file_path);
         $this_file_name = array_pop($this_file_path_array);
         $this_file_id = str_replace($project_dir . $job_id . DIRECTORY_SEPARATOR, '', $file->getPathname());
@@ -193,13 +194,56 @@ class FilesystemHelperController extends Controller
             'id' => $this_file_id,
             'type' => 'file',
             'icon' => 'glyphicon glyphicon-file',
-            'a_attr' => array('href' => $this_file_path, 'download' => $this_file_name)
+            'a_attr' => array('href' => '/admin/get_file?path=' . ltrim($this_file_path, DIRECTORY_SEPARATOR), 'download' => $this_file_name)
           );
         }
       }
     }
 
     return $this->json($data);
+  }
+
+  /**
+   * @Route("/admin/get_file", name="get_file", methods="GET")
+   *
+   * Get File
+   *
+   * Examples:
+   * http://127.0.0.1:8000/admin/get_file?path=3DRepo/uploads/3df_5b72cbe032b519.30125756/testupload02/bag-info.txt
+   *
+   * @param object  $request  Request object
+   * @return string
+   */
+  public function get_file(Request $request) {
+
+    $path = !empty($request->get('path')) ? $request->get('path') : '';
+    $file_path_array = explode('/', $path);
+    $file_name = array_pop($file_path_array);
+
+    // Retrieve a read-stream
+    try {
+      $filesystem = $this->container->get('oneup_flysystem.assets_filesystem');
+      $stream = $filesystem->readStream($path);
+      $contents = stream_get_contents($stream);
+      // Before calling fclose on the resource, check if it’s still valid using is_resource.
+      if (is_resource($stream)) fclose($stream);
+      // Return a response with a specific content
+      $response = new Response($contents);
+      // Create the disposition of the file
+      $disposition = $response->headers->makeDisposition(
+        ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+        $file_name
+      );
+      // Set the content disposition
+      $response->headers->set('Content-Disposition', $disposition);
+      // Dispatch request
+      return $response;
+    }
+    // Catch the error.
+    catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
+      throw $this->createNotFoundException($e->getMessage());
+    }
+
   }
 
   /**
