@@ -750,18 +750,20 @@ class ImportController extends Controller
         $project['uploaded_files'] = (is_dir($dir) && is_readable($dir)) ? true : false;
 
         // Get CSV data.
-        $project['csv'] = array();
-        $project['csv_row_count'] = array();
-        $finder = new Finder();
-        $finder->files()->name('*.csv');
-        foreach ($finder->in($dir) as $file) {
-          $project['csv'][$file->getBasename()] = $this->construct_import_data($dir, $file->getBasename());
-          $project['csv_row_count'][$file->getBasename()] = count($project['csv'][$file->getBasename()]);
-        }
-        // If there's csv data, encode to JSON so it can be passed on to Handsontables (JavaScript).
-        if(isset($project['csv'])) {
-          $project['csv'] = json_encode($project['csv']);
-          $project['csv_row_count'] = json_encode($project['csv_row_count']);
+        if ($project['uploaded_files']) {
+          $project['csv'] = array();
+          $project['csv_row_count'] = array();
+          $finder = new Finder();
+          $finder->files()->name('*.csv');
+          foreach ($finder->in($dir) as $file) {
+            $project['csv'][$file->getBasename()] = $this->construct_import_data($dir, $file->getBasename());
+            $project['csv_row_count'][$file->getBasename()] = count($project['csv'][$file->getBasename()]);
+          }
+          // If there's csv data, encode to JSON so it can be passed on to Handsontables (JavaScript).
+          if(isset($project['csv'])) {
+            $project['csv'] = json_encode($project['csv']);
+            $project['csv_row_count'] = json_encode($project['csv_row_count']);
+          }
         }
 
         // Get bagit validation errors if they exist.
