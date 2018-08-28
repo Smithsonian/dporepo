@@ -10,16 +10,17 @@ use Symfony\Component\Console\Input\ArrayInput;
 
 use AppBundle\Controller\ImportController;
 use AppBundle\Service\RepoValidateData;
+use AppBundle\Service\RepoImport;
 
 class ValidateCommand extends Command
 {
-  private $import;
+  private $repoImport;
   private $validate;
 
-  public function __construct(ImportController $import, RepoValidateData $validate)
+  public function __construct(RepoImport $repoImport, RepoValidateData $validate)
   {
-    // Import controller
-    $this->import = $import;
+    // Repo Import service
+    $this->repoImport = $repoImport;
     // Repo Validate Data service
     $this->validate = $validate;
     // TODO: move this to parameters.yml and bind in services.yml.
@@ -109,7 +110,7 @@ class ValidateCommand extends Command
         'parent_record_type' => $input->getArgument('parent_record_type'),
       );
 
-      $import_results = $this->import->import_csv($params);
+      $import_results = $this->repoImport->import_csv($params);
       
       // echo '<pre>';
       // var_dump($import_results);
