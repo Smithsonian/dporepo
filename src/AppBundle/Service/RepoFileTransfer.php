@@ -177,6 +177,58 @@ class RepoFileTransfer implements RepoFileTransferInterface {
   }
 
   /**
+   * @param $filesystem Filesystem object (via Flysystem).
+   * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
+   * @return mixed array containing success/fail value, and any messages.
+   */
+  public function checkExternalStorage($job_uuid, $filesystem = null)
+  {
+    $data = array();
+    $uuid = uniqid('3df_', true);
+
+    // Absolute external path.
+    $path_external = $this->external_file_storage_path . '_checker/' . $uuid . '.txt';
+
+    // Write the file.
+    $stream = fopen('php://temp', 'r+');
+    // $stream = file_get_contents('http://www.example.com/');
+    $result = $filesystem->writeStream($path_external, $stream);
+    // Before calling fclose on the resource, check if it’s still valid using is_resource.
+    if (is_resource($stream)) fclose($stream);
+
+    if (!$result) {
+      // Catch the error.
+      $data[]['errors'][] = 'Unable to access external storage.';
+    }
+
+    if (!empty($data[0]['errors'])) {
+      // Get the job's data via job.uuid.
+      $job_data = $this->repo_storage_controller->execute('getJobData', $job_uuid);
+
+      // Log the error to the database.
+      $this->repoValidate->logErrors(
+        array(
+          'job_id' => $job_data['job_id'],
+          'user_id' => 0,
+          'job_log_label' => 'External Storage Inaccessible',
+          'errors' => $data[0]['errors'],
+        )
+      );
+
+      // Update the 'job_status' in the 'job' table accordingly.
+      $this->repo_storage_controller->execute('setJobStatus', 
+        array(
+          'job_id' => $job_uuid, 
+          'status' => 'failed',
+          'date_completed' => date('Y-m-d h:i:s')
+        )
+      );
+    }
+    
+    return $data;
+  }
+
+  /**
    * @param $target_directory The directory which contains files to be transferred.
    * @param $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/

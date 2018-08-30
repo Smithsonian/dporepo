@@ -66,6 +66,20 @@ class ValidateCommand extends Command
       '',
     ]);
 
+    // First, check to see if the external storage is accessible (Drastic).
+    // If the external storage is not accessible, then the job status will be set to 'failed', 
+    // which will prevent any further validations and file transfers from executing.
+    $external_storage_check = $this->getApplication()->find('app:transfer-files');
+
+    $arguments_external_storage_check = array(
+        'command' => 'app:transfer-files',
+        'uuid' => $input->getArgument('uuid'),
+        'check_external_storage' => true
+    );
+
+    $input_external_storage_check = new ArrayInput($arguments_external_storage_check);
+    $return_external_storage_check = $external_storage_check->run($input_external_storage_check, $output);
+
     // If a localpath is passed, use it as the path to the files to validate.
     if ( !empty($input->getArgument('localpath')) ) {
       $directory_to_validate = $input->getArgument('localpath');
@@ -77,8 +91,6 @@ class ValidateCommand extends Command
     }
 
     if (!empty($directory_to_validate)) {
-
-      // var_dump($directory_to_validate); die();
 
       // Run the BagIt validation.
       $command_bagit = $this->getApplication()->find('app:bagit-validate');

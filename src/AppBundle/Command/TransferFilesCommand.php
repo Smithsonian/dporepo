@@ -34,7 +34,8 @@ class TransferFilesCommand extends ContainerAwareCommand
       // the "--help" option.
       ->setHelp('This command transfers uploaded files to an external storage location.')
       // Add arguments...
-      ->addArgument('uuid', InputArgument::REQUIRED, 'Job UUID.');
+      ->addArgument('uuid', InputArgument::REQUIRED, 'Job UUID.')
+      ->addArgument('check_external_storage', InputArgument::OPTIONAL, 'Check to see if the external storage is accessible.');
   }
 
   /**
@@ -54,35 +55,44 @@ class TransferFilesCommand extends ContainerAwareCommand
       '',
     ]);
 
-    if (!empty($input->getArgument('uuid'))) {
+    // Check to see if the external storage is accessible.
+    if (!empty($input->getArgument('check_external_storage'))) {
+      // Set up flysystem.
+      $container = $this->getContainer();
+      $flysystem = $container->get('oneup_flysystem.assets_filesystem');
+      // Transfer files.
+      $result = $this->fileTransfer->checkExternalStorage($input->getArgument('uuid'), $flysystem);
+    }
 
-      // Transfer files to external storage.
+    // Transfer files to external storage.
+    if (!empty($input->getArgument('uuid')) && empty($input->getArgument('check_external_storage'))) {
       // Set up flysystem.
       $container = $this->getContainer();
       $flysystem = $container->get('oneup_flysystem.assets_filesystem');
       $conn = $container->get('doctrine.dbal.default_connection');
       // Transfer files.
       $result = $this->fileTransfer->transferFiles($input->getArgument('uuid'), $flysystem, $conn);
+    }
 
-      // Output validation results.
-      if (!empty($result)) {
-        $output->writeln('<comment>Transferred Files:</comment>' . "\n");
-        foreach ($result as $key => $value) {
-          $output->writeln('---------------------------' . "\n");
-          foreach ($value as $k => $v) {
-            if ($k !== 'errors') {
-              $output->writeln($k . ': ' . $v . "\n");
-            } else {
-              if (!empty($v)) {
-                foreach ($v as $ek => $ev) {
-                  $output->writeln('<error>' . $ev . '</error>' . "\n");
-                }
+    // Output validation results.
+    if (!empty($result)) {
+      $output->writeln('<comment>Transferred Files:</comment>' . "\n");
+      foreach ($result as $key => $value) {
+        $output->writeln('---------------------------' . "\n");
+        foreach ($value as $k => $v) {
+          if ($k !== 'errors') {
+            $output->writeln($k . ': ' . $v . "\n");
+          } else {
+            if (!empty($v)) {
+              foreach ($v as $ek => $ev) {
+                $output->writeln('<error>' . $ev . '</error>' . "\n");
               }
             }
           }
         }
       }
-
     }
+
+    return $result;
   }
 }
