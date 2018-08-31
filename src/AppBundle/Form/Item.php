@@ -27,7 +27,7 @@ class Item extends AbstractType
               ))
             ->add('item_description', TextareaType::class, array(
                 'label' => 'Item Description',
-                'required' => false,
+                'required' => true,
                 'attr' => array('rows' => '10'),
               ))
             ->add('item_type', ChoiceType::class, array(
