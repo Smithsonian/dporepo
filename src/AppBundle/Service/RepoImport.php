@@ -218,13 +218,13 @@ class RepoImport implements RepoImportInterface {
       // Populate the errors array to return to front end.
       $return['errors'][] = 'Metadata ingest failed. Job ID: ' . $job_data['job_id'];
     } else {
-      // Update the job table to set the status from 'image validation completed' to 'metadata ingest complete'.
+      // Update the job table to set the status from 'metadata ingest in progress' to 'file transfer in progress'.
       $this->repo_storage_controller->execute('saveRecord', array(
         'base_table' => 'job',
         'record_id' => $job_data['job_id'],
         'user_id' => $user_id,
         'values' => array(
-          'job_status' => 'metadata ingest complete',
+          'job_status' => 'file transfer in progress',
           'date_completed' => date('Y-m-d H:i:s'),
           'qa_required' => 0,
           'qa_approved_time' => null,

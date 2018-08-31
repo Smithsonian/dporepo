@@ -96,7 +96,7 @@ class ValidateImagesController extends Controller
   {
 
     $data = array();
-    $job_status = 'image validation completed';
+    $job_status = 'metadata ingest in progress';
     $localpath = !empty($params['localpath']) ? $params['localpath'] : false;
 
     // Throw an exception if the job record doesn't exist.
