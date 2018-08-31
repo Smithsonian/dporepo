@@ -187,14 +187,17 @@ class RepoFileTransfer implements RepoFileTransferInterface {
     $uuid = uniqid('3df_', true);
 
     // Absolute external path.
-    $path_external = $this->external_file_storage_path . '_checker/' . $uuid . '.txt';
+    $path_external = $this->external_file_storage_path . '_checker/' . $uuid . '_robots.txt';
 
     // Write the file.
-    $stream = fopen('php://temp', 'r+');
+    $stream = fopen($this->project_directory . 'web/robots.txt', 'r+');
     // $stream = file_get_contents('http://www.example.com/');
     $result = $filesystem->writeStream($path_external, $stream);
     // Before calling fclose on the resource, check if it’s still valid using is_resource.
     if (is_resource($stream)) fclose($stream);
+
+    // Remove the uploaded test file.
+    if ($result) $filesystem->delete($path_external);
 
     if (!$result) {
       // Catch the error.
