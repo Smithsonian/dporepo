@@ -348,7 +348,6 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             `last_modified_user_account_id` int(11) NOT NULL,
             `active` tinyint(1) NOT NULL DEFAULT '1',
-            `status_type_repository_id` int(11) NOT NULL DEFAULT '0',
             PRIMARY KEY (`item_repository_id`),
             KEY `created_by_user_account_id` (`created_by_user_account_id`),
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`),

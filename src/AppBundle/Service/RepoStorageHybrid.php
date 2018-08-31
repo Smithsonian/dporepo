@@ -165,10 +165,6 @@ class RepoStorageHybrid implements RepoStorage {
       );
       $query_params['fields'][] = array(
         'table_name' => 'item',
-        'field_name' => 'status_type_repository_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'item',
         'field_name' => 'last_modified',
       );
       $query_params['fields'][] = array(
@@ -897,10 +893,6 @@ class RepoStorageHybrid implements RepoStorage {
           'field_name' => 'active',
         ),
         12 => array(
-          'table_name' => 'item',
-          'field_name' => 'status_type_repository_id',
-        ),
-        13 => array(
           'table_name' => 'item',
           'field_name' => 'item_description',
         ),
