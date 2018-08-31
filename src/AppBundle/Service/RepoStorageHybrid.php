@@ -4524,7 +4524,7 @@ class RepoStorageHybrid implements RepoStorage {
       }
 
       foreach($record_values['fields'] as $rv) {
-        if(array_key_exists('field_value', $rv) && isset($rv['field_value'])
+        if(array_key_exists('field_value', $rv)
           && array_key_exists('field_name', $rv) && isset($rv['field_name'])
         ) {
           if($update) {
@@ -4551,13 +4551,22 @@ class RepoStorageHybrid implements RepoStorage {
           $statement->bindValue(":id", $record_values['id']['field_value'], PDO::PARAM_INT);
           $statement->execute();
 
+          // TODO: beef it up with some exception handling.
+          // Example:
+          // try {
+          //   //----
+          // }
+          // catch(PDOException $e) {
+          //   echo $e->getMessage();
+          // }
+          //
           // If the number of rows affected by the last SQL statement is zero, return fail.
           // See: http://php.net/manual/en/pdostatement.rowcount.php
-          if($statement->rowCount() === 0) {
-            return array('return' => 'fail', 'messages' => 'UPDATE `' . $base_table . '` failed.');
-          } else {
+          // if($statement->rowCount() === 0) {
+            // return array('return' => 'fail', 'messages' => 'UPDATE `' . $base_table . '` failed.');
+          // } else {
             $last_inserted_id = $record_values['id']['field_value'];
-          }
+          // }
 
         }
         else {
