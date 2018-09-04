@@ -208,22 +208,36 @@ class ImportController extends Controller
             $parent_record_type,
           );
 
-          // Find the executable PHP binary.
-          $php_binary_finder = new PhpExecutableFinder();
-          $php_binary_path = $php_binary_finder->find();
+          // Hack for XAMPP on Windows.
+          if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            $php_binary_path = 'c:/xampp/php/php.exe';
+          } else {
+            // Find the executable PHP binary.
+            $php_binary_finder = new PhpExecutableFinder();
+            $php_binary_path = $php_binary_finder->find();
+          }
 
           // $command = 'cd ' . $this->container->getParameter('kernel.project_dir') . ' && ';
           chdir($this->container->getParameter('kernel.project_dir'));
-          $command = $php_binary_path . ' bin/console app:validate ' . implode(' ', $input) . ' > /dev/null 2>&1 &';
+          if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            $command = $php_binary_path . ' bin/console app:validate ' . implode(' ', $input) . ' > NUL';
+          } else {
+            $command = $php_binary_path . ' bin/console app:validate ' . implode(' ', $input) . ' > /dev/null 2>&1 &';
+          }
+
+          // $this->u->dumper($php_binary_path,0);
+          // $this->u->dumper($command);
+
           $process = new Process($command);
           // $process->disableOutput();
-          $process->start();
-          // try {
-          //     $process->mustRun();
-          //     echo $process->getOutput();
-          // } catch (ProcessFailedException $exception) {
-          //     echo $exception->getMessage();
-          // }
+          new NullOutput();
+          // $process->start();
+          try {
+              $process->mustRun();
+              // echo $process->getOutput();
+          } catch (ProcessFailedException $exception) {
+              echo $exception->getMessage();
+          }
 
           // // Use NullOutput() if you don't need the output
           // new NullOutput();
