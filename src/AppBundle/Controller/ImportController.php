@@ -21,6 +21,7 @@ use Symfony\Component\HttpKernel\KernelInterface;
 
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
+use Symfony\Component\Process\PhpExecutableFinder;
 
 use AppBundle\Controller\ItemsController;
 use AppBundle\Controller\DatasetsController;
@@ -207,9 +208,15 @@ class ImportController extends Controller
             $parent_record_type,
           );
 
-          $command = 'cd ' . $this->container->getParameter('kernel.project_dir') . ' && ';
-          $command .= 'php bin/console app:validate ' . implode(' ', $input);
+          // Find the executable PHP binary.
+          $php_binary_finder = new PhpExecutableFinder();
+          $php_binary_path = $php_binary_finder->find();
+
+          // $command = 'cd ' . $this->container->getParameter('kernel.project_dir') . ' && ';
+          chdir($this->container->getParameter('kernel.project_dir'));
+          $command = $php_binary_path . ' bin/console app:validate ' . implode(' ', $input) . ' > /dev/null 2>&1 &';
           $process = new Process($command);
+          // $process->disableOutput();
           $process->start();
           // try {
           //     $process->mustRun();
