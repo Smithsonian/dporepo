@@ -168,7 +168,7 @@ class ImportController extends Controller
 
       if (!empty($uuid)) {
         // Check to see if the job exists. If it doesn't, throw a createNotFoundException (404).
-        $job_data = $this->repo_storage_controller->execute('getJobData', $uuid);
+        $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
         if (empty($job_data)) throw $this->createNotFoundException('The Job record does not exist');
       }
 
@@ -437,7 +437,7 @@ class ImportController extends Controller
       $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
       // Determine what was ingested (e.g. subjects, items, capture datasets, models).
-      $job_data = $this->repo_storage_controller->execute('getJobData', $uuid);
+      $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
 
       // If there are no results, throw a createNotFoundException (404).
       if (empty($job_data)) throw $this->createNotFoundException('No records found');
@@ -672,7 +672,7 @@ class ImportController extends Controller
       if (empty($uuid)) throw $this->createNotFoundException('Job ID is empty');
 
       // Check the database to find the next job which hasn't had a BagIt validation performed against it.
-      $result = $this->repo_storage_controller->execute('getJobData', $uuid);
+      $result = $this->repo_storage_controller->execute('getJobData', array($uuid));
 
       // If $result is empty, throw a createNotFoundException (404).
       if (empty($result)) throw $this->createNotFoundException('Job status not found (404)');
@@ -741,7 +741,7 @@ class ImportController extends Controller
       if (!empty($uuid)) {
 
         // Check to see if the job record exists, and if it doesn't, throw a createNotFoundException (404).
-        $job_data = $this->repo_storage_controller->execute('getJobData', $uuid);
+        $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
         if (!$job_data) throw $this->createNotFoundException('The Job record does not exist');
 
         // Remove imported data.

@@ -61,7 +61,7 @@ class UploadListener
     $data->user_id = $user->getId();
 
     if (!$data->prevalidate) {
-      $job_data = $this->repo_storage_controller->execute('getJobData', $data->job_id);
+      $job_data = $this->repo_storage_controller->execute('getJobData', array($data->job_id));
 
       // TODO: Error handling...
       if (!empty($job_data)) {

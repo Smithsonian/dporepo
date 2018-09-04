@@ -961,7 +961,7 @@ class RepoStorageHybrid implements RepoStorage {
         'fields' => array(),
         'limit' => 1,
         'search_params' => array(
-          0 => array('field_names' => array('uuid'), 'search_values' => array($uuid), 'comparison' => '='),
+          0 => array('field_names' => array('uuid'), 'search_values' => array($uuid[0]), 'comparison' => '='),
         ),
         'search_type' => 'AND',
         'omit_active_field' => true,
@@ -1043,7 +1043,7 @@ class RepoStorageHybrid implements RepoStorage {
     if (!empty($params) && !empty($params['uuid'])) {
 
       // Get tje job's data via job.uuid.
-      $job_data = $this->getJobData($params['uuid']);
+      $job_data = $this->getJobData(array($params['uuid']));
 
       if (!empty($job_data)) {
 

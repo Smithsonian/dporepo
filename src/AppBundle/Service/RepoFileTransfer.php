@@ -206,7 +206,7 @@ class RepoFileTransfer implements RepoFileTransferInterface {
 
     if (!empty($data[0]['errors'])) {
       // Get the job's data via job.uuid.
-      $job_data = $this->repo_storage_controller->execute('getJobData', $job_uuid);
+      $job_data = $this->repo_storage_controller->execute('getJobData', array($job_uuid));
 
       // Log the error to the database.
       $this->repoValidate->logErrors(

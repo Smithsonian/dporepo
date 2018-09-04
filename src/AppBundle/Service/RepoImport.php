@@ -123,7 +123,7 @@ class RepoImport implements RepoImportInterface {
     // TODO: insert errors into the database (job_log table).
     if (!empty($return['errors'])) return $return;
     
-    $job_data = $this->repo_storage_controller->execute('getJobData', $params['uuid']);
+    $job_data = $this->repo_storage_controller->execute('getJobData', array($params['uuid']));
 
     // Throw a 404 if the job record doesn't exist.
     if (!$job_data) throw $this->createNotFoundException('The Job record doesn\'t exist');
@@ -147,7 +147,7 @@ class RepoImport implements RepoImportInterface {
     $session->remove('new_repository_ids_4');
 
     // Set the job type (e.g. subjects metadata import, items metadata import, capture datasets metadata import, models metadata import).
-    // $job_data = $this->repo_storage_controller->execute('getJobData', $params['uuid']);
+    // $job_data = $this->repo_storage_controller->execute('getJobData', array($params['uuid']));
 
     if (!empty($params['uuid']) && !empty($params['parent_project_id']) && !empty($params['parent_record_id']) && !empty($params['parent_record_type'])) {
 
