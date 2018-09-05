@@ -233,10 +233,9 @@ class ImportController extends Controller
           new NullOutput();
           // $process->start();
           try {
-              $process->mustRun();
-              // echo $process->getOutput();
+            $process->mustRun();
           } catch (ProcessFailedException $exception) {
-              echo $exception->getMessage();
+            $this->addFlash('error', '<strong>Error:</strong> ' . $exception->getMessage());
           }
 
           // // Use NullOutput() if you don't need the output
