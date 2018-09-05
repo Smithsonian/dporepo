@@ -208,19 +208,7 @@ class ImportController extends Controller
         // If a record is NOT found within the 'job_import_record' table, add a message and execute validations and metadata ingests.
         if (!$job_record_data && ($job_data['job_status'] !== 'failed') && ($job_data['job_status'] !== 'complete')) {
 
-          $this->addFlash('message', '<span class="glyphicon glyphicon-ok"></span> Files have been successfully uploaded. Validations and metadata ingests are currently in progress.');
-
-          // // Execute validations and metadata ingests.
-          // $application = new Application($kernel);
-          // $application->setAutoExit(false);
-
-          // $input = new ArrayInput(array(
-          //   'command' => 'app:validate',
-          //   'uuid' => $job_data['uuid'],
-          //   'parent_project_id' => $parent_project_id,
-          //   'parent_record_id' => $parent_record_id,
-          //   'parent_record_type' => $parent_record_type
-          // ));
+          $this->addFlash('message', 'Files have been successfully uploaded. Validations and metadata ingests are currently in progress.');
 
           $input = array(
             $job_data['uuid'],
@@ -250,9 +238,7 @@ class ImportController extends Controller
           // $this->u->dumper($command);
 
           $process = new Process($command);
-          // $process->disableOutput();
           new NullOutput();
-          // $process->start();
           try {
             $process->mustRun();
           } catch (ProcessFailedException $exception) {
@@ -272,8 +258,6 @@ class ImportController extends Controller
 
           // // return new Response(""), if you used NullOutput()
           // $res = new Response($content);
-
-          // $this->u->dumper($res);
         }
 
         // If a query result is produced against the 'job_import_record' table, add to the $project array.
