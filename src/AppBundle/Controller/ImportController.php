@@ -96,7 +96,27 @@ class ImportController extends Controller
      */
     public function import_summary_dashboard(Connection $conn, Request $request)
     {
+        $service_error = false;
         $obj = new UploadsParentPicker();
+
+        // Check to see if the external storage service is accessible.
+        // TODO: Send email alerts to admins?
+        // Set up flysystem.
+        $flysystem = $this->container->get('oneup_flysystem.assets_filesystem');
+        // Transfer files.
+        $result = $this->fileTransfer->checkExternalStorage('checker', $flysystem);
+        // If errors exist, serve out flash notifications.
+        if (!empty($result)) {
+          foreach ($result as $key => $value) {
+            if (isset($value['errors'])) {
+              $this->addFlash('error', '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).');
+              $service_error = true;
+              foreach ($value['errors'] as $ekey => $evalue) {
+                $this->addFlash('error', $evalue);
+              }
+            }
+          }
+        }
 
         // Create the parent record picker typeahead form.
         $form = $this->createForm(UploadsParentPickerForm::class, $obj);
@@ -106,6 +126,7 @@ class ImportController extends Controller
             'page_title' => 'Uploads',
             'form' => $form->createView(),
             'accepted_file_types' => $accepted_file_types,
+            'service_error' => $service_error,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
         ));
     }

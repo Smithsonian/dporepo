@@ -177,20 +177,24 @@
             <!-- column 1 -->
             <div class="col-sm-7 col-md-7">
               <!-- The fileinput-button span is used to style the file input field as button -->
+              {% set disabled = '' %}
+              {% if (service_error) %}
+                {% set disabled = ' disabled="disabled"' %}
+              {% endif %}
               {% if app.user.username == 'ghalusa' or app.user.username == 'halusag' %}
-              <span class="btn btn-success fileinput-button dz-clickable">
+              <button class="btn btn-success fileinput-button dz-clickable"{{disabled}}>
                   <i class="glyphicon glyphicon-plus"></i>
                   <span>Add Files</span>
-              </span>
+              </button>
               {% endif %}
-              <button type="reset" class="btn btn-warning cancel">
+              <button type="reset" class="btn btn-warning cancel"{{disabled}}>
                   <i class="glyphicon glyphicon-ban-circle"></i>
                   <span>Clear Upload Stage</span>
               </button>
-              <span class="btn btn-default prevalidate-trigger">
+              <button class="btn btn-default prevalidate-trigger"{{disabled}}>
                   <i class="glyphicon glyphicon-cog"></i>
                   <span>Pre-Validate Scans and CSV Files</span>
-              </span>
+              </button>
               <button type="submit" class="btn btn-primary start hidden">
                   <i class="glyphicon glyphicon-upload"></i>
                   <span>Start Upload</span>
