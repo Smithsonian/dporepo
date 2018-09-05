@@ -78,9 +78,16 @@
 
           {% for label, messages in app.flashes %}
             {% for message in messages %}
-              <div class="alert alert-success alert-dismissible flash-{{ label }}" role="alert">
+              {% if (label == 'error') %}
+                {% set bootstrap_label = 'danger' %}
+                {% set bootstrap_icon = 'exclamation-sign' %}
+              {% else %}
+                {% set bootstrap_label = 'success' %}
+                {% set bootstrap_icon = 'ok' %}
+              {% endif %}
+              <div class="alert alert-{{ bootstrap_label }} alert-dismissible flash-{{ label }}" role="alert">
                 <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">×</span></button>
-                {{ message|raw }}
+                <span class="glyphicon glyphicon-{{ bootstrap_icon }}" aria-hidden="true"></span> {{ message|raw }}
               </div>
             {% endfor %}
           {% endfor %}
