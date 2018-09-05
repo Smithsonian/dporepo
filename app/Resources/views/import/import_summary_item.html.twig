@@ -425,6 +425,8 @@
                   $('.status-target').addClass('text-danger');
                   $('.status-target span.status').wrap( "<strong></strong>" );
                   $('.status-target span.status').prepend('<span class="glyphicon glyphicon-exclamation-sign"></span> ');
+                  // Change the alert banner to an error.
+                  $('.alert-dismissible').removeClass('alert-success').addClass('alert-danger').empty().html('<span class="glyphicon glyphicon-exclamation-sign"></span> Error: See below for details') 
                 }
               } else {
                 $('.status-target span.status').empty().text('Error: Could not get status');
