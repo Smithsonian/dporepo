@@ -184,40 +184,38 @@ class RepoFileTransfer implements RepoFileTransferInterface {
   public function checkExternalStorage($job_uuid, $filesystem = null)
   {
     $data = array();
-    $uuid = uniqid('3df_', true);
-
+    // Get the job's data via job_uuid.
+    $job_data = $this->repo_storage_controller->execute('getJobData', array($job_uuid));
     // Absolute external path.
+    $uuid = uniqid('3df_', true); // (append a unique ID to the file name)
     $path_external = $this->external_file_storage_path . '_checker/' . $uuid . '_robots.txt';
+    // Local file to be written.
+    $stream = fopen($this->project_directory . 'web/robots.txt', 'r+');
 
     // Write the file.
-    $stream = fopen($this->project_directory . 'web/robots.txt', 'r+');
-    // $stream = file_get_contents('http://www.example.com/');
-    $result = $filesystem->writeStream($path_external, $stream);
-    // Before calling fclose on the resource, check if it’s still valid using is_resource.
-    if (is_resource($stream)) fclose($stream);
-
-    // Remove the uploaded test file.
-    if ($result) $filesystem->delete($path_external);
-
-    if (!$result) {
-      // Catch the error.
-      $data[]['errors'][] = 'Unable to access external storage.';
+    try {
+      $result = $filesystem->writeStream($path_external, $stream);
+      // Before calling fclose($stream) on the resource, check if it’s still valid using is_resource.
+      if (is_resource($stream)) fclose($stream);
+      // Remove the uploaded test file.
+      if ($result) $filesystem->delete($path_external);
+    }
+    // Catch the error.
+    catch(\Sabre\HTTP\ClientException $e) {
+      $data[]['errors'][] = 'External Storage Error - ' . $e->getMessage();
     }
 
-    if (!empty($data[0]['errors'])) {
-      // Get the job's data via job.uuid.
-      $job_data = $this->repo_storage_controller->execute('getJobData', array($job_uuid));
-
+    // If this is a check related to a job, log the errors to the database.
+    if (!empty($data[0]['errors']) && !empty($job_data)) {
       // Log the error to the database.
       $this->repoValidate->logErrors(
         array(
           'job_id' => $job_data['job_id'],
           'user_id' => 0,
-          'job_log_label' => 'External Storage Inaccessible',
+          'job_log_label' => 'File Transfer',
           'errors' => $data[0]['errors'],
         )
       );
-
       // Update the 'job_status' in the 'job' table accordingly.
       $this->repo_storage_controller->execute('setJobStatus', 
         array(
