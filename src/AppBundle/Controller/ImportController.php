@@ -842,14 +842,14 @@ class ImportController extends Controller
           foreach ($result as $key => $value) {
             if (isset($value['errors'])) {
               foreach ($value['errors'] as $ekey => $evalue) {
-                $this->addFlash('error', '<h4>External File Removal - ' . $evalue . '</h4>');
+                $this->addFlash('error', 'External File Removal - ' . $evalue);
               }
             }
           }
         }
 
         // The message
-        $this->addFlash('message', '<h4>Job data and files have been successfully removed</h4>' . $data);
+        $this->addFlash('message', 'Job data and files have been successfully removed' . $data);
         // Redirect to the main Uploads page.
         return $this->redirect('/admin/import');
       }
