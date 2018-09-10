@@ -92,27 +92,29 @@ class ValidateCommand extends Command
 
     if (!empty($directory_to_validate)) {
 
+      sleep(5);
+
       // Run the BagIt validation.
       $command_bagit = $this->getApplication()->find('app:bagit-validate');
-
       $arguments_bagit = array(
           'command' => 'app:bagit-validate',
           'localpath' => $directory_to_validate
       );
-
       $input_bagit = new ArrayInput($arguments_bagit);
       $return_bagit = $command_bagit->run($input_bagit, $output);
 
+      sleep(5);
+
       // Run the files validation.
       $command_files = $this->getApplication()->find('app:files-validate');
-
       $arguments_files = array(
           'command' => 'app:files-validate',
           'localpath' => $directory_to_validate
       );
-
       $input_files = new ArrayInput($arguments_files);
-      $return_files = $command_files->run($input_files, $output);      
+      $return_files = $command_files->run($input_files, $output);
+
+      sleep(5);  
 
       // Run the metadata ingest.
       $params = array(

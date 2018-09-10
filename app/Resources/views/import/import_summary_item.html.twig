@@ -182,6 +182,12 @@
           columns = [],
           details_page;
 
+      {% if project.execute_jobs_input is defined %}
+        var parent_project_id = "{{ project.execute_jobs_input.parent_project_id }}",
+            parent_record_id = "{{ project.execute_jobs_input.parent_record_id }}",
+            parent_record_type = "{{ project.execute_jobs_input.parent_record_type }}";
+      {% endif %}
+
       if(job_type === 'subjects metadata import') {
         columns = [
           { "data": "subject_name" },
@@ -325,6 +331,7 @@
         .then((value) => {
           switch (value) {
             case "yes":
+              clearInterval(checkerId);
               $('.overlay').removeClass('hidden');
               window.location.href = '/admin/purge_import/' + uuid;
               break;
@@ -392,6 +399,30 @@
         }
       }
 
+      function execute_jobs(uuid, parent_project_id, parent_record_id, parent_record_type) {
+
+        console.log('executing job...');
+
+        if (uuid && parent_project_id && parent_record_id && parent_record_type) {
+
+          $.ajax({
+            'type': 'GET'
+            ,'dataType': 'json'
+            ,'url': '/admin/execute_jobs/' + uuid + '/' + parent_project_id + '/' + parent_record_id + '/' + parent_record_type
+            ,success: function(result) {
+              if(result) {
+
+                console.log(result);
+                
+              } else {
+               alert(123);
+              }
+            }
+          });
+
+        }
+      }
+
       /**
        * Job Status Checker
        * Endpoint/example: /admin/get_job_status/3
@@ -410,6 +441,11 @@
             ,'url': '/admin/get_job_status/' + uuid
             ,success: function(result) {
               if(result) {
+
+                if (result === 'bagit validation in progress') {
+                  execute_jobs(uuid, parent_project_id, parent_record_id, parent_record_type);
+                }
+
                 $('.status-target span.status').empty().text(result);
                 if (result === 'complete') {
                   clearInterval(checkerId);

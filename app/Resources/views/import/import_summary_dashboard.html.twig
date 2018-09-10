@@ -404,10 +404,10 @@
       previewsContainer: "#previews", // Define the container to display the previews
       // clickable: ".fileinput-button", // Define the element that should be used as click trigger to select files.
       createImageThumbnails: false,
-      maxFilesize: 10240,
+      maxFilesize: 20000, // 20 GB
       ignoreHiddenFiles: true,
       chunking: true,
-      chunkSize: 5000000, // chunk size in bytes (20 MB)
+      chunkSize: 20000000, // chunk size in bytes (20 MB)
       acceptedFiles: "{{ accepted_file_types }}",
       dictInvalidFileType: "File type not allowed"
     });

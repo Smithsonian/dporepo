@@ -164,6 +164,103 @@ class ImportController extends Controller
 
       return $this->json($data);
     }
+
+    /**
+     * @Route("/admin/execute_jobs/{uuid}/{parent_project_id}/{parent_record_id}/{parent_record_type}", name="execute_jobs", defaults={"uuid" = null, "parent_project_id" = null, "parent_record_id" = null, "parent_record_type" = null}, methods="GET")
+     *
+     * @param int $uuid Job ID
+     * @param int $parent_project_id Parent Project ID
+     * @param int $parent_record_id Parent Record ID
+     * @param int $parent_record_type Parent Record Type
+     * @param object $conn Database connection object
+     * @param object $project ProjectsController class
+     * @param object $request Symfony's request object
+     */
+    public function execute_jobs($uuid, $parent_project_id, $parent_record_id, $parent_record_type, KernelInterface $kernel) {
+
+      $input = array(
+        'uuid' => $uuid,
+        'parent_project_id' => $parent_project_id,
+        'parent_record_id' => $parent_record_id,
+        'parent_record_type' => $parent_record_type,
+      );
+
+      // Hack for XAMPP on Windows.
+      if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+        $php_binary_path = 'c:/xampp/php/php.exe';
+      } else {
+        // Find the executable PHP binary.
+        $php_binary_finder = new PhpExecutableFinder();
+        $php_binary_path = $php_binary_finder->find();
+      }
+
+      // $command = 'cd ' . $this->container->getParameter('kernel.project_dir') . ' && ';
+      chdir($this->container->getParameter('kernel.project_dir'));
+      if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {            
+        $command = $php_binary_path . ' bin/console app:validate ' . implode(' ', $input) . ' > NUL';
+      } else {
+        $command = $php_binary_path . ' bin/console app:validate ' . implode(' ', $input) . ' > /dev/null 2>&1 &';
+      }
+
+      // $this->u->dumper($php_binary_path,0);
+      // $this->u->dumper($command);
+
+      // $this->u->dumper($this->container->getParameter('kernel.project_dir'));
+
+      // $process = new Process($command);
+      // $process->setTimeout(3600);
+      // $process->start();
+
+      $process = new Process($command);
+      $process->setTimeout(3600);
+
+      // $process->run(function ($type, $buffer) {
+      //     if (Process::ERR === $type) {
+      //         echo 'ERR > ' . $buffer;
+      //     } else {
+      //         echo 'OUT > ' . $buffer;
+      //     }
+      // });
+
+      $process->start();
+      foreach ($process as $type => $data) {
+          if ($process::OUT === $type) {
+              echo "\nRead from stdout: ".$data;
+          } else { // $process::ERR === $type
+              echo "\nRead from stderr: ".$data;
+          }
+      }
+
+      $process->wait();
+
+      // $pid = $process->getPid();
+
+      // $this->u->dumper($pid);
+
+      // new NullOutput();
+      // try {
+      //   $process->mustRun();
+      // } catch (ProcessFailedException $exception) {
+      //   $this->addFlash('error', '<strong>Error:</strong> ' . $exception->getMessage());
+      // }
+
+      // // Use NullOutput() if you don't need the output
+      // new NullOutput();
+      // $application->run($input);
+
+      // // You can use NullOutput() if you don't need the output
+      // $output = new BufferedOutput();
+      // $application->run($input, $output);
+
+      // // return the output, don't use if you used NullOutput()
+      // $content = $output->fetch();
+
+      // // return new Response(""), if you used NullOutput()
+      // $res = new Response($content);
+
+      return $this->json($input);
+
+    }
     
     /**
      * @Route("/admin/import/{uuid}/{parent_project_id}/{parent_record_id}/{parent_record_type}", name="import_summary_details", defaults={"uuid" = null, "parent_project_id" = null, "parent_record_id" = null, "parent_record_type" = null}, methods="GET")
@@ -176,7 +273,7 @@ class ImportController extends Controller
      * @param object $project ProjectsController class
      * @param object $request Symfony's request object
      */
-    public function import_summary_details($uuid, $parent_project_id, $parent_record_id, $parent_record_type, Connection $conn, ProjectsController $project, Request $request, DatasetElementsController $data_elements_controller, ValidateImagesController $images, KernelInterface $kernel)
+    public function import_summary_details($uuid, $parent_project_id, $parent_record_id, $parent_record_type, Connection $conn, Request $request)
     {
 
       // $this->u->dumper($uuid,0);
@@ -185,7 +282,6 @@ class ImportController extends Controller
       // $this->u->dumper($parent_record_type);
 
       $project = [];
-      $project['file_validation_errors'] = [];
 
       if (!empty($uuid)) {
         // Check to see if the job exists. If it doesn't, throw a createNotFoundException (404).
@@ -199,6 +295,8 @@ class ImportController extends Controller
         if (!$project) throw $this->createNotFoundException('The Project record does not exist');
       }
 
+      $project['file_validation_errors'] = [];
+
       // Get the total number of Item records for the import.
       if (!empty($uuid)) {
 
@@ -210,54 +308,14 @@ class ImportController extends Controller
 
           $this->addFlash('message', 'Files have been successfully uploaded. Validations and metadata ingests are currently in progress.');
 
-          $input = array(
-            $job_data['uuid'],
-            $parent_project_id,
-            $parent_record_id,
-            $parent_record_type,
+          // Set the parameters for the app:validate command (passed to client side, then executed asynchronously via the /admin/execute_jobs route)
+          $project['execute_jobs_input'] = array(
+            'uuid' => $job_data['uuid'],
+            'parent_project_id' => $parent_project_id,
+            'parent_record_id' => $parent_record_id,
+            'parent_record_type' => $parent_record_type,
           );
-
-          // Hack for XAMPP on Windows.
-          if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            $php_binary_path = 'c:/xampp/php/php.exe';
-          } else {
-            // Find the executable PHP binary.
-            $php_binary_finder = new PhpExecutableFinder();
-            $php_binary_path = $php_binary_finder->find();
-          }
-
-          // $command = 'cd ' . $this->container->getParameter('kernel.project_dir') . ' && ';
-          chdir($this->container->getParameter('kernel.project_dir'));
-          if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            $command = $php_binary_path . ' bin/console app:validate ' . implode(' ', $input) . ' > NUL';
-          } else {
-            $command = $php_binary_path . ' bin/console app:validate ' . implode(' ', $input) . ' > /dev/null 2>&1 &';
-          }
-
-          // $this->u->dumper($php_binary_path,0);
-          // $this->u->dumper($command);
-
-          $process = new Process($command);
-          new NullOutput();
-          try {
-            $process->mustRun();
-          } catch (ProcessFailedException $exception) {
-            $this->addFlash('error', '<strong>Error:</strong> ' . $exception->getMessage());
-          }
-
-          // // Use NullOutput() if you don't need the output
-          // new NullOutput();
-          // $application->run($input);
-
-          // // You can use NullOutput() if you don't need the output
-          // $output = new BufferedOutput();
-          // $application->run($input, $output);
-
-          // // return the output, don't use if you used NullOutput()
-          // $content = $output->fetch();
-
-          // // return new Response(""), if you used NullOutput()
-          // $res = new Response($content);
+          
         }
 
         // If a query result is produced against the 'job_import_record' table, add to the $project array.

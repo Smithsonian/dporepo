@@ -355,6 +355,7 @@ class BagitController extends Controller
         array(
           'job_id' => $data->job_id,
           'user_id' => 0,
+          'job_log_label' => 'BagIt Validation',
           'errors' => $return['errors'],
         )
       );

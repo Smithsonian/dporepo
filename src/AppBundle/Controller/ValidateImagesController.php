@@ -102,6 +102,10 @@ class ValidateImagesController extends Controller
     // Throw an exception if the job record doesn't exist.
     if (!$localpath) throw $this->createNotFoundException('The Job directory doesn\'t exist');
 
+    // Get the job ID, so errors can be logged to the database.
+    $dir_array = explode(DIRECTORY_SEPARATOR, $localpath);
+    $job_id = array_pop($dir_array);
+
     // Search for the data directory.
     $finder = new Finder();
     $finder->path('data')->name('/\.jpg|\.tif$/');
@@ -118,10 +122,6 @@ class ValidateImagesController extends Controller
 
         // $file->getMTime() — Gets the last modified time
         // $this->u->dumper($file->getMTime());
-
-        // Get the job ID, so errors can be logged to the database.
-        $dir_array = explode(DIRECTORY_SEPARATOR, $localpath);
-        $job_id = array_pop($dir_array);
 
         if($file->getSize() === 0) {
           $data[$i]['errors'][] = 'Zero byte file. No further checks will be performed - ' . $file->getFilename();
