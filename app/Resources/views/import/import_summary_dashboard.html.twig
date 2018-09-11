@@ -398,16 +398,20 @@
     // See: http://www.dropzonejs.com/#configuration-options
     var uploadsDropzone = new Dropzone(document.body, { // Make the whole body a dropzone
       url: "{{ oneup_uploader_endpoint('repository') }}", // Set the url
-      parallelUploads: 1,
+      // parallelUploads: 1, // Default is 2
       // previewTemplate: previewTemplate,
       autoQueue: false, // Make sure the files aren't queued until manually added
       previewsContainer: "#previews", // Define the container to display the previews
       // clickable: ".fileinput-button", // Define the element that should be used as click trigger to select files.
       createImageThumbnails: false,
-      maxFilesize: 20000, // 20 GB
+      maxFilesize: 20000, // how many files this Dropzone handles
       ignoreHiddenFiles: true,
       chunking: true,
-      chunkSize: 20000000, // chunk size in bytes (20 MB)
+      // forceChunking: true,
+      // parallelChunkUploads: true,
+      chunkSize: 5000000,
+      retryChunks: true,
+      retryChunksLimit: 2000,
       acceptedFiles: "{{ accepted_file_types }}",
       dictInvalidFileType: "File type not allowed"
     });
