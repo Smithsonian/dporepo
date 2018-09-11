@@ -109,7 +109,7 @@
           <div class="panel panel-default">
             <div class="panel-body">
               <h3>BagIt Validation Results</h3>
-              {% if not project.bagit_validation_errors and job_data.job_status == 'in progress' %}
+              {% if not project.bagit_validation_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' %}
                 <p><span class="glyphicon glyphicon-time"></span> Validation pending. Please check back shortly.</p>
               {% else %}
                 <ol class="list-unstyled">
@@ -122,7 +122,7 @@
               {% endif %}
               <hr>
               <h3>Image Validation Results</h3>
-              {% if not project.image_validation_errors and job_data.job_status == 'in progress' or job_data.job_status == 'bagit validation completed' %}
+              {% if not project.image_validation_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' or job_data.job_status == 'image validation in progress' %}
                 <p><span class="glyphicon glyphicon-time"></span> Image validation pending. Please check back shortly.</p>
               {% else %}
                 <ol class="list-unstyled">
@@ -135,7 +135,7 @@
               {% endif %}
               <hr>
               <h3>File Transfer Results</h3>
-              {% if not project.file_transfer_errors and job_data.job_status == 'in progress' or job_data.job_status == 'bagit validation completed' %}
+              {% if not project.file_transfer_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' or job_data.job_status == 'image validation in progress' or job_data.job_status == 'file transfer in progress' %}
                 <p><span class="glyphicon glyphicon-time"></span> File transfers pending. Please check back shortly.</p>
               {% else %}
                 <ol class="list-unstyled">
@@ -442,7 +442,7 @@
             ,success: function(result) {
               if(result) {
 
-                if (result === 'bagit validation in progress') {
+                if (result === 'bagit validation starting') {
                   execute_jobs(uuid, parent_project_id, parent_record_id, parent_record_type);
                 }
 

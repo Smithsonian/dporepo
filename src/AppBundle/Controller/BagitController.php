@@ -249,6 +249,15 @@ class BagitController extends Controller
     $dir_array = explode(DIRECTORY_SEPARATOR, $data->localpath);
     $data->job_id = array_pop($dir_array);
 
+    // Update the 'job_status' in the 'job' table from 'bagit validation in progress' to 'bagit validation in progress (confirmed)'.
+    $this->repo_storage_controller->execute('setJobStatus', 
+      array(
+        'job_id' => $data->job_id, 
+        'status' => 'bagit validation in progress (confirmed)',
+        'date_completed' => date('Y-m-d h:i:s')
+      )
+    );
+
     // Validate that all of the BagIt files exist.
     // (bag-info.txt, bagit.txt, manifest-sha1.txt, tagmanifest-md5.txt)
     $validate_folder = $this->validate_folder($data->localpath);

@@ -85,9 +85,9 @@ class ValidateCommand extends Command
       $directory_to_validate = $input->getArgument('localpath');
     }
 
-    // If a localpath is NOT passed, check the database for a job with the 'job_status' set to 'bagit validation in progress'.
+    // If a localpath is NOT passed, check the database for a job with the 'job_status' set to 'bagit validation starting'.
     if ( empty($input->getArgument('localpath')) ) {
-      $directory_to_validate = $this->validate->needsValidationChecker('bagit validation in progress', $this->uploads_directory);
+      $directory_to_validate = $this->validate->needsValidationChecker('bagit validation starting', $this->uploads_directory);
     }
 
     if (!empty($directory_to_validate)) {

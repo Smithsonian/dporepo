@@ -846,11 +846,11 @@
             parentRecordId = parentRecordChecker(),
             parentRecordType = getRecordType();
 
-        // Set the status of the job from 'uploading' to 'bagit validation in progress'.
+        // Set the status of the job from 'uploading' to 'bagit validation starting'.
         $.ajax({
           'type': 'GET'
           ,'dataType': 'json'
-          ,'url': '/admin/set_job_status/' + jobId + '/bagit validation in progress'
+          ,'url': '/admin/set_job_status/' + jobId + '/bagit validation starting'
           ,success: function(result) {
             if(result && result.statusSet) {
               // Redirect to the Upload overview page.

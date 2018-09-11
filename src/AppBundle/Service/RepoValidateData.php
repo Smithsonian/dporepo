@@ -327,7 +327,17 @@ class RepoValidateData implements RepoValidate {
     );
 
     if(!empty($data)) {
+      
       $directory = $uploads_directory . $data[0]['uuid'];
+      
+      // Update the 'job_status' in the 'job' table from 'bagit validation starting' to 'bagit validation in progress'.
+      $this->repo_storage_controller->execute('setJobStatus', 
+        array(
+          'job_id' => $data[0]['uuid'], 
+          'status' => 'bagit validation in progress',
+          'date_completed' => date('Y-m-d h:i:s')
+        )
+      );
     }
 
     return $directory;
