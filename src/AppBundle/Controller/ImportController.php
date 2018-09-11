@@ -172,9 +172,7 @@ class ImportController extends Controller
      * @param int $parent_project_id Parent Project ID
      * @param int $parent_record_id Parent Record ID
      * @param int $parent_record_type Parent Record Type
-     * @param object $conn Database connection object
-     * @param object $project ProjectsController class
-     * @param object $request Symfony's request object
+     * @param object $kernel KernelInterface class
      */
     public function execute_jobs($uuid, $parent_project_id, $parent_record_id, $parent_record_type, KernelInterface $kernel) {
 
@@ -233,7 +231,7 @@ class ImportController extends Controller
 
       $process->wait();
 
-      // $pid = $process->getPid();
+      $input['pid'] = $process->getPid();
 
       // $this->u->dumper($pid);
 
