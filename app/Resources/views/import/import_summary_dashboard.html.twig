@@ -406,6 +406,7 @@
       createImageThumbnails: false,
       maxFilesize: 20000, // how many files this Dropzone handles
       ignoreHiddenFiles: true,
+      timeout: 300000, // The timeout for the XHR requests in milliseconds (default is 30000 - 30 seconds)
       chunking: true,
       // forceChunking: true,
       // parallelChunkUploads: true,
@@ -474,6 +475,13 @@
         }
       }
     }
+
+    // uploadsDropzone.on("error", function(file, errorMessage, xhrObject) {
+    //   console.log('UPLOAD ERROR');
+    //   console.log(file);
+    //   console.log(errorMessage);
+    //   console.log(xhrObject);
+    // });
 
     uploadsDropzone.on("uploadprogress", function(file) {
       // Find the list item for this file.
@@ -797,6 +805,8 @@
       // // Show the total progress bar when upload starts
       // document.querySelector("#total-progress").style.opacity = "1";
 
+      xhr.timeout = 99999999;
+
       if((typeof file.prevalidate !== 'undefined') && !file.prevalidate) {
         // If not prevalidating, disable all actionable buttons.
         $('.start, .cancel, .prevalidate-trigger').attr('disabled', 'disabled');
@@ -888,44 +898,14 @@
       
     });
 
+    // Start the internet connectivity checker.
+    var connectionCheck = setInterval(checkStatus, 2000);
+
     // Setup the buttons for all transfers
     // The "add files" button doesn't need to be setup because the config
     // `clickable` has already been specified.
     document.querySelector("#actions .start").onclick = function() {
-
-      // Check if the parent record has been selected.
-      let parentRecordId = parentRecordChecker();
-      // Get queued files.
-      let queuedFiles = uploadsDropzone.getAcceptedFiles();
-      // Check if files have been added to the queue.
-      // Also check to see if there are actual files (e.g. photogrammetry scans, models), and not just CSVs.
-      if(!queuedFilesChecker(queuedFiles)) return;
-
-      // Generate a real job ID.
-      generateJobId(parentRecordId, false);
-
-      // Prepare and display the modal.
-      // $('#uploading-modal-title').empty();
-      // $('#uploading-modal-title').append('Uploading and Importing Data');
-      // $('#uploading-modal-message').empty();
-      // let p1 = $('<p />').text('Upload and import in progress...');
-      // let p2 = $('<p />').text('The system is shuffling everything into place. This page will automatically redirect to the Uploads Detail page once the upload process is complete.');
-      // $('#uploading-modal-message').append(p1, p2);
-      // $('#uploading-modal').modal('show');
-
-      // Display the uploading overlay.
-      $('.overlay-uploading').removeClass('hidden');
-
-      // Give some time (2 seconds) to create the job record in the database.
-      setTimeout(function() {
-        // Bring back the progress badges.
-        $('#previews').find('.badge-temp').removeClass('badge-temp').addClass('badge');
-        // Get the job ID from the data attribute of the prevalidate-trigger.
-        let jobId = $('.prevalidate-trigger').attr('data-jobid');
-        // Begin the uploading process.
-        uploadsDropzone.enqueueFiles(uploadsDropzone.getFilesWithStatus(Dropzone.ADDED));
-      }, 2000);
-
+      startUpload(false);
     };
 
     document.querySelector("#actions .cancel").onclick = function() {
@@ -960,6 +940,73 @@
     //     let thisVal = $('#uploads_parent_picker_form_parent_picker_text').val();
     //     $('#uploads_parent_picker_form_parent_picker').val(thisVal);
     // }
+
+    function startUpload(restart) {
+
+      // Check if the parent record has been selected.
+      let parentRecordId = parentRecordChecker();
+      // Get queued files.
+      let queuedFiles = uploadsDropzone.getAcceptedFiles();
+
+      // If this is not a restart...
+      if(!restart) {
+        // Check if files have been added to the queue.
+        // Also check to see if there are actual files (e.g. photogrammetry scans, models), and not just CSVs.
+        if(!queuedFilesChecker(queuedFiles)) return;
+        // Generate a real job ID.
+        generateJobId(parentRecordId, false);
+      }
+
+      // Display the uploading overlay.
+      $('.overlay-uploading').removeClass('hidden');
+
+      // Give some time (2 seconds) to create the job record in the database.
+      setTimeout(function() {
+
+        // Bring back the progress badges.
+        $('#previews').find('.badge-temp').removeClass('badge-temp').addClass('badge');
+        // Get the job ID from the data attribute of the prevalidate-trigger.
+        let jobId = $('.prevalidate-trigger').attr('data-jobid');
+        // Begin the uploading process.
+
+        if(restart) {
+
+          // Make a copy of all files.
+          let dropzoneFilesCopy = uploadsDropzone.files.slice(0);
+          // Remove all files.
+          uploadsDropzone.removeAllFiles();
+
+          var fileNames = [];
+
+          // Add back files which haven't been uploaded.
+          $.each(dropzoneFilesCopy, function(i, file) {
+
+            // Remove files with the status of "uploading".
+            if (file.status === 'uploading') {
+              uploadsDropzone.removeFile(file);
+            }
+
+            // Add the remaining files back to Dropzone.
+            if ((file.status !== 'success') && (fileNames.indexOf(file.name) === -1)) {
+              file.status = 'added';
+              file.accepted = true;
+              file.prevalidate = false;
+              file.processing = false;
+              uploadsDropzone.addFile(file);
+            }
+
+            fileNames.push(file.name);
+
+          });
+
+          let dropzoneFilesCheck = uploadsDropzone.getAcceptedFiles();
+          console.log(dropzoneFilesCheck.length);
+        }
+
+        uploadsDropzone.enqueueFiles(uploadsDropzone.getFilesWithStatus(Dropzone.ADDED));
+
+      }, 2000);
+    }
 
     function parentRecordChecker() {
       // Parent record ID value.
@@ -1201,6 +1248,59 @@
               scanFiles(i++, entry, directoryContainer, dzOptions, existingCount);
           });
         });
+      }
+
+    }
+
+    function checkStatus() {
+
+      var online = navigator.onLine;
+
+      if(!online) {
+
+        swal('Detected lost internet connection. Would you like to resume the upload process?', {
+          buttons: {
+            cancel: 'No',
+            catch: {
+              text: 'Yes',
+              value: 'yes',
+            }
+          },
+        })
+        .then((value) => {
+          switch (value) {
+            case "yes":
+              startUpload(true);
+              break;
+            default:
+              clearInterval(checkStatus);
+
+              // Set the status of the job from 'uploading' to 'failed'.
+              let jobId = $('.prevalidate-trigger').attr('data-jobid'),
+                  parentProjectId = $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
+                  parentRecordId = parentRecordChecker(),
+                  parentRecordType = getRecordType();
+              
+              $.ajax({
+                'type': 'GET'
+                ,'dataType': 'json'
+                ,'url': '/admin/set_job_status/' + jobId + '/cancelled'
+                ,success: function(result) {
+                  if(result && result.statusSet) {
+                    // Display the confirmation message.
+                    swal('Upload process cancelled. Redirecting to the overview page...');
+                    // Redirect to the Upload overview page.
+                    setTimeout(function() {
+                      document.location.href = '/admin/import/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
+                    }, 3000);
+                  } else {
+                    // TODO: catch error?
+                  }
+                }
+              });
+          }
+        });
+
       }
 
     }
