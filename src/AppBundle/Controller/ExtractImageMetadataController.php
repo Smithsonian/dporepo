@@ -129,7 +129,19 @@ class ExtractImageMetadataController extends Controller
         if(array_key_exists($mime_type, $this->valid_image_mimetypes)) {
 
           // Set metadata, warnings or errors.
-          $data[$i] = $this->get_metadata_from_image($file);
+          $data[$i] = $this->get_metadata_from_image($file->getPathname());
+
+          // Write the metadata for this file.
+          $this->repo_storage_controller->execute('saveRecord',
+            array(
+              'base_table' => 'file',
+              'values' => array(
+                'filename' => $file->getPathname(),
+                'metadata' => array_key_exists('metadata', $data[$i])
+                  ? json_encode($data[$i]['metadata']) : json_encode($data[$i]),
+              ),
+            )
+          );
 
         } else {
           $data[$i]['errors'][] = 'File is not a valid image - ' . $file->getFilename();
