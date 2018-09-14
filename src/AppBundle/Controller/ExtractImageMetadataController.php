@@ -132,16 +132,27 @@ class ExtractImageMetadataController extends Controller
           $data[$i] = $this->get_metadata_from_image($file->getPathname());
 
           // Write the metadata for this file.
-          $this->repo_storage_controller->execute('saveRecord',
-            array(
-              'base_table' => 'file',
-              'values' => array(
-                'filename' => $file->getPathname(),
-                'metadata' => array_key_exists('metadata', $data[$i])
-                  ? json_encode($data[$i]['metadata']) : json_encode($data[$i]),
-              ),
-            )
-          );
+          if(array_key_exists('metadata', $data[$i])) {
+            $id = $this->repo_storage_controller->execute('saveRecord',
+              array(
+                'base_table' => 'file_upload',
+                'user_id' => $this->getUser()->getId(),
+                'values' => array(
+                  'id' => array(
+                    'field_name' => 'file_name',
+                    'field_value' => $file->getPathname(),
+                  ),
+                  'fields' => array(
+                    'metadata' => array(
+                      'field_name' => 'metadata',
+                      'field_value' => json_encode($data[$i]['metadata']),
+                    )
+                  ),
+                )
+              )
+            );
+
+          }
 
         } else {
           $data[$i]['errors'][] = 'File is not a valid image - ' . $file->getFilename();
