@@ -33,7 +33,7 @@
               {% if job_data.job_status == 'cancelled' %}
                 <dd class="status-target text-danger"><span class="glyphicon glyphicon-exclamation-sign"></span> <strong>{{ job_data.job_status }}</strong></dd>
               {% elseif job_data.job_status == 'failed' %}
-                <dd class="status-target text-danger"><span class="glyphicon glyphicon-exclamation-sign"></span> <strong>{{ job_data.job_status }}</strong> (see below for details)</dd>
+                <dd class="status-target text-danger"><span class="glyphicon glyphicon-exclamation-sign"></span> <strong>{{ job_data.job_status }}</strong></dd>
               {% elseif job_data.job_status == 'complete' %}
                 <dd class="status-target text-success"><span class="glyphicon glyphicon-ok"></span> <strong>{{ job_data.job_status }}</strong></dd>
               {% else %}
