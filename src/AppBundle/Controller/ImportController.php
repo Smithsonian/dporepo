@@ -302,7 +302,7 @@ class ImportController extends Controller
         $job_record_data = $this->repo_storage_controller->execute('getImportedItems', array('job_id' => $job_data['job_id']));
 
         // If a record is NOT found within the 'job_import_record' table, add a message and execute validations and metadata ingests.
-        if (!$job_record_data && ($job_data['job_status'] !== 'failed') && ($job_data['job_status'] !== 'complete')) {
+        if (!$job_record_data && ($job_data['job_status'] !== 'cancelled') && ($job_data['job_status'] !== 'failed') && ($job_data['job_status'] !== 'complete')) {
 
           $this->addFlash('message', 'Files have been successfully uploaded. Validations and metadata ingests are currently in progress.');
 
