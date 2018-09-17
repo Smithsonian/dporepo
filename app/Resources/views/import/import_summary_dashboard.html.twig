@@ -925,18 +925,9 @@
       }
       // Resume the upload process.
       else {
-        $.ajax({
-          'type': 'GET'
-          ,'dataType': 'json'
-          ,'url': '/admin/set_job_status/' + jobId + '/uploading'
-          ,success: function(result) {
-            if(result && result.statusSet) {
-              startUpload(true, dropzoneFilesCopy);
-              thisTrigger.find('span').empty().text('Pause');
-              thisTrigger.removeClass('paused');
-            }
-          }
-        });
+        startUpload(true, dropzoneFilesCopy);
+        thisTrigger.find('span').empty().text('Pause');
+        thisTrigger.removeClass('paused');
       }
 
     });
@@ -1030,39 +1021,54 @@
 
         if(restart) {
 
-          if (!dropzoneFilesCopy.length) {
-            // Make a copy of all files.
-            dropzoneFilesCopy = uploadsDropzone.files.slice(0);
-            // Remove all files.
-            uploadsDropzone.removeAllFiles();
-          }
+          // Set the status back to 'uploading'.
+          $.ajax({
+            'type': 'GET'
+            ,'dataType': 'json'
+            ,'url': '/admin/set_job_status/' + jobId + '/uploading'
+            ,success: function(result) {
+              if(result && result.statusSet) {
+                
+                if (!dropzoneFilesCopy.length) {
+                  // Make a copy of all files.
+                  dropzoneFilesCopy = uploadsDropzone.files.slice(0);
+                  // Remove all files.
+                  uploadsDropzone.removeAllFiles();
+                }
 
-          var fileNames = [];
+                var fileNames = [];
 
-          // Add back files which haven't been uploaded.
-          $.each(dropzoneFilesCopy, function(i, file) {
+                // Add back files which haven't been uploaded.
+                $.each(dropzoneFilesCopy, function(i, file) {
 
-            // Remove files with the status of "uploading".
-            if (file.status === 'uploading') {
-              uploadsDropzone.removeFile(file);
+                  // Remove files with the status of "uploading".
+                  if (file.status === 'uploading') {
+                    uploadsDropzone.removeFile(file);
+                  }
+
+                  // Add the remaining files back to Dropzone.
+                  if ((file.status !== 'success') && (fileNames.indexOf(file.name) === -1)) {
+                    file.status = 'added';
+                    file.accepted = true;
+                    file.prevalidate = false;
+                    file.processing = false;
+                    uploadsDropzone.addFile(file);
+                  }
+
+                  fileNames.push(file.name);
+
+                });
+
+                uploadsDropzone.enqueueFiles(uploadsDropzone.getFilesWithStatus(Dropzone.ADDED));
+              }
             }
-
-            // Add the remaining files back to Dropzone.
-            if ((file.status !== 'success') && (fileNames.indexOf(file.name) === -1)) {
-              file.status = 'added';
-              file.accepted = true;
-              file.prevalidate = false;
-              file.processing = false;
-              uploadsDropzone.addFile(file);
-            }
-
-            fileNames.push(file.name);
-
           });
 
         }
 
-        uploadsDropzone.enqueueFiles(uploadsDropzone.getFilesWithStatus(Dropzone.ADDED));
+        if(!restart) {
+          uploadsDropzone.enqueueFiles(uploadsDropzone.getFilesWithStatus(Dropzone.ADDED));
+        }
 
       }, 2000);
     }
