@@ -463,7 +463,7 @@
                   $('.status-target span.status').prepend('<span class="glyphicon glyphicon-ok"></span> ');
                   location.reload();
                 }
-                if (result === 'failed') {
+                if ((result === 'failed') || (result === 'cancelled')) {
                   clearInterval(checkerId);
                   $('.status-target span.in-progress').remove();
                   $('.status-target').addClass('text-danger');

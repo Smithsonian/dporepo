@@ -859,20 +859,32 @@
           parentRecordId = parentRecordChecker(),
           parentRecordType = getRecordType();
 
-      // Set the status of the job from 'uploading' to 'bagit validation starting'.
-      $.ajax({
-        'type': 'GET'
-        ,'dataType': 'json'
-        ,'url': '/admin/set_job_status/' + jobId + '/bagit validation starting'
-        ,success: function(result) {
-          if(result && result.statusSet) {
-            // Redirect to the Upload overview page.
-            document.location.href = '/admin/import/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
-          } else {
-            // TODO: catch error?
+      setTimeout(function() {
+        $.ajax({
+          'type': 'GET'
+          ,'dataType': 'json'
+          ,'url': '/admin/get_job_status/' + jobId
+          ,success: function(result) {
+            if (result && (result !== 'cancelled') && (result !== 'paused')) {
+              // Set the status of the job from 'uploading' to 'bagit validation starting'.
+              $.ajax({
+                'type': 'GET'
+                ,'dataType': 'json'
+                ,'url': '/admin/set_job_status/' + jobId + '/bagit validation starting'
+                ,success: function(result) {
+                  if(result && result.statusSet) {
+                    // Redirect to the Upload overview page.
+                    document.location.href = '/admin/import/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
+                  } else {
+                    // TODO: catch error?
+                  }
+                }
+              });
+            }
           }
-        }
-      });
+        });
+      }, 2000);
+      
       
     });
 
@@ -889,20 +901,42 @@
 
     // Pause/Resume uploading.
     $('#actions .pause').on('click', function(e) {
+
+      let jobId = $('.prevalidate-trigger').attr('data-jobid');
+      let thisTrigger = $(this);
+
       // Pause the upload process.
       if (!$(this).hasClass('paused')) {
-        $(this).find('span').empty().text('Resume');
-        $(this).addClass('paused');
-        // Make a copy of all files.
-        dropzoneFilesCopy = uploadsDropzone.files.slice(0);
-        // Remove all files.
-        uploadsDropzone.removeAllFiles();
+        $.ajax({
+          'type': 'GET'
+          ,'dataType': 'json'
+          ,'url': '/admin/set_job_status/' + jobId + '/paused'
+          ,success: function(result) {
+            if(result && result.statusSet) {
+              thisTrigger.find('span').empty().text('Resume');
+              thisTrigger.addClass('paused');
+              // Make a copy of all files.
+              dropzoneFilesCopy = uploadsDropzone.files.slice(0);
+              // Remove all files.
+              uploadsDropzone.removeAllFiles();
+            }
+          }
+        });
       }
       // Resume the upload process.
       else {
-        startUpload(true, dropzoneFilesCopy);
-        $(this).find('span').empty().text('Pause');
-        $(this).removeClass('paused');
+        $.ajax({
+          'type': 'GET'
+          ,'dataType': 'json'
+          ,'url': '/admin/set_job_status/' + jobId + '/uploading'
+          ,success: function(result) {
+            if(result && result.statusSet) {
+              startUpload(true, dropzoneFilesCopy);
+              thisTrigger.find('span').empty().text('Pause');
+              thisTrigger.removeClass('paused');
+            }
+          }
+        });
       }
 
     });
@@ -923,8 +957,6 @@
       .then((value) => {
         switch (value) {
           case "yes":
-            // Remove all files.
-            uploadsDropzone.removeAllFiles(true);
             // Set the status of the job from 'uploading' to 'failed'.
             let jobId = $('.prevalidate-trigger').attr('data-jobid'),
                 parentProjectId = $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
@@ -937,12 +969,10 @@
               ,'url': '/admin/set_job_status/' + jobId + '/cancelled'
               ,success: function(result) {
                 if(result && result.statusSet) {
-                  // Display the confirmation message.
-                  swal('Upload process cancelled. Redirecting to the overview page...');
+                  // Remove all files.
+                  uploadsDropzone.removeAllFiles(true);
                   // Redirect to the Upload overview page.
-                  setTimeout(function() {
-                    document.location.href = '/admin/import/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
-                  }, 5000);
+                  document.location.href = '/admin/import/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
                 } else {
                   // TODO: catch error?
                 }
@@ -969,6 +999,8 @@
     };
 
     function startUpload(restart, dropzoneFilesCopy) {
+
+      dropzoneFilesCopy = (typeof dropzoneFilesCopy !== 'undefined') ? dropzoneFilesCopy : [];
 
       // Check if the parent record has been selected.
       let parentRecordId = parentRecordChecker();
