@@ -30,7 +30,9 @@
             {% endif %}
             <dt>Job Status:</dt>
             {% if job_data.job_status is defined %}
-              {% if job_data.job_status == 'failed' %}
+              {% if job_data.job_status == 'cancelled' %}
+                <dd class="status-target text-danger"><span class="glyphicon glyphicon-exclamation-sign"></span> <strong>{{ job_data.job_status }}</strong></dd>
+              {% elseif job_data.job_status == 'failed' %}
                 <dd class="status-target text-danger"><span class="glyphicon glyphicon-exclamation-sign"></span> <strong>{{ job_data.job_status }}</strong> (see below for details)</dd>
               {% elseif job_data.job_status == 'complete' %}
                 <dd class="status-target text-success"><span class="glyphicon glyphicon-ok"></span> <strong>{{ job_data.job_status }}</strong></dd>
@@ -111,6 +113,8 @@
               <h3>BagIt Validation Results</h3>
               {% if not project.bagit_validation_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' %}
                 <p><span class="glyphicon glyphicon-time"></span> Validation pending. Please check back shortly.</p>
+              {% elseif job_data.job_status == 'cancelled' %}
+                <p><span class="glyphicon glyphicon-ban-circle"></span> Job cancelled</p>
               {% else %}
                 <ol class="list-unstyled">
                   {% for bagit_validation_error in project.bagit_validation_errors %}
@@ -124,6 +128,8 @@
               <h3>Image Validation Results</h3>
               {% if not project.image_validation_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' or job_data.job_status == 'image validation in progress' %}
                 <p><span class="glyphicon glyphicon-time"></span> Image validation pending. Please check back shortly.</p>
+              {% elseif job_data.job_status == 'cancelled' %}
+                <p><span class="glyphicon glyphicon-ban-circle"></span> Job cancelled</p>
               {% else %}
                 <ol class="list-unstyled">
                   {% for image_validation_error in project.image_validation_errors %}
@@ -137,6 +143,8 @@
               <h3>File Transfer Results</h3>
               {% if not project.file_transfer_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' or job_data.job_status == 'image validation in progress' or job_data.job_status == 'file transfer in progress' %}
                 <p><span class="glyphicon glyphicon-time"></span> File transfers pending. Please check back shortly.</p>
+              {% elseif job_data.job_status == 'cancelled' %}
+                <p><span class="glyphicon glyphicon-ban-circle"></span> Job cancelled</p>
               {% else %}
                 <ol class="list-unstyled">
                   {% for file_transfer_error in project.file_transfer_errors %}
