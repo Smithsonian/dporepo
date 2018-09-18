@@ -9,6 +9,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\HttpKernel\KernelInterface;
 use finfo;
 
 use AppBundle\Controller\RepoStorageHybridController;
@@ -55,14 +56,26 @@ class ExtractImageMetadataController extends Controller
   private $repoValidate;
 
   /**
+   * @var object $kernel
+   */
+  public $kernel;
+  
+  /**
+   * @var string $project_directory
+   */
+  private $project_directory;
+
+  /**
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(TokenStorageInterface $token_storage, Connection $conn)
+  public function __construct(TokenStorageInterface $token_storage, Connection $conn, KernelInterface $kernel)
   {
     // Usage: $this->u->dumper($variable);
     $this->u = new AppUtilities();
     $this->token_storage = $token_storage;
+    $this->kernel = $kernel;
+    $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->repoValidate = new RepoValidateData($conn);
     // TODO: move this to parameters.yml and bind in services.yml.
@@ -133,24 +146,36 @@ class ExtractImageMetadataController extends Controller
 
           // Write the metadata for this file.
           if(array_key_exists('metadata', $data[$i])) {
-            $id = $this->repo_storage_controller->execute('saveRecord',
-              array(
-                'base_table' => 'file_upload',
-                'user_id' => $this->getUser()->getId(),
-                'values' => array(
-                  'id' => array(
-                    'field_name' => 'file_name',
-                    'field_value' => $file->getPathname(),
-                  ),
-                  'fields' => array(
-                    'metadata' => array(
-                      'field_name' => 'metadata',
-                      'field_value' => json_encode($data[$i]['metadata']),
-                    )
-                  ),
-                )
+
+            // Create the clean directory path to the file, since that's how it's stored in the database.
+            // Turns this: /Users/gor/Documents/Sites/dporepo/src/AppBundle/Command/../../../web/uploads/repository/3df_5ba15aec7ebea7.06350365/testupload03/data
+            // Into this: /uploads/repository/3df_5ba15aec7ebea7.06350365/testupload03/data
+            $file_path = str_replace($this->project_directory . 'src/AppBundle/Command/../../../web', '', $file->getPath());
+
+            // Get the file's id in the database.
+            $file_data = $this->repo_storage_controller->execute('getRecords', array(
+              'base_table' => 'file_upload',
+              'fields' => array(),
+              'limit' => 1,
+              'search_params' => array(
+                array('field_names' => array('file_path'), 'search_values' => array($file_path . '/' . $file->getBasename()), 'comparison' => '='),
+              ),
+              'search_type' => 'AND',
+              'omit_active_field' => true,
               )
             );
+
+            // If the record is found, save the metadata to the record.
+            if (count($file_data) === 1) {
+              $id = $this->repo_storage_controller->execute('saveRecord', array(
+                'base_table' => 'file_upload',
+                'record_id' => $file_data[0]['file_upload_id'],
+                'user_id' => 0,
+                'values' => array(
+                  'metadata' => json_encode($data[$i]['metadata'])
+                )
+              ));
+            }
           }
 
         } else {
