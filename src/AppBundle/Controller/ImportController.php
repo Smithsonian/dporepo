@@ -162,6 +162,20 @@ class ImportController extends Controller
 
       $data = $this->repo_storage_controller->execute('getDatatableImports', $query_params);
 
+      foreach ($data['aaData'] as $key => $value) {
+        switch ($value['job_status']) {
+          case 'cancelled':
+          case 'failed':
+            $data['aaData'][$key]['job_status'] = '<span class="text-danger"><span class="glyphicon glyphicon-exclamation-sign"></span> ' . $value['job_status'] . '</span>';
+            break;
+          case 'complete':
+            $data['aaData'][$key]['job_status'] = '<span class="text-success"><span class="glyphicon glyphicon-ok"></span> ' . $value['job_status'] . '</span>';
+            break;
+          default:
+            $data['aaData'][$key]['job_status'] = '<span class="text-info"><span class="glyphicon glyphicon-time"></span> ' . $value['job_status'] . '</span>';
+        }
+      }
+
       return $this->json($data);
     }
 
@@ -302,7 +316,7 @@ class ImportController extends Controller
         $job_record_data = $this->repo_storage_controller->execute('getImportedItems', array('job_id' => $job_data['job_id']));
 
         // If a record is NOT found within the 'job_import_record' table, add a message and execute validations and metadata ingests.
-        if (!$job_record_data && ($job_data['job_status'] !== 'failed') && ($job_data['job_status'] !== 'complete')) {
+        if (!$job_record_data && ($job_data['job_status'] !== 'cancelled') && ($job_data['job_status'] !== 'failed') && ($job_data['job_status'] !== 'complete')) {
 
           $this->addFlash('message', 'Files have been successfully uploaded. Validations and metadata ingests are currently in progress.');
 
