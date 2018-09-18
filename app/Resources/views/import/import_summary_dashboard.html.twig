@@ -597,34 +597,46 @@
 
             // Get the difference between the two arrays of files, 
             // using the manifest as the authoritative source.
-            var diff = $(allManifestFiles).not(allAcceptedFiles).get();
+            if (allManifestFiles.length) {
+              var diff = $(allManifestFiles).not(allAcceptedFiles).get();
 
-            // If there are file-based errors, populate the panel-body.
-            if(diff.length) {
-              let fileMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>BagIt Manifest Pre-validation</h4>');
-              let fileMessageOrderedList = $('<ol />');
-              for (var i = 0; i < diff.length; i++) {
-                // Ignore hidden files. For now, just Apple's .DS_Store.
-                // TODO: Add more hidden file types?
-                if(diff[i] !== '.DS_Store') {
-                  fileMessageOrderedList.append('<li>Missing file: ' + diff[i] + '</li>');
+              // If there are file-based errors, populate the panel-body.
+              if(diff.length) {
+                let fileMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>BagIt Manifest Pre-validation</h4>');
+                let fileMessageOrderedList = $('<ol />');
+                for (var i = 0; i < diff.length; i++) {
+                  // Ignore hidden files. For now, just Apple's .DS_Store.
+                  // TODO: Add more hidden file types?
+                  if(diff[i] !== '.DS_Store') {
+                    fileMessageOrderedList.append('<li>Missing file: ' + diff[i] + '</li>');
+                  }
+                  if(diff[i] === '.DS_Store') diff.splice(i, 1);
                 }
-                if(diff[i] === '.DS_Store') diff.splice(i, 1);
+                // Append the ordered list to the fileMessageContainer.
+                if(fileMessageOrderedList.find('li').length) {
+                  fileMessageContainer.append(fileMessageOrderedList);
+                  // Append the fileMessageContainer to the panel-body container.
+                  $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
+                }
               }
-              // Append the ordered list to the fileMessageContainer.
-              if(fileMessageOrderedList.find('li').length) {
-                fileMessageContainer.append(fileMessageOrderedList);
-                // Append the fileMessageContainer to the panel-body container.
-                $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
+
+              // If there are no file-based errors, display a message.
+              if(!diff.length) {
+                // The message.
+                let message = $('<div />').addClass('alert alert-success files-validation-success').attr('role', 'alert').html('<h4>BagIt Manifest Pre-validation</h4><p>No file validation errors found.</p>');
+                // Append the message to the panel-body container.
+                $('.panel-validation-results').find('.panel-body').append(message);
               }
             }
 
-            // If there are no file-based errors, display a message.
-            if(!diff.length) {
-              // The message.
-              let message = $('<div />').addClass('alert alert-success files-validation-success').attr('role', 'alert').html('<h4>BagIt Manifest Pre-validation</h4><p>No file validation errors found.</p>');
-              // Append the message to the panel-body container.
-              $('.panel-validation-results').find('.panel-body').append(message);
+            // If the BagIt manifest is empty, display an error.
+            if (!allManifestFiles.length) {
+              let fileMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>BagIt Manifest Pre-validation</h4>');
+              let fileMessageOrderedList = $('<ol />');
+              fileMessageOrderedList.append('<li>BagIt manifest is empty</li>');
+              fileMessageContainer.append(fileMessageOrderedList);
+              // Append the fileMessageContainer to the panel-body container.
+              $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
             }
 
           });
@@ -1028,7 +1040,7 @@
             ,'url': '/admin/set_job_status/' + jobId + '/uploading'
             ,success: function(result) {
               if(result && result.statusSet) {
-                
+
                 if (!dropzoneFilesCopy.length) {
                   // Make a copy of all files.
                   dropzoneFilesCopy = uploadsDropzone.files.slice(0);
