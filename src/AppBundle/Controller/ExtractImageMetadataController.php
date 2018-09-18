@@ -93,7 +93,7 @@ class ExtractImageMetadataController extends Controller
   {
 
     $data = array();
-    $job_status = 'metadata ingest in progress';
+    $job_status = 'failed';
     $localpath = !empty($params['localpath']) ? $params['localpath'] : false;
 
     // Throw an exception if the job record doesn't exist.
@@ -152,6 +152,7 @@ class ExtractImageMetadataController extends Controller
               )
             );
 
+            $job_status = 'success';
           }
 
         } else {
