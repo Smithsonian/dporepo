@@ -3797,7 +3797,7 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     // See if record exists; update if so, insert otherwise.
-    $sql = "Select isni_id FROM isni_data WHERE isni_id=:id";
+    $sql = "SELECT isni_id FROM isni_data WHERE isni_id=:id";
     $statement = $this->connection->prepare($sql);
     $statement->bindValue(":id", $id, PDO::PARAM_INT);
     $statement->execute();
@@ -3807,8 +3807,8 @@ class RepoStorageHybrid implements RepoStorage {
       // update
       $sql ="UPDATE isni_data set isni_label=:label, last_modified=NOW(), last_modified_user_account_id=:user_id WHERE isni_id=:id";
       $statement = $this->connection->prepare($sql);
-      $statement->bindValue(":id", $id, PDO::PARAM_INT);
-      $statement->bindValue(":label", $label, PDO::PARAM_INT);
+      $statement->bindValue(":id", $ret[0]['isni_id'], PDO::PARAM_STR);
+      $statement->bindValue(":label", $label, PDO::PARAM_STR);
       $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
       $statement->execute();
     }
@@ -3819,8 +3819,8 @@ class RepoStorageHybrid implements RepoStorage {
         ) 
         VALUES (:id, :label, NOW(), NOW(), :user_id, :user_id)";
       $statement = $this->connection->prepare($sql);
-      $statement->bindValue(":id", $id, PDO::PARAM_INT);
-      $statement->bindValue(":label", $label, PDO::PARAM_INT);
+      $statement->bindValue(":id", $id, PDO::PARAM_STR);
+      $statement->bindValue(":label", $label, PDO::PARAM_STR);
       $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
       $statement->execute();
     }
