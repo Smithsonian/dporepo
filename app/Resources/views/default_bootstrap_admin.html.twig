@@ -37,7 +37,7 @@
         <div class="container-fluid">
           <div class="row">
             <div class="col-sm-12">
-              <ul class="nav nav-tabs">
+              <ul class="nav nav-tabs main-nav">
                 <li role="presentation" id="admin"><a href="/admin/">Dashboard</a></li>
                 <li role="presentation" id="workspace"><a href="/admin/workspace/">Workspace</a></li>
                 <li role="presentation" id="import"><a href="/admin/import">Uploads</a></li>
@@ -78,8 +78,16 @@
 
           {% for label, messages in app.flashes %}
             {% for message in messages %}
-              <div class="alert alert-success flash-{{ label }}" role="alert">
-                {{ message }}
+              {% if (label == 'error') %}
+                {% set bootstrap_label = 'danger' %}
+                {% set bootstrap_icon = 'exclamation-sign' %}
+              {% else %}
+                {% set bootstrap_label = 'success' %}
+                {% set bootstrap_icon = 'ok' %}
+              {% endif %}
+              <div class="alert alert-{{ bootstrap_label }} alert-dismissible flash-{{ label }}" role="alert">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">×</span></button>
+                <span class="glyphicon glyphicon-{{ bootstrap_icon }}" aria-hidden="true"></span> {{ message|raw }}
               </div>
             {% endfor %}
           {% endfor %}
@@ -91,7 +99,7 @@
 
       <div class="row">
         <div class="clearfix"></div>
-        {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and is_granted('ROLE_ADMIN') %}
+        {% if (app.request.pathInfo == '/admin/workspace/') or (project_repository_id is defined) %}
           <div class="col-sm-9 col-sm-offset-3 col-md-9 col-md-offset-3 col-footer">
         {% else %}
           <div class="col-sm-12 col-md-12 col-footer">
@@ -112,7 +120,7 @@
     <link href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet" />
     <link href="{{ asset('lib/javascripts/vakata-jstree/dist/themes/proton/style.min.css') }}" rel="stylesheet" />
     <!-- <link href="{ asset('lib/javascripts/vakata-jstree/dist/themes/default/style.min.css') }" rel="stylesheet" /> -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.css" rel="stylesheet" type="text/css" />
+    <!-- <link href="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.css" rel="stylesheet" type="text/css" /> -->
     <link href="{{ asset('lib/javascripts/chosen_v1.8.2/chosen.min.css') }}" rel="stylesheet" type="text/css" />
     <link href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" rel="stylesheet" />
     <link href="{{ asset('lib/css/styles.css') }}" rel="stylesheet" />
@@ -126,7 +134,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.3.1/jquery.cookie.min.js"></script>
     <script src="{{ asset('lib/javascripts/chosen_v1.8.2/chosen.jquery.min.js') }}"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/2.1.0/sweetalert.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
     <script src="{{ asset('lib/javascripts/ie10-viewport-bug-workaround.js') }}"></script>

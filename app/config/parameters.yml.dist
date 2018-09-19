@@ -32,6 +32,13 @@ parameters:
     si_ldap_account_domain_name: ~
     si_ldap_base_dn: ~
 
-    # File upload and processing paths
-    file_upload_path: ~
-    file_processing_path: ~
+    # File upload path
+    uploads_directory: ~
+
+    # External file storage parameters
+    # See: vendor/sabre/dav/lib/DAV/Client.php
+    external_file_storage_location: ~
+    external_file_storage_auth_type: ~
+    external_file_storage_username: ~
+    external_file_storage_password: ~
+    external_file_storage_path: ~

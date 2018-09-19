@@ -157,19 +157,11 @@ class RepoStorageHybrid implements RepoStorage {
       );
       $query_params['fields'][] = array(
         'table_name' => 'item',
-        'field_name' => 'item_display_name',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'item',
         'field_name' => 'item_description',
       );
       $query_params['fields'][] = array(
         'table_name' => 'item',
         'field_name' => 'item_type',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'item',
-        'field_name' => 'status_type_repository_id',
       );
       $query_params['fields'][] = array(
         'table_name' => 'item',
@@ -294,6 +286,14 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'model_maps',
     );
     $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'file_path',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'file_checksum',
+    );
+    $query_params['fields'][] = array(
       'table_name' => 'capture_dataset',
       'field_name' => 'parent_item_repository_id',
     );
@@ -366,6 +366,7 @@ class RepoStorageHybrid implements RepoStorage {
           ,capture_dataset.cluster_geometry_field_id
           ,capture_dataset.resource_capture_datasets
           ,capture_dataset.calibration_object_used
+          ,capture_dataset.directory_path
           ,capture_dataset.date_created
           ,capture_dataset.created_by_user_account_id
           ,capture_dataset.last_modified
@@ -893,7 +894,7 @@ class RepoStorageHybrid implements RepoStorage {
         ),
         12 => array(
           'table_name' => 'item',
-          'field_name' => 'status_type_repository_id',
+          'field_name' => 'item_description',
         ),
       ),
       'sort_fields' => array(
@@ -946,18 +947,160 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   /**
+   * @param string $uuid The upload directory
+   * @return array
+   */
+  public function getJobData($uuid = null) {
+
+    $data = array();
+
+    if (!empty($uuid)) {
+      // Query the database.
+      $result = $this->getRecords(array(
+        'base_table' => 'job',
+        'fields' => array(),
+        'limit' => 1,
+        'search_params' => array(
+          0 => array('field_names' => array('uuid'), 'search_values' => array($uuid[0]), 'comparison' => '='),
+        ),
+        'search_type' => 'AND',
+        'omit_active_field' => true,
+        )
+      );
+    }
+
+    if (!empty($result)) {
+      $data = $result[0];
+    }
+
+    return $data;
+  }
+
+  /**
+   * @param string $params Possible params: job_id (uuid), status, date_completed.
+   * @return bool
+   */
+  public function setJobStatus($params = array()) {
+
+    $data = false;
+
+    if (!empty($params['job_id']) && !empty($params['status']) && empty($params['date_completed'])) {
+      $sql ="UPDATE job SET job_status = :status WHERE uuid = :job_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":job_id", $params['job_id'], PDO::PARAM_STR);
+      $statement->bindValue(":status", $params['status'], PDO::PARAM_STR);
+      $statement->execute();
+      if($statement->rowCount() === 1) $data = true;
+    }
+
+    if (!empty($params['job_id']) && !empty($params['status']) && !empty($params['date_completed'])) {
+      $sql ="UPDATE job SET job_status = :status, date_completed = :date_completed WHERE uuid = :job_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":job_id", $params['job_id'], PDO::PARAM_STR);
+      $statement->bindValue(":status", $params['status'], PDO::PARAM_STR);
+      $statement->bindValue(":date_completed", $params['date_completed'], PDO::PARAM_STR);
+      $statement->execute();
+      if($statement->rowCount() === 1) $data = true;
+    }
+
+    return $data;
+  }
+
+  /**
    * @param string $uploads_directory The upload directory
    * @return array Import result and/or any messages
    */
   public function getImportedItems($params) {
-    $sql = "SELECT SUM(case when job_import_record.record_table = 'item' then 1 else 0 end) AS items_total
+    $sql = "SELECT SUM(case when job_import_record.record_table = 'subject' then 1 else 0 end) AS subjects_total,
+      SUM(case when job_import_record.record_table = 'item' then 1 else 0 end) AS items_total,
+      SUM(case when job_import_record.record_table = 'capture_dataset' then 1 else 0 end) AS capture_datasets_total,
+      SUM(case when job_import_record.record_table = 'model' then 1 else 0 end) AS models_total,
+      job_import_record.record_table,
+      job.job_label,
+      job.date_created,
+      job.date_completed,
+      job.job_status,
+      fos_user.username
       FROM job_import_record
+      LEFT JOIN job ON job.job_id = job_import_record.job_id
+      LEFT JOIN fos_user ON fos_user.id = job.created_by_user_account_id
       WHERE job_import_record.job_id = :job_id
       GROUP BY job_import_record.job_id";
     $statement = $this->connection->prepare($sql);
     $statement->bindValue(":job_id", $params['job_id'], PDO::PARAM_INT);
     $statement->execute();
     return $statement->fetch();
+  }
+
+  /**
+   * @param int $job_id The job ID
+   * @return array Results from the database
+   */
+  public function purgeImportedData($params = array()) {
+
+    $data = array();
+
+    if (!empty($params) && !empty($params['uuid'])) {
+
+      // Get tje job's data via job.uuid.
+      $job_data = $this->getJobData(array($params['uuid']));
+
+      if (!empty($job_data)) {
+
+        $table_names = array(
+          'data_tables' => array(
+            'subject',
+            'item',
+            'capture_dataset',
+            'model'
+          ),
+          'job_and_file_tables' => array(
+            'job',
+            'job_import_record',
+            'job_log',
+            'file_upload'
+          )
+        );
+
+        // Remove data from tables containing repository data.
+        foreach ($table_names['data_tables'] as $data_table_name) {
+          // Remove records.
+          $sql_data = "DELETE FROM {$data_table_name}
+            WHERE {$data_table_name}.{$data_table_name}_repository_id IN (SELECT record_id
+            FROM job_import_record
+            WHERE job_import_record.job_id = :job_id
+            AND job_import_record.record_table = '{$data_table_name}')";
+          $statement = $this->connection->prepare($sql_data);
+          $statement->bindValue(":job_id", $job_data['job_id'], PDO::PARAM_INT);
+          $statement->execute();
+          $data[ $data_table_name ] = $statement->rowCount();
+          // Reset the auto increment value.
+          $sql_data_reset = "ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_repository_id INT(11) UNSIGNED;
+          ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_repository_id INT(11) UNSIGNED AUTO_INCREMENT";
+          $statement = $this->connection->prepare($sql_data_reset);
+          $statement->execute();
+        }
+
+        // Remove data from tables containing job-based data.
+        foreach ($table_names['job_and_file_tables'] as $job_table_name) {
+          // Remove records.
+          $sql_job = "DELETE FROM {$job_table_name} WHERE {$job_table_name}.job_id = :job_id";
+          $statement = $this->connection->prepare($sql_job);
+          $statement->bindValue(":job_id", $job_data['job_id'], PDO::PARAM_INT);
+          $statement->execute();
+          $data[ $job_table_name ] = $statement->rowCount();
+          // Reset the auto increment value.
+          $sql_job_reset = "ALTER TABLE {$job_table_name} MODIFY {$job_table_name}.{$job_table_name}_id INT(11) UNSIGNED;
+          ALTER TABLE {$job_table_name} MODIFY {$job_table_name}.{$job_table_name}_id INT(11) UNSIGNED AUTO_INCREMENT";
+          $statement = $this->connection->prepare($sql_job_reset);
+          $statement->execute();
+        }
+
+      }
+
+    }
+
+    return $data;
   }
 
   public function getStakeholderGuids() {
@@ -1342,7 +1485,19 @@ class RepoStorageHybrid implements RepoStorage {
         $query_params['fields'][] = array(
           'table_name' => $record_type,
           'field_name' => $record_type . '_repository_id',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_repository_id',
           'field_alias' => 'manage',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'parent_capture_dataset_repository_id',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'parent_item_repository_id',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
@@ -1410,6 +1565,14 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
+          'field_name' => 'file_path',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'file_checksum',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
           'field_name' => 'workflow_id',
         );
         $query_params['fields'][] = array(
@@ -1430,7 +1593,19 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
+          'field_name' => 'date_created',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'created_by_user_account_id',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
           'field_name' => 'last_modified',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'last_modified_user_account_id',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
@@ -1462,6 +1637,8 @@ class RepoStorageHybrid implements RepoStorage {
               $record_type . '.has_vertex_color',
               $record_type . '.has_uv_space',
               $record_type . '.model_maps',
+              $record_type . '.file_path',
+              $record_type . '.file_checksum',
             ),
             'search_values' => array($search_value),
             'comparison' => 'LIKE',
@@ -2080,6 +2257,10 @@ class RepoStorageHybrid implements RepoStorage {
         'field_name' => 'subject_repository_id',
       );
       $query_params['fields'][] = array(
+        'table_name' => 'subject',
+        'field_name' => 'project_repository_id',
+      );
+      $query_params['fields'][] = array(
         'field_name' => 'holding_entity_guid',
       );
       $query_params['fields'][] = array(
@@ -2090,6 +2271,9 @@ class RepoStorageHybrid implements RepoStorage {
       );
       $query_params['fields'][] = array(
         'field_name' => 'subject_name',
+      );
+      $query_params['fields'][] = array(
+        'field_name' => 'subject_display_name',
       );
       $query_params['fields'][] = array(
         'table_name' => 'subject',
@@ -2422,6 +2606,7 @@ class RepoStorageHybrid implements RepoStorage {
           'capture_dataset.cluster_geometry_field_id',
           'capture_dataset.resource_capture_datasets',
           'capture_dataset.calibration_object_used',
+          'capture_dataset.directory_path',
           'capture_dataset.workflow_status',
           'capture_dataset.workflow_status_detail',
           'capture_dataset.workflow_processing_step',
@@ -2495,6 +2680,9 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'field_name' => 'calibration_object_used',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'directory_path',
     );
 
     $query_params['fields'][] = array(
@@ -2903,8 +3091,20 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'project_repository_id',
     );
     $query_params['fields'][] = array(
+      'field_name' => "SUM(case when job_import_record.record_table = 'subject' then 1 else 0 end)",
+      'field_alias' => 'subjects_total',
+    );
+    $query_params['fields'][] = array(
       'field_name' => "SUM(case when job_import_record.record_table = 'item' then 1 else 0 end)",
       'field_alias' => 'items_total',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => "SUM(case when job_import_record.record_table = 'capture_dataset' then 1 else 0 end)",
+      'field_alias' => 'capture_datasets_total',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => "SUM(case when job_import_record.record_table = 'model' then 1 else 0 end)",
+      'field_alias' => 'models_total',
     );
     $query_params['fields'][] = array(
       'table_name' => 'project',
@@ -2913,6 +3113,10 @@ class RepoStorageHybrid implements RepoStorage {
     $query_params['fields'][] = array(
       'table_name' => $record_type,
       'field_name' => 'date_created',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'job',
+      'field_name' => 'uuid',
     );
     $query_params['fields'][] = array(
       'table_name' => 'job',
@@ -2993,6 +3197,16 @@ class RepoStorageHybrid implements RepoStorage {
     $date_range_start = array_key_exists('date_range_start', $params) ? $params['date_range_start'] : NULL;
     $date_range_end = array_key_exists('date_range_end', $params) ? $params['date_range_end'] : NULL;
 
+    // Determine what was ingested via $job_data['job_type'] (e.g. subjects, items, capture datasets).
+    $job_data = $this->getRecord(array(
+        'base_table' => 'job',
+        'id_field' => 'job_id',
+        'id_value' => $job_id,
+        'omit_active_field' => true,
+      )
+    );
+    // TODO: ^^^ error handling if job is not found? ^^^
+
     $query_params = array(
       'distinct' => true, // @todo Do we always want this to be true?
       'base_table' => $record_type,
@@ -3030,26 +3244,7 @@ class RepoStorageHybrid implements RepoStorage {
       'base_join_table' => 'job',
       'base_join_field' => 'project_id',
     );
-    $query_params['related_tables'][] = array(
-      'table_name' => 'subject',
-      'table_join_field' => 'subject_repository_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'job_import_record',
-      'base_join_field' => 'record_id',
-    );
-    $query_params['related_tables'][] = array(
-      'table_name' => 'item',
-      'table_join_field' => 'subject_repository_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'subject',
-      'base_join_field' => 'subject_repository_id',
-    );
 
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => $record_type . '_id',
-      'field_alias' => 'manage',
-    );
     $query_params['fields'][] = array(
       'table_name' => 'project',
       'field_name' => 'project_repository_id',
@@ -3064,7 +3259,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'subject',
-      'field_name' => 'subject_display_name',
+      'field_name' => 'subject_name',
     );
     $query_params['fields'][] = array(
       'table_name' => 'item',
@@ -3072,33 +3267,213 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'item',
-      'field_name' => 'item_display_name',
+      'field_name' => 'item_description',
+    );
+
+    // If subjects were ingested (with a project as the parent record)...
+    if ($job_data['job_type'] === 'subjects metadata import') {
+
+      $record_table = 'subject';
+
+      $query_params['related_tables'][] = array(
+        'table_name' => 'subject',
+        'table_join_field' => 'subject_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'job_import_record',
+        'base_join_field' => 'record_id',
+      );
+      $query_params['related_tables'][] = array(
+        'table_name' => 'item',
+        'table_join_field' => 'subject_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'subject',
+        'base_join_field' => 'subject_repository_id',
+      );
+
+      if (NULL !== $search_value) {
+        $query_params['search_params'][3] = array(
+          'field_names' => array(
+            'subject_name',
+            'item_description',
+          ),
+          'search_values' => array($search_value),
+          'comparison' => 'LIKE',
+        );
+      }
+
+    }
+    
+
+    // If items were ingested (with a subject as the parent record)...
+    if ($job_data['job_type'] === 'items metadata import') {
+
+      $record_table = 'item';
+
+      $query_params['related_tables'][] = array(
+        'table_name' => 'item',
+        'table_join_field' => 'item_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'job_import_record',
+        'base_join_field' => 'record_id',
+      );
+      $query_params['related_tables'][] = array(
+        'table_name' => 'subject',
+        'table_join_field' => 'subject_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'item',
+        'base_join_field' => 'subject_repository_id',
+      );
+
+      if (NULL !== $search_value) {
+        $query_params['search_params'][3] = array(
+          'field_names' => array(
+            'subject_name',
+            'item_description',
+          ),
+          'search_values' => array($search_value),
+          'comparison' => 'LIKE',
+        );
+      }
+
+    }
+
+
+    // If capture datasets were ingested (with an item as the parent record)...
+    if ($job_data['job_type'] === 'capture datasets metadata import') {
+
+      $record_table = 'capture_dataset';
+
+      $query_params['related_tables'][] = array(
+        'table_name' => 'capture_dataset',
+        'table_join_field' => 'capture_dataset_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'job_import_record',
+        'base_join_field' => 'record_id',
+      );
+      $query_params['related_tables'][] = array(
+        'table_name' => 'item',
+        'table_join_field' => 'item_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'capture_dataset',
+        'base_join_field' => 'parent_item_repository_id',
+      );
+      $query_params['related_tables'][] = array(
+        'table_name' => 'subject',
+        'table_join_field' => 'subject_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'item',
+        'base_join_field' => 'subject_repository_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'capture_dataset',
+        'field_name' => 'capture_dataset_repository_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'capture_dataset',
+        'field_name' => 'capture_dataset_name',
+      );
+
+      if (NULL !== $search_value) {
+        $query_params['search_params'][3] = array(
+          'field_names' => array(
+            'item_description',
+            'capture_dataset_name',
+          ),
+          'search_values' => array($search_value),
+          'comparison' => 'LIKE',
+        );
+      }
+
+    }
+
+
+    // If models were ingested (with a capture dataset as the parent record)...
+    if ($job_data['job_type'] === 'models metadata import') {
+
+      $record_table = 'model';
+
+      $query_params['related_tables'][] = array(
+        'table_name' => 'model',
+        'table_join_field' => 'model_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'job_import_record',
+        'base_join_field' => 'record_id',
+      );
+      $query_params['related_tables'][] = array(
+        'table_name' => 'capture_dataset',
+        'table_join_field' => 'capture_dataset_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'model',
+        'base_join_field' => 'parent_capture_dataset_repository_id',
+      );
+      $query_params['related_tables'][] = array(
+        'table_name' => 'item',
+        'table_join_field' => 'item_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'model',
+        'base_join_field' => 'parent_item_repository_id',
+      );
+      $query_params['related_tables'][] = array(
+        'table_name' => 'subject',
+        'table_join_field' => 'subject_repository_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'item',
+        'base_join_field' => 'subject_repository_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'capture_dataset',
+        'field_name' => 'capture_dataset_repository_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'capture_dataset',
+        'field_name' => 'capture_dataset_name',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'model',
+        'field_name' => 'model_repository_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'model',
+        'field_name' => 'model_file_type',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'model',
+        'field_name' => 'date_of_creation',
+      );
+
+      if (NULL !== $search_value) {
+        $query_params['search_params'][3] = array(
+          'field_names' => array(
+            'item_description',
+            'capture_dataset_name',
+          ),
+          'search_values' => array($search_value),
+          'comparison' => 'LIKE',
+        );
+      }
+
+    }
+
+
+    $query_params['search_params'][0] = array('field_names' => array('job_import_record.record_table'), 'search_values' => array($record_table), 'comparison' => '=');
+    $query_params['search_type'] = 'AND';
+
+    $query_params['search_params'][1] = array('field_names' => array('job_import_record.job_id'), 'search_values' => array((int)$job_id),'comparison' => '=');
+    $query_params['search_type'] = 'AND';
+
+    // $query_params['search_params'][2] = array('field_names' => array('item.item_repository_id'), 'search_values' => array(''), 'comparison' => 'IS NOT NULL');
+    // $query_params['search_type'] = 'AND';
+
+    $query_params['fields'][] = array(
+      'table_name' => $record_type,
+      'field_name' => $record_type . '_id',
+      'field_alias' => 'manage',
     );
     $query_params['fields'][] = array(
       'table_name' => $record_type,
       'field_name' => $record_type . '_id',
       'field_alias' => 'DT_RowId',
     );
-
-    $query_params['search_params'][0] = array('field_names' => array('job_import_record.record_table'), 'search_values' => array('subject'), 'comparison' => '=');
-    $query_params['search_type'] = 'AND';
-
-    $query_params['search_params'][1] = array('field_names' => array('job_import_record.job_id'), 'search_values' => array((int)$job_id),'comparison' => '=');
-    $query_params['search_type'] = 'AND';
-
-    $query_params['search_params'][2] = array('field_names' => array('item.item_repository_id'), 'search_values' => array(''), 'comparison' => 'IS NOT NULL');
-    $query_params['search_type'] = 'AND';
-
-    if (NULL !== $search_value) {
-      $query_params['search_params'][3] = array(
-        'field_names' => array(
-          'subject_display_name',
-          'item_display_name',
-        ),
-        'search_values' => array($search_value),
-        'comparison' => 'LIKE',
-      );
-    }
 
     if(NULL !== $date_range_start) {
       $c = count($query_params['search_params']);
@@ -3154,7 +3529,65 @@ class RepoStorageHybrid implements RepoStorage {
 
     return array('return' => 'success'); //, 'data' => $return);
 
-}
+  }
+
+  /**
+   * Get Parent Records
+   *
+   * @param array $params An array of parameters, namely 'base_record_id' and 'record_type'.
+   * @return array An array of parent records.
+   */
+  public function getParentRecords($params = array()) {
+
+    $data = array();
+
+    if(isset($params['base_record_id']) && isset($params['record_type'])) {
+
+      switch($params['record_type']) {
+
+        case 'item':
+          $params['id_field_name'] = 'item.item_repository_id';
+          $params['select'] = 'project.project_repository_id, subject.subject_repository_id, item.item_repository_id';
+          $params['left_joins'] = 'LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
+              LEFT JOIN project ON project.project_repository_id = subject.project_repository_id';
+          break;
+
+        case 'capture_dataset':
+          $params['id_field_name'] = 'capture_dataset.capture_dataset_repository_id';
+          $params['select'] = 'project.project_repository_id, subject.subject_repository_id, item.item_repository_id, capture_dataset.capture_dataset_repository_id';
+          $params['left_joins'] = 'LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
+              LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
+              LEFT JOIN project ON project.project_repository_id = subject.project_repository_id';
+          break;
+
+        case 'capture_dataset_element':
+          $params['id_field_name'] = 'capture_data_element.capture_data_element_repository_id';
+          $params['select'] = 'project.project_repository_id, subject.subject_repository_id, item.item_repository_id, capture_dataset.capture_dataset_repository_id, capture_data_element.capture_data_element_repository_id';
+          $params['left_joins'] = 'LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
+              LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
+              LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
+              LEFT JOIN project ON project.project_repository_id = subject.project_repository_id';
+          break;
+
+        default: // subject
+          $params['id_field_name'] = 'subject.subject_repository_id';
+          $params['select'] = 'project.project_repository_id, subject.subject_repository_id';
+          $params['left_joins'] = 'LEFT JOIN project ON project.project_repository_id = subject.project_repository_id';
+
+      }
+
+      $sql = "SELECT " . $params['select'] . "
+              FROM " . $params['record_type']
+               . ' ' . $params['left_joins'] .
+              " WHERE " . $params['id_field_name'] . " = :base_record_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":base_record_id", $params['base_record_id'], PDO::PARAM_INT);
+      $statement->execute();
+      $data = $statement->fetch(PDO::FETCH_ASSOC);
+    }
+
+    return $data;
+  }
 
   public function markSubjectInactive($params) {
 
@@ -3364,7 +3797,7 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     // See if record exists; update if so, insert otherwise.
-    $sql = "Select isni_id FROM isni_data WHERE isni_id=:id";
+    $sql = "SELECT isni_id FROM isni_data WHERE isni_id=:id";
     $statement = $this->connection->prepare($sql);
     $statement->bindValue(":id", $id, PDO::PARAM_INT);
     $statement->execute();
@@ -3374,8 +3807,8 @@ class RepoStorageHybrid implements RepoStorage {
       // update
       $sql ="UPDATE isni_data set isni_label=:label, last_modified=NOW(), last_modified_user_account_id=:user_id WHERE isni_id=:id";
       $statement = $this->connection->prepare($sql);
-      $statement->bindValue(":id", $id, PDO::PARAM_INT);
-      $statement->bindValue(":label", $label, PDO::PARAM_INT);
+      $statement->bindValue(":id", $ret[0]['isni_id'], PDO::PARAM_STR);
+      $statement->bindValue(":label", $label, PDO::PARAM_STR);
       $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
       $statement->execute();
     }
@@ -3386,8 +3819,8 @@ class RepoStorageHybrid implements RepoStorage {
         ) 
         VALUES (:id, :label, NOW(), NOW(), :user_id, :user_id)";
       $statement = $this->connection->prepare($sql);
-      $statement->bindValue(":id", $id, PDO::PARAM_INT);
-      $statement->bindValue(":label", $label, PDO::PARAM_INT);
+      $statement->bindValue(":id", $id, PDO::PARAM_STR);
+      $statement->bindValue(":label", $label, PDO::PARAM_STR);
       $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
       $statement->execute();
     }
@@ -3528,11 +3961,18 @@ class RepoStorageHybrid implements RepoStorage {
       'fields' => array(),
       'base_table' => $base_table,
       'search_params' => array(
-        0 => array('field_names' => array('active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array($id_field), 'search_values' => array($id_value), 'comparison' => '=')
+        0 => array('field_names' => array($id_field), 'search_values' => array($id_value), 'comparison' => '='),
+        1 => array('field_names' => array('active'), 'search_values' => array(1), 'comparison' => '='),
       ),
       'search_type' => 'AND'
     );
+
+    // If the 'omit_active_field' parameter is set, unset the $query_params['search_params'][1] variable 
+    // and pass the 'omit_active_field' parameter onto the getRecords() method.
+    if (isset($parameters['omit_active_field'])) {
+      unset($query_params['search_params'][1]);
+      $query_params['omit_active_field'] = true;
+    }
 
     $return_data = array();
     $ret = $this->getRecords($query_params);
@@ -3649,7 +4089,7 @@ class RepoStorageHybrid implements RepoStorage {
       //@todo other checks? Like > 0 ?
       if(array_key_exists('limit_start', $limit) && is_numeric($limit['limit_start'])) {
         $limit_start = $limit['limit_start'];
-        if(array_key_exists('limit_start', $limit) && is_numeric($limit['limit_start'])) {
+        if(array_key_exists('limit_stop', $limit) && is_numeric($limit['limit_stop'])) {
           $limit_stop = $limit['limit_stop'];
         }
         if(NULL !== $limit_stop) {
@@ -3678,7 +4118,12 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     // Search values
-    $query_parameters['search_params'][] = array('field_names' => array($base_table . '.active'), 'search_values' => array(1), 'comparison' => '=');
+    if(!isset($query_parameters['omit_active_field'])) {
+      // If not explicitly omitted, add a search against the 'active' field = 1
+      $query_parameters['search_params'][] = array('field_names' => array($base_table . '.active'), 'search_values' => array(1), 'comparison' => '=');
+    } else {
+      $query_parameters['search_params'][] = array('field_names' => array(), 'search_values' => array(), 'comparison' => '=');
+    }
 
     if (array_key_exists('search_params', $query_parameters) && is_array($query_parameters['search_params'])) {
       $search_sql_values = array();
@@ -3703,7 +4148,7 @@ class RepoStorageHybrid implements RepoStorage {
             }
             else {
               $this_search_param[] = $fn . ' LIKE ?';
-              $search_params[] = '%' . $search_values[array_keys($search_values[0])] . '%';
+              $search_params[] = is_array($search_values[0]) ? '%' . $search_values[array_keys($search_values[0])] . '%' : '%' . $search_values[0] . '%';
             }
           }
           else {
@@ -4071,7 +4516,7 @@ class RepoStorageHybrid implements RepoStorage {
       }
 
       foreach($record_values['fields'] as $rv) {
-        if(array_key_exists('field_value', $rv) && isset($rv['field_value'])
+        if(array_key_exists('field_value', $rv)
           && array_key_exists('field_name', $rv) && isset($rv['field_name'])
         ) {
           if($update) {
@@ -4098,7 +4543,22 @@ class RepoStorageHybrid implements RepoStorage {
           $statement->bindValue(":id", $record_values['id']['field_value'], PDO::PARAM_INT);
           $statement->execute();
 
-          $last_inserted_id = $record_values['id']['field_value'];
+          // TODO: beef it up with some exception handling.
+          // Example:
+          // try {
+          //   //----
+          // }
+          // catch(PDOException $e) {
+          //   echo $e->getMessage();
+          // }
+          //
+          // If the number of rows affected by the last SQL statement is zero, return fail.
+          // See: http://php.net/manual/en/pdostatement.rowcount.php
+          // if($statement->rowCount() === 0) {
+            // return array('return' => 'fail', 'messages' => 'UPDATE `' . $base_table . '` failed.');
+          // } else {
+            $last_inserted_id = $record_values['id']['field_value'];
+          // }
 
         }
         else {
@@ -4114,7 +4574,7 @@ class RepoStorageHybrid implements RepoStorage {
           $last_inserted_id = $this->connection->lastInsertId();
 
           if(!$last_inserted_id) {
-            return array('return' => 'fail', 'messages' => 'INSERT INTO `' . $this->table_name . '` failed.');
+            return array('return' => 'fail', 'messages' => 'INSERT INTO `' . $base_table . '` failed.');
           }
         }
 

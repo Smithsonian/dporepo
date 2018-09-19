@@ -1,0 +1,108 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link href="{{ asset('lib/javascripts/plupload/jquery.ui.plupload/css/jquery.ui.plupload.css') }}" rel="stylesheet" type="text/css" />
+  {# <link href="{{ asset('lib/javascripts/plupload/jquery.plupload.queue/css/jquery.plupload.queue.css') }}" rel="stylesheet" type="text/css" /> #}
+{% endblock %}
+
+{% block content %}
+	<div class="row">
+		<div class="col-md-12">
+
+			{# <div id="fileupload"></div> #}
+
+        <div id="uploader">
+          <p>Your browser doesn't have Flash, Silverlight or HTML5 support.</p>
+        </div>
+
+        {# <div id="container">
+          <a id="file-picker" href="javascript:;">Browse...</a>
+        </div> #}
+
+		</div>
+	</div>
+{% endblock %}
+
+{% block js_bottom %}
+  <script type="text/javascript" src="{{ asset('lib/javascripts/plupload/plupload.full.min.js') }}"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/plupload/moxie.min.js') }}"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/plupload/jquery.ui.plupload/jquery.ui.plupload.min.js') }}"></script>
+	<script type="text/javascript" src="{{ asset('lib/javascripts/plupload/jquery.plupload.queue/jquery.plupload.queue.min.js') }}"></script>
+
+
+  <script type="text/javascript">
+  // console.log(moxie);
+
+  // Initialize the widget when the DOM is ready
+  $(document).ready(function(){
+
+      $("#uploader").plupload({
+          // General settings
+          runtimes : 'html5,silverlight,html4',
+          url : "{{ oneup_uploader_endpoint('repository') }}",
+   
+          // Maximum file size (10240mb = 10GB)
+          max_file_size : '10240mb',
+   
+          chunk_size: '1mb',
+          max_retries: 3,
+   
+          // // Resize images on clientside if we can
+          // resize : {
+          //     width : 200,
+          //     height : 200,
+          //     quality : 90,
+          //     crop: true // crop to exact dimensions
+          // },
+   
+          // // Specify what files to browse for
+          // filters : [
+          //     {title : "Image files", extensions : "jpg,gif,png,tif,xmp"},
+          //     {title : "Zip files", extensions : "zip,avi"}
+          // ],
+   
+          // Rename files by clicking on their titles
+          rename: true,
+           
+          // Sort files
+          sortable: true,
+   
+          // Enable ability to drag'n'drop files onto the widget (currently only HTML5 supports that)
+          dragdrop: true,
+          directory: true,
+   
+          // Views to activate
+          views: {
+              list: true,
+          },
+   
+          // Flash settings
+          // flash_swf_url : '/web/lib/javascripts/plupload/js/Moxie.swf',
+       
+          // Silverlight settings
+          silverlight_xap_url : '/web/lib/javascripts/plupload/js/Moxie.xap'
+      });
+
+      
+
+  });
+
+  // var fileInput = new moxie.file.FileInput({
+  //                 browse_button: 'file-picker',
+  //                 container: 'container',
+  //                 accept: [
+  //                   {title: "Image files", extensions: "jpg,gif,png,tif"} // accept only images
+  //                 ],
+  //                 multiple: false,
+  //                 directory: true
+  //               });
+
+    // fileInput.onchange = function(e) {
+    //   // do something to files array
+    //   console.info(e.target.files); // or this.files or fileInput.files
+    // };
+
+    // fileInput.init(); // initialize
+  </script>
+{% endblock %}

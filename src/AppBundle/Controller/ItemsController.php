@@ -10,7 +10,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
 use AppBundle\Controller\RepoStorageHybridController;
-use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 use AppBundle\Form\Item;
@@ -26,28 +25,16 @@ class ItemsController extends Controller
      */
     public $u;
     private $repo_storage_controller;
-    /**
-     * @var string
-     */
-    private $file_upload_path;
-    /**
-     * @var string
-     */
-    private $file_processing_path;
 
     /**
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, $file_upload_path, $file_processing_path)
+    public function __construct(AppUtilities $u, Connection $conn)
     {
       // Usage: $this->u->dumper($variable);
       $this->u = $u;
-      $this->repo_storage_controller = new RepoStorageHybridController();
-
-      // Establish paths.
-      $this->file_upload_path = $file_upload_path;
-      $this->file_processing_path = $file_processing_path;
+      $this->repo_storage_controller = new RepoStorageHybridController($conn);
     }
 
     /**
@@ -55,7 +42,6 @@ class ItemsController extends Controller
      */
     public function browse_items(Connection $conn, Request $request, ProjectsController $projects, SubjectsController $subjects)
     {
-        $this->repo_storage_controller->setContainer($this->container);
 
         // Database tables are only created if not present.
         $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'item'));
@@ -64,7 +50,7 @@ class ItemsController extends Controller
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $subject_data = $subjects->get_subject($this->container, (int)$subject_repository_id);
+        $subject_data = $subjects->get_subject((int)$subject_repository_id);
         if(!$subject_data) throw $this->createNotFoundException('The record does not exist');
 
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$project_repository_id));
@@ -95,7 +81,6 @@ class ItemsController extends Controller
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
 
         // First, perform a 3D model generation status check, and update statuses in the database accordingly.
-        $this->repo_storage_controller->setContainer($this->container);
         $results = $this->repo_storage_controller->execute('getItemGuidsBySubjectId', array(
             'subject_repository_id' => (int)$subject_repository_id,
           )
@@ -108,7 +93,7 @@ class ItemsController extends Controller
               // An item may have 1 or more of either or both capture_datasets and models.
               // Processing status may exist for each model, for each capture_dataset.
               // How should we show those individual statuses rolled up as one status for the item?
-              // $this->getDirectoryStatuses($this->container, $value['item_guid']);
+              // $this->getDirectoryStatuses($value['item_guid']);
             }
         }
 
@@ -152,8 +137,6 @@ class ItemsController extends Controller
         $item->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $item->subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
 
-        $this->repo_storage_controller->setContainer($this->container);
-
         // Retrieve data from the database.
         if (!empty($id) && empty($post)) {
           $item_array = $this->repo_storage_controller->execute('getItem', array(
@@ -165,7 +148,7 @@ class ItemsController extends Controller
         }
 
         // Get data from lookup tables.
-        $item->item_type_lookup_options = $this->get_item_types($this->container);
+        $item->item_type_lookup_options = $this->get_item_types();
 
         // Create the form
         $form = $this->createForm(Item::class, $item);
@@ -189,8 +172,12 @@ class ItemsController extends Controller
 
         }
 
+        // Truncate the item_description.
+        $more_indicator = (strlen($item->item_description) > 50) ? '...' : '';
+        $item->item_description_truncated = substr($item->item_description, 0, 50) . $more_indicator;
+
         return $this->render('items/item_form.html.twig', array(
-            'page_title' => ((int)$id && isset($item->item_display_name)) ? 'Item: ' . $item->item_display_name : 'Add Item',
+            'page_title' => ((int)$id && isset($item->item_description_truncated)) ? 'Item: ' . $item->item_description_truncated : 'Add Item',
             'item_data' => $item,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
@@ -206,9 +193,8 @@ class ItemsController extends Controller
      * @param   int $item_id   The subject ID
      * @return  array|bool     The query result
      */
-    public function get_item($container, $item_id)
+    public function get_item($item_id)
     {
-        $this->repo_storage_controller->setContainer($container);
         $data = $this->repo_storage_controller->execute('getItem', array(
             'item_repository_id' => $item_id,
           )
@@ -221,14 +207,12 @@ class ItemsController extends Controller
      *
      * Run a query to retrieve all items from the database.
      *
-     * @param   $container  Symfony container, passed from caller
      * @param   int $subject_repository_id  The subject ID
      * @return  array|bool     The query result
      */
-    public function get_items($container, $subject_repository_id = false)
+    public function get_items($subject_repository_id = false)
     {
 
-        $this->repo_storage_controller->setContainer($container);
         $items_data = $this->repo_storage_controller->execute('getItemsBySubjectId',
           array(
             'subject_repository_id' => $subject_repository_id,
@@ -245,15 +229,20 @@ class ItemsController extends Controller
     public function get_items_tree_browser(Request $request, DatasetsController $datasets)
     {      
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
-        $items = $this->get_items($this->container, $subject_repository_id);
+        $items = $this->get_items($subject_repository_id);
 
         foreach ($items as $key => $value) {
+
+            // Truncate the item_description.
+            $more_indicator = (strlen($value['item_description']) > 38) ? '...' : '';
+            $value['item_description_truncated'] = substr($value['item_description'], 0, 38) . $more_indicator;
+
             // Check for child dataset records so the 'children' key can be set accordingly.
-            $dataset_data = $datasets->get_datasets($this->container, (int)$value['item_repository_id']);
+            $dataset_data = $datasets->get_datasets((int)$value['item_repository_id']);
             $data[$key] = array(
                 'id' => 'itemId-' . $value['item_repository_id'],
                 'children' => count($dataset_data) ? true : false,
-                'text' => $value['local_item_id'],
+                'text' => $value['item_description_truncated'],
                 'a_attr' => array('href' => '/admin/projects/datasets/' . $value['project_repository_id'] . '/' . $value['subject_repository_id'] . '/' . $value['item_repository_id']),
             );
         }
@@ -266,10 +255,9 @@ class ItemsController extends Controller
      * Get item_types
      * @return  array|bool  The query result
      */
-    public function get_item_types($container)
+    public function get_item_types()
     {
         $data = array();
-        $this->repo_storage_controller->setContainer($container);
         $temp = $this->repo_storage_controller->execute('getRecords', array(
             'base_table' => 'item_type',
             'fields' => array(),
@@ -307,8 +295,6 @@ class ItemsController extends Controller
         if(!empty($ids) && $project_repository_id && $subject_repository_id) {
 
           $ids_array = explode(',', $ids);
-
-          $this->repo_storage_controller->setContainer($this->container);
 
           foreach ($ids_array as $key => $id) {
             $ret = $this->repo_storage_controller->execute('markItemInactive', array(
@@ -349,11 +335,10 @@ class ItemsController extends Controller
      * @param  object  $conn    Database connection object
      * @return bool
      */
-    public function updateStatus($container, $itemguid = FALSE, $statusid = 0) {
+    public function updateStatus($itemguid = FALSE, $statusid = 0) {
 
         $updated = FALSE;
         if(!empty($itemguid)) {
-            $this->repo_storage_controller->setContainer($container);
             $ret = $this->repo_storage_controller->execute('markCaptureDatasetInactive', array(
               'item_guid' => $itemguid,
               'status_type_id' => $statusid,
@@ -362,54 +347,6 @@ class ItemsController extends Controller
         }
 
         return $updated;
-    }
-
-    /**
-     * @Route("/admin/projects/create_directory_in_jobbox/{item_guid}/{destination}", name="create_directory_in_jobbox", methods={"GET"}, defaults={"item_guid" = false, "destination" = false})
-     *
-     * Create Direcory in JobBox
-     *
-     * @param   object  Request  Request object
-     * @return  void
-     */
-    function create_directory_in_jobbox(Request $request)
-    {
-      //@todo revisit this and browse_datasets.html.twig that references this route.
-      // Move to Workflow Service.
-        $data = false;
-        $directoryContents = array();
-        $itemguid = !empty($request->attributes->get('item_guid')) ? $request->attributes->get('item_guid') : false;
-        $destination = !empty($request->attributes->get('destination')) ? $request->attributes->get('destination') : false;
-        $ids = explode('|', $destination);
-        $message = 'The directory could not be created (' . $itemguid . '). If this persists, please contact the administrator.';
- 
-        if($itemguid && !empty($itemguid)) {
-
-            $directoryContents = is_dir($this->file_upload_path) ? scandir($this->file_upload_path) : array();
-
-            if(!in_array($itemguid, $directoryContents)) {
-                // Create the directory.
-                mkdir($this->file_upload_path . '/' . $itemguid, 0775);
-                // Check to see if the directory was created.
-                if(is_dir($this->file_upload_path . '/' . $itemguid)) {
-                    $message = 'The directory has been created (' . $itemguid . ').';
-                }
-                
-            } else {
-                // The directory already exists, so don't overwrite it. Just send a mesaage.
-                $message = 'The directory already exists (' . $itemguid . ').';
-            }
-
-        }
-
-        // If the endpoint is accessed from within the application, redirect to the destination.
-        // If there is no destination, return a message in JSON format.
-        if($destination) {
-            $this->addFlash('message', $message);
-            return $this->redirectToRoute('datasets_browse', array('project_repository_id' => $ids[0], 'subject_repository_id' => $ids[1], 'item_repository_id' => $ids[2]));
-        } else {
-            return $this->json(array('message' => $message));
-        }
     }
 
 }

@@ -4,6 +4,8 @@
   {{ parent() }}
   <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
   <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('bundles/lifotypeahead/css/typeaheadbundle.css') }}" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.css') }}" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -13,17 +15,295 @@
     <li class="active">Uploads</li>
   </ol>
 
-  <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
-    <thead>
-      <tr>
-        <th class="text-center">Project</th>
-        <th class="text-center">Date Uploaded</th>
-        <th class="text-center">Items</th>
-        <th class="text-center">Uploaded By</th>
-        <th class="text-center">Status</th>
-      </tr>
-    </thead>
-  </table>
+  <!-- row -->
+  <div class="row">
+    <!-- column -->
+    <div class="col-sm-12 col-md-12">
+      <!-- nav-tabs -->
+      <ul class="nav nav-tabs" id="uploadsTabs" role="tablist">
+        <li role="presentation">
+          <a href="#browseUploads" id="browse-tab" role="tab" data-toggle="tab" aria-controls="browse" aria-expanded="true">Browse Ingests</a>
+        </li>
+        <li role="presentation" class="active">
+          <a href="#upload" role="tab" id="upload-tab" data-toggle="tab" aria-controls="upload">New Ingest</a>
+        </li>
+      </ul>
+      <!-- tab-content -->
+      <div class="tab-content" id="uploadsTabContent" style="padding-top: 3rem;">
+        <!-- tab-pane 1 -->
+        <div class="tab-pane fade" role="tabpanel" id="browseUploads" aria-labelledby="browse-tab">
+          <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
+            <thead>
+              <tr>
+                <th class="text-center">Project</th>
+                <th class="text-center">Status</th>
+                <th class="text-center">Total Subjects</th>
+                <th class="text-center">Total Items</th>
+                <th class="text-center">Total Capture Datasets</th>
+                <th class="text-center">Total Models</th>
+                <th class="text-center">Date Uploaded</th>
+                <th class="text-center">Uploaded By</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+        <!-- // tab-pane 1 -->
+        <!-- tab-pane 2 -->
+        <div class="tab-pane fade in active" role="tabpanel" id="upload" aria-labelledby="upload-tab">
+          <!-- row -->
+          <div class="row">
+            <div class="col-lg-6">
+              <!-- Typeahead form element -->
+              <h3><span class="glyphicon glyphicon-briefcase" aria-hidden="true"></span> BagIt!</h3>
+              <p>Photogrammetry scans and Models must be bagged via BagIt before uploading to the repository.</p>
+              <p>For more information, and to download Bagger, please see the <a href="https://github.com/LibraryOfCongress/bagger" target="_blank">Library of Congress' Bagger GitHub repository</a>.</p>
+              <hr>
+              {{ form_start(form) }}
+              <h3><span class="glyphicon glyphicon-home" aria-hidden="true"></span> Choose a Parent Record</h3>
+              {{ form_row(form.parent_picker) }}
+              {{ form_end(form) }}
+            </div>
+            <div class="col-lg-6">
+              <h3><span class="glyphicon glyphicon-save-file" aria-hidden="true"></span> CSV Templates</h3>
+              <p>Please use the following templates to import data into the repository.</p>
+              <p>Before importing data to the repository, check out the <a href="javascript:void(0);" class="csv-modal-trigger">CSV Guide</a>. <em class="text-muted">Templates last updated: 6/12/2018</em></p>
+              <h5>Blank Templates</h5>
+              <div class="row">
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/subjects.csv" download="subjects.csv">subjects.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/items.csv" download="items.csv">items.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/capture_datasets.csv" download="capture_datasets.csv">capture_datasets.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/models.csv" download="models.csv">models.csv</a>
+                </div>
+              </div>
+              <h5>Templates With Example Data</h5>
+              <div class="row">
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/subjects_ex.csv" download="subjects_ex.csv">subjects_ex.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/items_ex.csv" download="items_ex.csv">items_ex.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/capture_datasets_ex.csv" download="capture_datasets_ex.csv">capture_datasets_ex.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/models_ex.csv" download="models_ex.csv">models_ex.csv</a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- // row -->
+          <!-- row -->
+          <div class="row">
+            <!-- column 1 -->
+            <div class="col-lg-6">
+              <!-- File Drag and Drop zone -->
+              <!-- panel -->
+              <div class="panel panel-default panel-uploads" data-set-number="1" data-file-count="0">
+                <div class="panel-heading">
+                  <p><span class="glyphicon glyphicon-upload" aria-hidden="true"></span> Uploads Stage</p>
+                  <p class="panel-uploads-info" style="font-size: 1.3rem; font-weight: normal;">Drag and drop files onto this page.</p> <!-- or click the "Add Files" button -->
+                  <p class="panel-uploads-info" style="font-size: 1.3rem; font-weight: normal;">Accepted file types: {{ accepted_file_types | e }}</p>
+                  <div class="overlay-uploading hidden">
+                    <span>Upload in progress...</span>
+                    <img src="/lib/images/spinner-dark-background.gif" alt="loading animation" style="width: 86px;">
+                  </div>
+                </div>
+                <!-- panel-body -->
+                <div class="panel-body" style="height: 40rem; overflow: scroll; padding: 0;">
+                  <!-- Template Begins -->
+                  <!-- HTML heavily inspired by http://blueimp.github.io/jQuery-File-Upload/ -->
+                  <div class="table table-striped" class="files" id="previews">
+                    <ul class="directory-structure" style="padding-left: 0;">
+                    </ul>
+                    <div id="template" class="row file-row">
+                      {# <div class="col-sm-7 col-md-7">
+                        <div class="pull-left"><span class="name" data-dz-name></span>, <span class="size" data-dz-size></span></div>
+                        <div class="pull-right"><strong class="error text-danger" data-dz-errormessage></strong></div>
+                      </div>
+                      <div class="col-sm-5 col-md-5">
+                        <div class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                          <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress></div>
+                        </div>
+                      </div> #}
+                      {# <div>
+                        <button class="btn btn-primary start" style="display: none;">
+                            <i class="glyphicon glyphicon-upload"></i>
+                            <span>Start</span>
+                        </button>
+                        <button data-dz-remove class="btn btn-warning cancel" style="display: none;">
+                            <i class="glyphicon glyphicon-ban-circle"></i>
+                            <span>Cancel</span>
+                        </button>
+                        <button data-dz-remove class="btn btn-danger delete" style="display: none;">
+                          <i class="glyphicon glyphicon-trash"></i>
+                          <span>Delete</span>
+                        </button>
+                      </div> #}
+                    </div>
+                  </div>
+                  <!-- Template Ends -->
+                </div>
+                <!-- // panel-body -->
+              </div>
+              <!-- // panel -->
+
+            </div>
+            <!-- // column 1 -->
+            <!-- column 2 -->
+            <div class="col-lg-6">
+              <div class="panel panel-default panel-validation-results">
+                <!-- Panel contents -->
+                <div class="panel-heading">
+                  <p><span class="glyphicon glyphicon-list" aria-hidden="true"></span> Pre-Validation Results</p>
+                  <p style="font-size: 1.3rem; font-weight: normal;">To revalidate, click the "Clear Upload Stage" button and add files back to the Uploads Stage.</p>
+                </div>
+                <div class="panel-body">
+                </div>
+              </div>
+            </div>
+            <!-- // column 2 -->
+          </div>
+          <!-- // row -->
+          <!-- row -->
+          <div id="actions" class="row">
+            <!-- column 1 -->
+            <div class="col-sm-10 col-md-9 col-lg-9">
+              <!-- The fileinput-button span is used to style the file input field as button -->
+              {% set disabled = '' %}
+              {% if (service_error) %}
+                {% set disabled = ' disabled="disabled"' %}
+              {% endif %}
+              {% if app.user.username == 'ghalusa' or app.user.username == 'halusag' %}
+              <button class="btn btn-success fileinput-button dz-clickable"{{disabled}}>
+                  <i class="glyphicon glyphicon-plus"></i>
+                  <span>Add Files</span>
+              </button>
+              {% endif %}
+              <button type="reset" class="btn btn-warning cancel"{{disabled}}>
+                  <i class="glyphicon glyphicon-ban-circle"></i>
+                  <span>Clear Upload Stage</span>
+              </button>
+              <button class="btn btn-default prevalidate-trigger"{{disabled}}>
+                  <i class="glyphicon glyphicon-cog"></i>
+                  <span>Pre-Validate</span>
+              </button>
+              <button type="submit" class="btn btn-primary start hidden">
+                  <i class="glyphicon glyphicon-upload"></i>
+                  <span>Start Upload</span>
+              </button>
+              <button type="submit" class="btn btn-primary pause hidden">
+                  <i class="glyphicon glyphicon-pause"></i>
+                  <span>Pause</span>
+              </button>
+              <button type="submit" class="btn btn-primary cancel-upload hidden">
+                  <i class="glyphicon glyphicon-stop"></i>
+                  <span>Cancel</span>
+              </button>
+            </div>
+            <!-- // column 1 -->
+            <!-- column 2 -->
+            <div class="col-sm-2 col-md-3 col-md-3">
+              <!-- The global file processing state -->
+              {# <span class="fileupload-process">
+                <div id="total-progress" class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress=""></div>
+                </div>
+              </span> #}
+            </div>
+            <!-- // column 2 -->
+          </div>
+          <div class="row hidden" id="panel-spreadsheets">
+            <div class="col-sm-12 col-md-12">
+              <!-- Spreadsheets container (Handsontable) -->
+            </div>
+          </div>
+          <!-- // row -->
+        </div>
+        <!-- // tab-pane 2 -->
+      </div>
+      <!-- // tab-content -->
+    </div>
+    <!-- // column -->
+  </div>
+  <!-- // row -->
+
+  <!-- Uploading Modal -->
+  <div class="modal fade" id="uploading-modal" tabindex="-1" role="dialog" aria-labelledby="uploadingLabel" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="uploadingLabel"><i class="glyphicon glyphicon-time"></i> <span id="uploading-modal-title"></span></h2>
+        </div>
+        <div class="modal-body" style="min-height: 24rem;">
+          <div class="text-center">
+            <span id="uploading-modal-message"></span>
+          </div>
+          <div class="center-block" style="width: 140px; margin-top: 3rem;">
+            <img src="/lib/images/spinner.gif" alt="loading animation" style="width: 140px;">
+          </div>
+        </div>
+        <div class="modal-footer">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CSV Help Modal -->
+  <div class="modal fade" id="csv-modal" tabindex="-1" role="dialog" aria-labelledby="csvLabel">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="csvLabel"><i class="glyphicon glyphicon-info-sign"></i> CSV Guide</h2>
+        </div>
+        <div class="modal-body" style="min-height: 24rem;">
+          <h4>The import_row_id and import_parent_id fields</h4>
+
+          <p>There are 2 integral fields which every CSV contains:</p>
+
+          <ol>
+            <li>import_row_id</li>
+            <li>import_parent_id</li>
+          </ol>
+
+          <p><span class="text-warning"><strong>subjects.csv</strong></span> is the exception. In the case of Subjects, the parent Project is always known so there is no need to specify an import_parent_id. Only import_row_id is used.</p>
+
+          <hr>
+
+          <h4>import_row_id</h4>
+
+          <p>The 'import_row_id' field should simply be a sequential number. During the Pre-validation process, if it is detected that the 'import_row_id' is not sequential, or contains gaps (no values), the Pre-validation will fail.<p>
+
+          <h4>import_parent_id</h4>
+
+          <p>The 'import_parent_id' field is leveraged to map to the parent record's ID. For instance, if a row in subjects.csv contains an 'import_row_id' of 22 for a Subject, the 'import_parent_id' for the corresponding Item(s) will be 22.</p>
+
+          <hr>
+
+          <h4>Single Record Imports vs Multiple Record Imports</h4>
+
+          <p>In order to acheive certain results when importing data, CSV files can be structured in 3 ways.</p>
+
+          <ol>
+            <li>For <strong>single record imports</strong>, the 'import_parent_id' field should have no value assigned to it - should be left blank. The parent is specified by selecting the parent record in the UI.</li>
+            <li>For <strong>multiple record imports</strong> where multiple types of records are imported (e.g. subjects, items, capture datasets), the 'import_parent_id' field is required to be mapped to the parent record's ID. Again, the only CSV file which this does not apply to is the <span class="text-warning"><strong>subjects.csv</strong></span> file.</li>
+            <li>For multiple record imports where the parent record is chosen via "Choose a Parent Record" AND the parent record is intended to remain the same for the first level of CSV data, the 'import_parent_id' field is NOT required. Should a value be found within the 'import_parent_id' field, it will be ignored.</li>
+          </ol>
+
+          <p>For detailed examples, please see the provided example CSV files.</p>
+        </div>
+        <div class="modal-footer">
+        </div>
+      </div>
+    </div>
+  </div>
 
 {% endblock %}
 
@@ -34,30 +314,30 @@
   <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
+  <script src="{{ asset('bundles/lifotypeahead/js/bootstrap-typeahead.js') }}"></script>
+  <script src="{{ asset('bundles/lifotypeahead/js/typeaheadbundle.js') }}"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/dropzone.js') }}"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.js') }}"></script>
   <script type="text/javascript">
     $(document).ready(function() {
+
       var details_page = "/admin/projects/subjects/";
       
-      $('#browse').dataTable({
+      var table = $('#browse').DataTable({
         "columns": [
-          { "data": "project_name",
-            "render": function (data, type, row, meta) {
-                return "<a href='/admin/projects/subjects/" + row.project_repository_id + "'>" + row.project_name + "</a>";
-            }
-          },
+          { "data": "project_name" },
+          { "data": "job_status" },
+          { "data": "subjects_total" },
+          { "data": "items_total" },
+          { "data": "capture_datasets_total" },
+          { "data": "models_total" },
           { "data": "date_created" },
-          { "data": "items_total" ,
-            "render": function (data, type, row, meta) {
-                return "<a href='/admin/import/" + row.job_id + "'>" + row.items_total + "</a>";
-            }
-          },
-          { "data": "username" },
-          { "data": "job_status" }
+          { "data": "username" }       
         ],
         //"dom": 'lfip<"datatables_bulk_actions">tip',
         "pagingType": "simple_numbers",
         "stateSave": true,
-        "order": [[0,"desc"]],
+        "order": [[6,"desc"]],
         // Show processing throbber.
         "processing": true,
         // All data management will be done on the server side.
@@ -72,8 +352,1035 @@
           {"sWidth":"425px","aTargets":[0]},
           {"bSortable":false,"aTargets":[0,4]}
         ],
+        "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+          // This table row.
+          var thisTableRow = $(nRow);
+          // Send to details page when clicked.
+          thisTableRow.find('td').click(function() {
+            // This table cell.
+            var thisTableCell = $(this);
+            // Don't do anything if the table cell has the 'manage_column' CSS class.
+            if(thisTableCell.hasClass('manage_column')) return;
+            // Send to the details page.
+            window.location.href = '/admin/import/' + aData.uuid + '/' + aData.project_id;
+          });
+
+        }
+      });
+
+      /**
+       * "Choose a Parent Record" form
+       * If the enter key is pressed before the dropdown populates, prevent the form from submitting.
+       */
+      $('form[name="uploads_parent_picker_form"]').submit(function(e){
+        e.preventDefault();
+      });
+
+      /**
+       * Browse Ingests tab click handler
+       * (refreshes DataTables)
+       */
+      $('#browse-tab').on('click', function(e) {
+        table.clear().draw();
+        $('.main').find('.flash-message').remove();
       });
 
     });
+
+    // // Place focus on the parent record picker.
+    // $('form[name="uploads_parent_picker_form"]').find('#uploads_parent_picker_form_parent_picker_text').focus();
+    // console.log($('form[name="uploads_parent_picker_form"]').find('#uploads_parent_picker_form_parent_picker_text'));
+
+    var jobId,
+        resultsContainer = $('#panel-spreadsheets').find('.col-md-12'),
+        loadingGif = $('<img />').attr('src', '/lib/images/spinner.gif').attr('alt', 'loading animation').attr('style', 'width: 140px;'),
+        loadingGifContainer = $('<div />').addClass('center-block').attr('style', 'width: 140px;').append(loadingGif);
+
+    // Dropzone.js
+    // Get the template HTML and remove it from the document.
+    // var previewNode = document.querySelector("#template");
+    // previewNode.id = "";
+    // var previewTemplate = previewNode.parentNode.innerHTML;
+    // previewNode.parentNode.removeChild(previewNode);
+
+    // See: http://www.dropzonejs.com/#configuration-options
+    var uploadsDropzone = new Dropzone(document.body, { // Make the whole body a dropzone
+      url: "{{ oneup_uploader_endpoint('repository') }}", // Set the url
+      // parallelUploads: 1, // Default is 2
+      // previewTemplate: previewTemplate,
+      autoQueue: false, // Make sure the files aren't queued until manually added
+      previewsContainer: "#previews", // Define the container to display the previews
+      // clickable: ".fileinput-button", // Define the element that should be used as click trigger to select files.
+      createImageThumbnails: false,
+      maxFilesize: 20000, // how many files this Dropzone handles
+      ignoreHiddenFiles: true,
+      timeout: 300000, // The timeout for the XHR requests in milliseconds (default is 30000 - 30 seconds)
+      chunking: true,
+      // forceChunking: true,
+      // parallelChunkUploads: true,
+      chunkSize: 5000000,
+      retryChunks: true,
+      retryChunksLimit: 2000,
+      acceptedFiles: "{{ accepted_file_types }}",
+      dictInvalidFileType: "File type not allowed"
+    });
+
+    // Add the ability to select directories from a file selection dialog window (when clicking the "Add Files" button).
+    $('body').find('input.dz-hidden-input').attr('webkitdirectory', '').attr('directory', '');
+
+    uploadsDropzone.on("drop", function(ev) {
+      // Format directories and files hierarchically.
+      if (ev.dataTransfer.items) {
+        // Use DataTransferItemList interface to access the file(s)
+        for (var i = 0; i < ev.dataTransfer.items.length; i++) {
+          // Get the item's properties via webkitGetAsEntry().
+          let item = ev.dataTransfer.items[i].webkitGetAsEntry();
+              listing = $('#previews ul');
+          // console.log('itemitemitemitem');
+          // console.log(item);
+          // Add the file size and modified date to 'item'.
+          item.detail = ev.dataTransfer.files[i];
+
+          // console.log(item);
+
+          // Recursively scan files and add to the DOM.
+          scanFiles(i, item, listing, uploadsDropzone.options);
+        }
+      }
+    });
+
+    uploadsDropzone.on("addedfiles", function(files) {
+
+      var fileInput = $('body').find('.dz-hidden-input'),
+          items = fileInput[0].files;
+
+      // console.log(items);
+
+      simulateDrop({ 
+          dataTransfer: { items: [ items ] },
+          preventDefault: function () {}
+      });
+    });
+
+    function simulateDrop(ev) {
+      ev.preventDefault();
+
+      // console.log(ev.dataTransfer);
+
+      // Format directories and files hierarchically.
+      if (ev.dataTransfer.items[0].length) {
+        // Use DataTransferItemList interface to access the file(s)
+        for (var i = 0; i < ev.dataTransfer.items[0].length; i++) {
+
+          // Get the item's properties via webkitGetAsEntry().
+          let item = ev.dataTransfer.items[0][i],
+              listing = $('#previews ul');
+
+          // console.log(item);
+
+          // Recursively scan files and add to the DOM.
+          scanFiles(i, item, listing, uploadsDropzone.options);
+        }
+      }
+    }
+
+    // uploadsDropzone.on("error", function(file, errorMessage, xhrObject) {
+    //   console.log('UPLOAD ERROR');
+    //   console.log(file);
+    //   console.log(errorMessage);
+    //   console.log(xhrObject);
+    // });
+
+    uploadsDropzone.on("uploadprogress", function(file) {
+      // Find the list item for this file.
+      let fileListItem = $('#previews').find('[data-file-name="' + file.name + '"]');
+      // Update the progress indicator for a chunked file upload while uploading (while progress is < 100%).
+      if (file.upload.chunked && (Math.floor(file.upload.progress) !== 100)) {
+        fileListItem.find('.badge').text(Math.floor(file.upload.progress) + '%');
+      }
+      // Update the progress indicator for a chunked file upload once it reaches 100%.
+      if (file.upload.chunked && (file.upload.chunks.length === file.upload.totalChunkCount) && (Math.floor(file.upload.progress) === 100)) {
+        fileListItem.find('.badge').text(Math.floor(file.upload.progress) + '%');
+      }
+      // Update the progress indicator for a non-chunked file upload.
+      if (!file.upload.chunked) {
+        fileListItem.find('.badge').text(Math.floor(file.upload.progress) + '%');
+      }
+    });
+
+    // CSV Help Dialog modal trigger.
+    $('.csv-modal-trigger').on('click', function(e) {
+      $('#csv-modal').modal('show');
+    });
+
+    // Prevalidate click handler.
+    $('.prevalidate-trigger').on('click', function(e) {
+
+      let csvList = [];
+
+      // Set the parentRecordId.
+      let parentRecordId = parentRecordChecker();
+      // Check if the parent record has been selected.
+      if(!parentRecordId) return;
+
+      // Get queued files.
+      let queuedFiles = uploadsDropzone.getAcceptedFiles();
+      // Check if files have been added to the queue.
+      // Also check to see if there are actual files (e.g. photogrammetry scans, models), and not just CSVs.
+      if(!queuedFilesChecker(queuedFiles)) return;
+
+      // Generate a temporary job ID.
+      generateJobId(parentRecordId, true);
+
+      // Get the parent record type.
+      let parentRecordType = getRecordType();
+
+      // Display the progress modal.
+      $('#uploading-modal-title').empty();
+      $('#uploading-modal-title').append('Pre-Validating...');
+      $('#uploading-modal-message').empty();
+      $('#uploading-modal-message').append('Pre-validation in progress');
+      $('#uploading-modal').modal('show');
+      
+      for (var i = 0; i < queuedFiles.length; i++) {
+
+        // Set a custom parameter, 'parentRecordId', so it can be passed to the back-end.
+        queuedFiles[i].parentRecordId = parentRecordId;
+
+        // Set a custom parameter, 'parentRecordType', so it can be passed to the back-end.
+        queuedFiles[i].parentRecordType = parentRecordType;
+
+        // Get the extension of the file.
+        let fileExtension = getExtension(queuedFiles[i].name);
+
+        // Pre-validate CSV files, files count, and file names.
+        if(fileExtension === 'csv') {
+          // Set a custom parameter, 'prevalidate', so it can be used within the 'success' function.
+          queuedFiles[i].prevalidate = true;
+          // Start the upload.
+          uploadsDropzone.enqueueFile(queuedFiles[i]);
+          // // Don't display the progress bar.
+          // document.querySelector("#total-progress").style.opacity = "0";
+          csvList.push(queuedFiles[i].name)
+        }
+
+        // Pre-validate files count and names.
+        if((queuedFiles[i].name === 'manifest-sha1.txt') || (queuedFiles[i].name === 'manifest-md5.txt')) {
+
+          let allManifestFiles = [],
+              allAcceptedFiles = [],
+              reader = new FileReader();
+
+          // Read the manifest file.
+          reader.readAsText(queuedFiles[i]);
+          reader.addEventListener('loadend', function(event) {
+            let manifest = event.target.result,
+                manifestArray = manifest.split(/\r?\n/),
+                acceptedFiles = uploadsDropzone.getAcceptedFiles();
+
+            // Process the manifest to get all of the files count and names.
+            for (var i = 0; i < manifestArray.length; i++) {
+              if(manifestArray[i].length) {
+                let currentLineArray = manifestArray[i].trim().split(/\s+/),
+                    currentFullFilePath = currentLineArray[1].split('/');
+                // Add the file to the allManifestFiles array.
+                allManifestFiles.push(currentFullFilePath[currentFullFilePath.length - 1]);
+              }
+            }
+
+            // Process the acceptedFiles to get all of the file names.
+            for (var i = 0; i < acceptedFiles.length; i++) {
+              if((acceptedFiles[i].name.indexOf('.txt') === -1) && (acceptedFiles[i].name.indexOf('.csv') === -1)) {
+                allAcceptedFiles.push(acceptedFiles[i].name);
+              }
+            }
+
+            // Get the difference between the two arrays of files, 
+            // using the manifest as the authoritative source.
+            if (allManifestFiles.length) {
+              var diff = $(allManifestFiles).not(allAcceptedFiles).get();
+
+              // If there are file-based errors, populate the panel-body.
+              if(diff.length) {
+                let fileMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>BagIt Manifest Pre-validation</h4>');
+                let fileMessageOrderedList = $('<ol />');
+                for (var i = 0; i < diff.length; i++) {
+                  // Ignore hidden files. For now, just Apple's .DS_Store.
+                  // TODO: Add more hidden file types?
+                  if(diff[i] !== '.DS_Store') {
+                    fileMessageOrderedList.append('<li>Missing file: ' + diff[i] + '</li>');
+                  }
+                  if(diff[i] === '.DS_Store') diff.splice(i, 1);
+                }
+                // Append the ordered list to the fileMessageContainer.
+                if(fileMessageOrderedList.find('li').length) {
+                  fileMessageContainer.append(fileMessageOrderedList);
+                  // Append the fileMessageContainer to the panel-body container.
+                  $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
+                }
+              }
+
+              // If there are no file-based errors, display a message.
+              if(!diff.length) {
+                // The message.
+                let message = $('<div />').addClass('alert alert-success files-validation-success').attr('role', 'alert').html('<h4>BagIt Manifest Pre-validation</h4><p>No file validation errors found.</p>');
+                // Append the message to the panel-body container.
+                $('.panel-validation-results').find('.panel-body').append(message);
+              }
+            }
+
+            // If the BagIt manifest is empty, display an error.
+            if (!allManifestFiles.length) {
+              let fileMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>BagIt Manifest Pre-validation</h4>');
+              let fileMessageOrderedList = $('<ol />');
+              fileMessageOrderedList.append('<li>BagIt manifest is empty</li>');
+              fileMessageContainer.append(fileMessageOrderedList);
+              // Append the fileMessageContainer to the panel-body container.
+              $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
+            }
+
+          });
+          
+        }
+        
+      }
+
+      // Run the required CSV validation.
+      requiredCsvValidation(parentRecordType, csvList);
+
+      // If there are no errors, change the states of the action buttons.
+      setTimeout(function() {
+        // Check to see if there are errors.
+        let fileErrors = $('.panel-validation-results .panel-body').find('.files-validation-error'),
+            csvErrors = $('.panel-validation-results .panel-body').find('.cvs-validation-error');
+        // No errors? Change the states of the action buttons.
+        if(!fileErrors.length && !csvErrors.length) {
+          // Disable the "Pre-Validate" and "Clear Upload Stage" buttons.
+          // $('.fileinput-button, .cancel, .prevalidate-trigger').attr('disabled', 'disabled');
+          // Reveal the "Start Upload" button.
+          $('.start, .pause, .cancel-upload').removeClass('hidden');
+        }
+      }, 2000);
+
+      // Hide the progress modal.
+      setTimeout(function() {
+        $('#uploading-modal').modal('hide');
+      }, 3000);
+
+    });
+    
+    // Set the spreadsheet count so unique IDs can be assigned to the Handsontable containers.
+    let spreadsheetCount = 1;
+
+    uploadsDropzone.on("success", function(file, responseText) {
+
+      // console.log(file);
+
+      let fileExtension = getExtension(file.name);
+
+      // If the uploaded file is being pre-validated...
+      if((typeof file.prevalidate !== 'undefined') && file.prevalidate && (fileExtension === 'csv')) {
+
+        // Set the file status back to 'added' and prevalidate to false.
+        file.status = 'added';
+        file.prevalidate = false;
+
+        // Import limitation validation
+        importLimitationValidation(file.parentRecordType, file.name);
+
+        // Empty CSV warning
+        if(!JSON.parse(responseText.csv).length) {
+          swal({
+            title: 'Error',
+            text: file.name + ': CSV is empty',
+            icon: 'warning',
+          });
+        }
+
+        // If no errors are returned, display a message.
+        if(responseText && JSON.parse(responseText.csv).length && (typeof responseText.error === 'undefined')) {
+          // The message.
+          let message = $('<div />').addClass('alert alert-success cvs-validation-success').attr('role', 'alert').html('<h4>CSV Pre-validation</h4><p><strong>' + file.name + '</strong></p><p>No CSV validation errors found.</p>');
+          // Append the message to the panel-body container.
+          $('.panel-validation-results').find('.panel-body').append(message);
+        }
+
+        // If errors are returned, populate the Pre-Validation Results container.
+        if(responseText && (typeof responseText.error !== 'undefined')) {
+
+          let validationErrors = JSON.parse(responseText.error);
+
+          // Display a general summary of validation errors.
+          if(validationErrors.length) {
+            let csvMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>CSV Pre-validation</h4><p><strong>' + file.name + '</strong></p>');
+            let csvMessageOrderedList = $('<ol />');
+            // Loop through the errors and append to the message.
+            for (var i = 0; i < validationErrors.length; i++) {
+              listItem = $('<li />').text(validationErrors[i].row + ': ' + validationErrors[i].error);
+              csvMessageOrderedList.append(listItem);
+            }
+            // Append the ordered list to the csvMessageContainer.
+            csvMessageContainer.append(csvMessageOrderedList);
+            // Append the csvMessageContainer to the panel-body container.
+            $('.panel-validation-results').find('.panel-body').append(csvMessageContainer);
+          }
+
+        }
+
+        if(JSON.parse(responseText.csv).length) {
+          // Display the CSV within a spreadsheet interface, highlighting errors.
+          // TODO: Make it possible to edit the spreadsheet and resubmit for pre-validation.
+          // See: Handsontable
+          // https://github.com/handsontable/handsontable
+          let container,
+              hotVarName = 'hot',
+              panel = $('<div />').addClass('panel panel-default panel-spreadsheet'),
+              panelHeading = $('<div />').addClass('panel-heading').text(file.name),
+              panelHeadingContent = $('<span />')
+                .attr('style', 'font-size: 1.5rem; font-weight: normal;')
+                .html('<i class="glyphicon glyphicon-info-sign" style="margin-left: 1.5rem;"></i> For now, only for representation of the data. The goal is to allow for edits and resubmission.'),
+              csvsRowCount = responseText.csv_row_count,
+              csvsRowCountParsed = JSON.parse(csvsRowCount),
+              panelBody = $('<div />')
+                  .addClass('panel-body')
+                  .attr('id', 'csv-spreadsheet-' + spreadsheetCount)
+                  .attr('style', 'height: ' + (csvsRowCountParsed*40) + 'px');
+              
+
+          // Show the panel-spreadsheet container.
+          $('#panel-spreadsheets').removeClass('hidden');
+          // Populate the panel with the heading and body.
+          panelHeading.append(panelHeadingContent);
+          panel.append(panelHeading, panelBody);
+          // Add the panel to the results container.
+          resultsContainer.append(panel);
+
+          // Initialize Handsontable.
+          container = document.getElementById('csv-spreadsheet-' + spreadsheetCount);
+          // Note: window[hotVarName + spreadsheetCount] is a dynamic variable.
+          // This basically allows for multiple Handsontable instances.
+          // See: https://stackoverflow.com/a/28130158/1298317
+          window[hotVarName + spreadsheetCount] = new Handsontable(container, {
+            data: JSON.parse(responseText.csv),
+            rowHeaders: true,
+            colHeaders: true,
+            outsideClickDeselects: false,
+            selectionMode: 'multiple',
+          });
+
+          // Style rows which have errors.
+          // https://docs.handsontable.com/2.0.0/demo-selecting-ranges.html#page-styling
+          // First, make sure there are errors to parse.
+          // If errors are returned, populate the Pre-Validation Results container.
+          if(responseText && (typeof responseText.error !== 'undefined')) {
+
+            let validationErrors = JSON.parse(responseText.error);
+
+            if((typeof validationErrors !== 'undefined') && validationErrors.length) {
+
+              for (var i = 0; i < validationErrors.length; i++) {
+                // validationErrors[i].row
+                // validationErrors[i].error
+                let row = validationErrors[i].row.match(/\d/g);
+                row = row.join('');
+                // Select the rows with errors.
+                window[hotVarName + spreadsheetCount].selectRows(parseInt(row));
+
+                var selected = window[hotVarName + spreadsheetCount].getSelected();
+
+                for (var index = 0; index < selected.length; index += 1) {
+                  var item = selected[index];
+                  var startRow = Math.min(item[0], item[2]);
+                  var endRow = Math.max(item[0], item[2]);
+                  var startCol = Math.min(item[1], item[3]);
+                  var endCol = Math.max(item[1], item[3]);
+
+                  for (var rowIndex = startRow; rowIndex <= endRow; rowIndex += 1) {
+                    for (var columnIndex = startCol; columnIndex <= endCol; columnIndex += 1) {
+                      // Set the text-danger CSS class on the row containing the error.
+                      window[hotVarName + spreadsheetCount].setCellMeta(rowIndex, columnIndex, 'className', 'text-danger');
+                    }
+                  }
+                }
+
+              }
+              window[hotVarName + spreadsheetCount].deselectCell();
+              window[hotVarName + spreadsheetCount].render();
+            }
+          }
+        }
+
+      }
+
+      spreadsheetCount++;
+    });
+
+    // // Update the total progress bar
+    // uploadsDropzone.on("totaluploadprogress", function(progress) {
+    //   document.querySelector("#total-progress .progress-bar").style.width = progress + "%";
+    // });
+
+    uploadsDropzone.on("sending", function(file, xhr, formData) {
+
+      // // Show the total progress bar when upload starts
+      // document.querySelector("#total-progress").style.opacity = "1";
+
+      xhr.timeout = 99999999;
+
+      if((typeof file.prevalidate !== 'undefined') && !file.prevalidate) {
+        // If not prevalidating, disable all actionable buttons.
+        $('.start, .cancel, .prevalidate-trigger').attr('disabled', 'disabled');
+      }
+
+      // Append custom data to formData.
+      // NOTE: can't console.log formData after appending.
+      // If you want to view formData, pass it to the server side then dump/echo.
+      // See: https://github.com/enyo/dropzone/issues/1075
+
+      // Add the jobId to the formData
+      jobId = $('.prevalidate-trigger').attr('data-jobid');
+      formData.append('jobId', jobId);
+
+      // Add the prevalidate value to the formData
+      if((typeof file.prevalidate !== 'undefined') && file.prevalidate) {
+        formData.append('prevalidate', file.prevalidate);
+      }
+
+      // Add the parentRecordId value to the formData
+      if((typeof file.parentRecordId !== 'undefined') && file.parentRecordId) {
+        formData.append('parentRecordId', file.parentRecordId);
+      }
+
+      // Add the parentRecordType value to the formData
+      if((typeof file.parentRecordType !== 'undefined') && file.parentRecordType) {
+        formData.append('parentRecordType', file.parentRecordType);
+      }
+
+      // If the file is actually a folder, add the fullPath to the formData.
+      if(file.fullPath){
+        formData.append('fullPath', file.fullPath);
+      }
+
+    });
+
+    // Called when all files in the queue finish uploading.
+    uploadsDropzone.on("queuecomplete", function(file) {
+
+      let jobId = $('.prevalidate-trigger').attr('data-jobid'),
+          parentProjectId = $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
+          parentRecordId = parentRecordChecker(),
+          parentRecordType = getRecordType();
+
+      setTimeout(function() {
+        $.ajax({
+          'type': 'GET'
+          ,'dataType': 'json'
+          ,'url': '/admin/get_job_status/' + jobId
+          ,success: function(result) {
+            if (result && (result !== 'cancelled') && (result !== 'paused')) {
+              // Set the status of the job from 'uploading' to 'bagit validation starting'.
+              $.ajax({
+                'type': 'GET'
+                ,'dataType': 'json'
+                ,'url': '/admin/set_job_status/' + jobId + '/bagit validation starting'
+                ,success: function(result) {
+                  if(result && result.statusSet) {
+                    // Redirect to the Upload overview page.
+                    document.location.href = '/admin/import/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
+                  } else {
+                    // TODO: catch error?
+                  }
+                }
+              });
+            }
+          }
+        });
+      }, 2000);
+      
+      
+    });
+
+    // Start the internet connectivity checker.
+    var connectionCheck = setInterval(checkStatus, 2000);
+
+    // Begin uploads.
+    document.querySelector("#actions .start").onclick = function() {
+      startUpload(false);
+    };
+
+
+    var dropzoneFilesCopy = [];
+
+    // Pause/Resume uploading.
+    $('#actions .pause').on('click', function(e) {
+
+      let jobId = $('.prevalidate-trigger').attr('data-jobid');
+      let thisTrigger = $(this);
+
+      // Pause the upload process.
+      if (!$(this).hasClass('paused')) {
+        $.ajax({
+          'type': 'GET'
+          ,'dataType': 'json'
+          ,'url': '/admin/set_job_status/' + jobId + '/paused'
+          ,success: function(result) {
+            if(result && result.statusSet) {
+              thisTrigger.find('span').empty().text('Resume');
+              thisTrigger.addClass('paused');
+              // Make a copy of all files.
+              dropzoneFilesCopy = uploadsDropzone.files.slice(0);
+              // Remove all files.
+              uploadsDropzone.removeAllFiles();
+            }
+          }
+        });
+      }
+      // Resume the upload process.
+      else {
+        startUpload(true, dropzoneFilesCopy);
+        thisTrigger.find('span').empty().text('Pause');
+        thisTrigger.removeClass('paused');
+      }
+
+    });
+
+
+    // Cancel uploading.
+    document.querySelector("#actions .cancel-upload").onclick = function() {
+
+      swal('Are you sure you wish to cancel uploading?', {
+        buttons: {
+          cancel: 'No',
+          catch: {
+            text: 'Yes',
+            value: 'yes',
+          }
+        },
+      })
+      .then((value) => {
+        switch (value) {
+          case "yes":
+            // Set the status of the job from 'uploading' to 'failed'.
+            let jobId = $('.prevalidate-trigger').attr('data-jobid'),
+                parentProjectId = $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
+                parentRecordId = parentRecordChecker(),
+                parentRecordType = getRecordType();
+            
+            $.ajax({
+              'type': 'GET'
+              ,'dataType': 'json'
+              ,'url': '/admin/set_job_status/' + jobId + '/cancelled'
+              ,success: function(result) {
+                if(result && result.statusSet) {
+                  // Remove all files.
+                  uploadsDropzone.removeAllFiles(true);
+                  // Redirect to the Upload overview page.
+                  document.location.href = '/admin/import/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
+                } else {
+                  // TODO: catch error?
+                }
+              }
+            });
+            break;
+          default:
+        }
+      });
+
+    };
+
+    // Remove files from the uploads stage.
+    document.querySelector("#actions .cancel").onclick = function() {
+      // Remove files from Dropzone.
+      uploadsDropzone.removeAllFiles(true);
+      $('#previews ul.directory-structure').empty();
+      // Clear previous validation results from the validation panel.
+      $('.panel-validation-results').find('.panel-body').empty();
+      // Hide the Start button.
+      $('.start').addClass('hidden');
+      // Remove spreadsheets.
+      resultsContainer.empty();
+    };
+
+    function startUpload(restart, dropzoneFilesCopy) {
+
+      dropzoneFilesCopy = (typeof dropzoneFilesCopy !== 'undefined') ? dropzoneFilesCopy : [];
+
+      // Check if the parent record has been selected.
+      let parentRecordId = parentRecordChecker();
+      // Get queued files.
+      let queuedFiles = uploadsDropzone.getAcceptedFiles();
+
+      // If this is not a restart...
+      if(!restart) {
+        // Check if files have been added to the queue.
+        // Also check to see if there are actual files (e.g. photogrammetry scans, models), and not just CSVs.
+        if(!queuedFilesChecker(queuedFiles)) return;
+        // Generate a real job ID.
+        generateJobId(parentRecordId, false);
+      }
+
+      // Display the uploading overlay.
+      $('.overlay-uploading').removeClass('hidden');
+
+      // Give some time (2 seconds) to create the job record in the database.
+      setTimeout(function() {
+
+        // Bring back the progress badges.
+        $('#previews').find('.badge-temp').removeClass('badge-temp').addClass('badge');
+        // Get the job ID from the data attribute of the prevalidate-trigger.
+        let jobId = $('.prevalidate-trigger').attr('data-jobid');
+        // Begin the uploading process.
+
+        if(restart) {
+
+          // Set the status back to 'uploading'.
+          $.ajax({
+            'type': 'GET'
+            ,'dataType': 'json'
+            ,'url': '/admin/set_job_status/' + jobId + '/uploading'
+            ,success: function(result) {
+              if(result && result.statusSet) {
+
+                if (!dropzoneFilesCopy.length) {
+                  // Make a copy of all files.
+                  dropzoneFilesCopy = uploadsDropzone.files.slice(0);
+                  // Remove all files.
+                  uploadsDropzone.removeAllFiles();
+                }
+
+                var fileNames = [];
+
+                // Add back files which haven't been uploaded.
+                $.each(dropzoneFilesCopy, function(i, file) {
+
+                  // Remove files with the status of "uploading".
+                  if (file.status === 'uploading') {
+                    uploadsDropzone.removeFile(file);
+                  }
+
+                  // Add the remaining files back to Dropzone.
+                  if ((file.status !== 'success') && (fileNames.indexOf(file.name) === -1)) {
+                    file.status = 'added';
+                    file.accepted = true;
+                    file.prevalidate = false;
+                    file.processing = false;
+                    uploadsDropzone.addFile(file);
+                  }
+
+                  fileNames.push(file.name);
+
+                });
+
+                uploadsDropzone.enqueueFiles(uploadsDropzone.getFilesWithStatus(Dropzone.ADDED));
+              }
+            }
+          });
+
+        }
+
+        if(!restart) {
+          uploadsDropzone.enqueueFiles(uploadsDropzone.getFilesWithStatus(Dropzone.ADDED));
+        }
+
+      }, 2000);
+    }
+
+    function parentRecordChecker() {
+      // Parent record ID value.
+      let parentRecordId = $('#uploads_parent_picker_form_parent_picker').val();
+      // If there is no parent ID selected, then display an alert.
+      if(!parentRecordId.length) {
+        swal({
+          title: 'Select Parent Record',
+          text: 'Please select a parent record.',
+          icon: 'warning',
+        });
+        return false;
+      } else {
+        return parentRecordId;
+      }
+    }
+
+    function getRecordType() {
+      // Parent record text value.
+      let parentRecordText = $('#uploads_parent_picker_form_parent_picker_text').val();
+      // Get the string found between the brackets (e.g. [ subject ] would return 'subject').
+      parentRecordText = parentRecordText.substring(parentRecordText.lastIndexOf("[")+1,parentRecordText.lastIndexOf("]"));
+      // Clean it up...
+      parentRecordText = parentRecordText.toLowerCase();
+      parentRecordText = parentRecordText.trim();
+      parentRecordText = parentRecordText.replace(' ', '_');
+      return parentRecordText;
+    }
+
+    function queuedFilesChecker(files) {
+
+      // Display an alert if there are no files queued.
+      if(!files.length) {
+        swal({
+          title: 'No Files Found',
+          text: 'Please add files to the upload queue.',
+          icon: 'warning',
+        });
+        return false;
+      }
+
+      // Display an alert if the 'manifest-sha1.txt' or 'manifest-md5.txt' file isn't found in the queue.
+      let filenames = [];
+      // Build-out an array of files present.
+      for (var i = 0; i < files.length; i++) {
+        // Get the extension of the file.
+        let fname = files[i].name;
+        // Add it to the filenames array.
+        filenames.push(fname);
+      }
+
+      if((filenames.indexOf('manifest-sha1.txt') === -1) && (filenames.indexOf('manifest-md5.txt') === -1)) {
+        var span = document.createElement('span');
+        span.innerHTML = 'Please add bagged (via BagIt) capture datasets and/or model files to the upload queue.';
+        swal({
+          title: 'File bag not found',
+          content: span,
+          icon: "warning",
+        });
+        return false;
+      }
+
+      return true;
+    }
+
+    function generateJobId(parentRecordId, temporary) {
+
+      if((typeof temporary !== 'undefined') && temporary) {
+        // Generate a temporary jobId.
+        var tempJobId = 'temp-' + Math.floor(Math.random() * 2000) + 1;
+        // Add the job ID as a data attribute of the prevalidate-trigger.
+        $('.prevalidate-trigger').attr('data-jobid', tempJobId);
+      } else {
+
+        // Get the parent record type.
+        let recordType = getRecordType();
+
+        // Generate a real jobId.
+        $.ajax({
+          'type': 'GET'
+          ,'global': false
+          ,'dataType': 'text'
+          ,'url': '/admin/create_job/' + parentRecordId + '/' + recordType
+          ,success: function(result) {
+            if(result) {
+              var res = JSON.parse(result);
+              // Add the job ID as a data attribute of the prevalidate-trigger.
+              $('.prevalidate-trigger').attr('data-jobid', res.uuid);
+              // Add the parent Project's id as a data attribute of the prevalidate-trigger.
+              $('#uploads_parent_picker_form_parent_picker').attr('data-project-id', res.projectId);
+            }
+          }
+        });
+      }
+
+    }
+
+    function getExtension(fileName) {
+      let fileNameArray = fileName.split('.');
+      return fileNameArray[fileNameArray.length-1].toLowerCase();
+    }
+
+    // Import limitation validation
+    function importLimitationValidation(parentRecordType, fileName) {
+
+      let generateWarning = false;
+
+      // Subject import limitation message, based on the 'subject' parent record type.
+      if((parentRecordType === 'subject') && (fileName === 'subjects.csv')) {
+        generateWarning = true;
+      }
+
+      // Subject and Item import limitation message, based on the 'item' parent record type.
+      if((parentRecordType === 'item') && ((fileName === 'subjects.csv') || (fileName === 'items.csv'))) {
+        generateWarning = true;
+      }
+
+      // Subject, Item, and Capture Dataset import limitation message, based on the 'capture_dataset' parent record type.
+      if((parentRecordType === 'capture_dataset') && ((fileName === 'subjects.csv') || (fileName === 'items.csv') || (fileName === 'capture_datasets.csv'))) {
+        generateWarning = true;
+      }
+
+      if(generateWarning) {
+        // The message.
+        let importLimitationMessage = $('<div />')
+            .addClass('alert alert-warning cvs-validation-error')
+            .attr('role', 'alert')
+            .html('<strong>' + fileName + '</strong>: Warning! The chosen parent record type is a "' + parentRecordType + '", therefore data within the "' + fileName + '" file will not be imported.');
+        // Append the message to the panel-body container.
+        $('.panel-validation-results').find('.panel-body').append(importLimitationMessage);
+      }
+
+    }
+
+    // Required CSV validation
+    function requiredCsvValidation(parentRecordType, csvList) {
+
+      let generateWarning = false;
+          csvTargetFile = '';
+
+      if (parentRecordType.length && csvList.length) {
+
+        if (parentRecordType === 'project') {
+          requiredCsvs = 'subjects.csv, items.csv, capture_datasets.csv';
+        }
+        if (parentRecordType === 'subject') {
+          requiredCsvs = 'items.csv, capture_datasets.csv';
+        }
+        if (parentRecordType === 'item') {
+          requiredCsvs = 'capture_datasets.csv';
+        }
+
+        // Project as parent record - no subjects.csv found
+        if ( (parentRecordType === 'project') && (csvList.indexOf('subjects.csv') === -1) ) {
+          csvTargetFile = 'subjects.csv';
+          generateWarning = true;
+        }
+
+        // Project as parent record - no items.csv found
+        if ( (parentRecordType === 'project') && (csvList.indexOf('items.csv') === -1) ) {
+          csvTargetFile = 'items.csv';
+          generateWarning = true;
+        }
+
+        // Project as parent record - no capture_datasets.csv found
+        if ( (parentRecordType === 'project') && (csvList.indexOf('capture_datasets.csv') === -1) ) {
+          csvTargetFile = 'capture_datasets.csv';
+          generateWarning = true;
+        }
+
+        // Subject as parent record- no items.csv found
+        if ( (parentRecordType === 'subject') && (csvList.indexOf('items.csv') === -1) ) {
+          csvTargetFile = 'items.csv';
+          generateWarning = true;
+        }
+
+        // Subject as parent record- no capture_datasets.csv found
+        if ( (parentRecordType === 'subject') && (csvList.indexOf('capture_datasets.csv') === -1) ) {
+          csvTargetFile = 'capture_datasets.csv';
+          generateWarning = true;
+        }
+
+        // Item as parent record - no capture_datasets.csv found
+        if ( (parentRecordType === 'item') && (csvList.indexOf('capture_datasets.csv') === -1) ) {
+          csvTargetFile = 'capture_datasets.csv';
+          generateWarning = true;
+        }
+
+        if (generateWarning) {
+          // The message.
+          let requiredCsvMessage = $('<div />')
+              .addClass('alert alert-danger cvs-validation-error')
+              .attr('role', 'alert')
+              .html('<strong>Error: ' + csvTargetFile + ' not found</strong>: Required CSV files: ' + requiredCsvs);
+          // Append the message to the panel-body container.
+          $('.panel-validation-results').find('.panel-body').append(requiredCsvMessage);
+        }
+
+      }
+
+    }
+
+    function scanFiles(i, item, container, dzOptions, existingCount) {
+
+      // Ignore hidden files if Dropzone's 'ignoreHiddenFiles' option is set to true.
+      if (dzOptions.ignoreHiddenFiles && item.name.substring(0, 1) === '.') {
+        return;
+      }
+
+      let itemIcon = item.isDirectory ? 'folder-close' : 'file',
+          itemExtension = !item.isDirectory ? item.name.split('.').pop() : '',
+          fileTypeWarning = (itemExtension.length && (dzOptions.acceptedFiles.indexOf(itemExtension.toLowerCase()) === -1)) ? 'Invalid file type. This file will not be uploaded.' : '',
+          spanIcon = $('<span />').addClass('glyphicon glyphicon-' + itemIcon).attr('style', 'margin-right: 4px;'),
+          allItemsCount = $('#previews').find('li.list-group-item').length,
+          thisCount = (allItemsCount+1),
+          listItem = $('<li />')
+              .addClass('list-group-item')
+              .attr('data-count', thisCount)
+              .attr('data-file-name', item.name)
+              .attr('style', 'border-left: none; border-right: none; border-top-left-radius: 0; border-top-right-radius: 0;')
+              .text(item.name),
+          progressBadge = '<span class="badge-temp"></span>',
+          errorMessageContainer = '<div class="pull-right text-danger" style="font-size: 1.3rem;">' + fileTypeWarning + '</div>';
+
+      // Add elements to the list item.
+      listItem.prepend(spanIcon).append(errorMessageContainer, progressBadge);
+      // Add the list item to the container.
+      container.append(listItem);
+      
+      // Directory handler
+      if (item.isDirectory) {
+        let directoryReader = item.createReader();
+        let directoryContainer = $('<ul />').attr('style', 'padding-left: 15px;').attr('data-file-name', item.name);
+        // Add an unordered list to serve as the directory container.
+        container.append(directoryContainer);
+        // Read file entries within a directory.
+        directoryReader.readEntries(function(entries) {
+            entries.forEach(function(entry) {
+              scanFiles(i++, entry, directoryContainer, dzOptions, existingCount);
+          });
+        });
+      }
+
+    }
+
+    function checkStatus() {
+
+      var online = navigator.onLine;
+
+      if(!online) {
+
+        swal('Detected lost internet connection. Would you like to resume the upload process?', {
+          buttons: {
+            cancel: 'No',
+            catch: {
+              text: 'Yes',
+              value: 'yes',
+            }
+          },
+        })
+        .then((value) => {
+          switch (value) {
+            case "yes":
+              startUpload(true);
+              break;
+            default:
+              clearInterval(checkStatus);
+
+              // Set the status of the job from 'uploading' to 'failed'.
+              let jobId = $('.prevalidate-trigger').attr('data-jobid'),
+                  parentProjectId = $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
+                  parentRecordId = parentRecordChecker(),
+                  parentRecordType = getRecordType();
+              
+              $.ajax({
+                'type': 'GET'
+                ,'dataType': 'json'
+                ,'url': '/admin/set_job_status/' + jobId + '/cancelled'
+                ,success: function(result) {
+                  if(result && result.statusSet) {
+                    // Display the confirmation message.
+                    swal('Upload process cancelled. Redirecting to the overview page...');
+                    // Redirect to the Upload overview page.
+                    setTimeout(function() {
+                      document.location.href = '/admin/import/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
+                    }, 3000);
+                  } else {
+                    // TODO: catch error?
+                  }
+                }
+              });
+          }
+        });
+
+      }
+
+    }
+
   </script>
 {% endblock %}

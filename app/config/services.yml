@@ -19,8 +19,9 @@ services:
             $edan_auth_token: '%edan_auth_token%'
             $edan_version: '%edan_version%'
             $edan_search_endpoint: '%edan_search_endpoint%'
-            $file_upload_path: '%file_upload_path%'
-            $file_processing_path: '%file_processing_path%'
+            $uploads_directory: '%uploads_directory%'
+            $external_file_storage_path: '%external_file_storage_path%'
+            $conn: '@doctrine.dbal.default_connection'
 
     # makes classes in src/AppBundle available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
@@ -37,6 +38,19 @@ services:
         public: true
         tags: ['controller.service_arguments']
 
+    # explicit commands registration
+    AppBundle\Command\:
+        resource: '../../src/AppBundle/Command/*'
+        tags: ['console.command']
+
+    # Swiftmailer Bundle command registration
+    # Fixes:
+    # User Deprecated: Auto-registration of the command "Symfony\Bundle\SwiftmailerBundle\Command\*" 
+    # is deprecated since Symfony 3.4 and won't be supported in 4.0. Use PSR-4 based service discovery instead.
+    Symfony\Bundle\SwiftmailerBundle\Command\:
+        resource: '../../vendor/symfony/swiftmailer-bundle/Command/*'
+        tags: ['console.command']
+
     # add more services, or override services that need manual wiring
     # AppBundle\Service\ExampleService:
     #     arguments:
@@ -44,3 +58,22 @@ services:
 
     AppBundle\Utils\GumpParseErrors:
         public: false
+    # Additional services for OneupUploaderBundle
+    app.file_namer:
+        public: true
+        class: AppBundle\Uploader\FileNamer
+
+    app.upload_listener:
+        public: true
+        class: AppBundle\EventListener\UploadListener
+        tags:
+            - { name: kernel.event_listener, event: oneup_uploader.post_persist, method: onUpload }
+
+    app.sabredav_client:
+        class: Sabre\DAV\Client
+        arguments:
+            $settings:
+                baseUri: '%external_file_storage_location%'
+                userName: '%external_file_storage_username%'
+                password: '%external_file_storage_password%'
+                authType: '%external_file_storage_auth_type%'

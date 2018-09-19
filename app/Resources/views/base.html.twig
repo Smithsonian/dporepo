@@ -20,5 +20,10 @@
         {% block javascripts %}{% endblock %}
         {% block js_bottom %}{% endblock %}
         <script src="{{ asset('lib/javascripts/javascriptAfterDatatables.js') }}"></script>
+      <div class="overlay hidden">
+        <div style="z-index: 6; margin-top: 26rem;">
+          <h3 style="color: white;">Please wait while metadata and files are removed from the system...</h3>
+        </div>
+      </div>
     </body>
 </html>

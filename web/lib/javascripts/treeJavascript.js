@@ -23,7 +23,7 @@ jQuery(document).ready(function($) {
             switch(true) {
               // Projects
               case (node.id.indexOf('stakeholderGuid-') !== -1):
-                return '/admin/projects/get_stakeholder_projects_tree_browser/' + node.id.replace('stakeholderGuid-', '');
+                return '/admin/projects/get_stakeholder_projects/' + node.id.replace('stakeholderGuid-', '');
                 break;
               // Subjects
               case (node.id.indexOf('projectId-') !== -1):

@@ -79,6 +79,10 @@ swiftmailer:
     password: '%mailer_password%'
     spool: { type: memory }
 
+sensio_framework_extra:
+    router:
+        annotations: false
+
 # DebugBundle Configuration
 # http://symfony.com/doc/3.4/reference/configuration/debug.html
 # By default, the dumps are shown in the toolbar. Since this is not always possible 
@@ -124,3 +128,28 @@ fr3d_ldap:
     #         - { ldap_attr: uid,  user_method: setUsername }
     #         - { ldap_attr: mail,  user_method: setEmail }
     #     filter: (&(ObjectClass=person))
+
+# OneupUploaderBundle Configuration
+oneup_uploader:
+    mappings:
+        repository:
+            frontend: dropzone
+            # If you want to use your own path, for example /data/uploads
+            # storage:
+            #     directory: "%kernel.root_dir%/../data/uploads/"
+            # namer: oneup_uploader.namer.uniqid
+            namer: app.file_namer
+
+# OneupFlysystemBundle Configuration
+oneup_flysystem:
+    adapters:
+        assets_adapter:
+            webdav:
+                client: app.sabredav_client
+
+    filesystems:
+        assets:
+            adapter: assets_adapter
+            cache: ~
+            alias: ~
+            mount: ~

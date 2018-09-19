@@ -9,7 +9,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
 use AppBundle\Controller\RepoStorageHybridController;
-use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 use AppBundle\Form\ProcessingActionForm;
@@ -30,11 +29,11 @@ class ProcessingActionController extends Controller
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u)
+    public function __construct(AppUtilities $u, Connection $conn)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
-        $this->repo_storage_controller = new RepoStorageHybridController();
+        $this->repo_storage_controller = new RepoStorageHybridController($conn);
     }
 
     /**
@@ -65,8 +64,7 @@ class ProcessingActionController extends Controller
           $query_params['search_value'] = $search;
         }
 
-        $this->repo_storage_controller->setContainer($this->container);
-        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
+                 $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
         return $this->json($data);
     }
@@ -91,8 +89,7 @@ class ProcessingActionController extends Controller
         if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
-        $this->repo_storage_controller->setContainer($this->container);
-        if(!empty($id) && empty($post)) {
+                 if(!empty($id) && empty($post)) {
           $rec = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'processing_action',
             'record_id' => $id));
@@ -147,8 +144,6 @@ class ProcessingActionController extends Controller
 
             // Create the array of ids.
             $ids_array = explode(',', $request->query->get('ids'));
-
-            $this->repo_storage_controller->setContainer($this->container);
 
             // Loop thorough the ids.
             foreach ($ids_array as $key => $id) {

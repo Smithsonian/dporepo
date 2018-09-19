@@ -4,6 +4,7 @@
   {{ parent() }}
   <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
   <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.css') }}" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -11,7 +12,7 @@
   <ol class="breadcrumb">
     <li><a href="/admin">Dashboard</a></li>
     <li><a href="/admin/import">Uploads</a></li>
-    <li class="active">{{project.project_name}}</li>
+    <li class="active">{{ project.project_name }}</li>
   </ol>
 
   <div class="panel panel-default">
@@ -23,33 +24,151 @@
               <dd>{{ project.project_name }}</dd>
             <dt>Date Uploaded:</dt>
               <dd>{{ project.date_created }}</dd>
-            <dt>Total Items #:</dt>
-              <dd>{{ project.items_total|default('0') }}</dd>
+            {% if project.username is defined %}
+              <dt>Uploaded By:</dt>
+                <dd>{{ project.username }}</dd>
+            {% endif %}
+            <dt>Job Status:</dt>
+            {% if job_data.job_status is defined %}
+              {% if job_data.job_status == 'cancelled' %}
+                <dd class="status-target text-danger"><span class="glyphicon glyphicon-exclamation-sign"></span> <strong>{{ job_data.job_status }}</strong></dd>
+              {% elseif job_data.job_status == 'failed' %}
+                <dd class="status-target text-danger"><span class="glyphicon glyphicon-exclamation-sign"></span> <strong>{{ job_data.job_status }}</strong></dd>
+              {% elseif job_data.job_status == 'complete' %}
+                <dd class="status-target text-success"><span class="glyphicon glyphicon-ok"></span> <strong>{{ job_data.job_status }}</strong></dd>
+              {% else %}
+                <dd class="status-target"><span class="in-progress"><img src="/lib/images/spinner-40px.gif" alt="Visual job status indicator" width="26" height="26"> In Progress:</span> <span class="status">{{ job_data.job_status }}</span></dd>
+              {% endif %}
+            {% endif %}
           </dl>
         </div>
         <div class="col-sm-6 col-md-6">
           <dl class="dl-horizontal">
-            <dt>Success #:</dt>
+            {# <dt>Success #:</dt>
               <dd>{{ project.item_success|default('0') }}</dd>
             <dt>Failed #:</dt>
               <dd>{{ project.item_failed|default('0') }}</dd>
             <dt>In Progress #:</dt>
-              <dd>{{ project.item_in_progress|default('0') }}</dd>
+              <dd>{{ project.item_in_progress|default('0') }}</dd> #}
+            {% if project.subjects_total is defined or project.items_total is defined or project.capture_datasets_total is defined %}
+            <dt>Total # Records:</dt>
+              {% if project.subjects_total != 0 %}
+                <dd>Subjects: {{ project.subjects_total|default('0') }}</dd>
+              {% endif %}
+              {% if project.items_total != 0 %}
+                <dd>Items: {{ project.items_total|default('0') }}</dd>
+              {% endif %}
+              {% if project.capture_datasets_total != 0 %}
+                <dd>Capture Datasets: {{ project.capture_datasets_total|default('0') }}</dd>
+              {% endif %}
+              {% if project.models_total != 0 %}
+                <dd>Models: {{ project.models_total|default('0') }}</dd>
+              {% endif %}
+            {% endif %}
+            <dt>Remove Data and Files</dt>
+              <dd><a href="javascript:void(0);" id="purge-data" class="text-danger"><span class="glyphicon glyphicon-trash" aria-hidden="true"></span> Purge This Import's Data and Files</a></dd>
           </dl>
         </div>
       </div>
     </div>
   </div>
 
+  <h3>Uploaded Metadata</h3>
   <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
     <thead>
       <tr>
-        <th class="text-center">Subject</th>
-        <th class="text-center">Item</th>
-        {# <th class="text-center">Status</th> #}
+        {% if job_data.job_type == 'subjects metadata import' %}
+          <th class="text-center">Subject</th>
+          <th class="text-center">Item</th>
+        {% elseif job_data.job_type == 'items metadata import' %}
+          <th class="text-center">Subject</th>
+          <th class="text-center">Item</th>
+        {% elseif job_data.job_type == 'capture datasets metadata import' %}
+          <th class="text-center">Item</th>
+          <th class="text-center">Capture Dataset</th>
+        {% elseif job_data.job_type == 'models metadata import' %}
+          <th class="text-center">Capture Dataset</th>
+          <th class="text-center">Item</th>
+          <th class="text-center">Model Type</th>
+          <th class="text-center">Model Date of Creation</th>
+        {% endif %}
       </tr>
     </thead>
   </table>
+
+  {% if project.uploaded_files is defined %}
+    <div class="row">
+      <div class="col-sm-6 col-md-6">
+        <div class="panel panel-default">
+          <div class="panel-body">
+            <h3>Uploaded Files</h3>
+            <div id="jstreeContainer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-md-6">
+        {% if job_data.job_status is defined %}
+          <div class="panel panel-default">
+            <div class="panel-body">
+              <h3>BagIt Validation Results</h3>
+              {% if not project.bagit_validation_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' %}
+                <p><span class="glyphicon glyphicon-time"></span> Validation pending. Please check back shortly.</p>
+              {% elseif job_data.job_status == 'cancelled' %}
+                <p><span class="glyphicon glyphicon-ban-circle"></span> Job cancelled</p>
+              {% else %}
+                <ol class="list-unstyled">
+                  {% for bagit_validation_error in project.bagit_validation_errors %}
+                    <li class="text-danger"><strong>{{ bagit_validation_error.job_log_description }}</strong></li>
+                  {% else %}
+                    <li class="text-success"><strong><span class="glyphicon glyphicon-ok"></span> No BagIt validation errors found.</strong></li>
+                  {% endfor %}
+                </ol>
+              {% endif %}
+              <hr>
+              <h3>Image Validation Results</h3>
+              {% if not project.image_validation_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' or job_data.job_status == 'image validation in progress' %}
+                <p><span class="glyphicon glyphicon-time"></span> Image validation pending. Please check back shortly.</p>
+              {% elseif job_data.job_status == 'cancelled' %}
+                <p><span class="glyphicon glyphicon-ban-circle"></span> Job cancelled</p>
+              {% else %}
+                <ol class="list-unstyled">
+                  {% for image_validation_error in project.image_validation_errors %}
+                    <li class="text-danger"><strong>{{ image_validation_error.job_log_description }}</strong></li>
+                  {% else %}
+                    <li class="text-success"><strong><span class="glyphicon glyphicon-ok"></span> No image validation errors found.</strong></li>
+                  {% endfor %}
+                </ol>
+              {% endif %}
+              <hr>
+              <h3>File Transfer Results</h3>
+              {% if not project.file_transfer_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' or job_data.job_status == 'image validation in progress' or job_data.job_status == 'file transfer in progress' %}
+                <p><span class="glyphicon glyphicon-time"></span> File transfers pending. Please check back shortly.</p>
+              {% elseif job_data.job_status == 'cancelled' %}
+                <p><span class="glyphicon glyphicon-ban-circle"></span> Job cancelled</p>
+              {% else %}
+                <ol class="list-unstyled">
+                  {% for file_transfer_error in project.file_transfer_errors %}
+                    <li class="text-danger" style="border-bottom: 1px solid #dddddd; padding: 0.5rem 0 0.5rem 0.5rem;"><strong>{{ file_transfer_error.job_log_description }}</strong></li>
+                  {% else %}
+                    <li class="text-success"><strong><span class="glyphicon glyphicon-ok"></span> No file transfer errors found.</strong></li>
+                  {% endfor %}
+                </ol>
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+
+  {% if project.uploaded_files is defined %}
+    <div class="row hidden" id="panel-spreadsheets">
+      <div class="col-sm-12 col-md-12">
+        <h3>Uploaded CSV Files</h3>
+        <!-- Spreadsheets container (Handsontable) -->
+      </div>
+    </div>
+  {% endif %}
 
 {% endblock %}
 
@@ -60,18 +179,55 @@
   <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.js') }}"></script>
   <script type="text/javascript">
     $(document).ready(function() {
 
       var id = "{{ id }}",
-          details_page = "/admin/projects/datasets/";
+          uuid = "{{ job_data.uuid }}",
+          job_type = "{{ job_data.job_type }}",
+          job_status = "{{ job_data.job_status }}",
+          columns = [],
+          details_page;
+
+      {% if project.execute_jobs_input is defined %}
+        var parent_project_id = "{{ project.execute_jobs_input.parent_project_id }}",
+            parent_record_id = "{{ project.execute_jobs_input.parent_record_id }}",
+            parent_record_type = "{{ project.execute_jobs_input.parent_record_type }}";
+      {% endif %}
+
+      if(job_type === 'subjects metadata import') {
+        columns = [
+          { "data": "subject_name" },
+          { "data": "item_description" }
+        ];
+      }
+
+      if(job_type === 'items metadata import') {
+        columns = [
+          { "data": "subject_name" },
+          { "data": "item_description" }
+        ];
+      }
+
+      if(job_type === 'capture datasets metadata import') {
+        columns = [
+          { "data": "item_description" },
+          { "data": "capture_dataset_name" }
+        ];
+      }
+
+      if(job_type === 'models metadata import') {
+        columns = [
+          { "data": "capture_dataset_name" },
+          { "data": "item_description" },
+          { "data": "model_file_type" },
+          { "data": "date_of_creation" }
+        ];
+      }
 
       $('#browse').dataTable({
-        "columns": [
-          { "data": "subject_display_name" },
-          { "data": "item_display_name" }
-          // { "data": "status" }
-        ],
+        "columns": columns,
         //"dom": 'lfip<"datatables_bulk_actions">tip',
         "pagingType": "simple_numbers",
         "stateSave": true,
@@ -81,14 +237,14 @@
         // All data management will be done on the server side.
         "serverSide": true,
         // Path to the file that is going to handle the queries.
-        "ajax": "/admin/import/" + id + "/datatables_browse_import_details",
+        "ajax": "/admin/import/" + uuid + "/datatables_browse_import_details",
         // Method type.
         "serverMethod": "POST",
         // Values in the length dropdown.
         "lengthMenu":[10,50,100,500],
         // Set some widths.
         "columnDefs":[
-          {"sWidth":"400px","aTargets":[0]}
+          {"sWidth":"22%","aTargets":[0,1]}
           // {"bSortable":false,"aTargets":[0,1]}
         ],
         "fnRowCallback":function(nRow, aData, iDisplayIndex) {
@@ -103,12 +259,228 @@
             // Don't do anything if the table cell has the 'manage_column' CSS class.
             if(thisTableCell.hasClass('manage_column')) return;
             // Send to the details page.
-            window.location.href = details_page + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
+
+            if(job_type === 'subjects metadata import') {
+              details_page = '/admin/projects/datasets/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
+            }
+
+            if(job_type === 'items metadata import') {
+              details_page = '/admin/projects/datasets/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
+            }
+
+            if(job_type === 'capture datasets metadata import') {
+              details_page = '/admin/projects/dataset_elements/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id + '/' + aData.capture_dataset_repository_id;
+            }
+
+            if(job_type === 'models metadata import') {              
+              // TODO: Not sure what to link to. Capture Dataset or Model? Probably Model...
+              // details_page = '/admin/projects/dataset_elements/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id + '/' + aData.capture_dataset_repository_id;
+              let parent_repository_id = aData.capture_dataset_repository_id ? aData.capture_dataset_repository_id : aData.item_repository_id;
+              details_page = '/admin/projects/model/manage/' + parent_repository_id + '/' + aData.model_repository_id;
+            }
+
+            window.location.href = details_page;
           });
 
         }
         
       });
+
+      // Initialize jsTree.
+      // See: https://www.jstree.com/
+      $('#jstreeContainer').jstree({
+        'cache': false,
+        'state': { 'key': 'dpoJsTreeFiles' },
+        'core' : {
+          'data' : {
+            'url' : '/admin/get_directory_contents/' + uuid,
+            'data' : function (node) {
+              return { 'id' : node.id };
+            },
+            'force_text' : true
+          },
+        },
+        'sort' : function(a, b) {
+            return this.get_type(a) === this.get_type(b) ? (this.get_text(a) > this.get_text(b) ? 1 : -1) : (this.get_type(a) >= this.get_type(b) ? 1 : -1);
+          },
+          'types' : {
+            'default' : { 'icon' : 'glyphicon glyphicon-folder-close' },
+            'file' : { 'valid_children' : [], 'icon' : 'file' }
+          },
+          'unique' : {
+            'duplicate' : function (name, counter) {
+              return name + ' ' + counter;
+            }
+          },
+          'plugins' : ['sort','types','unique']
+      });
+
+      // jsTree prevents the default anchor href action, so it need to be overridden.
+      $('#jstreeContainer').on('click', 'a', function(e) {
+        if ($(this).attr('href') !== '#') {
+          document.location.href = this.href;
+        }
+      });
+
+      /**
+       * Purge Import button click handler
+       */
+      $('#purge-data').on('click', function(e) {
+        
+        swal("Remove this Import's Data and Files? This action is destructive, and cannot be undone.", {
+          buttons: {
+            cancel: "No",
+            catch: {
+              text: "Yes",
+              value: "yes",
+            }
+          },
+        })
+        .then((value) => {
+          switch (value) {
+            case "yes":
+              clearInterval(checkerId);
+              $('.overlay').removeClass('hidden');
+              window.location.href = '/admin/purge_import/' + uuid;
+              break;
+            default:
+              swal("No action taken. Imported data and files unaffected.");
+          }
+        });
+
+      });
+
+      /**
+       * Display CSV Data
+       */
+      let resultsContainer = $('#panel-spreadsheets').find('.col-md-12'),
+          csvs = '{% if project.csv is defined %}{{ project.csv | raw }}{% endif %}',
+          csvsParsed = JSON.parse(csvs),
+          csvsRowCount = '{% if project.csv_row_count is defined %}{{ project.csv_row_count | raw }}{% endif %}',
+          csvsRowCountParsed = JSON.parse(csvsRowCount),
+          spreadsheetCount = 1;
+
+      if(Object.keys(csvsParsed).length) {
+        // Loop through the CSVs.
+        for (var key in csvsParsed) {
+          // Display the CSV within a spreadsheet interface.
+          // See: Handsontable
+          // https://github.com/handsontable/handsontable
+          let container,
+              hotVarName = 'hot',
+              panel = $('<div />').addClass('panel panel-default panel-spreadsheet'),
+              panelHeading = $('<div />').addClass('panel-heading').text(key),
+              panelBody = $('<div />').addClass('panel-body')
+                  .attr('id', 'csv-spreadsheet-' + spreadsheetCount)
+                  .attr('style', 'height: ' + (csvsRowCountParsed[key]*40) + 'px');
+
+          // Unset the 'row_count'.
+          // delete csvsParsed[key]['row_count'];
+
+          // console.log(csvsParsed[key]);
+
+          // Show the panel-spreadsheet container.
+          $('#panel-spreadsheets').removeClass('hidden');
+          // Populate the panel with the heading and body.
+          panel.append(panelHeading, panelBody);
+          // Add the panel to the results container.
+          resultsContainer.append(panel);
+
+          // Initialize Handsontable.
+          container = document.getElementById('csv-spreadsheet-' + spreadsheetCount);
+          // Note: window[hotVarName + spreadsheetCount] is a dynamic variable.
+          // This basically allows for multiple Handsontable instances.
+          // See: https://stackoverflow.com/a/28130158/1298317
+          window[hotVarName + spreadsheetCount] = new Handsontable(container, {
+            data: csvsParsed[key],
+            rowHeaders: true,
+            colHeaders: true,
+            outsideClickDeselects: false,
+            selectionMode: 'multiple',
+            readOnly: true
+          });
+
+          // TODO: Hook up the capability to export data via getData().
+          // console.log(window[hotVarName + spreadsheetCount].getData());
+
+          spreadsheetCount++;
+        }
+      }
+
+      function execute_jobs(uuid, parent_project_id, parent_record_id, parent_record_type) {
+
+        console.log('executing job...');
+
+        if (uuid && parent_project_id && parent_record_id && parent_record_type) {
+
+          $.ajax({
+            'type': 'GET'
+            ,'dataType': 'json'
+            ,'url': '/admin/execute_jobs/' + uuid + '/' + parent_project_id + '/' + parent_record_id + '/' + parent_record_type
+            ,success: function(result) {
+              if(result) {
+
+                console.log(result);
+                
+              } else {
+               alert(123);
+              }
+            }
+          });
+
+        }
+      }
+
+      /**
+       * Job Status Checker
+       * Endpoint/example: /admin/get_job_status/3
+       */
+      // Poll every 5 seconds to get the status of the job.
+      var checkerId = setInterval(checkStatus, 5000);
+
+      function checkStatus() {
+
+        if (job_status === 'complete') {
+          clearInterval(checkerId);
+        } else {
+          $.ajax({
+            'type': 'GET'
+            ,'dataType': 'json'
+            ,'url': '/admin/get_job_status/' + uuid
+            ,success: function(result) {
+              if(result) {
+
+                if (result === 'bagit validation starting') {
+                  execute_jobs(uuid, parent_project_id, parent_record_id, parent_record_type);
+                }
+
+                $('.status-target span.status').empty().text(result);
+                if (result === 'complete') {
+                  clearInterval(checkerId);
+                  $('.status-target span.in-progress').remove();
+                  $('.status-target').addClass('text-success');
+                  $('.status-target span.status').wrap( "<strong></strong>" );
+                  $('.status-target span.status').prepend('<span class="glyphicon glyphicon-ok"></span> ');
+                  location.reload();
+                }
+                if ((result === 'failed') || (result === 'cancelled')) {
+                  clearInterval(checkerId);
+                  $('.status-target span.in-progress').remove();
+                  $('.status-target').addClass('text-danger');
+                  $('.status-target span.status').wrap( "<strong></strong>" );
+                  $('.status-target span.status').prepend('<span class="glyphicon glyphicon-exclamation-sign"></span> ');
+                  // Change the alert banner to an error.
+                  $('.alert-dismissible').removeClass('alert-success').addClass('alert-danger').empty().html('<span class="glyphicon glyphicon-exclamation-sign"></span> Error: See below for details') 
+                }
+              } else {
+                $('.status-target span.status').empty().text('Error: Could not get status');
+                clearInterval(checkerId);
+              }
+            }
+          });
+        }
+
+      }
 
     });
   </script>

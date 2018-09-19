@@ -9,7 +9,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
 use AppBundle\Controller\RepoStorageHybridController;
-use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 use AppBundle\Form\PhotogrammetryScaleBarTargetPairForm;
@@ -30,11 +29,11 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u)
+    public function __construct(AppUtilities $u, Connection $conn)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
-        $this->repo_storage_controller = new RepoStorageHybridController();
+        $this->repo_storage_controller = new RepoStorageHybridController($conn);
     }
 
     /**
@@ -65,7 +64,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
           'search_value' => $search,
           'parent_id' => $req['parent_id']
         );
-        $this->repo_storage_controller->setContainer($this->container);
+        
         $results = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
         return $this->json($results);
@@ -91,7 +90,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
         if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
-        $this->repo_storage_controller->setContainer($this->container);
+        
         if(!empty($id) && empty($post)) {
           $rec = $this->repo_storage_controller->execute('getPhotogrammetryScaleBarTargetPair', array(
             'photogrammetry_scale_bar_target_pair_repository_id' => $id));
@@ -144,7 +143,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
     public function get_unit()
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this->container);
+      
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'unit',
           'sort_fields' => array(
@@ -168,7 +167,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
     public function get_target_type()
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this->container);
+      
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'target_type',
           'sort_fields' => array(
@@ -198,7 +197,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
             // Create the array of ids.
             $ids_array = explode(',', $request->query->get('ids'));
 
-            $this->repo_storage_controller->setContainer($this->container);
+            
 
             // Loop thorough the ids.
             foreach ($ids_array as $key => $id) {

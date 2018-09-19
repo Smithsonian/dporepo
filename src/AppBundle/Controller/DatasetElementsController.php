@@ -10,7 +10,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
 use AppBundle\Controller\RepoStorageHybridController;
-use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 use AppBundle\Form\DatasetElement;
@@ -28,14 +27,20 @@ class DatasetElementsController extends Controller
     private $repo_storage_controller;
 
     /**
+     * @var string $uploads_path
+     */
+    private $uploads_path;
+
+    /**
     * Constructor
     * @param object  $u  Utility functions object
     */
-    public function __construct(AppUtilities $u)
+    public function __construct(AppUtilities $u, Connection $conn)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
-        $this->repo_storage_controller = new RepoStorageHybridController();
+        $this->repo_storage_controller = new RepoStorageHybridController($conn);
+        $this->uploads_path = '/uploads/repository';
     }
 
     /**
@@ -44,7 +49,7 @@ class DatasetElementsController extends Controller
     public function browse_dataset_elements(Connection $conn, Request $request, ProjectsController $projects, SubjectsController $subjects, ItemsController $items, DatasetsController $datasets)
     {
         // Database tables are only created if not present.
-        $this->repo_storage_controller->setContainer($this->container);
+        
         $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'dataset_element'));
 
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
@@ -53,14 +58,14 @@ class DatasetElementsController extends Controller
         $id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $dataset_data = $datasets->get_dataset($this->container, (int)$id);
+        $dataset_data = $datasets->get_dataset((int)$id);
         if(!$dataset_data) throw $this->createNotFoundException('The record does not exist');
         
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $project_repository_id));
 
-        $subject_data = $subjects->get_subject($this->container, (int)$subject_repository_id);
-        $item_data = $items->get_item($this->container, (int)$item_repository_id);
-        $dataset_element_data = $this->get_dataset_element($this->container, (int)$id);
+        $subject_data = $subjects->get_subject((int)$subject_repository_id);
+        $item_data = $items->get_item((int)$item_repository_id);
+        $dataset_element_data = $this->get_dataset_element((int)$id);
 
         // Truncate the item_description.
         $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
@@ -77,6 +82,7 @@ class DatasetElementsController extends Controller
             'item_data' => $item_data,
             'dataset_data' => $dataset_data,
             'dataset_element_data' => $dataset_element_data,
+            'uploads_path' => $this->uploads_path,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
@@ -115,7 +121,7 @@ class DatasetElementsController extends Controller
           $query_params['capture_dataset_repository_id'] = $id;
         }
 
-        $this->repo_storage_controller->setContainer($this->container);
+        
         $data = $this->repo_storage_controller->execute('getDatatableCaptureDataElement', $query_params);
 
         return $this->json($data);
@@ -135,7 +141,7 @@ class DatasetElementsController extends Controller
      */
     function show_dataset_elements_form( Connection $conn, Request $request, ProjectsController $projects, SubjectsController $subjects, ItemsController $items, DatasetsController $datasets )
     {
-        $this->repo_storage_controller->setContainer($this->container);
+        
 
         $dataset_element = new DatasetElements();
         $post = $request->request->all();
@@ -161,9 +167,9 @@ class DatasetElementsController extends Controller
         // Get data for the breadcumbs.
         // TODO: find a better way?
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => (int)$dataset_element->project_repository_id));
-        $subject_data = $subjects->get_subject($this->container, (int)$dataset_element->subject_repository_id);
-        $item_data = $items->get_item($this->container, (int)$dataset_element->item_repository_id);
-        $dataset_data = $datasets->get_dataset($this->container, (int)$dataset_element->capture_dataset_repository_id);
+        $subject_data = $subjects->get_subject((int)$dataset_element->subject_repository_id);
+        $item_data = $items->get_item((int)$dataset_element->item_repository_id);
+        $dataset_data = $datasets->get_dataset((int)$dataset_element->capture_dataset_repository_id);
         
         // Truncate the item_description so the breadcrumb don't blow up.
         $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
@@ -219,12 +225,11 @@ class DatasetElementsController extends Controller
      * @param       int $capture_dataset_repository_id  The dataset ID
      * @return      array|bool        The query result
      */
-    public function get_dataset_elements($container, $capture_dataset_repository_id = false)
+    public function get_dataset_elements($capture_dataset_repository_id = false)
     {
         $query_params = array(
           'capture_dataset_repository_id' => $capture_dataset_repository_id,
         );
-        $this->repo_storage_controller->setContainer($container);
         $data = $this->repo_storage_controller->execute('getElementsForCaptureDataset', $query_params);
         return $data;
     }
@@ -237,7 +242,7 @@ class DatasetElementsController extends Controller
     public function get_dataset_elements_tree_browser(Request $request)
     {
         $capture_dataset_repository_id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
-        $capture_data_element = $this->get_dataset_elements($this->container, $capture_dataset_repository_id);
+        $capture_data_element = $this->get_dataset_elements($capture_dataset_repository_id);
 
         foreach ($capture_data_element as $key => $value) {
             $data[$key] = array(
@@ -260,9 +265,8 @@ class DatasetElementsController extends Controller
      * @param       int $capture_data_element_repository_id  The dataset element ID
      * @return      array|bool                The query result
      */
-    public function get_dataset_element($container, $capture_data_element_repository_id = false)
+    public function get_dataset_element($capture_data_element_repository_id = false)
     {
-        $this->repo_storage_controller->setContainer($container);
         $record = $this->repo_storage_controller->execute('getRecordById',
           array(
             'base_table' => 'capture_data_element',
@@ -296,7 +300,7 @@ class DatasetElementsController extends Controller
 
           $ids_array = explode(',', $ids);
 
-          $this->repo_storage_controller->setContainer($this->container);
+          
 
           // Loop thorough the ids.
           foreach ($ids_array as $key => $id) {
@@ -317,8 +321,7 @@ class DatasetElementsController extends Controller
       $referer = $request->headers->get('referer');
       return $this->redirect($referer);
 
-//      return $this->redirectToRoute('dataset_elements_browse', array('project_repository_id' => $project_repository_id, 'subject_repository_id' => $subject_repository_id,
-//          'item_repository_id' => $item_repository_id, 'capture_dataset_repository_id' => $capture_dataset_repository_id));
+     // return $this->redirectToRoute('dataset_elements_browse', array('project_repository_id' => $project_repository_id, 'subject_repository_id' => $subject_repository_id, 'item_repository_id' => $item_repository_id, 'capture_dataset_repository_id' => $capture_dataset_repository_id));
     }
 
 }

@@ -7,6 +7,19 @@ body {
   padding-top: 100px;
 }
 
+.overlay {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0,0,0,0.5);
+  z-index: 5;
+}
+
 /*
  * Global add-ons
  */
@@ -130,10 +143,14 @@ body {
   cursor: pointer;
 }
 
+.datatables_bulk_actions div.dt-buttons {
+  margin-left: 0.5rem;
+}
+
 /*
  * jQuery UI Resizable
  */
-.ui-resizable-handle {
+.sidebar-nav .ui-resizable-handle {
   position: absolute;
   font-size: 0.1px;
   display: block;
@@ -142,7 +159,7 @@ body {
   right: -8px;
 }
 
-.ui-resizable-handle:after {
+.sidebar-nav .ui-resizable-handle:after {
   content: "";
   display: block;
   position: absolute;
@@ -218,8 +235,12 @@ dd {
   margin-bottom: 1rem;
 }
 
-.nav-tabs li a {
+.nav-tabs.main-nav li a {
 	color: white;
+}
+
+.nav-tabs.main-nav li.active a {
+  color: black;
 }
 
 .nav-tabs li a:hover {
@@ -330,4 +351,60 @@ dd {
 
 .isni-labels {
   margin-top: 1rem;
+}
+
+/**
+ * Uploads UI
+ */
+
+.panel-uploads,
+.panel-validation-results,
+.panel-spreadsheet {
+  margin-top: 2rem;
+}
+
+.panel-uploads .panel-heading,
+.panel-validation-results .panel-heading,
+.panel-spreadsheet .panel-heading {
+  font-size: 2rem;
+  font-weight: 500;
+}
+
+.panel-uploads .drop-zone,
+.panel-validation-results .panel-body {
+  height: 43rem;
+  overflow: scroll;
+}
+
+.panel-spreadsheet .panel-body {
+  overflow: scroll;
+}
+
+.panel-spreadsheet .panel-body {
+  padding: 0;
+}
+
+
+.dz-preview {
+  display: none;
+}
+
+
+.overlay-uploading {
+  position: absolute;
+  text-align: right;
+  top: 2rem;
+  left: 1.5rem;
+  right: 1.5rem;
+  bottom: 42rem;
+  background-color: rgba(0,0,0,0.5);
+  z-index: 5;
+  color: #ffffff;
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+}
+
+.overlay-uploading span {
+  font-size: 1.8rem;
+  font-weight: normal;
 }

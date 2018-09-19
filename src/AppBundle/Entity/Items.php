@@ -9,7 +9,6 @@ class Items
 {
 
     /**
-     * @Assert\NotBlank()
      * @Assert\Length(min="1", max="255")
      * @var string
      */
@@ -21,11 +20,8 @@ class Items
     public $local_item_id;
 
     /**
-     * @var string
-     */
-    public $item_display_name;
-
-    /**
+     * @Assert\NotBlank()
+     * @Assert\Length(min="1", max="255")
      * @var string
      */
     public $item_description;

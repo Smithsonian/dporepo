@@ -1,0 +1,6 @@
+import_row_id,local_subject_id,subject_guid,subject_name,subject_display_name,holding_entity_name,holding_entity_guid
+1,ABC 101,GUID 11,Subject Name 1,"Subject Display Name 1",NAME: Holding Entity Name,0000000123456789
+2,ABC 102,GUID 12,Subject Name 2,"Subject Display Name 2",NAME: Holding Entity Name,0000000123456789
+3,ABC 103,GUID 13,Subject Name 3,"Subject Display Name 3",NAME: Holding Entity Name,0000000123456789
+4,ABC 104,GUID 14,Subject Name 4,"Subject Display Name 4",NAME: Holding Entity Name,0000000123456789
+5,ABC 105,GUID 15,Subject Name 5,"Subject Display Name 5",NAME: Holding Entity Name,0000000123456789

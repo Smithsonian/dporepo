@@ -5,11 +5,11 @@ namespace AppBundle\Controller;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Doctrine\DBAL\Driver\Connection;
 
 use AppBundle\Controller\RepoStorageHybridController;
 
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Symfony\Component\DependencyInjection\Container;
 
 // Custom utility bundle
 use AppBundle\Utils\AppUtilities;
@@ -22,9 +22,9 @@ class WorkflowController extends Controller {
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(AppUtilities $u)
+  public function __construct(AppUtilities $u, Connection $conn)
   {
-    $this->repo_storage_controller = new RepoStorageHybridController();
+    $this->repo_storage_controller = new RepoStorageHybridController($conn);
   }
 
 
@@ -61,7 +61,7 @@ class WorkflowController extends Controller {
       'user_id' => $user_id,
     );
 
-    $this->repo_storage_controller->setContainer($this->container);
+    
     $data = $this->repo_storage_controller->execute('setWorkflowProcessingStatus', $query_params);
 
     return $this->json($data);
@@ -87,7 +87,7 @@ class WorkflowController extends Controller {
       'record_id' => $record_id,
     );
 
-    $this->repo_storage_controller->setContainer($this->container);
+    
     $data = $this->repo_storage_controller->execute('getWorkflowProcessingStatus', $query_params);
 
     return $this->json($data);
@@ -112,7 +112,7 @@ class WorkflowController extends Controller {
 
     $uid = is_object($this->getUser()) ? $this->getUser()->getId() : 0;
 
-    $this->repo_storage_controller->setContainer($this->container);
+    
 
     $id = $this->repo_storage_controller->execute('saveRecord', array(
       'base_table' => $record_type,

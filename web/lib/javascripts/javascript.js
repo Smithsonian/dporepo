@@ -35,7 +35,11 @@ jQuery(document).ready(function($) {
     var allCheckedCheckboxes = $(this).parent().parent().find('input[name=manage_checkbox]:checkbox:checked');
 
     if(!allCheckedCheckboxes.length) {
-      swal('No Records Selected', 'Please choose at least one record.');
+      swal({
+        title: 'No Records Selected',
+        text: 'Please choose at least one record.',
+        icon: 'warning'
+      });
       return;
     }
 
@@ -46,46 +50,54 @@ jQuery(document).ready(function($) {
     returnPath = $(this).parent().parent().parent().find('#return-path').val();
 
     swal({
-      title: 'Remove Records',
-      text: 'Are you sure you want to remove these records?',
-      type: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#DD6B55',
-      confirmButtonText: 'Yes, Remove',
-      closeOnConfirm: true
-    },
-    function(){
-
-      var recordIds = [];
-
-      allCheckedCheckboxes.each(function(e) {
-        var thisCheckbox = $(this);
-        recordIds.push(thisCheckbox.val());
-      });
-
-      var recordIdsString = JSON.stringify(recordIds).replace('[','').replace(']','').replace(/"/g,''),
-          urlSlash = ((currentPath.join('/') !== 'admin/workspace/') && (currentPath.indexOf('resources') !== 1)) ? '/' : '';
-
-      var returnPathString;
-      if(null != returnPath) {
-        returnPathString = '&returnpath=' . returnPath;
-      }
-
-      var deleteUrl;
-      if(null != deletePath) {
-        deleteUrl = window.location.origin + '/' + deletePath + '?ids=' + recordIdsString;
-      }
-      else {
-        deleteUrl = window.location.origin + '/' + currentPath.join('/') + urlSlash + 'delete?ids=' + recordIdsString;
-      }
-
-      if(null != deleteUrl) {
-        if(null != returnPathString) {
-          deleteUrl += returnPathString;
+      title: 'Remove Records?',
+      text: 'Are you sure you want to remove the selected record(s)?',
+      icon: 'warning',
+      buttons: {
+        cancel: "No",
+        catch: {
+          text: "Yes",
+          value: "yes",
         }
+      },
+    })
+    .then((value) => {
+      switch (value) {
+        case "yes":
+          var recordIds = [];
+
+          allCheckedCheckboxes.each(function(e) {
+            var thisCheckbox = $(this);
+            recordIds.push(thisCheckbox.val());
+          });
+
+          var recordIdsString = JSON.stringify(recordIds).replace('[','').replace(']','').replace(/"/g,''),
+              urlSlash = ((currentPath.join('/') !== 'admin/workspace/') && (currentPath.indexOf('resources') !== 1)) ? '/' : '';
+
+          var returnPathString;
+          if(null != returnPath) {
+            returnPathString = '&returnpath=' . returnPath;
+          }
+
+          var deleteUrl;
+          if(null != deletePath) {
+            deleteUrl = window.location.origin + '/' + deletePath + '?ids=' + recordIdsString;
+          }
+          else {
+            deleteUrl = window.location.origin + '/' + currentPath.join('/') + urlSlash + 'delete?ids=' + recordIdsString;
+          }
+
+          if(null != deleteUrl) {
+            if(null != returnPathString) {
+              deleteUrl += returnPathString;
+            }
+          }
+          // console.log(window.location.origin + '/' + currentPath.join('/') + urlSlash + 'delete?ids=' + recordIdsString);
+          document.location.href = deleteUrl;
+          break;
+        default:
+          return;
       }
-      // console.log(window.location.origin + '/' + currentPath.join('/') + urlSlash + 'delete?ids=' + recordIdsString);
-      document.location.href = deleteUrl;
     });
 
   });
@@ -115,15 +127,15 @@ jQuery(document).ready(function($) {
   /**
    * Set the Active Navigation Tab
    */
-  $('.nav-tabs li').each(function(e) {
+  $('.nav-tabs.main-nav li').each(function(e) {
     const thisItem = $(this);
     thisItem.removeClass('active');
     if(currentPath[1] === thisItem.attr('id')) {
       thisItem.addClass('active');
     } else if(currentPath[1].length === 0) {
-      $('.nav-tabs li#admin').addClass('active');
+      $('.nav-tabs.main-nav li#admin').addClass('active');
     } else if (currentPath[1] === 'projects') {
-      $('.nav-tabs li#workspace').addClass('active');
+      $('.nav-tabs.main-nav li#workspace').addClass('active');
     }
   });
 
@@ -191,7 +203,8 @@ jQuery(document).ready(function($) {
   $('body').on('click', '.view-hidden-content', function(e) {
 
     var viewHiddenContentButton = $(this),
-        toggleableContainers = viewHiddenContentButton.parent().find('.col-hidden-toggle');
+        toggleableContainers = viewHiddenContentButton.parent().find('.col-hidden-toggle')
+        originalText = (typeof viewHiddenContentButton.attr('data-original-text') !== 'undefined') ? viewHiddenContentButton.attr('data-original-text') : 'Expand Details';
 
     if(!toggleableContainers.length) toggleableContainers = $('.col-hidden-toggle');
 
@@ -205,7 +218,7 @@ jQuery(document).ready(function($) {
           .removeClass('glyphicon-chevron-down')
           .addClass('glyphicon-chevron-up');
       } else {
-        viewHiddenContentButton.find('.view-hidden-content-text').text('Expand Details');
+        viewHiddenContentButton.find('.view-hidden-content-text').text(originalText);
         viewHiddenContentButton.find('.glyphicon')
           .removeClass('glyphicon-chevron-up')
           .addClass('glyphicon-chevron-down');
@@ -271,3 +284,16 @@ jQuery(document).ready(function($) {
   });
 
 });
+
+function getFormattedDate() {
+  var date = new Date()
+      ,day = date.getDate().toString()
+      ,month = ("0" + (date.getMonth()+1)).slice(-2)
+      ,year = date.getFullYear().toString()
+      ,hour = ("0" + date.getHours()).slice(-2)
+      ,minutes = date.getMinutes().toString()
+      ,seconds = ("0" + date.getSeconds()).slice(-2)
+      ,date_formatted = month+"-"+day+"-"+year+"-"+hour+"_"+minutes+"_"+seconds;
+
+  return date_formatted;
+}

@@ -10,7 +10,6 @@ use Doctrine\DBAL\Driver\Connection;
 
 use Symfony\Component\HttpFoundation\Session\Session;
 use AppBundle\Controller\RepoStorageHybridController;
-use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 // Custom utility bundles
@@ -33,11 +32,11 @@ class AdminController extends Controller
     * Constructor
     * @param object  $u  Utility functions object
     */
-    public function __construct(AppUtilities $u)
+    public function __construct(AppUtilities $u, Connection $conn)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
-        $this->repo_storage_controller = new RepoStorageHybridController();
+        $this->repo_storage_controller = new RepoStorageHybridController($conn);
     }
 
     /**
@@ -104,13 +103,12 @@ class AdminController extends Controller
           $query_params['search_value'] = $search;
         }
 
-        $this->repo_storage_controller->setContainer($this->container);
         $data = $this->repo_storage_controller->execute('getDatatableProject', $query_params);
 
         // Get the subjects count
         if(!empty($data['aaData'])) {
           foreach ($data['aaData'] as $key => $value) {
-            $project_subjects = $subjects->get_subjects($this->container, $value['project_repository_id']);
+            $project_subjects = $subjects->get_subjects($value['project_repository_id']);
             $data['aaData'][$key]['subjects_count'] = count($project_subjects);
           }
         }
@@ -147,13 +145,12 @@ class AdminController extends Controller
           $query_params['search_value'] = $search;
         }
 
-        $this->repo_storage_controller->setContainer($this->container);
         $data = $this->repo_storage_controller->execute('getDatatableSubject', $query_params); //@todo or getDatatableSubjectItem ?
 
         // Get the items count
         if(!empty($data['aaData'])) {
             foreach ($data['aaData'] as $key => $value) {
-                $subject_items = $items->get_items($this->container, $value['subject_repository_id']);
+                $subject_items = $items->get_items($value['subject_repository_id']);
                 $data['aaData'][$key]['items_count'] = count($subject_items);
             }
         }

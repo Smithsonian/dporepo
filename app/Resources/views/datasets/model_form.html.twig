@@ -51,6 +51,13 @@
               {{ form_row(form.has_uv_space) }}
             </div>
             {{ form_row(form.model_maps) }}
+            {{ form_row(form.file_path) }}
+            {% if data.file_path is defined %}
+              <div class="well well-sm">
+                <h5><span class="glyphicon glyphicon-save-file" aria-hidden="true"></span> <a href="{{ uploads_path }}{{ data.file_path }}" download="model{{ data.model_file_type }}">Download Model</a></h5>
+              </div>
+            {% endif %}
+            {{ form_row(form.file_checksum) }}
         </div>
     </div>
 

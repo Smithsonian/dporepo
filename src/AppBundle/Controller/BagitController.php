@@ -2,65 +2,134 @@
 
 namespace AppBundle\Controller;
 
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Symfony\Component\DependencyInjection\Container;
+use Symfony\Component\Finder\Finder;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Doctrine\DBAL\Driver\Connection;
 
 use AppBundle\Controller\RepoStorageHybridController;
+use AppBundle\Service\RepoValidateData;
 
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
 
+/**
+ * Route(service="app.bagit_controller")
+ */
 class BagitController extends Controller
 {
+  /**
+   * @var string $bagit_path
+   */
+  public $bagit_path;
 
   /**
-   * @Route("/bagit/create", name="bagit_create", methods={"POST","GET"})
+   * @var string $uploads_directory
    */
-  public function bagit_create(Request $request) {
+  private $uploads_directory;
 
-    $localpath = $request->request->get('localpath');
-    if(empty($localpath)) {
-      $localpath = $request->query->get('localpath');
-    }
+  /**
+   * @var object $repo_storage_controller
+   */
+  private $repo_storage_controller;
 
-    $overwrite_manifest = $request->request->get('overwrite_manifest');
-    if(empty($overwrite_manifest)) {
-      $overwrite_manifest = $request->query->get('overwrite_manifest');
-    }
-    if(empty($overwrite_manifest)) {
-      $overwrite_manifest = false;
-    }
+  /**
+   * @var object $repoValidate
+   */
+  private $repoValidate;
 
-    $create_data_dir = $request->request->get('create_data_dir');
-    if(empty($create_data_dir)) {
-      $create_data_dir = $request->query->get('create_data_dir');
-    }
-    if(empty($create_data_dir)) {
-      $create_data_dir = true; // By default, create the data dir for the user, and move files into it.
-    }
+  /**
+   * @var array $bag_files_sha1
+   */
+  private $bag_files_sha1;
 
-    $flag_warnings_as_errors = $request->request->get('flag_warnings_as_errors');
-    if(empty($flag_warnings_as_errors)) {
-      $flag_warnings_as_errors = $request->query->get('flag_warnings_as_errors');
-    }
-    if(empty($flag_warnings_as_errors)) {
-      $flag_warnings_as_errors = false;
-    }
+  /**
+   * @var array $bag_files_md5
+   */
+  private $bag_files_md5;
 
+  /**
+   * @var array $token_storage
+   */
+  private $token_storage;
+
+  /**
+   * Constructor
+   * @param object  $u  Utility functions object
+   */
+  public function __construct(TokenStorageInterface $token_storage, Connection $conn)
+  {
+
+    $this->u = new AppUtilities();
+    $this->repo_storage_controller = new RepoStorageHybridController($conn);
+    $this->repoValidate = new RepoValidateData($conn);
+    $this->token_storage = $token_storage;
+
+    $this->bagit_path = __DIR__ . '/../../../vendor/scholarslab/bagit/lib/bagit.php';
+
+    // TODO: move this to parameters.yml and bind in services.yml.
+    $ds = DIRECTORY_SEPARATOR;
+    // $this->uploads_directory = $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
+    $this->uploads_directory = __DIR__ . '' . $ds . '..' . $ds . '..' . $ds . '..' . $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
+
+    $this->bag_files_sha1 = array(
+      'bag-info.txt',
+      'bagit.txt',
+      'manifest-sha1.txt',
+      'tagmanifest-sha1.txt',
+    );
+
+    $this->bag_files_md5 = array(
+      'bag-info.txt',
+      'bagit.txt',
+      'manifest-md5.txt',
+      'tagmanifest-md5.txt',
+    );
+  }
+
+  /**
+   * @param array $params Parameters sent to the function.
+   * @return array Results from the BagIt creation process.
+   *
+   * Parameters include:
+   *
+   * localpath
+   * job_id
+   * overwrite_manifest
+   * create_data_dir
+   * flag_warnings_as_errors
+   */
+  public function bagit_create($params = array()) {
+
+    $data = (object)[];
     $return = array();
-
     $manifest_contents = NULL;
 
-    require $this->get('kernel')->getRootDir() . "/../vendor/scholarslab/bagit/lib/bagit.php";
+    // Include the BagIt PHP library
+    require_once $this->bagit_path;
+
+    $data->localpath = !empty($params['localpath']) ? $params['localpath'] : false;
+    $data->job_id = !empty($params['job_id']) ? $params['job_id'] : false;
+    $data->overwrite_manifest = !empty($params['overwrite_manifest']) ? $params['overwrite_manifest'] : false;
+    $data->create_data_dir = !empty($params['create_data_dir']) ? $params['create_data_dir'] : true;
+    $data->flag_warnings_as_errors = !empty($params['flag_warnings_as_errors']) ? $params['flag_warnings_as_errors'] : false;
+
+    // If there is no directory path provided, return early.
+    if(!$data->localpath) {
+      $return['errors'][] = 'Error: Directory path not provided.';
+      return $return;
+    }
+
+    // If there is no job ID provided, return early.
+    if(!$data->job_id) {
+      $return['errors'][] = 'Error: Job ID not provided.';
+      return $return;
+    }
 
     // Make sure bagit manifest does not exist already.
-    if(file_exists($localpath . '/manifest-sha1.txt')) {
-      if(!$overwrite_manifest) {
+    if(file_exists($data->localpath . '/manifest-sha1.txt')) {
+      if(!$data->overwrite_manifest) {
         $return['errors'][] = 'A manifest file exists at this path.';
       }
       else  {
@@ -68,27 +137,28 @@ class BagitController extends Controller
       }
     }
 
-    // Make sure file contents are inside a folder named "data"- create folder and move them if need be.
-    if(!file_exists($localpath . '/data')) {
-      if($create_data_dir) {
-        $this->create_datadir_move_files($localpath);
+    // Make sure file contents are inside a folder named "data" - create folder and move them if need be.
+    if(!file_exists($data->localpath . '/data')) {
+      if($data->create_data_dir) {
+        $this->create_datadir_move_files($data->localpath);
       }
       else {
         $return['errors'][] = 'The data directory for this package is missing.';
       }
     }
     else {
-      $package_data_files = $this->get_package_data_files($localpath . '/data');
+      $package_data_files = $this->get_package_data_files($data->localpath . '/data');
       if(count($package_data_files) == 0) {
         $return['warnings'][] = 'There are no files in the data directory for this package.';
       }
     }
 
     if(array_key_exists('errors', $return) && count($return['errors']) > 0) {
-      return new JsonResponse($return);
+      return $return;
     }
 
-    $bag = new \BagIt($localpath);
+    // Instantiate the BagIt class
+    $bag = new \BagIt($data->localpath);
     $bag->update();
 
     $manifest_filename = $bag->manifest->fileName;
@@ -112,12 +182,11 @@ class BagitController extends Controller
       $return['tag_manifest'] = (array)$tag_manifest;
 
       // Let's get crazy- hash the tagmanifest file too(!)
-      $tagmanifest_hash = $bag->manifest->calculateHash($tag_manifest->fileName);
-      $return['tag_manifest']['tag_manifest_hash'] = $tagmanifest_hash;
+      $return['tag_manifest']['tag_manifest_hash'] = $bag->manifest->calculateHash($tag_manifest->fileName);
     }
 
     if(!array_key_exists('errors', $return) || count($return['errors']) == 0) {
-      if($flag_warnings_as_errors) {
+      if($data->flag_warnings_as_errors) {
         if(!array_key_exists('warnings', $return) || count($return['warnings']) == 0) {
           $return['result'] = 'success';
         }
@@ -133,47 +202,89 @@ class BagitController extends Controller
       $return['result'] = 'fail';
     }
 
-    return new JsonResponse($return);
+    // Log errors to the database.
+    if(isset($return['errors']) && !empty($return['errors'])) {
+      $this->repoValidate->logErrors(
+        array(
+          'job_id' => $data->job_id,
+          'user_id' => 0,
+          'job_log_label' => 'BagIt Validation',
+          'errors' => $return['errors'],
+        )
+      );
+    }
 
+    return $return;
   }
 
   /**
-   * @Route("/bagit/validate", name="bagit_validate", methods={"POST","GET"})
+   * @param array $params Parameters sent to the function.
+   * @return array Results from the BagIt validation process.
+   *
+   * Parameters include:
+   *
+   * localpath
+   * flag_warnings_as_errors
    */
-  public function bagit_validate(Request $request) {
+  public function bagit_validate($params = array()) {
 
-    $localpath = $request->request->get('localpath');
-    if(empty($localpath)) {
-      $localpath = $request->query->get('localpath');
-    }
-
-    $flag_warnings_as_errors = $request->request->get('flag_warnings_as_errors');
-    if(empty($flag_warnings_as_errors)) {
-      $flag_warnings_as_errors = $request->query->get('flag_warnings_as_errors');
-    }
-    if(empty($flag_warnings_as_errors)) {
-      $flag_warnings_as_errors = false;
-    }
-
+    $data = (object)[];
     $return = array();
-
     $manifest_contents = NULL;
+    $data->job_status = 'image validation in progress';
 
-    require $this->get('kernel')->getRootDir() . "/../vendor/scholarslab/bagit/lib/bagit.php";
-    $missing_bagit_files = $this->validate_folder($localpath);
-    if(count($missing_bagit_files) > 0) {
-      $return['errors'] = $missing_bagit_files;
+    // Include the BagIt PHP library
+    require_once $this->bagit_path;
+
+    $data->localpath = !empty($params['localpath']) ? $params['localpath'] : false;
+    $data->flag_warnings_as_errors = !empty($params['flag_warnings_as_errors']) ? $params['flag_warnings_as_errors'] : false;
+
+    // If there is no directory path provided, return early.
+    if(!$data->localpath) {
+      $return['errors'][] = 'Error: Directory path not provided.';
+      return $return;
+    }
+
+    // Get the job ID, so errors can be logged to the database.
+    $dir_array = explode(DIRECTORY_SEPARATOR, $data->localpath);
+    $data->job_id = array_pop($dir_array);
+
+    // Update the 'job_status' in the 'job' table from 'bagit validation in progress' to 'bagit validation in progress (confirmed)'.
+    $this->repo_storage_controller->execute('setJobStatus', 
+      array(
+        'job_id' => $data->job_id, 
+        'status' => 'bagit validation in progress (confirmed)',
+        'date_completed' => date('Y-m-d h:i:s')
+      )
+    );
+
+    // Validate that all of the BagIt files exist.
+    // (bag-info.txt, bagit.txt, manifest-sha1.txt, tagmanifest-md5.txt)
+    $validate_folder = $this->validate_folder($data->localpath);
+
+    if (isset($validate_folder['path_to_bag'])) {
+      // The directory path to the bag.
+      $return['path_to_bag'] = $validate_folder['path_to_bag'];
+    }
+
+    // If there are missing BagIt files, add them to $return['errors'].
+    if (isset($validate_folder['missing_files']) && (count($validate_folder['missing_files']) > 0)) {
+      foreach ($validate_folder['missing_files'] as $mkey => $mvalue) {
+        $return['errors'][] = $mvalue;
+      }
     }
 
     // If we have the manifest and other files, validate the manifest.
     if (!array_key_exists('errors', $return) || count($return['errors']) == 0) {
-      $bag = new \BagIt($localpath);
+
+      // Instantiate the BagIt class
+      $bag = new \BagIt($return['path_to_bag']);
       $validation = $bag->validate();
 
       if (count($validation) > 0) {
         // We can only validate if we have a manifest.
         foreach ($validation as $message) {
-          $full_message = 'Missing file: ';
+          $full_message = 'Missing file - ';
           foreach ($message as $k => $value) {
             $full_message .= ' ' . $value;
           }
@@ -187,18 +298,16 @@ class BagitController extends Controller
       $package_data_files = array();
 
       // Bagit->validate should be checking this anyway.
-      if(!file_exists($localpath . '/data')) {
+      if(!file_exists($return['path_to_bag'] . '/data')) {
         $return['errors'][] = 'The data directory for this package is missing.';
       }
       else {
-        $package_data_files = $this->get_package_data_files($localpath . '/data');
+        $package_data_files = $this->get_package_data_files($return['path_to_bag'] . '/data');
       }
 
       // Is the manifest empty? If so, return this as a warning.
-      if(empty($manifest_contents)) {
-        if(count($package_data_files) > 0) {
-          $return['errors'][] = 'The Bagit manifest is empty but the data directory for the package is not.';
-        }
+      if(empty($manifest_contents) && (count($package_data_files) > 0)) {
+        $return['errors'][] = 'The Bagit manifest is empty but the data directory for the package is not.';
       }
       else {
         // Are there other files in the package that aren't Bagit files and aren't in the manifest?
@@ -208,7 +317,7 @@ class BagitController extends Controller
             if(!array_key_exists('data/' . $pdfilename, $manifest_contents)) {
               $return['warnings'][] = 'File ' . $pdfilename
                 . ' is not included in the manifest, but exists in the data directory for the Bagit package ('
-                . $localpath . '/data/' . $pdfilename . ').';
+                . $data->localpath . '/data/' . $pdfilename . ').';
             }
           }
         }
@@ -233,7 +342,7 @@ class BagitController extends Controller
     }
 
     if(!array_key_exists('errors', $return) || count($return['errors']) == 0) {
-      if($flag_warnings_as_errors) {
+      if($data->flag_warnings_as_errors) {
         if(!array_key_exists('warnings', $return) || count($return['warnings']) == 0) {
           $return['result'] = 'success';
         }
@@ -249,29 +358,87 @@ class BagitController extends Controller
       $return['result'] = 'fail';
     }
 
-    return new JsonResponse($return);
+    // Log errors to the database.
+    if(isset($return['errors']) && !empty($return['errors'])) {
+      $this->repoValidate->logErrors(
+        array(
+          'job_id' => $data->job_id,
+          'user_id' => 0,
+          'job_log_label' => 'BagIt Validation',
+          'errors' => $return['errors'],
+        )
+      );
+      // Set the job_status to 'failed'.
+      $data->job_status = 'failed';
+    }
+
+    // Update the 'job_status' in the 'job' table accordingly.
+    $this->repo_storage_controller->execute('setJobStatus', 
+      array(
+        'job_id' => $data->job_id, 
+        'status' => $data->job_status, 
+        'date_completed' => date('Y-m-d h:i:s')
+      )
+    );
+
+    return $return;
   }
 
-  function validate_folder($localpath, $message_prefix = 'Missing file: '){
-    $missingFiles = [];
-    // Bagit doesn't actually care about this file, but it's included in the tag manifest.
-    if (!file_exists($localpath . '/bag-info.txt')) {
-      $missingFiles[] = $message_prefix . 'Bag Info';
-    }
-    if (!file_exists($localpath . '/manifest-sha1.txt') && !file_exists($localpath . '/manifest-md5.txt')) {
-      $missingFiles[] = $message_prefix . 'Manifest';
-    }
-    if (!file_exists($localpath . '/bagit.txt')) {
-      $missingFiles[] = $message_prefix . 'Bagit';
-    }
-    if (!file_exists($localpath . '/tagmanifest-sha1.txt')) {
-      $missingFiles[] = $message_prefix . 'Tag Manifest';
+  /**
+   * @param array $localpath Path to bag .txt files.
+   * @return array Missing files.
+   */
+  public function validate_folder($localpath, $message_prefix = 'Missing file: ') {
+
+    $bag_files_found = [];
+    $data = [];
+
+    $finder = new Finder();
+    $finder->files()->in($localpath . '/');
+    $finder->files()->name('*.txt');
+
+    // Create an array of all .txt files found.
+    foreach ($finder as $file) {
+      // Since it's allowed to upload recursive directory structures, a bag can be found anywhere.
+      // Get the path to the bag.
+      $path_to_bag = str_replace($localpath . '/', '', $file->getPathname());
+      // Path on Unix, Linux, Mac.
+      if(DIRECTORY_SEPARATOR === '/') {
+        $data['path_to_bag'] = $localpath . '/' . str_replace(basename($file->getRealPath()), '', $path_to_bag);
+      }
+      // Path on Windows.
+      if(DIRECTORY_SEPARATOR === '\\') {
+        $data['path_to_bag'] = str_replace(basename($file->getRealPath()), '', $path_to_bag);
+      }
+      // Create an array of all BagIt .txt files found.
+      $bag_files_found[] = basename($file->getRealPath());
     }
 
-    return $missingFiles;
+    $bag_files = $this->bag_files_sha1;
+
+    // Choose the correct bag files array.
+    foreach ($bag_files_found as $bfkey => $bfvalue) {
+      if(strstr($bfvalue, 'md5')) {
+        $bag_files = $this->bag_files_md5;
+        break;
+      }
+    }
+
+    // Create an array of missing BagIt .txt files.
+    foreach ($bag_files as $key => $value) {
+      if(!in_array($value, $bag_files_found)) {
+        $data['missing_files'][] = $message_prefix . $value;
+      }
+    }
+
+    return $data;
   }
 
-  function get_package_data_files($package_data_dir) {
+  /**
+   * @param array $package_data_dir Path to the package's data directory.
+   * @return array The package's data files.
+   */
+  public function get_package_data_files($package_data_dir) {
 
     $package_data_files = scandir($package_data_dir);
 
@@ -296,19 +463,20 @@ class BagitController extends Controller
     return $package_data_files;
   }
 
-  function create_datadir_move_files($package_dir) {
+  /**
+   * @param array $package_dir Path to the package's directory.
+   * @return null
+   */
+  public function create_datadir_move_files($package_dir) {
 
     $package_files = $this->get_package_data_files($package_dir);
 
     // Create 'data' directory.
     mkdir($package_dir . '/data', 0775);
 
-    // Shuffle into it anything that isn't a bagit file.
+    // Shuffle into it anything that isn't a BagIt-based file or CSV file.
     foreach($package_files as $filename) {
-      if($filename !== 'bag-info.txt'
-        && $filename !== 'manifest-sha1.txt'
-        && $filename !== 'bagit.txt'
-        && $filename !== 'tagmanifest-sha1.txt') {
+      if((!in_array($filename, $this->bag_files_sha1) || !in_array($filename, $this->bag_files_md5)) && !strstr($filename, '.csv')) {
         rename($package_dir . '/' . $filename, $package_dir . '/data/' . $filename);
       }
     }

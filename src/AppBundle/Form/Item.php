@@ -25,13 +25,9 @@ class Item extends AbstractType
                 'label' => 'Local Item ID',
                 'required' => false,
               ))
-            ->add('item_display_name', null, array(
-                'label' => 'Item Display Name',
-                'required' => true,
-              ))
             ->add('item_description', TextareaType::class, array(
                 'label' => 'Item Description',
-                'required' => false,
+                'required' => true,
                 'attr' => array('rows' => '10'),
               ))
             ->add('item_type', ChoiceType::class, array(

@@ -10,7 +10,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
 use AppBundle\Controller\RepoStorageHybridController;
-use Symfony\Component\DependencyInjection\Container;
 use PDO;
 
 use AppBundle\Form\Project;
@@ -31,11 +30,11 @@ class ProjectsController extends Controller
     * Constructor
     * @param object  $u  Utility functions object
     */
-    public function __construct(AppUtilities $u)
+    public function __construct(AppUtilities $u, Connection $conn)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
-        $this->repo_storage_controller = new RepoStorageHybridController();
+        $this->repo_storage_controller = new RepoStorageHybridController($conn);
     }
 
     /**
@@ -44,7 +43,6 @@ class ProjectsController extends Controller
     public function browse_projects(Connection $conn, Request $request, IsniController $isni)
     {
         // Database tables are only created if not present.
-        $this->repo_storage_controller->setContainer($this->container);
         $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'project'));
         $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'isni_data'));
 
@@ -84,13 +82,12 @@ class ProjectsController extends Controller
           $query_params['search_value'] = $search;
         }
 
-        $this->repo_storage_controller->setContainer($this->container);
         $data = $this->repo_storage_controller->execute('getDatatableProject', $query_params);
 
         // Get the subjects count
         if(!empty($data['aaData'])) {
             foreach ($data['aaData'] as $key => $value) {
-                $project_subjects = $subjects->get_subjects($this->container, $value['project_repository_id']);
+                $project_subjects = $subjects->get_subjects($value['project_repository_id']);
                 $data['aaData'][$key]['subjects_count'] = count($project_subjects);
             }
         }
@@ -115,7 +112,6 @@ class ProjectsController extends Controller
         $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         // Retrieve data from the database.
-        $this->repo_storage_controller->setContainer($this->container);
         if (!empty($id) && empty($post)) {
           $project = (object)$this->repo_storage_controller->execute('getProject', array('project_repository_id' => $id));
           $project->stakeholder_guid_picker = NULL;
@@ -131,7 +127,7 @@ class ProjectsController extends Controller
         }
 
         // Get data from lookup tables.
-        $project->stakeholder_guid_options = $this->get_units_stakeholders($this->container);
+        $project->stakeholder_guid_options = $this->get_units_stakeholders();
 
         // Create the form
         $form = $this->createForm(Project::class, $project);
@@ -143,7 +139,7 @@ class ProjectsController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $project = $form->getData();
-            $project_repository_id = $this->insert_update_project($this->container, $project, $id);
+            $project_repository_id = $this->insert_update_project($project, $id);
 
             $this->addFlash('message', 'Project successfully updated.');
             return $this->redirect('/admin/projects/subjects/' . $project_repository_id);
@@ -163,17 +159,27 @@ class ProjectsController extends Controller
      *
      * Run a query to retrieve all projects from the database.
      *
-     * @return  array|bool     The query result
+     * @param array $params Parameters sent by the typeahead-bundle
+     * The $params array contains the following keys: query, limit, render, property
+     *
+     * @return array|bool The query result
      */
-    public function get_projects($container)
+    public function get_projects($params = array())
     {
-        $this->repo_storage_controller->setContainer($container);
+
+        // Query the database.
         $data = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'project',
           'fields' => array(),
           'sort_fields' => array(
             0 => array('field_name' => 'stakeholder_guid')
           ),
+          'limit' => (int)$params['limit'],
+          'search_params' => array(
+            0 => array('field_names' => array('project.active'), 'search_values' => array(1), 'comparison' => '='),
+            1 => array('field_names' => array('project.project_name'), 'search_values' => $params['query'], 'comparison' => 'LIKE')
+          ),
+          'search_type' => 'AND',
           )
         );
 
@@ -188,7 +194,6 @@ class ProjectsController extends Controller
     public function get_stakeholder_guids_tree_browser()
     {
       $data = array();
-      $this->repo_storage_controller->setContainer($this->container);
       $projects = $this->repo_storage_controller->execute('getStakeholderGuids');
       foreach ($projects as $key => $value) {
           $data[$key]['id'] = 'stakeholderGuid-' . $value['stakeholder_guid'];
@@ -210,7 +215,6 @@ class ProjectsController extends Controller
         $data = array();
         $stakeholder_guid = !empty($request->attributes->get('stakeholder_guid')) ? $request->attributes->get('stakeholder_guid') : false;
 
-        $this->repo_storage_controller->setContainer($this->container);
         $projects = $this->repo_storage_controller->execute('getRecords', array(
             'base_table' => 'project',
             'fields' => array(),
@@ -227,7 +231,7 @@ class ProjectsController extends Controller
         foreach ($projects as $key => $value) {
 
             // Check for child dataset records so the 'children' key can be set accordingly.
-            $subject_data = $subjects->get_subjects($this->container, (int)$value['project_repository_id']);
+            $subject_data = $subjects->get_subjects((int)$value['project_repository_id']);
 
             $data[$key] = array(
                 'id' => 'projectId-' . $value['project_repository_id'],
@@ -250,9 +254,8 @@ class ProjectsController extends Controller
      * @param   int     $project_id  The project ID
      * @return  int     The project ID
      */
-    public function insert_update_project($container, $data, $project_repository_id = FALSE)
+    public function insert_update_project($data, $project_repository_id = FALSE)
     {
-        $this->repo_storage_controller->setContainer($container);
 
         // If there is no entry, then perform an insert.
         if(isset($data->stakeholder_guid)) {
@@ -287,11 +290,10 @@ class ProjectsController extends Controller
      * Get unit_stakeholder
      * @return  array|bool  The query result
      */
-    public function get_units_stakeholders($container)
+    public function get_units_stakeholders()
     {
       $data = array();
 
-      $this->repo_storage_controller->setContainer($container);
       $temp = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'unit_stakeholder',
           'sort_fields' => array(
@@ -328,7 +330,6 @@ class ProjectsController extends Controller
 
           $ids_array = explode(',', $ids);
 
-          $this->repo_storage_controller->setContainer($this->container);
 
           foreach ($ids_array as $key => $id) {
             $ret = $this->repo_storage_controller->execute('markProjectInactive', array(

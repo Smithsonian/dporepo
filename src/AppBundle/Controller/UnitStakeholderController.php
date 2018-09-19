@@ -9,7 +9,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
 use AppBundle\Controller\RepoStorageHybridController;
-use Symfony\Component\DependencyInjection\Container;
 use PDO;
 use GUMP;
 
@@ -31,11 +30,11 @@ class UnitStakeholderController extends Controller
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u)
+    public function __construct(AppUtilities $u, Connection $conn)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
-        $this->repo_storage_controller = new RepoStorageHybridController();
+        $this->repo_storage_controller = new RepoStorageHybridController($conn);
 
         // Table name and field names.
         $this->table_name = 'unit_stakeholder';
@@ -53,7 +52,7 @@ class UnitStakeholderController extends Controller
     public function browse(Request $request)
     {
         // Database tables are only created if not present.
-        $this->repo_storage_controller->setContainer($this->container);
+        
         $ret = $this->repo_storage_controller->build('createTable', array('table_name' => $this->table_name));
 
         return $this->render('resources/browse_unit_stakeholder.html.twig', array(
@@ -103,7 +102,7 @@ class UnitStakeholderController extends Controller
           $query_params['search_value'] = $search;
         }
 
-        $this->repo_storage_controller->setContainer($this->container);
+        
         $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
 
         return $this->json($data);
@@ -126,7 +125,7 @@ class UnitStakeholderController extends Controller
         $post = $request->request->all();
         $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
-        $this->repo_storage_controller->setContainer($this->container);
+        
         if(empty($post)) {
           $data = $this->repo_storage_controller->execute('getRecordById', array(
             'record_type' => 'unit_stakeholder',
@@ -134,7 +133,7 @@ class UnitStakeholderController extends Controller
         }
 
         // Get data from lookup tables.
-        $data['units_stakeholders'] = $projects->get_units_stakeholders($this->container);
+        $data['units_stakeholders'] = $projects->get_units_stakeholders();
         if(!array_key_exists('isni_id', $data)) {
           $data['isni_id'] = NULL;
         }
@@ -227,7 +226,7 @@ class UnitStakeholderController extends Controller
 
           $ids_array = explode(',', $ids);
 
-          $this->repo_storage_controller->setContainer($this->container);
+          
 
           // Loop thorough the ids.
           foreach ($ids_array as $key => $id) {
