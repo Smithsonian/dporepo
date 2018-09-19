@@ -37,7 +37,7 @@ class FilesValidationCommand extends Command
 
   /**
    * Example:
-   * php bin/console app:bagit-validate /var/www/html/dporepo/web/uploads/repository/4
+   * php bin/console app:files-validate /var/www/html/dporepo/web/uploads/repository/4
    */
   protected function execute(InputInterface $input, OutputInterface $output)
   {
