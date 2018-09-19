@@ -204,33 +204,36 @@
              index = thisElement.attr('id').replace('loop-index-','');
 
         // Validate that this is really the record.
-        swal({
-          title: "Choose This Record?",
-          text: "If yes, the appropriate fields will be auto filled, and this window will be dismissed.",
-          type: 'warning',
-          showCancelButton: true,
-          confirmButtonColor: '#DD6B55',
-          confirmButtonText: 'Go!',
-          closeOnConfirm: true,
-        },
-        function(){
+        swal('Proceed with this record? The appropriate fields will be auto filled, and this window will be dismissed.', {
+          buttons: {
+            cancel: 'No',
+            catch: {
+              text: 'Yes',
+              value: 'yes',
+            }
+          },
+        })
+        .then((value) => {
+          switch (value) {
+            case "yes":
+              // Set all of the variables.
+              var subject_guid = $('#subject_guid_chosen_' + index).val(),
+                  subject_name = $('#subject_name_chosen_' + index).val(),
+                  subject_holder_subject_id = $('#subject_holder_subject_id_chosen_' + index).val(),
+                  holding_entity_guid = $('#holding_entity_guid_chosen_' + index).val();
+                  // holding_entity_name = $('#holding_entity_name_chosen_' + index).val();
 
-            // Set all of the variables.
-            var subject_guid = $('#subject_guid_chosen_' + index).val(),
-                subject_name = $('#subject_name_chosen_' + index).val(),
-                subject_holder_subject_id = $('#subject_holder_subject_id_chosen_' + index).val(),
-                holding_entity_guid = $('#holding_entity_guid_chosen_' + index).val();
-                // holding_entity_name = $('#holding_entity_name_chosen_' + index).val();
-
-            // Populate the fields in the parent form and close the modal.
-            $('#subject_subject_guid').val(subject_guid);
-            $('#subject_subject_name').val(subject_name);
-            $('#subject_local_subject_id').val(subject_holder_subject_id);
-            $('#subject_holding_entity_guid').val(holding_entity_guid);
-            // $('#subject_holding_entity_name').val(holding_entity_name);
-            $('#edanSearchModal').modal('hide');
-
-        });
+              // Populate the fields in the parent form and close the modal.
+              $('#subject_subject_guid').val(subject_guid);
+              $('#subject_subject_name').val(subject_name);
+              $('#subject_local_subject_id').val(subject_holder_subject_id);
+              $('#subject_holding_entity_guid').val(holding_entity_guid);
+              // $('#subject_holding_entity_name').val(holding_entity_name);
+              $('#edanSearchModal').modal('hide');
+              break;
+            default:
+          }
+        });        
 
       });
 
