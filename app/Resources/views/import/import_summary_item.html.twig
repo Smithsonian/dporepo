@@ -118,7 +118,7 @@
               {% else %}
                 <ol class="list-unstyled">
                   {% for bagit_validation_error in project.bagit_validation_errors %}
-                    <li class="text-danger"><strong>{{ bagit_validation_error.job_log_description }}</strong></li>
+                    <li class="text-danger"><strong><span class="glyphicon glyphicon-ban-circle"></span> {{ bagit_validation_error.job_log_description }}</strong></li>
                   {% else %}
                     <li class="text-success"><strong><span class="glyphicon glyphicon-ok"></span> No BagIt validation errors found.</strong></li>
                   {% endfor %}
@@ -133,7 +133,7 @@
               {% else %}
                 <ol class="list-unstyled">
                   {% for image_validation_error in project.image_validation_errors %}
-                    <li class="text-danger"><strong>{{ image_validation_error.job_log_description }}</strong></li>
+                    <li class="text-danger"><strong><span class="glyphicon glyphicon-ban-circle"></span> {{ image_validation_error.job_log_description }}</strong></li>
                   {% else %}
                     <li class="text-success"><strong><span class="glyphicon glyphicon-ok"></span> No image validation errors found.</strong></li>
                   {% endfor %}
@@ -148,7 +148,7 @@
               {% else %}
                 <ol class="list-unstyled">
                   {% for file_transfer_error in project.file_transfer_errors %}
-                    <li class="text-danger" style="border-bottom: 1px solid #dddddd; padding: 0.5rem 0 0.5rem 0.5rem;"><strong>{{ file_transfer_error.job_log_description }}</strong></li>
+                    <li class="text-danger" style="border-bottom: 1px solid #dddddd; padding: 0.5rem 0 0.5rem 0.5rem;"><strong><span class="glyphicon glyphicon-ban-circle"></span> {{ file_transfer_error.job_log_description }}</strong></li>
                   {% else %}
                     <li class="text-success"><strong><span class="glyphicon glyphicon-ok"></span> No file transfer errors found.</strong></li>
                   {% endfor %}
