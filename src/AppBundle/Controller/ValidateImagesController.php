@@ -76,6 +76,7 @@ class ValidateImagesController extends Controller
       'jpg' => image_type_to_mime_type(IMAGETYPE_JPEG),
       'jpeg' => image_type_to_mime_type(IMAGETYPE_JPEG),
       'cr2' => image_type_to_mime_type(IMAGETYPE_JPEG),
+      'dng' => image_type_to_mime_type(IMAGETYPE_JPEG),
     );
     // Valid image mime types.
     $this->valid_image_mimetypes = array(
@@ -120,7 +121,7 @@ class ValidateImagesController extends Controller
 
       // Search for the data directory.
       $finder = new Finder();
-      $finder->path('data')->name('/\.jpg|\.tif|\.cr2$/');
+      $finder->path('data')->name('/\.jpg|\.tif|\.cr2|\.dng$/');
       $finder->in($localpath);
 
       $i = 0;
@@ -196,7 +197,7 @@ class ValidateImagesController extends Controller
               array(
                 'job_id' => $job_data['job_id'],
                 'user_id' => 0,
-                'job_log_label' => 'Image Pairs Validation',
+                'job_log_label' => 'Image Validation',
                 'errors' => $rvalue,
               )
             );
@@ -233,21 +234,46 @@ class ValidateImagesController extends Controller
     // If data is passed, go ahead and perform the validation.
     if (!empty($data)) {
 
-      // Create an array of all files, with the file names as the keys, and the extensions as the values.
-      $all_files = array();
+      // Create an array of all of the file extensions.
+      $all_file_extensions = array();
       foreach($data as $key => $value) {
-        $all_files[$value['file_name']] = $value['file_extension'];
+        array_push($all_file_extensions, $value['file_extension']);
       }
 
-      // Validate for image pairs if .cr2 files exist.
-      if (count($all_files)) {
-        foreach($all_files as $fkey => $fvalue) {
-          if ($fvalue === 'cr2') {
+      $image_pair_type = null;
+      if (in_array('tif', $all_file_extensions)) $image_pair_type = 'tif';
+      if (in_array('cr2', $all_file_extensions)) $image_pair_type = 'cr2';
+      if (in_array('dng', $all_file_extensions)) $image_pair_type = 'dng';
+
+      if (!empty($image_pair_type)) {
+
+        // Create an array of all of the files, with the file names as the keys, and the extensions as the values.
+        $all_files = array();
+        foreach($data as $key => $value) {
+          $all_files[$value['file_name']] = $value['file_extension'];
+        }
+
+        // Validate for image pairs.
+        if (count($all_files)) {
+          foreach($all_files as $fkey => $fvalue) {
+
+            // The file's base name (without the extension).
             $file_basename = pathinfo($fkey, PATHINFO_FILENAME);
-            // Set an error if a corresponding jpg doesn't exist.
-            if (!array_key_exists($file_basename . '.jpg', $all_files)) {
-              $return[]['errors'] = 'Corresponding JPG not found for ' . $fvalue . ': ' . $fkey;
+
+            switch($fvalue) {
+              case 'jpg':
+                // Set an error if a corresponding tif, cr2, dng, etc. doesn't exist.
+                if (!array_key_exists($file_basename . '.' . $image_pair_type, $all_files)) {
+                  $return[]['errors'] = 'Corresponding ' . strtoupper($image_pair_type) . ' not found for JPG: ' . $file_basename . '.jpg';
+                }
+                break;
+              default:
+                // Set an error if a corresponding jpg doesn't exist.
+                if (!array_key_exists($file_basename . '.jpg', $all_files)) {
+                  $return[]['errors'] = 'Corresponding JPG not found for ' . strtoupper($fvalue) . ': ' . $fkey;
+                }
             }
+
           }
         }
       }
