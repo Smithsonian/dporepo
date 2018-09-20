@@ -247,12 +247,13 @@ class BagitController extends Controller
 
     // Get the job ID, so errors can be logged to the database.
     $dir_array = explode(DIRECTORY_SEPARATOR, $data->localpath);
-    $data->job_id = array_pop($dir_array);
+    $data->uuid = array_pop($dir_array);
+    $job_data = $this->repo_storage_controller->execute('getJobData', array($data->uuid));
 
     // Update the 'job_status' in the 'job' table from 'bagit validation in progress' to 'bagit validation in progress (confirmed)'.
     $this->repo_storage_controller->execute('setJobStatus', 
       array(
-        'job_id' => $data->job_id, 
+        'job_id' => $job_data['uuid'], 
         'status' => 'bagit validation in progress (confirmed)',
         'date_completed' => date('Y-m-d h:i:s')
       )
@@ -362,7 +363,7 @@ class BagitController extends Controller
     if(isset($return['errors']) && !empty($return['errors'])) {
       $this->repoValidate->logErrors(
         array(
-          'job_id' => $data->job_id,
+          'job_id' => $job_data['job_id'],
           'user_id' => 0,
           'job_log_label' => 'BagIt Validation',
           'errors' => $return['errors'],
@@ -375,7 +376,7 @@ class BagitController extends Controller
     // Update the 'job_status' in the 'job' table accordingly.
     $this->repo_storage_controller->execute('setJobStatus', 
       array(
-        'job_id' => $data->job_id, 
+        'job_id' => $job_data['uuid'], 
         'status' => $data->job_status, 
         'date_completed' => date('Y-m-d h:i:s')
       )

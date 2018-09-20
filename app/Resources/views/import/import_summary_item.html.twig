@@ -436,7 +436,9 @@
        * Endpoint/example: /admin/get_job_status/3
        */
       // Poll every 5 seconds to get the status of the job.
-      var checkerId = setInterval(checkStatus, 5000);
+      if ((job_status !== 'cancelled') && (job_status !== 'failed')) {
+        var checkerId = setInterval(checkStatus, 5000);
+      }
 
       function checkStatus() {
 
@@ -470,7 +472,9 @@
                   $('.status-target span.status').wrap( "<strong></strong>" );
                   $('.status-target span.status').prepend('<span class="glyphicon glyphicon-exclamation-sign"></span> ');
                   // Change the alert banner to an error.
-                  $('.alert-dismissible').removeClass('alert-success').addClass('alert-danger').empty().html('<span class="glyphicon glyphicon-exclamation-sign"></span> Error: See below for details') 
+                  $('.alert-dismissible').removeClass('alert-success').addClass('alert-danger').empty().html('<span class="glyphicon glyphicon-exclamation-sign"></span> Error: Refreshing page...');
+                  // Refresh the page.
+                  location.reload();
                 }
               } else {
                 $('.status-target span.status').empty().text('Error: Could not get status');
