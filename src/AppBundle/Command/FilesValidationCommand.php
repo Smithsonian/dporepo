@@ -8,15 +8,20 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 
 use AppBundle\Controller\ValidateImagesController;
+use AppBundle\Controller\ExtractImageMetadataController;
 
 class FilesValidationCommand extends Command
 {
   private $validate_images;
+  private $extract_image_metadata;
 
-  public function __construct(ValidateImagesController $validate_images)
+  public function __construct(ValidateImagesController $validate_images, ExtractImageMetadataController $extract_image_metadata)
   {
     // Validate Images Controller.
     $this->validate_images = $validate_images;
+    // Image Metadata Extractor Controller.
+    $this->extract_image_metadata = $extract_image_metadata;
+
     // This is required due to parent constructor, which sets up name.
     parent::__construct();
   }
@@ -83,6 +88,34 @@ class FilesValidationCommand extends Command
           }
         }
       }
+
+      // Extract the metadata.
+      $result = $this->extract_image_metadata->extract_metadata($params);
+
+      // Output metadata results.
+      if (!empty($result)) {
+        $output->writeln('<comment>Metadata from Files:</comment>' . "\n");
+        foreach ($result as $key => $value) {
+          $output->writeln('---------------------------' . "\n");
+          foreach ($value as $k => $v) {
+            if ($k == 'metadata') {
+              foreach($v as $vk => $vv) {
+                $output->writeln($vk . ': ' . $vv . "\n");
+              }
+            } else {
+              if (!empty($v)) {
+                if($k == 'errors' || $k == 'warnings') {
+                  $html_tag = substr($k, 0, -1);
+                  foreach ($v as $ek => $ev) {
+                    $output->writeln('<' . $html_tag . '>' . $ev . '</' . $html_tag . '>' . "\n");
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
 
     }
 
