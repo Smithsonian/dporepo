@@ -46,10 +46,9 @@ class FilesValidationCommand extends Command
     // Outputs multiple lines to the console (adding "\n" at the end of each line).
     $output->writeln([
       '',
-      '<bg=blue;options=bold>                   </>',
-      '<bg=blue;options=bold> Files Validator   </>',
-      '<bg=blue;options=bold> ================= </>',
+      '<bg=blue;options=bold> Validating Files </>',
       '',
+      'Command: ' . 'php bin/console app:files-validate ' . $input->getArgument('localpath') . "\n",
     ]);
 
     if (!empty($input->getArgument('localpath'))) {
@@ -63,6 +62,10 @@ class FilesValidationCommand extends Command
       $result = $this->validate_images->validate($params);
 
       // Output validation results.
+      if (empty($result)) {
+        $output->writeln('<comment>Files validation complete.</comment>');
+      }
+
       if (!empty($result)) {
         $output->writeln('<comment>Validated Files:</comment>' . "\n");
         foreach ($result as $key => $value) {

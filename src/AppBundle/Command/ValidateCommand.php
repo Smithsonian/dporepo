@@ -64,6 +64,7 @@ class ValidateCommand extends Command
       '<bg=green;options=bold>  == Validate Assets ==  </>',
       '<bg=green;options=bold>  =====================  </>',
       '',
+      'Command: ' . 'php bin/console app:bagit-validate ' . $input->getArgument('uuid') . ' ' . $input->getArgument('parent_project_id') . ' ' . $input->getArgument('parent_record_id') . ' ' . $input->getArgument('parent_record_type') . "\n",
     ]);
 
     // First, check to see if the external storage is accessible (Drastic).
@@ -114,7 +115,19 @@ class ValidateCommand extends Command
       $input_files = new ArrayInput($arguments_files);
       $return_files = $command_files->run($input_files, $output);
 
-      sleep(5);  
+      sleep(5);
+
+      // Outputs multiple lines to the console (adding "\n" at the end of each line).
+      $output->writeln([
+        '',
+        '<bg=blue;options=bold> Ingesting Metadata </>',
+        '',
+        'Parameters: ' . "\n",
+        'uuid: ' . $input->getArgument('uuid'),
+        'parent_project_id: ' . $input->getArgument('parent_project_id'),
+        'parent_record_id: ' . $input->getArgument('parent_record_id'),
+        'parent_record_type: ' . $input->getArgument('parent_record_type') . "\n"
+      ]);
 
       // Run the metadata ingest.
       $params = array(
