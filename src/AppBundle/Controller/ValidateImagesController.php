@@ -228,8 +228,8 @@ class ValidateImagesController extends Controller
 
     $return = array();
 
-    // If no data is passed, set a message.
-    if (empty($data)) $return['messages'][] = 'No image pairs to validate. Please provide an array of files to validate.';
+    // // If no data is passed, set a message.
+    // if (empty($data)) $return['messages'][] = 'No image pairs to validate. Please provide an array of files to validate.';
 
     // If data is passed, go ahead and perform the validation.
     if (!empty($data)) {
