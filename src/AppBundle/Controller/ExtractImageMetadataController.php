@@ -248,7 +248,22 @@ class ExtractImageMetadataController extends Controller
     // Can also ask for EXIF, which is a sub-set of IFD0.
     $sections = 'FILE,COMPUTED,IFD0,THUMBNAIL,EXIF';
 
-    $image_data = exif_read_data($filename, $sections, true, false);
+    $image_data = @exif_read_data($filename, $sections, true, false);
+
+    // TODO: Extract Exif from XMP
+    //
+    // Reason:
+    // The nmnh-USNM_PAL_00033475-pg-group_01-cam_1-col_cor-0001.jpg file may contain XMP data, rather than EXIF
+    // See: https://stackoverflow.com/a/8864064/1298317
+    //
+    // Error during testing:
+    // console.ERROR: Error thrown while running command "app:validate "3df_5ba94c6e6a13a2.78828007" 2 791 subject".
+    // Message: "Warning: exif_read_data(nmnh-USNM_PAL_00033475-pg-group_01-cam_1-col_cor-0001.jpg): 
+    // Incorrect APP1 Exif Identifier Code" {"exception":"[object] (Symfony\\Component\\Debug\\Exception\\ContextErrorException(code: 0): Warning: 
+    // exif_read_data(nmnh-USNM_PAL_00033475-pg-group_01-cam_1-col_cor-0001.jpg):
+    // Incorrect APP1 Exif Identifier Code at C:\\xampp\\htdocs\\dporepo_test\\src\\AppBundle\\Controller\\ExtractImageMetadataController.php:254)",
+    // "command":"app:validate \"3df_5ba94c6e6a13a2.78828007\" 2 791 subject",
+    // "message":"Warning: exif_read_data(nmnh-USNM_PAL_00033475-pg-group_01-cam_1-col_cor-0001.jpg): Incorrect APP1 Exif Identifier Code"}
 
     // Read EXIF data.
     if(false === $image_data) {
