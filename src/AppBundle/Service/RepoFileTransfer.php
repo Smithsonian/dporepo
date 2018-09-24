@@ -105,6 +105,8 @@ class RepoFileTransfer implements RepoFileTransferInterface {
 
     // Absolute local path.
     $path = $this->project_directory . $this->uploads_directory . $target_directory;
+    // Job data.
+    $job_data = $this->repo_storage_controller->execute('getJobData', array($target_directory));
 
     if (!is_dir($path)) {
       $data[0]['errors'][] = 'Target directory not found - ' . $path;
@@ -149,7 +151,7 @@ class RepoFileTransfer implements RepoFileTransferInterface {
             // Log the errors to the database.
             $this->repoValidate->logErrors(
               array(
-                'job_id' => $target_directory,
+                'job_id' => $job_data['job_id'],
                 'user_id' => 0,
                 'job_log_label' => 'File Transfer',
                 'errors' => $data[$i]['errors'],
@@ -167,7 +169,7 @@ class RepoFileTransfer implements RepoFileTransferInterface {
     // Update the 'job_status' in the 'job' table accordingly.
     $this->repo_storage_controller->execute('setJobStatus', 
       array(
-        'job_id' => $target_directory, 
+        'job_id' => $job_data['uuid'], 
         'status' => $job_status, 
         'date_completed' => date('Y-m-d h:i:s')
       )
