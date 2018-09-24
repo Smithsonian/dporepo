@@ -145,9 +145,9 @@ class ValidateCommand extends Command
       // die();
 
       if (isset($import_results['errors'])) {
-        $output->writeln('<comment>Metadata ingest failed. Job log IDs: ' . implode(', ', $import_results['errors']) . '</comment>');
+        $output->writeln('<comment>Metadata ingest failed. Errors: ' . implode(', ', $import_results['errors']) . '</comment>');
       } else {
-        $output->writeln('<comment>Metadata ingest complete. Job log IDs: ' . implode(', ', $import_results['job_log_ids']) . '</comment>');
+        $output->writeln('<comment>Metadata ingest complete.</comment>');
 
         // Transfer files.
         $command_file_transfer = $this->getApplication()->find('app:transfer-files');
