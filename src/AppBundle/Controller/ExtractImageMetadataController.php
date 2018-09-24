@@ -155,7 +155,7 @@ class ExtractImageMetadataController extends Controller
             $file_path = str_replace($this->project_directory . 'src' . DIRECTORY_SEPARATOR . 'AppBundle' . DIRECTORY_SEPARATOR . 'Command' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'web', '', $file->getPath());
 
             // Windows file path fix.
-            $file_path = str_replace('\\', '/', $file_path);
+            $file_path = str_replace(DIRECTORY_SEPARATOR, '/', $file_path);
 
             // Get the file's id in the database.
             $file_data = $this->repo_storage_controller->execute('getRecords', array(
