@@ -141,6 +141,8 @@ class ExtractImageMetadataController extends Controller
         // Check if this is a valid image according to our hard-coded arrays above.
         if(array_key_exists($mime_type, $this->valid_image_mimetypes)) {
 
+          // $this->u->dumper('array_key_exists($mime_type, $this->valid_image_mimetypes)');
+
           // Set metadata, warnings or errors.
           $data[$i] = $this->get_metadata_from_image($file->getPathname());
 
@@ -150,7 +152,10 @@ class ExtractImageMetadataController extends Controller
             // Create the clean directory path to the file, since that's how it's stored in the database.
             // Turns this: /Users/gor/Documents/Sites/dporepo/src/AppBundle/Command/../../../web/uploads/repository/3df_5ba15aec7ebea7.06350365/testupload03/data
             // Into this: /uploads/repository/3df_5ba15aec7ebea7.06350365/testupload03/data
-            $file_path = str_replace($this->project_directory . 'src/AppBundle/Command/../../../web', '', $file->getPath());
+            $file_path = str_replace($this->project_directory . 'src' . DIRECTORY_SEPARATOR . 'AppBundle' . DIRECTORY_SEPARATOR . 'Command' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'web', '', $file->getPath());
+
+            // Windows file path fix.
+            $file_path = str_replace('\\', '/', $file_path);
 
             // Get the file's id in the database.
             $file_data = $this->repo_storage_controller->execute('getRecords', array(
@@ -165,8 +170,11 @@ class ExtractImageMetadataController extends Controller
               )
             );
 
+            // Log an error if the file is not found within the database.
+            if (empty($file_data)) $data[$i]['errors'][] = 'Extract Image Metadata - file not found in the database: ' . $file_path . '/' . $file->getBasename();
+
             // If the record is found, save the metadata to the record.
-            if (count($file_data) === 1) {
+            if (!empty($file_data) && (count($file_data)) === 1) {
               $id = $this->repo_storage_controller->execute('saveRecord', array(
                 'base_table' => 'file_upload',
                 'record_id' => $file_data[0]['file_upload_id'],
