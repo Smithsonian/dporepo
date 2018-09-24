@@ -255,19 +255,19 @@ class RepoImport implements RepoImportInterface {
       // Prevent additional CSVs from being imported according to the $job_type.
       // Assign keys to each CSV, with projects first, subjects second, and items third.
       foreach ($finder as $file) {
-        if (($job_type === 'subjects') && stristr($file->getRealPath(), 'subjects')) {
+        if (($job_type === 'subjects') && stristr($file->getFilename(), 'subjects')) {
           $csv[0]['type'] = 'subject';
           $csv[0]['data'] = $file->getContents();
         }
-        if ((($job_type === 'subjects') || ($job_type === 'items')) && stristr($file->getRealPath(), 'items')) {
+        if ((($job_type === 'subjects') || ($job_type === 'items')) && stristr($file->getFilename(), 'items')) {
           $csv[1]['type'] = 'item';
           $csv[1]['data'] = $file->getContents();
         }
-        if ((($job_type === 'subjects') || ($job_type === 'items') || ($job_type === 'capture datasets') || ($job_type === 'models')) && stristr($file->getRealPath(), 'capture_datasets')) {
+        if ((($job_type === 'subjects') || ($job_type === 'items') || ($job_type === 'capture datasets') || ($job_type === 'models')) && stristr($file->getFilename(), 'capture_datasets')) {
           $csv[2]['type'] = 'capture_dataset';
           $csv[2]['data'] = $file->getContents();
         }
-        if ((($job_type === 'subjects') || ($job_type === 'items') || ($job_type === 'capture datasets') || ($job_type === 'models')) && stristr($file->getRealPath(), 'models')) {
+        if ((($job_type === 'subjects') || ($job_type === 'items') || ($job_type === 'capture datasets') || ($job_type === 'models')) && stristr($file->getFilename(), 'models')) {
           $csv[3]['type'] = 'model';
           $csv[3]['data'] = $file->getContents();
         }
