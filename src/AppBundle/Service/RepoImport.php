@@ -126,10 +126,16 @@ class RepoImport implements RepoImportInterface {
     $job_data = $this->repo_storage_controller->execute('getJobData', array($params['uuid']));
 
     // Throw a 404 if the job record doesn't exist.
-    if (!$job_data) throw $this->createNotFoundException('The Job record doesn\'t exist');
+    if (!$job_data) {
+      $return['errors'][] = 'The Job record doesn\'t exist';
+      return $return;
+    }
 
     // Don't perform the metadata ingest if the job_status has been set to 'failed'.
-    if ($job_data['job_status'] === 'failed') return $return;
+    if ($job_data['job_status'] === 'failed') {
+      $return['errors'][] = 'The job has failed. Exiting metadata ingest process.';
+      return $return;
+    }
 
     // Get user data.
     if( method_exists($this->tokenStorage, 'getUser') ) {
