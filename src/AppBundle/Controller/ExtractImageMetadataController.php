@@ -114,7 +114,8 @@ class ExtractImageMetadataController extends Controller
 
     // Get the job ID, so errors can be logged to the database.
     $dir_array = explode(DIRECTORY_SEPARATOR, $localpath);
-    $job_id = array_pop($dir_array);
+    $uuid = array_pop($dir_array);
+    $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
 
     // Search for the data directory.
     $finder = new Finder();
@@ -198,7 +199,7 @@ class ExtractImageMetadataController extends Controller
         // Log the errors to the database.
         $this->repoValidate->logErrors(
           array(
-            'job_id' => $job_id,
+            'job_id' => $job_data['job_id'],
             'user_id' => 0,
             'job_log_label' => 'Image Metadata Extraction',
             'errors' => $data[$i]['errors'],
@@ -212,7 +213,7 @@ class ExtractImageMetadataController extends Controller
     // Update the 'job_status' in the 'job' table accordingly.
     $this->repo_storage_controller->execute('setJobStatus',
       array(
-        'job_id' => $job_id,
+        'job_id' => $job_data['job_id'],
         'status' => $job_status,
         'date_completed' => date('Y-m-d h:i:s')
       )
