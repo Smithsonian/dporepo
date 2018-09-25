@@ -568,6 +568,73 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
             )";
           break;
+        case 'role':
+          $sql = "CREATE TABLE IF NOT EXISTS `role` (
+            `role_id` int(11) NOT NULL,
+            `rolename_canonical` varchar(80) NOT NULL,
+            `rolename` varchar(255) NOT NULL,
+            `role_description` varchar(2000) DEFAULT NULL,
+            `date_created` datetime NOT NULL,
+            `created_by_user_account_id` int(11) NOT NULL,
+            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `last_modified_user_account_id` int(11) NOT NULL,
+            `active` tinyint(1) NOT NULL DEFAULT '1',
+            PRIMARY KEY (`role_id`),
+            KEY `created_by_user_account_id` (`created_by_user_account_id`),
+            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
+          )";
+          break;
+        case 'permission':
+          $sql = "CREATE TABLE IF NOT EXISTS `permission` (
+            `permission_id` int(11) NOT NULL,
+            `permission_name` varchar(255) DEFAULT NULL,
+            `permission_detail` varchar(2000) DEFAULT NULL,
+            `date_created` datetime NOT NULL,
+            `created_by_user_account_id` int(11) NOT NULL,
+            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `last_modified_user_account_id` int(11) NOT NULL,
+            `active` tinyint(1) NOT NULL DEFAULT '1',
+            PRIMARY KEY (`permission_id`),
+            KEY `created_by_user_account_id` (`created_by_user_account_id`),
+            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
+          )";
+          break;
+        case 'role_permission':
+          $sql = "CREATE TABLE IF NOT EXISTS `role_permission` (
+            `role_permission_id` int(11) NOT NULL,
+            `role_id` int(11) NOT NULL,
+            `permission_id` int(11) NOT NULL,
+            `date_created` datetime NOT NULL,
+            `created_by_user_account_id` int(11) NOT NULL,
+            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `last_modified_user_account_id` int(11) NOT NULL,
+            `active` tinyint(1) NOT NULL DEFAULT '1',
+            PRIMARY KEY (`role_permission_id`),
+            KEY `role_id` (`role_id`),
+            KEY `permission_id` (`permission_id`),
+            KEY `created_by_user_account_id` (`created_by_user_account_id`),
+            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
+          )";
+          break;
+        case 'user_role':
+          $sql = "CREATE TABLE IF NOT EXISTS `user_role` (
+            `user_role_id` int(11) NOT NULL,
+            `username_canonical` VARCHAR(180) NOT NULL,
+            `project_id` int(11) DEFAULT NULL,
+            `role_id` int(11) NOT NULL,
+            `date_created` datetime NOT NULL,
+            `created_by_user_account_id` int(11) NOT NULL,
+            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `last_modified_user_account_id` int(11) NOT NULL,
+            `active` tinyint(1) NOT NULL DEFAULT '1',
+            PRIMARY KEY (`user_role_id`),
+            KEY `role_id` (`role_id`),
+            KEY `project_id` (`project_id`),
+            KEY `created_by_user_account_id` (`created_by_user_account_id`),
+            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
+          ) 
+          ";
+          break;
         case 'uv_map':
           $sql = "CREATE TABLE IF NOT EXISTS `uv_map` (
             `uv_map_repository_id` int(11) NOT NULL AUTO_INCREMENT,
