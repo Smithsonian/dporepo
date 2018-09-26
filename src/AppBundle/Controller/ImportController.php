@@ -365,7 +365,7 @@ class ImportController extends Controller
           }
           // If there's csv data, encode to JSON so it can be passed on to Handsontables (JavaScript).
           if(isset($project['csv'])) {
-            $project['csv'] = json_encode($project['csv']);
+            $project['csv'] = json_encode($project['csv'], JSON_HEX_APOS);
             $project['csv_row_count'] = json_encode($project['csv_row_count']);
           }
         }
