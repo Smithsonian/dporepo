@@ -554,7 +554,7 @@
         let fileExtension = getExtension(queuedFiles[i].name);
 
         // Pre-validate CSV files, files count, and file names.
-        if(fileExtension === 'csv') {
+        if (fileExtension === 'csv') {
           // Set a custom parameter, 'prevalidate', so it can be used within the 'success' function.
           queuedFiles[i].prevalidate = true;
           // Start the upload.
@@ -1221,8 +1221,10 @@
     // Required CSV validation
     function requiredCsvValidation(parentRecordType, csvList) {
 
-      let generateWarning = false;
-          csvTargetFile = '';
+      let generateWarning = false,
+          requiredCsvFilenames = ['subjects.csv','items.csv','capture_datasets.csv','models.csv'],
+          csvTargetFile = '',
+          errorText = '';
 
       if (parentRecordType.length && csvList.length) {
 
@@ -1273,11 +1275,27 @@
         }
 
         if (generateWarning) {
+          errorText = '<strong>' + csvTargetFile + ':</strong> Not found. Required CSV files: ' + requiredCsvs;
+        }
+
+        // Check to see if all CSVs are named correctly.
+        let csvNamesDiff = $(csvList).not(requiredCsvFilenames).get();
+
+        if (csvNamesDiff.length) {
+          // Loop through the result.
+          for (var i = 0; i < csvNamesDiff.length; i++) {
+            csvTargetFile = csvNamesDiff[i];
+            errorText += '<br><br><strong>' + csvTargetFile + ':</strong> CSV file name does not meet file naming requirements. Acceptable file names: ' + requiredCsvFilenames.join(', ');
+            generateWarning = true;
+          }
+        }
+
+        if (generateWarning) {
           // The message.
           let requiredCsvMessage = $('<div />')
               .addClass('alert alert-danger cvs-validation-error')
               .attr('role', 'alert')
-              .html('<strong>Error: ' + csvTargetFile + ' not found</strong>: Required CSV files: ' + requiredCsvs);
+              .html(errorText);
           // Append the message to the panel-body container.
           $('.panel-validation-results').find('.panel-body').append(requiredCsvMessage);
         }
