@@ -140,8 +140,23 @@
                 </ol>
               {% endif %}
               <hr>
+              <h3>Metadata Ingest Results</h3>
+              {% if not project.metadata_ingest_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' or job_data.job_status == 'image validation in progress' or job_data.job_status == 'metadata ingest in progress' %}
+                <p><span class="glyphicon glyphicon-time"></span> Metadata Ingest pending. Please check back shortly.</p>
+              {% elseif job_data.job_status == 'cancelled' %}
+                <p><span class="glyphicon glyphicon-ban-circle"></span> Job cancelled</p>
+              {% else %}
+                <ol class="list-unstyled">
+                  {% for metadata_ingest_error in project.metadata_ingest_errors %}
+                    <li class="text-danger"><strong><span class="glyphicon glyphicon-ban-circle"></span> {{ metadata_ingest_error.job_log_description }}</strong></li>
+                  {% else %}
+                    <li class="text-success"><strong><span class="glyphicon glyphicon-ok"></span> No metadata ingest errors found.</strong></li>
+                  {% endfor %}
+                </ol>
+              {% endif %}
+              <hr>
               <h3>File Transfer Results</h3>
-              {% if not project.file_transfer_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' or job_data.job_status == 'image validation in progress' or job_data.job_status == 'file transfer in progress' %}
+              {% if not project.file_transfer_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' or job_data.job_status == 'image validation in progress' or job_data.job_status == 'metadata ingest in progress' or job_data.job_status == 'file transfer in progress' %}
                 <p><span class="glyphicon glyphicon-time"></span> File transfers pending. Please check back shortly.</p>
               {% elseif job_data.job_status == 'cancelled' %}
                 <p><span class="glyphicon glyphicon-ban-circle"></span> Job cancelled</p>

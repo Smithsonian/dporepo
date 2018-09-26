@@ -365,7 +365,7 @@ class ImportController extends Controller
           }
           // If there's csv data, encode to JSON so it can be passed on to Handsontables (JavaScript).
           if(isset($project['csv'])) {
-            $project['csv'] = json_encode($project['csv']);
+            $project['csv'] = json_encode($project['csv'], JSON_HEX_APOS);
             $project['csv_row_count'] = json_encode($project['csv_row_count']);
           }
         }
@@ -440,6 +440,47 @@ class ImportController extends Controller
                 ),
                 'search_values' => array(
                   'Image Validation'
+                ),
+                'comparison' => '='
+              )
+            ),
+            'search_type' => 'AND',
+            'sort_fields' => array(
+              0 => array('field_name' => 'date_created')
+            ),
+            'omit_active_field' => true,
+          )
+        );
+
+        // Get metadata ingest errors if they exist.
+        $project['metadata_ingest_errors'] = $this->repo_storage_controller->execute('getRecords', array(
+            'base_table' => 'job_log',
+            'fields' => array(),
+            'search_params' => array(
+              array(
+                'field_names' => array(
+                  'job_id'
+                ),
+                'search_values' => array(
+                  $job_data['job_id']
+                ),
+                'comparison' => '='
+              ),
+              array(
+                'field_names' => array(
+                  'job_log_status'
+                ),
+                'search_values' => array(
+                  'error'
+                ),
+                'comparison' => '='
+              ),
+              array(
+                'field_names' => array(
+                  'job_log_label'
+                ),
+                'search_values' => array(
+                  'Metadata Ingest'
                 ),
                 'comparison' => '='
               )
