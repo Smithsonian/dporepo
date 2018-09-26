@@ -452,6 +452,47 @@ class ImportController extends Controller
           )
         );
 
+        // Get metadata ingest errors if they exist.
+        $project['metadata_ingest_errors'] = $this->repo_storage_controller->execute('getRecords', array(
+            'base_table' => 'job_log',
+            'fields' => array(),
+            'search_params' => array(
+              array(
+                'field_names' => array(
+                  'job_id'
+                ),
+                'search_values' => array(
+                  $job_data['job_id']
+                ),
+                'comparison' => '='
+              ),
+              array(
+                'field_names' => array(
+                  'job_log_status'
+                ),
+                'search_values' => array(
+                  'error'
+                ),
+                'comparison' => '='
+              ),
+              array(
+                'field_names' => array(
+                  'job_log_label'
+                ),
+                'search_values' => array(
+                  'Metadata Ingest'
+                ),
+                'comparison' => '='
+              )
+            ),
+            'search_type' => 'AND',
+            'sort_fields' => array(
+              0 => array('field_name' => 'date_created')
+            ),
+            'omit_active_field' => true,
+          )
+        );
+
         // Get file transfer errors if they exist.
         $project['file_transfer_errors'] = $this->repo_storage_controller->execute('getRecords', array(
             'base_table' => 'job_log',
