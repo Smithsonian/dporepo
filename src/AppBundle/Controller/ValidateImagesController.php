@@ -76,7 +76,7 @@ class ValidateImagesController extends Controller
       'jpg' => image_type_to_mime_type(IMAGETYPE_JPEG),
       'jpeg' => image_type_to_mime_type(IMAGETYPE_JPEG),
       'cr2' => image_type_to_mime_type(IMAGETYPE_JPEG),
-      'dng' => image_type_to_mime_type(IMAGETYPE_JPEG),
+      'dng' => image_type_to_mime_type(IMAGETYPE_TIFF_MM),
     );
     // Valid image mime types.
     $this->valid_image_mimetypes = array(
