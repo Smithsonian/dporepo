@@ -46,3 +46,4 @@ parameters:
     # Processing service parameters
     processing_service_location: ~
     processing_service_auth_type: ~
+    processing_service_client_id: ~
