@@ -76,4 +76,11 @@ interface RepoProcessingServiceInterface {
    */
   public function query_api(array $params, string $method, array $post_params, bool $return_output, string $content_type);
 
+  /**
+   * Create GUID
+   *
+   * @return string
+   */
+  public function create_guid();
+
 }
