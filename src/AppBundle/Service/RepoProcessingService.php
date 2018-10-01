@@ -36,6 +36,11 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   private $processing_service_location;
 
   /**
+   * @var string $processing_service_client_id
+   */
+  private $processing_service_client_id;
+
+  /**
    * @var object $conn
    */
   private $conn;
@@ -43,16 +48,22 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   /**
    * @var object $repo_storage_controller
    */
-  private $repo_storage_controller;
+  // private $repo_storage_controller;
+
+  /**
+   * @var object $repo_storage_controller
+   */
+  private $client_id;
 
   /**
    * Constructor
    * @param object  $kernel  Symfony's kernel object
    * @param string  $external_file_storage_path  External file storage path
    * @param string  $processing_service_location  Processing service location (e.g. URL)
+   * @param string  $processing_service_client_id  Processing service client ID
    * @param string  $conn  The database connection
    */
-  public function __construct(KernelInterface $kernel, string $external_file_storage_path, string $processing_service_location, \Doctrine\DBAL\Connection $conn)
+  public function __construct(KernelInterface $kernel, string $external_file_storage_path, string $processing_service_location, string $processing_service_client_id, \Doctrine\DBAL\Connection $conn)
   {
     $this->u = new AppUtilities();
     // $this->u->dumper('hello');
@@ -61,8 +72,218 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
     // $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
     $this->external_file_storage_path = $external_file_storage_path;
     $this->processing_service_location = $processing_service_location;
+    $this->processing_service_client_id = $processing_service_client_id;
     $this->conn = $conn;
     // $this->repo_storage_controller = new RepoStorageHybridController($conn);
+  }
+
+  /**
+   * Get recipes
+   *
+   * @return array
+   */
+  public function get_recipes() {
+
+    $data = array();
+
+    $params = array(
+      'recipes',
+    );
+
+    $data = $this->query_api($params, 'GET');
+
+    return $data;
+  }
+
+  /**
+   * Post job
+   *
+   * @param string $recipe_id
+   * @param string $job_name
+   * @param string $file_name
+   * @return array
+   */
+  public function post_job($recipe_id = null, $job_name = null, $file_name = null) {
+
+    $data = array();
+
+    if (empty($recipe_id) || empty($job_name) || empty($file_name)) {
+      $data['error'] = 'Error: Missing parameter(s). Required parameters: recipe_id, job_name, file_name';
+    }
+
+    // If there are no errors, executte the API call.
+    if (empty($data['error'])) {
+
+      $params = array(
+        'job',
+      );
+
+      $post_params = array(
+        'id' => uniqid('3df_', true),
+        'name' => $job_name,
+        'clientId' => $this->processing_service_client_id,
+        'recipeId' => $recipe_id,
+        'parameters' => array(
+          'meshFile' => $file_name
+        ),
+        'priority' => 'normal',
+        'submission' => str_replace('+00:00', 'Z', gmdate('c', strtotime('now'))),
+      );
+
+      // API returns 200 for a successful POST,
+      // and a 404 for an unsuccessful POST. 
+      $result = $this->query_api($params, 'POST', $post_params);
+    }
+
+    return $data;
+  }
+
+  /**
+   * Start job
+   *
+   * @param $job_id
+   * @return array
+   */
+  public function start_job($job_id = null) {
+
+    $data = array();
+
+    if (empty($job_id)) $data['error'] = 'Error: Missing parameter. Required parameters: job_id';
+
+    // If there are no errors, executte the API call.
+    if (empty($data['error'])) {
+
+      // /clients/{clientId}/jobs/{jobId}/run
+      $params = array(
+        'clients',
+        $this->processing_service_client_id,
+        'jobs',
+        $job_id,
+        'run'
+      );
+
+      $data = $this->query_api($params, 'GET');
+
+    }
+
+    return $data;
+  }
+
+  /**
+   * Cancel job
+   *
+   * @param $job_id
+   * @return array
+   */
+  public function cancel_job($job_id = null) {
+
+    $data = array();
+
+    if (empty($job_id)) $data['error'] = 'Error: Missing parameter. Required parameters: job_id';
+
+    // If there are no errors, executte the API call.
+    if (empty($data['error'])) {
+
+      // /clients/{clientId}/jobs/{jobId}/cancel
+      $params = array(
+        'clients',
+        $this->processing_service_client_id,
+        'jobs',
+        $job_id,
+        'cancel'
+      );
+
+      $data = $this->query_api($params, 'GET');
+
+    }
+
+    return $data;
+  }
+
+  /**
+   * Delete job
+   *
+   * @param $job_id
+   * @return array
+   */
+  public function delete_job($job_id = null) {
+
+    $data = array();
+
+    if (empty($job_id)) $data['error'] = 'Error: Missing parameter. Required parameters: job_id';
+
+    // If there are no errors, executte the API call.
+    if (empty($data['error'])) {
+
+      // /clients/{clientId}/jobs/{jobId}
+      $params = array(
+        'clients',
+        $this->processing_service_client_id,
+        'jobs',
+        $job_id
+      );
+
+      // API returns 200 for a successful DELETE.
+      $data = $this->query_api($params, 'DELETE');
+
+    }
+
+    return $data;
+  }
+
+  /**
+   * Get job
+   *
+   * @param $job_id
+   * @return array
+   */
+  public function get_job($job_id = null) {
+
+    $data = array();
+
+    if (empty($job_id)) $data['error'] = 'Error: Missing parameter. Required parameters: job_id';
+
+    // If there are no errors, executte the API call.
+    if (empty($data['error'])) {
+
+      // /clients/{clientId}/jobs/{jobId}
+      $params = array(
+        'clients',
+        $this->processing_service_client_id,
+        'jobs',
+        $job_id
+      );
+
+      // API returns 200 and one job's data for a successful GET,
+      // and a 400 and error message for an unsuccessful GET.
+      $data = $this->query_api($params, 'GET');
+
+    }
+
+    return $data;
+  }
+
+  /**
+   * Get jobs
+   *
+   * @return array
+   */
+  public function get_jobs() {
+
+    $data = array();
+
+    // /clients/{clientId}/jobs
+    $params = array(
+      'clients',
+      $this->processing_service_client_id,
+      'jobs'
+    );
+
+    // API returns 200 and all job data for a successful GET,
+    // and a 200 for an unsuccessful GET (for an invalid client ID).
+    $data = $this->query_api($params, 'GET');
+
+    return $data;
   }
 
   /**
@@ -75,11 +296,8 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    * @param string $content_type
    * @return array
    */
-  public function query_api($params = array(), $method = 'get', $post_params = array(), $return_output = true, $content_type = 'Content-type: application/json; charset=utf-8')
+  public function query_api($params = array(), $method = 'GET', $post_params = array(), $return_output = true, $content_type = 'Content-type: application/json; charset=utf-8')
   {
-    // $this->u->dumper($method,0);
-    // $this->u->dumper($params,0);
-    // $this->u->dumper(json_encode($post_params));
 
     $data = array();
 
@@ -91,30 +309,27 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
       }
 
       $url_path = implode('/', $params);
-      // $this->u->dumper($this->processing_service_location . $url_path);
 
       $ch = curl_init($this->processing_service_location . $url_path);
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
       curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
       curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
       curl_setopt($ch, CURLOPT_HTTPHEADER, array($content_type));
-      curl_setopt($ch, CURLINFO_HEADER_OUT, TRUE);
+      curl_setopt($ch, CURLINFO_HEADER_OUT, true);
 
-      switch ($method) {
-        case "post":
-          // $this->u->dumper('posting');
+      switch (strtoupper($method)) {
+        case "POST":
           curl_setopt($ch, CURLOPT_POST, 1);
           curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_params));
           curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
           break;
-        case "delete":
-          // $this->u->dumper('deleting');
+        case "DELETE":
           curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
           break;
       }
 
       // Return output.
-      if($return_output) $data['output'] = curl_exec($ch);
+      if($return_output) $data['result'] = curl_exec($ch);
       // Suppress output.
       if(!$return_output) curl_exec($ch);
       // Return the HTTP code.
