@@ -47,10 +47,9 @@ class BagitValidationCommand extends Command
     // Outputs multiple lines to the console (adding "\n" at the end of each line).
     $output->writeln([
       '',
-      '<bg=blue;options=bold>                   </>',
-      '<bg=blue;options=bold> BagIt Validator   </>',
-      '<bg=blue;options=bold> ================= </>',
+      '<bg=blue;options=bold> Validating Bagged Assets (BagIt) </>',
       '',
+      'Command: ' . 'php bin/console app:bagit-validate ' . $input->getArgument('localpath') . "\n",
     ]);
 
     if (!empty($input->getArgument('localpath'))) {
@@ -65,8 +64,8 @@ class BagitValidationCommand extends Command
       $result = $this->bagit->bagit_validate($params);
 
       // Output validation results.
-      if (isset($result['result'])) {
-        $output->writeln('<comment>Validation Result: ' . $result['result'] . "</comment>\n");
+      if (isset($result['result']) && ($result['result'] === 'success')) {
+        $output->writeln('<comment>BagIt validation complete.</comment>' . "\n");
       }
 
       // Output errors.

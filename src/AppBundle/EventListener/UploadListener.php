@@ -87,7 +87,7 @@ class UploadListener
             'parent_record_id' => $file_data->parent_record_id,
             'parent_record_type' => $file_data->parent_record_type,
             'file_name' => $file->getBasename(),
-            'file_path' => '/uploads/repository/' . $file_data->target_directory . '/' . $file_data->full_path,
+            'file_path' => DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'repository' . DIRECTORY_SEPARATOR . $file_data->target_directory . DIRECTORY_SEPARATOR . $file_data->full_path,
             'file_size' => filesize($file_data->job_id_directory . '/' . $file_data->full_path),
             'file_type' => $file->getExtension(), // $file->getMimeType()
             'file_hash' => '',

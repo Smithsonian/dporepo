@@ -92,91 +92,6 @@ class RepoFileTransfer implements RepoFileTransferInterface {
    */
 
   /**
-   * @param $target_directory The directory which contains files to be transferred.
-   * @param $filesystem Filesystem object (via Flysystem).
-   * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
-   * @param $conn The database connection.
-   * @return mixed array containing success/fail value, and any messages.
-   */
-  public function transferFiles($target_directory = null, $filesystem = null, $conn = null)
-  {
-    $data = array();
-    $job_status = 'complete';
-
-    // Absolute local path.
-    $path = $this->project_directory . $this->uploads_directory . $target_directory;
-
-    if (!is_dir($path)) {
-      $data[0]['errors'][] = 'Target directory not found - ' . $path;
-    }
-
-    if (is_dir($path)) {
-
-      $finder = new Finder();
-      $finder->in($path);
-      $finder->sortByName();
-
-      // Traverse the local path and upload files.
-      $i = 0;
-      foreach ($finder as $file) {
-
-        // Make sure the asset is a file and not a directory (directories are automatically detected by WebDAV).
-        if ($file->isFile()) {
-
-          // Remove the absolute local path to format into the absolute external path.
-          $path_external = str_replace($this->project_directory . $this->uploads_directory, $this->external_file_storage_path, $file->getPathname());
-
-          // Write the file.
-          try {
-            $stream = fopen($file->getPathname(), 'r+');
-            $filesystem->writeStream($path_external, $stream);
-            // Before calling fclose on the resource, check if it’s still valid using is_resource.
-            if (is_resource($stream)) fclose($stream);
-          }
-          // Catch the error.
-          catch(\League\Flysystem\FileExistsException | \League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
-            $data[$i]['errors'][] = $e->getMessage();
-          }
-
-          // Return some information about the file.
-          $data[$i]['file_name'] = $file->getFilename();
-          $data[$i]['file_size'] = $file->getSize();
-          $data[$i]['file_extension'] = $file->getExtension();
-
-          if (!empty($data[$i]['errors'])) {
-            // Set the job_status to 'failed', if not already set.
-            if ($job_status !== 'failed') $job_status = 'failed';
-            // Log the errors to the database.
-            $this->repoValidate->logErrors(
-              array(
-                'job_id' => $target_directory,
-                'user_id' => 0,
-                'job_log_label' => 'File Transfer',
-                'errors' => $data[$i]['errors'],
-              )
-            );
-          }
-
-          $i++;
-        }
-
-      }
-
-    }
-
-    // Update the 'job_status' in the 'job' table accordingly.
-    $this->repo_storage_controller->execute('setJobStatus', 
-      array(
-        'job_id' => $target_directory, 
-        'status' => $job_status, 
-        'date_completed' => date('Y-m-d h:i:s')
-      )
-    );
-
-    return $data;
-  }
-
-  /**
    * @param $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return mixed array containing success/fail value, and any messages.
@@ -226,6 +141,93 @@ class RepoFileTransfer implements RepoFileTransferInterface {
       );
     }
     
+    return $data;
+  }
+
+  /**
+   * @param $target_directory The directory which contains files to be transferred.
+   * @param $filesystem Filesystem object (via Flysystem).
+   * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
+   * @param $conn The database connection.
+   * @return mixed array containing success/fail value, and any messages.
+   */
+  public function transferFiles($target_directory = null, $filesystem = null, $conn = null)
+  {
+    $data = array();
+    $job_status = 'complete';
+
+    // Absolute local path.
+    $path = $this->project_directory . $this->uploads_directory . $target_directory;
+    // Job data.
+    $job_data = $this->repo_storage_controller->execute('getJobData', array($target_directory));
+
+    if (!is_dir($path)) {
+      $data[0]['errors'][] = 'Target directory not found - ' . $path;
+    }
+
+    if (is_dir($path)) {
+
+      $finder = new Finder();
+      $finder->in($path);
+      $finder->sortByName();
+
+      // Traverse the local path and upload files.
+      $i = 0;
+      foreach ($finder as $file) {
+
+        // Make sure the asset is a file and not a directory (directories are automatically detected by WebDAV).
+        if ($file->isFile()) {
+
+          // Remove the absolute local path to format into the absolute external path.
+          $path_external = str_replace($this->project_directory . $this->uploads_directory, $this->external_file_storage_path, $file->getPathname());
+
+          // Write the file.
+          try {
+            $stream = fopen($file->getPathname(), 'r+');
+            $filesystem->writeStream($path_external, $stream);
+            // Before calling fclose on the resource, check if it’s still valid using is_resource.
+            if (is_resource($stream)) fclose($stream);
+          }
+          // Catch the error.
+          catch(\League\Flysystem\FileExistsException | \League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
+            $data[$i]['errors'][] = $e->getMessage();
+          }
+
+          // Return some information about the file.
+          $data[$i]['file_name'] = $file->getFilename();
+          $data[$i]['file_size'] = $file->getSize();
+          $data[$i]['file_extension'] = $file->getExtension();
+
+          if (!empty($data[$i]['errors'])) {
+            // Set the job_status to 'failed', if not already set.
+            if ($job_status !== 'failed') $job_status = 'failed';
+            // Log the errors to the database.
+            $this->repoValidate->logErrors(
+              array(
+                'job_id' => $job_data['job_id'],
+                'user_id' => 0,
+                'job_log_label' => 'File Transfer',
+                'errors' => $data[$i]['errors'],
+              )
+            );
+          }
+
+          $i++;
+        }
+
+      }
+
+    }
+
+    // Update the 'job_status' in the 'job' table accordingly.
+    $this->repo_storage_controller->execute('setJobStatus', 
+      array(
+        'job_id' => $job_data['uuid'], 
+        'status' => $job_status, 
+        'date_completed' => date('Y-m-d h:i:s')
+      )
+    );
+
     return $data;
   }
 
