@@ -72,6 +72,11 @@ class RepoImport implements RepoImportInterface {
   private $repo_storage_controller;
 
   /**
+   * @var object $repoValidate
+   */
+  private $repoValidate;
+
+  /**
    * Constructor
    * @param object  $kernel  Symfony's kernel object
    * @param string  $uploads_directory  Uploads directory path
@@ -92,6 +97,7 @@ class RepoImport implements RepoImportInterface {
     $this->external_file_storage_path = $external_file_storage_path;
     $this->conn = $conn;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
+    $this->repoValidate = new RepoValidateData($conn);
   }
 
   /**
@@ -126,10 +132,16 @@ class RepoImport implements RepoImportInterface {
     $job_data = $this->repo_storage_controller->execute('getJobData', array($params['uuid']));
 
     // Throw a 404 if the job record doesn't exist.
-    if (!$job_data) throw $this->createNotFoundException('The Job record doesn\'t exist');
+    if (!$job_data) {
+      $return['errors'][] = 'The Job record doesn\'t exist';
+      return $return;
+    }
 
     // Don't perform the metadata ingest if the job_status has been set to 'failed'.
-    if ($job_data['job_status'] === 'failed') return $return;
+    if ($job_data['job_status'] === 'failed') {
+      $return['errors'][] = 'The job has failed. Exiting metadata ingest process.';
+      return $return;
+    }
 
     // Get user data.
     if( method_exists($this->tokenStorage, 'getUser') ) {
@@ -255,19 +267,19 @@ class RepoImport implements RepoImportInterface {
       // Prevent additional CSVs from being imported according to the $job_type.
       // Assign keys to each CSV, with projects first, subjects second, and items third.
       foreach ($finder as $file) {
-        if (($job_type === 'subjects') && stristr($file->getRealPath(), 'subjects')) {
+        if (($job_type === 'subjects') && stristr($file->getFilename(), 'subjects')) {
           $csv[0]['type'] = 'subject';
           $csv[0]['data'] = $file->getContents();
         }
-        if ((($job_type === 'subjects') || ($job_type === 'items')) && stristr($file->getRealPath(), 'items')) {
+        if ((($job_type === 'subjects') || ($job_type === 'items')) && stristr($file->getFilename(), 'items')) {
           $csv[1]['type'] = 'item';
           $csv[1]['data'] = $file->getContents();
         }
-        if ((($job_type === 'subjects') || ($job_type === 'items') || ($job_type === 'capture datasets') || ($job_type === 'models')) && stristr($file->getRealPath(), 'capture_datasets')) {
+        if ((($job_type === 'subjects') || ($job_type === 'items') || ($job_type === 'capture datasets') || ($job_type === 'models')) && stristr($file->getFilename(), 'capture_datasets')) {
           $csv[2]['type'] = 'capture_dataset';
           $csv[2]['data'] = $file->getContents();
         }
-        if ((($job_type === 'subjects') || ($job_type === 'items') || ($job_type === 'capture datasets') || ($job_type === 'models')) && stristr($file->getRealPath(), 'models')) {
+        if ((($job_type === 'subjects') || ($job_type === 'items') || ($job_type === 'capture datasets') || ($job_type === 'models')) && stristr($file->getFilename(), 'models')) {
           $csv[3]['type'] = 'model';
           $csv[3]['data'] = $file->getContents();
         }
@@ -425,6 +437,7 @@ class RepoImport implements RepoImportInterface {
     $session = new Session();
     $data = (object)$data;
     $job_log_ids = array();
+    $job_status = 'finished';
 
     // Get user data.
     if( method_exists($this->tokenStorage, 'getUser') ) {
@@ -476,142 +489,176 @@ class RepoImport implements RepoImportInterface {
 
     foreach ($data->csv as $csv_key => $csv_val) {
 
-      // Set the parent record's repository ID.
-      switch ($data->type) {
-        case 'subject':
-          // Set the project_repository_id
-          $csv_val->project_repository_id = (int)$data->parent_project_id;
-          break;
-        case 'item':
-          // Set the subject_repository_id.
-          if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
-            $csv_val->subject_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
-          } else {
-            $csv_val->subject_repository_id = $data->parent_record_id;
-          }
-          break;
-        case 'capture_dataset':
-          // Set the parent_item_repository_id.
-          if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
-            $csv_val->parent_item_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
-          } else {
-            $csv_val->parent_item_repository_id = $data->parent_record_id;
-          }
+      // If import_row_id or import_parent_id is missing, set the job to failed and exit.
+      if (!isset($csv_val->import_row_id) || !isset($csv_val->import_parent_id)) {
+        // Set the job status.
+        $job_status = 'failed';
+        // Log the error to the database.
+        $this->repoValidate->logErrors(
+          array(
+            'job_id' => $data->job_id,
+            'user_id' => 0,
+            'job_log_label' => 'Metadata Ingest',
+            'errors' => array($data->type . ' CSV is missing the import_row_id column'),
+          )
+        );
+        // Update the 'job_status' in the 'job' table accordingly.
+        $this->repo_storage_controller->execute('setJobStatus', 
+          array(
+            'job_id' => $data->uuid, 
+            'status' => $job_status,
+            'date_completed' => date('Y-m-d h:i:s')
+          )
+        );
+        break;
+      }
 
-          // Get the parent project ID.
-          $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
-            'base_record_id' => $csv_val->parent_item_repository_id,
-            'record_type' => 'item',
-          ));
-          if (!empty($parent_records)) {
-            $csv_val->parent_project_repository_id = $parent_records['project_repository_id'];
-          }
+      if (isset($csv_val->import_row_id)) {
+        // Set the parent record's repository ID.
+        switch ($data->type) {
+          case 'subject':
+            // Set the project_repository_id
+            $csv_val->project_repository_id = (int)$data->parent_project_id;
+            break;
+          case 'item':
+            // Set the subject_repository_id.
+            if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
+              $csv_val->subject_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+            } else {
+              $csv_val->subject_repository_id = $data->parent_record_id;
+            }
+            break;
+          case 'capture_dataset':
+            // Set the parent_item_repository_id.
+            if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
+              $csv_val->parent_item_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+            } else {
+              $csv_val->parent_item_repository_id = $data->parent_record_id;
+            }
 
-        case 'model':
-          // 1) Append the job ID to the file path
-          // 2) Add the file's checksum to the $csv_val object.
-          if(!empty($csv_val->file_path)) {
-            // Append the job ID to the file path.
-            $csv_val->file_path = '/' . $data->uuid . $csv_val->file_path;
-            // Get the file's checksum from the BagIt manifest.
-            $finder = new Finder();
-            $finder->files()->in($this->uploads_directory . $data->uuid . '/');
-            $finder->files()->name('manifest*.txt');
-            // Find the manifest file.
-            foreach ($finder as $file) {
-              $manifest_contents = $file->getContents();
-              $manifest_lines = preg_split('/\r\n|\n|\r/', trim($manifest_contents));
-              foreach ($manifest_lines as $mkey => $mvalue) {
-                $manifest_line_array = preg_split('/\s+/', $mvalue);
-                // If there's a match against file paths, add the checksum to the $csv_val object.
-                if (strstr($csv_val->file_path, $manifest_line_array[1])) {
-                  $csv_val->file_checksum = $manifest_line_array[0];
-                  break;
+            // Get the parent project ID.
+            $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
+              'base_record_id' => $csv_val->parent_item_repository_id,
+              'record_type' => 'item',
+            ));
+            if (!empty($parent_records)) {
+              $csv_val->parent_project_repository_id = $parent_records['project_repository_id'];
+            }
+
+          case 'model':
+            // 1) Append the job ID to the file path
+            // 2) Add the file's checksum to the $csv_val object.
+            if(!empty($csv_val->file_path)) {
+              // Append the job ID to the file path.
+              $csv_val->file_path = '/' . $data->uuid . $csv_val->file_path;
+              // Get the file's checksum from the BagIt manifest.
+              $finder = new Finder();
+              $finder->files()->in($this->uploads_directory . $data->uuid . '/');
+              $finder->files()->name('manifest*.txt');
+              // Find the manifest file.
+              foreach ($finder as $file) {
+                $manifest_contents = $file->getContents();
+                $manifest_lines = preg_split('/\r\n|\n|\r/', trim($manifest_contents));
+                foreach ($manifest_lines as $mkey => $mvalue) {
+                  $manifest_line_array = preg_split('/\s+/', $mvalue);
+                  // If there's a match against file paths, add the checksum to the $csv_val object.
+                  if (strstr($csv_val->file_path, $manifest_line_array[1])) {
+                    $csv_val->file_checksum = $manifest_line_array[0];
+                    break;
+                  }
                 }
               }
             }
-          }
-          // Set the parent_capture_dataset_repository_id or parent_item_repository_id (when a model is associated to an item).
-          // TODO: add previous_parent_record_type to the mix, 
-          // so the system will automatically detect what to associate a model to (to make it a bit more bullet-proof).
-          if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
-            // If a model maps to an item, set the value for the 'parent_item_repository_id' field.
-            if ($data->parent_record_type === 'item') {
-              $csv_val->parent_item_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+            // Set the parent_capture_dataset_repository_id or parent_item_repository_id (when a model is associated to an item).
+            // TODO: add previous_parent_record_type to the mix, 
+            // so the system will automatically detect what to associate a model to (to make it a bit more bullet-proof).
+            if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
+              // If a model maps to an item, set the value for the 'parent_item_repository_id' field.
+              if ($data->parent_record_type === 'item') {
+                $csv_val->parent_item_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+              }
+              // Otherwise, set the value for the 'parent_capture_dataset_repository_id' field.
+              else {
+                $csv_val->parent_capture_dataset_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+              }
+            } else {
+              // If a model maps to an item, set the value for the 'parent_item_repository_id' field.
+              if ($data->parent_record_type === 'item') {
+                $csv_val->parent_item_repository_id = $data->parent_record_id;
+              }
+              // Otherwise, set the value for the 'parent_capture_dataset_repository_id' field.
+              else {
+                $csv_val->parent_capture_dataset_repository_id = $data->parent_record_id;
+              }
             }
-            // Otherwise, set the value for the 'parent_capture_dataset_repository_id' field.
-            else {
-              $csv_val->parent_capture_dataset_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
-            }
-          } else {
-            // If a model maps to an item, set the value for the 'parent_item_repository_id' field.
-            if ($data->parent_record_type === 'item') {
-              $csv_val->parent_item_repository_id = $data->parent_record_id;
-            }
-            // Otherwise, set the value for the 'parent_capture_dataset_repository_id' field.
-            else {
-              $csv_val->parent_capture_dataset_repository_id = $data->parent_record_id;
-            }
-          }
-          break;
+            break;
+        }
+
+        // Insert data from the CSV into the appropriate database table, using the $data->type as the table name.
+        $this_id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => $data->type,
+          'user_id' => $data->user_id,
+          'values' => (array)$csv_val
+        ));
+
+        // Create an array of all of the newly created repository IDs.
+        $new_new_repository_ids[$csv_val->import_row_id] = $this_id;
+
+        // Set the description for the job log.
+        switch ($data->type) {
+          case 'subject':
+            $data->description = $csv_val->local_subject_id . ' - ' . $csv_val->subject_name;
+            break;
+          case 'item':
+            $data->description = $csv_val->item_description;
+            break;
+          case 'capture_dataset':
+            $data->description = $data->for_model_description = $csv_val->capture_dataset_name;
+            break;
+          case 'model':
+            $data->description = $project['project_name'] . ' - ' . $csv_val->model_file_type;
+            break;
+        }
+
+        // Insert into the job_import_record table
+        $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_import_record',
+          'user_id' => $data->user_id,
+          'values' => array(
+            'job_id' => $data->job_id,
+            'record_id' => $this_id,
+            'project_id' => (int)$data->parent_project_id,
+            'record_table' => $data->type,
+            'description' => $data->description,
+          )
+        ));
       }
+    }
+    if (isset($new_new_repository_ids) && !empty($new_new_repository_ids)) {
+      // Set the session variable 'new_repository_ids'.
+      $session->set('new_repository_ids_' . $i, $new_new_repository_ids);
+    }
 
-      // Insert data from the CSV into the appropriate database table, using the $data->type as the table name.
-      $this_id = $this->repo_storage_controller->execute('saveRecord', array(
-        'base_table' => $data->type,
-        'user_id' => $data->user_id,
-        'values' => (array)$csv_val
-      ));
+    // Job data.
+    $job_data = $this->repo_storage_controller->execute('getJobData', array($data->uuid));
 
-      // Create an array of all of the newly created repository IDs.
-      $new_new_repository_ids[$csv_val->import_row_id] = $this_id;
-
-      // Set the description for the job log.
-      switch ($data->type) {
-        case 'subject':
-          $data->description = $csv_val->local_subject_id . ' - ' . $csv_val->subject_name;
-          break;
-        case 'item':
-          $data->description = $csv_val->item_description;
-          break;
-        case 'capture_dataset':
-          $data->description = $data->for_model_description = $csv_val->capture_dataset_name;
-          break;
-        case 'model':
-          $data->description = $project['project_name'] . ' - ' . $csv_val->model_file_type;
-          break;
-      }
-
-      // Insert into the job_import_record table
-      $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
-        'base_table' => 'job_import_record',
+    if ($job_data['job_status'] !== 'failed') {
+      // Insert into the job_log table
+      // TODO: Feed the 'job_log_label' to the log leveraging fields from a form submission in the UI.
+      $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
+        'base_table' => 'job_log',
         'user_id' => $data->user_id,
         'values' => array(
           'job_id' => $data->job_id,
-          'record_id' => $this_id,
-          'project_id' => (int)$data->parent_project_id,
-          'record_table' => $data->type,
-          'description' => $data->description,
+          'job_log_status' => $job_status,
+          'job_log_label' => 'Import ' . $data->type,
+          'job_log_description' => 'Import ' . $job_status,
         )
       ));
-
     }
 
-    // Set the session variable 'new_repository_ids'.
-    $session->set('new_repository_ids_' . $i, $new_new_repository_ids);
-
-    // Insert into the job_log table
-    // TODO: Feed the 'job_log_label' to the log leveraging fields from a form submission in the UI.
-    $job_log_ids[] = $this->repo_storage_controller->execute('saveRecord', array(
-      'base_table' => 'job_log',
-      'user_id' => $data->user_id,
-      'values' => array(
-        'job_id' => $data->job_id,
-        'job_log_status' => 'finish',
-        'job_log_label' => 'Import ' . $data->type,
-        'job_log_description' => 'Import finished',
-      )
-    ));
+    // If the $job_data['job_status'] is failed, remove $job_log_ids.
+    if ($job_data['job_status'] === 'failed') $job_log_ids = array();
 
     // TODO: return something more than job log IDs?
     return $job_log_ids;

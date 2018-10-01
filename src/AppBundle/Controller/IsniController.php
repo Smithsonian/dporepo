@@ -82,16 +82,20 @@ class IsniController extends Controller
                     $isniRecordArray = json_decode(json_encode($isniRecord), true);
                     $data[$i]["organisationType"] = isset($isniRecordArray["organisationType"]) ? $isniRecordArray["organisationType"] : array();
 
+                    // Set the organisationName as an array if it's not already present.
+                    if(!isset($isniRecordArray["organisationName"])) $isniRecordArray["organisationName"] = array();
+
                     if(isset($isniRecordArray["organisationName"])) {
                         foreach ($isniRecordArray["organisationName"] as $key => $value) {
                             if(is_array($value)) {
-                                // if(isset($data[$i]["organisationName"]) && !in_array($value["mainName"], $data[$i]["organisationName"])) {
-                                    $data[$i]["organisationName"][] = $value["mainName"];
-                                // }
+                                $subdivisionName = '';
+                                if(isset($value["subdivisionName"])) {
+                                    // If an array is returned, just take the first subdivisionName.
+                                    $subdivisionName = is_array($value["subdivisionName"]) ?  ' - ' . $value["subdivisionName"][0] : ' - ' . $value["subdivisionName"];
+                                }
+                                $data[$i]["organisationName"][] = $value["mainName"] . $subdivisionName;
                             } else {
-                                // if(!in_array($value, $data[$i]["organisationName"])) {
-                                    $data[$i]["organisationName"][] = $value;
-                                // }
+                                $data[$i]["organisationName"][] = $value;
                             }
                         }
                     }
@@ -99,13 +103,14 @@ class IsniController extends Controller
                     if(isset($isniRecordArray["organisationNameVariant"])) {
                         foreach ($isniRecordArray["organisationNameVariant"] as $key => $value) {
                             if(is_array($value)) {
-                                // if(!in_array($value["mainName"], $data[$i]["organisationNameVariant"])) {
-                                    $data[$i]["organisationNameVariant"][] = $value["mainName"];
-                                // }
+                                $subdivisionName = '';
+                                if(isset($value["subdivisionName"])) {
+                                    // If an array is returned, just take the first subdivisionName.
+                                    $subdivisionName = is_array($value["subdivisionName"]) ? ' - ' . $value["subdivisionName"][0] : ' - ' . $value["subdivisionName"];
+                                }
+                                $data[$i]["organisationName"][] = $value["mainName"] . $subdivisionName;
                             } else {
-                                // if(!in_array($value, $data[$i]["organisationNameVariant"])) {
-                                    $data[$i]["organisationNameVariant"][] = $value;
-                                // }
+                                $data[$i]["organisationName"][] = $value;
                             }
                         }
                     }

@@ -118,7 +118,7 @@
               {% else %}
                 <ol class="list-unstyled">
                   {% for bagit_validation_error in project.bagit_validation_errors %}
-                    <li class="text-danger"><strong>{{ bagit_validation_error.job_log_description }}</strong></li>
+                    <li class="text-danger"><strong><span class="glyphicon glyphicon-ban-circle"></span> {{ bagit_validation_error.job_log_description }}</strong></li>
                   {% else %}
                     <li class="text-success"><strong><span class="glyphicon glyphicon-ok"></span> No BagIt validation errors found.</strong></li>
                   {% endfor %}
@@ -133,22 +133,37 @@
               {% else %}
                 <ol class="list-unstyled">
                   {% for image_validation_error in project.image_validation_errors %}
-                    <li class="text-danger"><strong>{{ image_validation_error.job_log_description }}</strong></li>
+                    <li class="text-danger"><strong><span class="glyphicon glyphicon-ban-circle"></span> {{ image_validation_error.job_log_description }}</strong></li>
                   {% else %}
                     <li class="text-success"><strong><span class="glyphicon glyphicon-ok"></span> No image validation errors found.</strong></li>
                   {% endfor %}
                 </ol>
               {% endif %}
               <hr>
+              <h3>Metadata Ingest Results</h3>
+              {% if not project.metadata_ingest_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' or job_data.job_status == 'image validation in progress' or job_data.job_status == 'metadata ingest in progress' %}
+                <p><span class="glyphicon glyphicon-time"></span> Metadata Ingest pending. Please check back shortly.</p>
+              {% elseif job_data.job_status == 'cancelled' %}
+                <p><span class="glyphicon glyphicon-ban-circle"></span> Job cancelled</p>
+              {% else %}
+                <ol class="list-unstyled">
+                  {% for metadata_ingest_error in project.metadata_ingest_errors %}
+                    <li class="text-danger"><strong><span class="glyphicon glyphicon-ban-circle"></span> {{ metadata_ingest_error.job_log_description }}</strong></li>
+                  {% else %}
+                    <li class="text-success"><strong><span class="glyphicon glyphicon-ok"></span> No metadata ingest errors found.</strong></li>
+                  {% endfor %}
+                </ol>
+              {% endif %}
+              <hr>
               <h3>File Transfer Results</h3>
-              {% if not project.file_transfer_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' or job_data.job_status == 'image validation in progress' or job_data.job_status == 'file transfer in progress' %}
+              {% if not project.file_transfer_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' or job_data.job_status == 'image validation in progress' or job_data.job_status == 'metadata ingest in progress' or job_data.job_status == 'file transfer in progress' %}
                 <p><span class="glyphicon glyphicon-time"></span> File transfers pending. Please check back shortly.</p>
               {% elseif job_data.job_status == 'cancelled' %}
                 <p><span class="glyphicon glyphicon-ban-circle"></span> Job cancelled</p>
               {% else %}
                 <ol class="list-unstyled">
                   {% for file_transfer_error in project.file_transfer_errors %}
-                    <li class="text-danger" style="border-bottom: 1px solid #dddddd; padding: 0.5rem 0 0.5rem 0.5rem;"><strong>{{ file_transfer_error.job_log_description }}</strong></li>
+                    <li class="text-danger" style="border-bottom: 1px solid #dddddd; padding: 0.5rem 0 0.5rem 0.5rem;"><strong><span class="glyphicon glyphicon-ban-circle"></span> {{ file_transfer_error.job_log_description }}</strong></li>
                   {% else %}
                     <li class="text-success"><strong><span class="glyphicon glyphicon-ok"></span> No file transfer errors found.</strong></li>
                   {% endfor %}
@@ -436,7 +451,9 @@
        * Endpoint/example: /admin/get_job_status/3
        */
       // Poll every 5 seconds to get the status of the job.
-      var checkerId = setInterval(checkStatus, 5000);
+      if ((job_status !== 'cancelled') && (job_status !== 'failed')) {
+        var checkerId = setInterval(checkStatus, 5000);
+      }
 
       function checkStatus() {
 
@@ -470,7 +487,9 @@
                   $('.status-target span.status').wrap( "<strong></strong>" );
                   $('.status-target span.status').prepend('<span class="glyphicon glyphicon-exclamation-sign"></span> ');
                   // Change the alert banner to an error.
-                  $('.alert-dismissible').removeClass('alert-success').addClass('alert-danger').empty().html('<span class="glyphicon glyphicon-exclamation-sign"></span> Error: See below for details') 
+                  $('.alert-dismissible').removeClass('alert-success').addClass('alert-danger').empty().html('<span class="glyphicon glyphicon-exclamation-sign"></span> Error: Refreshing page...');
+                  // Refresh the page.
+                  location.reload();
                 }
               } else {
                 $('.status-target span.status').empty().text('Error: Could not get status');

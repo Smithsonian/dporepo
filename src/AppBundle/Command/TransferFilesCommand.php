@@ -45,14 +45,16 @@ class TransferFilesCommand extends ContainerAwareCommand
   protected function execute(InputInterface $input, OutputInterface $output)
   {
     $result = '';
+    $errors = false;
+
+    $job_description = !empty($input->getArgument('check_external_storage')) ? 'External Storage Check' : 'Transferring Files';
 
     // Outputs multiple lines to the console (adding "\n" at the end of each line).
     $output->writeln([
       '',
-      '<bg=blue;options=bold>                   </>',
-      '<bg=blue;options=bold> Transfer Files    </>',
-      '<bg=blue;options=bold> ================= </>',
+      '<bg=blue;options=bold> ' . $job_description . ' </>',
       '',
+      'Command: ' . 'php bin/console app:transfer-files ' . $input->getArgument('uuid') . ' '. $input->getArgument('check_external_storage') . "\n",
     ]);
 
     // Check to see if the external storage is accessible.
@@ -84,6 +86,7 @@ class TransferFilesCommand extends ContainerAwareCommand
             $output->writeln($k . ': ' . $v . "\n");
           } else {
             if (!empty($v)) {
+              $errors = TRUE;
               foreach ($v as $ek => $ev) {
                 $output->writeln('<error>' . $ev . '</error>' . "\n");
               }
@@ -91,6 +94,7 @@ class TransferFilesCommand extends ContainerAwareCommand
           }
         }
       }
+      if (!$errors) $output->writeln('<comment>File transfer complete.</comment>');
     }
 
     return $result;

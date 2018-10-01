@@ -8,15 +8,20 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 
 use AppBundle\Controller\ValidateImagesController;
+use AppBundle\Controller\ExtractImageMetadataController;
 
 class FilesValidationCommand extends Command
 {
   private $validate_images;
+  private $extract_image_metadata;
 
-  public function __construct(ValidateImagesController $validate_images)
+  public function __construct(ValidateImagesController $validate_images, ExtractImageMetadataController $extract_image_metadata)
   {
     // Validate Images Controller.
     $this->validate_images = $validate_images;
+    // Image Metadata Extractor Controller.
+    $this->extract_image_metadata = $extract_image_metadata;
+
     // This is required due to parent constructor, which sets up name.
     parent::__construct();
   }
@@ -37,7 +42,7 @@ class FilesValidationCommand extends Command
 
   /**
    * Example:
-   * php bin/console app:bagit-validate /var/www/html/dporepo/web/uploads/repository/4
+   * php bin/console app:files-validate /var/www/html/dporepo/web/uploads/repository/4
    */
   protected function execute(InputInterface $input, OutputInterface $output)
   {
@@ -46,10 +51,9 @@ class FilesValidationCommand extends Command
     // Outputs multiple lines to the console (adding "\n" at the end of each line).
     $output->writeln([
       '',
-      '<bg=blue;options=bold>                   </>',
-      '<bg=blue;options=bold> Files Validator   </>',
-      '<bg=blue;options=bold> ================= </>',
+      '<bg=blue;options=bold> Validating Files </>',
       '',
+      'Command: ' . 'php bin/console app:files-validate ' . $input->getArgument('localpath') . "\n",
     ]);
 
     if (!empty($input->getArgument('localpath'))) {
@@ -63,6 +67,10 @@ class FilesValidationCommand extends Command
       $result = $this->validate_images->validate($params);
 
       // Output validation results.
+      if (empty($result)) {
+        $output->writeln('<comment>Files validation complete.</comment>');
+      }
+
       if (!empty($result)) {
         $output->writeln('<comment>Validated Files:</comment>' . "\n");
         foreach ($result as $key => $value) {
@@ -80,6 +88,34 @@ class FilesValidationCommand extends Command
           }
         }
       }
+
+      // Extract the metadata.
+      $result = $this->extract_image_metadata->extract_metadata($params);
+
+      // Output metadata results.
+      if (!empty($result)) {
+        $output->writeln('<comment>Metadata from Files:</comment>' . "\n");
+        foreach ($result as $key => $value) {
+          $output->writeln('---------------------------' . "\n");
+          foreach ($value as $k => $v) {
+            if ($k == 'metadata') {
+              foreach($v as $vk => $vv) {
+                $output->writeln($vk . ': ' . $vv . "\n");
+              }
+            } else {
+              if (!empty($v)) {
+                if($k == 'errors' || $k == 'warnings') {
+                  $html_tag = substr($k, 0, -1);
+                  foreach ($v as $ek => $ev) {
+                    $output->writeln('<' . $html_tag . '>' . $ev . '</' . $html_tag . '>' . "\n");
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
 
     }
 
