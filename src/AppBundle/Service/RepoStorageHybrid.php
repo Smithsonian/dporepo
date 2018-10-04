@@ -3588,26 +3588,42 @@ class RepoStorageHybrid implements RepoStorage {
     $permission_name = isset($params['permission_name']) ? $params['permission_name'] : NULL;
     $project_id = isset($params['project_id']) ? $params['project_id'] : NULL;
 
-    if(NULL == $permission_name || NULL == $username) {
+    if(NULL == $permission_name || NULL == $username || NULL == $project_id) {
       return $data;
     }
 
-    // See if user specifically has access to this project, or has access to this permission globally.
-    $sql = "SELECT user_role.username_canonical, permission.permission_name, GROUP_CONCAT(project.project_repository_id) as project_ids
-          FROM user_role
-
-          JOIN role_permission ON user_role.role_id = role_permission.role_id
-          JOIN permission ON role_permission.permission_id = permission.permission_id
-          LEFT JOIN project on user_role.project_id = project.project_repository_id
-          LEFT JOIN unit_stakeholder ON project.stakeholder_guid = unit_stakeholder.isni_id
-
-          WHERE user_role.username_canonical= :username 
-          AND permission.permission_name= :permission_name
-          AND ( (user_role.project_id IS NULL AND user_role.stakeholder_id IS NULL) ";
-    if(NULL !== $project_id) {
-      $sql .= " OR user_role.project_id= :project_id ";
-    }
-    $sql .= ")";
+    // See if user specifically has access to this project, has access via a stakeholder, or has access to this permission globally.
+    $sql = "SELECT username_canonical, permission_name, GROUP_CONCAT(project_repository_id) as project_ids
+              FROM
+              (
+              SELECT user_role.username_canonical, permission.permission_name, project.project_repository_id
+                        FROM user_role
+              
+                        JOIN role_permission ON user_role.role_id = role_permission.role_id
+                        JOIN permission ON role_permission.permission_id = permission.permission_id
+                        LEFT JOIN project on user_role.project_id = project.project_repository_id
+                        LEFT JOIN unit_stakeholder ON project.stakeholder_guid = unit_stakeholder.isni_id
+              
+                        WHERE user_role.username_canonical= :username 
+                        AND permission.permission_name= :permission_name
+                        AND ( (user_role.project_id IS NULL AND user_role.stakeholder_id IS NULL) 
+                        OR user_role.project_id= :project_id ) 
+                        UNION
+              SELECT user_role.username_canonical, permission.permission_name, project.project_repository_id
+                        FROM user_role
+              
+                        JOIN role_permission ON user_role.role_id = role_permission.role_id
+                        JOIN permission ON role_permission.permission_id = permission.permission_id
+                        LEFT JOIN unit_stakeholder ON user_role.stakeholder_id = unit_stakeholder.unit_stakeholder_repository_id
+                        LEFT JOIN project on unit_stakeholder.isni_id = project.stakeholder_guid
+                        WHERE user_role.username_canonical= :username 
+                        AND permission.permission_name= :permission_name
+                        AND user_role.project_id IS NULL 
+                        AND user_role.stakeholder_id IS NOT NULL 
+                        AND project.project_repository_id= :project_id  
+              )
+              as tmp
+              GROUP BY username_canonical, permission_name ";
 
     $statement = $this->connection->prepare($sql);
     $statement->bindValue(":username", $username, PDO::PARAM_STR);
