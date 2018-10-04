@@ -3514,16 +3514,27 @@ class RepoStorageHybrid implements RepoStorage {
             LEFT JOIN role on user_role.role_id = role.role_id
             LEFT JOIN project on user_role.project_id = project.project_repository_id
             LEFT JOIN unit_stakeholder on project.stakeholder_guid = unit_stakeholder.isni_id 
+            WHERE user_role.project_id IS NOT NULL 
             
             UNION 
             
             SELECT fos_user.username_canonical, username, email, enabled, rolename,
-            project.project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
+            '' as project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
             FROM fos_user
             LEFT JOIN user_role on fos_user.username_canonical = user_role.username_canonical
             LEFT JOIN role on user_role.role_id = role.role_id
-            LEFT JOIN unit_stakeholder on user_role.stakeholder_id = unit_stakeholder.unit_stakeholder_repository_id
-            LEFT JOIN project on unit_stakeholder.isni_id = project.stakeholder_guid 
+            JOIN unit_stakeholder on user_role.stakeholder_id = unit_stakeholder.unit_stakeholder_repository_id
+            WHERE user_role.stakeholder_id IS NOT NULL 
+            
+            UNION
+
+            SELECT fos_user.username_canonical, username, email, enabled, rolename,
+            '' as project_name, '' as unit_stakeholder_label, '' as unit_stakeholder_full_name
+            FROM fos_user
+            LEFT JOIN user_role on fos_user.username_canonical = user_role.username_canonical
+            LEFT JOIN role on user_role.role_id = role.role_id
+            WHERE user_role.stakeholder_id IS NULL AND user_role.project_id IS NULL 
+            
              )
              as tmp ";
     if(NULL !== $username_canonical) {
