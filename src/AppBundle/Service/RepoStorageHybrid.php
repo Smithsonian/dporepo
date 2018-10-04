@@ -3562,6 +3562,48 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
+  public function getUserAccess($params = array()) {
+
+    $data = array();
+
+    $username = isset($params['username_canonical']) ? $params['username_canonical'] : NULL;
+    $permission_name = isset($params['permission_name']) ? $params['permission_name'] : NULL;
+    $project_id = isset($params['project_id']) ? $params['project_id'] : NULL;
+
+    if(NULL == $permission_name || NULL == $username) {
+      return $data;
+    }
+
+    // See if user specifically has access to this project, or has access to this permission globally.
+    $sql = "SELECT user_role.username_canonical, permission.permission_name
+            FROM user_role
+            JOIN role_permission ON user_role.role_id = role_permission.role_id
+            JOIN permission ON role_permission.permission_id = permission.permission_id
+            WHERE user_role.username_canonical= :username 
+            AND permission.permission_name= :permission_name
+            AND (user_role.project_id IS NULL";
+    if(NULL !== $project_id) {
+      $sql .= " OR user_role.project_id= :project_id ";
+    }
+    $sql .= ")";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":username", $username, PDO::PARAM_STR);
+    $statement->bindValue(":permission_name", $permission_name, PDO::PARAM_STR);
+    if(NULL !== $project_id) {
+      $statement->bindValue(":project_id", $project_id, PDO::PARAM_INT);
+    }
+    $statement->execute();
+    $data = $statement->fetch(PDO::FETCH_ASSOC);
+
+    if(is_array($data) && array_key_exists('username_canonical', $data)) {
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+
   public function markProjectInactive($params) {
     $user_id = $params['user_id'];
     $project_id = $params['record_id'];
