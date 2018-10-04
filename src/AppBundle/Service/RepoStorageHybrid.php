@@ -3496,6 +3496,72 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
+  public function getDatatableUsers($params) {
+    //$params will be something like array('username_canonical' => 'bartlettr');
+    $data = array();
+
+    $username_canonical = array_key_exists('username_canonical', $params) ? $params['username_canonical'] : NULL;
+    $sql = "SELECT fos_user.username_canonical, username, email, enabled, GROUP_CONCAT(rolename) as roles,
+            project.project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
+            FROM fos_user
+            LEFT JOIN user_role on fos_user.username_canonical = user_role.username_canonical
+            LEFT JOIN role on user_role.role_id = role.role_id
+            LEFT JOIN project on user_role.project_id = project.project_repository_id
+            LEFT JOIN unit_stakeholder on project.stakeholder_guid = unit_stakeholder.isni_id
+            ";
+    if(NULL !== $username_canonical) {
+      $sql .= " WHERE username_canonical=:username_canonical ";
+    }
+    $sql .= " GROUP BY fos_user.username_canonical, project.project_name, unit_stakeholder.unit_stakeholder_repository_id ORDER BY username ";
+    //@todo accept sort param
+
+    $statement = $this->connection->prepare($sql);
+    if(NULL !== $username_canonical) {
+      $statement->bindValue(":username_canonical", $username_canonical, PDO::PARAM_STR);
+    }
+    $statement->execute();
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $statement = $this->connection->prepare("SELECT COUNT(DISTINCT username_canonical) as c from fos_user");
+    $statement->execute();
+    $count = $statement->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["c"];
+    $data["iTotalDisplayRecords"] = $count["c"];
+
+    return $data;
+  }
+
+  public function getDatatableRoles($params) {
+    //$params will be something like array('rolename_canonical' => 'bartlettr');
+    $data = array();
+
+    $rolename_canonical = array_key_exists('rolename_canonical', $params) ? $params['rolename_canonical'] : NULL;
+    $sql = "SELECT rolename_canonical, rolename, role_description, GROUP_CONCAT(permission_name) as permissions
+            FROM role
+            LEFT JOIN role_permission on role.role_id = role_permission.role_id
+            LEFT JOIN permission on role_permission.permission_id = permission.permission_id";
+    if(NULL !== $rolename_canonical) {
+      $sql .= " WHERE rolename_canonical=:rolename_canonical ";
+    }
+    $sql .= " GROUP BY rolename_canonical ORDER BY rolename ";
+    //@todo accept sort param
+
+    $statement = $this->connection->prepare($sql);
+    if(NULL !== $rolename_canonical) {
+      $statement->bindValue(":rolename_canonical", $rolename_canonical, PDO::PARAM_STR);
+    }
+    $statement->execute();
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $statement = $this->connection->prepare("SELECT COUNT(DISTINCT rolename_canonical) as r from role");
+    $statement->execute();
+    $count = $statement->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["r"];
+    $data["iTotalDisplayRecords"] = $count["r"];
+
+    return $data;
+  }
+
   public function markProjectInactive($params) {
     $user_id = $params['user_id'];
     $project_id = $params['record_id'];
