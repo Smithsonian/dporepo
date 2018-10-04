@@ -277,7 +277,7 @@ class ValidateImagesController extends Controller
 
                 // Set an error if a corresponding jpg or tif file doesn't exist.
                 if (!array_key_exists($file_basename . '.' . $image_pair_type, $all_files)) {
-                  $return[]['errors'] = '1 - Corresponding ' . strtoupper($image_pair_type) . ' not found for ' . strtoupper($fvalue) . ': ' . $fkey;
+                  $return[]['errors'] = 'Corresponding ' . strtoupper($image_pair_type) . ' not found for ' . strtoupper($fvalue) . ': ' . $fkey;
                 }
                 break;
               default:
@@ -290,7 +290,7 @@ class ValidateImagesController extends Controller
 
                 // Set an error if a corresponding cr2 or dng doesn't exist.
                 if (!array_key_exists($file_basename . '.' . $unique_file_extensions[0], $all_files)) {
-                  $return[]['errors'] = '2 - Corresponding ' . strtoupper($unique_file_extensions[0]) . ' not found for ' . strtoupper($fvalue) . ': ' . $fkey;
+                  $return[]['errors'] = 'Corresponding ' . strtoupper($unique_file_extensions[0]) . ' not found for ' . strtoupper($fvalue) . ': ' . $fkey;
                 }
             }
 
