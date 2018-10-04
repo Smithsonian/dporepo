@@ -3643,6 +3643,19 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
+  public function getAllProjectIds($params = array()) {
+
+    $data = array('project_ids' => '');
+    $sql = "SELECT GROUP_CONCAT(project_repository_id) as project_ids from project ";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->execute();
+    $data = $statement->fetch(PDO::FETCH_ASSOC);
+
+    return $data;
+
+  }
+
   public function markProjectInactive($params) {
     $user_id = $params['user_id'];
     $project_id = $params['record_id'];
