@@ -81,6 +81,13 @@ class RepoUserAccess {
     // Returns an array with a single row containing keys username_canonical, permission_name, project_ids.
     // Project_ids contains a string which is a comma-separated list of project_ids for which the user has this permission.
     if(is_array($user_has_access) && array_key_exists('username_canonical', $user_has_access) && isset($user_has_access['username_canonical'])) {
+
+      // If project_ids is empty, the user has access to all projects.
+      // Load that key's value with all available projects
+      if(empty($user_has_access['project_ids'])) {
+        $user_has_access['project_ids'] = $this->repo_storage_controller->execute('getAllProjectIds', array());
+      }
+
       return $user_has_access;
     }
     else {
