@@ -3562,9 +3562,9 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
-  public function getUserAccess($params = array()) {
+  public function getUserAccessByProject($params = array()) {
 
-    $data = array();
+    $data = false;
 
     $username = isset($params['username_canonical']) ? $params['username_canonical'] : NULL;
     $permission_name = isset($params['permission_name']) ? $params['permission_name'] : NULL;
@@ -3575,13 +3575,17 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     // See if user specifically has access to this project, or has access to this permission globally.
-    $sql = "SELECT user_role.username_canonical, permission.permission_name
-            FROM user_role
-            JOIN role_permission ON user_role.role_id = role_permission.role_id
-            JOIN permission ON role_permission.permission_id = permission.permission_id
-            WHERE user_role.username_canonical= :username 
-            AND permission.permission_name= :permission_name
-            AND (user_role.project_id IS NULL";
+    $sql = "SELECT user_role.username_canonical, permission.permission_name, GROUP_CONCAT(project.project_repository_id) as project_ids
+          FROM user_role
+
+          JOIN role_permission ON user_role.role_id = role_permission.role_id
+          JOIN permission ON role_permission.permission_id = permission.permission_id
+          LEFT JOIN project on user_role.project_id = project.project_repository_id
+          LEFT JOIN unit_stakeholder ON project.stakeholder_guid = unit_stakeholder.isni_id
+
+          WHERE user_role.username_canonical= :username 
+          AND permission.permission_name= :permission_name
+          AND ( (user_role.project_id IS NULL AND user_role.stakeholder_id IS NULL) ";
     if(NULL !== $project_id) {
       $sql .= " OR user_role.project_id= :project_id ";
     }
@@ -3596,12 +3600,47 @@ class RepoStorageHybrid implements RepoStorage {
     $statement->execute();
     $data = $statement->fetch(PDO::FETCH_ASSOC);
 
-    if(is_array($data) && array_key_exists('username_canonical', $data)) {
-      return true;
+    return $data;
+  }
+
+  public function getUserAccessByStakeholder($params = array()) {
+
+    $data = false;
+
+    $username = isset($params['username_canonical']) ? $params['username_canonical'] : NULL;
+    $permission_name = isset($params['permission_name']) ? $params['permission_name'] : NULL;
+    $stakeholder_id = isset($params['stakeholder_id']) ? $params['stakeholder_id'] : NULL;
+
+    if(NULL == $permission_name || NULL == $username) {
+      return $data;
     }
-    else {
-      return false;
+
+    // See if user specifically has access to this stakeholder's projects, or has access to this permission globally.
+    $sql = "SELECT user_role.username_canonical, permission.permission_name, GROUP_CONCAT(project.project_repository_id) as project_ids
+          FROM user_role
+          JOIN role_permission ON user_role.role_id = role_permission.role_id
+          JOIN permission ON role_permission.permission_id = permission.permission_id
+          JOIN unit_stakeholder ON user_role.stakeholder_id = unit_stakeholder.unit_stakeholder_repository_id
+          LEFT JOIN project ON unit_stakeholder.isni_id = project.stakeholder_guid
+          WHERE user_role.username_canonical= :username 
+          AND permission.permission_name= :permission_name
+          AND ( (user_role.project_id IS NULL AND user_role.stakeholder_id IS NULL) ";
+    if(NULL !== $stakeholder_id) {
+      $sql .= " OR user_role.stakeholder_id= :stakeholder_id ";
     }
+    $sql .= ")";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":username", $username, PDO::PARAM_STR);
+    $statement->bindValue(":permission_name", $permission_name, PDO::PARAM_STR);
+    if(NULL !== $stakeholder_id) {
+      $statement->bindValue(":stakeholder_id", $stakeholder_id, PDO::PARAM_INT);
+    }
+    $statement->execute();
+    $data = $statement->fetch(PDO::FETCH_ASSOC);
+
+    return $data;
+
   }
 
   public function markProjectInactive($params) {
