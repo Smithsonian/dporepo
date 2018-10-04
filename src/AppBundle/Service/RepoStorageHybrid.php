@@ -3501,18 +3501,36 @@ class RepoStorageHybrid implements RepoStorage {
     $data = array();
 
     $username_canonical = array_key_exists('username_canonical', $params) ? $params['username_canonical'] : NULL;
-    $sql = "SELECT fos_user.username_canonical, username, email, enabled, GROUP_CONCAT(rolename) as roles,
+    $sql = "SELECT username_canonical, username, email, enabled, GROUP_CONCAT(rolename) as roles,
+            project_name, unit_stakeholder_label, unit_stakeholder_full_name
+            
+            FROM 
+            
+            (SELECT fos_user.username_canonical, username, email, enabled, rolename,
             project.project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
+            
             FROM fos_user
             LEFT JOIN user_role on fos_user.username_canonical = user_role.username_canonical
             LEFT JOIN role on user_role.role_id = role.role_id
             LEFT JOIN project on user_role.project_id = project.project_repository_id
-            LEFT JOIN unit_stakeholder on project.stakeholder_guid = unit_stakeholder.isni_id
-            ";
+            LEFT JOIN unit_stakeholder on project.stakeholder_guid = unit_stakeholder.isni_id 
+            
+            UNION 
+            
+            SELECT fos_user.username_canonical, username, email, enabled, rolename,
+            project.project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
+            FROM fos_user
+            LEFT JOIN user_role on fos_user.username_canonical = user_role.username_canonical
+            LEFT JOIN role on user_role.role_id = role.role_id
+            LEFT JOIN unit_stakeholder on user_role.stakeholder_id = unit_stakeholder.unit_stakeholder_repository_id
+            LEFT JOIN project on unit_stakeholder.isni_id = project.stakeholder_guid 
+             )
+             as tmp ";
     if(NULL !== $username_canonical) {
       $sql .= " WHERE username_canonical=:username_canonical ";
     }
-    $sql .= " GROUP BY fos_user.username_canonical, project.project_name, unit_stakeholder.unit_stakeholder_repository_id ORDER BY username ";
+    $sql .= " GROUP BY username_canonical, unit_stakeholder_label, unit_stakeholder_full_name, project_name
+             ORDER BY username, unit_stakeholder_label, unit_stakeholder_full_name, project_name";
     //@todo accept sort param
 
     $statement = $this->connection->prepare($sql);
