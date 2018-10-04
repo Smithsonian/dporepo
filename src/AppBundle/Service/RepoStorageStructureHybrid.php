@@ -639,6 +639,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
           $sql = "CREATE TABLE IF NOT EXISTS `user_role` (
             `user_role_id` int(11) NOT NULL AUTO_INCREMENT,
             `username_canonical` VARCHAR(180) NOT NULL,
+            `stakeholder_id` INT NULL
             `project_id` int(11) DEFAULT NULL,
             `role_id` int(11) NOT NULL,
             `date_created` datetime NOT NULL,
