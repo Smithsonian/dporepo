@@ -570,7 +570,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
           break;
         case 'role':
           $sql = "CREATE TABLE IF NOT EXISTS `role` (
-            `role_id` int(11) NOT NULL,
+            `role_id` int(11) NOT NULL AUTO_INCREMENT,
             `rolename_canonical` varchar(80) NOT NULL,
             `rolename` varchar(255) NOT NULL,
             `role_description` varchar(2000) DEFAULT NULL,
@@ -586,9 +586,11 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
           break;
         case 'permission':
           $sql = "CREATE TABLE IF NOT EXISTS `permission` (
-            `permission_id` int(11) NOT NULL,
+            `permission_id` int(11) NOT NULL AUTO_INCREMENT,
             `permission_name` varchar(255) DEFAULT NULL,
             `permission_detail` varchar(2000) DEFAULT NULL,
+            `permission_group` VARCHAR(80) NULL DEFAULT 'general',
+            `route_name` VARCHAR(255) NULL DEFAULT NULL
             `date_created` datetime NOT NULL,
             `created_by_user_account_id` int(11) NOT NULL,
             `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -601,7 +603,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
           break;
         case 'role_permission':
           $sql = "CREATE TABLE IF NOT EXISTS `role_permission` (
-            `role_permission_id` int(11) NOT NULL,
+            `role_permission_id` int(11) NOT NULL AUTO_INCREMENT,
             `role_id` int(11) NOT NULL,
             `permission_id` int(11) NOT NULL,
             `date_created` datetime NOT NULL,
@@ -616,9 +618,26 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
             KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
           )";
           break;
+        case 'user_detail':
+          $sql = "CREATE TABLE IF NOT EXISTS `user_detail` (
+            `user_detail_id` int(11) NOT NULL AUTO_INCREMENT,
+            `username_canonical` varchar(180) COLLATE utf8_unicode_ci NOT NULL,
+            `unit_id` int(11) DEFAULT NULL,
+            `user_type` varchar(16) NOT NULL DEFAULT 'unit',
+            `date_created` datetime NOT NULL,
+            `created_by_user_account_id` int(11) NOT NULL,
+            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `last_modified_user_account_id` int(11) NOT NULL,
+            `active` tinyint(1) NOT NULL DEFAULT '1',
+            PRIMARY KEY (`user_detail_id`),
+            KEY `unit_id` (`unit_id`),
+            KEY `created_by_user_account_id` (`created_by_user_account_id`),
+            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
+          )";
+          break;
         case 'user_role':
           $sql = "CREATE TABLE IF NOT EXISTS `user_role` (
-            `user_role_id` int(11) NOT NULL,
+            `user_role_id` int(11) NOT NULL AUTO_INCREMENT,
             `username_canonical` VARCHAR(180) NOT NULL,
             `project_id` int(11) DEFAULT NULL,
             `role_id` int(11) NOT NULL,
