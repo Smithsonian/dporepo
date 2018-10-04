@@ -23,28 +23,36 @@ class RepoUserAccess {
   }
 
 
-  public function user_has_access($username, $permission, $project_id = NULL, $stakeholder_id = NULL) {
+  public function user_has_access_by_stakeholder($username, $permission, $stakeholder_id = NULL) {
 
-    if(NULL == $stakeholder_id) {
-      // Get user access for the specified params.
-      $user_has_access = $this->repo_storage_controller->execute('getUserAccessByProject',
-        array(
-          'username_canonical' => $username,
-          'permission_name' => $permission,
-          'project_id' => $project_id
-        )
-      );
+    // Get user access for the specified params.
+    $user_has_access = $this->repo_storage_controller->execute('getUserAccessByStakeholder',
+      array(
+        'username_canonical' => $username,
+        'permission_name' => $permission,
+        'stakeholder_id' => $stakeholder_id,
+      )
+    );
+
+    if(is_array($user_has_access) && array_key_exists('username_canonical', $user_has_access) && isset($user_has_access['username_canonical'])) {
+      return true;
     }
     else {
-      // Get user access for the specified params.
-      $user_has_access = $this->repo_storage_controller->execute('getUserAccessByStakeholder',
-        array(
-          'username_canonical' => $username,
-          'permission_name' => $permission,
-          'stakeholder_id' => $stakeholder_id,
-        )
-      );
+      return false;
     }
+
+  }
+
+  public function user_has_access_by_project($username, $permission, $project_id = NULL) {
+
+    // Get user access for the specified params.
+    $user_has_access = $this->repo_storage_controller->execute('getUserAccessByProject',
+      array(
+        'username_canonical' => $username,
+        'permission_name' => $permission,
+        'project_id' => $project_id
+      )
+    );
 
     if(is_array($user_has_access) && array_key_exists('username_canonical', $user_has_access) && isset($user_has_access['username_canonical'])) {
       return true;
