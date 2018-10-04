@@ -75,7 +75,7 @@ class ValidateImagesController extends Controller
       'tiff' => image_type_to_mime_type(IMAGETYPE_TIFF_MM),
       'jpg' => image_type_to_mime_type(IMAGETYPE_JPEG),
       'jpeg' => image_type_to_mime_type(IMAGETYPE_JPEG),
-      'cr2' => image_type_to_mime_type(IMAGETYPE_JPEG),
+      'cr2' => image_type_to_mime_type(IMAGETYPE_TIFF_MM),
       'dng' => image_type_to_mime_type(IMAGETYPE_TIFF_MM),
     );
     // Valid image mime types.
@@ -121,7 +121,8 @@ class ValidateImagesController extends Controller
 
       // Search for the data directory.
       $finder = new Finder();
-      $finder->path('data')->name('/\.jpg|\.tif|\.cr2|\.dng$/');
+      $finder->path('data/');
+      // $finder->path('data')->name('/\.jpg|\.tif|\.cr2|\.dng$/');
       $finder->in($localpath);
 
       $i = 0;
@@ -161,9 +162,9 @@ class ValidateImagesController extends Controller
 
           }
 
-          $data[$i]['file_name'] = $file->getFilename();
+          $data[$i]['file_name'] = strtolower($file->getFilename());
           $data[$i]['file_size'] = $file->getSize();
-          $data[$i]['file_extension'] = $file->getExtension();
+          $data[$i]['file_extension'] = strtolower($file->getExtension());
           $data[$i]['file_mime_type'] = $this->get_mime_type($file->getPathname());
 
           if (!empty($data[$i]['errors'])) {
@@ -240,12 +241,18 @@ class ValidateImagesController extends Controller
         array_push($all_file_extensions, $value['file_extension']);
       }
 
-      $image_pair_type = null;
-      if (in_array('tif', $all_file_extensions)) $image_pair_type = 'tif';
-      if (in_array('cr2', $all_file_extensions)) $image_pair_type = 'cr2';
-      if (in_array('dng', $all_file_extensions)) $image_pair_type = 'dng';
+      $unique_file_extensions = array_unique($all_file_extensions);
 
-      if (!empty($image_pair_type)) {
+      // If there are more than 2 unique file types present, set an error.
+      if (count($unique_file_extensions) > 2) {
+        $return[]['errors'] = 'More than 2 file types detected';
+      }
+
+      $image_pair_type = null;
+      if (in_array('jpg', $all_file_extensions)) $image_pair_type = 'jpg';
+      if (in_array('tif', $all_file_extensions)) $image_pair_type = 'tif';
+
+      if (!empty($image_pair_type) && (count($unique_file_extensions) === 2)) {
 
         // Create an array of all of the files, with the file names as the keys, and the extensions as the values.
         $all_files = array();
@@ -261,16 +268,29 @@ class ValidateImagesController extends Controller
             $file_basename = pathinfo($fkey, PATHINFO_FILENAME);
 
             switch($fvalue) {
-              case 'jpg':
-                // Set an error if a corresponding tif, cr2, dng, etc. doesn't exist.
+              case 'cr2':
+              case 'dng':
+
+                // $this->u->dumper($image_pair_type,0);
+                // $this->u->dumper($file_basename . '.' . $image_pair_type,0);
+                // $this->u->dumper($all_files);
+
+                // Set an error if a corresponding jpg or tif file doesn't exist.
                 if (!array_key_exists($file_basename . '.' . $image_pair_type, $all_files)) {
-                  $return[]['errors'] = 'Corresponding ' . strtoupper($image_pair_type) . ' not found for JPG: ' . $file_basename . '.jpg';
+                  $return[]['errors'] = 'Corresponding ' . strtoupper($image_pair_type) . ' not found for ' . strtoupper($fvalue) . ': ' . $fkey;
                 }
                 break;
               default:
-                // Set an error if a corresponding jpg doesn't exist.
-                if (!array_key_exists($file_basename . '.jpg', $all_files)) {
-                  $return[]['errors'] = 'Corresponding JPG not found for ' . strtoupper($fvalue) . ': ' . $fkey;
+
+                // We want to check against the "other" file type present.
+                // So, remove the $image_pair_type file extension from the $unique_file_extensions array.
+                $key = array_search($image_pair_type, $unique_file_extensions);
+                if (false !== $key) unset($unique_file_extensions[$key]);
+                $unique_file_extensions = array_values($unique_file_extensions);
+
+                // Set an error if a corresponding cr2 or dng doesn't exist.
+                if (!array_key_exists($file_basename . '.' . $unique_file_extensions[0], $all_files)) {
+                  $return[]['errors'] = 'Corresponding ' . strtoupper($unique_file_extensions[0]) . ' not found for ' . strtoupper($fvalue) . ': ' . $fkey;
                 }
             }
 
