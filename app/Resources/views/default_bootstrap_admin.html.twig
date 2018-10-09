@@ -42,7 +42,12 @@
                 <li role="presentation" id="workspace"><a href="/admin/workspace/">Workspace</a></li>
                 <li role="presentation" id="import"><a href="/admin/import">Uploads</a></li>
                 <li role="presentation" id="resources"><a href="/admin/resources/">Equipment/Resources</a></li>
-                <li role="presentation" id="settings"><a href="/admin/settings/">Profile/Settings</a></li>
+                {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and is_granted('ROLE_ADMIN') %}
+                    <li role="presentation" id="users"><a href="/admin/users/">Users</a></li>
+                {% endif %}
+                {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and is_granted('ROLE_ADMIN') %}
+                    <li role="presentation" id="roles"><a href="/admin/roles/">Roles</a></li>
+                {% endif %}
               </ul>
             </div>
           </div>
