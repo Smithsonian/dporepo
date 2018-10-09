@@ -4410,8 +4410,8 @@ class RepoStorageHybrid implements RepoStorage {
     $user_role_id = NULL;
 
     $sql ="INSERT INTO user_role 
-        (username_canonical, role_id, created_by_user_account_id, date_created ";
-    $sql_values = " VALUES (:username_canonical, :role_id, :created_by_user_account_id, NOW() ";
+        (username_canonical, role_id, created_by_user_account_id, date_created, last_modified_user_account_id ";
+    $sql_values = " VALUES (:username_canonical, :role_id, :created_by_user_account_id, NOW(), :last_modified_user_account_id ";
     if(NULL !== $project_id) {
       $sql .= ", project_id";
       $sql_values .= ", :project_id";
@@ -4432,6 +4432,7 @@ class RepoStorageHybrid implements RepoStorage {
       $statement->bindValue(":stakeholder_id", $stakeholder_id, PDO::PARAM_INT);
     }
     $statement->bindValue(":created_by_user_account_id", $user_id, PDO::PARAM_INT);
+    $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
 
     $statement->execute();
 
