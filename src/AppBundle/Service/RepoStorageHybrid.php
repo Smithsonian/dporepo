@@ -2078,6 +2078,7 @@ class RepoStorageHybrid implements RepoStorage {
     $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
 
     $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $project_ids = array_key_exists('project_ids', $params) ? $params['project_ids'] : NULL;
     $date_range_start = array_key_exists('date_range_start', $params) ? $params['date_range_start'] : NULL;
     $date_range_end = array_key_exists('date_range_end', $params) ? $params['date_range_end'] : NULL;
 
@@ -2163,6 +2164,18 @@ class RepoStorageHybrid implements RepoStorage {
         ),
         'search_values' => array($search_value),
         'comparison' => 'LIKE',
+      );
+    }
+
+    if (NULL !== $project_ids && is_array($project_ids)) {
+      $i = count($query_params['search_params']);
+      $query_params['search_params'][$i] = array(
+        'field_names' => array(
+          $record_type . '.project_repository_id',
+        ),
+        'search_values' => $project_ids,
+        'comparison' => 'IN',
+        'comparison_type' => 'INT',
       );
     }
 
@@ -3500,8 +3513,14 @@ class RepoStorageHybrid implements RepoStorage {
     //$params will be something like array('username_canonical' => 'bartlettr');
     $data = array();
 
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+
     $username_canonical = array_key_exists('username_canonical', $params) ? $params['username_canonical'] : NULL;
-    $sql = "SELECT username_canonical, username, email, enabled, GROUP_CONCAT(rolename) as roles,
+    $sql = "SELECT username_canonical, username_canonical as manage, username_canonical as DT_RowId, username, email, enabled, GROUP_CONCAT(rolename) as roles,
             project_name, unit_stakeholder_label, unit_stakeholder_full_name
             
             FROM 
@@ -3537,12 +3556,105 @@ class RepoStorageHybrid implements RepoStorage {
             
              )
              as tmp ";
+
+    $where = "";
+    $where_parts = array();
+    if(NULL !== $username_canonical) {
+      $where_parts[] = " username_canonical=:username_canonical ";
+    }
+
+    if ($search_value) {
+      $where_parts[] = "(username_canonical LIKE ':search_value' OR email LIKE ':search_value' OR 
+      roles LIKE ':search_value' OR project_name LIKE ':search_value' OR 
+      unit_stakeholder_label LIKE ':search_value' OR unit_stakeholder_full_name LIKE ':search_value')";
+    }
+
+    if(count($where_parts) > 0) {
+      $where = " WHERE " . implode(' AND ' . $where_parts);
+    }
+
+    $sql .= $where . " GROUP BY username_canonical, unit_stakeholder_label, unit_stakeholder_full_name, project_name ";
+
+    if($sort_field) {
+      $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+    }
+    else {
+      $sql .= " ORDER BY username, unit_stakeholder_label, unit_stakeholder_full_name, project_name";
+    }
+
+    $count_query = "SELECT COUNT(manage) as c from (" . $sql . ") as x ";
+
+    if(NULL !== $stop_record) {
+      $sql .= " LIMIT {$start_record}, {$stop_record} ";
+    }
+    else {
+      $sql .= " LIMIT {$start_record} ";
+    }
+
+    $statement = $this->connection->prepare($sql);
+    if(NULL !== $username_canonical) {
+      $statement->bindValue(":username_canonical", $username_canonical, PDO::PARAM_STR);
+    }
+    if($search_value) {
+      $statement->bindValue(":search_value", $search_value, PDO::PARAM_STR);
+    }
+    $statement->execute();
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $statement = $this->connection->prepare($count_query);
+    $statement->execute();
+    $count = $statement->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["c"];
+    $data["iTotalDisplayRecords"] = $count["c"];
+
+    return $data;
+  }
+
+  public function getDatatableUserRoles($params) {
+    //$params will be something like array('username_canonical' => 'rb');
+    $data = array();
+
+    $username_canonical = array_key_exists('username_canonical', $params) ? $params['username_canonical'] : NULL;
+    $sql = "SELECT user_role_id, user_role_id as manage, user_role_id as DT_RowId, rolename,
+            project_name, unit_stakeholder_label, unit_stakeholder_full_name, username_canonical
+            FROM 
+            
+            (SELECT user_role_id, user_role.username_canonical, rolename,
+            project.project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
+            
+            FROM user_role
+            LEFT JOIN role on user_role.role_id = role.role_id
+            LEFT JOIN project on user_role.project_id = project.project_repository_id
+            LEFT JOIN unit_stakeholder on project.stakeholder_guid = unit_stakeholder.isni_id 
+            WHERE user_role.project_id IS NOT NULL 
+            
+            UNION 
+            
+            SELECT user_role_id, user_role.username_canonical, rolename,
+            '' as project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
+            FROM user_role
+            LEFT JOIN role on user_role.role_id = role.role_id
+            JOIN unit_stakeholder on user_role.stakeholder_id = unit_stakeholder.unit_stakeholder_repository_id
+            WHERE user_role.stakeholder_id IS NOT NULL 
+            
+            UNION
+
+            SELECT user_role_id, user_role.username_canonical, rolename,
+            '' as project_name, '' as unit_stakeholder_label, '' as unit_stakeholder_full_name
+            FROM user_role
+            LEFT JOIN role on user_role.role_id = role.role_id
+            WHERE user_role.stakeholder_id IS NULL AND user_role.project_id IS NULL 
+            
+             )
+             as tmp ";
     if(NULL !== $username_canonical) {
       $sql .= " WHERE username_canonical=:username_canonical ";
     }
-    $sql .= " GROUP BY username_canonical, unit_stakeholder_label, unit_stakeholder_full_name, project_name
-             ORDER BY username, unit_stakeholder_label, unit_stakeholder_full_name, project_name";
+    $sql .= " GROUP BY user_role_id, username_canonical, unit_stakeholder_label, unit_stakeholder_full_name, project_name, rolename
+             ORDER BY username_canonical, unit_stakeholder_label, unit_stakeholder_full_name, project_name, rolename, user_role_id";
     //@todo accept sort param
+
+    $count_query = "SELECT COUNT(user_role_id) as c from (" . $sql . ") as x";
 
     $statement = $this->connection->prepare($sql);
     if(NULL !== $username_canonical) {
@@ -3551,7 +3663,8 @@ class RepoStorageHybrid implements RepoStorage {
     $statement->execute();
     $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-    $statement = $this->connection->prepare("SELECT COUNT(DISTINCT username_canonical) as c from fos_user");
+    $statement = $this->connection->prepare($count_query);
+    $statement->bindValue(":username_canonical", $username_canonical, PDO::PARAM_STR);
     $statement->execute();
     $count = $statement->fetch(PDO::FETCH_ASSOC);
     $data["iTotalRecords"] = $count["c"];
@@ -3565,7 +3678,7 @@ class RepoStorageHybrid implements RepoStorage {
     $data = array();
 
     $rolename_canonical = array_key_exists('rolename_canonical', $params) ? $params['rolename_canonical'] : NULL;
-    $sql = "SELECT rolename_canonical, rolename, role_description, GROUP_CONCAT(permission_name) as permissions
+    $sql = "SELECT rolename_canonical, rolename_canonical as manage, rolename_canonical as DT_RowId, rolename, role_description, GROUP_CONCAT(permission_name) as permissions
             FROM role
             LEFT JOIN role_permission on role.role_id = role_permission.role_id
             LEFT JOIN permission on role_permission.permission_id = permission.permission_id";
@@ -3591,6 +3704,7 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
+  // User access control functions.
   public function getUserAccessByProject($params = array()) {
 
     $data = false;
@@ -3665,7 +3779,7 @@ class RepoStorageHybrid implements RepoStorage {
           FROM user_role
           JOIN role_permission ON user_role.role_id = role_permission.role_id
           JOIN permission ON role_permission.permission_id = permission.permission_id
-          JOIN unit_stakeholder ON user_role.stakeholder_id = unit_stakeholder.unit_stakeholder_repository_id
+          LEFT JOIN unit_stakeholder ON user_role.stakeholder_id = unit_stakeholder.unit_stakeholder_repository_id
           LEFT JOIN project ON unit_stakeholder.isni_id = project.stakeholder_guid
           WHERE user_role.username_canonical= :username 
           AND permission.permission_name= :permission_name
@@ -3688,6 +3802,72 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
+  public function getUserAccessAny($params = array()) {
+
+    $data = false;
+
+    $username = isset($params['username_canonical']) ? $params['username_canonical'] : NULL;
+    $permission_name = isset($params['permission_name']) ? $params['permission_name'] : NULL;
+
+    if(NULL == $permission_name || NULL == $username) {
+      return $data;
+    }
+
+    // If the user has global access, return all project_ids.
+    $sql = "SELECT DISTINCT user_role.username_canonical, permission.permission_name
+            FROM user_role 
+            JOIN role_permission ON user_role.role_id = role_permission.role_id 
+            JOIN permission ON role_permission.permission_id = permission.permission_id 
+            WHERE user_role.username_canonical= :username 
+            AND permission.permission_name= :permission_name 
+            AND stakeholder_id IS NULL AND project_id IS NULL
+           ";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":username", $username, PDO::PARAM_STR);
+    $statement->bindValue(":permission_name", $permission_name, PDO::PARAM_STR);
+    $statement->execute();
+    $data = $statement->fetch(PDO::FETCH_ASSOC);
+
+    if(is_array($data) && count($data) > 0) {
+      $data['project_ids'] = '';
+      return $data;
+    }
+
+    // Otherwise see if user specifically has access to a specific stakeholder's projects, or specific projects
+    $sql = "SELECT username_canonical, permission_name, GROUP_CONCAT(DISTINCT project_repository_id) as project_ids
+          FROM 
+          (
+          SELECT DISTINCT user_role.username_canonical, permission.permission_name, project.project_repository_id
+          FROM user_role
+          JOIN role_permission ON user_role.role_id = role_permission.role_id
+          JOIN permission ON role_permission.permission_id = permission.permission_id
+          JOIN unit_stakeholder ON user_role.stakeholder_id = unit_stakeholder.unit_stakeholder_repository_id
+          LEFT JOIN project ON unit_stakeholder.isni_id = project.stakeholder_guid
+          WHERE user_role.username_canonical= :username 
+          AND permission.permission_name= :permission_name 
+          UNION
+          SELECT DISTINCT user_role.username_canonical, permission.permission_name, project.project_repository_id
+          FROM user_role
+          JOIN role_permission ON user_role.role_id = role_permission.role_id
+          JOIN permission ON role_permission.permission_id = permission.permission_id
+          JOIN project ON user_role.project_id = project.project_repository_id
+          LEFT JOIN unit_stakeholder ON project.stakeholder_guid = unit_stakeholder.isni_id 
+          WHERE user_role.username_canonical= :username 
+          AND permission.permission_name= :permission_name
+          )
+          as tmp
+          GROUP BY username_canonical, permission_name 
+           ";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":username", $username, PDO::PARAM_STR);
+    $statement->bindValue(":permission_name", $permission_name, PDO::PARAM_STR);
+    $statement->execute();
+    $data = $statement->fetch(PDO::FETCH_ASSOC);
+
+    return $data;
+  }
+
   public function getAllProjectIds($params = array()) {
 
     $data = array('project_ids' => '');
@@ -3700,6 +3880,8 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
 
   }
+
+  // End user access functions.
 
   public function markProjectInactive($params) {
     $user_id = $params['user_id'];
@@ -3791,6 +3973,97 @@ class RepoStorageHybrid implements RepoStorage {
       $data = $statement->fetch(PDO::FETCH_ASSOC);
     }
 
+    return $data;
+  }
+
+  public function getValues($params) {
+
+    $tablename = array_key_exists('tablename', $params) ? $params['tablename'] : NULL;
+    $stakeholder_id = array_key_exists('stakeholder_id', $params) ? $params['stakeholder_id'] : NULL;
+    if($tablename !== "stakeholder" && $tablename !== "project" && $tablename !== "role") {
+      return array();
+    }
+
+    switch($tablename) {
+      case 'role':
+        $sql = "SELECT role_id as id, rolename as name FROM role ";
+        break;
+      case 'project':
+        $sql = "SELECT project_repository_id as id, project_name as name FROM project";
+        break;
+      case 'stakeholder':
+        $sql = "SELECT unit_stakeholder_repository_id as id, unit_stakeholder_full_name as name FROM unit_stakeholder";
+        break;
+    }
+
+    if(NULL !== $stakeholder_id && $tablename == 'project') {
+      $sql .= " WHERE stakeholder_guid=:stakeholder_guid ";
+    }
+    $sql .= " ORDER BY name ";
+    $statement = $this->connection->prepare($sql);
+    if(NULL !== $stakeholder_id && $tablename == 'project') {
+      $statement->bindValue(":stakeholder_guid", $stakeholder_id, PDO::PARAM_STR);
+    }
+    $statement->execute();
+    $data = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    return $data;
+  }
+
+  public function getUserRole($params = array()) {
+
+    $user_role_id = array_key_exists('user_role_id', $params) ? $params['user_role_id'] : NULL;
+    if(NULL == $user_role_id) {
+      return array();
+    }
+
+    $sql = "SELECT * FROM user_role WHERE user_role_id = :user_role_id";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":user_role_id", $user_role_id, PDO::PARAM_STR);
+    $statement->execute();
+    $data = $statement->fetch(PDO::FETCH_ASSOC);
+
+    return $data;
+  }
+
+  public function getRole($params = array()) {
+
+    $sql = "SELECT * FROM role WHERE rolename_canonical = :rolename_canonical";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":rolename_canonical", $params['rolename_canonical'], PDO::PARAM_STR);
+    $statement->execute();
+    $data = $statement->fetch(PDO::FETCH_ASSOC);
+
+    $sql = "SELECT permission_id, permission_name FROM permission ";
+    $statement = $this->connection->prepare($sql);
+    $statement->execute();
+    $all_permission_data = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $permission_data = array();
+    if(is_array($data) && array_key_exists('role_id', $data)) {
+      $sql = "SELECT role_permission_id, permission_id
+            FROM role_permission 
+            WHERE (role_id = :role_id)";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":role_id", $data['role_id'], PDO::PARAM_INT);
+      $statement->execute();
+      $permission_data = $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    foreach($all_permission_data as $k => $p) {
+      // permission_id, permission_name
+      $permission_id = $p['permission_id'];
+      $p['selected'] = false;
+      foreach($permission_data as $k2 => $p2) {
+        if($p2['permission_id'] == $permission_id) {
+          $p['selected'] = true;
+          break;
+        }
+      }
+      $all_permission_data[$k] = $p;
+    }
+
+    $data['role_permissions'] = is_array($all_permission_data) ? $all_permission_data : array();
     return $data;
   }
 
@@ -4034,6 +4307,226 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
+  public function saveRole($params) {
+
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
+    $rolename_canonical = array_key_exists('rolename_canonical', $params) ? $params['rolename_canonical'] : NULL;
+    $rolename = array_key_exists('rolename', $params) ? $params['rolename'] : NULL;
+    $role_description = array_key_exists('role_description', $params) ? $params['role_description'] : NULL;
+    $role_permissions = array_key_exists('role_permissions', $params) ? $params['role_permissions'] : NULL;
+
+    $new_rolename_canonical = $this->make_slug($rolename);
+
+    if(!isset($rolename) || strlen(trim($rolename)) < 1 ) {
+      return; //@todo with error
+    }
+
+    // See if record exists; update if so, insert otherwise.
+    $sql = "SELECT role_id FROM role WHERE rolename_canonical=:rolename_canonical";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":rolename_canonical", $rolename_canonical, PDO::PARAM_INT);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    if(count($ret) > 0) {
+      // update
+      $sql ="UPDATE role SET rolename=:rolename, rolename_canonical=:new_rolename_canonical, role_description=:role_description, 
+            last_modified=NOW(), last_modified_user_account_id=:user_id WHERE rolename_canonical=:rolename_canonical";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":rolename", $rolename, PDO::PARAM_STR);
+      $statement->bindValue(":role_description", $role_description, PDO::PARAM_STR);
+      $statement->bindValue(":new_rolename_canonical", $new_rolename_canonical, PDO::PARAM_STR);
+      $statement->bindValue(":rolename_canonical", $rolename_canonical, PDO::PARAM_STR);
+      $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
+      $statement->execute();
+    }
+    else {
+      // insert
+      // Update this record with new status info. Write to workflow_status_log also.
+      $sql ="INSERT INTO role 
+          (rolename, rolename_canonical, role_description, created_by_user_account_id, date_created) 
+          VALUES (:rolename, :rolename_canonical, :role_description, :created_by_user_account_id, NOW())";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":rolename_canonical", $new_rolename_canonical, PDO::PARAM_STR);
+      $statement->bindValue(":rolename", $rolename, PDO::PARAM_STR);
+      $statement->bindValue(":role_description", $role_description, PDO::PARAM_STR);
+      $statement->bindValue(":created_by_user_account_id", $user_id, PDO::PARAM_INT);
+
+      $statement->execute();
+    }
+
+    // Get the role id.
+    $sql = "SELECT role_id FROM role WHERE rolename_canonical=:rolename_canonical";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":rolename_canonical", $new_rolename_canonical, PDO::PARAM_STR);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+    if(count($ret) > 0) {
+      $role_id = $ret[0]['role_id'];
+
+      // Set role permissions.
+      $sql ="DELETE FROM role_permission where role_id=:role_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":role_id", $role_id, PDO::PARAM_INT);
+      $statement->execute();
+
+      foreach($role_permissions as $permission_id) {
+        $sql ="INSERT INTO role_permission (role_id, permission_id) VALUES (:role_id, :permission_id)";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":role_id", $role_id, PDO::PARAM_INT);
+        $statement->bindValue(":permission_id", $permission_id, PDO::PARAM_INT);
+        $statement->execute();
+      }
+    }
+
+    return $new_rolename_canonical;
+
+  }
+
+  public function saveUserRole($params) {
+
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
+    $user_role_id = array_key_exists('user_role_id', $params) ? $params['user_role_id'] : NULL;
+    $username_canonical = array_key_exists('username_canonical', $params) ? $params['username_canonical'] : NULL;
+    $role_id = array_key_exists('role_id', $params) ? $params['role_id'] : NULL;
+    $project_id = array_key_exists('project_id', $params) ? $params['project_id'] : NULL;
+    $stakeholder_id = array_key_exists('stakeholder_id', $params) ? $params['stakeholder_id'] : NULL;
+
+    if(!isset($username_canonical) || !isset($role_id)) {
+      return; //@todo with error
+    }
+
+    // Delete any matching records, if exist.
+    if(isset($user_role_id)) {
+      $sql = "DELETE FROM user_role WHERE user_role_id=:user_role_id ";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":user_role_id", $user_role_id, PDO::PARAM_INT);
+      $statement->execute();
+    }
+
+    // Insert.
+    $user_role_id = NULL;
+
+    $sql ="INSERT INTO user_role 
+        (username_canonical, role_id, created_by_user_account_id, date_created ";
+    $sql_values = " VALUES (:username_canonical, :role_id, :created_by_user_account_id, NOW() ";
+    if(NULL !== $project_id) {
+      $sql .= ", project_id";
+      $sql_values .= ", :project_id";
+    }
+    if(NULL !== $stakeholder_id) {
+      $sql .= ", stakeholder_id";
+      $sql_values .= ", :stakeholder_id";
+    }
+    $sql .= ") " . $sql_values . ")";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":username_canonical", $username_canonical, PDO::PARAM_STR);
+    $statement->bindValue(":role_id", $role_id, PDO::PARAM_INT);
+    if(NULL !== $project_id) {
+      $statement->bindValue(":project_id", $project_id, PDO::PARAM_INT);
+    }
+    if(NULL !== $stakeholder_id) {
+      $statement->bindValue(":stakeholder_id", $stakeholder_id, PDO::PARAM_INT);
+    }
+    $statement->bindValue(":created_by_user_account_id", $user_id, PDO::PARAM_INT);
+
+    $statement->execute();
+
+
+    // Get the user role id.
+    $sql = "SELECT user_role_id FROM user_role 
+        WHERE username_canonical=:username_canonical AND role_id=:role_id AND created_by_user_account_id= :created_by_user_account_id ";
+    if(NULL !== $project_id) {
+      $sql .= "AND project_id=:project_id ";
+    }
+    else {
+      $sql .= "AND project_id IS NULL ";
+    }
+    if(NULL !== $stakeholder_id) {
+      $sql .= "AND stakeholder_id= :stakeholder_id ";
+    }
+    else {
+      $sql .= "AND stakeholder_id IS NULL ";
+    }
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":username_canonical", $username_canonical, PDO::PARAM_STR);
+    $statement->bindValue(":role_id", $role_id, PDO::PARAM_INT);
+    if(NULL !== $project_id) {
+      $statement->bindValue(":project_id", $project_id, PDO::PARAM_INT);
+    }
+    if(NULL !== $stakeholder_id) {
+      $statement->bindValue(":stakeholder_id", $stakeholder_id, PDO::PARAM_INT);
+    }
+    $statement->bindValue(":created_by_user_account_id", $user_id, PDO::PARAM_INT);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+    if(count($ret) > 0) {
+      $user_role_id = $ret[0]['user_role_id'];
+    }
+
+    return $user_role_id;
+
+  }
+
+  public function deleteUserRole($params) {
+
+    $user_role_id = array_key_exists('user_role_id', $params) ? $params['user_role_id'] : NULL;
+    $username_canonical = array_key_exists('username_canonical', $params) ? $params['username_canonical'] : NULL;
+
+    if(!isset($username_canonical) || !isset($user_role_id)) {
+      return; //@todo with error
+    }
+
+    // Delete any matching records, if exist.
+    if(isset($user_role_id)) {
+      $sql = "DELETE FROM user_role WHERE user_role_id=:user_role_id ";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":user_role_id", $user_role_id, PDO::PARAM_INT);
+      $statement->execute();
+    }
+
+    return;
+
+  }
+
+  private function make_slug($str) {
+    // Turns a string into a string of only lowercase characters and underscores.
+
+    $newstr = strtolower(str_replace(' ', '_', trim($str)));
+    $newstr = str_replace('!', '', $newstr);
+    $newstr = str_replace('@', '', $newstr);
+    $newstr = str_replace('#', '', $newstr);
+    $newstr = str_replace('$', '', $newstr);
+    $newstr = str_replace('%', '', $newstr);
+    $newstr = str_replace('^', '', $newstr);
+    $newstr = str_replace('&', '', $newstr);
+    $newstr = str_replace('*', '', $newstr);
+    $newstr = str_replace('(', '', $newstr);
+    $newstr = str_replace(')', '', $newstr);
+    $newstr = str_replace('{', '', $newstr);
+    $newstr = str_replace('}', '', $newstr);
+    $newstr = str_replace('[', '', $newstr);
+    $newstr = str_replace(']', '', $newstr);
+    $newstr = str_replace('-', '_', $newstr);
+    $newstr = str_replace('+', '', $newstr);
+    $newstr = str_replace('=', '', $newstr);
+    $newstr = str_replace('|', '', $newstr);
+    $newstr = str_replace("\\", '', $newstr);
+    $newstr = str_replace("/", '', $newstr);
+    $newstr = str_replace('"', '', $newstr);
+    $newstr = str_replace(':', '', $newstr);
+    $newstr = str_replace(';', '', $newstr);
+    $newstr = str_replace('<', '', $newstr);
+    $newstr = str_replace('>', '', $newstr);
+    $newstr = str_replace('.', '', $newstr);
+    $newstr = str_replace(',', '', $newstr);
+    $newstr = str_replace('?', '', $newstr);
+    $newstr = str_replace('~', '', $newstr);
+    $newstr = str_replace("`", '', $newstr);
+
+    return $newstr;
+  }
 
   /**
    * ----------------------------------------------------------------
@@ -4560,11 +5053,29 @@ class RepoStorageHybrid implements RepoStorage {
         foreach($field_names as $fn) {
           if(count($search_values) == 1) {
             $k = array_keys($search_values)[0];
-            if(array_key_exists('comparison', $p) && (($p['comparison'] !== 'LIKE') && ($p['comparison'] !== 'IS NOT NULL'))) {
+            $comparison_type = 'STR';
+            if(array_key_exists('comparison_type', $p)) {
+              $comparison_type = 'INT';
+            }
+            $comparison = 'LIKE';
+            if(array_key_exists('comparison', $p)) {
+              $comparison = $p['comparison'];
+            }
+
+            if($comparison == 'IN' && $comparison_type == 'INT') {
+              $in_placeholders = array();
+              $t = is_array($search_values[$k]) ? $search_values[$k] : explode(',',$search_values[$k]);
+              foreach($t as $m) {
+                $in_placeholders[] = '?';
+                $search_params[] = $m;
+              }
+              $this_search_param[] = $fn . ' IN (' . implode(',', $in_placeholders) . ')';
+            }
+            elseif($comparison !== 'IN' && $comparison !== 'LIKE' && $comparison !== 'IS NOT NULL') {
               $this_search_param[] = $fn . ' ' . $p['comparison'] . ' ?';
               $search_params[] = $search_values[$k];
             }
-            else if(array_key_exists('comparison', $p) && (($p['comparison'] !== 'LIKE') && ($p['comparison'] === 'IS NOT NULL'))) {
+            else if($comparison !== 'LIKE' && $comparison === 'IS NOT NULL') {
               $this_search_param[] = $fn . ' IS NOT NULL';
             }
             else {
