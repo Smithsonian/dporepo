@@ -96,7 +96,9 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-            <button type="button" class="btn btn-primary" id="save-changes">Save changes</button>
+              {% if user_can_edit %}
+              <button type="button" class="btn btn-primary" id="save-changes">Save changes</button>
+              {% endif %}
           </div>
         </div>
       </div>
