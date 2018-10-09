@@ -11,6 +11,7 @@ use AppBundle\Entity\UvMap;
 
 // Custom utility bundle
 use AppBundle\Utils\AppUtilities;
+use AppBundle\Service\RepoUserAccess;
 
 class UvMapController extends Controller
 {
@@ -18,6 +19,8 @@ class UvMapController extends Controller
    * @var object $u
    */
   public $u;
+  private $repo_storage_controller;
+  private $repo_user_access;
 
   /**
    * Constructor
@@ -28,7 +31,7 @@ class UvMapController extends Controller
     // Usage: $this->u->dumper($variable);
     $this->u = $u;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
-
+    $this->repo_user_access = new RepoUserAccess($conn);
   }
 
   /**

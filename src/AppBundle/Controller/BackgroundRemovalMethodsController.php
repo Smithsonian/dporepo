@@ -15,6 +15,7 @@ use GUMP;
 // Custom utility bundles
 use AppBundle\Utils\GumpParseErrors;
 use AppBundle\Utils\AppUtilities;
+use AppBundle\Service\RepoUserAccess;
 
 class BackgroundRemovalMethodsController extends Controller
 {
@@ -23,6 +24,7 @@ class BackgroundRemovalMethodsController extends Controller
      */
     public $u;
     private $repo_storage_controller;
+    private $repo_user_access;
 
     /**
      * Constructor
@@ -34,6 +36,7 @@ class BackgroundRemovalMethodsController extends Controller
         $this->u = $u;
 
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
+        $this->repo_user_access = new RepoUserAccess($conn);
 
         // Table name and field names.
         $this->table_name = 'background_removal_method';

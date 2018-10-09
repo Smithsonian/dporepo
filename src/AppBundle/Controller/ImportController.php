@@ -36,6 +36,7 @@ use AppBundle\Entity\UploadsParentPicker;
 use AppBundle\Utils\AppUtilities;
 
 use AppBundle\Service\RepoFileTransfer;
+use AppBundle\Service\RepoUserAccess;
 
 class ImportController extends Controller
 {
@@ -60,6 +61,7 @@ class ImportController extends Controller
     private $datasetsController;
     private $modelsController;
     private $fileTransfer;
+    private $repo_user_access;
 
     /**
      * Constructor
@@ -70,6 +72,7 @@ class ImportController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
+        $this->repo_user_access = new RepoUserAccess($conn);
         $this->tokenStorage = $tokenStorage;
 
         $this->itemsController = $itemsController;

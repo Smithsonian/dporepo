@@ -17,6 +17,7 @@ use AppBundle\Utils\GumpParseErrors;
 use AppBundle\Utils\AppUtilities;
 
 use AppBundle\Controller\ProjectsController;
+use AppBundle\Service\RepoUserAccess;
 
 class UnitStakeholderController extends Controller
 {
@@ -25,6 +26,7 @@ class UnitStakeholderController extends Controller
      */
     public $u;
     private $repo_storage_controller;
+    private $repo_user_access;
 
     /**
      * Constructor
@@ -35,6 +37,7 @@ class UnitStakeholderController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
+        $this->repo_user_access = new RepoUserAccess($conn);
 
         // Table name and field names.
         $this->table_name = 'unit_stakeholder';

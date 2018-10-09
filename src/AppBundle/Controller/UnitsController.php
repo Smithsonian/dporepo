@@ -15,6 +15,7 @@ use GUMP;
 // Custom utility bundles
 use AppBundle\Utils\GumpParseErrors;
 use AppBundle\Utils\AppUtilities;
+use AppBundle\Service\RepoUserAccess;
 
 class UnitsController extends Controller
 {
@@ -23,6 +24,7 @@ class UnitsController extends Controller
      */
     public $u;
     private $repo_storage_controller;
+    private $repo_user_access;
 
     /**
      * Constructor
@@ -30,9 +32,10 @@ class UnitsController extends Controller
      */
     public function __construct(AppUtilities $u, Connection $conn)
     {
-        // Usage: $this->u->dumper($variable);
-        $this->u = $u;
-        $this->repo_storage_controller = new RepoStorageHybridController($conn);
+      // Usage: $this->u->dumper($variable);
+      $this->u = $u;
+      $this->repo_storage_controller = new RepoStorageHybridController($conn);
+      $this->repo_user_access = new RepoUserAccess($conn);
 
         // Table name and field names.
         $this->table_name = 'unit';

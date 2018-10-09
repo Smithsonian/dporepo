@@ -16,6 +16,7 @@ use AppBundle\Entity\Model;
 
 // Custom utility bundle
 use AppBundle\Utils\AppUtilities;
+use AppBundle\Service\RepoUserAccess;
 
 class ModelController extends Controller
 {
@@ -25,6 +26,7 @@ class ModelController extends Controller
     public $u;
     private $repo_storage_controller;
     private $uploads_path;
+    private $repo_user_access;
 
     /**
      * Constructor
@@ -35,6 +37,7 @@ class ModelController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
+        $this->repo_user_access = new RepoUserAccess($conn);
         $this->uploads_path = '/uploads/repository';
     }
 

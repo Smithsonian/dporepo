@@ -20,6 +20,9 @@ use AppBundle\Controller\SubjectsController;
 // Items methods
 use AppBundle\Controller\ItemsController;
 
+// Access control methods
+use AppBundle\Service\RepoUserAccess;
+
 class AdminController extends Controller
 {
     /**
@@ -27,6 +30,7 @@ class AdminController extends Controller
      */
     public $u;
     private $repo_storage_controller;
+    private $repo_user_access_controller;
 
     /**
     * Constructor
@@ -37,6 +41,7 @@ class AdminController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
+        $this->repo_user_access_controller = new RepoUserAccess($conn);
     }
 
     /**
