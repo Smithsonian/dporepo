@@ -18,6 +18,8 @@ use AppBundle\Entity\Projects;
 // Custom utility bundle
 use AppBundle\Utils\AppUtilities;
 
+use AppBundle\Service\RepoUserAccess;
+
 class ProjectsController extends Controller
 {
     /**
@@ -25,6 +27,7 @@ class ProjectsController extends Controller
      */
     public $u;
     private $repo_storage_controller;
+    private $repo_user_access;
 
     /**
     * Constructor
@@ -35,6 +38,7 @@ class ProjectsController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
+        $this->repo_user_access = new RepoUserAccess($conn);
     }
 
     /**
@@ -42,7 +46,17 @@ class ProjectsController extends Controller
      */
     public function browse_projects(Connection $conn, Request $request, IsniController $isni)
     {
-        // Database tables are only created if not present.
+
+      $username = $this->getUser()->getUsernameCanonical();
+      $access = $this->repo_user_access->get_user_access_any($username, 'view_projects');
+
+      if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
+        $response = new Response();
+        $response->setStatusCode(403);
+        return $response;
+      }
+
+      // Database tables are only created if not present.
         $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'project'));
         $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'isni_data'));
 
@@ -65,6 +79,13 @@ class ProjectsController extends Controller
      */
     public function datatables_browse_projects(Request $request, SubjectsController $subjects)
     {
+        $username = $this->getUser()->getUsernameCanonical();
+        $access = $this->repo_user_access->get_user_access_any($username, 'view_projects');
+        $project_ids = array(0);
+        if(array_key_exists('project_ids', $access) && isset($access['project_ids'])) {
+          $project_ids = $access['project_ids'];
+        }
+
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
@@ -81,6 +102,7 @@ class ProjectsController extends Controller
         if ($search) {
           $query_params['search_value'] = $search;
         }
+        $query_params['project_ids'] = $project_ids;
 
         $data = $this->repo_storage_controller->execute('getDatatableProject', $query_params);
 
@@ -110,6 +132,22 @@ class ProjectsController extends Controller
         $project = new Projects();
         $post = $request->request->all();
         $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
+
+        $username = $this->getUser()->getUsernameCanonical();
+        $user_can_edit = false;
+        if(false !== $id) {
+          $access = $this->repo_user_access->get_user_access($username, 'view_projects', $id);
+          if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+            $response = new Response();
+            $response->setStatusCode(403);
+            return $response;
+          }
+
+          $access = $this->repo_user_access->get_user_access($username, 'edit_projects', $id);
+          if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+            $user_can_edit = true;
+          }
+        }
 
         // Retrieve data from the database.
         if (!empty($id) && empty($post)) {
@@ -149,6 +187,7 @@ class ProjectsController extends Controller
             'page_title' => !empty($id) ? 'Project: ' . $project->project_name : 'Create Project',
             'project_data' => (array)$project,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'user_can_edit' => $user_can_edit,
             'form' => $form->createView(),
         ));
 
@@ -167,7 +206,15 @@ class ProjectsController extends Controller
     public function get_projects($params = array())
     {
 
-        // Query the database.
+      $username = $this->getUser()->getUsernameCanonical();
+      $access = $this->repo_user_access->get_user_access_any($username, 'view_projects');
+      $project_ids = array(0);
+      if(array_key_exists('project_ids', $access) && isset($access['project_ids'])) {
+        $project_ids = $access['project_ids'];
+      }
+      $query_params['project_ids'] = $project_ids;
+
+      // Query the database.
         $data = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'project',
           'fields' => array(),
@@ -177,7 +224,8 @@ class ProjectsController extends Controller
           'limit' => (int)$params['limit'],
           'search_params' => array(
             0 => array('field_names' => array('project.active'), 'search_values' => array(1), 'comparison' => '='),
-            1 => array('field_names' => array('project.project_name'), 'search_values' => $params['query'], 'comparison' => 'LIKE')
+            1 => array('field_names' => array('project.project_name'), 'search_values' => $params['query'], 'comparison' => 'LIKE'),
+            2 => array('field_names' => array('project.project_repository_id'), 'search_values' => $project_ids, 'comparison' => 'IN')
           ),
           'search_type' => 'AND',
           )
@@ -215,6 +263,13 @@ class ProjectsController extends Controller
         $data = array();
         $stakeholder_guid = !empty($request->attributes->get('stakeholder_guid')) ? $request->attributes->get('stakeholder_guid') : false;
 
+        $username = $this->getUser()->getUsernameCanonical();
+        $access = $this->repo_user_access->get_user_access_any($username, 'view_projects');
+        $project_ids = array(0);
+        if(array_key_exists('project_ids', $access) && isset($access['project_ids'])) {
+          $project_ids = $access['project_ids'];
+        }
+
         $projects = $this->repo_storage_controller->execute('getRecords', array(
             'base_table' => 'project',
             'fields' => array(),
@@ -222,7 +277,8 @@ class ProjectsController extends Controller
               0 => array('field_name' => 'project_name')
             ),
             'search_params' => array(
-              0 => array('field_names' => array('stakeholder_guid'), 'search_values' => array($stakeholder_guid), 'comparison' => '=')
+              0 => array('field_names' => array('stakeholder_guid'), 'search_values' => array($stakeholder_guid), 'comparison' => '='),
+              1 => array('field_names' => array('project.project_repository_id'), 'search_values' => $project_ids, 'comparison' => 'IN')
             ),
             'search_type' => 'AND'
           )
@@ -256,6 +312,14 @@ class ProjectsController extends Controller
      */
     public function insert_update_project($data, $project_repository_id = FALSE)
     {
+
+        $username = $this->getUser()->getUsernameCanonical();
+        $access = $this->repo_user_access->get_user_access($username, 'edit_projects', $project_repository_id);
+        if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+          $response = new Response();
+          $response->setStatusCode(403);
+          return $response;
+        }
 
         // If there is no entry, then perform an insert.
         if(isset($data->stakeholder_guid)) {
@@ -330,15 +394,32 @@ class ProjectsController extends Controller
 
           $ids_array = explode(',', $ids);
 
-
+          $username = $this->getUser()->getUsernameCanonical();
+          $any_skipped = $any_deleted = false;
           foreach ($ids_array as $key => $id) {
+
+            $access = $this->repo_user_access->get_user_access($username, 'edit_projects', $id);
+            if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+              $any_skipped = true;
+              continue;
+            }
+
+            $any_deleted = true;
             $ret = $this->repo_storage_controller->execute('markProjectInactive', array(
               'record_id' => $id,
               'user_id' => $this->getUser()->getId(),
             ));
           }
 
-          $this->addFlash('message', 'Records successfully removed.');
+          if($any_skipped && $any_deleted) {
+            $this->addFlash('message', 'Some records were successfully removed but some were not because this user does not have access.');
+          }
+          elseif($any_skipped) {
+            $this->addFlash('message', 'Records were not removed because this user does not have access.');
+          }
+          else {
+            $this->addFlash('message', 'Records successfully removed.');
+          }
 
         } else {
           $this->addFlash('message', 'Missing data. No records removed.');
