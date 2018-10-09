@@ -3995,12 +3995,14 @@ class RepoStorageHybrid implements RepoStorage {
         $sql = "SELECT unit_stakeholder_repository_id as id, unit_stakeholder_full_name as name FROM unit_stakeholder";
         break;
     }
+    $sql .= " WHERE active=:active ";
 
     if(NULL !== $stakeholder_id && $tablename == 'project') {
-      $sql .= " WHERE stakeholder_guid=:stakeholder_guid ";
+      $sql .= " AND stakeholder_guid=:stakeholder_guid ";
     }
     $sql .= " ORDER BY name ";
     $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":active", 1, PDO::PARAM_INT);
     if(NULL !== $stakeholder_id && $tablename == 'project') {
       $statement->bindValue(":stakeholder_guid", $stakeholder_id, PDO::PARAM_STR);
     }
