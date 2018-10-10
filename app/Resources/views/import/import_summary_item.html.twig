@@ -40,6 +40,8 @@
                 <dd class="status-target"><span class="in-progress"><img src="/lib/images/spinner-40px.gif" alt="Visual job status indicator" width="26" height="26"> In Progress:</span> <span class="status">{{ job_data.job_status }}</span></dd>
               {% endif %}
             {% endif %}
+            <dt>UUID:</dt>
+              <dd>{{ job_data.uuid }}</dd>
           </dl>
         </div>
         <div class="col-sm-6 col-md-6">
