@@ -86,6 +86,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
     $data = array();
 
+    // /recipes
     $params = array(
       'recipes',
     );
@@ -223,7 +224,6 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
       // API returns 200 for a successful DELETE.
       $data = $this->query_api($params, 'DELETE');
-
     }
 
     return $data;
@@ -255,7 +255,6 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
       // API returns 200 and one job's data for a successful GET,
       // and a 400 and error message for an unsuccessful GET.
       $data = $this->query_api($params, 'GET');
-
     }
 
     return $data;
@@ -317,6 +316,9 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    */
   public function query_api($params = array(), $method = 'GET', $post_params = array(), $return_output = true, $content_type = 'Content-type: application/json; charset=utf-8')
   {
+    // $this->u->dumper($method,0);
+    // $this->u->dumper($params,0);
+    // $this->u->dumper(json_encode($post_params),0);
 
     $data = array();
 
@@ -363,7 +365,6 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
       $data['httpcode'] = curl_getinfo($ch, CURLINFO_HTTP_CODE);
       $data['response_header'] = curl_getinfo($ch, CURLINFO_HEADER_OUT);
       curl_close($ch);
-
     }
 
     return $data;
