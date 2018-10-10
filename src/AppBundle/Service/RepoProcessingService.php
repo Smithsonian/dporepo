@@ -97,6 +97,48 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   }
 
   /**
+   * Get recipe by name
+   *
+   * @param string $recipe_name
+   * @return array
+   */
+  public function get_recipe_by_name($recipe_name = null) {
+
+    $data = array();
+
+    if (empty($recipe_name)) {
+      $data['error'] = 'Error: Missing parameter(s). Required parameters: recipe_name';
+    }
+
+    // If there are no errors, execute the API call.
+    if (empty($data['error'])) {
+
+      $recipes = $this->get_recipes();
+
+      if ($recipes['httpcode'] === 200) {
+        // Get all recipes.
+        $recipes_array = json_decode($recipes['result'], true);
+        // Loop through recipes to find the target recipe.
+        foreach ($recipes_array as $key => $value) {
+          if ($value['name'] === $recipe_name) {
+            $data = $value;
+          } 
+        }
+        // Set an error if the recipe can't be found.
+        if (empty($data)) $data['error'] = 'Error: Recipe doesn\'t exist';
+      } else {
+        // Set an error if the recipes endpoint returns something other than a 200 HTTP code.
+        $data['error'] = 'Error: Could not retrieve recipes.';
+        $data['error'] .= 'HTTP code: ' . $recipes['httpcode'];
+        $data['error'] .= 'Response header: ' . $recipes['response_header'];
+      }
+
+    }
+
+    return $data;
+  }
+
+  /**
    * Post job
    *
    * @param string $recipe_id
@@ -112,7 +154,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
       $data['error'] = 'Error: Missing parameter(s). Required parameters: recipe_id, job_name, file_name';
     }
 
-    // If there are no errors, executte the API call.
+    // If there are no errors, execute the API call.
     if (empty($data['error'])) {
 
       $params = array(
@@ -151,7 +193,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
     if (empty($job_id)) $data['error'] = 'Error: Missing parameter. Required parameters: job_id';
 
-    // If there are no errors, executte the API call.
+    // If there are no errors, execute the API call.
     if (empty($data['error'])) {
 
       // /clients/{clientId}/jobs/{jobId}/run
@@ -181,7 +223,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
     if (empty($job_id)) $data['error'] = 'Error: Missing parameter. Required parameters: job_id';
 
-    // If there are no errors, executte the API call.
+    // If there are no errors, execute the API call.
     if (empty($data['error'])) {
 
       // /clients/{clientId}/jobs/{jobId}/cancel
@@ -211,7 +253,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
     if (empty($job_id)) $data['error'] = 'Error: Missing parameter. Required parameters: job_id';
 
-    // If there are no errors, executte the API call.
+    // If there are no errors, execute the API call.
     if (empty($data['error'])) {
 
       // /clients/{clientId}/jobs/{jobId}
@@ -241,7 +283,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
     if (empty($job_id)) $data['error'] = 'Error: Missing parameter. Required parameters: job_id';
 
-    // If there are no errors, executte the API call.
+    // If there are no errors, execute the API call.
     if (empty($data['error'])) {
 
       // /clients/{clientId}/jobs/{jobId}
@@ -279,6 +321,48 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
     // API returns 200 and all job data for a successful GET,
     // and a 200 for an unsuccessful GET (for an invalid client ID).
     $data = $this->query_api($params, 'GET');
+
+    return $data;
+  }
+
+  /**
+   * Get job by name
+   *
+   * @param string $job_name
+   * @return array
+   */
+  public function get_job_by_name($job_name = null) {
+
+    $data = array();
+
+    if (empty($job_name)) {
+      $data['error'] = 'Error: Missing parameter(s). Required parameters: job_name';
+    }
+
+    // If there are no errors, execute the API call.
+    if (empty($data['error'])) {
+
+      $recipes = $this->get_jobs();
+
+      if ($recipes['httpcode'] === 200) {
+        // Get all recipes.
+        $jobs_array = json_decode($recipes['result'], true);
+        // Loop through recipes to find the target recipe.
+        foreach ($jobs_array as $key => $value) {
+          if ($value['name'] === $job_name) {
+            $data = $value;
+          } 
+        }
+        // Set an error if the recipe can't be found.
+        if (empty($data)) $data['error'] = 'Error: Job doesn\'t exist';
+      } else {
+        // Set an error if the recipes endpoint returns something other than a 200 HTTP code.
+        $data['error'] = 'Error: Could not retrieve jobs.';
+        $data['error'] .= 'HTTP code: ' . $recipes['httpcode'];
+        $data['error'] .= 'Response header: ' . $recipes['response_header'];
+      }
+
+    }
 
     return $data;
   }
