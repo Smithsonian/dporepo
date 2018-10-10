@@ -21,6 +21,8 @@ services:
             $edan_search_endpoint: '%edan_search_endpoint%'
             $uploads_directory: '%uploads_directory%'
             $external_file_storage_path: '%external_file_storage_path%'
+            $processing_service_location: '%processing_service_location%'
+            $processing_service_client_id: '%processing_service_client_id%'
             $conn: '@doctrine.dbal.default_connection'
 
     # makes classes in src/AppBundle available to be used as services
@@ -77,3 +79,9 @@ services:
                 userName: '%external_file_storage_username%'
                 password: '%external_file_storage_password%'
                 authType: '%external_file_storage_auth_type%'
+
+    app.processing_client:
+        class: Sabre\DAV\Client
+        arguments:
+            $settings:
+                baseUri: '%processing_service_location%'
