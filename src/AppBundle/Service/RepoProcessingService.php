@@ -139,12 +139,12 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   }
 
   /**
-   * Start job
+   * Run job
    *
    * @param $job_id
    * @return array
    */
-  public function start_job($job_id = null) {
+  public function run_job($job_id = null) {
 
     $data = array();
 

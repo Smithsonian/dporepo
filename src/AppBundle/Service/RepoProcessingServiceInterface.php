@@ -26,12 +26,12 @@ interface RepoProcessingServiceInterface {
   public function post_job(string $recipe_id, string $job_name, string $file_name);
 
   /**
-   * Start job
+   * Run job
    *
    * @param $job_id
    * @return array
    */
-  public function start_job(string $job_id);
+  public function run_job(string $job_id);
 
   /**
    * Cancel job
