@@ -489,17 +489,26 @@ class RepoImport implements RepoImportInterface {
 
     foreach ($data->csv as $csv_key => $csv_val) {
 
-      // If import_row_id or import_parent_id is missing, set the job to failed and exit.
-      if (!isset($csv_val->import_row_id) || !isset($csv_val->import_parent_id)) {
-        // Set the job status.
+      // If the import_row_id is missing, set the job to failed and set the error.
+      if (!isset($csv_val->import_row_id)) {
         $job_status = 'failed';
+        $error = array($data->type . ' CSV is missing the import_row_id column');
+      }
+
+      // If this is not a subject, and the import_parent_id is missing, set the job to failed and set the error.
+      if (($data->type !== 'subject') && !isset($csv_val->import_parent_id)) {
+        $job_status = 'failed';
+        $error = array($data->type . ' CSV is missing the import_parent_id column');
+      }
+
+      if ($job_status === 'failed') {
         // Log the error to the database.
         $this->repoValidate->logErrors(
           array(
             'job_id' => $data->job_id,
             'user_id' => 0,
             'job_log_label' => 'Metadata Ingest',
-            'errors' => array($data->type . ' CSV is missing the import_row_id column'),
+            'errors' => $error,
           )
         );
         // Update the 'job_status' in the 'job' table accordingly.
