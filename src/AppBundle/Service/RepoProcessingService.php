@@ -285,6 +285,27 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   }
 
   /**
+   * Retrieve the server machine state
+   *
+   * @return array
+   */
+  public function machine_state() {
+
+    $data = array();
+
+    // /machine
+    $params = array(
+      'machine'
+    );
+
+    // API returns 200 and all job data for a successful GET,
+    // and a 200 for an unsuccessful GET (for an invalid client ID).
+    $data = $this->query_api($params, 'GET');
+
+    return $data;
+  }
+
+  /**
    * Query API
    *
    * @param array $params
