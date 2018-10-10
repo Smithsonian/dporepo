@@ -162,8 +162,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
         'run'
       );
 
-      $data = $this->query_api($params, 'GET');
-
+      $data = $this->query_api($params, 'PATCH');
     }
 
     return $data;
@@ -193,8 +192,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
         'cancel'
       );
 
-      $data = $this->query_api($params, 'GET');
-
+      $data = $this->query_api($params, 'PATCH');
     }
 
     return $data;
@@ -309,8 +307,13 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
       }
 
       $url_path = implode('/', $params);
+      $url_path = str_replace('.', '%2E', $url_path);
+
+      // $this->u->dumper('cURL URL:',0);
+      // $this->u->dumper($this->processing_service_location . $url_path);
 
       $ch = curl_init($this->processing_service_location . $url_path);
+      curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
       curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
       curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -322,6 +325,9 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
           curl_setopt($ch, CURLOPT_POST, 1);
           curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_params));
           curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+          break;
+        case "PATCH":
+          curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PATCH");
           break;
         case "DELETE":
           curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
