@@ -16,6 +16,14 @@ interface RepoProcessingServiceInterface {
   public function get_recipes();
 
   /**
+   * Get recipe by name
+   *
+   * @param string $recipe_name
+   * @return array
+   */
+  public function get_recipe_by_name(string $recipe_name);
+
+  /**
    * Post job
    *
    * @param string $recipe_id
@@ -63,6 +71,14 @@ interface RepoProcessingServiceInterface {
    * @return array
    */
   public function get_jobs();
+
+  /**
+   * Get job by name
+   *
+   * @param string $job_name
+   * @return array
+   */
+  public function get_job_by_name(string $job_name);
 
   /**
    * Query API
