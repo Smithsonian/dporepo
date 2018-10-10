@@ -85,6 +85,3 @@ services:
         arguments:
             $settings:
                 baseUri: '%processing_service_location%'
-                userName: ''
-                password: ''
-                authType: '%processing_service_auth_type%'
