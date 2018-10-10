@@ -132,7 +132,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
       // API returns 200 for a successful POST,
       // and a 404 for an unsuccessful POST. 
-      $result = $this->query_api($params, 'POST', $post_params);
+      $data = $this->query_api($params, 'POST', $post_params);
     }
 
     return $data;
