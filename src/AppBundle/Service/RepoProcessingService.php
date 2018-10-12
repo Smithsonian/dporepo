@@ -389,6 +389,124 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   }
 
   /**
+   * See if a job or set of jobs are running.
+   *
+   * @param array $job_ids An array of job ids
+   * @return bool
+   */
+  public function are_jobs_running($job_ids = array()) {
+
+    $data = false;
+    $client_jobs = array();
+
+    if (!empty($job_ids)) {
+      
+      // Get the machine state.
+      $state = $this->machine_state();
+
+      if (!empty($state['result'])) {
+
+        // Get the repository client's jobs.
+        $json_decoded = json_decode($state['result'], true);
+
+        foreach ($json_decoded['clients'] as $key => $value) {
+
+          if ($value['name'] === 'Goran Halusa') {
+            $client_jobs = $json_decoded['clients'][$key];
+            break;
+          }
+        }
+
+        // Check for job_ids in the repository client's runningJobs.
+        if (!empty($client_jobs) && !empty($client_jobs['runningJobs'])) {
+          foreach ($job_ids as $key => $value) {
+            // If a running job is found, set $data to true and break.
+            if (in_array($value, $client_jobs['runningJobs'])) {
+              $data = true;
+              break;
+            }
+          }
+        }
+
+      }
+    }
+
+    return $data;
+  }
+
+  /**
+   * Get processing assets.
+   *
+   * @param array $job_ids An array of job ids
+   * @param object $filesystem Filesystem object (via Flysystem).
+   * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
+   * @return bool
+   */
+  public function get_processing_assets($job_ids = array(), $filesystem) {
+
+    $data = array();
+    $client_jobs = array();
+
+    if (!empty($job_ids)) {
+      
+      // Loop through jobs, and retrieve outputted assets.
+      foreach ($job_ids as $job_id) {
+
+        // Retrieve a read-stream
+        try {
+
+          $files = $filesystem->listContents($job_id, false);
+
+          if (!empty($files)) {
+
+            foreach ($files as $file_key => $file_value) {
+
+              // Only grab application/json and text/plain mimetypes.
+              // TODO: transfer (pull) files to the repository for all other file types (e.g. .obj, .ply, or whatever).
+              // And then, transfer to the file storage service (or leave them on the repository filesystem).
+              if (($file_value['mimetype'] === 'text/plain; charset=utf-8') || ($file_value['mimetype'] === 'application/json; charset=utf-8')) {
+                // Set the file path minus the protocol and host.
+                $file_path = str_replace('http://si-3ddigip01.si.edu:8000/', '', $file_value['path']);
+                // Set the file name
+                $file_path_array = explode('/', $file_path);
+                $file_name = array_pop($file_path_array);
+
+                // Read the file and get the contents.
+                // !!!WARNING!!!
+                // Had to hack:
+                // vendor/league/flysystem-webdav/src/WebDAVAdapter.php (lines 129-131)
+                // vendor/league/flysystem/src/Filesystem.php (line 273)
+                $stream = $filesystem->readStream($file_path);
+                $contents = stream_get_contents($stream);
+                // Before calling fclose on the resource, check if it’s still valid using is_resource.
+                if (is_resource($stream)) fclose($stream);
+
+                $data[] = array(
+                  'job_id' => $job_id,
+                  'file_name' => $file_name,
+                  'file_contents' => $contents,
+                );
+
+              }
+
+            }
+
+          }
+
+        }
+        // Catch the error.
+        catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
+          throw $this->createNotFoundException($e->getMessage() . ' - The directory, ' . $job_id . ', does not exist.');
+        }
+
+      }
+
+    }
+
+    return $data;
+  }
+
+  /**
    * Query API
    *
    * @param array $params
