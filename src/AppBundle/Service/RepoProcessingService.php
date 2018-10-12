@@ -5,7 +5,6 @@ namespace AppBundle\Service;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Finder\Finder;
 
-use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Utils\AppUtilities;
 
 class RepoProcessingService implements RepoProcessingServiceInterface {
@@ -21,16 +20,6 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   public $kernel;
 
   /**
-   * @var string $project_directory
-   */
-  // private $project_directory;
-
-  /**
-   * @var string $external_file_storage_path
-   */
-  private $external_file_storage_path;
-
-  /**
    * @var string $processing_service_location
    */
   private $processing_service_location;
@@ -41,40 +30,17 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   private $processing_service_client_id;
 
   /**
-   * @var object $conn
-   */
-  private $conn;
-
-  /**
-   * @var object $repo_storage_controller
-   */
-  // private $repo_storage_controller;
-
-  /**
-   * @var object $repo_storage_controller
-   */
-  private $client_id;
-
-  /**
    * Constructor
    * @param object  $kernel  Symfony's kernel object
-   * @param string  $external_file_storage_path  External file storage path
    * @param string  $processing_service_location  Processing service location (e.g. URL)
    * @param string  $processing_service_client_id  Processing service client ID
-   * @param string  $conn  The database connection
    */
-  public function __construct(KernelInterface $kernel, string $external_file_storage_path, string $processing_service_location, string $processing_service_client_id, \Doctrine\DBAL\Connection $conn)
+  public function __construct(KernelInterface $kernel, string $processing_service_location, string $processing_service_client_id)
   {
     $this->u = new AppUtilities();
     // $this->u->dumper('hello');
-    $this->kernel = $kernel;
-    // $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
-    // $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
-    $this->external_file_storage_path = $external_file_storage_path;
     $this->processing_service_location = $processing_service_location;
     $this->processing_service_client_id = $processing_service_client_id;
-    $this->conn = $conn;
-    // $this->repo_storage_controller = new RepoStorageHybridController($conn);
   }
 
   /**
