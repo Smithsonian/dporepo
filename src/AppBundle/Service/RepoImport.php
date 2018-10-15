@@ -578,6 +578,69 @@ class RepoImport implements RepoImportInterface {
                 }
               }
             }
+
+            /////////////////////////////////////////////////////////////////////////////////////////
+            // Extract database column data from the processing server's 'inspect-mesh' results.
+            // Query the database for 'inspect-mesh' jobs.
+            $repo_processing_job_data = $this->repo_storage_controller->execute('getRecords', array(
+              'base_table' => 'processing_job',
+              'fields' => array(
+                array(
+                  'table_name' => 'processing_job_file',
+                  'field_name' => 'job_id',
+                ),
+                array(
+                  'table_name' => 'processing_job_file',
+                  'field_name' => 'file_contents',
+                ),
+              ),
+              // Joins
+              'related_tables' => array(
+                array(
+                  'table_name' => 'processing_job_file',
+                  'table_join_field' => 'job_id',
+                  'join_type' => 'LEFT JOIN',
+                  'base_join_table' => 'processing_job',
+                  'base_join_field' => 'job_id',
+                )
+              ),
+              'limit' => 1,
+              'search_params' => array(
+                0 => array('field_names' => array('processing_job.repository_job_uuid'), 'search_values' => array($data->uuid), 'comparison' => '='),
+                1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('inspect-mesh'), 'comparison' => '='),
+                2 => array('field_names' => array('processing_job.state'), 'search_values' => array('done'), 'comparison' => '='),
+                2 => array('field_names' => array('processing_job_file.file_name'), 'search_values' => array('model-report.json'), 'comparison' => '='),
+              ),
+              'search_type' => 'AND',
+              
+              'omit_active_field' => true,
+              )
+            );
+
+            // $this->u->dumper($repo_processing_job_data);
+
+            foreach ($repo_processing_job_data as $key => $value) {
+
+              // Get the processing job's model-report.json file's contents.
+              $file_contents = json_decode($value['file_contents'], true);
+              // $this->u->dumper($file_contents['id'],0);
+              // $this->u->dumper($file_contents['steps']['inspect']['result']['inspection']);
+              $model_file_name = $file_contents['parameters']['meshFile'];
+
+              // If the proceesing service's $model_file_name is found in the repository's file_path, 
+              // add values from the model-report.json file's contents.
+              if(stristr($csv_val->file_path, $model_file_name)) {
+                $csv_val->is_watertight = $file_contents['steps']['inspect']['result']['inspection']['topology']['isWatertight'];
+                $csv_val->has_normals = $file_contents['steps']['inspect']['result']['inspection']['statistics']['hasNormals'];
+                $csv_val->face_count = $file_contents['steps']['inspect']['result']['inspection']['statistics']['numFaces'];
+                $csv_val->vertices_count = $file_contents['steps']['inspect']['result']['inspection']['statistics']['numVertices'];
+                $csv_val->has_vertex_color = $file_contents['steps']['inspect']['result']['inspection']['statistics']['hasVertexColors'];
+                $csv_val->has_uv_space = $file_contents['steps']['inspect']['result']['inspection']['statistics']['hasTexCoords'];
+              }
+
+            }
+            /////////////////////////////////////////////////////////////////////////////////////////
+
             // Set the parent_capture_dataset_repository_id or parent_item_repository_id (when a model is associated to an item).
             // TODO: add previous_parent_record_type to the mix, 
             // so the system will automatically detect what to associate a model to (to make it a bit more bullet-proof).

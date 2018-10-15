@@ -92,12 +92,12 @@ class RepoModelValidate implements RepoModelValidateInterface {
   }
 
   /**
-   * @param string $target_directory The directory which contains model(s) to be validated and processed.
+   * @param string $uuid The directory (UUID) which contains model(s) to be validated and processed.
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function validate_models($target_directory = null, $filesystem)
+  public function validate_models($uuid = null, $filesystem)
   {
     // $job_ids = array(
     //     "",
@@ -111,9 +111,9 @@ class RepoModelValidate implements RepoModelValidateInterface {
     $job_status = 'models validated';
 
     // Absolute local path.
-    $path = $this->project_directory . $this->uploads_directory . $target_directory;
+    $path = $this->project_directory . $this->uploads_directory . $uuid;
     // Job data.
-    $job_data = $this->repo_storage_controller->execute('getJobData', array($target_directory));
+    $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
 
     if (!is_dir($path)) {
       $data[0]['errors'][] = 'Target directory not found - ' . $path;
@@ -124,89 +124,106 @@ class RepoModelValidate implements RepoModelValidateInterface {
       // Create a new inspect-mesh job and run.
       $processing_job = $this->run_validate_models($path, $job_data, $filesystem);
 
-      // Check to see if jobs are running. Don't pass "Go" until all jobs are finished.
-      while ($this->processing->are_jobs_running($processing_job['job_ids'])) {
-        $this->processing->are_jobs_running($processing_job['job_ids']);
-        echo 'running processing jobs...' . "\n";
-        sleep(5);
-      }
+      // Continue only if job_ids are returned.
+      if (!empty($processing_job)) {
 
-      // // Spoof the job_ids array (for testing).
-      // $processing_job['job_ids'] = array('60444498-23B8-8B29-F74B-E60C0BA9FE1A');
-
-      // Retrieve all of the assets produced by the processing service.
-      $processing_assets = $this->processing->get_processing_assets($processing_job['job_ids'], $filesystem);
-
-      // Insert processing-based file assets into the metadata storage service.
-      if (!empty($processing_assets)) {
-        // Loop through the processing-based file assets.
-        foreach ($processing_assets as $asset) {
-          // Insert one processing-based file asset.
-          $id = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => 'processing_job_file',
-            'user_id' => $this->user_id,
-            'values' => $asset,
-          ));
+        // Check to see if jobs are running. Don't pass "Go" until all jobs are finished.
+        while ($this->processing->are_jobs_running($processing_job['job_ids'])) {
+          $this->processing->are_jobs_running($processing_job['job_ids']);
+          echo 'running processing jobs...' . "\n";
+          sleep(5);
         }
-      }
 
-      // Update the main job record with the results of the processing job.
-      foreach ($processing_job['job_ids'] as $job_key => $job_id) {
+        // // Spoof the job_ids array (for testing).
+        // $processing_job['job_ids'] = array('60444498-23B8-8B29-F74B-E60C0BA9FE1A');
 
-        // Get the processing job from the processing service.
-        $job = $this->processing->get_job($job_id);
+        // Retrieve all of the logs produced by the processing service.
+        $processing_assets = $this->processing->get_processing_asset_logs($processing_job['job_ids'], $filesystem);
 
-        // Error handling
-        if ($job['httpcode'] !== 200) $data[$job_key]['errors'][] = 'The processing service returned HTTP code ' . $job['httpcode'];
-
-        if ($job['httpcode'] === 200) {
-
-          $processing_job = json_decode($job['result'], true);
-          // If there's an error, set the repository's upload/ingest job status to 'failed'.
-          $job_status = ($processing_job['state'] === 'error') ? 'failed' : false;
-
-          // Query the database for the corresponding processing job record,
-          // so we can use the repository's ID (processing_job_id) to update the repository's processing job record.
-          $repo_processing_job_data = $this->repo_storage_controller->execute('getRecords', array(
-            'base_table' => 'processing_job',
-            'fields' => array(),
-            'limit' => 1,
-            'search_params' => array(
-              0 => array('field_names' => array('processing_job.job_id'), 'search_values' => array($job_id), 'comparison' => '='),
-            ),
-            'search_type' => 'AND',
-            'omit_active_field' => true,
-            )
-          );
-
-          if ($repo_processing_job_data) {
-            // Update one job record. 
-            $processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
-              'base_table' => 'processing_job',
-              'record_id' => $repo_processing_job_data[0]['processing_job_id'],
+        // Insert processing-based logs into the metadata storage service.
+        if (!empty($processing_assets)) {
+          // Loop through the processing-based logs.
+          foreach ($processing_assets as $asset) {
+            // Insert one processing-based log.
+            $id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'processing_job_file',
               'user_id' => $this->user_id,
-              'values' => array(
-                'job_json' => json_encode($job['result']), 
-                'state' => $processing_job['state']
-              )
+              'values' => $asset,
             ));
           }
-
         }
+
+        // Update the main job record with the results of the processing job.
+        foreach ($processing_job['job_ids'] as $job_key => $job_id) {
+
+          // Get the processing job from the processing service.
+          $job = $this->processing->get_job($job_id);
+
+          // Error handling
+          if ($job['httpcode'] !== 200) $data[$job_key]['errors'][] = 'The processing service returned HTTP code ' . $job['httpcode'];
+
+          if ($job['httpcode'] === 200) {
+
+            $processing_job = json_decode($job['result'], true);
+            // If there's an error, set the repository's upload/ingest job status to 'failed'.
+            $job_status = ($processing_job['state'] === 'error') ? 'failed' : $job_status;
+
+            // Query the database for the corresponding processing job record,
+            // so we can use the repository's ID (processing_job_id) to update the repository's processing job record.
+            $repo_processing_job_data = $this->repo_storage_controller->execute('getRecords', array(
+              'base_table' => 'processing_job',
+              'fields' => array(),
+              'limit' => 1,
+              'search_params' => array(
+                0 => array('field_names' => array('processing_job.job_id'), 'search_values' => array($job_id), 'comparison' => '='),
+              ),
+              'search_type' => 'AND',
+              'omit_active_field' => true,
+              )
+            );
+
+            if ($repo_processing_job_data) {
+
+              // Update one job record. 
+              $processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
+                'base_table' => 'processing_job',
+                'record_id' => $repo_processing_job_data[0]['processing_job_id'],
+                'user_id' => $this->user_id,
+                'values' => array(
+                  'job_json' => json_encode($job['result']), 
+                  'state' => $processing_job['state']
+                )
+              ));
+
+              // Log the errors to the database.
+              if ($processing_job['state'] === 'error') {
+                $this->repoValidate->logErrors(
+                  array(
+                    'job_id' => $job_data['job_id'],
+                    'user_id' => $this->user_id,
+                    'job_log_label' => 'Asset Validation',
+                    'errors' => array($processing_job['error']),
+                  )
+                );
+              }
+
+            }
+
+          }
+        }
+
       }
 
     }
 
-    if ($job_status) {
-      // Update the 'job_status' in the 'job' table accordingly.
-      $this->repo_storage_controller->execute('setJobStatus', 
-        array(
-          'job_id' => $job_data['uuid'], 
-          'status' => $job_status, 
-          'date_completed' => date('Y-m-d h:i:s')
-        )
-      );
-    }
+    // Update the 'job_status' in the 'job' table accordingly.
+    $this->repo_storage_controller->execute('setJobStatus', 
+      array(
+        'job_id' => $job_data['uuid'], 
+        'status' => $job_status, 
+        'date_completed' => date('Y-m-d h:i:s')
+      )
+    );
 
     return $data;
   }
@@ -264,6 +281,7 @@ class RepoModelValidate implements RepoModelValidateInterface {
                   'base_table' => 'processing_job',
                   'user_id' => $this->user_id,
                   'values' => array(
+                    'repository_job_uuid' => $job_data['uuid'],
                     'job_id' => $job['id'], 
                     'recipe' =>  $job['recipe']['name'], 
                     'job_json' => json_encode($job), 
@@ -332,7 +350,7 @@ class RepoModelValidate implements RepoModelValidateInterface {
 // Temporary
 ////////////////
 
-// $this->u->dumper($target_directory);
+// $this->u->dumper($uuid);
 // $result = $this->processing->get_recipes(); // good
 // Empty array when a job is created.
 // post_job($recipe_id, $job_name, $file_name)

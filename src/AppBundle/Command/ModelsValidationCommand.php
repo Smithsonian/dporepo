@@ -13,12 +13,12 @@ use AppBundle\Service\RepoModelValidate;
 class ModelsValidationCommand extends ContainerAwareCommand
 {
   protected $container;
-  private $modelValidate;
+  private $model_validate;
 
-  public function __construct(RepoModelValidate $modelValidate)
+  public function __construct(RepoModelValidate $model_validate)
   {
     // Repo File Transfer service.
-    $this->modelValidate = $modelValidate;
+    $this->model_validate = $model_validate;
     // This is required due to parent constructor, which sets up name.
     parent::__construct();
   }
@@ -46,7 +46,7 @@ class ModelsValidationCommand extends ContainerAwareCommand
     $result = '';
     $errors = false;
 
-    $job_description = 'Validate Model';
+    $job_description = 'Validating Models';
 
     // Outputs multiple lines to the console (adding "\n" at the end of each line).
     $output->writeln([
@@ -62,7 +62,7 @@ class ModelsValidationCommand extends ContainerAwareCommand
       $container = $this->getContainer();
       $flysystem = $container->get('oneup_flysystem.processing_filesystem');
       // Validate models.
-      $result = $this->modelValidate->validate_models($input->getArgument('uuid'), $flysystem);
+      $result = $this->model_validate->validate_models($input->getArgument('uuid'), $flysystem);
     }
 
     // Output validation results.
