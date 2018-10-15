@@ -11,11 +11,9 @@ interface RepoValidateAssetsInterface {
   /**
    * Validate Assets
    * @param array  $params  Parameters. For now, only 'localpath' is being sent.
-   * @param $filesystem Filesystem object (via Flysystem).
-   * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array 
    */
-  public function validate_assets(array $params, obj $filesystem);
+  public function validate_assets(array $params);
 
   /**
    * Validate Images
