@@ -209,9 +209,9 @@ class ImportController extends Controller
       // $command = 'cd ' . $this->container->getParameter('kernel.project_dir') . ' && ';
       chdir($this->container->getParameter('kernel.project_dir'));
       if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {            
-        $command = $php_binary_path . ' bin/console app:validate_assets ' . implode(' ', $input) . ' > NUL';
+        $command = $php_binary_path . ' bin/console app:validate-assets ' . implode(' ', $input) . ' > NUL';
       } else {
-        $command = $php_binary_path . ' bin/console app:validate_assets ' . implode(' ', $input) . ' > /dev/null 2>&1 &';
+        $command = $php_binary_path . ' bin/console app:validate-assets ' . implode(' ', $input) . ' > /dev/null 2>&1 &';
       }
 
       // $this->u->dumper($php_binary_path,0);
@@ -320,7 +320,7 @@ class ImportController extends Controller
 
           $this->addFlash('message', 'Files have been successfully uploaded. Validations and metadata ingests are currently in progress.');
 
-          // Set the parameters for the app:validate_assets command (passed to client side, then executed asynchronously via the /admin/execute_jobs route)
+          // Set the parameters for the app:validate-assets command (passed to client side, then executed asynchronously via the /admin/execute_jobs route)
           $project['execute_jobs_input'] = array(
             'uuid' => $job_data['uuid'],
             'parent_project_id' => $parent_project_id,
