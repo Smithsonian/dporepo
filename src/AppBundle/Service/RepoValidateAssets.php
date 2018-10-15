@@ -22,24 +22,14 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
   public $u;
 
   /**
-   * @var string $uploads_directory
-   */
-  private $uploads_directory;
-
-  /**
    * @var string $valid_image_types
    */
   private $valid_image_types;
 
   /**
-   * @var string $valid_image_types
+   * @var string $valid_image_mimetypes
    */
   private $valid_image_mimetypes;
-
-  /**
-   * @var array $token_storage
-   */
-  private $token_storage;
 
   /**
    * @var object $repo_storage_controller
@@ -47,25 +37,20 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
   private $repo_storage_controller;
 
   /**
-   * @var object $repoValidate
+   * @var object $repo_validate
    */
-  private $repoValidate;
+  private $repo_validate;
 
   /**
   * Constructor
   * @param object  $u  Utility functions object
   */
-  public function __construct(TokenStorageInterface $token_storage, Connection $conn)
+  public function __construct(Connection $conn)
   {
     // Usage: $this->u->dumper($variable);
     $this->u = new AppUtilities();
-    $this->token_storage = $token_storage;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
-    $this->repoValidate = new RepoValidateData($conn);
-    // TODO: move this to parameters.yml and bind in services.yml.
-    $ds = DIRECTORY_SEPARATOR;
-    // $this->uploads_directory = $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
-    $this->uploads_directory = __DIR__ . '' . $ds . '..' . $ds . '..' . $ds . '..' . $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
+    $this->repo_validate = new RepoValidateData($conn);
     // Valid image types.
     $this->valid_image_types = array(
       'tif' => image_type_to_mime_type(IMAGETYPE_TIFF_MM),
@@ -125,7 +110,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
           if (!empty($result[$rkey]['errors'])) {
             // Set the job_status to 'failed'.
             $job_status = 'failed';
-            $this->repoValidate->logErrors(
+            $this->repo_validate->logErrors(
               array(
                 'job_id' => $job_data['job_id'],
                 'user_id' => 0,
@@ -146,7 +131,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
           // Set the job_status to failed.
           if ($job_status !== 'failed') $job_status = 'failed';
           foreach ($result_pairs as $rkey => $rvalue) {
-            $this->repoValidate->logErrors(
+            $this->repo_validate->logErrors(
               array(
                 'job_id' => $job_data['job_id'],
                 'user_id' => 0,
