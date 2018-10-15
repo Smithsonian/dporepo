@@ -51,7 +51,7 @@ class ValidateCommand extends Command
 
   /**
    * Example:
-   * php bin/console app:bagit-validate /var/www/html/dporepo/web/uploads/repository/4
+   * php bin/console app:validate 3df_5b91d293515604.56745643 2 2 project
    */
   protected function execute(InputInterface $input, OutputInterface $output)
   {
@@ -64,7 +64,7 @@ class ValidateCommand extends Command
       '<bg=green;options=bold>  == Validate Assets ==  </>',
       '<bg=green;options=bold>  =====================  </>',
       '',
-      'Command: ' . 'php bin/console app:bagit-validate ' . $input->getArgument('uuid') . ' ' . $input->getArgument('parent_project_id') . ' ' . $input->getArgument('parent_record_id') . ' ' . $input->getArgument('parent_record_type') . "\n",
+      'Command: ' . 'php bin/console app:validate ' . $input->getArgument('uuid') . ' ' . $input->getArgument('parent_project_id') . ' ' . $input->getArgument('parent_record_id') . ' ' . $input->getArgument('parent_record_type') . "\n",
     ]);
 
     // First, check to see if the external storage is accessible (Drastic).
