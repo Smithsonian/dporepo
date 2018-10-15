@@ -114,7 +114,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
               array(
                 'job_id' => $job_data['job_id'],
                 'user_id' => 0,
-                'job_log_label' => 'Image Validation',
+                'job_log_label' => 'Asset Validation',
                 'errors' => $result[$rkey]['errors'],
               )
             );
@@ -135,7 +135,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
               array(
                 'job_id' => $job_data['job_id'],
                 'user_id' => 0,
-                'job_log_label' => 'Image Validation',
+                'job_log_label' => 'Asset Validation',
                 'errors' => $rvalue,
               )
             );

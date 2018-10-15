@@ -96,14 +96,14 @@ interface RepoProcessingServiceInterface {
   public function are_jobs_running(array $job_ids);
 
   /**
-   * Get processing assets.
+   * Get processing asset logs.
    *
    * @param array $job_ids An array of job ids
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return bool
    */
-  public function get_processing_assets(array $job_ids, obj $filesystem);
+  public function get_processing_asset_logs(array $job_ids, obj $filesystem);
 
   /**
    * Query API

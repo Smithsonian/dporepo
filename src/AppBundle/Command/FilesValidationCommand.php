@@ -3,6 +3,7 @@
 namespace AppBundle\Command;
 
 use Symfony\Component\Console\Command\Command;
+use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
@@ -10,8 +11,9 @@ use Symfony\Component\Console\Input\InputArgument;
 use AppBundle\Service\RepoValidateAssets;
 use AppBundle\Controller\ExtractImageMetadataController;
 
-class FilesValidationCommand extends Command
+class FilesValidationCommand extends ContainerAwareCommand
 {
+  protected $container;
   private $validate_assets;
   private $extract_image_metadata;
 
@@ -63,8 +65,11 @@ class FilesValidationCommand extends Command
         'localpath' => $input->getArgument('localpath'),
       );
 
+      // Set up flysystem.
+      $container = $this->getContainer();
+      $filesystem = $container->get('oneup_flysystem.assets_filesystem');
       // Run the validation.
-      $result = $this->validate_assets->validate_assets($params);
+      $result = $this->validate_assets->validate_assets($params, $filesystem);
 
       // Output validation results.
       if (empty($result)) {
@@ -116,12 +121,7 @@ class FilesValidationCommand extends Command
         }
       }
 
-
     }
 
-    // If there's no $input->getArgument('localpath'), display a message.
-    if(empty($input->getArgument('localpath'))) {
-      $output->writeln('<comment>No jobs found to validate</comment>');
-    }   
   }
 }

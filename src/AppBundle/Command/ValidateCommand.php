@@ -115,6 +115,17 @@ class ValidateCommand extends Command
       $input_files = new ArrayInput($arguments_files);
       $return_files = $command_files->run($input_files, $output);
 
+      sleep(5);
+
+      // Run the models validation.
+      $command_models = $this->getApplication()->find('app:model-validate');
+      $arguments_models = array(
+          'command' => 'app:model-validate',
+          'uuid' => $input->getArgument('uuid')
+      );
+      $input_models = new ArrayInput($arguments_models);
+      $return_models = $command_models->run($input_models, $output);
+
       // sleep(5);
 
       // // Outputs multiple lines to the console (adding "\n" at the end of each line).
