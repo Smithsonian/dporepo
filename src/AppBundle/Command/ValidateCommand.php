@@ -35,7 +35,7 @@ class ValidateCommand extends Command
   {
     $this
       // The name of the command (the part after "bin/console").
-      ->setName('app:validate')
+      ->setName('app:validate_assets')
       // The short description shown while running "php bin/console list".
       ->setDescription('Validate uploaded assets.')
       // The full command description shown when running the command with
@@ -51,7 +51,7 @@ class ValidateCommand extends Command
 
   /**
    * Example:
-   * php bin/console app:validate 3df_5b91d293515604.56745643 2 2 project
+   * php bin/console app:validate_assets 3df_5b91d293515604.56745643 2 2 project
    */
   protected function execute(InputInterface $input, OutputInterface $output)
   {
@@ -64,7 +64,7 @@ class ValidateCommand extends Command
       '<bg=green;options=bold>  == Validate Assets ==  </>',
       '<bg=green;options=bold>  =====================  </>',
       '',
-      'Command: ' . 'php bin/console app:validate ' . $input->getArgument('uuid') . ' ' . $input->getArgument('parent_project_id') . ' ' . $input->getArgument('parent_record_id') . ' ' . $input->getArgument('parent_record_type') . "\n",
+      'Command: ' . 'php bin/console app:validate_assets ' . $input->getArgument('uuid') . ' ' . $input->getArgument('parent_project_id') . ' ' . $input->getArgument('parent_record_id') . ' ' . $input->getArgument('parent_record_type') . "\n",
     ]);
 
     // First, check to see if the external storage is accessible (Drastic).
@@ -115,51 +115,51 @@ class ValidateCommand extends Command
       $input_files = new ArrayInput($arguments_files);
       $return_files = $command_files->run($input_files, $output);
 
-      sleep(5);
+      // sleep(5);
 
-      // Outputs multiple lines to the console (adding "\n" at the end of each line).
-      $output->writeln([
-        '',
-        '<bg=blue;options=bold> Ingesting Metadata </>',
-        '',
-        'Parameters: ' . "\n",
-        'uuid: ' . $input->getArgument('uuid'),
-        'parent_project_id: ' . $input->getArgument('parent_project_id'),
-        'parent_record_id: ' . $input->getArgument('parent_record_id'),
-        'parent_record_type: ' . $input->getArgument('parent_record_type') . "\n"
-      ]);
+      // // Outputs multiple lines to the console (adding "\n" at the end of each line).
+      // $output->writeln([
+      //   '',
+      //   '<bg=blue;options=bold> Ingesting Metadata </>',
+      //   '',
+      //   'Parameters: ' . "\n",
+      //   'uuid: ' . $input->getArgument('uuid'),
+      //   'parent_project_id: ' . $input->getArgument('parent_project_id'),
+      //   'parent_record_id: ' . $input->getArgument('parent_record_id'),
+      //   'parent_record_type: ' . $input->getArgument('parent_record_type') . "\n"
+      // ]);
 
-      // Run the metadata ingest.
-      $params = array(
-        'uuid' => $input->getArgument('uuid'),
-        'parent_project_id' => $input->getArgument('parent_project_id'),
-        'parent_record_id' => $input->getArgument('parent_record_id'),
-        'parent_record_type' => $input->getArgument('parent_record_type'),
-      );
+      // // Run the metadata ingest.
+      // $params = array(
+      //   'uuid' => $input->getArgument('uuid'),
+      //   'parent_project_id' => $input->getArgument('parent_project_id'),
+      //   'parent_record_id' => $input->getArgument('parent_record_id'),
+      //   'parent_record_type' => $input->getArgument('parent_record_type'),
+      // );
 
-      $import_results = $this->repoImport->import_csv($params);
+      // $import_results = $this->repoImport->import_csv($params);
       
-      // echo '<pre>';
-      // var_dump($import_results);
-      // echo '</pre>';
-      // die();
+      // // echo '<pre>';
+      // // var_dump($import_results);
+      // // echo '</pre>';
+      // // die();
 
-      if (isset($import_results['errors'])) {
-        $output->writeln('<comment>Metadata ingest failed. Errors: ' . implode(', ', $import_results['errors']) . '</comment>');
-      } else {
-        $output->writeln('<comment>Metadata ingest complete.</comment>');
+      // if (isset($import_results['errors'])) {
+      //   $output->writeln('<comment>Metadata ingest failed. Errors: ' . implode(', ', $import_results['errors']) . '</comment>');
+      // } else {
+      //   $output->writeln('<comment>Metadata ingest complete.</comment>');
 
-        // Transfer files.
-        $command_file_transfer = $this->getApplication()->find('app:transfer-files');
+      //   // Transfer files.
+      //   $command_file_transfer = $this->getApplication()->find('app:transfer-files');
 
-        $arguments_file_transfer = array(
-            'command' => 'app:transfer-files',
-            'uuid' => $input->getArgument('uuid')
-        );
+      //   $arguments_file_transfer = array(
+      //       'command' => 'app:transfer-files',
+      //       'uuid' => $input->getArgument('uuid')
+      //   );
 
-        $input_file_transfer = new ArrayInput($arguments_file_transfer);
-        $return_file_transfer = $command_file_transfer->run($input_file_transfer, $output);
-      }
+      //   $input_file_transfer = new ArrayInput($arguments_file_transfer);
+      //   $return_file_transfer = $command_file_transfer->run($input_file_transfer, $output);
+      // }
 
     }
 

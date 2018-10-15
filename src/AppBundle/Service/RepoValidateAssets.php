@@ -1,14 +1,11 @@
 <?php
 
-namespace AppBundle\Controller;
+namespace AppBundle\Service;
 
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Doctrine\DBAL\Driver\Connection;
+use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Doctrine\DBAL\Driver\Connection;
 use finfo;
 
 use AppBundle\Controller\RepoStorageHybridController;
@@ -17,7 +14,7 @@ use AppBundle\Service\RepoValidateData;
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
 
-class ValidateImagesController extends Controller
+class RepoValidateAssets implements RepoValidateAssetsInterface
 {
   /**
    * @var object $u
@@ -86,7 +83,7 @@ class ValidateImagesController extends Controller
   }
 
   /**
-   * Validate Images
+   * Validate Assets
    *
    * Leveraging PHP's SplFileInfo class
    * See: http://php.net/manual/en/class.splfileinfo.php
@@ -94,7 +91,7 @@ class ValidateImagesController extends Controller
    * @param array  $params  Parameters. For now, only 'localpath' is being sent.
    * @return array 
    */
-  public function validate($params = array())
+  public function validate_assets($params = array())
   {
 
     $data = array();
@@ -180,7 +177,8 @@ class ValidateImagesController extends Controller
    * @param array $localpath The local path to uploaded assets..
    * @return array containing success/fail value, and any messages.
    */
-  public function validate_images($localpath) {
+  public function validate_images($localpath)
+  {
 
     $data = array();
 
@@ -311,7 +309,7 @@ class ValidateImagesController extends Controller
    * @param string  $filename  The file name
    * @return string
    */
-  private function get_mime_type($filename = null) {
+  public function get_mime_type($filename = null) {
 
     if (!empty($filename)) {
       $buffer = file_get_contents($filename);
