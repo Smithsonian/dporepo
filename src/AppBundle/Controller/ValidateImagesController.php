@@ -119,6 +119,72 @@ class ValidateImagesController extends Controller
         return $data;
       }
 
+      // Validate images.
+      $result = $this->validate_images($localpath);
+
+      if (!empty($result)) {
+        foreach ($result as $rkey => $rvalue) {
+          // Log the errors to the database.
+          if (!empty($result[$rkey]['errors'])) {
+            // Set the job_status to 'failed'.
+            $job_status = 'failed';
+            $this->repoValidate->logErrors(
+              array(
+                'job_id' => $job_data['job_id'],
+                'user_id' => 0,
+                'job_log_label' => 'Image Validation',
+                'errors' => $result[$rkey]['errors'],
+              )
+            );
+          }
+        }
+      }
+
+      // Validate image pairs (if the job hasn't failed).
+      if ($job_status !== 'failed') {
+        // Run the image pairs validation.
+        $result_pairs = $this->validate_image_pairs($result, $job_status);
+        // Log the errors to the database.
+        if (!empty($result_pairs)) {
+          // Set the job_status to failed.
+          if ($job_status !== 'failed') $job_status = 'failed';
+          foreach ($result_pairs as $rkey => $rvalue) {
+            $this->repoValidate->logErrors(
+              array(
+                'job_id' => $job_data['job_id'],
+                'user_id' => 0,
+                'job_log_label' => 'Image Validation',
+                'errors' => $rvalue,
+              )
+            );
+          }
+        }
+      }
+
+      // Update the 'job_status' in the 'job' table accordingly.
+      $res = $this->repo_storage_controller->execute('setJobStatus', 
+        array(
+          'job_id' => $job_data['uuid'], 
+          'status' => $job_status, 
+          'date_completed' => date('Y-m-d h:i:s')
+        )
+      );
+
+    }
+
+    return $data;
+  }
+
+  /**
+   * Validate Images
+   * @param array $localpath The local path to uploaded assets..
+   * @return array containing success/fail value, and any messages.
+   */
+  public function validate_images($localpath) {
+
+    $data = array();
+
+    if (!empty($localpath)) {
       // Search for the data directory.
       $finder = new Finder();
       $finder->path('data')->name('/\.jpg|\.tif|\.cr2|\.dng$/');
@@ -166,53 +232,9 @@ class ValidateImagesController extends Controller
           $data[$i]['file_extension'] = $file->getExtension();
           $data[$i]['file_mime_type'] = $this->get_mime_type($file->getPathname());
 
-          if (!empty($data[$i]['errors'])) {
-            // Set the job_status to 'failed', if not already set.
-            if ($job_status !== 'failed') $job_status = 'failed';
-            // Log the errors to the database.
-            $this->repoValidate->logErrors(
-              array(
-                'job_id' => $job_data['job_id'],
-                'user_id' => 0,
-                'job_log_label' => 'Image Validation',
-                'errors' => $data[$i]['errors'],
-              )
-            );
-          }
-
           $i++;
         }
       }
-
-      // If the job hasn't failed, validate image pairs.
-      if ($job_status !== 'failed') {
-        // Run the image pairs validation.
-        $result = $this->validateImagePairs($data, $job_status);
-        // Log the errors to the database.
-        if (!empty($result)) {
-          // Set the job_status to failed.
-          $job_status = 'failed';
-          foreach ($result as $rkey => $rvalue) {
-            $this->repoValidate->logErrors(
-              array(
-                'job_id' => $job_data['job_id'],
-                'user_id' => 0,
-                'job_log_label' => 'Image Validation',
-                'errors' => $rvalue,
-              )
-            );
-          }
-        }
-      }
-
-      // Update the 'job_status' in the 'job' table accordingly.
-      $res = $this->repo_storage_controller->execute('setJobStatus', 
-        array(
-          'job_id' => $job_data['uuid'], 
-          'status' => $job_status, 
-          'date_completed' => date('Y-m-d h:i:s')
-        )
-      );
 
     }
 
@@ -224,7 +246,7 @@ class ValidateImagesController extends Controller
    * @param array $data The data to validate.
    * @return array containing success/fail value, and any messages.
    */
-  public function validateImagePairs($data = array(), $job_status = '') {
+  public function validate_image_pairs($data = array(), $job_status = '') {
 
     $return = array();
 
