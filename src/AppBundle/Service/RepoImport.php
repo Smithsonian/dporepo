@@ -553,7 +553,7 @@ class RepoImport implements RepoImportInterface {
             if (!empty($parent_records)) {
               $csv_val->parent_project_repository_id = $parent_records['project_repository_id'];
             }
-
+            break;
           case 'model':
             // 1) Append the job ID to the file path
             // 2) Add the file's checksum to the $csv_val object.
@@ -601,12 +601,12 @@ class RepoImport implements RepoImportInterface {
                   'table_join_field' => 'job_id',
                   'join_type' => 'LEFT JOIN',
                   'base_join_table' => 'processing_job',
-                  'base_join_field' => 'job_id',
+                  'base_join_field' => 'processing_service_job_id',
                 )
               ),
               'limit' => 1,
               'search_params' => array(
-                0 => array('field_names' => array('processing_job.repository_job_uuid'), 'search_values' => array($data->uuid), 'comparison' => '='),
+                0 => array('field_names' => array('processing_job.job_id'), 'search_values' => array($data->uuid), 'comparison' => '='),
                 1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('inspect-mesh'), 'comparison' => '='),
                 2 => array('field_names' => array('processing_job.state'), 'search_values' => array('done'), 'comparison' => '='),
                 2 => array('field_names' => array('processing_job_file.file_name'), 'search_values' => array('model-report.json'), 'comparison' => '='),
@@ -620,24 +620,26 @@ class RepoImport implements RepoImportInterface {
             // $this->u->dumper($repo_processing_job_data);
 
             foreach ($repo_processing_job_data as $key => $value) {
-
               // Get the processing job's model-report.json file's contents.
               $file_contents = json_decode($value['file_contents'], true);
               // $this->u->dumper($file_contents['id'],0);
               // $this->u->dumper($file_contents['steps']['inspect']['result']['inspection']);
               $model_file_name = $file_contents['parameters']['meshFile'];
-
               // If the proceesing service's $model_file_name is found in the repository's file_path, 
               // add values from the model-report.json file's contents.
               if(stristr($csv_val->file_path, $model_file_name)) {
-                $csv_val->is_watertight = $file_contents['steps']['inspect']['result']['inspection']['topology']['isWatertight'];
-                $csv_val->has_normals = $file_contents['steps']['inspect']['result']['inspection']['statistics']['hasNormals'];
-                $csv_val->face_count = $file_contents['steps']['inspect']['result']['inspection']['statistics']['numFaces'];
-                $csv_val->vertices_count = $file_contents['steps']['inspect']['result']['inspection']['statistics']['numVertices'];
-                $csv_val->has_vertex_color = $file_contents['steps']['inspect']['result']['inspection']['statistics']['hasVertexColors'];
-                $csv_val->has_uv_space = $file_contents['steps']['inspect']['result']['inspection']['statistics']['hasTexCoords'];
+                // Break-out the topology and statistics into dedicated variables (mainly for readability).
+                $topology = $file_contents['steps']['inspect']['result']['inspection']['topology'];
+                $statistics = $file_contents['steps']['inspect']['result']['inspection']['statistics'];
+                // Determine the model_modality (type of geometry) - 'point_cloud' or a 'mesh'.
+                $csv_val->model_modality = (($statistics['numFaces'] === 0) && ($statistics['numEdges'] === 0)) ? 'point_cloud' : 'mesh';
+                $csv_val->is_watertight = $topology['isWatertight'];
+                $csv_val->has_normals = $statistics['hasNormals'];
+                $csv_val->face_count = $statistics['numFaces'];
+                $csv_val->vertices_count = $statistics['numVertices'];
+                $csv_val->has_vertex_color = $statistics['hasVertexColors'];
+                $csv_val->has_uv_space = $statistics['hasTexCoords'];
               }
-
             }
             /////////////////////////////////////////////////////////////////////////////////////////
 
