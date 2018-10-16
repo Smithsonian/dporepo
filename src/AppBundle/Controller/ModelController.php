@@ -242,6 +242,7 @@ class ModelController extends Controller
             if ($modeldetail[0]['parent_capture_dataset_repository_id'] != null) {
               $capturedataset = $conn->fetchAll("SELECT * FROM capture_dataset WHERE capture_dataset_repository_id =".$modeldetail[0]['parent_capture_dataset_repository_id']);
               $itemid = $modeldetail[0]['parent_item_repository_id'];
+              $modeldetail[0]['capture_dataset'] = [];
               if (count($capturedataset) > 0) {
                 if ($itemid == null) {
                   $itemid = $capturedataset[0]['parent_item_repository_id'];
