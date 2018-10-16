@@ -224,5 +224,80 @@ class ModelController extends Controller
     //         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
     //     ));
     // }
-  
+    /**
+     * @Route("/admin/projects/model/{id}/detail", name="model_detail", methods="GET", defaults={"id" = null})
+     *
+     * @param Connection $conn
+     * @param Request $request
+     */
+    public function detail(Connection $conn, Request $request,$id)
+    {
+         //$Model = new Model;
+        if ($id !== null) {
+          $statement = $conn->prepare("SELECT * FROM model WHERE model_repository_id = $id LIMIT 1");
+          $statement->execute();
+          $modeldetail = $statement->fetchAll();
+          if (count($modeldetail) > 0) {
+            if ($modeldetail[0]['parent_capture_dataset_repository_id'] != null) {
+              $capturedataset = $conn->fetchAll("SELECT * FROM capture_dataset WHERE capture_dataset_repository_id =".$modeldetail[0]['parent_capture_dataset_repository_id']);
+              $itemid = $modeldetail[0]['parent_item_repository_id'];
+              if (count($capturedataset) > 0) {
+                if ($itemid == null) {
+                  $itemid = $capturedataset[0]['parent_item_repository_id'];
+                }
+                $modeldetail[0]['capture_dataset'] = $capturedataset[0];
+                
+              }
+              $item = $conn->fetchAll("SELECT item_description,subject_repository_id FROM item WHERE item_repository_id =".$itemid);
+              
+              if (count($item) > 0) {
+                $subject = $conn->fetchAll("SELECT project_repository_id,subject_name FROM subject WHERE subject_repository_id=".$item[0]['subject_repository_id']);
+                if (count($subject) > 0) {
+                  $project = $conn->fetchAll("SELECT project_name FROM project WHERE project_repository_id=".$subject[0]['project_repository_id']);
+                  $modeldetail[0]['subject_name'] = $subject[0]['subject_name'];
+                  $modeldetail[0]['item_description'] = $item[0]['item_description'];
+                  $modeldetail[0]['project_name'] = $project[0]['project_name'];
+                  $modeldetail[0]['project_repository_id'] = $subject[0]['project_repository_id'];
+                  $modeldetail[0]['subject_repository_id'] = $item[0]['subject_repository_id'];
+                }
+              }
+              
+            }
+          }
+          //dump($modeldetail);
+          //exit;
+        }
+         
+         // Database tables are only created if not present.
+         //$Model->createTable();
+
+         return $this->render('datasets/model_detail.html.twig', array(
+             'page_title' => "Model detail",
+             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),"modeldetail"=>$modeldetail[0],
+         ));
+    }
+    /**
+     * @Route("/admin/model/files/datatables_browse", name="datatables_browse_files", methods="POST")
+     *
+     * @param Connection $conn
+     * @param Request $request
+     */
+    public function browse_model_files(Connection $conn, Request $request)
+    {
+      $parent_id = $request->request->get("parent_id");
+      $files = $conn->fetchAll("SELECT * FROM model_file WHERE model_repository_id=$parent_id");
+      return new JsonResponse($files);
+    }
+    /**
+     * @Route("/admin/model/datatables_browse_derivative_models", name="datatables_browse_derivative_models", methods="POST")
+     *
+     * @param Connection $conn
+     * @param Request $request
+     */
+    public function browse_derivative_models(Connection $conn, Request $request)
+    {
+      $parent_id = $request->request->get("parent_id");
+      $models = $conn->fetchAll("SELECT * FROM model WHERE parent_model_repository_id=$parent_id");
+      return new JsonResponse($models);
+    }
 }
