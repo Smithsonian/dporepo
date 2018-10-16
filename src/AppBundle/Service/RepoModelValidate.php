@@ -108,7 +108,7 @@ class RepoModelValidate implements RepoModelValidateInterface {
     // $this->u->dumper('done deleting job(s)');
 
     $data = array();
-    $job_status = 'models validated';
+    $job_status = 'metadata ingest in progress';
 
     // Absolute local path.
     $path = $this->project_directory . $this->uploads_directory . $uuid;
@@ -130,7 +130,6 @@ class RepoModelValidate implements RepoModelValidateInterface {
         // Check to see if jobs are running. Don't pass "Go" until all jobs are finished.
         while ($this->processing->are_jobs_running($processing_job['job_ids'])) {
           $this->processing->are_jobs_running($processing_job['job_ids']);
-          echo 'running processing jobs...' . "\n";
           sleep(5);
         }
 
@@ -175,7 +174,7 @@ class RepoModelValidate implements RepoModelValidateInterface {
               'fields' => array(),
               'limit' => 1,
               'search_params' => array(
-                0 => array('field_names' => array('processing_job.job_id'), 'search_values' => array($job_id), 'comparison' => '='),
+                0 => array('field_names' => array('processing_job.processing_service_job_id'), 'search_values' => array($job_id), 'comparison' => '='),
               ),
               'search_type' => 'AND',
               'omit_active_field' => true,
@@ -217,13 +216,15 @@ class RepoModelValidate implements RepoModelValidateInterface {
     }
 
     // Update the 'job_status' in the 'job' table accordingly.
-    $this->repo_storage_controller->execute('setJobStatus', 
-      array(
-        'job_id' => $job_data['uuid'], 
-        'status' => $job_status, 
-        'date_completed' => date('Y-m-d h:i:s')
-      )
-    );
+    if (!empty($job_status)) {
+      $this->repo_storage_controller->execute('setJobStatus', 
+        array(
+          'job_id' => $job_data['uuid'], 
+          'status' => $job_status, 
+          'date_completed' => date('Y-m-d h:i:s')
+        )
+      );
+    }
 
     return $data;
   }
@@ -281,8 +282,8 @@ class RepoModelValidate implements RepoModelValidateInterface {
                   'base_table' => 'processing_job',
                   'user_id' => $this->user_id,
                   'values' => array(
-                    'repository_job_uuid' => $job_data['uuid'],
-                    'job_id' => $job['id'], 
+                    'job_id' => $job_data['job_id'],
+                    'processing_service_job_id' => $job['id'], 
                     'recipe' =>  $job['recipe']['name'], 
                     'job_json' => json_encode($job), 
                     'state' => $job['state']

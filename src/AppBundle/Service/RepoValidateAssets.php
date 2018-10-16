@@ -80,7 +80,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
   {
 
     $data = array();
-    $job_status = 'metadata ingest in progress';
+    $job_status = 'model validation in progress';
     $localpath = !empty($params['localpath']) ? $params['localpath'] : false;
 
     // Set an error if the job directory path parameter doesn't exist.
