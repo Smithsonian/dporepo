@@ -126,51 +126,51 @@ class ValidateCommand extends Command
       $input_models = new ArrayInput($arguments_models);
       $return_models = $command_models->run($input_models, $output);
 
-      // sleep(5);
+      sleep(5);
 
-      // // Outputs multiple lines to the console (adding "\n" at the end of each line).
-      // $output->writeln([
-      //   '',
-      //   '<bg=blue;options=bold> Ingesting Metadata </>',
-      //   '',
-      //   'Parameters: ' . "\n",
-      //   'uuid: ' . $input->getArgument('uuid'),
-      //   'parent_project_id: ' . $input->getArgument('parent_project_id'),
-      //   'parent_record_id: ' . $input->getArgument('parent_record_id'),
-      //   'parent_record_type: ' . $input->getArgument('parent_record_type') . "\n"
-      // ]);
+      // Outputs multiple lines to the console (adding "\n" at the end of each line).
+      $output->writeln([
+        '',
+        '<bg=blue;options=bold> Ingesting Metadata </>',
+        '',
+        'Parameters: ' . "\n",
+        'uuid: ' . $input->getArgument('uuid'),
+        'parent_project_id: ' . $input->getArgument('parent_project_id'),
+        'parent_record_id: ' . $input->getArgument('parent_record_id'),
+        'parent_record_type: ' . $input->getArgument('parent_record_type') . "\n"
+      ]);
 
-      // // Run the metadata ingest.
-      // $params = array(
-      //   'uuid' => $input->getArgument('uuid'),
-      //   'parent_project_id' => $input->getArgument('parent_project_id'),
-      //   'parent_record_id' => $input->getArgument('parent_record_id'),
-      //   'parent_record_type' => $input->getArgument('parent_record_type'),
-      // );
+      // Run the metadata ingest.
+      $params = array(
+        'uuid' => $input->getArgument('uuid'),
+        'parent_project_id' => $input->getArgument('parent_project_id'),
+        'parent_record_id' => $input->getArgument('parent_record_id'),
+        'parent_record_type' => $input->getArgument('parent_record_type'),
+      );
 
-      // $import_results = $this->repoImport->import_csv($params);
+      $import_results = $this->repoImport->import_csv($params);
       
-      // // echo '<pre>';
-      // // var_dump($import_results);
-      // // echo '</pre>';
-      // // die();
+      // echo '<pre>';
+      // var_dump($import_results);
+      // echo '</pre>';
+      // die();
 
-      // if (isset($import_results['errors'])) {
-      //   $output->writeln('<comment>Metadata ingest failed. Errors: ' . implode(', ', $import_results['errors']) . '</comment>');
-      // } else {
-      //   $output->writeln('<comment>Metadata ingest complete.</comment>');
+      if (isset($import_results['errors'])) {
+        $output->writeln('<comment>Metadata ingest failed. Errors: ' . implode(', ', $import_results['errors']) . '</comment>');
+      } else {
+        $output->writeln('<comment>Metadata ingest complete.</comment>');
 
-      //   // Transfer files.
-      //   $command_file_transfer = $this->getApplication()->find('app:transfer-files');
+        // Transfer files.
+        $command_file_transfer = $this->getApplication()->find('app:transfer-files');
 
-      //   $arguments_file_transfer = array(
-      //       'command' => 'app:transfer-files',
-      //       'uuid' => $input->getArgument('uuid')
-      //   );
+        $arguments_file_transfer = array(
+            'command' => 'app:transfer-files',
+            'uuid' => $input->getArgument('uuid')
+        );
 
-      //   $input_file_transfer = new ArrayInput($arguments_file_transfer);
-      //   $return_file_transfer = $command_file_transfer->run($input_file_transfer, $output);
-      // }
+        $input_file_transfer = new ArrayInput($arguments_file_transfer);
+        $return_file_transfer = $command_file_transfer->run($input_file_transfer, $output);
+      }
 
     }
 
