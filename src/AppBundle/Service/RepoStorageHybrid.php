@@ -1497,6 +1497,11 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
+          'field_name' => 'parent_model_id',
+        );
+
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
           'field_name' => 'parent_item_repository_id',
         );
         $query_params['fields'][] = array(
@@ -1622,6 +1627,7 @@ class RepoStorageHybrid implements RepoStorage {
           $query_params['search_params'][1] = array(
             'field_names' => array(
               $record_type . '.model_guid',
+              $record_type . '.parent_model_id',
               $record_type . '.date_of_creation',
               $record_type . '.model_file_type',
               $record_type . '.derived_from',
@@ -1639,6 +1645,81 @@ class RepoStorageHybrid implements RepoStorage {
               $record_type . '.model_maps',
               $record_type . '.file_path',
               $record_type . '.file_checksum',
+            ),
+            'search_values' => array($search_value),
+            'comparison' => 'LIKE',
+          );
+        }
+        if (isset($parent_id_field) && NULL !== $parent_id) {
+          $c = count($query_params['search_params']);
+          $query_params['search_params'][$c] = array(
+            'field_names' => array(
+              $parent_id_field,
+            ),
+            'search_values' => array(
+              $parent_id
+            ),
+            'comparison' => '=',
+          );
+        }
+        break;
+
+
+      case 'model_file':
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_id',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_id',
+          'field_alias' => 'manage',
+        );
+        
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'filename',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'fullpath',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'active',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'date_created',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'created_by_user_account_id',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'last_modified',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => 'last_modified_user_account_id',
+        );
+        $query_params['fields'][] = array(
+          'table_name' => $record_type,
+          'field_name' => $record_type . '_id',
+          'field_alias' => 'DT_RowId',
+        );
+
+        $query_params['search_params'][0] = array(
+          'field_names' => array($record_type . '.active'),
+          'search_values' => array(1),
+          'comparison' => '='
+        );
+        if (NULL !== $search_value) {
+          $query_params['search_params'][1] = array(
+            'field_names' => array(
+              $record_type . '.filename',
+              $record_type . '.fullname',
             ),
             'search_values' => array($search_value),
             'comparison' => 'LIKE',
