@@ -410,13 +410,23 @@
             { "data": "parent_item_repository_id", "title": "Parent Item Repository ID"  },
             { "data": "file_path", "title": "Download Model" ,
               "render": function (data, type, row, meta) {
-                let thisPathArray = row.file_path.split('/'),
-                    thisFileName = thisPathArray[thisPathArray.length - 1];
-                return '<a href="{{ uploads_path }}' + row.file_path + '" download="model' + row.model_file_type + '" title="Download this model">' + thisFileName + '</a>';
+                if (row.file_path == null)
+                  row.file_path = '';
+                if (row.file_path !== null){
+                  
+                  let thisPathArray = row.file_path.split('/'),
+                      thisFileName = thisPathArray[thisPathArray.length - 1];
+                  return '<a href="{{ uploads_path }}' + row.file_path + '" download="model' + row.model_file_type + '" title="Download this model">' + thisFileName + '</a>';
+                }
               }
             },
             { "data": "model_file_type", "title": "Model File Type"  },
-            { "data": "model_guid", "title": "Model Guid"  },
+            { "data": "model_guid", "title": "Model Guid",
+              "render":function(data, type, row, meta){
+                let model_id = row.model_repository_id;
+                return  '<a href="/admin/projects/model/'+model_id+'/detail">' + row.model_guid + '</a>';
+              }  
+            },
             { "data": "date_of_creation", "title": "Date of Creation"  },            
             { "data": "model_modality", "title": "Model Modality"  },
             { "data": "units", "title": "Units"  },
