@@ -7,7 +7,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
-
+use Symfony\Component\HttpFoundation\JsonResponse;
 use AppBundle\Controller\RepoStorageHybridController;
 use PDO;
 
@@ -238,6 +238,7 @@ class ModelController extends Controller
           $statement->execute();
           $modeldetail = $statement->fetchAll();
           if (count($modeldetail) > 0) {
+            $modeldetail[0]['uploads_path'] = $this->uploads_path;
             if ($modeldetail[0]['parent_capture_dataset_repository_id'] != null) {
               $capturedataset = $conn->fetchAll("SELECT * FROM capture_dataset WHERE capture_dataset_repository_id =".$modeldetail[0]['parent_capture_dataset_repository_id']);
               $itemid = $modeldetail[0]['parent_item_repository_id'];
@@ -284,9 +285,29 @@ class ModelController extends Controller
      */
     public function browse_model_files(Connection $conn, Request $request)
     {
-      $parent_id = $request->request->get("parent_id");
-      $files = $conn->fetchAll("SELECT * FROM model_file WHERE model_repository_id=$parent_id");
-      return new JsonResponse($files);
+        $req = $request->request->all();
+        $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+        $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
+        $sort_order = $req['order'][0]['dir'];
+        $start_record = !empty($req['start']) ? $req['start'] : 0;
+        $stop_record = !empty($req['length']) ? $req['length'] : 20;
+
+        $query_params = array(
+          'record_type' => 'model_file',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+          'parent_id' => $req['parent_id'],
+        );
+        if ($search) {
+          $query_params['search_value'] = $search;
+        }
+
+        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
+
+        return $this->json($data);
+
     }
     /**
      * @Route("/admin/model/datatables_browse_derivative_models", name="datatables_browse_derivative_models", methods="POST")
@@ -296,8 +317,35 @@ class ModelController extends Controller
      */
     public function browse_derivative_models(Connection $conn, Request $request)
     {
+      $req = $request->request->all();
+        $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+        $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
+        $sort_order = $req['order'][0]['dir'];
+        $start_record = !empty($req['start']) ? $req['start'] : 0;
+        $stop_record = !empty($req['length']) ? $req['length'] : 20;
+
+        $query_params = array(
+          'record_type' => 'model',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+          'parent_id' => $req['parent_model_id'],
+          //'parent_id_field' => isset($req['parent_type']) ? 'parent_item_repository_id' : 'parent_capture_dataset_repository_id',
+          'parent_id_field' => 'parent_model_id',
+
+        );
+        if ($search) {
+          $query_params['search_value'] = $search;
+        }
+
+        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
+
+        return $this->json($data);
+        /*
       $parent_id = $request->request->get("parent_id");
-      $models = $conn->fetchAll("SELECT * FROM model WHERE parent_model_repository_id=$parent_id");
+      $models = $conn->fetchAll("SELECT * FROM model WHERE parent_model_id=$parent_id");
       return new JsonResponse($models);
+      */
     }
 }
