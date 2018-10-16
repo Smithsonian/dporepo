@@ -28,7 +28,8 @@
     <div class="row">
         <div class="col-sm-12 col-md-12">
             <div class="form-group">
-                <a href="" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
+
+                <a href="{% if modeldetail.capture_dataset|length %}/admin/projects/dataset_elements/{{modeldetail.project_repository_id}}/{{modeldetail.subject_repository_id}}/{{modeldetail.capture_dataset.parent_item_repository_id}}/{{modeldetail.capture_dataset.capture_dataset_repository_id}} {% else %}/admin/projects/datasets/{{modeldetail.project_repository_id}}/{{modeldetail.subject_repository_id}}/{{modeldetail.parent_item_repository_id}} {% endif %}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
             </div>
         </div>
     </div>
