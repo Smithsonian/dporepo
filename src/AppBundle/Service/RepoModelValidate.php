@@ -206,14 +206,22 @@ class RepoModelValidate implements RepoModelValidateInterface {
                 )
               ));
 
+
               // Log the errors to the database.
               if ($processing_job['state'] === 'error') {
+
+                // Get the model's file name
+                foreach ($processing_assets as $asset) {
+                  if ($asset['file_name'] === 'model-report.json') {
+                    $report = json_decode($asset['file_contents'], true);
+                  }
+                }
                 $this->repoValidate->logErrors(
                   array(
                     'job_id' => $job_data['job_id'],
                     'user_id' => $this->user_id,
                     'job_log_label' => 'Asset Validation',
-                    'errors' => array($processing_job['error']),
+                    'errors' => array($processing_job['error'] . ' (Processing job ID: ' . $processing_job['id'] . ', Model file name: ' . $report['parameters']['meshFile'] . ')'),
                   )
                 );
               }
