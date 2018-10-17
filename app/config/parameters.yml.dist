@@ -42,8 +42,3 @@ parameters:
     external_file_storage_username: ~
     external_file_storage_password: ~
     external_file_storage_path: ~
-
-    # Processing service parameters
-    processing_service_location: ~
-    processing_service_auth_type: ~
-    processing_service_client_id: ~

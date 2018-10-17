@@ -146,18 +146,10 @@ oneup_flysystem:
         assets_adapter:
             webdav:
                 client: app.sabredav_client
-        processing_adapter:
-            webdav:
-                client: app.processing_client
 
     filesystems:
         assets:
             adapter: assets_adapter
-            cache: ~
-            alias: ~
-            mount: ~
-        processing:
-            adapter: processing_adapter
             cache: ~
             alias: ~
             mount: ~
