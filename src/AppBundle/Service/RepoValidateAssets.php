@@ -171,7 +171,8 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
       // Search for the data directory.
       $finder = new Finder();
       $finder->path('data/');
-      // $finder->path('data')->name('/\.jpg|\.tif|\.cr2|\.dng$/');
+      // For some reason, regex is not reliable. Commented-out for now.
+      # $finder->path('data')->name('/\.jpg|\.tif|\.cr2|\.dng$/');
       $finder->in($localpath);
 
       $i = 0;
@@ -181,7 +182,8 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
 
           if (!$file->isFile()) $data[$i]['errors'][] = 'File is not a valid image.';
 
-          if ($file->isFile()) {
+          // If this is 1) a file, and 2) the file extension exists in the $this->valid_image_types array, process.
+          if ($file->isFile() && array_key_exists(strtolower($file->getExtension()), $this->valid_image_types)) {
 
             $data[$i]['errors'] = array();
 
