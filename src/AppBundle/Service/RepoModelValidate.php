@@ -115,6 +115,18 @@ class RepoModelValidate implements RepoModelValidateInterface {
     // Job data.
     $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
 
+    // Throw an error if the job record doesn't exist.
+    if (!$job_data) {
+      $return['errors'][] = 'The Job record doesn\'t exist';
+      return $return;
+    }
+
+    // Don't perform the model validation if the job_status has been set to 'failed'.
+    if ($job_data['job_status'] === 'failed') {
+      $return['errors'][] = 'The job has failed. Exiting model validation process.';
+      return $return;
+    }
+
     if (!is_dir($path)) {
       $data[0]['errors'][] = 'Target directory not found - ' . $path;
     }
