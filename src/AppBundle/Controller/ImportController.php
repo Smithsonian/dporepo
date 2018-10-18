@@ -36,6 +36,7 @@ use AppBundle\Entity\UploadsParentPicker;
 use AppBundle\Utils\AppUtilities;
 
 use AppBundle\Service\RepoFileTransfer;
+use AppBundle\Service\RepoProcessingService;
 
 class ImportController extends Controller
 {
@@ -62,10 +63,15 @@ class ImportController extends Controller
     private $fileTransfer;
 
     /**
+     * @var object $processing
+     */
+    private $processing;
+
+    /**
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, RepoFileTransfer $fileTransfer) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
@@ -76,6 +82,7 @@ class ImportController extends Controller
         $this->datasetsController = $datasetsController;
         $this->modelsController = $modelsController;
         $this->fileTransfer = $fileTransfer;
+        $this->processing = $processing;
 
         // $this->logger = $logger;
         // Usage:
@@ -908,4 +915,37 @@ class ImportController extends Controller
         return $this->redirect('/admin/import');
       }
     }
+
+    /**
+     * @Route("/admin/pjobs/remove", name="remove_jobs_from_processing_server", methods="GET")
+     *
+     * @param object $request Symfony's request object
+     */
+    public function remove_jobs_from_processing_server(Request $request)
+    {
+      
+      $jobs = array();
+      $message_type = 'error';
+      $message = 'No processing jobs found to remove.';
+
+      // Get the machine state.
+      $jobs = $this->processing->get_jobs();
+
+      // Decode the JSON.
+      $json_decoded = json_decode($jobs['result'], true);
+
+      if (!empty($json_decoded)) {
+        // Loop through jobs and delete each one by ID.
+        foreach ($json_decoded as $key => $value) {
+          $this->processing->delete_job($value['id']);
+        }
+        $message_type = 'message';
+        $message = 'All processing jobs have been removed from the processing server.';
+      }
+
+      // The message
+      $this->addFlash($message_type, $message);
+      // Redirect to the main Uploads page.
+      return $this->redirect('/admin/import');
+  }
 }
