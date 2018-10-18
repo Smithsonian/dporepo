@@ -99,13 +99,6 @@ class RepoModelValidate implements RepoModelValidateInterface {
    */
   public function validate_models($uuid = null, $filesystem)
   {
-    // $job_ids = array(
-    //     "",
-    // );
-    // foreach ($job_ids as $key => $value) {
-    //   $this->processing->delete_job($value);
-    // }
-    // $this->u->dumper('done deleting job(s)');
 
     $data = array();
     $job_status = 'metadata ingest in progress';
