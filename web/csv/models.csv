@@ -1,1 +1,1 @@
-import_row_id,import_parent_id,date_of_creation,model_file_type,derived_from,creation_method,model_modality,units,is_watertight,model_purpose,point_count,has_normals,face_count,vertices_count,has_vertex_color,has_uv_space,model_maps,file_path,file_checksum
+import_row_id,import_parent_id,date_of_creation,model_file_type,derived_from,creation_method,units,model_purpose,point_count,model_maps,file_path,file_checksum
