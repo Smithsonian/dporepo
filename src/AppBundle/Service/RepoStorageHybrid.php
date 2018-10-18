@@ -1004,10 +1004,6 @@ class RepoStorageHybrid implements RepoStorage {
             'field_name' => 'qa_approved_time',
           ),
           array(
-            'table_name' => 'job',
-            'field_name' => 'pid',
-          ),
-          array(
             'table_name' => 'fos_user',
             'field_name' => 'username',
           )
