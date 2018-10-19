@@ -40,18 +40,47 @@ interface RepoImportInterface {
    *
    * @param string $function_name Name of the function to call.
    * @param array $csv_val The current values from the uploaded CSV
-   * @param string $uuid The UUID of the job.
+   * @param array $data Job data
    * @return array
    */
-  public function extract_data_from_external(array $function_name, string $csv_va, array $uuid);
+  public function extract_data_from_external(array $function_name, string $csv_val, array $data);
 
   /**
    * Get Model Data From Processing Service
    *
    * @param array $csv_val The current values from the uploaded CSV
-   * @param string $uuid The UUID of the job.
+   * @param array $data Job data
    * @return array
    */
-  public function get_model_data_from_processing_service(array $csv_val, string $uuid);
+  public function get_model_data_from_processing_service(array $csv_val, array $data);
+
+  /**
+   * Get Data From File Names
+   *
+   * @param array $csv_val The current values from the uploaded CSV
+   * @param array $data Job data
+   * @return array
+   */
+  public function get_data_from_file_names(array $csv_val, array $data);
+
+  /**
+   * Get Capture Dataset Data From Filenames
+   *
+   * @param array $image_file_names Image file names
+   * @param array $csv_val The current values from the uploaded CSV
+   * @param array $data Job data
+   * @return array
+   */
+  public function get_dataset_data_from_filenames(array $image_file_names, array $csv_val, array $data);
+  
+  /**
+   * Get Data From File Names
+   *
+   * @param array $model_file_names Model file names
+   * @param array $csv_val The current values from the uploaded CSV
+   * @param array $data Job data
+   * @return array
+   */
+  public function get_model_data_from_filenames(array $model_file_names, array $csv_val, array $data);
 
 }

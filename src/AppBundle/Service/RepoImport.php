@@ -98,6 +98,24 @@ class RepoImport implements RepoImportInterface {
     $this->conn = $conn;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->repoValidate = new RepoValidateData($conn);
+
+    // Image extensions.
+    $this->image_extensions = array(
+      'tif',
+      'tiff',
+      'jpg',
+      'jpeg',
+      'cr2',
+      'dng',
+    );
+
+    // Model extensions.
+    $this->model_extensions = array(
+      'obj',
+      'ply',
+      'gltf',
+      'glb',
+    );
   }
 
   /**
@@ -491,6 +509,7 @@ class RepoImport implements RepoImportInterface {
       $new_repository_ids[$i] = $session->get('new_repository_ids_' . ($i-1));
     }
 
+    // foreach() begins
     foreach ($data->csv as $csv_key => $csv_val) {
 
       // If the import_row_id is missing, set the job to failed and set the error.
@@ -583,10 +602,10 @@ class RepoImport implements RepoImportInterface {
               }
             }
 
-            /////////////////////////////////////////////////////////////////////////////////////////
-            // Extract database column data from the processing server's 'inspect-mesh' results.
-            $csv_val = $this->extract_data_from_external('get_model_data_from_processing_service', $csv_val, $data->uuid);
-            /////////////////////////////////////////////////////////////////////////////////////////
+            // /////////////////////////////////////////////////////////////////////////////////////////
+            // // Extract database column data from the processing server's 'inspect-mesh' results.
+            // $csv_val = $this->extract_data_from_external('get_model_data_from_processing_service', $csv_val, $data);
+            // /////////////////////////////////////////////////////////////////////////////////////////
 
             // Set the parent_capture_dataset_repository_id or parent_item_repository_id (when a model is associated to an item).
             // TODO: add previous_parent_record_type to the mix, 
@@ -612,6 +631,14 @@ class RepoImport implements RepoImportInterface {
             }
             break;
         }
+
+        // Extract database column data from the processing server's 'inspect-mesh' results.
+        $csv_val = $this->extract_data_from_external('get_model_data_from_processing_service', $csv_val, $data);
+        // Extract database column data from file names.
+        $csv_val = $this->extract_data_from_external('get_data_from_file_names', $csv_val, $data);
+
+        // $this->u->dumper('csv_val',0);
+        // $this->u->dumper($csv_val);
 
         // Insert data from the CSV into the appropriate database table, using the $data->type as the table name.
         $this_id = $this->repo_storage_controller->execute('saveRecord', array(
@@ -653,6 +680,8 @@ class RepoImport implements RepoImportInterface {
         ));
       }
     }
+    // foreach() ends
+
     if (isset($new_new_repository_ids) && !empty($new_new_repository_ids)) {
       // Set the session variable 'new_repository_ids'.
       $session->set('new_repository_ids_' . $i, $new_new_repository_ids);
@@ -688,14 +717,14 @@ class RepoImport implements RepoImportInterface {
    *
    * @param string $function_name Name of the function to call.
    * @param array $csv_val The current values from the uploaded CSV
-   * @param string $uuid The UUID of the job.
+   * @param string $data Job data
    * @return array
    */
-  public function extract_data_from_external($function_name = null, $csv_val = array(), $uuid = null)
+  public function extract_data_from_external($function_name = null, $csv_val = array(), $data = array())
   {
 
-    if (!empty($function_name) && !empty($csv_val) && !empty($uuid) && method_exists($this, $function_name)) {
-      $csv_val = $this->$function_name($csv_val, $uuid);
+    if (!empty($function_name) && !empty($csv_val) && !empty($data) && method_exists($this, $function_name)) {
+      $csv_val = $this->$function_name($csv_val, $data);
     }
 
     return $csv_val;
@@ -705,14 +734,14 @@ class RepoImport implements RepoImportInterface {
    * Get Model Data From Processing Service
    *
    * @param array $csv_val The current values from the uploaded CSV
-   * @param string $uuid The UUID of the job.
+   * @param string $data Job data
    * @return array
    */
-  public function get_model_data_from_processing_service($csv_val = array(), $uuid = null)
+  public function get_model_data_from_processing_service($csv_val = array(), $data = array())
   {
     // Extract database column data from the processing server's 'inspect-mesh' results.
     // Query the database for 'inspect-mesh' jobs.
-    if (!empty($csv_val) && !empty($uuid)) {
+    if (!empty($csv_val) && !empty($data)) {
       
       $repo_processing_job_data = $this->repo_storage_controller->execute('getRecords', array(
         'base_table' => 'processing_job',
@@ -738,7 +767,7 @@ class RepoImport implements RepoImportInterface {
         ),
         'limit' => 1,
         'search_params' => array(
-          0 => array('field_names' => array('processing_job.job_id'), 'search_values' => array($uuid), 'comparison' => '='),
+          0 => array('field_names' => array('processing_job.job_id'), 'search_values' => array($data->uuid), 'comparison' => '='),
           1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('inspect-mesh'), 'comparison' => '='),
           2 => array('field_names' => array('processing_job.state'), 'search_values' => array('done'), 'comparison' => '='),
           2 => array('field_names' => array('processing_job_file.file_name'), 'search_values' => array('model-report.json'), 'comparison' => '='),
@@ -777,4 +806,150 @@ class RepoImport implements RepoImportInterface {
 
     return $csv_val;
   }
+
+  /**
+   * Get Data From File Names
+   *
+   * @param array $csv_val The current values from the uploaded CSV
+   * @param array $data Job data
+   * @return array
+   */
+  public function get_data_from_file_names($csv_val = array(), $data = null)
+  {
+    // $this->u->dumper($csv_val);
+    $image_file_names = $model_file_names = array();
+    $capture_datasets = $models = array();
+
+    if (!empty($csv_val) && !empty($data)) {
+
+      // Get the file's checksum from the BagIt manifest.
+      $finder = new Finder();
+      $finder->files()->in($this->uploads_directory . $data->uuid . '/');
+      // Loop through uploaded files.
+      foreach ($finder as $file) {
+        // Get image files.
+        // If this file's extension exists in the $this->image_extensions array, add to the $images array.
+        if (in_array($file->getExtension(), $this->image_extensions)) {
+          $image_file_names[] = str_replace('.' . $file->getExtension(), '', $file->getFilename());
+          $dir = dirname($file->getPathname(), 1);
+          $dir_parts = explode(DIRECTORY_SEPARATOR, $dir);
+          $dir_parent = array_pop($dir_parts);
+        }
+
+        // Get model files.
+        // If this file's extension exists in the $this->model_extensions array, add to the $models array.
+        if (in_array($file->getExtension(), $this->model_extensions)) {
+          $model_file_names[] = str_replace('.' . $file->getExtension(), '', $file->getFilename());
+        }
+      }
+
+      // Remove duplicate image file names and sort.
+      $image_file_names = array_unique($image_file_names);
+      sort($image_file_names);
+      if (!empty($image_file_names)) {
+        $csv_val = $this->get_dataset_data_from_filenames($image_file_names, $csv_val, $data);
+      }
+
+      // // Remove duplicate model file names and sort.
+      // $model_file_names = array_unique($model_file_names);
+      // sort($model_file_names);
+      // if (!empty($model_file_names)) {
+      //   $models = $this->get_model_data_from_filenames($model_file_names, $csv_val, $data);
+      // }
+      $this->u->dumper('csv_val before',0);
+      $this->u->dumper($csv_val,0);
+      $this->u->dumper('csv_val after',0);
+      $this->u->dumper($csv_val,0);
+      // $this->u->dumper($models);
+
+    }
+
+    return $csv_val;
+  }
+
+  /**
+   * Get Capture Dataset Data From Filenames
+   *
+   * @param array $image_file_names Image file names
+   * @param array $csv_val The current values from the uploaded CSV
+   * @param array $data Job data
+   * @return array
+   */
+  public function get_dataset_data_from_filenames($image_file_names = array(), $csv_val = array(), $data = array())
+  {
+
+    if (!empty($image_file_names) && !empty($csv_val) && !empty($data)) {
+
+      // $this->u->dumper($image_file_names,0);
+      // $this->u->dumper($csv_val);
+      // $this->u->dumper($data->type);
+
+      // Insert into subject (local_subject_id)
+      // Insert into capture_dataset (capture_dataset_field_id)
+      // Insert into capture_data_element (position_in_cluster_field_id, cluster_position_field_id)
+      // 
+      // Example file name mapping: usnm_160-s01-p01-01.jpg
+      // [local_subject_id]-s[capture_dataset_field_id]-p[position_in_cluster_field_id]-[cluster_position_field_id].jpg
+
+      foreach ($image_file_names as $file_key => $file_name) {
+        // Create an array from the file name.
+        $file_name_parts = explode('-', $file_name);
+
+        switch ($data->type) {
+          case 'subject':
+            // 
+            // $this->u->dumper('data->type',0);
+            // $this->u->dumper($data->type,0);
+            $csv_val->local_subject_id = $file_name_parts[0];
+            // $this->u->dumper($csv_val);
+            break;
+          case 'capture_dataset':
+            // 
+            $this->u->dumper('data->type',0);
+            $this->u->dumper($data->type,0);
+            $this->u->dumper($csv_val->directory_path,0);
+            $csv_val->directory_path = preg_replace('/[^0-9]/', '', $csv_val->directory_path);
+            $this->u->dumper($csv_val->directory_path,0);
+            $csv_val->capture_dataset_field_id = str_replace('s', '', $file_name_parts[1]);
+            $this->u->dumper($csv_val);
+            break;
+          case 'capture_data_element':
+            // 
+            // $this->u->dumper('data->type',0);
+            // $this->u->dumper($data->type,0);
+            $csv_val->position_in_cluster_field_id = str_replace('p', '', $file_name_parts[2]);
+            $csv_val->cluster_position_field_id = $file_name_parts[3];
+            // $this->u->dumper($csv_val);
+            break;
+        }
+
+        // $this->u->dumper($csv_val);
+      }
+
+    }
+
+    return $csv_val;
+  }
+
+  /**
+   * Get Data From File Names
+   *
+   * @param array $model_file_names Model file names
+   * @param array $csv_val The current values from the uploaded CSV
+   * @param array $data Job data
+   * @return array
+   */
+  public function get_model_data_from_filenames($model_file_names = array(), $csv_val = array(), $data = array())
+  {
+    $data = array();
+
+    if (!empty($model_file_names)) {
+
+      // Dostuff
+
+    }
+
+    return $data;
+  }
+
 }
