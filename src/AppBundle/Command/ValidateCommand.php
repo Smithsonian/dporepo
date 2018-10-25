@@ -91,11 +91,14 @@ class ValidateCommand extends Command
     // If a localpath is passed, use it as the path to the files to validate.
     if ( !empty($input->getArgument('localpath')) ) {
       $directory_to_validate = $input->getArgument('localpath');
+      $uuid = $input->getArgument('uuid');
     }
 
     // If a localpath is NOT passed, check the database for a job with the 'job_status' set to 'bagit validation starting'.
     if ( empty($input->getArgument('localpath')) ) {
       $directory_to_validate = $this->validate->needsValidationChecker('bagit validation starting', $this->uploads_directory);
+      $directory_to_validate_parts = explode('/', $directory_to_validate);
+      $uuid = array_pop($directory_to_validate_parts);
     }
 
     if (!empty($directory_to_validate)) {
@@ -141,7 +144,7 @@ class ValidateCommand extends Command
         '<bg=blue;options=bold> Ingesting Metadata </>',
         '',
         'Parameters: ' . "\n",
-        'uuid: ' . $input->getArgument('uuid'),
+        'uuid: ' . $uuid,
         'parent_project_id: ' . $input->getArgument('parent_project_id'),
         'parent_record_id: ' . $input->getArgument('parent_record_id'),
         'parent_record_type: ' . $input->getArgument('parent_record_type') . "\n"
@@ -149,7 +152,7 @@ class ValidateCommand extends Command
 
       // Run the metadata ingest.
       $params = array(
-        'uuid' => $input->getArgument('uuid'),
+        'uuid' => $uuid,
         'parent_project_id' => $input->getArgument('parent_project_id'),
         'parent_record_id' => $input->getArgument('parent_record_id'),
         'parent_record_type' => $input->getArgument('parent_record_type'),
