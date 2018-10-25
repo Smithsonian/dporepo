@@ -1092,7 +1092,7 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   /**
-   * @param int $job_id The job ID
+   * @param array $params Parameters - only the job UUID for now.
    * @return array Results from the database
    */
   public function purgeImportedData($params = array()) {
@@ -1101,7 +1101,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     if (!empty($params) && !empty($params['uuid'])) {
 
-      // Get tje job's data via job.uuid.
+      // Get the job's data via job.uuid.
       $job_data = $this->getJobData(array($params['uuid']));
 
       if (!empty($job_data)) {
