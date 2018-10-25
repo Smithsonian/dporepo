@@ -7,26 +7,31 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\HttpKernel\KernelInterface;
 
-use AppBundle\Controller\ImportController;
-use AppBundle\Service\RepoValidateData;
 use AppBundle\Service\RepoImport;
+use AppBundle\Service\RepoValidateData;
+use AppBundle\Controller\RepoStorageHybridController;
 
 class ValidateCommand extends Command
 {
-  private $repoImport;
+  private $repo_import;
   private $validate;
+  private $project_directory;
 
-  public function __construct(RepoImport $repoImport, RepoValidateData $validate)
+  public function __construct(KernelInterface $kernel, RepoImport $repo_import, RepoValidateData $validate, string $uploads_directory, bool $external_file_storage_on, object $conn)
   {
     // Repo Import service
-    $this->repoImport = $repoImport;
+    $this->repo_import = $repo_import;
     // Repo Validate Data service
     $this->validate = $validate;
-    // TODO: move this to parameters.yml and bind in services.yml.
-    $ds = DIRECTORY_SEPARATOR;
-    // $this->uploads_directory = $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
-    $this->uploads_directory = __DIR__ . '' . $ds . '..' . $ds . '..' . $ds . '..' . $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
+    // Storage controller
+    $this->repo_storage_controller = new RepoStorageHybridController($conn);
+    // Uploads directory
+    $this->kernel = $kernel;
+    $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? $this->project_directory . str_replace('\\', '/', $uploads_directory) : $this->project_directory . $uploads_directory;
+    $this->external_file_storage_on = $external_file_storage_on;
     // This is required due to parent constructor, which sets up name.
     parent::__construct();
   }
