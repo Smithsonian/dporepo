@@ -57,13 +57,14 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
       'tiff' => image_type_to_mime_type(IMAGETYPE_TIFF_MM),
       'jpg' => image_type_to_mime_type(IMAGETYPE_JPEG),
       'jpeg' => image_type_to_mime_type(IMAGETYPE_JPEG),
-      'cr2' => image_type_to_mime_type(IMAGETYPE_JPEG),
+      'cr2' => 'image/x-canon-cr2',
       'dng' => image_type_to_mime_type(IMAGETYPE_TIFF_MM),
     );
     // Valid image mime types.
     $this->valid_image_mimetypes = array(
       image_type_to_mime_type(IMAGETYPE_TIFF_MM) => array('image/tif', 'image/tiff'),
       image_type_to_mime_type(IMAGETYPE_JPEG) => array('image/jpg', 'image/jpeg'),
+      'image/x-canon-cr2' => array('image/x-canon-cr2'),
     );
   }
 
@@ -208,7 +209,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
                 $data[$i]['errors'][] = 'File extension does not match the image type - ' . $file->getFilename();
               }
             } else {
-              $data[$i]['errors'][] = 'File is not a valid image - ' . $file->getFilename();
+              $data[$i]['errors'][] = 'File is not a valid image 2 - ' . $file->getFilename();
             }
 
           }
