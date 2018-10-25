@@ -507,12 +507,12 @@ class RepoImport implements RepoImportInterface {
       $new_repository_ids[$i] = $session->get('new_repository_ids_' . ($i-1));
     }
 
-    // Extract 'model' database column data from the processing server's 'inspect-mesh' results.
+    // Extract subject, item, and model database column data from the processing server's 'inspect-mesh' results.
     if ($data->type === 'model') {
       $data = $this->extract_data_from_external('get_model_data_from_processing_service', $data);
     }
 
-    // Extract database column data from file names.
+    // Extract subject and capture_dataset database column data from file names.
     $data = $this->extract_data_from_external('get_data_from_file_names', $data);
 
     // foreach() begins
@@ -645,6 +645,11 @@ class RepoImport implements RepoImportInterface {
           'values' => (array)$csv_val
         ));
 
+        // Insert capture data elements and capture data files into the metadata storage.
+        if (($data->type === 'capture_dataset') && isset($csv_val->capture_data_elements) && !empty($csv_val->capture_data_elements)) {
+          $this->insert_capture_data_elements($csv_val->capture_data_elements, $this_id, $data->user_id);
+        }
+
         // Create an array of all of the newly created repository IDs.
         $new_new_repository_ids[$csv_val->import_row_id] = $this_id;
 
@@ -711,6 +716,52 @@ class RepoImport implements RepoImportInterface {
   }
 
   /**
+   * Insert Capture Data Elements
+   *
+   * @param array $capture_data_elements An array of capture data elements.
+   * @param int $capture_dataset_repository_id The capture dataset repository ID
+   * @param string $user_id The user ID
+   * @return null
+   */
+  public function insert_capture_data_elements($capture_data_elements = array(), $capture_dataset_repository_id = null, $user_id = null) {
+
+    if (!empty($capture_data_elements) && !empty($capture_dataset_repository_id)) {
+      // Loop through capture data elements and add to storage.
+      foreach ($capture_data_elements as $ekey => $evalue) {
+
+        // Pluck-out capture data files and save for the next step.
+        if(isset($evalue['capture_data_files']) && !empty($evalue['capture_data_files'])) {
+          $capture_data_files = $evalue['capture_data_files'];
+          unset($evalue['capture_data_files']);
+        }
+
+        // Set the parent capture dataset ID.
+        $evalue['capture_dataset_repository_id'] = $capture_dataset_repository_id;
+        // Add to metadata storage.
+        $capture_data_element_id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'capture_data_element',
+          'user_id' => $user_id,
+          'values' => $evalue
+        ));
+
+        // Loop through capture data files and add to storage.
+        foreach ($capture_data_files as $fkey => $fvalue) {
+          // Set the parent capture data element ID.
+          $fvalue['parent_capture_data_element_repository_id'] = $capture_data_element_id;
+          // Add to metadata storage.
+          $capture_data_file = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'capture_data_file',
+            'user_id' => $user_id,
+            'values' => $fvalue
+          ));
+        }
+
+      }
+    }
+
+  }
+
+  /**
    * Extract Data From External
    *
    * @param string $function_name Name of the function to call.
@@ -766,7 +817,7 @@ class RepoImport implements RepoImportInterface {
           0 => array('field_names' => array('processing_job.job_id'), 'search_values' => array($data->job_id), 'comparison' => '='),
           1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('inspect-mesh'), 'comparison' => '='),
           2 => array('field_names' => array('processing_job.state'), 'search_values' => array('done'), 'comparison' => '='),
-          2 => array('field_names' => array('processing_job_file.file_name'), 'search_values' => array('model-report.json'), 'comparison' => '='),
+          3 => array('field_names' => array('processing_job_file.file_name'), 'search_values' => array('-report.json'), 'comparison' => 'LIKE'),
         ),
         'search_type' => 'AND',
         
@@ -915,13 +966,47 @@ class RepoImport implements RepoImportInterface {
           $i = 0;
           foreach ($image_file_names as $dir_name => $files) {
             $data->csv[$i]->capture_dataset_field_id = preg_replace('/[^0-9]/', '', $dir_name);
-            // Add capture data elements to the capture_dataset CSV.
+
+            // Add 'capture_data_elements' and 'capture_data_files' to the 'capture_dataset' CSV.
             foreach ($files as $file) {
+
               $file_name_parts = explode('-', $file);
-              $data->csv[$i]->capture_data_elements[] = array(
-                'position_in_cluster_field_id' => stristr($file_name_parts[2], 'p') ? str_replace('p', '', $file_name_parts[2]) : '',
-                'cluster_position_field_id' => isset($file_name_parts[3]) ? $file_name_parts[3] : $file_name_parts[2],
+              // Query the metadata storage for the file's info using the job UUID and filename.
+              $file_info = $this->repo_storage_controller->execute('getRecords', array(
+                'base_table' => 'file_upload',
+                'fields' => array(),
+                'limit' => 1,
+                'search_params' => array(
+                  0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($data->uuid), 'comparison' => 'LIKE'),
+                  1 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($file), 'comparison' => 'LIKE'),
+                ),
+                'search_type' => 'AND',
+                'omit_active_field' => true,
+                )
               );
+
+              if (!empty($file_info)) {
+                $capture_data_files = array();
+                foreach ($file_info as $file_info_key => $file_info_value) {
+                  // Get file info for the capture_data_file columns
+                  $capture_data_files[] = array(
+                    'file_upload_id' => $file_info_value['file_upload_id'],
+                    'capture_data_file_name' => $file_info_value['file_name'],
+                    'capture_data_file_type' => $file_info_value['file_type'],
+                    'is_compressed_multiple_files' => 0,
+                  );
+                }
+              }
+
+              $data->csv[$i]->capture_data_elements[] = array(
+                'position_in_cluster_field_id' => stristr($file_name_parts[2], 'p') ? (int)str_replace('p', '', $file_name_parts[2]) : null,
+                'cluster_position_field_id' => isset($file_name_parts[3]) ? (int)$file_name_parts[3] : (int)$file_name_parts[2],
+                'capture_data_files' => $capture_data_files,
+              );
+              // file_upload.file_path = /uploads/repository/3df_5bd0bb0256c840.25240097/testupload06_usnm_160/data/-s03-/usnm_160-s03-01.cr2
+              // SELECT * FROM file_upload
+              // WHERE file_path LIKE '3df_5bd0bb0256c840.25240097'
+              // AND  file_path LIKE 'usnm_160-s03-01'
             }
 
             $i++;

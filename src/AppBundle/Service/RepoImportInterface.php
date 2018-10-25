@@ -36,6 +36,16 @@ interface RepoImportInterface {
   public function ingest_csv_data($data = null, $ids = array(), $parent_record_type = null, $i = 1);
 
   /**
+   * Insert Capture Data Elements
+   *
+   * @param array $capture_data_elements An array of capture data elements.
+   * @param int $capture_dataset_repository_id The capture dataset repository ID
+   * @param string $user_id The user ID
+   * @return null
+   */
+  public function insert_capture_data_elements(array $capture_data_elements, int $capture_dataset_repository_id, string $user_id);
+
+  /**
    * Extract Data From External
    *
    * @param string $function_name Name of the function to call.
