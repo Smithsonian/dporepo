@@ -103,7 +103,8 @@ class ValidateCommand extends Command
 
     if (!empty($directory_to_validate)) {
 
-      sleep(5);
+      // Get job data
+      $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
 
       // Run the BagIt validation.
       $command_bagit = $this->getApplication()->find('app:bagit-validate');
