@@ -205,7 +205,7 @@ class RepoModelValidate implements RepoModelValidateInterface {
 
                 // Get the model's file name
                 foreach ($processing_assets as $asset) {
-                  if ($asset['file_name'] === 'model-report.json') {
+                  if (stristr($asset['file_name'], '-report.json')) {
                     $report = json_decode($asset['file_contents'], true);
                   }
                 }
