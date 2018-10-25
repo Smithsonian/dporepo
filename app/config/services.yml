@@ -21,6 +21,7 @@ services:
             $edan_search_endpoint: '%edan_search_endpoint%'
             $uploads_directory: '%uploads_directory%'
             $external_file_storage_path: '%external_file_storage_path%'
+            $external_file_storage_on: '%external_file_storage_on%'
             $processing_service_location: '%processing_service_location%'
             $processing_service_client_id: '%processing_service_client_id%'
             $conn: '@doctrine.dbal.default_connection'
