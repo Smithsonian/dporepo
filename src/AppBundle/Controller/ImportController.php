@@ -68,10 +68,15 @@ class ImportController extends Controller
     private $processing;
 
     /**
+     * @var string $external_file_storage_on
+     */
+    private $external_file_storage_on;
+
+    /**
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, string $external_file_storage_on) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
@@ -83,6 +88,7 @@ class ImportController extends Controller
         $this->modelsController = $modelsController;
         $this->fileTransfer = $fileTransfer;
         $this->processing = $processing;
+        $this->external_file_storage_on = $external_file_storage_on;
 
         // $this->logger = $logger;
         // Usage:
@@ -107,20 +113,23 @@ class ImportController extends Controller
         $service_error = false;
         $obj = new UploadsParentPicker();
 
-        // Check to see if the external storage service is accessible.
-        // TODO: Send email alerts to admins?
-        // Set up flysystem.
-        $flysystem = $this->container->get('oneup_flysystem.assets_filesystem');
-        // Transfer files.
-        $result = $this->fileTransfer->checkExternalStorage('checker', $flysystem);
-        // If errors exist, serve out flash notifications.
-        if (!empty($result)) {
-          foreach ($result as $key => $value) {
-            if (isset($value['errors'])) {
-              $this->addFlash('error', '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).');
-              $service_error = true;
-              foreach ($value['errors'] as $ekey => $evalue) {
-                $this->addFlash('error', $evalue);
+        // If the external file storage service is turned on in parameters.yml, 
+        // check to see if the external storage service is accessible.
+        if($this->external_file_storage_on) {
+          // TODO: Send email alerts to admins?
+          // Set up flysystem.
+          $flysystem = $this->container->get('oneup_flysystem.assets_filesystem');
+          // Transfer files.
+          $result = $this->fileTransfer->checkExternalStorage('checker', $flysystem);
+          // If errors exist, serve out flash notifications.
+          if (!empty($result)) {
+            foreach ($result as $key => $value) {
+              if (isset($value['errors'])) {
+                $this->addFlash('error', '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).');
+                $service_error = true;
+                foreach ($value['errors'] as $ekey => $evalue) {
+                  $this->addFlash('error', $evalue);
+                }
               }
             }
           }
