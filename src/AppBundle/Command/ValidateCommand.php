@@ -72,19 +72,21 @@ class ValidateCommand extends Command
       'Command: ' . 'php bin/console app:validate-assets ' . $input->getArgument('uuid') . ' ' . $input->getArgument('parent_project_id') . ' ' . $input->getArgument('parent_record_id') . ' ' . $input->getArgument('parent_record_type') . "\n",
     ]);
 
-    // First, check to see if the external storage is accessible (Drastic).
+    // First, check to see if the external storage is accessible (Drastic) - (if it's turned on in parameters.yml).
     // If the external storage is not accessible, then the job status will be set to 'failed', 
     // which will prevent any further validations and file transfers from executing.
-    $external_storage_check = $this->getApplication()->find('app:transfer-files');
+    if ($this->external_file_storage_on) {
+      $external_storage_check = $this->getApplication()->find('app:transfer-files');
 
-    $arguments_external_storage_check = array(
-        'command' => 'app:transfer-files',
-        'uuid' => $input->getArgument('uuid'),
-        'check_external_storage' => true
-    );
+      $arguments_external_storage_check = array(
+          'command' => 'app:transfer-files',
+          'uuid' => $input->getArgument('uuid'),
+          'check_external_storage' => true
+      );
 
-    $input_external_storage_check = new ArrayInput($arguments_external_storage_check);
-    $return_external_storage_check = $external_storage_check->run($input_external_storage_check, $output);
+      $input_external_storage_check = new ArrayInput($arguments_external_storage_check);
+      $return_external_storage_check = $external_storage_check->run($input_external_storage_check, $output);
+    }
 
     // If a localpath is passed, use it as the path to the files to validate.
     if ( !empty($input->getArgument('localpath')) ) {
@@ -165,16 +167,38 @@ class ValidateCommand extends Command
       } else {
         $output->writeln('<comment>Metadata ingest complete.</comment>');
 
-        // Transfer files.
-        $command_file_transfer = $this->getApplication()->find('app:transfer-files');
+        // If the external file storage is turned on (in the parameters.yml config),
+        // transfer files to the external file storage.
+        if ($this->external_file_storage_on) {
+          // Transfer files.
+          $command_file_transfer = $this->getApplication()->find('app:transfer-files');
 
-        $arguments_file_transfer = array(
-            'command' => 'app:transfer-files',
-            'uuid' => $input->getArgument('uuid')
-        );
+          $arguments_file_transfer = array(
+              'command' => 'app:transfer-files',
+              'uuid' => $uuid
+          );
 
-        $input_file_transfer = new ArrayInput($arguments_file_transfer);
-        $return_file_transfer = $command_file_transfer->run($input_file_transfer, $output);
+          $input_file_transfer = new ArrayInput($arguments_file_transfer);
+          $return_file_transfer = $command_file_transfer->run($input_file_transfer, $output);
+        }
+
+        // If the external file storage is turned off (in the parameters.yml config),
+        // set the job record's job_status to 'complete'.
+        if (!$this->external_file_storage_on) {
+          // Set the status
+          $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'job',
+            'record_id' => $job_data['job_id'],
+            'user_id' => 0,
+            'values' => array(
+              'job_status' => 'complete',
+              'date_completed' => date('Y-m-d H:i:s'),
+              'qa_required' => 0,
+              'qa_approved_time' => null,
+            )
+          ));
+        }
+
       }
 
     }
