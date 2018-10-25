@@ -88,11 +88,14 @@ class ExtractImageMetadataController extends Controller
       'tiff' => image_type_to_mime_type(IMAGETYPE_TIFF_MM),
       'jpg' => image_type_to_mime_type(IMAGETYPE_JPEG),
       'jpeg' => image_type_to_mime_type(IMAGETYPE_JPEG),
+      'cr2' => 'image/x-canon-cr2',
+      'dng' => image_type_to_mime_type(IMAGETYPE_TIFF_MM),
     );
     // Valid image mime types.
     $this->valid_image_mimetypes = array(
       image_type_to_mime_type(IMAGETYPE_TIFF_MM) => array('image/tif', 'image/tiff'),
       image_type_to_mime_type(IMAGETYPE_JPEG) => array('image/jpg', 'image/jpeg'),
+      'image/x-canon-cr2' => array('image/x-canon-cr2'),
     );
   }
 
