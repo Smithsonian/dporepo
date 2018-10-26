@@ -1,0 +1,60 @@
+{
+    "meta": {
+        "name": "chdm-1938_58_1083_3m"
+    },
+    "process": {
+        "method": "photogrammetry"
+    },
+    "model": {
+        "units": "cm",
+        "derivatives": [{
+            "usage": "Web",
+            "quality": "Thumb",
+            "assets": [{
+                "type": "Model",
+                "uri": "chdm-1938_58_1083_3m-50k-1024-web.glb"
+            },
+            {
+                "type": "Image",
+                "uri": "chdm-1938_58_1083_3m-thumb.jpg"
+            }]
+        }, {
+            "usage": "Web",
+            "quality": "Low",
+            "assets": [{
+                "type": "Model",
+                "uri": "chdm-1938_58_1083_3m-200k-1024-web.glb"
+            }]
+        }, {
+            "usage": "Web",
+            "quality": "Medium",
+            "assets": [{
+                "type": "Model",
+                "uri": "chdm-1938_58_1083_3m-200k-2048-web.glb"
+            }]
+        }, {
+            "usage": "Web",
+            "quality": "High",
+            "assets": [{
+                "type": "Model",
+                "uri": "chdm-1938_58_1083_3m-200k-4096-web.glb"
+            }]
+        }],
+        "boundingBox": {
+            "min": [-220.54, -565.58, -353.17],
+            "max": [340.64, 460.87, 378.81]
+        },
+        "transform": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+    },
+    "documents": {
+        "documents": [{
+            "title": "Dolore Magna Aliqua",
+            "uri": "chdm-1938_58_1083_3m.md",
+            "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            "mimeType": "text/markdown"
+        }]
+    },
+    "annotations": {
+        "annotations": []
+    }
+}
