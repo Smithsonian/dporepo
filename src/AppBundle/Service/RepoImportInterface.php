@@ -37,14 +37,14 @@ interface RepoImportInterface {
   public function ingest_csv_data(obj $data, array $job_data, $parent_record_type, int $i);
 
   /**
-   * Insert Capture Data Elements and Files
+   * Insert Capture Data Elements
    *
    * @param array $capture_data_elements An array of capture data elements.
    * @param int $capture_dataset_repository_id The capture dataset repository ID
-   * @param string $user_id The user ID
+   * @param array $data Job data
    * @return null
    */
-  public function insert_capture_data_elements_and_files(array $capture_data_elements, int $capture_dataset_repository_id, string $user_id);
+  public function insert_capture_data_elements_and_files(array $capture_data_elements, int $capture_dataset_repository_id, array $data);
 
   /**
    * Extract Data From External

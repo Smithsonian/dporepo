@@ -683,7 +683,7 @@ class RepoImport implements RepoImportInterface {
 
         // Insert capture data elements and capture data files into the metadata storage.
         if (($data->type === 'capture_dataset') && isset($csv_val->capture_data_elements) && !empty($csv_val->capture_data_elements)) {
-          $this->insert_capture_data_elements_and_files($csv_val->capture_data_elements, $this_id, $data->user_id);
+          $this->insert_capture_data_elements_and_files($csv_val->capture_data_elements, $this_id, $data);
         }
 
         // Create an array of all of the newly created repository IDs.
@@ -756,12 +756,12 @@ class RepoImport implements RepoImportInterface {
    *
    * @param array $capture_data_elements An array of capture data elements.
    * @param int $capture_dataset_repository_id The capture dataset repository ID
-   * @param string $user_id The user ID
+   * @param array $data Job data
    * @return null
    */
-  public function insert_capture_data_elements_and_files($capture_data_elements = array(), $capture_dataset_repository_id = null, $user_id = null) {
+  public function insert_capture_data_elements_and_files($capture_data_elements = array(), $capture_dataset_repository_id = null, $data = array()) {
 
-    if (!empty($capture_data_elements) && !empty($capture_dataset_repository_id)) {
+    if (!empty($capture_data_elements) && !empty($capture_dataset_repository_id) && !empty($data)) {
       // Loop through capture data elements and add to storage.
       foreach ($capture_data_elements as $ekey => $evalue) {
 
@@ -776,8 +776,21 @@ class RepoImport implements RepoImportInterface {
         // Add to metadata storage.
         $capture_data_element_id = $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'capture_data_element',
-          'user_id' => $user_id,
+          'user_id' => $data->user_id,
           'values' => $evalue
+        ));
+
+        // Insert into the job_import_record table
+        $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_import_record',
+          'user_id' => $data->user_id,
+          'values' => array(
+            'job_id' => $data->job_id,
+            'record_id' => $capture_data_element_id,
+            'project_id' => (int)$data->parent_project_id,
+            'record_table' => 'capture_data_element',
+            'description' => 'imported capture data element',
+          )
         ));
 
         // Loop through capture data files and add to storage.
@@ -785,10 +798,23 @@ class RepoImport implements RepoImportInterface {
           // Set the parent capture data element ID.
           $fvalue['parent_capture_data_element_repository_id'] = $capture_data_element_id;
           // Add to metadata storage.
-          $capture_data_file = $this->repo_storage_controller->execute('saveRecord', array(
+          $capture_data_file_id = $this->repo_storage_controller->execute('saveRecord', array(
             'base_table' => 'capture_data_file',
-            'user_id' => $user_id,
+            'user_id' => $data->user_id,
             'values' => $fvalue
+          ));
+
+          // Insert into the job_import_record table
+          $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'job_import_record',
+            'user_id' => $data->user_id,
+            'values' => array(
+              'job_id' => $data->job_id,
+              'record_id' => $capture_data_file_id,
+              'project_id' => (int)$data->parent_project_id,
+              'record_table' => 'capture_data_file',
+              'description' => 'imported capture data file',
+            )
           ));
         }
 
