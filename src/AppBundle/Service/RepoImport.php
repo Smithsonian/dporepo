@@ -77,11 +77,32 @@ class RepoImport implements RepoImportInterface {
   private $repoValidate;
 
   /**
+   * @var object $image_extensions
+   */
+  private $image_extensions;
+
+  /**
+   * @var object $model_extensions
+   */
+  private $model_extensions;
+
+  /**
+   * @var object $default_image_file_name_map
+   */
+  private $default_image_file_name_map;
+
+  /**
+   * @var object $default_model_file_name_map
+   */
+  private $default_model_file_name_map;
+
+  /**
    * Constructor
    * @param object  $kernel  Symfony's kernel object
    * @param string  $uploads_directory  Uploads directory path
    * @param string  $external_file_storage_path  External file storage path
    * @param string  $conn  The database connection
+   * @param string  $uploads_directory  Uploads directory path
    */
   public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn)
   {
@@ -92,8 +113,7 @@ class RepoImport implements RepoImportInterface {
     $this->modelsController = $modelsController;
     $this->kernel = $kernel;
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
-    // $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
-    $this->uploads_directory = __DIR__ . '/../../../web/uploads/repository/';
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
     $this->external_file_storage_path = $external_file_storage_path;
     $this->conn = $conn;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
@@ -115,6 +135,21 @@ class RepoImport implements RepoImportInterface {
       'ply',
       'gltf',
       'glb',
+    );
+
+    // Default image file name mapping.
+    $this->default_image_file_name_map = array(
+      'local_subject_id',
+      'capture_dataset_field_id',
+      'position_in_cluster_field_id',
+      'cluster_position_field_id',
+    );
+
+    // Default model file name mapping.
+    $this->default_model_file_name_map = array(
+      'local_subject_id',
+      'item_description',
+      'model_purpose',
     );
   }
 
@@ -149,7 +184,7 @@ class RepoImport implements RepoImportInterface {
 
     // Throw a 404 if the job record doesn't exist.
     if (!$job_data) {
-      $return['errors'][] = 'The Job record doesn\'t exist';
+      $return['errors'][] = 'The Job record doesn\'t exist - import_csv()';
       return $return;
     }
 
@@ -179,7 +214,7 @@ class RepoImport implements RepoImportInterface {
 
     if (!empty($params['uuid']) && !empty($params['parent_project_id']) && !empty($params['parent_record_id']) && !empty($params['parent_record_type'])) {
 
-      $ids = (object)array(
+      $job_info = (object)array(
         'job_id' => $job_data['job_id'],
         'uuid' => $params['uuid'],
         'parent_project_id' => $params['parent_project_id'],
@@ -191,7 +226,7 @@ class RepoImport implements RepoImportInterface {
 
       if (!empty($job_type)) {
         // Prepare the data.
-        $data = $this->prepare_data($job_type, $this->uploads_directory . $ids->uuid);
+        $data = $this->prepare_data($job_type, $this->project_directory . $this->uploads_directory . $job_info->uuid);
 
         // Ingest data.
         if (!empty($data)) {
@@ -207,7 +242,7 @@ class RepoImport implements RepoImportInterface {
           if((count($csv_types) === 1) && in_array('model', $csv_types)) {
             $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => 'job',
-              'record_id' => $ids->job_id,
+              'record_id' => $job_info->job_id,
               'user_id' => 0,
               'values' => array(
                 'job_type' => 'models metadata import',
@@ -218,10 +253,9 @@ class RepoImport implements RepoImportInterface {
           // Execute the ingest.
           $i = 1;
           foreach ($data as $csv_key => $csv_value) {
-
             // Don't perform an ingest without CSV data (an empty CSV).
             if(isset($csv_value['csv'])) {
-              $return['job_log_ids'] = $this->ingest_csv_data($csv_value, $ids, $params['parent_record_type'], $i);
+              $return['job_log_ids'] = $this->ingest_csv_data($csv_value, $job_info, $params['parent_record_type'], $i);
             }
 
             $i++;
@@ -447,12 +481,14 @@ class RepoImport implements RepoImportInterface {
   /**
    * Ingest CSV Data
    *
-   * @param string $data  Data object
-   * @param int $job_id  Job ID
-   * @param int $parent_record_id  Parent record ID
+   * @param obj $data  Data object
+   * @param array $job_data  Job data
+   * @param string $parent_record_type  Parent record type
+   * @param int $i  Iterator
    * @return array  An array of job log IDs
    */
-  public function ingest_csv_data($data = null, $ids = array(), $parent_record_type = null, $i = 1) {
+  public function ingest_csv_data($data = null, $job_data = array(), $parent_record_type = null, $i = 1)
+  {
 
     $session = new Session();
     $data = (object)$data;
@@ -468,10 +504,10 @@ class RepoImport implements RepoImportInterface {
     }
 
     // Job ID and parent record ID
-    $data->job_id = isset($ids->job_id) ? $ids->job_id : false;
-    $data->uuid = isset($ids->uuid) ? $ids->uuid : false;
-    $data->parent_project_id = isset($ids->parent_project_id) ? $ids->parent_project_id : false;
-    $data->parent_record_id = isset($ids->parent_record_id) ? $ids->parent_record_id : false;
+    $data->job_id = isset($job_data->job_id) ? $job_data->job_id : false;
+    $data->uuid = isset($job_data->uuid) ? $job_data->uuid : false;
+    $data->parent_project_id = isset($job_data->parent_project_id) ? $job_data->parent_project_id : false;
+    $data->parent_record_id = isset($job_data->parent_record_id) ? $job_data->parent_record_id : false;
     $data->parent_record_type = isset($parent_record_type) ? $parent_record_type : false;
 
     // Just in case: throw a 404 if either job ID or parent record ID aren't passed.
@@ -591,7 +627,7 @@ class RepoImport implements RepoImportInterface {
               $csv_val->file_path = '/' . $data->uuid . $csv_val->file_path;
               // Get the file's checksum from the BagIt manifest.
               $finder = new Finder();
-              $finder->files()->in($this->uploads_directory . $data->uuid . '/');
+              $finder->files()->in($this->project_directory . $this->uploads_directory . $data->uuid . '/');
               $finder->files()->name('manifest*.txt');
               // Find the manifest file.
               foreach ($finder as $file) {
@@ -647,7 +683,7 @@ class RepoImport implements RepoImportInterface {
 
         // Insert capture data elements and capture data files into the metadata storage.
         if (($data->type === 'capture_dataset') && isset($csv_val->capture_data_elements) && !empty($csv_val->capture_data_elements)) {
-          $this->insert_capture_data_elements($csv_val->capture_data_elements, $this_id, $data->user_id);
+          $this->insert_capture_data_elements_and_files($csv_val->capture_data_elements, $this_id, $data->user_id);
         }
 
         // Create an array of all of the newly created repository IDs.
@@ -723,7 +759,7 @@ class RepoImport implements RepoImportInterface {
    * @param string $user_id The user ID
    * @return null
    */
-  public function insert_capture_data_elements($capture_data_elements = array(), $capture_dataset_repository_id = null, $user_id = null) {
+  public function insert_capture_data_elements_and_files($capture_data_elements = array(), $capture_dataset_repository_id = null, $user_id = null) {
 
     if (!empty($capture_data_elements) && !empty($capture_dataset_repository_id)) {
       // Loop through capture data elements and add to storage.
@@ -870,7 +906,7 @@ class RepoImport implements RepoImportInterface {
 
       // Get the file's checksum from the BagIt manifest.
       $finder = new Finder();
-      $finder->files()->in($this->uploads_directory . $data->uuid . '/');
+      $finder->files()->in($this->project_directory . $this->uploads_directory . $data->uuid . '/');
       // Loop through uploaded files.
       foreach ($finder as $file) {
 
@@ -909,7 +945,6 @@ class RepoImport implements RepoImportInterface {
       if (!empty($model_file_names)) {
         $data = $this->get_model_data_from_filenames($model_file_names, $data);
       }
-      // $this->u->dumper($data);
 
     }
 
@@ -925,88 +960,116 @@ class RepoImport implements RepoImportInterface {
    */
   public function get_dataset_data_from_filenames($image_file_names = array(), $data = array())
   {
+    // Insert into subject (local_subject_id)
+    // Insert into capture_dataset (capture_dataset_field_id)
+    // Insert into capture_data_element (position_in_cluster_field_id, cluster_position_field_id)
+    // 
+    // Example file name mapping:
+    // usnm_160-s01-p01-01.jpg
+    // [local_subject_id]-s[capture_dataset_field_id]-p[position_in_cluster_field_id]-[cluster_position_field_id].jpg
 
     if (!empty($image_file_names) && !empty($data)) {
 
-      // Insert into subject (local_subject_id)
-      // Insert into capture_dataset (capture_dataset_field_id)
-      // Insert into capture_data_element (position_in_cluster_field_id, cluster_position_field_id)
-      // 
-      // Example file name mapping: usnm_160-s01-p01-01.jpg
-      // [local_subject_id]-s[capture_dataset_field_id]-p[position_in_cluster_field_id]-[cluster_position_field_id].jpg
-
-      // What to do with missing "p"?
-      // "usnm_160-s03-03"
-      // array(3) {
-      //   [0]=>
-      //   string(8) "usnm_160"
-      //   [1]=>
-      //   string(3) "s03"
-      //   [2]=>
-      //   string(2) "03"
-      // }
+      // If there's a file_name_map.csv file at the root of the 'data' directory, use it.
+      $file_name_map_main = $this->get_filename_map($data);
 
       // Add data to uploaded CSVs.
       switch ($data->type) {
         case 'subject':
-          // Grab any file name to get the local_subject_id.
+          // Grab the first file name to get the local_subject_id.
           foreach ($image_file_names as $dir_name => $files) {
             if (!empty($files)) {
+              // Get the file's info from the metadata storage.
+              $file_info = $this->get_file_info($data->uuid, $files[0]);
+              // Get the file name map, if one exists in this directory.
+              if (!empty($file_info)) {
+                $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                // If no file name map exists, use the main one in the root of the 'data' directory.
+                $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
+              }
+              // Establish the map key so we know which slot in the file name to obtain the data from.
+              $key = (isset($file_name_map) && array_search('local_subject_id', $file_name_map)) ? array_search('local_subject_id', $file_name_map) : array_search('local_subject_id', $this->default_image_file_name_map);
               // Transform the file name to an array.
               $file_name_parts = explode('-', $files[0]);
               // Populate the CSV's subject entries with the local_subject_id from the file name.
               foreach ($data->csv as $ck => $cv) {
-                $data->csv[$ck]->local_subject_id = $file_name_parts[0];
+                $data->csv[$ck]->local_subject_id = $file_name_parts[ $key ];
               }
             }
           }
           break;
         case 'capture_dataset':
-          // Get the capture_dataset_field_id from the directory name.
+          
           $i = 0;
           foreach ($image_file_names as $dir_name => $files) {
+
+            // Get the capture_dataset_field_id from the directory name.
             $data->csv[$i]->capture_dataset_field_id = preg_replace('/[^0-9]/', '', $dir_name);
 
             // Add 'capture_data_elements' and 'capture_data_files' to the 'capture_dataset' CSV.
-            foreach ($files as $file) {
+            if (!empty($files)) {
+              foreach ($files as $file) {
 
-              $file_name_parts = explode('-', $file);
-              // Query the metadata storage for the file's info using the job UUID and filename.
-              $file_info = $this->repo_storage_controller->execute('getRecords', array(
-                'base_table' => 'file_upload',
-                'fields' => array(),
-                'limit' => 1,
-                'search_params' => array(
-                  0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($data->uuid), 'comparison' => 'LIKE'),
-                  1 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($file), 'comparison' => 'LIKE'),
-                ),
-                'search_type' => 'AND',
-                'omit_active_field' => true,
-                )
-              );
+                // Get the file's info from the metadata storage.
+                $file_info = $this->get_file_info($data->uuid, $file);
 
-              if (!empty($file_info)) {
-                $capture_data_files = array();
-                foreach ($file_info as $file_info_key => $file_info_value) {
-                  // Get file info for the capture_data_file columns
-                  $capture_data_files[] = array(
-                    'file_upload_id' => $file_info_value['file_upload_id'],
-                    'capture_data_file_name' => $file_info_value['file_name'],
-                    'capture_data_file_type' => $file_info_value['file_type'],
-                    'is_compressed_multiple_files' => 0,
-                  );
+                // Get the file name map, if one exists in this directory.
+                $file_name_map = array();
+                // if (!empty($file_info)) $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                if (!empty($file_info)) {
+                  $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                  // If no file name map exists, use the main one in the root of the 'data' directory.
+                  $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
                 }
-              }
 
-              $data->csv[$i]->capture_data_elements[] = array(
-                'position_in_cluster_field_id' => stristr($file_name_parts[2], 'p') ? (int)str_replace('p', '', $file_name_parts[2]) : null,
-                'cluster_position_field_id' => isset($file_name_parts[3]) ? (int)$file_name_parts[3] : (int)$file_name_parts[2],
-                'capture_data_files' => $capture_data_files,
-              );
-              // file_upload.file_path = /uploads/repository/3df_5bd0bb0256c840.25240097/testupload06_usnm_160/data/-s03-/usnm_160-s03-01.cr2
-              // SELECT * FROM file_upload
-              // WHERE file_path LIKE '3df_5bd0bb0256c840.25240097'
-              // AND  file_path LIKE 'usnm_160-s03-01'
+                // $this->u->dumper($file_name_map,0);
+
+                // Establish the file name map keys so we know which slot in the file name to obtain the data from.
+                // Default position_in_cluster_field_id key.
+                $key1 = array_search('position_in_cluster_field_id', $this->default_image_file_name_map);
+                // Default cluster_position_field_id key.
+                $key2 = array_search('cluster_position_field_id', $this->default_image_file_name_map);
+                // If the $file_name_map exists, then set the key using that.
+                if (!empty($file_name_map)) {
+                  // User-supplied position_in_cluster_field_id key.
+                  $key1 = array_search('position_in_cluster_field_id', $file_name_map)
+                      ? array_search('position_in_cluster_field_id', $file_name_map)
+                      : null;
+                  // User-supplied cluster_position_field_id key.
+                  $key2 = array_search('cluster_position_field_id', $file_name_map)
+                      ? array_search('cluster_position_field_id', $file_name_map)
+                      : null;
+                }
+
+                // $this->u->dumper($file_name_map,0);
+                // $this->u->dumper($key1,0);
+                // $this->u->dumper($key2);
+
+                // Transform the file name to an array.
+                $file_name_parts = explode('-', $file);
+
+                // Build-out the $capture_data_files array.
+                if (!empty($file_info)) {
+                  $capture_data_files = array();
+                  foreach ($file_info as $file_info_key => $file_info_value) {
+                    // File info for the capture_data_file columns
+                    $capture_data_files[] = array(
+                      'file_upload_id' => $file_info_value['file_upload_id'],
+                      'capture_data_file_name' => $file_info_value['file_name'],
+                      'capture_data_file_type' => $file_info_value['file_type'],
+                      'is_compressed_multiple_files' => 0,
+                    );
+                  }
+                }
+
+                // Build-out the $capture_data_elements array, adding in this capture data element's $capture_data_files array.
+                $data->csv[$i]->capture_data_elements[] = array(
+                  'position_in_cluster_field_id' => (!empty($key1) && stristr($file_name_parts[ $key1 ], 'p')) ? (int)str_replace('p', '', $file_name_parts[ $key1 ]) : null,
+                  'cluster_position_field_id' => (!empty($key2) && isset($file_name_parts[ $key2 ])) ? (int)$file_name_parts[ $key2 ] : null,
+                  'capture_data_files' => $capture_data_files,
+                );
+
+              }
             }
 
             $i++;
@@ -1028,13 +1091,18 @@ class RepoImport implements RepoImportInterface {
    */
   public function get_model_data_from_filenames($model_file_names = array(), $data = array())
   {
+    // Insert into subject (local_subject_id)
+    // Insert into item (item_description)
+    // Insert into model (model_purpose)
+    //
+    // Example file name mapping:
+    // nmnh-usnm_v_512384522-skull-master_model-2018_10_22.obj
+    // nmnh-[local_subject_id]-[item_description]-[model_purpose]-2018_10_22.obj
 
     if (!empty($model_file_names)) {
 
-      // nmnh-usnm_v_512384522-skull-master_model-2018_10_22.obj
-      // local_subject_id
-      // item_description
-      // model_purpose
+      // If there's a file_name_map.csv file at the root of the 'data' directory, use it.
+      $file_name_map_main = $this->get_filename_map($data);
 
       // Add data to uploaded CSVs.
       switch ($data->type) {
@@ -1042,11 +1110,24 @@ class RepoImport implements RepoImportInterface {
           // Get the local_subject_id from the file name.
           foreach ($model_file_names as $key => $file) {
             if (!empty($file)) {
+              // Get the file's info from the metadata storage.
+              $file_info = $this->get_file_info($data->uuid, $file);
+              // Get the file name map, if one exists in this directory.
+              if (!empty($file_info)) {
+                $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                // If no file name map exists, use the main one in the root of the 'data' directory.
+                $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
+              }
+              // Establish the file name map key so we know which slot in the file name to obtain the data from.
+              // local_subject_id
+              $key1 = (isset($file_name_map) && array_search('local_subject_id', $file_name_map))
+                  ? array_search('local_subject_id', $file_name_map)
+                  : array_search('local_subject_id', $this->default_model_file_name_map);
               // Transform the file name to an array.
               $file_name_parts = explode('-', $file);
               // Populate the CSV's subject entries with the local_subject_id from the file name.
               foreach ($data->csv as $ck => $cv) {
-                $data->csv[$ck]->local_subject_id = $file_name_parts[1];
+                $data->csv[$ck]->local_subject_id = $file_name_parts[$key1];
               }
             }
           }
@@ -1055,10 +1136,24 @@ class RepoImport implements RepoImportInterface {
           // Get the item_description from the file name.
           foreach ($model_file_names as $key => $file) {
             if (!empty($file)) {
+              // Get the file's info from the metadata storage.
+              $file_info = $this->get_file_info($data->uuid, $file);
+              // Get the file name map, if one exists in this directory.
+              if (!empty($file_info)) {
+                $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                // If no file name map exists, use the main one in the root of the 'data' directory.
+                $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
+              }
+              // Establish the file name map key so we know which slot in the file name to obtain the data from.
+              // item_description
+              $key1 = (isset($file_name_map) && array_search('item_description', $file_name_map))
+                  ? array_search('item_description', $file_name_map)
+                  : array_search('item_description', $this->default_model_file_name_map);
+              // Transform the file name to an array.
               $file_name_parts = explode('-', $file);
               // Populate the CSV's item entries with the item_description from the file name.
               foreach ($data->csv as $ck => $cv) {
-                $data->csv[$ck]->item_description = $file_name_parts[2];
+                $data->csv[$ck]->item_description = $file_name_parts[$key1];
               }
             }
           }
@@ -1067,12 +1162,104 @@ class RepoImport implements RepoImportInterface {
           // Get the model_purpose from the file name.
           foreach ($model_file_names as $key => $file) {
             if (!empty($file)) {
+              // Get the file's info from the metadata storage.
+              $file_info = $this->get_file_info($data->uuid, $file);
+              // Get the file name map, if one exists in this directory.
+              if (!empty($file_info)) {
+                $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                // If no file name map exists, use the main one in the root of the 'data' directory.
+                $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
+              }
+              // Establish the file name map key so we know which slot in the file name to obtain the data from.
+              // model_purpose
+              $key1 = (isset($file_name_map) && array_search('model_purpose', $file_name_map))
+                  ? array_search('model_purpose', $file_name_map)
+                  : array_search('model_purpose', $this->default_model_file_name_map);
+              // Transform the file name to an array.
               $file_name_parts = explode('-', $file);
               // Remove '_model' from the model_purpose chunk from the file name ('master_model' becomes 'model').
-              $data->csv[$key]->model_purpose = str_replace('_model', '', $file_name_parts[3]);
+              $data->csv[$key]->model_purpose = str_replace('_model', '', $file_name_parts[$key1]);
             }
           }
           break;
+      }
+
+    }
+
+    return $data;
+  }
+
+  /**
+   * Get File Info
+   *
+   * @param string $uuid The job UUID
+   * @param string $file_name The file name
+   */
+  public function get_file_info($uuid = null, $file_name = null)
+  {
+    $data = array();
+
+    if (!empty($uuid) && !empty($file_name)) {
+      // Query the metadata storage for the file's info using the job UUID and filename.
+      $data = $this->repo_storage_controller->execute('getRecords', array(
+        'base_table' => 'file_upload',
+        'fields' => array(),
+        'limit' => 1,
+        'search_params' => array(
+          0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($uuid), 'comparison' => 'LIKE'),
+          1 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($file_name), 'comparison' => 'LIKE'),
+        ),
+        'search_type' => 'AND',
+        'omit_active_field' => true,
+        )
+      );
+    }
+
+    return $data;
+  }
+
+  /**
+   * Get File Name Map
+   *
+   * @param array $job_data Job data
+   * @param string $directory The target directory
+   * @return array
+   */
+  public function get_filename_map($job_data = array(), $directory = '')
+  {
+
+    $data = array();
+    $target_directory = $this->project_directory . $this->uploads_directory . $job_data->uuid;
+
+    if (!empty($job_data)) {
+
+      if (!empty($directory)) {
+        // Remove the file name to get the parent directory.
+        $file_path_array = explode(DIRECTORY_SEPARATOR, $directory);
+        array_pop($file_path_array);
+        $dir = implode(DIRECTORY_SEPARATOR, $file_path_array);
+        $dir = str_replace(DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'repository' . DIRECTORY_SEPARATOR, '', $dir);
+        $target_directory = $this->project_directory . $this->uploads_directory . $dir;
+      }
+
+      // $this->u->dumper($target_directory);
+
+      // Find the file_name_map.csv
+      $finder = new Finder();
+      $finder->files()->in($target_directory);
+      // By default, scan for the 'file_name_map.csv' file above the 'data' directory.
+      // Don't want to find 'file_name_map.csv' overrides within the 'data' directory unless we specifically ask for it.
+      if (empty($directory)) $finder->notPath('data' . DIRECTORY_SEPARATOR);
+      $finder->files()->name('file_name_map.csv');
+
+      foreach ($finder as $file) {
+        // Just to make sure we're dealing with the correct file.
+        if ($file->getFilename() === 'file_name_map.csv') {
+          $contents = $file->getContents();
+          // Remove spaces from the CSV if there are any.
+          $contents = preg_replace('/\s+/', '', $contents);
+          $data = explode(',', $contents);
+        }
       }
 
     }
