@@ -545,7 +545,7 @@ class RepoImport implements RepoImportInterface {
 
     // Extract subject, item, and model database column data from the processing server's 'inspect-mesh' results.
     if ($data->type === 'model') {
-      $data = $this->extract_data_from_external('get_model_data_from_processing_service', $data);
+      $data = $this->extract_data_from_external('get_model_data_from_processing_service_results', $data);
     }
 
     // Extract subject and capture_dataset database column data from file names.
@@ -841,12 +841,12 @@ class RepoImport implements RepoImportInterface {
   }
 
   /**
-   * Get Model Data From Processing Service
+   * Get Model Data From Processing Service Results
    *
-   * @param string $data Job data
+   * @param array $data Job data
    * @return array
    */
-  public function get_model_data_from_processing_service($data = array())
+  public function get_model_data_from_processing_service_results($data = array())
   {
     // Extract database column data from the processing server's 'inspect-mesh' results.
     // Query the database for 'inspect-mesh' jobs.

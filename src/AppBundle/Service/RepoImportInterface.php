@@ -56,12 +56,12 @@ interface RepoImportInterface {
   public function extract_data_from_external(string $function_name, array $data);
 
   /**
-   * Get Model Data From Processing Service
+   * Get Model Data From Processing Service Results
    *
    * @param array $data Job data
    * @return array
    */
-  public function get_model_data_from_processing_service(array $data);
+  public function get_model_data_from_processing_service_results(array $data);
 
   /**
    * Get Data From File Names
