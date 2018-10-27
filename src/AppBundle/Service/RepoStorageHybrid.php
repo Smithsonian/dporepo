@@ -950,7 +950,7 @@ class RepoStorageHybrid implements RepoStorage {
    * @param string $uuid The upload directory
    * @return array
    */
-  public function getJobData($uuid = null) {
+  public function getJobData($uuid = null, $function = '') {
 
     $data = array();
 
