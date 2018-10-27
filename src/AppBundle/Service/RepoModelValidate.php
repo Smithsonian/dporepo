@@ -106,11 +106,11 @@ class RepoModelValidate implements RepoModelValidateInterface {
     // Absolute local path.
     $path = $this->project_directory . $this->uploads_directory . $uuid;
     // Job data.
-    $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
+    $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid, 'validate_models'));
 
     // Throw an error if the job record doesn't exist.
-    if (!$job_data) {
-      $return['errors'][] = 'The Job record doesn\'t exist';
+    if (empty($job_data)) {
+      $return['errors'][] = 'The Job record doesn\'t exist - validate_models() - ' . $uuid;
       return $return;
     }
 
