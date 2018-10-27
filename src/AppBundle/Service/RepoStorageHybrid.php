@@ -1111,6 +1111,8 @@ class RepoStorageHybrid implements RepoStorage {
             'subject',
             'item',
             'capture_dataset',
+            'capture_data_element',
+            'capture_data_file',
             'model'
           ),
           'job_and_file_tables' => array(
