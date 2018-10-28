@@ -106,8 +106,8 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
         if (empty($data)) $data['error'] = 'Error: Recipe doesn\'t exist';
       } else {
         // Set an error if the recipes endpoint returns something other than a 200 HTTP code.
-        $data['error'] = 'Error: Could not retrieve recipes.';
-        $data['error'] .= 'HTTP code: ' . $recipes['httpcode'];
+        $data['error'] = 'Error: Could not retrieve recipes. ';
+        $data['error'] .= 'HTTP code: ' . $recipes['httpcode'] . '. ';
         $data['error'] .= 'Response header: ' . $recipes['response_header'];
       }
 
@@ -333,8 +333,8 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
         if (empty($data)) $data['error'] = 'Error: Job doesn\'t exist';
       } else {
         // Set an error if the recipes endpoint returns something other than a 200 HTTP code.
-        $data['error'] = 'Error: Could not retrieve jobs.';
-        $data['error'] .= 'HTTP code: ' . $recipes['httpcode'];
+        $data['error'] = 'Error: Could not retrieve jobs. ';
+        $data['error'] .= 'HTTP code: ' . $recipes['httpcode'] . ', ';
         $data['error'] .= 'Response header: ' . $recipes['response_header'];
       }
 
@@ -598,7 +598,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
       // Error handling
       if (isset($recipe['error']) && !empty($recipe['error'])) {
-        $data[$i]['errors'][] = $recipe['error'];
+        $data[]['errors'][] = $recipe['error'];
         return $data;
       }
 
@@ -611,7 +611,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
         // Error handling
         if ($result['httpcode'] !== 201) {
-          $data[$i]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
+          $data[]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
           return $data;
         }
 
@@ -621,7 +621,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
           $data = $this->get_job_by_name($job_name);
           // Error handling
           if (isset($data['error']) && !empty($data['error'])) {
-            $data[$i]['errors'][] = $data['error'];
+            $data[]['errors'][] = $data['error'];
             return $data;
           }
 
