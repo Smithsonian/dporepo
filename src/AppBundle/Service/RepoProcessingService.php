@@ -739,93 +739,127 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
     $data = array();
 
-    // Retrieve all of the logs produced by the processing service.
-    $processing_assets = $this->get_processing_asset_logs($job_id, $filesystem);
+    // First, check to see if processing-based logs have already been saved to the metadata storage.
+    $data['logs'] = $this->repo_storage_controller->execute('getRecords', array(
+      'base_table' => 'processing_job_file',
+      'fields' => array(),
+      'limit' => 1,
+      'search_params' => array(
+        0 => array('field_names' => array('processing_job_file.job_id'), 'search_values' => array($job_id), 'comparison' => '='),
+      ),
+      'search_type' => 'AND',
+      'omit_active_field' => true,
+      )
+    );
 
-    // Insert processing-based logs into the metadata storage service.
-    if (!empty($processing_assets)) {
+    // Save processing-based logs to the metadata storage.
+    if (empty($data['logs'])) {
+
+      // Retrieve all of the logs produced by the processing service.
+      $processing_assets = $this->get_processing_asset_logs($job_id, $filesystem);
       // Loop through the processing-based logs.
-      foreach ($processing_assets as $asset) {
-        // Insert one processing-based log.
-        $id = $this->repo_storage_controller->execute('saveRecord', array(
-          'base_table' => 'processing_job_file',
-          'user_id' => $user_id,
-          'values' => $asset,
-        ));
-      }
-    }
-
-    // Get the processing job from the processing service.
-    $processing_job = $this->get_job($job_id);
-
-    // Error handling
-    if ($processing_job['httpcode'] !== 200) $data[]['errors'][] = 'The processing service returned HTTP code ' . $processing_job['httpcode'];
-
-    if ($processing_job['httpcode'] === 200) {
-
-      // JSON decode it.
-      $processing_job = json_decode($processing_job['result'], true);
-
-      // // If there's an error, set the repository's upload/ingest job status to 'failed'.
-      // $job_status = ($processing_job['state'] === 'error') ? 'failed' : $job_status;
-
-      // Query the database for the corresponding processing job record,
-      // so we can use the repository's ID (processing_job_id) to update the repository's processing job record.
-      $repo_processing_job_data = $this->repo_storage_controller->execute('getRecords', array(
-        'base_table' => 'processing_job',
-        'fields' => array(),
-        'limit' => 1,
-        'search_params' => array(
-          0 => array('field_names' => array('processing_job.processing_service_job_id'), 'search_values' => array($job_id), 'comparison' => '='),
-        ),
-        'search_type' => 'AND',
-        'omit_active_field' => true,
-        )
-      );
-
-      // Update the main job record with the results of the processing job.
-      if ($repo_processing_job_data) {
-
-        // Update one job record.
-        $processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
-          'base_table' => 'processing_job',
-          'record_id' => $repo_processing_job_data[0]['processing_job_id'],
-          'user_id' => $user_id,
-          'values' => array(
-            'job_json' => json_encode($processing_job), 
-            'state' => $processing_job['state']
-          )
-        ));
-
-        // Get the report file.
+      if (!empty($processing_assets)) {
         foreach ($processing_assets as $asset) {
-          if (stristr($asset['file_name'], '-report.json')) {
-            $data['report'] = json_decode($asset['file_contents'], true);
-          }
+          // Insert one processing-based log.
+          $id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'processing_job_file',
+            'user_id' => $user_id,
+            'values' => $asset,
+          ));
+        }
+      }
+
+      // Get the processing job from the processing service.
+      $processing_job = $this->get_job($job_id);
+
+      // Error handling
+      if ($processing_job['httpcode'] !== 200) $data[]['errors'][] = 'The processing service returned HTTP code ' . $processing_job['httpcode'];
+
+      if ($processing_job['httpcode'] === 200) {
+
+        // JSON decode it.
+        $processing_job = json_decode($processing_job['result'], true);
+
+        // // If there's an error, set the repository's upload/ingest job status to 'failed'.
+        // $job_status = ($processing_job['state'] === 'error') ? 'failed' : $job_status;
+
+        // Query the database for the corresponding processing job record,
+        // so we can use the repository's ID (processing_job_id) to update the repository's processing job record.
+        $repo_processing_job_data = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'processing_job',
+          'fields' => array(),
+          'limit' => 1,
+          'search_params' => array(
+            0 => array('field_names' => array('processing_job.processing_service_job_id'), 'search_values' => array($job_id), 'comparison' => '='),
+          ),
+          'search_type' => 'AND',
+          'omit_active_field' => true,
+          )
+        );
+
+        // Update the main job record with the results of the processing job.
+        if ($repo_processing_job_data) {
+
+          // Update one job record.
+          $processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'processing_job',
+            'record_id' => $repo_processing_job_data[0]['processing_job_id'],
+            'user_id' => $user_id,
+            'values' => array(
+              'job_json' => json_encode($processing_job), 
+              'state' => $processing_job['state']
+            )
+          ));
+
+          $data['logs'] = $this->repo_storage_controller->execute('getRecords', array(
+            'base_table' => 'processing_job_file',
+            'fields' => array(),
+            'limit' => 1,
+            'search_params' => array(
+              0 => array('field_names' => array('processing_job_file.job_id'), 'search_values' => array($job_id), 'comparison' => '='),
+            ),
+            'search_type' => 'AND',
+            'omit_active_field' => true,
+            )
+          );
+
+          // // Log the errors to the database.
+          // if ($processing_job['state'] === 'error') {
+
+          //   // Get the model's file name
+          //   foreach ($processing_assets as $asset) {
+          //     if (stristr($asset['file_name'], '-report.json')) {
+          //       $data['report'] = json_decode($asset['file_contents'], true);
+          //     }
+          //   }
+          //   $this->repoValidate->logErrors(
+          //     array(
+          //       'job_id' => $job_data['job_id'],
+          //       'user_id' => $this->user_id,
+          //       'job_log_label' => 'Asset Validation',
+          //       'errors' => array($processing_job['error'] . ' (Processing job ID: ' . $processing_job['id'] . ', Model file name: ' . $data['report']['parameters']['meshFile'] . ')'),
+          //     )
+          //   );
+          // }
+
         }
 
-        // // Log the errors to the database.
-        // if ($processing_job['state'] === 'error') {
-
-        //   // Get the model's file name
-        //   foreach ($processing_assets as $asset) {
-        //     if (stristr($asset['file_name'], '-report.json')) {
-        //       $data['report'] = json_decode($asset['file_contents'], true);
-        //     }
-        //   }
-        //   $this->repoValidate->logErrors(
-        //     array(
-        //       'job_id' => $job_data['job_id'],
-        //       'user_id' => $this->user_id,
-        //       'job_log_label' => 'Asset Validation',
-        //       'errors' => array($processing_job['error'] . ' (Processing job ID: ' . $processing_job['id'] . ', Model file name: ' . $data['report']['parameters']['meshFile'] . ')'),
-        //     )
-        //   );
-        // }
-
       }
-
     }
+
+    $data['job'] = $this->repo_storage_controller->execute('getRecords', array(
+      'base_table' => 'processing_job',
+      'fields' => array(),
+      'limit' => 1,
+      'search_params' => array(
+        0 => array('field_names' => array('processing_job.processing_service_job_id'), 'search_values' => array($job_id), 'comparison' => '='),
+      ),
+      'search_type' => 'AND',
+      'omit_active_field' => true,
+      )
+    );
+
+    ksort($data);
 
     return $data;
   }
