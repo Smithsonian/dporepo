@@ -213,6 +213,14 @@ class RepoStorageHybrid implements RepoStorage {
 
     // Fields.
     $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'subject_repository_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'subject',
+      'field_name' => 'project_repository_id',
+    );
+    $query_params['fields'][] = array(
       'table_name' => 'model',
       'field_name' => 'model_repository_id',
     );
@@ -286,12 +294,12 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'model_maps',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'model',
+      'table_name' => 'file_upload',
       'field_name' => 'file_path',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'file_checksum',
+      'table_name' => 'file_upload',
+      'field_name' => 'file_hash',
     );
     $query_params['fields'][] = array(
       'table_name' => 'capture_dataset',
@@ -327,6 +335,20 @@ class RepoStorageHybrid implements RepoStorage {
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'item',
       'base_join_field' => 'subject_repository_id',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'model_file',
+      'table_join_field' => 'model_repository_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'model',
+      'base_join_field' => 'model_repository_id',
+    );
+    $query_params['related_tables'][] = array(
+      'table_name' => 'file_upload',
+      'table_join_field' => 'file_upload_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'model_file',
+      'base_join_field' => 'file_upload_id',
     );
 
     $query_params['records_values'] = array();
@@ -1483,11 +1505,18 @@ class RepoStorageHybrid implements RepoStorage {
       case 'model':
 
         $query_params['related_tables'][] = array(
-          'table_name' => 'file_upload',
-          'table_join_field' => 'parent_record_id',
+          'table_name' => 'model_file',
+          'table_join_field' => 'model_repository_id',
           'join_type' => 'LEFT JOIN',
           'base_join_table' => 'model',
           'base_join_field' => 'model_repository_id',
+        );
+        $query_params['related_tables'][] = array(
+          'table_name' => 'file_upload',
+          'table_join_field' => 'file_upload_id',
+          'join_type' => 'LEFT JOIN',
+          'base_join_table' => 'model_file',
+          'base_join_field' => 'file_upload_id',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
@@ -1652,31 +1681,17 @@ class RepoStorageHybrid implements RepoStorage {
           'comparison' => '=',
         );
       }
-      /*
-       * //@todo
-      $query_params['search_params'][] = array(
-        'field_names' => array(
-          'file_upload.parent_record_type',
-        ),
-        'search_values' => array(
-          'model'
-        ),
-        'comparison' => '=',
-      );
-      $query_params['search_params'][] = array(
-        'field_names' => array(
-          'file_upload.parent_record_type',
-        ),
-        'search_values' => array(
-          NULL
-        ),
-        'comparison' => 'IS',
-      );
-      */
       break;
 
-
       case 'model_file':
+      $query_params['related_tables'][] = array(
+        'table_name' => 'model_file',
+        'table_join_field' => 'file_upload_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'file_upload',
+        'base_join_field' => 'file_upload_id',
+      );
+
         $query_params['fields'][] = array(
           'table_name' => $record_type,
           'field_name' => $record_type . '_id',
@@ -1688,12 +1703,12 @@ class RepoStorageHybrid implements RepoStorage {
         );
         
         $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'filename',
+        'table_name' => 'file_upload',
+        'field_name' => 'file_name',
         );
         $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'fullpath',
+        'table_name' => 'file_upload',
+        'field_name' => 'file_path',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
@@ -1729,8 +1744,8 @@ class RepoStorageHybrid implements RepoStorage {
         if (NULL !== $search_value) {
           $query_params['search_params'][1] = array(
             'field_names' => array(
-              $record_type . '.filename',
-              $record_type . '.fullname',
+            $record_type . '.file_name',
+            $record_type . '.file_path',
             ),
             'search_values' => array($search_value),
             'comparison' => 'LIKE',
