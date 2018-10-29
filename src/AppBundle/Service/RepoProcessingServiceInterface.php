@@ -140,13 +140,11 @@ interface RepoProcessingServiceInterface {
   public function send_job(string $path, string $recipe, string $user_id, array $params, obj $filesystem);
 
   /**
-   * @param string $path The path to the assets to be processed.
-   * @param array $data Processing service's job data.
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function transfer_assets_to_processing_service(string $path, array $data, obj $filesystem);
+  public function execute_job(obj $filesystem);
 
   /**
    * Get Processing Results

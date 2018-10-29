@@ -4,8 +4,8 @@ namespace AppBundle\Service;
 
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Finder\Finder;
-use AppBundle\Controller\RepoStorageHybridController;
 
+use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Utils\AppUtilities;
 
 class RepoProcessingService implements RepoProcessingServiceInterface {
@@ -50,6 +50,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   public function __construct(KernelInterface $kernel, \Doctrine\DBAL\Connection $conn, string $processing_service_location, string $processing_service_client_id)
   {
     $this->u = new AppUtilities();
+    $this->kernel = $kernel;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->processing_service_location = $processing_service_location;
     $this->processing_service_client_id = $processing_service_client_id;
@@ -631,15 +632,53 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
             'user_id' => $user_id,
             'values' => array(
               'job_id' => rand(1, 4000000),
-              'processing_service_job_id' => $data['id'], 
+              'processing_service_job_id' => $data['id'],
               'recipe' =>  $data['recipe']['name'], 
               'job_json' => json_encode($data), 
-              'state' => $data['state']
+              'state' => $data['state'],
+              'asset_path' => $path,
             )
           ));
 
-          // Transfer assets to the processing service.
-          $data = $this->transfer_assets_to_processing_service($path, $data, $filesystem);
+          // // Transfer assets to the processing service - asynchronously.
+          // // Example:
+          // // bin/console app:transfer-processing-assets /Users/gor/Documents/Sites/dporepo/web/uploads/repository/3df_5bd4c0846fd3f0.72669883/testupload04-1model/data/1/nmnh-usnm_v_512384522-skull-master_model-2018_10_22.ply A95A9B1F-F40F-CB5C-C7AE-1BBC3CB55634
+          // $input = array(
+          //   'path' => escapeshellarg($path),
+          //   'job_id' => escapeshellarg($data['id']),
+          // );
+
+          // // Hack for XAMPP on Windows.
+          // if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+          //   $php_binary_path = 'c:/xampp/php/php.exe';
+          // } else {
+          //   // Find the executable PHP binary.
+          //   $php_binary_finder = new PhpExecutableFinder();
+          //   $php_binary_path = $php_binary_finder->find();
+          // }
+          
+          // if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {            
+          //   $command = $php_binary_path . ' bin/console app:transfer-processing-assets ' . implode(' ', $input) . ' > NUL';
+          // } else {
+          //   $command = $php_binary_path . ' bin/console app:transfer-processing-assets ' . implode(' ', $input) . ' > /dev/null 2>&1 &';
+          // }
+
+          // // chdir($this->kernel->getProjectDir());
+          // // $data['pid'] = (int)shell_exec(sprintf(
+          // //     '%s > %s 2>&1 &',
+          // //     $command,
+          // //     '/dev/null'
+          // // ));
+          // // exec($command);
+
+          // $process = new Process($command);
+          // $process->setWorkingDirectory($this->kernel->getProjectDir());
+          // // $process->disableOutput();
+          // $process->setTimeout(3600);
+          // $process->start();
+          // $process->wait();
+          // // $data['pid'] = $process->getPid();
+
         }
 
       }
@@ -650,23 +689,44 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   }
 
   /**
-   * @param string $path The path to the assets to be processed.
-   * @param array $data Processing service's job data.
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function transfer_assets_to_processing_service($path = null, $data = array(), $filesystem)
+  public function execute_job($filesystem)
   {
 
-    $job_data = array();
+    $data = array();
 
-    if (!empty($path) && !empty($data)) {
+    // Query the database for the next job which has the state of 'created'.
+    $job_data = $this->repo_storage_controller->execute('getRecords', array(
+      'base_table' => 'processing_job',
+      'fields' => array(),
+      'limit' => 1,
+      'search_params' => array(
+        0 => array('field_names' => array('processing_job.state'), 'search_values' => array('created'), 'comparison' => '='),
+      ),
+      'search_type' => 'AND',
+      'omit_active_field' => true,
+      )
+    );
+
+    // If there are no processing jobs in the queue, prepare the error, and return $data now.
+    if (empty($job_data)) {
+      $data[]['errors'][] = 'No processing jobs found in the queue';
+      return $data;
+    }
+
+    // Otherwise, run the processing job.
+    if (!empty($job_data) && isset($job_data[0]) && !empty($job_data[0]['asset_path']) && !empty($job_data[0]['processing_service_job_id'])) {
+
+      $path = $job_data[0]['asset_path'];
+      $job_id = $job_data[0]['processing_service_job_id'];
 
       // If this is one file, no need to traverse. Just transfer the file.
       if (is_file($path)) {
         // The external path.
-        $path_external = $data['id'] . DIRECTORY_SEPARATOR . basename($path);
+        $path_external = $job_id . DIRECTORY_SEPARATOR . basename($path);
         // Transfer the file to the processing service via WebDAV.
         try {
           $stream = fopen($path, 'r+');
@@ -674,13 +734,13 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
           // Before calling fclose on the resource, check if it’s still valid using is_resource.
           if (is_resource($stream)) fclose($stream);
           // Now that the file has been transferred, go ahead and run the job.
-          $result = $this->run_job($data['id']);
+          $result = $this->run_job($job_id);
           // Error handling
-          if ($result['httpcode'] !== 202) $job_data[]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
+          if ($result['httpcode'] !== 202) $data[]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
         }
         // Catch the error.
         catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
-          $job_data[]['errors'][] = $e->getMessage();
+          $data[]['errors'][] = $e->getMessage();
         }
       }
 
@@ -695,7 +755,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
           // Make sure the asset is a file and not a directory (directories are automatically detected by WebDAV).
           if ($file->isFile()) {
             // The external path.
-            $path_external = $data['id'] . DIRECTORY_SEPARATOR . $file->getFilename();
+            $path_external = $job_id . DIRECTORY_SEPARATOR . $file->getFilename();
             // Transfer the file to the processing service via WebDAV.
             try {
               $stream = fopen($file->getPathname(), 'r+');
@@ -703,13 +763,13 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
               // Before calling fclose on the resource, check if it’s still valid using is_resource.
               if (is_resource($stream)) fclose($stream);
               // Now that the file has been transferred, go ahead and run the job.
-              $result = $this->run_job($data['id']);
+              $result = $this->run_job($job_id);
               // Error handling
-              if ($result['httpcode'] !== 202) $job_data[$i]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
+              if ($result['httpcode'] !== 202) $data[$i]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
             }
             // Catch the error.
             catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
-              $job_data[$i]['errors'][] = $e->getMessage();
+              $data[$i]['errors'][] = $e->getMessage();
             }
 
             $i++;
@@ -719,8 +779,6 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
       }
     }
-
-    $data = array_merge($data, $job_data);
 
     return $data;
   }
