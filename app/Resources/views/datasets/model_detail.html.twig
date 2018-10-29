@@ -81,12 +81,6 @@
           {% if modeldetail.model_maps != null %}
             <div><label>Model Maps:</label> {{modeldetail.model_maps}}</div>
           {% endif %}
-          {% if modeldetail.file_path != null %}
-            <div><label>File Path:</label> {{modeldetail.file_path}}</div>
-          {% endif %}
-          {% if modeldetail.face_count != null %}
-            <div><label>File Checksum:</label> {{modeldetail.file_checksum}}</div>
-          {% endif %}
         </div>
       </div>
       {% if modeldetail.parent_model_id == null %}
