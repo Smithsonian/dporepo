@@ -48,10 +48,12 @@ class ModelController extends Controller
     {
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
-        $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
-        $sort_order = $req['order'][0]['dir'];
+        $sort_field = isset($req['columns']) && isset($req['order'][0]['column']['data']) ? $req['columns'][ $req['order'][0]['column'] ]['data'] : '';
+        $sort_order = isset($req['order'][0]['dir']) ? $req['order'][0]['dir'] : 'asc';
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
+        $parent_id = !empty($req['parent_id']) ? $req['parent_id'] : 26; //@todo set to 0
+        $parent_id_field = isset($req['parent_type']) ? 'parent_item_repository_id' : 'parent_capture_dataset_repository_id';
 
         $query_params = array(
           'record_type' => 'model',
@@ -59,9 +61,10 @@ class ModelController extends Controller
           'sort_order' => $sort_order,
           'start_record' => $start_record,
           'stop_record' => $stop_record,
-          'parent_id' => $req['parent_id'],
-          'parent_id_field' => isset($req['parent_type']) ? 'parent_item_repository_id' : 'parent_capture_dataset_repository_id',
+          'parent_id' => $parent_id,
+          'parent_id_field' => $parent_id_field,
         );
+
         if ($search) {
           $query_params['search_value'] = $search;
         }
@@ -288,10 +291,11 @@ class ModelController extends Controller
     {
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
-        $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
-        $sort_order = $req['order'][0]['dir'];
+        $sort_field = isset($req['columns']) && isset($req['order'][0]['column']['data']) ? $req['columns'][ $req['order'][0]['column'] ]['data'] : '';
+        $sort_order = isset($req['order'][0]['dir']) ? $req['order'][0]['dir'] : 'asc';
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
+        $parent_id = !empty($req['parent_id']) ? $req['parent_id'] : 0;
 
         $query_params = array(
           'record_type' => 'model_file',
@@ -299,7 +303,7 @@ class ModelController extends Controller
           'sort_order' => $sort_order,
           'start_record' => $start_record,
           'stop_record' => $stop_record,
-          'parent_id' => $req['parent_id'],
+          'parent_id' => $parent_id,
         );
         if ($search) {
           $query_params['search_value'] = $search;
