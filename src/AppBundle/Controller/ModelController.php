@@ -52,7 +52,7 @@ class ModelController extends Controller
         $sort_order = isset($req['order'][0]['dir']) ? $req['order'][0]['dir'] : 'asc';
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
-        $parent_id = !empty($req['parent_id']) ? $req['parent_id'] : 26; //@todo set to 0
+        $parent_id = !empty($req['parent_id']) ? $req['parent_id'] : 0;
         $parent_id_field = isset($req['parent_type']) ? 'parent_item_repository_id' : 'parent_capture_dataset_repository_id';
 
         $query_params = array(
@@ -86,6 +86,16 @@ class ModelController extends Controller
     function formView(Connection $conn, Request $request)
     {
         $data = new Model();
+      $get = $request->query->all();
+      $parent_type = "capture_dataset";
+
+      if(!empty($request->attributes->get('type'))) {
+        $parent_type = $request->attributes->get('type');
+        if($parent_type !== "item") {
+          $parent_type = "capture_dataset";
+        }
+      }
+
         $post = $request->request->all();
         $parent_id = !empty($request->attributes->get('parent_id')) ? $request->attributes->get('parent_id') : false;
         $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
@@ -103,13 +113,29 @@ class ModelController extends Controller
         }
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
-        // Add the parent_id to the $data object
-        $data->parent_capture_dataset_repository_id = $parent_id;
-
         // Back link
         $back_link = $request->headers->get('referer');
-        if(isset($data->project_repository_id)) {
-            $back_link = "/admin/projects/dataset_elements/{$data->project_repository_id}/{$data->subject_repository_id}/{$data->parent_item_repository_id}/{$data->parent_capture_dataset_repository_id}";
+
+      // Add the parent_id to the $data object
+      if(empty($id)) {
+        if($parent_type == "item") {
+          $data->parent_item_repository_id = $parent_id;
+        }
+        else {
+          $data->parent_capture_dataset_repository_id = $parent_id;
+        }
+      }
+      else {
+        //@todo we need a way to get the backlink for new models, too
+        if($parent_type == "item") {
+          $back_link = "/admin/projects/datasets/{$data->project_repository_id}/{$data->subject_repository_id}/{$data->parent_item_repository_id}";
+        }
+        else {
+          //@todo- this is problematic since subjects are only linked through items
+          // A model might be linked to a capture dataset, which links to project and item; or it may be linked to an item, which links to a project and a subject.
+          // We'll need to modify the URL for capture datasets- we shouldn't need the subject repository ID.
+          //$back_link = "/admin/projects/dataset_elements/{$data->project_repository_id}/{$data->subject_repository_id}/{$data->parent_item_repository_id}/{$data->parent_capture_dataset_repository_id}";
+        }
         }
 
         // Get data from lookup tables.
@@ -210,30 +236,12 @@ class ModelController extends Controller
     }
 
     /**
-     * /\/\/\/ Route("/admin/projects/model/{id}", name="model_browse", methods="GET", defaults={"id" = null})
-     *
-     * @param Connection $conn
-     * @param Request $request
-     */
-    // public function browse(Connection $conn, Request $request)
-    // {
-    //     $Model = new Model;
-
-    //     // Database tables are only created if not present.
-    //     $Model->createTable();
-
-    //     return $this->render('datasetElements/model_browse.html.twig', array(
-    //         'page_title' => "Browse Model",
-    //         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-    //     ));
-    // }
-    /**
      * @Route("/admin/projects/model/{id}/detail", name="model_detail", methods="GET", defaults={"id" = null})
      *
      * @param Connection $conn
      * @param Request $request
      */
-    public function detail(Connection $conn, Request $request,$id)
+    public function modelDetail(Connection $conn, Request $request,$id)
     {
          //$Model = new Model;
         if ($id !== null) {
