@@ -97,9 +97,7 @@
             <thead>
               <tr>
                 <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
-                <th class="text-center"></th>
-                <th class="text-center"></th>
-                <th class="text-center"></th>
+                <th class="text-center">Download</th>
                 <th class="text-center"></th>
                 <th class="text-center"></th>
                 <th class="text-center"></th>
@@ -282,34 +280,19 @@
           }
       });
 
-      $(".datatables_bulk_actions").prepend(request_download_button);
+      $("#browse_wrapper").find(".datatables_bulk_actions").prepend(request_download_button);
 
 
       $('#browse_models').dataTable( {
         "columns": [
           { "data": "manage" },
+          { "data": "manage" },
           { "data": "model_repository_id", "title": "Model Repository ID"  },
           { "data": "parent_capture_dataset_repository_id", "title": "Parent Capture Dataset Repository ID"  },
           { "data": "parent_item_repository_id", "title": "Parent Item Repository ID"  },
-          { "data": "file_path", "title": "Download Model" ,
-            "render": function (data, type, row, meta) {
-              if (row.file_path == null)
-                row.file_path = '';
-              if (row.file_path !== null){
-                
-                let thisPathArray = row.file_path.split('/'),
-                    thisFileName = thisPathArray[thisPathArray.length - 1];
-                return '<a href="{{ uploads_path }}' + row.file_path + '" download="model' + row.model_file_type + '" title="Download this model">' + thisFileName + '</a>';
-              }
-            }
-          },
+          { "data": "file_path", "title": "File Path" },
           { "data": "model_file_type", "title": "Model File Type"  },
-          { "data": "model_guid", "title": "Model Guid",
-              "render":function(data, type, row, meta){
-                let model_id = row.model_repository_id;
-                return  '<a href="/admin/projects/model/'+model_id+'/detail">' + row.model_guid + '</a>';
-              }
-          },
+          { "data": "model_guid", "title": "Model Guid"  },
           { "data": "date_of_creation", "title": "Date of Creation"  },            
           { "data": "model_modality", "title": "Model Modality"  },
           { "data": "units", "title": "Units"  },
@@ -324,9 +307,6 @@
           { "data": "model_maps", "title": "Model Maps"  },
           { "data": "derived_from", "title": "Derived From"  },
           { "data": "creation_method", "title": "Creation Method"  },
-          { "data": "workflow_processing_step", "title": "Workflow Processing Step"  },
-          { "data": "workflow_status", "title": "Workflow Status"  },
-          { "data": "workflow_status_detail", "title": "Workflow Status Detail"  },
           { "data": "date_created", "title": "Date Created"  },
           { "data": "created_by_user_account_id", "title": "Created by User Account ID"  },
           { "data": "last_modified", "title": "Last Modified"  },
@@ -368,7 +348,7 @@
               "bSortable": false
           },
           {
-              "targets": [ 1, 2, 3, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27 ],
+              "targets": [ 1, 2, 3, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 ],
               "visible": false,
               "searchable": true
           }
@@ -382,9 +362,11 @@
           thisTableRow.find('td:eq(0)')
             .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
             .addClass("manage_column");
-          // Add the class to the model download link.
-          thisTableRow.find('td:eq(4)')
-            .addClass("download");
+          // Create the download checkboxes.
+          thisTableRow.find('td:eq(1)')
+            .html("<input type='checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
+            .addClass("manage_column");
+
 
           // Send to details page when clicked.
           thisTableRow.find('td').click(function() {
@@ -406,8 +388,43 @@
         .addClass('btn btn-default add-record-button')
         .attr('href', '/admin/projects/model/manage/' + item_repository_id + '?from=item')
         .html('<span class="glyphicon glyphicon-plus"></span> Add a Model');
-
       $('#browse_models_wrapper').find('.datatables_bulk_actions').prepend(models_add_button);
+
+      var request_model_download_button = $('<button></button>')
+        .addClass('btn btn-default glyphicon glyphicon-download-alt')
+        .attr('style', 'width: 13.8rem;')
+        .attr('id', 'request-download-button')
+        .on('click', function(){
+
+          var download_ids = new Array;
+          $('#browse [name="download_checkbox"]:checked').each(function(){
+            download_ids.push($(this).val());
+          });
+
+          if(!download_ids.length) {
+            swal('No Records Selected', 'Please choose at least one record.');
+            return;
+          }
+
+          if(download_ids.length > 0) {
+
+            swal({
+                title: "Send Download Request",
+                text: "Send a request to download chosen assets?",
+                type: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#DD6B55",
+                confirmButtonText: "Send Request",
+                closeOnConfirm: true
+              },
+              function(){
+                // Placeholder
+              });
+
+          }
+        });
+
+      $("#browse_models_wrapper").find(".datatables_bulk_actions").prepend(request_model_download_button);
 
     });
   </script>
