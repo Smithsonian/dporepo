@@ -478,71 +478,166 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   }
 
   /**
-   * Get processing assets.
+   * Get Processing Assets
    *
-   * @param string $job_id The processing service job ID
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return bool
    */
-  public function get_processing_asset_logs($job_id = null, $filesystem) {
+  public function get_processing_assets($filesystem) {
 
     $data = array();
     $client_jobs = array();
+    $processing_assets = array();
+    $contents = null;
 
-    if (!empty($job_id)) {
-      
-      // Loop through jobs, and retrieve outputted assets.
-      // Retrieve a read-stream
-      try {
+    $data = array();
 
-        // Call the processing service via WebDAV to get the directory contents.
-        $files = $filesystem->listContents($job_id, false);
+    // Query the database for the next job which has the state of 'created'.
+    $job_data = $this->repo_storage_controller->execute('getRecords', array(
+      'base_table' => 'processing_job',
+      'fields' => array(),
+      'limit' => 1,
+      'search_params' => array(
+        0 => array('field_names' => array('processing_job.state'), 'search_values' => array('created'), 'comparison' => '='),
+      ),
+      'search_type' => 'AND',
+      'omit_active_field' => true,
+      )
+    );
 
-        if (!empty($files)) {
+    if (!empty($job_data)) {
+      // Get the processing job from the processing service.
+      $processing_job = $this->get_job($job_data[0]['processing_service_job_id']);
+      // Error handling
+      if ($processing_job['httpcode'] !== 200) $data[]['errors'][] = 'The processing service returned HTTP code ' . $processing_job['httpcode'];
+      // No error...
+      if ($processing_job['httpcode'] === 200) {
+        // Decode JSON
+        $processing_job_array = json_decode($processing_job['result'], true);
 
-          foreach ($files as $file_key => $file_value) {
+        // Log the errors to the database.
+        if ($processing_job_array['state'] === 'error') {
+          $this->repo_validate->logErrors(
+            array(
+              'job_id' => $repo_processing_job_id,
+              'user_id' => $job_data[0]['created_by_user_account_id'],
+              'job_log_label' => 'Asset Validation',
+              'errors' => array($processing_job['error'] . ' (Processing job ID: ' . $processing_job['id'] . ')'),
+            )
+          );
+        }
 
-            // Only grab application/json and text/plain mimetypes.
-            // TODO: transfer (pull) files to the repository for all other file types (e.g. .obj, .ply, or whatever).
-            // And then, transfer to the file storage service (or leave them on the repository filesystem).
-            if (isset($file_value['mimetype'])) {
-              if (($file_value['mimetype'] === 'text/plain; charset=utf-8') || ($file_value['mimetype'] === 'application/json; charset=utf-8')) {
-                // Set the file path minus the protocol and host.
-                $file_path = str_replace('http://si-3ddigip01.si.edu:8000/', '', $file_value['path']);
-                // Set the file name
-                $file_path_array = explode('/', $file_path);
-                $file_name = array_pop($file_path_array);
+        // If the state of the job is 'done', proceed with pulling assets from the processing service.
+        if ($processing_job_array['state'] === 'done') {
 
-                // Read the file and get the contents.
-                // !!!WARNING!!!
-                // Had to hack:
-                // vendor/league/flysystem-webdav/src/WebDAVAdapter.php (lines 129-131)
-                // vendor/league/flysystem/src/Filesystem.php (line 273)
-                $stream = $filesystem->readStream($file_path);
-                $contents = stream_get_contents($stream);
-                // Before calling fclose on the resource, check if it’s still valid using is_resource.
-                if (is_resource($stream)) fclose($stream);
+          $job_id = $job_data[0]['processing_service_job_id'];
+          $local_assets_path = $job_data[0]['asset_path'];
 
-                $data[] = array(
-                  'job_id' => $job_id,
-                  'file_name' => $file_name,
-                  'file_contents' => $contents,
-                );
+          // Retrieve all of the logs produced by the processing service.
+          if (!empty($job_id) && !empty($local_assets_path)) {
+          
+            // Loop through jobs, and retrieve outputted assets.
+            // Retrieve a read-stream
+            try {
+
+              // Call the processing service via WebDAV to get the directory contents.
+              $files = $filesystem->listContents($job_id, false);
+
+              if (!empty($files)) {
+
+                foreach ($files as $file_key => $file_value) {
+
+                  // TODO: transfer to the file storage service (or leave them on the repository filesystem).
+                  // Set the file path minus the protocol and host.
+                  $file_path = str_replace('http://si-3ddigip01.si.edu:8000/', '', $file_value['path']);
+                  // Set the file name
+                  $file_path_array = explode('/', $file_path);
+                  $file_name = array_pop($file_path_array);
+
+                  // If the file's mimetype is application/json or text/plain, get the contents.
+                  // !!!WARNING!!!
+                  // Had to hack:
+                  // vendor/league/flysystem-webdav/src/WebDAVAdapter.php (lines 129-131)
+                  // vendor/league/flysystem/src/Filesystem.php (line 273)
+                  if (isset($file_value['mimetype'])) {
+
+                    $stream = $filesystem->readStream($file_path);
+                    $contents = stream_get_contents($stream);
+                    // Before calling fclose on the resource, check if it’s still valid using is_resource.
+                    if (is_resource($stream)) fclose($stream);
+
+                    if (($file_value['mimetype'] !== 'text/plain; charset=utf-8') && ($file_value['mimetype'] !== 'application/json; charset=utf-8')) {
+
+                      // Save the processed asset to the repository's file system.
+                      // If asset is a file, get the parent directory from the $local_assets_path.
+                      if (is_file($local_assets_path)) {
+                        $local_assets_path_array = explode(DIRECTORY_SEPARATOR, $local_assets_path);
+                        array_pop($local_assets_path_array);
+                        $local_assets_path = implode(DIRECTORY_SEPARATOR, $local_assets_path_array);
+                      }
+                      // $this->u->dumper($local_assets_path);
+                      // Create the 'processed' directory.
+                      chdir($local_assets_path);
+                      if (!is_dir($local_assets_path . DIRECTORY_SEPARATOR . 'processed')) {
+                        mkdir($local_assets_path . DIRECTORY_SEPARATOR . 'processed', 0755);
+                      }
+                      // Write the file to the 'processed' directory.
+                      $handle = fopen($local_assets_path . DIRECTORY_SEPARATOR . 'processed' . DIRECTORY_SEPARATOR . $file_name, 'w');
+                      fwrite($handle, $contents);
+                      if (is_resource($handle)) fclose($handle);
+                      // Reset $contents to null.
+                      $contents = null;
+                    }
+                  }
+
+                  $processing_assets[] = array(
+                    'job_id' => $job_id,
+                    'file_name' => $file_name,
+                    'file_contents' => $contents,
+                  );
+
+                  // Reset $contents to null.
+                  $contents = null;
+
+                }
 
               }
+
+            }
+            // Catch the error.
+            catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
+              throw $this->createNotFoundException($e->getMessage() . ' - The directory, ' . $job_id . ', does not exist.');
             }
 
           }
 
+          // Loop through the processing-based logs.
+          if (!empty($processing_assets)) {
+            foreach ($processing_assets as $asset) {
+              // Insert one processing-based log.
+              $id = $this->repo_storage_controller->execute('saveRecord', array(
+                'base_table' => 'processing_job_file',
+                'user_id' => $job_data[0]['created_by_user_account_id'],
+                'values' => $asset,
+              ));
+            }
+          }
+
+          // Update the processing job record.
+          $repo_processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'processing_job',
+            'record_id' => $job_data[0]['processing_job_id'],
+            'user_id' => $job_data[0]['created_by_user_account_id'],
+            'values' => array(
+              'job_json' => json_encode($processing_job_array), 
+              'state' => $processing_job_array['state']
+            )
+          ));
+
+          $data['state'] = $processing_job_array['state'];
         }
-
       }
-      // Catch the error.
-      catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
-        throw $this->createNotFoundException($e->getMessage() . ' - The directory, ' . $job_id . ', does not exist.');
-      }
-
     }
 
     return $data;
@@ -769,11 +864,12 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    *
    * @param string $job_id The processing service job ID
    * @param string $user_id The user's repository ID
+   * @param string $path The path to the assets to be processed.
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return 
    */
-  public function get_processing_results($job_id = null, $user_id = null, $filesystem)
+  public function get_processing_results($job_id = null, $user_id = null, $path = null, $filesystem)
   {
 
     $data = array();
@@ -790,104 +886,6 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
       'omit_active_field' => true,
       )
     );
-
-    // Save processing-based logs to the metadata storage.
-    if (empty($data['logs'])) {
-
-      // Retrieve all of the logs produced by the processing service.
-      $processing_assets = $this->get_processing_asset_logs($job_id, $filesystem);
-      // Loop through the processing-based logs.
-      if (!empty($processing_assets)) {
-        foreach ($processing_assets as $asset) {
-          // Insert one processing-based log.
-          $id = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => 'processing_job_file',
-            'user_id' => $user_id,
-            'values' => $asset,
-          ));
-        }
-      }
-
-      // Get the processing job from the processing service.
-      $processing_job = $this->get_job($job_id);
-
-      // Error handling
-      if ($processing_job['httpcode'] !== 200) $data[]['errors'][] = 'The processing service returned HTTP code ' . $processing_job['httpcode'];
-
-      if ($processing_job['httpcode'] === 200) {
-
-        // JSON decode it.
-        $processing_job = json_decode($processing_job['result'], true);
-
-        // Query the database for the corresponding processing job record,
-        // so we can use the repository's ID (processing_job_id) to update the repository's processing job record.
-        $repo_processing_job_data = $this->repo_storage_controller->execute('getRecords', array(
-          'base_table' => 'processing_job',
-          'fields' => array(),
-          'limit' => 1,
-          'search_params' => array(
-            0 => array('field_names' => array('processing_job.processing_service_job_id'), 'search_values' => array($job_id), 'comparison' => '='),
-          ),
-          'search_type' => 'AND',
-          'omit_active_field' => true,
-          )
-        );
-
-        // Update the main job record with the results of the processing job.
-        if ($repo_processing_job_data) {
-
-          // Update one processing job record.
-          $repo_processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => 'processing_job',
-            'record_id' => $repo_processing_job_data[0]['processing_job_id'],
-            'user_id' => $user_id,
-            'values' => array(
-              'job_json' => json_encode($processing_job), 
-              'state' => $processing_job['state']
-            )
-          ));
-
-          // Query the metadata storage for all of the logs from the processing job.
-          $data['logs'] = $this->repo_storage_controller->execute('getRecords', array(
-            'base_table' => 'processing_job_file',
-            'fields' => array(),
-            'limit' => 1,
-            'search_params' => array(
-              0 => array('field_names' => array('processing_job_file.job_id'), 'search_values' => array($job_id), 'comparison' => '='),
-            ),
-            'search_type' => 'AND',
-            'omit_active_field' => true,
-            )
-          );
-
-          // Log the errors to the database.
-          if ($processing_job['state'] === 'error') {
-            $this->repo_validate->logErrors(
-              array(
-                'job_id' => $repo_processing_job_id,
-                'user_id' => $user_id,
-                'job_log_label' => 'Asset Validation',
-                'errors' => array($processing_job['error'] . ' (Processing job ID: ' . $processing_job['id'] . ')'),
-              )
-            );
-          }
-
-          // // Update the repository job record.
-          // $job_status = ($processing_job['state'] === 'error') ? 'failed' : $processing_job['state'];
-          // $repository_job_id = $this->repo_storage_controller->execute('saveRecord', array(
-          //   'base_table' => 'job',
-          //   'record_id' => $repo_processing_job_data[0]['job_id'],
-          //   'user_id' => $user_id,
-          //   'values' => array(
-          //     'job_status' => $job_status,
-          //     'date_completed' => !in_array($processing_job['state'], array('created', 'running')) ? date('Y-m-d h:i:s') : null,
-          //   )
-          // ));
-
-        }
-
-      }
-    }
 
     // Query the metadata storage for the main data from the processing job.
     $data['job'] = $this->repo_storage_controller->execute('getRecords', array(

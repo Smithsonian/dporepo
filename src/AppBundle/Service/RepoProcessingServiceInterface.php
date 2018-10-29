@@ -108,14 +108,13 @@ interface RepoProcessingServiceInterface {
   public function are_jobs_running(array $job_ids);
 
   /**
-   * Get processing asset logs.
+   * Get processing assets.
    *
-   * @param string $job_id The processing service job ID
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return bool
    */
-  public function get_processing_asset_logs(string $job_id, obj $filesystem);
+  public function get_processing_assets(obj $filesystem);
 
   /**
    * @param string $recipe The processing service recipe.
@@ -153,11 +152,12 @@ interface RepoProcessingServiceInterface {
    *
    * @param string $job_id The processing service job ID
    * @param string $user_id The user's repository ID
+   * @param string $path The path to the assets to be processed.
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return 
    */
-  public function get_processing_results($job_id = null, $user_id = null, $filesystem);
+  public function get_processing_results(string $job_id, string $user_id, string $path, $filesystem);
 
   /**
    * Create GUID
