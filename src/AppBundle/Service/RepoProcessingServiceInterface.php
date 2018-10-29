@@ -119,25 +119,27 @@ interface RepoProcessingServiceInterface {
 
   /**
    * @param string $recipe The processing service recipe.
+   * @param array $params Parameters for the processing service.
    * @param string $path The path to the assets to be processed.
    * @param string $user_id The ID of the repository user.
-   * @param array $params Parameters for the processing service.
+   * @param array $parent_record_data The repository parent record type and ID.
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function initialize_job(string $recipe, string $path, string $user_id, array $params, obj $filesystem);
+  public function initialize_job(string $recipe, array $params, string $path, string $user_id, array $project_data, obj $filesystem);
 
   /**
    * @param string $path The path to the assets to be processed.
    * @param string $recipe The processing service recipe.
    * @param string $user_id The ID of the repository user.
    * @param array $params Parameters for the processing service.
+   * @param array $parent_record_data The repository parent record type and ID.
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function send_job(string $path, string $recipe, string $user_id, array $params, obj $filesystem);
+  public function send_job(string $path, string $recipe, string $user_id, array $params, $project_data = array(), obj $filesystem);
 
   /**
    * @param object $filesystem Filesystem object (via Flysystem).

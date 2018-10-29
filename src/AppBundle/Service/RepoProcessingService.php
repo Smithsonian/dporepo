@@ -550,19 +550,20 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
   /**
    * @param string $recipe The processing service recipe.
+   * @param array $params Parameters for the processing service.
    * @param string $path The path to the assets to be processed.
    * @param string $user_id The ID of the repository user.
-   * @param array $params Parameters for the processing service.
+   * @param array $parent_record_data The repository parent record type and ID.
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function initialize_job($recipe = null, $path = null, $user_id = null, $params = array(), $filesystem)
+  public function initialize_job($recipe = null, $params = array(), $path = null, $user_id = null, $parent_record_data = array(), $filesystem)
   {
 
     $data = array();
 
-    if (!empty($path) && !empty($recipe) && !empty($user_id)) {
+    if (!empty($path) && !empty($recipe) && !empty($user_id) && !empty($parent_record_data)) {
       // If the path or file doesn't exist, prepare an error.
       if (!is_dir($path) && !is_file($path)) {
         $data[]['errors'][] = 'Target directory not found - ' . $path;
@@ -571,7 +572,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
       // If the path or file does exist, send job to the processing service.
       if (is_dir($path) || is_file($path)) {
         // Create a new job and run.
-        $data = $this->send_job($path, $recipe, $user_id, $params, $filesystem);
+        $data = $this->send_job($path, $recipe, $user_id, $params, $parent_record_data, $filesystem);
       }
     }
 
@@ -583,16 +584,17 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    * @param string $recipe The processing service recipe.
    * @param string $user_id The ID of the repository user.
    * @param array $params Parameters for the processing service.
+   * @param array $parent_record_data The repository parent record type and ID.
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function send_job($path = null, $recipe = array(), $user_id = null, $params = array(), $filesystem)
+  public function send_job($path = null, $recipe = array(), $user_id = null, $params = array(), $parent_record_data = array(), $filesystem)
   {
 
     $data = array();
 
-    if (!empty($path) && !empty($recipe) && !empty($user_id) && !empty($params)) {
+    if (!empty($path) && !empty($recipe) && !empty($user_id) && !empty($params) && !empty($parent_record_data)) {
 
       // Get the ID of the recipe, so it can be passed to processing service's job creation endpoint (post_job).
       $recipe = $this->get_recipe_by_name($recipe);
@@ -626,12 +628,30 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
             return $data;
           }
 
+          // // Add a new job to the repository's metadata storage.
+          // $uuid = uniqid('3df_', true);
+          // $repository_job_id = $this->repo_storage_controller->execute('saveRecord', array(
+          //   'base_table' => 'job',
+          //   'user_id' => $user_id,
+          //   'values' => array(
+          //     'uuid' => $uuid,
+          //     'project_id' => (int)$project_data['project_repository_id'],
+          //     'job_label' => 'Processing Job (' . $data['recipe']['name'] . '): "' . $project_data['project_name'] . '"',
+          //     'job_type' => 'processing job',
+          //     'job_status' => 'created',
+          //     'date_completed' => null,
+          //     'qa_required' => 0,
+          //     'qa_approved_time' => null,
+          //   )
+          // ));
+
           // Log job data to the metadata storage.
           $processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
             'base_table' => 'processing_job',
             'user_id' => $user_id,
             'values' => array(
-              'job_id' => rand(1, 4000000),
+              'parent_record_id' => $parent_record_data['parent_record_id'],
+              'parent_record_type' => $parent_record_data['parent_record_type'],
               'processing_service_job_id' => $data['id'],
               'recipe' =>  $data['recipe']['name'], 
               'job_json' => json_encode($data), 
@@ -639,45 +659,6 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
               'asset_path' => $path,
             )
           ));
-
-          // // Transfer assets to the processing service - asynchronously.
-          // // Example:
-          // // bin/console app:transfer-processing-assets /Users/gor/Documents/Sites/dporepo/web/uploads/repository/3df_5bd4c0846fd3f0.72669883/testupload04-1model/data/1/nmnh-usnm_v_512384522-skull-master_model-2018_10_22.ply A95A9B1F-F40F-CB5C-C7AE-1BBC3CB55634
-          // $input = array(
-          //   'path' => escapeshellarg($path),
-          //   'job_id' => escapeshellarg($data['id']),
-          // );
-
-          // // Hack for XAMPP on Windows.
-          // if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-          //   $php_binary_path = 'c:/xampp/php/php.exe';
-          // } else {
-          //   // Find the executable PHP binary.
-          //   $php_binary_finder = new PhpExecutableFinder();
-          //   $php_binary_path = $php_binary_finder->find();
-          // }
-          
-          // if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {            
-          //   $command = $php_binary_path . ' bin/console app:transfer-processing-assets ' . implode(' ', $input) . ' > NUL';
-          // } else {
-          //   $command = $php_binary_path . ' bin/console app:transfer-processing-assets ' . implode(' ', $input) . ' > /dev/null 2>&1 &';
-          // }
-
-          // // chdir($this->kernel->getProjectDir());
-          // // $data['pid'] = (int)shell_exec(sprintf(
-          // //     '%s > %s 2>&1 &',
-          // //     $command,
-          // //     '/dev/null'
-          // // ));
-          // // exec($command);
-
-          // $process = new Process($command);
-          // $process->setWorkingDirectory($this->kernel->getProjectDir());
-          // // $process->disableOutput();
-          // $process->setTimeout(3600);
-          // $process->start();
-          // $process->wait();
-          // // $data['pid'] = $process->getPid();
 
         }
 
@@ -838,9 +819,6 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
         // JSON decode it.
         $processing_job = json_decode($processing_job['result'], true);
 
-        // // If there's an error, set the repository's upload/ingest job status to 'failed'.
-        // $job_status = ($processing_job['state'] === 'error') ? 'failed' : $job_status;
-
         // Query the database for the corresponding processing job record,
         // so we can use the repository's ID (processing_job_id) to update the repository's processing job record.
         $repo_processing_job_data = $this->repo_storage_controller->execute('getRecords', array(
@@ -858,8 +836,8 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
         // Update the main job record with the results of the processing job.
         if ($repo_processing_job_data) {
 
-          // Update one job record.
-          $processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
+          // Update one processing job record.
+          $repo_processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
             'base_table' => 'processing_job',
             'record_id' => $repo_processing_job_data[0]['processing_job_id'],
             'user_id' => $user_id,
@@ -869,6 +847,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
             )
           ));
 
+          // Query the metadata storage for all of the logs from the processing job.
           $data['logs'] = $this->repo_storage_controller->execute('getRecords', array(
             'base_table' => 'processing_job_file',
             'fields' => array(),
@@ -881,30 +860,36 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
             )
           );
 
-          // // Log the errors to the database.
-          // if ($processing_job['state'] === 'error') {
+          // Log the errors to the database.
+          if ($processing_job['state'] === 'error') {
+            $this->repo_validate->logErrors(
+              array(
+                'job_id' => $repo_processing_job_id,
+                'user_id' => $user_id,
+                'job_log_label' => 'Asset Validation',
+                'errors' => array($processing_job['error'] . ' (Processing job ID: ' . $processing_job['id'] . ')'),
+              )
+            );
+          }
 
-          //   // Get the model's file name
-          //   foreach ($processing_assets as $asset) {
-          //     if (stristr($asset['file_name'], '-report.json')) {
-          //       $data['report'] = json_decode($asset['file_contents'], true);
-          //     }
-          //   }
-          //   $this->repoValidate->logErrors(
-          //     array(
-          //       'job_id' => $job_data['job_id'],
-          //       'user_id' => $this->user_id,
-          //       'job_log_label' => 'Asset Validation',
-          //       'errors' => array($processing_job['error'] . ' (Processing job ID: ' . $processing_job['id'] . ', Model file name: ' . $data['report']['parameters']['meshFile'] . ')'),
-          //     )
-          //   );
-          // }
+          // // Update the repository job record.
+          // $job_status = ($processing_job['state'] === 'error') ? 'failed' : $processing_job['state'];
+          // $repository_job_id = $this->repo_storage_controller->execute('saveRecord', array(
+          //   'base_table' => 'job',
+          //   'record_id' => $repo_processing_job_data[0]['job_id'],
+          //   'user_id' => $user_id,
+          //   'values' => array(
+          //     'job_status' => $job_status,
+          //     'date_completed' => !in_array($processing_job['state'], array('created', 'running')) ? date('Y-m-d h:i:s') : null,
+          //   )
+          // ));
 
         }
 
       }
     }
 
+    // Query the metadata storage for the main data from the processing job.
     $data['job'] = $this->repo_storage_controller->execute('getRecords', array(
       'base_table' => 'processing_job',
       'fields' => array(),
