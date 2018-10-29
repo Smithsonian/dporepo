@@ -116,14 +116,6 @@ class ModelForm extends AbstractType
                 'label' => 'Model Maps',
                 'required' => false,
               ))
-            ->add('file_path', null, array(
-                'label' => 'File Path',
-                'required' => false,
-              ))
-            ->add('file_checksum', null, array(
-                'label' => 'File Checksum',
-                'required' => false,
-              ))
             ->add('save', SubmitType::class, array(
                 'label' => 'Save Edits',
                 'attr' => array('class' => 'btn btn-primary'),
