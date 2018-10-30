@@ -332,8 +332,8 @@ class ModelController extends Controller
     {
       $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
-        $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
-        $sort_order = $req['order'][0]['dir'];
+        $sort_field = isset($req['columns']) && isset($req['order'][0]) ? $req['columns'][ $req['order'][0]['column'] ]['data'] : '';
+        $sort_order = isset($req['order'][0]['dir']) ? $req['order'][0]['dir'] : 'asc';
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
@@ -343,7 +343,7 @@ class ModelController extends Controller
           'sort_order' => $sort_order,
           'start_record' => $start_record,
           'stop_record' => $stop_record,
-          'parent_id' => $req['parent_model_id'],
+          'parent_id' => isset($req['parent_model_id']) ? $req['parent_model_id'] : 0,
           //'parent_id_field' => isset($req['parent_type']) ? 'parent_item_repository_id' : 'parent_capture_dataset_repository_id',
           'parent_id_field' => 'parent_model_id',
 
