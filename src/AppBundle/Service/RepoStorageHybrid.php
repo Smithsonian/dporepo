@@ -3519,10 +3519,12 @@ class RepoStorageHybrid implements RepoStorage {
     $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
     $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
 
+    $role_slug = array_key_exists('role_slug', $params) ? $params['role_slug'] : NULL;
     $username_canonical = array_key_exists('username_canonical', $params) ? $params['username_canonical'] : NULL;
 
     // First select was project.project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
-    $sql = "SELECT username_canonical, username_canonical as manage, username_canonical as DT_RowId, username, email, enabled, GROUP_CONCAT(rolename) as roles,
+    $sql = "SELECT username_canonical, username_canonical as manage, username_canonical as DT_RowId, username, email, enabled, 
+            GROUP_CONCAT(rolename) as roles,
             project_name, unit_stakeholder_label, unit_stakeholder_full_name
             
             FROM 
@@ -3535,9 +3537,11 @@ class RepoStorageHybrid implements RepoStorage {
             LEFT JOIN role on user_role.role_id = role.role_id
             LEFT JOIN project on user_role.project_id = project.project_repository_id
             LEFT JOIN unit_stakeholder on project.stakeholder_guid = unit_stakeholder.isni_id 
-            WHERE user_role.project_id IS NOT NULL 
-            
-            UNION 
+            WHERE user_role.project_id IS NOT NULL ";
+    if(NULL !== $role_slug) {
+      $sql .= " AND role.rolename_canonical LIKE :rolename_canonical ";
+    }
+    $sql .= " UNION 
             
             SELECT fos_user.username_canonical, username, email, enabled, rolename,
             'ALL' as project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
@@ -3545,19 +3549,22 @@ class RepoStorageHybrid implements RepoStorage {
             LEFT JOIN user_role on fos_user.username_canonical = user_role.username_canonical
             LEFT JOIN role on user_role.role_id = role.role_id
             JOIN unit_stakeholder on user_role.stakeholder_id = unit_stakeholder.unit_stakeholder_repository_id
-            WHERE user_role.stakeholder_id IS NOT NULL 
-            
-            UNION
+            WHERE user_role.stakeholder_id IS NOT NULL ";
+    if(NULL !== $role_slug) {
+      $sql .= " AND role.rolename_canonical LIKE :rolename_canonical ";
+    }
+    $sql .= " UNION
 
             SELECT fos_user.username_canonical, username, email, enabled, rolename,
             'ALL' as project_name, '' as unit_stakeholder_label, 'ALL' as unit_stakeholder_full_name
             FROM fos_user
             LEFT JOIN user_role on fos_user.username_canonical = user_role.username_canonical
             LEFT JOIN role on user_role.role_id = role.role_id
-            WHERE user_role.stakeholder_id IS NULL AND user_role.project_id IS NULL 
-            
-             )
-             as tmp ";
+            WHERE user_role.stakeholder_id IS NULL AND user_role.project_id IS NULL ";
+    if(NULL !== $role_slug) {
+      $sql .= " AND role.rolename_canonical LIKE :rolename_canonical ";
+    }
+    $sql .= ") as tmp ";
 
     $where = "";
     $where_parts = array();
@@ -3572,7 +3579,7 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     if(count($where_parts) > 0) {
-      $where = " WHERE " . implode(' AND ' . $where_parts);
+      $where = " WHERE " . implode(' AND ', $where_parts);
     }
 
     $sql .= $where . " GROUP BY username_canonical, unit_stakeholder_label, unit_stakeholder_full_name, project_name ";
@@ -3597,13 +3604,24 @@ class RepoStorageHybrid implements RepoStorage {
     if(NULL !== $username_canonical) {
       $statement->bindValue(":username_canonical", $username_canonical, PDO::PARAM_STR);
     }
+    if(NULL !== $role_slug) {
+      $statement->bindValue(":rolename_canonical", $role_slug, PDO::PARAM_STR);
+    }
+
     if($search_value) {
       $statement->bindValue(":search_value", $search_value, PDO::PARAM_STR);
     }
+
     $statement->execute();
     $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
 
     $statement = $this->connection->prepare($count_query);
+    if(NULL !== $username_canonical) {
+      $statement->bindValue(":username_canonical", $username_canonical, PDO::PARAM_STR);
+    }
+    if(NULL !== $role_slug) {
+      $statement->bindValue(":rolename_canonical", $role_slug, PDO::PARAM_STR);
+    }
     $statement->execute();
     $count = $statement->fetch(PDO::FETCH_ASSOC);
     $data["iTotalRecords"] = $count["c"];

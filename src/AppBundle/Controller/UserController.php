@@ -119,7 +119,7 @@ class UserController extends Controller {
     }
 
     // Retrieve data from the database.
-    if (!empty($role_slug) && empty($post)) {
+    if (!empty($role_slug) && $role_slug !== "new" && empty($post)) {
       $role = $this->repo_storage_controller->execute('getRole',
         array('rolename_canonical' => $role_slug)
       );
@@ -153,9 +153,10 @@ class UserController extends Controller {
       //@todo return $this->redirect('/admin/roles/' . $role_slug);
     }
 
+    $role = (array)$role;
     return $this->render('users/role_form.html.twig', array(
-      'page_title' => !empty($id) ? 'Role: ' . $role->role_name : 'Create Role',
-      'role_data' => (array)$role,
+      'page_title' => !empty($role_slug) && $role_slug !== 'new' ? 'Role: ' . $role['rolename'] : 'Create Role',
+      'role_data' => $role,
       'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
       'form' => $form->createView(),
     ));
@@ -174,12 +175,16 @@ class UserController extends Controller {
     }
 
     $req = $request->request->all();
+    if(empty($req)) {
+      $req = $request->query->all();
+    }
 
     $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
     $sort_field = array_key_exists('order', $req) ? $req['columns'][ $req['order'][0]['column'] ]['data'] : 'username_canonical';
     $sort_order = array_key_exists('order', $req) ? $req['order'][0]['dir'] : '';
     $start_record = !empty($req['start']) ? $req['start'] : 0;
     $stop_record = !empty($req['length']) ? $req['length'] : 20;
+    $role_slug = array_key_exists('role_slug', $req) ? $req['role_slug'] : NULL;
 
     $query_params = array(
       'sort_field' => $sort_field,
@@ -187,6 +192,9 @@ class UserController extends Controller {
       'start_record' => $start_record,
       'stop_record' => $stop_record,
     );
+    if(NULL !== $role_slug) {
+      $query_params['role_slug'] = $role_slug;
+    }
     if ($search) {
       $query_params['search_value'] = $search;
     }
