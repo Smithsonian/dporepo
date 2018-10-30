@@ -3520,13 +3520,15 @@ class RepoStorageHybrid implements RepoStorage {
     $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
 
     $username_canonical = array_key_exists('username_canonical', $params) ? $params['username_canonical'] : NULL;
+
+    // First select was project.project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
     $sql = "SELECT username_canonical, username_canonical as manage, username_canonical as DT_RowId, username, email, enabled, GROUP_CONCAT(rolename) as roles,
             project_name, unit_stakeholder_label, unit_stakeholder_full_name
             
             FROM 
             
             (SELECT fos_user.username_canonical, username, email, enabled, rolename,
-            project.project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
+            project.project_name, '' as unit_stakeholder_label, '' as unit_stakeholder_full_name
             
             FROM fos_user
             LEFT JOIN user_role on fos_user.username_canonical = user_role.username_canonical
@@ -3538,7 +3540,7 @@ class RepoStorageHybrid implements RepoStorage {
             UNION 
             
             SELECT fos_user.username_canonical, username, email, enabled, rolename,
-            '' as project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
+            'ALL' as project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
             FROM fos_user
             LEFT JOIN user_role on fos_user.username_canonical = user_role.username_canonical
             LEFT JOIN role on user_role.role_id = role.role_id
@@ -3548,7 +3550,7 @@ class RepoStorageHybrid implements RepoStorage {
             UNION
 
             SELECT fos_user.username_canonical, username, email, enabled, rolename,
-            '' as project_name, '' as unit_stakeholder_label, '' as unit_stakeholder_full_name
+            'ALL' as project_name, '' as unit_stakeholder_label, 'ALL' as unit_stakeholder_full_name
             FROM fos_user
             LEFT JOIN user_role on fos_user.username_canonical = user_role.username_canonical
             LEFT JOIN role on user_role.role_id = role.role_id
@@ -3615,12 +3617,13 @@ class RepoStorageHybrid implements RepoStorage {
     $data = array();
 
     $username_canonical = array_key_exists('username_canonical', $params) ? $params['username_canonical'] : NULL;
+    // First select was project.project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
     $sql = "SELECT user_role_id, user_role_id as manage, user_role_id as DT_RowId, rolename,
             project_name, unit_stakeholder_label, unit_stakeholder_full_name, username_canonical
             FROM 
             
             (SELECT user_role_id, user_role.username_canonical, rolename,
-            project.project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
+            project.project_name, '' as unit_stakeholder_label, '' as unit_stakeholder_full_name
             
             FROM user_role
             LEFT JOIN role on user_role.role_id = role.role_id
@@ -3631,7 +3634,7 @@ class RepoStorageHybrid implements RepoStorage {
             UNION 
             
             SELECT user_role_id, user_role.username_canonical, rolename,
-            '' as project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
+            'ALL' as project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
             FROM user_role
             LEFT JOIN role on user_role.role_id = role.role_id
             JOIN unit_stakeholder on user_role.stakeholder_id = unit_stakeholder.unit_stakeholder_repository_id
@@ -3640,7 +3643,7 @@ class RepoStorageHybrid implements RepoStorage {
             UNION
 
             SELECT user_role_id, user_role.username_canonical, rolename,
-            '' as project_name, '' as unit_stakeholder_label, '' as unit_stakeholder_full_name
+            'ALL' as project_name, 'ALL' as unit_stakeholder_label, '' as unit_stakeholder_full_name
             FROM user_role
             LEFT JOIN role on user_role.role_id = role.role_id
             WHERE user_role.stakeholder_id IS NULL AND user_role.project_id IS NULL 
