@@ -1684,11 +1684,12 @@ class RepoStorageHybrid implements RepoStorage {
       break;
 
       case 'model_file':
+      $parent_id_field = "model_repository_id";
       $query_params['related_tables'][] = array(
-        'table_name' => 'model_file',
+        'table_name' => 'file_upload',
         'table_join_field' => 'file_upload_id',
         'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'file_upload',
+        'base_join_table' => 'model_file',
         'base_join_field' => 'file_upload_id',
       );
 
