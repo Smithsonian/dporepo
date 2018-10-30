@@ -159,8 +159,6 @@
                             <th class="text-center">Has Vertex Color?</th>
                             <th class="text-center">Has UV Space?</th-->
                             <th class="text-center">Model Purpose</th>
-                            <th class="text-center">File Path</th>
-                            <th class="text-center">File Hash</th>
                             <th class="text-center">Last Modified</th>
                         </tr>
                         </thead>
@@ -411,8 +409,6 @@
             //{ "data": "has_vertex_color"},
             //{ "data": "has_uv_space"},
             { "data": "model_purpose"},
-            { "data": "file_path"},
-            { "data": "file_hash"},
             { "data": "last_modified" }
           ],
           "dom": 'lfip<"datatables_bulk_actions">tip',
@@ -466,7 +462,7 @@
               if(thisTableCell.hasClass('manage_column')) return;
               // Send to the details page.
               var this_id = thisTableCell.closest("tr").attr('id');
-              window.location.href = '/admin/projects/model/manage/' + capture_dataset_repository_id + '/' + this_id;
+              window.location.href = '/admin/projects/model/' + this_id + '/detail';
             });
           }
         });
