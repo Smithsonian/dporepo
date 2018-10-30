@@ -4346,14 +4346,14 @@ class RepoStorageHybrid implements RepoStorage {
       // insert
       // Update this record with new status info. Write to workflow_status_log also.
       $sql ="INSERT INTO role 
-          (rolename, rolename_canonical, role_description, created_by_user_account_id, date_created) 
-          VALUES (:rolename, :rolename_canonical, :role_description, :created_by_user_account_id, NOW())";
+          (rolename, rolename_canonical, role_description, created_by_user_account_id, date_created, last_modified_user_account_id, last_modified) 
+          VALUES (:rolename, :rolename_canonical, :role_description, :created_by_user_account_id, NOW(), :last_modified_user_account_id, NOW())";
       $statement = $this->connection->prepare($sql);
       $statement->bindValue(":rolename_canonical", $new_rolename_canonical, PDO::PARAM_STR);
       $statement->bindValue(":rolename", $rolename, PDO::PARAM_STR);
       $statement->bindValue(":role_description", $role_description, PDO::PARAM_STR);
       $statement->bindValue(":created_by_user_account_id", $user_id, PDO::PARAM_INT);
-
+      $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
       $statement->execute();
     }
 
@@ -4367,16 +4367,19 @@ class RepoStorageHybrid implements RepoStorage {
       $role_id = $ret[0]['role_id'];
 
       // Set role permissions.
-      $sql ="DELETE FROM role_permission where role_id=:role_id";
+      $sql ="UPDATE role_permission SET active=0 where role_id=:role_id";
       $statement = $this->connection->prepare($sql);
       $statement->bindValue(":role_id", $role_id, PDO::PARAM_INT);
       $statement->execute();
 
       foreach($role_permissions as $permission_id) {
-        $sql ="INSERT INTO role_permission (role_id, permission_id) VALUES (:role_id, :permission_id)";
+        $sql ="INSERT INTO role_permission (role_id, permission_id, created_by_user_account_id, date_created, last_modified_user_account_id, last_modified) 
+          VALUES (:role_id, :permission_id, :created_by_user_account_id, NOW(), :last_modified_user_account_id, NOW())";
         $statement = $this->connection->prepare($sql);
         $statement->bindValue(":role_id", $role_id, PDO::PARAM_INT);
         $statement->bindValue(":permission_id", $permission_id, PDO::PARAM_INT);
+        $statement->bindValue(":created_by_user_account_id", $user_id, PDO::PARAM_INT);
+        $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
         $statement->execute();
       }
     }
@@ -4410,8 +4413,8 @@ class RepoStorageHybrid implements RepoStorage {
     $user_role_id = NULL;
 
     $sql ="INSERT INTO user_role 
-        (username_canonical, role_id, created_by_user_account_id, date_created, last_modified_user_account_id ";
-    $sql_values = " VALUES (:username_canonical, :role_id, :created_by_user_account_id, NOW(), :last_modified_user_account_id ";
+        (username_canonical, role_id, created_by_user_account_id, date_created, last_modified_user_account_id, last_modified ";
+    $sql_values = " VALUES (:username_canonical, :role_id, :created_by_user_account_id, NOW(), :last_modified_user_account_id, NOW() ";
     if(NULL !== $project_id) {
       $sql .= ", project_id";
       $sql_values .= ", :project_id";
@@ -4481,9 +4484,9 @@ class RepoStorageHybrid implements RepoStorage {
       return; //@todo with error
     }
 
-    // Delete any matching records, if exist.
+    // Set inactive any matching records, if exist.
     if(isset($user_role_id)) {
-      $sql = "DELETE FROM user_role WHERE user_role_id=:user_role_id ";
+      $sql = "UPDATE user_role SET active=0 WHERE user_role_id=:user_role_id ";
       $statement = $this->connection->prepare($sql);
       $statement->bindValue(":user_role_id", $user_role_id, PDO::PARAM_INT);
       $statement->execute();
@@ -5130,7 +5133,6 @@ class RepoStorageHybrid implements RepoStorage {
     // var_dump($sql);
     // echo '</pre>';
     // die();
-
     $statement = $this->connection->prepare($sql);
     if(count($search_params) > 0) {
       $statement->execute($search_params);

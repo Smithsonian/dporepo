@@ -113,6 +113,15 @@ class CameraClusterTypesController extends Controller
      */
     function show_camera_cluster_types_form(Connection $conn, Request $request, GumpParseErrors $gump_parse_errors)
     {
+      $username = $this->getUser()->getUsernameCanonical();
+      $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');
+
+      if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
+        $response = new Response();
+        $response->setStatusCode(403);
+        return $response;
+      }
+
         $errors = false;
         $data = array();
         $gump = new GUMP();
@@ -176,6 +185,15 @@ class CameraClusterTypesController extends Controller
      */
     public function delete_multiple(Request $request)
     {
+      $username = $this->getUser()->getUsernameCanonical();
+      $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');
+
+      if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
+        $response = new Response();
+        $response->setStatusCode(403);
+        return $response;
+      }
+
       $ids = $request->query->get('ids');
 
       if(!empty($ids)) {

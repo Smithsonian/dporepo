@@ -80,6 +80,16 @@ class UvMapController extends Controller
    */
   function formView(Connection $conn, Request $request)
   {
+
+    $username = $this->getUser()->getUsernameCanonical();
+    $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');
+
+    if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
+      $response = new Response();
+      $response->setStatusCode(403);
+      return $response;
+    }
+
     $data = new UvMap();
     $post = $request->request->all();
     $parent_id = !empty($request->attributes->get('parent_id')) ? $request->attributes->get('parent_id') : false;
@@ -138,6 +148,16 @@ class UvMapController extends Controller
    */
   public function deleteMultiple(Connection $conn, Request $request)
   {
+
+    $username = $this->getUser()->getUsernameCanonical();
+    $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');
+
+    if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
+      $response = new Response();
+      $response->setStatusCode(403);
+      return $response;
+    }
+
     if(!empty($request->query->get('ids'))) {
 
       // Create the array of ids.
