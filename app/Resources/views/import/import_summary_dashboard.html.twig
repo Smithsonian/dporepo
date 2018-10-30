@@ -21,17 +21,17 @@
     <div class="col-sm-12 col-md-12">
       <!-- nav-tabs -->
       <ul class="nav nav-tabs" id="uploadsTabs" role="tablist">
-        <li role="presentation">
+        <li role="presentation" class="active">
           <a href="#browseUploads" id="browse-tab" role="tab" data-toggle="tab" aria-controls="browse" aria-expanded="true">Browse Ingests</a>
         </li>
-        <li role="presentation" class="active">
+        <li role="presentation">
           <a href="#upload" role="tab" id="upload-tab" data-toggle="tab" aria-controls="upload">New Ingest</a>
         </li>
       </ul>
       <!-- tab-content -->
       <div class="tab-content" id="uploadsTabContent" style="padding-top: 3rem;">
         <!-- tab-pane 1 -->
-        <div class="tab-pane fade" role="tabpanel" id="browseUploads" aria-labelledby="browse-tab">
+        <div class="tab-pane fade in active" role="tabpanel" id="browseUploads" aria-labelledby="browse-tab">
           <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
               <tr>
@@ -49,7 +49,7 @@
         </div>
         <!-- // tab-pane 1 -->
         <!-- tab-pane 2 -->
-        <div class="tab-pane fade in active" role="tabpanel" id="upload" aria-labelledby="upload-tab">
+        <div class="tab-pane fade" role="tabpanel" id="upload" aria-labelledby="upload-tab">
           <!-- row -->
           <div class="row">
             <div class="col-lg-6">

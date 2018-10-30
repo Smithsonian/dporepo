@@ -5,7 +5,6 @@ namespace AppBundle\Service;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Finder\Finder;
 
-use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Utils\AppUtilities;
 
 class RepoProcessingService implements RepoProcessingServiceInterface {
@@ -21,16 +20,6 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   public $kernel;
 
   /**
-   * @var string $project_directory
-   */
-  // private $project_directory;
-
-  /**
-   * @var string $external_file_storage_path
-   */
-  private $external_file_storage_path;
-
-  /**
    * @var string $processing_service_location
    */
   private $processing_service_location;
@@ -41,40 +30,17 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   private $processing_service_client_id;
 
   /**
-   * @var object $conn
-   */
-  private $conn;
-
-  /**
-   * @var object $repo_storage_controller
-   */
-  // private $repo_storage_controller;
-
-  /**
-   * @var object $repo_storage_controller
-   */
-  private $client_id;
-
-  /**
    * Constructor
    * @param object  $kernel  Symfony's kernel object
-   * @param string  $external_file_storage_path  External file storage path
    * @param string  $processing_service_location  Processing service location (e.g. URL)
    * @param string  $processing_service_client_id  Processing service client ID
-   * @param string  $conn  The database connection
    */
-  public function __construct(KernelInterface $kernel, string $external_file_storage_path, string $processing_service_location, string $processing_service_client_id, \Doctrine\DBAL\Connection $conn)
+  public function __construct(KernelInterface $kernel, string $processing_service_location, string $processing_service_client_id)
   {
     $this->u = new AppUtilities();
     // $this->u->dumper('hello');
-    $this->kernel = $kernel;
-    // $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
-    // $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
-    $this->external_file_storage_path = $external_file_storage_path;
     $this->processing_service_location = $processing_service_location;
     $this->processing_service_client_id = $processing_service_client_id;
-    $this->conn = $conn;
-    // $this->repo_storage_controller = new RepoStorageHybridController($conn);
   }
 
   /**
@@ -97,6 +63,48 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   }
 
   /**
+   * Get recipe by name
+   *
+   * @param string $recipe_name
+   * @return array
+   */
+  public function get_recipe_by_name($recipe_name = null) {
+
+    $data = array();
+
+    if (empty($recipe_name)) {
+      $data['error'] = 'Error: Missing parameter(s). Required parameters: recipe_name';
+    }
+
+    // If there are no errors, execute the API call.
+    if (empty($data['error'])) {
+
+      $recipes = $this->get_recipes();
+
+      if ($recipes['httpcode'] === 200) {
+        // Get all recipes.
+        $recipes_array = json_decode($recipes['result'], true);
+        // Loop through recipes to find the target recipe.
+        foreach ($recipes_array as $key => $value) {
+          if ($value['name'] === $recipe_name) {
+            $data = $value;
+          } 
+        }
+        // Set an error if the recipe can't be found.
+        if (empty($data)) $data['error'] = 'Error: Recipe doesn\'t exist';
+      } else {
+        // Set an error if the recipes endpoint returns something other than a 200 HTTP code.
+        $data['error'] = 'Error: Could not retrieve recipes.';
+        $data['error'] .= 'HTTP code: ' . $recipes['httpcode'];
+        $data['error'] .= 'Response header: ' . $recipes['response_header'];
+      }
+
+    }
+
+    return $data;
+  }
+
+  /**
    * Post job
    *
    * @param string $recipe_id
@@ -112,7 +120,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
       $data['error'] = 'Error: Missing parameter(s). Required parameters: recipe_id, job_name, file_name';
     }
 
-    // If there are no errors, executte the API call.
+    // If there are no errors, execute the API call.
     if (empty($data['error'])) {
 
       $params = array(
@@ -151,7 +159,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
     if (empty($job_id)) $data['error'] = 'Error: Missing parameter. Required parameters: job_id';
 
-    // If there are no errors, executte the API call.
+    // If there are no errors, execute the API call.
     if (empty($data['error'])) {
 
       // /clients/{clientId}/jobs/{jobId}/run
@@ -181,7 +189,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
     if (empty($job_id)) $data['error'] = 'Error: Missing parameter. Required parameters: job_id';
 
-    // If there are no errors, executte the API call.
+    // If there are no errors, execute the API call.
     if (empty($data['error'])) {
 
       // /clients/{clientId}/jobs/{jobId}/cancel
@@ -211,7 +219,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
     if (empty($job_id)) $data['error'] = 'Error: Missing parameter. Required parameters: job_id';
 
-    // If there are no errors, executte the API call.
+    // If there are no errors, execute the API call.
     if (empty($data['error'])) {
 
       // /clients/{clientId}/jobs/{jobId}
@@ -241,7 +249,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
     if (empty($job_id)) $data['error'] = 'Error: Missing parameter. Required parameters: job_id';
 
-    // If there are no errors, executte the API call.
+    // If there are no errors, execute the API call.
     if (empty($data['error'])) {
 
       // /clients/{clientId}/jobs/{jobId}
@@ -284,6 +292,48 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   }
 
   /**
+   * Get job by name
+   *
+   * @param string $job_name
+   * @return array
+   */
+  public function get_job_by_name($job_name = null) {
+
+    $data = array();
+
+    if (empty($job_name)) {
+      $data['error'] = 'Error: Missing parameter(s). Required parameters: job_name';
+    }
+
+    // If there are no errors, execute the API call.
+    if (empty($data['error'])) {
+
+      $recipes = $this->get_jobs();
+
+      if ($recipes['httpcode'] === 200) {
+        // Get all recipes.
+        $jobs_array = json_decode($recipes['result'], true);
+        // Loop through recipes to find the target recipe.
+        foreach ($jobs_array as $key => $value) {
+          if ($value['name'] === $job_name) {
+            $data = $value;
+          } 
+        }
+        // Set an error if the recipe can't be found.
+        if (empty($data)) $data['error'] = 'Error: Job doesn\'t exist';
+      } else {
+        // Set an error if the recipes endpoint returns something other than a 200 HTTP code.
+        $data['error'] = 'Error: Could not retrieve jobs.';
+        $data['error'] .= 'HTTP code: ' . $recipes['httpcode'];
+        $data['error'] .= 'Response header: ' . $recipes['response_header'];
+      }
+
+    }
+
+    return $data;
+  }
+
+  /**
    * Retrieve the server machine state
    *
    * @return array
@@ -300,6 +350,126 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
     // API returns 200 and all job data for a successful GET,
     // and a 200 for an unsuccessful GET (for an invalid client ID).
     $data = $this->query_api($params, 'GET');
+
+    return $data;
+  }
+
+  /**
+   * See if a job or set of jobs are running.
+   *
+   * @param array $job_ids An array of job ids
+   * @return bool
+   */
+  public function are_jobs_running($job_ids = array()) {
+
+    $data = false;
+    $client_jobs = array();
+
+    if (!empty($job_ids)) {
+      
+      // Get the machine state.
+      $state = $this->machine_state();
+
+      if (!empty($state['result'])) {
+
+        // Get the repository client's jobs.
+        $json_decoded = json_decode($state['result'], true);
+
+        foreach ($json_decoded['clients'] as $key => $value) {
+
+          if ($value['name'] === 'Goran Halusa') {
+            $client_jobs = $json_decoded['clients'][$key];
+            break;
+          }
+        }
+
+        // Check for job_ids in the repository client's runningJobs.
+        if (!empty($client_jobs) && !empty($client_jobs['runningJobs'])) {
+          foreach ($job_ids as $key => $value) {
+            // If a running job is found, set $data to true and break.
+            if (in_array($value, $client_jobs['runningJobs'])) {
+              $data = true;
+              break;
+            }
+          }
+        }
+
+      }
+    }
+
+    return $data;
+  }
+
+  /**
+   * Get processing assets.
+   *
+   * @param array $job_ids An array of job ids
+   * @param object $filesystem Filesystem object (via Flysystem).
+   * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
+   * @return bool
+   */
+  public function get_processing_asset_logs($job_ids = array(), $filesystem) {
+
+    $data = array();
+    $client_jobs = array();
+
+    if (!empty($job_ids)) {
+      
+      // Loop through jobs, and retrieve outputted assets.
+      foreach ($job_ids as $job_id) {
+
+        // Retrieve a read-stream
+        try {
+
+          $files = $filesystem->listContents($job_id, false);
+
+          if (!empty($files)) {
+
+            foreach ($files as $file_key => $file_value) {
+
+              // Only grab application/json and text/plain mimetypes.
+              // TODO: transfer (pull) files to the repository for all other file types (e.g. .obj, .ply, or whatever).
+              // And then, transfer to the file storage service (or leave them on the repository filesystem).
+              if (isset($file_value['mimetype'])) {
+                if (($file_value['mimetype'] === 'text/plain; charset=utf-8') || ($file_value['mimetype'] === 'application/json; charset=utf-8')) {
+                  // Set the file path minus the protocol and host.
+                  $file_path = str_replace('http://si-3ddigip01.si.edu:8000/', '', $file_value['path']);
+                  // Set the file name
+                  $file_path_array = explode('/', $file_path);
+                  $file_name = array_pop($file_path_array);
+
+                  // Read the file and get the contents.
+                  // !!!WARNING!!!
+                  // Had to hack:
+                  // vendor/league/flysystem-webdav/src/WebDAVAdapter.php (lines 129-131)
+                  // vendor/league/flysystem/src/Filesystem.php (line 273)
+                  $stream = $filesystem->readStream($file_path);
+                  $contents = stream_get_contents($stream);
+                  // Before calling fclose on the resource, check if it’s still valid using is_resource.
+                  if (is_resource($stream)) fclose($stream);
+
+                  $data[] = array(
+                    'job_id' => $job_id,
+                    'file_name' => $file_name,
+                    'file_contents' => $contents,
+                  );
+
+                }
+              }
+
+            }
+
+          }
+
+        }
+        // Catch the error.
+        catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
+          throw $this->createNotFoundException($e->getMessage() . ' - The directory, ' . $job_id . ', does not exist.');
+        }
+
+      }
+
+    }
 
     return $data;
   }

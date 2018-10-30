@@ -88,11 +88,14 @@ class ExtractImageMetadataController extends Controller
       'tiff' => image_type_to_mime_type(IMAGETYPE_TIFF_MM),
       'jpg' => image_type_to_mime_type(IMAGETYPE_JPEG),
       'jpeg' => image_type_to_mime_type(IMAGETYPE_JPEG),
+      'cr2' => 'image/x-canon-cr2',
+      'dng' => image_type_to_mime_type(IMAGETYPE_TIFF_MM),
     );
     // Valid image mime types.
     $this->valid_image_mimetypes = array(
       image_type_to_mime_type(IMAGETYPE_TIFF_MM) => array('image/tif', 'image/tiff'),
       image_type_to_mime_type(IMAGETYPE_JPEG) => array('image/jpg', 'image/jpeg'),
+      'image/x-canon-cr2' => array('image/x-canon-cr2'),
     );
   }
 
@@ -106,7 +109,7 @@ class ExtractImageMetadataController extends Controller
   {
 
     $data = array();
-    $job_status = 'metadata ingest in progress';
+    $job_status = 'model validation in progress';
     $localpath = !empty($params['localpath']) ? $params['localpath'] : false;
 
     // Throw an exception if the job record doesn't exist.
@@ -257,12 +260,12 @@ class ExtractImageMetadataController extends Controller
     // See: https://stackoverflow.com/a/8864064/1298317
     //
     // Error during testing:
-    // console.ERROR: Error thrown while running command "app:validate "3df_5ba94c6e6a13a2.78828007" 2 791 subject".
+    // console.ERROR: Error thrown while running command "app:validate-assets "3df_5ba94c6e6a13a2.78828007" 2 791 subject".
     // Message: "Warning: exif_read_data(nmnh-USNM_PAL_00033475-pg-group_01-cam_1-col_cor-0001.jpg): 
     // Incorrect APP1 Exif Identifier Code" {"exception":"[object] (Symfony\\Component\\Debug\\Exception\\ContextErrorException(code: 0): Warning: 
     // exif_read_data(nmnh-USNM_PAL_00033475-pg-group_01-cam_1-col_cor-0001.jpg):
     // Incorrect APP1 Exif Identifier Code at C:\\xampp\\htdocs\\dporepo_test\\src\\AppBundle\\Controller\\ExtractImageMetadataController.php:254)",
-    // "command":"app:validate \"3df_5ba94c6e6a13a2.78828007\" 2 791 subject",
+    // "command":"app:validate-assets \"3df_5ba94c6e6a13a2.78828007\" 2 791 subject",
     // "message":"Warning: exif_read_data(nmnh-USNM_PAL_00033475-pg-group_01-cam_1-col_cor-0001.jpg): Incorrect APP1 Exif Identifier Code"}
 
     // Read EXIF data.

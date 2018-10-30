@@ -129,7 +129,16 @@ class RepoValidateData implements RepoValidate {
 
       $integer_field_types = $boolean_field_types = array();
 
-      $jsonSchemaObject = json_decode(file_get_contents($this->schema_dir . $schema . '.json'));
+      // If need be, use the alternate JSON schema for uploads.
+      switch ($schema) {
+        case 'model':
+          $upload_json = '_upload';
+          break;
+        default:
+          $upload_json = '';
+      }
+
+      $jsonSchemaObject = json_decode(file_get_contents($this->schema_dir . $schema . $upload_json . '.json'));
 
       // Convert the CSV's integer-based fields to integers... 
       // Convert the CSV's boolean-based fields to booleans... 
@@ -165,7 +174,7 @@ class RepoValidateData implements RepoValidate {
       }
 
       $schemaStorage = new SchemaStorage();
-      $schemaStorage->addSchema('file://' . $this->schema_dir, $jsonSchemaObject);
+      $schemaStorage->addSchema('file://' . $this->schema_dir  . $schema, $jsonSchemaObject);
 
       $jsonValidator = new Validator( new Factory($schemaStorage) );
       $jsonValidator->validate($data, $jsonSchemaObject, Constraint::CHECK_MODE_APPLY_DEFAULTS);

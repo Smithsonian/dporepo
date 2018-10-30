@@ -1,14 +1,11 @@
 <?php
 
-namespace AppBundle\Controller;
+namespace AppBundle\Service;
 
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Doctrine\DBAL\Driver\Connection;
+use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Doctrine\DBAL\Driver\Connection;
 use finfo;
 
 use AppBundle\Controller\RepoStorageHybridController;
@@ -17,7 +14,7 @@ use AppBundle\Service\RepoValidateData;
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
 
-class ValidateImagesController extends Controller
+class RepoValidateAssets implements RepoValidateAssetsInterface
 {
   /**
    * @var object $u
@@ -25,24 +22,14 @@ class ValidateImagesController extends Controller
   public $u;
 
   /**
-   * @var string $uploads_directory
-   */
-  private $uploads_directory;
-
-  /**
    * @var string $valid_image_types
    */
   private $valid_image_types;
 
   /**
-   * @var string $valid_image_types
+   * @var string $valid_image_mimetypes
    */
   private $valid_image_mimetypes;
-
-  /**
-   * @var array $token_storage
-   */
-  private $token_storage;
 
   /**
    * @var object $repo_storage_controller
@@ -50,43 +37,39 @@ class ValidateImagesController extends Controller
   private $repo_storage_controller;
 
   /**
-   * @var object $repoValidate
+   * @var object $repo_validate
    */
-  private $repoValidate;
+  private $repo_validate;
 
   /**
   * Constructor
   * @param object  $u  Utility functions object
   */
-  public function __construct(TokenStorageInterface $token_storage, Connection $conn)
+  public function __construct(Connection $conn)
   {
     // Usage: $this->u->dumper($variable);
     $this->u = new AppUtilities();
-    $this->token_storage = $token_storage;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
-    $this->repoValidate = new RepoValidateData($conn);
-    // TODO: move this to parameters.yml and bind in services.yml.
-    $ds = DIRECTORY_SEPARATOR;
-    // $this->uploads_directory = $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
-    $this->uploads_directory = __DIR__ . '' . $ds . '..' . $ds . '..' . $ds . '..' . $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
+    $this->repo_validate = new RepoValidateData($conn);
     // Valid image types.
     $this->valid_image_types = array(
       'tif' => image_type_to_mime_type(IMAGETYPE_TIFF_MM),
       'tiff' => image_type_to_mime_type(IMAGETYPE_TIFF_MM),
       'jpg' => image_type_to_mime_type(IMAGETYPE_JPEG),
       'jpeg' => image_type_to_mime_type(IMAGETYPE_JPEG),
-      'cr2' => image_type_to_mime_type(IMAGETYPE_TIFF_MM),
+      'cr2' => 'image/x-canon-cr2',
       'dng' => image_type_to_mime_type(IMAGETYPE_TIFF_MM),
     );
     // Valid image mime types.
     $this->valid_image_mimetypes = array(
       image_type_to_mime_type(IMAGETYPE_TIFF_MM) => array('image/tif', 'image/tiff'),
       image_type_to_mime_type(IMAGETYPE_JPEG) => array('image/jpg', 'image/jpeg'),
+      'image/x-canon-cr2' => array('image/x-canon-cr2'),
     );
   }
 
   /**
-   * Validate Images
+   * Validate Assets
    *
    * Leveraging PHP's SplFileInfo class
    * See: http://php.net/manual/en/class.splfileinfo.php
@@ -94,11 +77,11 @@ class ValidateImagesController extends Controller
    * @param array  $params  Parameters. For now, only 'localpath' is being sent.
    * @return array 
    */
-  public function validate($params = array())
+  public function validate_assets($params = array())
   {
 
     $data = array();
-    $job_status = 'metadata ingest in progress';
+    $job_status = 'model validation in progress';
     $localpath = !empty($params['localpath']) ? $params['localpath'] : false;
 
     // Set an error if the job directory path parameter doesn't exist.
@@ -119,10 +102,78 @@ class ValidateImagesController extends Controller
         return $data;
       }
 
+      // Validate images.
+      $result = $this->validate_images($localpath);
+
+      if (!empty($result)) {
+        foreach ($result as $rkey => $rvalue) {
+          // Log the errors to the database.
+          if (!empty($result[$rkey]['errors'])) {
+            // Set the job_status to 'failed'.
+            $job_status = 'failed';
+            $this->repo_validate->logErrors(
+              array(
+                'job_id' => $job_data['job_id'],
+                'user_id' => 0,
+                'job_log_label' => 'Asset Validation',
+                'errors' => $result[$rkey]['errors'],
+              )
+            );
+          }
+        }
+      }
+
+      // Validate image pairs (if the job hasn't failed).
+      if ($job_status !== 'failed') {
+        // Run the image pairs validation.
+        $result_pairs = $this->validate_image_pairs($result, $job_status);
+        // Log the errors to the database.
+        if (!empty($result_pairs)) {
+          // Set the job_status to failed.
+          if ($job_status !== 'failed') $job_status = 'failed';
+          foreach ($result_pairs as $rkey => $rvalue) {
+            $this->repo_validate->logErrors(
+              array(
+                'job_id' => $job_data['job_id'],
+                'user_id' => 0,
+                'job_log_label' => 'Asset Validation',
+                'errors' => $rvalue,
+              )
+            );
+          }
+        }
+      }
+
+      // Update the 'job_status' in the 'job' table accordingly.
+      $res = $this->repo_storage_controller->execute('setJobStatus', 
+        array(
+          'job_id' => $job_data['uuid'], 
+          'status' => $job_status, 
+          'date_completed' => date('Y-m-d h:i:s')
+        )
+      );
+
+    }
+
+    return $data;
+  }
+
+  /**
+   * Validate Images
+   * @param array $localpath The local path to uploaded assets..
+   * @return array containing success/fail value, and any messages.
+   */
+  public function validate_images($localpath)
+  {
+
+    $data = array();
+
+    if (!empty($localpath)) {
       // Search for the data directory.
       $finder = new Finder();
       $finder->path('data/');
-      // $finder->path('data')->name('/\.jpg|\.tif|\.cr2|\.dng$/');
+      // For some reason, regex is not reliable. Commented-out for now.
+      # $finder->path('data')->name('/\.jpg|\.tif|\.cr2|\.dng$/');
       $finder->in($localpath);
 
       $i = 0;
@@ -132,7 +183,8 @@ class ValidateImagesController extends Controller
 
           if (!$file->isFile()) $data[$i]['errors'][] = 'File is not a valid image.';
 
-          if ($file->isFile()) {
+          // If this is 1) a file, and 2) the file extension exists in the $this->valid_image_types array, process.
+          if ($file->isFile() && array_key_exists(strtolower($file->getExtension()), $this->valid_image_types)) {
 
             $data[$i]['errors'] = array();
 
@@ -157,7 +209,7 @@ class ValidateImagesController extends Controller
                 $data[$i]['errors'][] = 'File extension does not match the image type - ' . $file->getFilename();
               }
             } else {
-              $data[$i]['errors'][] = 'File is not a valid image - ' . $file->getFilename();
+              $data[$i]['errors'][] = 'File is not a valid image 2 - ' . $file->getFilename();
             }
 
           }
@@ -167,53 +219,9 @@ class ValidateImagesController extends Controller
           $data[$i]['file_extension'] = strtolower($file->getExtension());
           $data[$i]['file_mime_type'] = $this->get_mime_type($file->getPathname());
 
-          if (!empty($data[$i]['errors'])) {
-            // Set the job_status to 'failed', if not already set.
-            if ($job_status !== 'failed') $job_status = 'failed';
-            // Log the errors to the database.
-            $this->repoValidate->logErrors(
-              array(
-                'job_id' => $job_data['job_id'],
-                'user_id' => 0,
-                'job_log_label' => 'Image Validation',
-                'errors' => $data[$i]['errors'],
-              )
-            );
-          }
-
           $i++;
         }
       }
-
-      // If the job hasn't failed, validate image pairs.
-      if ($job_status !== 'failed') {
-        // Run the image pairs validation.
-        $result = $this->validateImagePairs($data, $job_status);
-        // Log the errors to the database.
-        if (!empty($result)) {
-          // Set the job_status to failed.
-          $job_status = 'failed';
-          foreach ($result as $rkey => $rvalue) {
-            $this->repoValidate->logErrors(
-              array(
-                'job_id' => $job_data['job_id'],
-                'user_id' => 0,
-                'job_log_label' => 'Image Validation',
-                'errors' => $rvalue,
-              )
-            );
-          }
-        }
-      }
-
-      // Update the 'job_status' in the 'job' table accordingly.
-      $res = $this->repo_storage_controller->execute('setJobStatus', 
-        array(
-          'job_id' => $job_data['uuid'], 
-          'status' => $job_status, 
-          'date_completed' => date('Y-m-d h:i:s')
-        )
-      );
 
     }
 
@@ -225,7 +233,7 @@ class ValidateImagesController extends Controller
    * @param array $data The data to validate.
    * @return array containing success/fail value, and any messages.
    */
-  public function validateImagePairs($data = array(), $job_status = '') {
+  public function validate_image_pairs($data = array(), $job_status = '') {
 
     $return = array();
 
@@ -309,7 +317,7 @@ class ValidateImagesController extends Controller
    * @param string  $filename  The file name
    * @return string
    */
-  private function get_mime_type($filename = null) {
+  public function get_mime_type($filename = null) {
 
     if (!empty($filename)) {
       $buffer = file_get_contents($filename);

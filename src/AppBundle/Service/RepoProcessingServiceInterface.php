@@ -16,6 +16,14 @@ interface RepoProcessingServiceInterface {
   public function get_recipes();
 
   /**
+   * Get recipe by name
+   *
+   * @param string $recipe_name
+   * @return array
+   */
+  public function get_recipe_by_name(string $recipe_name);
+
+  /**
    * Post job
    *
    * @param string $recipe_id
@@ -63,6 +71,39 @@ interface RepoProcessingServiceInterface {
    * @return array
    */
   public function get_jobs();
+
+  /**
+   * Get job by name
+   *
+   * @param string $job_name
+   * @return array
+   */
+  public function get_job_by_name(string $job_name);
+
+  /**
+   * Retrieve the server machine state
+   *
+   * @return array
+   */
+  public function machine_state();
+
+  /**
+   * See if a job or set of jobs are running.
+   *
+   * @param array $job_ids An array of job ids
+   * @return bool
+   */
+  public function are_jobs_running(array $job_ids);
+
+  /**
+   * Get processing asset logs.
+   *
+   * @param array $job_ids An array of job ids
+   * @param object $filesystem Filesystem object (via Flysystem).
+   * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
+   * @return bool
+   */
+  public function get_processing_asset_logs(array $job_ids, obj $filesystem);
 
   /**
    * Query API

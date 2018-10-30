@@ -35,7 +35,7 @@ class ValidateCommand extends Command
   {
     $this
       // The name of the command (the part after "bin/console").
-      ->setName('app:validate')
+      ->setName('app:validate-assets')
       // The short description shown while running "php bin/console list".
       ->setDescription('Validate uploaded assets.')
       // The full command description shown when running the command with
@@ -51,7 +51,7 @@ class ValidateCommand extends Command
 
   /**
    * Example:
-   * php bin/console app:bagit-validate /var/www/html/dporepo/web/uploads/repository/4
+   * php bin/console app:validate-assets 3df_5b91d293515604.56745643 2 2 project
    */
   protected function execute(InputInterface $input, OutputInterface $output)
   {
@@ -64,7 +64,7 @@ class ValidateCommand extends Command
       '<bg=green;options=bold>  == Validate Assets ==  </>',
       '<bg=green;options=bold>  =====================  </>',
       '',
-      'Command: ' . 'php bin/console app:bagit-validate ' . $input->getArgument('uuid') . ' ' . $input->getArgument('parent_project_id') . ' ' . $input->getArgument('parent_record_id') . ' ' . $input->getArgument('parent_record_type') . "\n",
+      'Command: ' . 'php bin/console app:validate-assets ' . $input->getArgument('uuid') . ' ' . $input->getArgument('parent_project_id') . ' ' . $input->getArgument('parent_record_id') . ' ' . $input->getArgument('parent_record_type') . "\n",
     ]);
 
     // First, check to see if the external storage is accessible (Drastic).
@@ -114,6 +114,17 @@ class ValidateCommand extends Command
       );
       $input_files = new ArrayInput($arguments_files);
       $return_files = $command_files->run($input_files, $output);
+
+      sleep(5);
+
+      // Run the models validation.
+      $command_models = $this->getApplication()->find('app:model-validate');
+      $arguments_models = array(
+          'command' => 'app:model-validate',
+          'uuid' => $input->getArgument('uuid')
+      );
+      $input_models = new ArrayInput($arguments_models);
+      $return_models = $command_models->run($input_models, $output);
 
       sleep(5);
 
