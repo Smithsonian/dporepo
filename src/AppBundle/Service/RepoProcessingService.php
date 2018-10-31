@@ -522,14 +522,14 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
             array(
               'job_id' => $repo_processing_job_id,
               'user_id' => $job_data[0]['created_by_user_account_id'],
-              'job_log_label' => 'Asset Validation',
+              'job_log_label' => 'Processing Job',
               'errors' => array($processing_job['error'] . ' (Processing job ID: ' . $processing_job['id'] . ')'),
             )
           );
         }
 
-        // If the state of the job is 'done', proceed with pulling assets from the processing service.
-        if ($processing_job_array['state'] === 'done') {
+        // If the state of the job is 'error' or 'done', proceed with pulling assets from the processing service.
+        if (in_array($processing_job_array['state'], array('error', 'done'))) {
 
           $job_id = $job_data[0]['processing_service_job_id'];
           $local_assets_path = $job_data[0]['asset_path'];
@@ -624,21 +624,22 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
             }
           }
 
-          // Update the processing job record.
-          $repo_processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => 'processing_job',
-            'record_id' => $job_data[0]['processing_job_id'],
-            'user_id' => $job_data[0]['created_by_user_account_id'],
-            'values' => array(
-              'job_json' => json_encode($processing_job_array), 
-              'state' => $processing_job_array['state']
-            )
-          ));
-
-          $data['state'] = $processing_job_array['state'];
         }
       }
     }
+
+    // Update the processing job record.
+    $repo_processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
+      'base_table' => 'processing_job',
+      'record_id' => $job_data[0]['processing_job_id'],
+      'user_id' => $job_data[0]['created_by_user_account_id'],
+      'values' => array(
+        'job_json' => json_encode($processing_job_array), 
+        'state' => $processing_job_array['state']
+      )
+    ));
+
+    $data['state'] = $processing_job_array['state'];
 
     return $data;
   }
@@ -802,7 +803,8 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
       // If this is one file, no need to traverse. Just transfer the file.
       if (is_file($path)) {
         // The external path.
-        $path_external = $job_id . DIRECTORY_SEPARATOR . basename($path);
+        $path_external = $job_id . '/' . basename($path);
+
         // Transfer the file to the processing service via WebDAV.
         try {
           $stream = fopen($path, 'r+');
@@ -831,7 +833,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
           // Make sure the asset is a file and not a directory (directories are automatically detected by WebDAV).
           if ($file->isFile()) {
             // The external path.
-            $path_external = $job_id . DIRECTORY_SEPARATOR . $file->getFilename();
+            $path_external = $job_id . '/' . $file->getFilename();
             // Transfer the file to the processing service via WebDAV.
             try {
               $stream = fopen($file->getPathname(), 'r+');
