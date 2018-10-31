@@ -1,12 +1,5 @@
 <?php
 
-// NOTE!
-// This is a modified copy of the WebDAVAdapter, which resides in:
-// vendor/league/flysystem-webdav/src/WebDAVAdapter.php
-// In case that one gets overwritten during an update, 
-// this one is here to serve as a backup.
-// ghalusa - 2018-08-15
-
 namespace League\Flysystem\WebDAV;
 
 use League\Flysystem\Adapter\AbstractAdapter;
@@ -133,9 +126,9 @@ class WebDAVAdapter extends AbstractAdapter
 
             return array_merge([
                 'contents' => $response['body'],
-                'timestamp' => strtotime(is_array($response['headers']['last-modified'])
-                    ? current($response['headers']['last-modified'])
-                    : $response['headers']['last-modified']),
+                    // 'timestamp' => strtotime(is_array($response['headers']['last-modified'])
+                    // ? current($response['headers']['last-modified'])
+                    // : $response['headers']['last-modified']),
                 'path' => $path,
             ], Util::map($response['headers'], static::$resultMap));
         } catch (Exception $e) {
@@ -173,6 +166,21 @@ class WebDAVAdapter extends AbstractAdapter
      */
     public function writeStream($path, $resource, Config $config)
     {
+        // die('HERE yo!!!!!!!');
+        // echo '<pre>';
+        // var_dump($path);
+        // echo '</pre>';
+        // echo '<pre>';
+        // var_dump($resource);
+        // echo '</pre>';
+        // echo '<pre>';
+        // var_dump($config);
+        // echo '</pre>';
+        // die();
+        // echo '<pre>';
+        // var_dump($this->write($path, $resource, $config));
+        // echo '</pre>';
+        // die();
         return $this->write($path, $resource, $config);
     }
 
@@ -452,6 +460,6 @@ class WebDAVAdapter extends AbstractAdapter
         // return isset($object['{DAV:}iscollection']) && $object['{DAV:}iscollection'] === '1';
 
         // Hack:
-        return isset($object['{DAV:}getcontentlength']) && $object['{DAV:}getcontentlength'] == '0';
+        return isset($object['{DAV:}getcontentlength']) && $object['{DAV:}getcontentlength'] === '0';
     }
 }

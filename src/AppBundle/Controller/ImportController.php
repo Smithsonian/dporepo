@@ -103,7 +103,9 @@ class ImportController extends Controller
      */
     public function import_summary_dashboard(Connection $conn, Request $request)
     {
-      
+        // Patch vendor overrides.
+        $this->u->patchVendorOverrides();
+        
         $service_error = false;
         $obj = new UploadsParentPicker();
 
