@@ -482,29 +482,50 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    *
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
+   * @param string $job_id The processing service job ID.
    * @return bool
    */
-  public function get_processing_assets($filesystem) {
+  public function get_processing_assets($filesystem, $job_id = null) {
 
     $data = array();
     $client_jobs = array();
     $processing_assets = array();
+    $search_param = '';
     $contents = null;
 
     $data = array();
 
-    // Query the database for the next job which has the state of 'created'.
-    $job_data = $this->repo_storage_controller->execute('getRecords', array(
-      'base_table' => 'processing_job',
-      'fields' => array(),
-      'limit' => 1,
-      'search_params' => array(
-        0 => array('field_names' => array('processing_job.state'), 'search_values' => array('created'), 'comparison' => '='),
-      ),
-      'search_type' => 'AND',
-      'omit_active_field' => true,
-      )
-    );
+    // If a job ID is passed, add to the query.
+    if (!empty($job_id)) {
+      // Query the database for the next job which has the state of 'created'.
+      $job_data = $this->repo_storage_controller->execute('getRecords', array(
+        'base_table' => 'processing_job',
+        'fields' => array(),
+        'limit' => 1,
+        'search_params' => array(
+          0 => array('field_names' => array('processing_job.state'), 'search_values' => array('created'), 'comparison' => '='),
+          1 => array('field_names' => array('processing_job.processing_service_job_id'), 'search_values' => array($job_id), 'comparison' => '='),
+        ),
+        'search_type' => 'AND',
+        'omit_active_field' => true,
+        )
+      );
+    }
+
+    if (empty($job_id)) {
+      // Query the database for the next job which has the state of 'created'.
+      $job_data = $this->repo_storage_controller->execute('getRecords', array(
+        'base_table' => 'processing_job',
+        'fields' => array(),
+        'limit' => 1,
+        'search_params' => array(
+          0 => array('field_names' => array('processing_job.state'), 'search_values' => array('created'), 'comparison' => '=')
+        ),
+        'search_type' => 'AND',
+        'omit_active_field' => true,
+        )
+      );
+    }
 
     if (!empty($job_data)) {
       // Get the processing job from the processing service.
@@ -576,7 +597,6 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
                         array_pop($local_assets_path_array);
                         $local_assets_path = implode(DIRECTORY_SEPARATOR, $local_assets_path_array);
                       }
-                      // $this->u->dumper($local_assets_path);
                       // Create the 'processed' directory.
                       chdir($local_assets_path);
                       if (!is_dir($local_assets_path . DIRECTORY_SEPARATOR . 'processed')) {

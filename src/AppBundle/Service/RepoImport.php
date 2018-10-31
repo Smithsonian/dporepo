@@ -876,7 +876,7 @@ class RepoImport implements RepoImportInterface {
         ),
         'limit' => 1,
         'search_params' => array(
-          0 => array('field_names' => array('processing_job.job_id'), 'search_values' => array($data->job_id), 'comparison' => '='),
+          0 => array('field_names' => array('processing_job.processing_service_job_id'), 'search_values' => array($data->job_id), 'comparison' => '='),
           1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('inspect-mesh'), 'comparison' => '='),
           2 => array('field_names' => array('processing_job.state'), 'search_values' => array('done'), 'comparison' => '='),
           3 => array('field_names' => array('processing_job_file.file_name'), 'search_values' => array('-report.json'), 'comparison' => 'LIKE'),

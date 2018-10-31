@@ -112,9 +112,10 @@ interface RepoProcessingServiceInterface {
    *
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
+   * @param string $job_id The processing service job ID.
    * @return bool
    */
-  public function get_processing_assets(obj $filesystem);
+  public function get_processing_assets(obj $filesystem, string $job_id);
 
   /**
    * @param string $recipe The processing service recipe.
