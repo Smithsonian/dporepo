@@ -646,20 +646,20 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
         }
       }
+
+      // Update the processing job record.
+      $repo_processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
+        'base_table' => 'processing_job',
+        'record_id' => $job_data[0]['processing_job_id'],
+        'user_id' => $job_data[0]['created_by_user_account_id'],
+        'values' => array(
+          'job_json' => json_encode($processing_job_array), 
+          'state' => $processing_job_array['state']
+        )
+      ));
+
+      $data['state'] = $processing_job_array['state'];
     }
-
-    // Update the processing job record.
-    $repo_processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
-      'base_table' => 'processing_job',
-      'record_id' => $job_data[0]['processing_job_id'],
-      'user_id' => $job_data[0]['created_by_user_account_id'],
-      'values' => array(
-        'job_json' => json_encode($processing_job_array), 
-        'state' => $processing_job_array['state']
-      )
-    ));
-
-    $data['state'] = $processing_job_array['state'];
 
     return $data;
   }
