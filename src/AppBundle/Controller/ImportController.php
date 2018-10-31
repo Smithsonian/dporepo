@@ -105,7 +105,43 @@ class ImportController extends Controller
     {
         // Patch vendor overrides.
         $this->u->patchVendorOverrides();
-        
+
+        // $filesystem = $this->container->get('oneup_flysystem.processing_filesystem');
+        // // Path to the directory or file.
+        // $local_path = $this->uploads_directory . '3df_5bd4c0846fd3f0.72669883/testupload04-1model/data/1/nmnh-usnm_v_512384522-skull-master_model-2018_10_22.ply';
+        // // $local_path = str_replace('/', DIRECTORY_SEPARATOR, $this->uploads_directory) . '3df_5bd12be7cf7323.94477555\testupload04-2models\data\1\model.ply';
+
+        // // Need to pass the parent record type and ID so we can associate a processing job with something.
+        // $parent_record_data = array(
+        //   'parent_record_id' => 7,
+        //   'parent_record_type' => 'model',
+        // );
+        // // Send a job to the processing service
+        // // Parameters to send to the processing service API.
+        // $params = array('meshFile' => 'nmnh-usnm_v_512384522-skull-master_model-2018_10_22.ply');
+        // // Initialize job.
+        // $processing_job = $this->processing->initialize_job('inspect-mesh', $params, $local_path, $this->getUser()->getId(), $parent_record_data, $filesystem);
+        // $this->u->dumper('== processing_job ==',0);
+        // $this->u->dumper($processing_job);
+        // // $this->addFlash('message', 'Initialized processing job');
+
+        // // Get processing job status
+        // $result = $this->processing->get_job('354AE906-748A-151D-28A2-D8E97B3DCF49');
+        // $job_status = json_decode($result['result'], true);
+        // $this->u->dumper('$job_status',0);
+        // $this->u->dumper($job_status,0);
+        // // Get processing results
+        // if (in_array($job_status['state'], array('error', 'done'))) {
+
+        //   $processing_results = $this->processing->get_processing_results($job_status['id'], $this->getUser()->getId(), $local_path, $filesystem);
+        //   $this->u->dumper('== processing_results ==',0);
+        //   $this->u->dumper($processing_results);
+        // }
+
+        // die();
+
+
+
         $service_error = false;
         $obj = new UploadsParentPicker();
 
