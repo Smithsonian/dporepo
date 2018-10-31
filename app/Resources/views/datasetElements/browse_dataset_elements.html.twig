@@ -330,7 +330,7 @@
                 });
             }
           });
-        $(".datatables_bulk_actions").append(request_download_button);
+        $('#browse').find('.datatables_bulk_actions').append(request_download_button);
 
         $('#browse_capture_dataset_rights').dataTable( {
           "columns": [
@@ -466,13 +466,6 @@
             });
           }
         });
-        /*var models_add_button = $('<a />')
-          .addClass('btn btn-default add-record-button')
-          .attr('href', '/admin/[ROUTE HERE TO ADD MODEL]/' + capture_dataset_repository_id)
-          .html('<span class="glyphicon glyphicon-plus"></span> Add a Model');
-        $('#browse_models').find('.datatables_bulk_actions').append(models_add_button);
-        */
-        //@todo
         var request_model_download_button = $("<button></button>")
           .addClass('btn btn-default glyphicon glyphicon-download-alt')
           .attr('style', 'width: 13.8rem;')
@@ -501,10 +494,10 @@
                 });
             }
           });
-        $(".datatables_bulk_actions").append(request_model_download_button);
+        $('#browse_models').find('.datatables_bulk_actions').append(request_model_download_button);
 
         // Hide the Export Metadata dropdown menu on menu item click.
-        $('.datatables_bulk_actions').on('click', '.buttons-html5', function(){
+        $('#browse_models').find('.datatables_bulk_actions').on('click', '.buttons-html5', function(){
             $(this).parent().hide();
         });
 
