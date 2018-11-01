@@ -53,7 +53,7 @@ class ModelController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
         $parent_id = !empty($req['parent_id']) ? $req['parent_id'] : 0;
-        $parent_id_field = isset($req['parent_type']) ? 'parent_item_repository_id' : 'parent_capture_dataset_repository_id';
+        $parent_id_field = isset($req['parent_type']) ? $req['parent_type'] : 'parent_capture_dataset_repository_id';
 
         $query_params = array(
           'record_type' => 'model',
