@@ -1583,6 +1583,7 @@ class RepoStorageHybrid implements RepoStorage {
 
       case 'model':
 
+        /*
         $query_params['related_tables'][] = array(
           'table_name' => 'model_file',
           'table_join_field' => 'model_repository_id',
@@ -1597,6 +1598,7 @@ class RepoStorageHybrid implements RepoStorage {
           'base_join_table' => 'model_file',
           'base_join_field' => 'file_upload_id',
         );
+        */
         $query_params['fields'][] = array(
           'table_name' => $record_type,
           'field_name' => $record_type . '_repository_id',
@@ -1683,6 +1685,7 @@ class RepoStorageHybrid implements RepoStorage {
           'table_name' => $record_type,
           'field_name' => 'model_maps',
         );
+        /*
         $query_params['fields'][] = array(
           'table_name' => 'file_upload',
           'field_name' => 'file_path',
@@ -1691,6 +1694,7 @@ class RepoStorageHybrid implements RepoStorage {
           'table_name' => 'file_upload',
           'field_name' => 'file_hash',
         );
+        */
       $query_params['fields'][] = array(
         'table_name' => $record_type,
         'field_name' => 'active',
@@ -1742,7 +1746,7 @@ class RepoStorageHybrid implements RepoStorage {
             $record_type . '.has_vertex_color',
             $record_type . '.has_uv_space',
             $record_type . '.model_maps',
-            $record_type . '.file_path',
+            //$record_type . '.file_path',
           ),
           'search_values' => array($search_value),
           'comparison' => 'LIKE',
@@ -2242,7 +2246,6 @@ class RepoStorageHybrid implements RepoStorage {
         }
 
         break;
-
 
     }
 
