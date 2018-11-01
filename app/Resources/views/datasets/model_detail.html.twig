@@ -35,65 +35,66 @@
 
     <div class="row">
         <div class="col-sm-12 col-md-12">
-        <div class="col-md-6">
-          <input type="hidden" id="model_repository_id" value="{{modeldetail.model_repository_id}}">
-            {% if modeldetail.parent_model_id %}
-                <div><label><a href="/admin/projects/model/{{modeldetail.parent_model_id}}/detail">Parent Model</a></label></div>
-            {% endif %}
-          {% if modeldetail.capture_dataset|length %}
-            <div><label>Capture Dataset:</label> <a href="/admin/projects/dataset_elements/{{modeldetail.project_repository_id}}/{{modeldetail.subject_repository_id}}/{{modeldetail.capture_dataset.parent_item_repository_id}}/{{modeldetail.capture_dataset.capture_dataset_repository_id}}">{{modeldetail.capture_dataset.capture_dataset_name}}</a></div>
-          {% endif %}
-          <div><label>Model GUID: </label> {{modeldetail.model_guid}}</div>
-          {% if modeldetail.date_of_creation %}
-           <div><label>Date Of Creation: </label> {{modeldetail.date_of_creation|date("m/d/Y")}}</div>
-          {% endif %}
-          {% if modeldetail.model_file_type != null %}
-            <div><label>Model File Type:</label> {{modeldetail.model_file_type}}</div>
-          {% endif %}
-          {% if modeldetail.derived_from != null %}
-            <div><label>Derived From: </label> {{modeldetail.derived_from}}</div>
-          {% endif %}
-          <div><label>Creation Method: </label> {{modeldetail.creation_method}}</div>
-          <div><label>Model Modality: </label> {{modeldetail.model_modality}}</div>
-          <div><label>Units: </label> {{modeldetail.units}}</div>
-          {% if modeldetail.is_watertight == 1 %}
-            <div><label>Is Watertight</label></div>
-          {% endif %}
+            <div class="col-md-6">
+              <input type="hidden" id="model_repository_id" value="{{modeldetail.model_repository_id}}">
+                {% if modeldetail.parent_model_id %}
+                    <div><label><a href="/admin/projects/model/{{modeldetail.parent_model_id}}/detail">Parent Model</a></label></div>
+                {% endif %}
+              {% if modeldetail.capture_dataset|length %}
+                <div><label>Capture Dataset:</label> <a href="/admin/projects/dataset_elements/{{modeldetail.project_repository_id}}/{{modeldetail.subject_repository_id}}/{{modeldetail.capture_dataset.parent_item_repository_id}}/{{modeldetail.capture_dataset.capture_dataset_repository_id}}">{{modeldetail.capture_dataset.capture_dataset_name}}</a></div>
+              {% endif %}
+              <div><label>Model GUID: </label> {{modeldetail.model_guid}}</div>
+              {% if modeldetail.date_of_creation %}
+               <div><label>Date Of Creation: </label> {{modeldetail.date_of_creation|date("m/d/Y")}}</div>
+              {% endif %}
+              {% if modeldetail.model_file_type != null %}
+                <div><label>Model File Type:</label> {{modeldetail.model_file_type}}</div>
+              {% endif %}
+              {% if modeldetail.derived_from != null %}
+                <div><label>Derived From: </label> {{modeldetail.derived_from}}</div>
+              {% endif %}
+              <div><label>Creation Method: </label> {{modeldetail.creation_method}}</div>
+              <div><label>Model Modality: </label> {{modeldetail.model_modality}}</div>
+              <div><label>Units: </label> {{modeldetail.units}}</div>
+              {% if modeldetail.is_watertight == 1 %}
+                <div><label>Is Watertight</label></div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <div><label>Model Purpose:  </label> {{modeldetail.model_purpose}}</div>
+              {% if modeldetail.point_count != null %}
+                <div><label>Point Count: </label> {{modeldetail.point_count}}</div>
+              {% endif %}
+              {% if modeldetail.has_normals == 1 %}
+                <div><label>Has Normals</label></div>
+              {% endif %}
+              {% if modeldetail.face_count != null %}
+                <div><label>Face Count: </label> {{modeldetail.face_count}}</div>
+              {% endif %}
+              {% if modeldetail.vertices_count != null %}
+                <div><label>Vertices Count: </label> {{modeldetail.vertices_count}}</div>
+              {% endif %}
+              {% if modeldetail.has_vertex_color != null %}
+                <div><label>Has Vertex Color</label></div>
+              {% endif %}
+              {% if modeldetail.has_uv_space != null %}
+                <div><label>Has UV Space</label></div>
+              {% endif %}
+              {% if modeldetail.model_maps != null %}
+                <div><label>Model Maps:</label> {{modeldetail.model_maps}}</div>
+              {% endif %}
+            </div>
         </div>
-        <div class="col-md-6">
-          <div><label>Model Purpose:  </label> {{modeldetail.model_purpose}}</div>
-          {% if modeldetail.point_count != null %}
-            <div><label>Point Count: </label> {{modeldetail.point_count}}</div>
-          {% endif %}
-          {% if modeldetail.has_normals == 1 %}
-            <div><label>Has Normals</label></div>
-          {% endif %}
-          {% if modeldetail.face_count != null %}
-            <div><label>Face Count: </label> {{modeldetail.face_count}}</div>
-          {% endif %}
-          {% if modeldetail.vertices_count != null %}
-            <div><label>Vertices Count: </label> {{modeldetail.vertices_count}}</div>
-          {% endif %}
-          {% if modeldetail.has_vertex_color != null %}
-            <div><label>Has Vertex Color</label></div>
-          {% endif %}
-          {% if modeldetail.has_uv_space != null %}
-            <div><label>Has UV Space</label></div>
-          {% endif %}
-          {% if modeldetail.model_maps != null %}
-            <div><label>Model Maps:</label> {{modeldetail.model_maps}}</div>
-          {% endif %}
-        </div>
-      </div>
-</div>
+    </div>
+
 <div class="col-sm-12 col-md-12 child-data">
-        <div class="panel panel-default">
-            <div class="panel-body">
-                <h2>Derivative models</h2>
-                <input type="hidden" id="delete-path" value="admin/projects/model/delete" />
-                <table id="browse_models" class="table table-striped table-bordered" cellspacing="0" width="100%">
-                    <thead>
-                    <tr>
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <h2>Derivative models</h2>
+            <input type="hidden" id="delete-path" value="admin/projects/model/delete" />
+            <table id="browse_models" class="table table-striped table-bordered" cellspacing="0" width="100%">
+                <thead>
+                <tr>
                     <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
                     <th class="text-center">Model Repository ID</th>
                     <th class="text-center">Parent Capture Dataset Repository ID</th>
@@ -118,29 +119,29 @@
                     <th class="text-center">Created by User Account ID</th>
                     <th class="text-center">Last Modified</th>
                     <th class="text-center">Last Modified User Account ID</th>
-                    </tr>
-                    </thead>
-                </table>
-            </div>
+                </tr>
+                </thead>
+            </table>
         </div>
+      </div>
       <div class="panel panel-default">
-      <div class="panel-body">
-          <h2>Model Files</h2>
-          <input type="hidden" id="delete-model-file" value="admin/projects/model_file/delete" />
-          <table id="browse_model_files" class="table table-striped table-bordered" cellspacing="0" width="100%">
-              <thead>
-              <tr>
-                  <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
-                  <th class="text-center">File Name</th>
+          <div class="panel-body">
+              <h2>Model Files</h2>
+              <input type="hidden" id="delete-model-file" value="admin/projects/model_file/delete" />
+              <table id="browse_model_files" class="table table-striped table-bordered" cellspacing="0" width="100%">
+                  <thead>
+                  <tr>
+                      <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                      <th class="text-center">File Name</th>
                       <th class="text-center">Path</th>
-                  <th class="text-center">Last Modified</th>
-              </tr>
-              </thead>
-          </table>
+                      <th class="text-center">Last Modified</th>
+                  </tr>
+                  </thead>
+              </table>
+          </div>
       </div>
-      </div>
-        </div>
     </div>
+
 {% endblock %}
 
 {% block javascripts %}
@@ -165,7 +166,7 @@
         $(document).ready(function(){
           var capture_dataset_repository_id = $("#capture_dataset_id").val();
           var  model_repository_id = $("#model_repository_id").val();
-        
+
         $('#browse_model_files').dataTable( {
           "columns": [
             { "data": "manage" },
@@ -196,7 +197,7 @@
             {"sWidth":"106px","aTargets":[0]},
             {"bSortable":false,"aTargets":[0]},
           ],
-          
+
         });
 
         $('#browse_models').dataTable( {
