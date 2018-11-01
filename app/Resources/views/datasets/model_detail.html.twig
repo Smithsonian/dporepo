@@ -3,10 +3,8 @@
 {% block stylesheets %}
     {{ parent() }}
     <link href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/css/bootstrap-datepicker3.css" rel="stylesheet" type="text/css">
-    {% if data.model_repository_id is defined %}
-        <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
-        <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
-    {% endif %}
+    <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -235,7 +233,7 @@
                 buttons: [
                     {
                         extend: 'csvHtml5',
-                        filename: '{% if modeldetail.capture_dataset|length  %}{{modeldetail.subject_name|e}}-{{modeldetail.capture_dataset.capture_dataset_name|e}}-models_' + getFormattedDate()+'{% endif %}',
+                        filename: '{% if modeldetail.capture_dataset|length  %}{{modeldetail.subject_name|e}}-{{modeldetail.capture_dataset.capture_dataset_name|e}}-models_' +'{% endif %}',
                         exportOptions: {
                             columns: ':not(:first-child)',
                             modifier: {
@@ -245,7 +243,7 @@
                     },
                     {
                         extend: 'excelHtml5',
-                        filename: '{% if modeldetail.capture_dataset|length  %}{{modeldetail.subject_name|e}}-{{modeldetail.capture_dataset.capture_dataset_name|e}}-models_' + getFormattedDate()+'{% endif %}',
+                        filename: '{% if modeldetail.capture_dataset|length  %}{{modeldetail.subject_name|e}}-{{modeldetail.capture_dataset.capture_dataset_name|e}}-models_' +'{% endif %}',
                         title: '',
                         exportOptions: {
                             columns: ':not(:first-child)',
@@ -264,16 +262,6 @@
                             }
                         }
                     },
-                    // {
-                    //     extend: 'print'
-                    // },
-                    // {
-                    //     extend: 'pdfHtml5',
-                    //     text: 'PDF',
-                    //     orientation: 'landscape',
-                    //     pageSize: 'TABLOID',
-                    //     filename: '{% if modeldetail.capture_dataset|length  %}{{modeldetail.subject_name|e}}-{{modeldetail.capture_dataset.capture_dataset_name|e}}-models_' + getFormattedDate()+'{% endif %}',
-                    // },
                 ]
             },
             
