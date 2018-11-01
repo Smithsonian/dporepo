@@ -285,7 +285,7 @@ class ModelController extends Controller
          //$Model->createTable();
 
          return $this->render('datasets/model_detail.html.twig', array(
-             'page_title' => "Model detail",
+             'page_title' => "Model Detail",
              'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),"modeldetail"=>$modeldetail[0],
          ));
     }
