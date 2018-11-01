@@ -1,0 +1,35 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+  {{ parent() }}
+{% endblock %}
+
+{% block content %}
+
+  <!-- row -->
+  <div class="row">
+    <!-- column -->
+    <div class="col-sm-12 col-md-12">
+
+      <h2>Job Data</h2>
+
+      {% if (data) %}
+        <p><strong>Job ID:</strong> {{ data.id }}</p>
+        {{ dump(data) }}
+      {% endif %}
+
+      {% if (processing_results) %}
+        <h2>Processing Results</h2>
+        {{ dump(processing_results) }}
+      {% endif %}
+
+    </div>
+    <!-- // column -->
+  </div>
+  <!-- // row -->
+
+{% endblock %}
+
+{% block js_bottom %}
+  {{ parent() }}
+{% endblock %}

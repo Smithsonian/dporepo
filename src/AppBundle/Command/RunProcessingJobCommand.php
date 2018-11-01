@@ -74,8 +74,9 @@ class RunProcessingJobCommand extends ContainerAwareCommand
           }
         }
       }
-      if (!$errors) $output->writeln('<comment>Processing job executed</comment>');
     }
+
+    if (!$errors) $output->writeln('<comment>Processing job executed</comment>');
 
     return $result;
   }
