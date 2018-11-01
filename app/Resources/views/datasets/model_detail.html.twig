@@ -94,29 +94,30 @@
                 <thead>
                 <tr>
                     <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
-                    <th class="text-center">Model Repository ID</th>
-                    <th class="text-center">Parent Capture Dataset Repository ID</th>
-                    <th class="text-center">Parent Item Repository ID</th>
-                    <th class="text-center">Model File Type</th>
-                    <th class="text-center">Model Guid</th>
-                    <th class="text-center">Date of Creation</th>
-                    <th class="text-center">Model Modality</th>
-                    <th class="text-center">Units</th>
-                    <th class="text-center">Is Watertight</th>
-                    <th class="text-center">Model Purpose</th>
-                    <th class="text-center">Point Count</th>
-                    <th class="text-center">Has Normals</th>
-                    <th class="text-center">Face Count</th>
-                    <th class="text-center">Vertices Count</th>
-                    <th class="text-center">Has Vertex Color</th>
-                    <th class="text-center">Has UV Space</th>
-                    <th class="text-center">Model Maps</th>
-                    <th class="text-center">Derived From</th>
-                    <th class="text-center">Creation Method</th>
-                    <th class="text-center">Date Created</th>
-                    <th class="text-center">Created by User Account ID</th>
-                    <th class="text-center">Last Modified</th>
-                    <th class="text-center">Last Modified User Account ID</th>
+                    <th class="text-center">Download</th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
+                    <th class="text-center"></th>
                 </tr>
                 </thead>
             </table>
@@ -201,6 +202,7 @@
         $('#browse_models').dataTable( {
           "columns": [
             { "data": "manage" },
+            { "data": "manage" },
             { "data": "model_repository_id", "title": "Model Repository ID"  },
             { "data": "parent_capture_dataset_repository_id", "title": "Parent Capture Dataset Repository ID"  },
             { "data": "parent_item_repository_id", "title": "Parent Item Repository ID"  },
@@ -227,48 +229,9 @@
           ],
           "dom": 'lfip<"datatables_bulk_actions"B>tip',
           buttons: [
-            {
-                extend: 'collection',
-                text: 'Export Metadata',
-                buttons: [
+              'csv', 'excel', 'pdf', 'print',
                     {
-                        extend: 'csvHtml5',
-                        filename: '{% if modeldetail.capture_dataset|length  %}{{modeldetail.subject_name|e}}-{{modeldetail.capture_dataset.capture_dataset_name|e}}-models_' +'{% endif %}',
-                        exportOptions: {
-                            columns: ':not(:first-child)',
-                            modifier: {
-                                search: 'none'
-                            }
-                        }
-                    },
-                    {
-                        extend: 'excelHtml5',
-                        filename: '{% if modeldetail.capture_dataset|length  %}{{modeldetail.subject_name|e}}-{{modeldetail.capture_dataset.capture_dataset_name|e}}-models_' +'{% endif %}',
-                        title: '',
-                        exportOptions: {
-                            columns: ':not(:first-child)',
-                            modifier: {
-                                search: 'none'
-                            }
-                        }
-                    },
-                    {
-                        extend: 'copy',
-                        title: '',
-                        exportOptions: {
-                            columns: ':not(:first-child)',
-                            modifier: {
-                                search: 'none'
-                            }
-                        }
-                    },
-                ]
-            },
-            
-            {
-                extend: 'collection',
-                text: 'Toggle Column Visibility',
-                buttons: [ 'columnsToggle' ],
+                extend: 'colvis',
                 postfixButtons: [ 'colvisRestore' ]
             }
           ],
@@ -282,7 +245,7 @@
           "serverSide": true,
           // Path to the file that is going to handle the queries.
           "ajax": {
-            "url": "/admin/model/datatables_browse_derivative_models",
+              "url": "/admin/projects/model/datatables_browse",
             "data": {
               "parent_model_id": model_repository_id
             }
@@ -299,21 +262,26 @@
                 "bSortable": false
             },
             {
-                "targets": [ 1, 2, 3, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 ],
+                "targets": [ 2, 3, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 ],
                 "visible": false,
                 "searchable": true
             }
           ],
           "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+
             // This table row.
             var thisTableRow = $(nRow);
+
             // Create the delete record checkboxes.
             thisTableRow.find('td:eq(0)')
               .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
               .addClass("manage_column");
-            // Add the class to the model download link.
-            thisTableRow.find('td:eq(4)')
-              .addClass("download");
+              // Create the download checkboxes.
+              thisTableRow.find('td:eq(1)')
+                .html("<input type='checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
+                .addClass("manage_column");
+
+
             // Send to details page when clicked.
             thisTableRow.find('td').click(function() {
               // This table cell.
@@ -326,9 +294,52 @@
               var this_id = thisTableCell.closest("tr").attr('id');
               window.location.href = '/admin/projects/model/' + this_id + '/detail';
             });
+
           }
         });
         
+          var models_add_button = $('<a />')
+            .addClass('btn btn-default add-record-button')
+            .attr('href', '/admin/projects/model/manage/' + item_repository_id + '?from=item')
+            .html('<span class="glyphicon glyphicon-plus"></span> Add a Model');
+          $('#browse_models_wrapper').find('.datatables_bulk_actions').prepend(models_add_button);
+
+          var request_model_download_button = $('<button></button>')
+            .addClass('btn btn-default glyphicon glyphicon-download-alt')
+            .attr('style', 'width: 13.8rem;')
+            .attr('id', 'request-download-button')
+            .on('click', function(){
+
+              var download_ids = new Array;
+              $('#browse [name="download_checkbox"]:checked').each(function(){
+                download_ids.push($(this).val());
+              });
+
+              if(!download_ids.length) {
+                swal('No Records Selected', 'Please choose at least one record.');
+                return;
+              }
+
+              if(download_ids.length > 0) {
+
+                swal({
+                    title: "Send Download Request",
+                    text: "Send a request to download chosen assets?",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "Send Request",
+                    closeOnConfirm: true
+                  },
+                  function(){
+                    // Placeholder
+                  });
+
+              }
+            });
+
+          $("#browse_models_wrapper").find(".datatables_bulk_actions").prepend(request_model_download_button);
+
         // Hide the Export Metadata dropdown menu on menu item click.
         $('.datatables_bulk_actions').on('click', '.buttons-html5', function(){
             $(this).parent().hide();
