@@ -101,7 +101,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
         foreach ($recipes_array as $key => $value) {
           if ($value['name'] === $recipe_name) {
             $data = $value;
-          } 
+          }
         }
         // Set an error if the recipe can't be found.
         if (empty($data)) $data['error'] = 'Error: Recipe doesn\'t exist';
@@ -328,7 +328,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
         foreach ($jobs_array as $key => $value) {
           if ($value['name'] === $job_name) {
             $data = $value;
-          } 
+          }
         }
         // Set an error if the recipe can't be found.
         if (empty($data)) $data['error'] = 'Error: Job doesn\'t exist';
@@ -443,7 +443,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
     $client_jobs = array();
 
     if (!empty($job_ids)) {
-      
+
       // Get the machine state.
       $state = $this->machine_state();
 
@@ -557,7 +557,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
           // Retrieve all of the logs produced by the processing service.
           if (!empty($job_id) && !empty($local_assets_path)) {
-          
+
             // Loop through jobs, and retrieve outputted assets.
             // Retrieve a read-stream
             try {
@@ -653,7 +653,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
         'record_id' => $job_data[0]['processing_job_id'],
         'user_id' => $job_data[0]['created_by_user_account_id'],
         'values' => array(
-          'job_json' => json_encode($processing_job_array), 
+          'job_json' => json_encode($processing_job_array),
           'state' => $processing_job_array['state']
         )
       ));
@@ -769,8 +769,8 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
               'parent_record_id' => $parent_record_data['parent_record_id'],
               'parent_record_type' => $parent_record_data['parent_record_type'],
               'processing_service_job_id' => $data['id'],
-              'recipe' =>  $data['recipe']['name'], 
-              'job_json' => json_encode($data), 
+              'recipe' =>  $data['recipe']['name'],
+              'job_json' => json_encode($data),
               'state' => $data['state'],
               'asset_path' => $path,
             )
@@ -889,7 +889,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    * @param string $path The path to the assets to be processed.
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
-   * @return 
+   * @return
    */
   public function get_processing_results($job_id = null, $user_id = null, $path = null, $filesystem)
   {
@@ -1004,9 +1004,9 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 //     'user_id' => $this->user_id,
 //     'values' => array(
 //       'job_id' => $job_data['job_id'],
-//       'processing_service_job_id' => $job['id'], 
-//       'recipe' =>  $job['recipe']['name'], 
-//       'job_json' => json_encode($job), 
+//       'processing_service_job_id' => $job['id'],
+//       'recipe' =>  $job['recipe']['name'],
+//       'job_json' => json_encode($job),
 //       'state' => $job['state']
 //     )
 //   ));

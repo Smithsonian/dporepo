@@ -882,7 +882,7 @@ class RepoImport implements RepoImportInterface {
           3 => array('field_names' => array('processing_job_file.file_name'), 'search_values' => array('-report.json'), 'comparison' => 'LIKE'),
         ),
         'search_type' => 'AND',
-        
+
         'omit_active_field' => true,
         )
       );
@@ -893,7 +893,7 @@ class RepoImport implements RepoImportInterface {
         $model_file_name = $file_contents['parameters']['meshFile'];
 
         foreach ($data->csv as $csv_key => $csv_val) {
-          // If the processing service's $model_file_name is found in the repository's file_path, 
+          // If the processing service's $model_file_name is found in the repository's file_path,
           // add values from the model-report.json file's contents.
           if(stristr($csv_val->file_path, $model_file_name)) {
             // Break-out the topology and statistics into dedicated variables (mainly for readability).
@@ -909,7 +909,7 @@ class RepoImport implements RepoImportInterface {
             $data->csv[$csv_key]->has_uv_space = $statistics['hasTexCoords'];
           }
         }
-        
+
       }
     }
 
@@ -959,7 +959,7 @@ class RepoImport implements RepoImportInterface {
         $image_file_names[$ikey] = array_unique($image_file_names[$ikey]);
         sort($image_file_names[$ikey]);
       }
-      
+
       if (!empty($image_file_names)) {
         ksort($image_file_names);
         $data = $this->get_dataset_data_from_filenames($image_file_names, $data);
@@ -989,7 +989,7 @@ class RepoImport implements RepoImportInterface {
     // Insert into subject (local_subject_id)
     // Insert into capture_dataset (capture_dataset_field_id)
     // Insert into capture_data_element (position_in_cluster_field_id, cluster_position_field_id)
-    // 
+    //
     // Example file name mapping:
     // usnm_160-s01-p01-01.jpg
     // [local_subject_id]-s[capture_dataset_field_id]-p[position_in_cluster_field_id]-[cluster_position_field_id].jpg
@@ -1025,7 +1025,7 @@ class RepoImport implements RepoImportInterface {
           }
           break;
         case 'capture_dataset':
-          
+
           $i = 0;
           foreach ($image_file_names as $dir_name => $files) {
 

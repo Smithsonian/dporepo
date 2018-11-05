@@ -156,7 +156,7 @@ interface RepoProcessingServiceInterface {
    * @param string $path The path to the assets to be processed.
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
-   * @return 
+   * @return
    */
   public function get_processing_results(string $job_id, string $user_id, string $path, $filesystem);
 

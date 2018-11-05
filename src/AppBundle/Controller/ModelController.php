@@ -7,7 +7,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
-
+use Symfony\Component\HttpFoundation\JsonResponse;
 use AppBundle\Controller\RepoStorageHybridController;
 use PDO;
 
@@ -48,10 +48,12 @@ class ModelController extends Controller
     {
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
-        $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
-        $sort_order = $req['order'][0]['dir'];
+        $sort_field = isset($req['columns']) && isset($req['order'][0]['column']['data']) ? $req['columns'][ $req['order'][0]['column'] ]['data'] : '';
+        $sort_order = isset($req['order'][0]['dir']) ? $req['order'][0]['dir'] : 'asc';
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
+        $parent_id = !empty($req['parent_id']) ? $req['parent_id'] : 0;
+        $parent_id_field = isset($req['parent_type']) ? $req['parent_type'] : 'parent_capture_dataset_repository_id';
 
         $query_params = array(
           'record_type' => 'model',
@@ -59,9 +61,10 @@ class ModelController extends Controller
           'sort_order' => $sort_order,
           'start_record' => $start_record,
           'stop_record' => $stop_record,
-          'parent_id' => $req['parent_id'],
-          'parent_id_field' => isset($req['parent_type']) ? 'parent_item_repository_id' : 'parent_capture_dataset_repository_id',
+          'parent_id' => $parent_id,
+          'parent_id_field' => $parent_id_field,
         );
+
         if ($search) {
           $query_params['search_value'] = $search;
         }
@@ -83,6 +86,16 @@ class ModelController extends Controller
     function formView(Connection $conn, Request $request)
     {
         $data = new Model();
+      $get = $request->query->all();
+      $parent_type = "capture_dataset";
+
+      if(!empty($request->attributes->get('type'))) {
+        $parent_type = $request->attributes->get('type');
+        if($parent_type !== "item") {
+          $parent_type = "capture_dataset";
+        }
+      }
+
         $post = $request->request->all();
         $parent_id = !empty($request->attributes->get('parent_id')) ? $request->attributes->get('parent_id') : false;
         $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
@@ -100,13 +113,29 @@ class ModelController extends Controller
         }
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
-        // Add the parent_id to the $data object
-        $data->parent_capture_dataset_repository_id = $parent_id;
-
         // Back link
         $back_link = $request->headers->get('referer');
-        if(isset($data->project_repository_id)) {
-            $back_link = "/admin/projects/dataset_elements/{$data->project_repository_id}/{$data->subject_repository_id}/{$data->parent_item_repository_id}/{$data->parent_capture_dataset_repository_id}";
+
+      // Add the parent_id to the $data object
+      if(empty($id)) {
+        if($parent_type == "item") {
+          $data->parent_item_repository_id = $parent_id;
+        }
+        else {
+          $data->parent_capture_dataset_repository_id = $parent_id;
+        }
+      }
+      else {
+        //@todo we need a way to get the backlink for new models, too
+        if($parent_type == "item") {
+          $back_link = "/admin/projects/datasets/{$data->project_repository_id}/{$data->subject_repository_id}/{$data->parent_item_repository_id}";
+        }
+        else {
+          //@todo- this is problematic since subjects are only linked through items
+          // A model might be linked to a capture dataset, which links to project and item; or it may be linked to an item, which links to a project and a subject.
+          // We'll need to modify the URL for capture datasets- we shouldn't need the subject repository ID.
+          //$back_link = "/admin/projects/dataset_elements/{$data->project_repository_id}/{$data->subject_repository_id}/{$data->parent_item_repository_id}/{$data->parent_capture_dataset_repository_id}";
+        }
         }
 
         // Get data from lookup tables.
@@ -207,22 +236,129 @@ class ModelController extends Controller
     }
 
     /**
-     * /\/\/\/ Route("/admin/projects/model/{id}", name="model_browse", methods="GET", defaults={"id" = null})
+     * @Route("/admin/projects/model/{id}/detail", name="model_detail", methods="GET", defaults={"id" = null})
      *
      * @param Connection $conn
      * @param Request $request
      */
-    // public function browse(Connection $conn, Request $request)
-    // {
-    //     $Model = new Model;
+    public function modelDetail(Connection $conn, Request $request,$id)
+    {
+         //$Model = new Model;
+        if ($id !== null) {
+          $statement = $conn->prepare("SELECT * FROM model WHERE model_repository_id = $id LIMIT 1");
+          $statement->execute();
+          $modeldetail = $statement->fetchAll();
+          if (count($modeldetail) > 0) {
+            $modeldetail[0]['uploads_path'] = $this->uploads_path;
+            if ($modeldetail[0]['parent_capture_dataset_repository_id'] != null) {
+              $capturedataset = $conn->fetchAll("SELECT * FROM capture_dataset WHERE capture_dataset_repository_id =".$modeldetail[0]['parent_capture_dataset_repository_id']);
+              $itemid = $modeldetail[0]['parent_item_repository_id'];
+              $modeldetail[0]['capture_dataset'] = [];
+              if (count($capturedataset) > 0) {
+                if ($itemid == null) {
+                  $itemid = $capturedataset[0]['parent_item_repository_id'];
+                }
+                $modeldetail[0]['capture_dataset'] = $capturedataset[0];
+                
+              }
+              $item = $conn->fetchAll("SELECT item_description,subject_repository_id FROM item WHERE item_repository_id =".$itemid);
+              
+              if (count($item) > 0) {
+                $subject = $conn->fetchAll("SELECT project_repository_id,subject_name FROM subject WHERE subject_repository_id=".$item[0]['subject_repository_id']);
+                if (count($subject) > 0) {
+                  $project = $conn->fetchAll("SELECT project_name FROM project WHERE project_repository_id=".$subject[0]['project_repository_id']);
+                  $modeldetail[0]['subject_name'] = $subject[0]['subject_name'];
+                  $modeldetail[0]['item_description'] = $item[0]['item_description'];
+                  $modeldetail[0]['project_name'] = $project[0]['project_name'];
+                  $modeldetail[0]['project_repository_id'] = $subject[0]['project_repository_id'];
+                  $modeldetail[0]['subject_repository_id'] = $item[0]['subject_repository_id'];
+                }
+              }
+              
+            }
+          }
+          //dump($modeldetail);
+          //exit;
+        }
+         
+         // Database tables are only created if not present.
+         //$Model->createTable();
 
-    //     // Database tables are only created if not present.
-    //     $Model->createTable();
+         return $this->render('datasets/model_detail.html.twig', array(
+             'page_title' => "Model Detail",
+             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),"modeldetail"=>$modeldetail[0],
+         ));
+    }
+    /**
+     * @Route("/admin/model/files/datatables_browse", name="datatables_browse_files", methods="POST")
+     *
+     * @param Connection $conn
+     * @param Request $request
+     */
+    public function browse_model_files(Connection $conn, Request $request)
+    {
+        $req = $request->request->all();
+        $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+        $sort_field = isset($req['columns']) && isset($req['order'][0]['column']['data']) ? $req['columns'][ $req['order'][0]['column'] ]['data'] : '';
+        $sort_order = isset($req['order'][0]['dir']) ? $req['order'][0]['dir'] : 'asc';
+        $start_record = !empty($req['start']) ? $req['start'] : 0;
+        $stop_record = !empty($req['length']) ? $req['length'] : 20;
+        $parent_id = !empty($req['parent_id']) ? $req['parent_id'] : 0;
 
-    //     return $this->render('datasetElements/model_browse.html.twig', array(
-    //         'page_title' => "Browse Model",
-    //         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-    //     ));
-    // }
-  
+        $query_params = array(
+          'record_type' => 'model_file',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+          'parent_id' => $parent_id,
+        );
+        if ($search) {
+          $query_params['search_value'] = $search;
+        }
+
+        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
+
+        return $this->json($data);
+
+    }
+    /**
+     * @Route("/admin/model/datatables_browse_derivative_models", name="datatables_browse_derivative_models", methods="POST")
+     *
+     * @param Connection $conn
+     * @param Request $request
+     */
+    public function browse_derivative_models(Connection $conn, Request $request)
+    {
+      $req = $request->request->all();
+        $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+        $sort_field = isset($req['columns']) && isset($req['order'][0]) ? $req['columns'][ $req['order'][0]['column'] ]['data'] : '';
+        $sort_order = isset($req['order'][0]['dir']) ? $req['order'][0]['dir'] : 'asc';
+        $start_record = !empty($req['start']) ? $req['start'] : 0;
+        $stop_record = !empty($req['length']) ? $req['length'] : 20;
+
+        $query_params = array(
+          'record_type' => 'model',
+          'sort_field' => $sort_field,
+          'sort_order' => $sort_order,
+          'start_record' => $start_record,
+          'stop_record' => $stop_record,
+          'parent_id' => isset($req['parent_model_id']) ? $req['parent_model_id'] : 0,
+          //'parent_id_field' => isset($req['parent_type']) ? 'parent_item_repository_id' : 'parent_capture_dataset_repository_id',
+          'parent_id_field' => 'parent_model_id',
+
+        );
+        if ($search) {
+          $query_params['search_value'] = $search;
+        }
+
+        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
+
+        return $this->json($data);
+        /*
+      $parent_id = $request->request->get("parent_id");
+      $models = $conn->fetchAll("SELECT * FROM model WHERE parent_model_id=$parent_id");
+      return new JsonResponse($models);
+      */
+    }
 }

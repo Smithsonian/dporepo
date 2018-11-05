@@ -217,9 +217,9 @@ class RepoModelValidate implements RepoModelValidateInterface {
                   'base_table' => 'processing_job',
                   'user_id' => $this->user_id,
                   'values' => array(
-                    'processing_service_job_id' => $job['id'], 
-                    'recipe' =>  $job['recipe']['name'], 
-                    'job_json' => json_encode($job), 
+                    'processing_service_job_id' => $job['id'],
+                    'recipe' =>  $job['recipe']['name'],
+                    'job_json' => json_encode($job),
                     'state' => $job['state'],
                     'asset_path' => $file->getPathname(),
                   )

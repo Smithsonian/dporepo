@@ -1,0 +1,49 @@
+{
+    "meta": {
+        "name": "f1961_33-part_02-x_pol-ort_texture"
+    },
+    "process": {
+        "method": "photogrammetry"
+    },
+    "model": {
+        "units": "cm",
+        "derivatives": [{
+            "usage": "Web",
+            "quality": "Thumb",
+            "assets": [{
+                "type": "Model",
+                "uri": "f1961_33-part_02-x_pol-ort_texture-30k-512-web.glb"
+            },
+            {
+                "type": "Image",
+                "uri": "f1961_33-part_02-textured.jpg"
+            }]
+        }, {
+            "usage": "Web",
+            "quality": "Low",
+            "assets": [{
+                "type": "Model",
+                "uri": "f1961_33-part_02-x_pol-ort_texture-200k-1024-web.glb"
+            }]
+        }, {
+            "usage": "Web",
+            "quality": "Medium",
+            "assets": [{
+                "type": "Model",
+                "uri": "f1961_33-part_02-x_pol-ort_texture-200k-2048-web.glb"
+            }]
+        }, {
+            "usage": "Web",
+            "quality": "High",
+            "assets": [{
+                "type": "Model",
+                "uri": "f1961_33-part_02-x_pol-ort_texture-200k-4096-web.glb"
+            }]
+        }],
+        "boundingBox": {
+            "min": [-0.12897, -0.071133, -0.00517],
+            "max": [0.157553, 0.05734, 0.21462]
+        },
+        "transform": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+    }
+}
