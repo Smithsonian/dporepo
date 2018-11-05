@@ -537,17 +537,17 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
         // Decode JSON
         $processing_job_array = json_decode($processing_job['result'], true);
 
-        // Log the errors to the database.
-        if ($processing_job_array['state'] === 'error') {
-          $this->repo_validate->logErrors(
-            array(
-              'job_id' => $repo_processing_job_id,
-              'user_id' => $job_data[0]['created_by_user_account_id'],
-              'job_log_label' => 'Processing Job',
-              'errors' => array($processing_job['error'] . ' (Processing job ID: ' . $processing_job['id'] . ')'),
-            )
-          );
-        }
+        // // Log the errors to the database.
+        // if ($processing_job_array['state'] === 'error') {
+        //   $this->repo_validate->logErrors(
+        //     array(
+        //       'job_id' => $repo_processing_job_id,
+        //       'user_id' => $job_data[0]['created_by_user_account_id'],
+        //       'job_log_label' => 'Processing Job',
+        //       'errors' => array($processing_job['error'] . ' (Processing job ID: ' . $processing_job['id'] . ')'),
+        //     )
+        //   );
+        // }
 
         // If the state of the job is 'error' or 'done', proceed with pulling assets from the processing service.
         if (in_array($processing_job_array['state'], array('error', 'done'))) {
