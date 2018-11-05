@@ -290,7 +290,26 @@ class ModelController extends Controller
          ));
     }
     /**
-     * @Route("/admin/model/files/datatables_browse", name="datatables_browse_files", methods="POST")
+   * @Route("/admin/projects/model/{id}/viewer", name="model_viewer", methods="GET", defaults={"id" = null})
+   *
+   * @param Connection $conn
+   * @param Request $request
+   */
+  public function modelViewer(Connection $conn, Request $request,$id)
+  {
+
+    //@todo use incoming model $id to retrieve model assets.
+    $model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
+
+    return $this->render('datasets/model_viewer.html.twig', array(
+      'page_title' => "Model Viewer",
+      'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+      "model_url" => $model_url,
+    ));
+  }
+
+  /**
+     * @Route("/admin/model/files/datatables_browse", name="datatables_browse_files", methods={"POST","GET"})
      *
      * @param Connection $conn
      * @param Request $request
