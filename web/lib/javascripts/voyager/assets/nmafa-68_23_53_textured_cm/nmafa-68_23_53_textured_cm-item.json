@@ -1,0 +1,74 @@
+{
+    "meta": {
+        "name": "nmafa-68_23_53_textured_cm"
+    },
+    "process": {
+        "method": "photogrammetry"
+    },
+    "model": {
+        "units": "cm",
+        "derivatives": [{
+            "usage": "Web",
+            "quality": "Thumb",
+            "assets": [{
+                "type": "Model",
+                "uri": "nmafa-68_23_53_textured_cm-30k-512-web.glb"
+            }]
+        }, {
+            "usage": "Web",
+            "quality": "Low",
+            "assets": [{
+                "type": "Model",
+                "uri": "nmafa-68_23_53_textured_cm-200k-1024-web.glb"
+            }]
+        }, {
+            "usage": "Web",
+            "quality": "Medium",
+            "assets": [{
+                "type": "Model",
+                "uri": "nmafa-68_23_53_textured_cm-200k-2048-web.glb"
+            }]
+        }, {
+            "usage": "Web",
+            "quality": "High",
+            "assets": [{
+                "type": "Model",
+                "uri": "nmafa-68_23_53_textured_cm-200k-4096-web.glb"
+            }]
+        }],
+        "boundingBox": {
+            "min": [-34.522, -14.163, -4.618],
+            "max": [39.081, -2.0289, 1.882]
+        },
+        "transform": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+    },
+    "documents": {
+        "documents": [{
+            "title": "Dolore Magna Aliqua",
+            "uri": "nmafa-68_23_53_textured_cm.md",
+            "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            "mimeType": "text/markdown"
+        }]
+    },
+    "annotations": {
+        "annotations": [{
+            "title": "First Hotspot",
+            "position": [6.61, -0.61, 0.66],
+            "direction": [-0.05, -0.95, 0.32],
+            "description": "Ut enim ad minima veniam, quis nostrum exercitationem ullam.",
+            "documents": [0]
+        }, {
+            "title": "Second Hotspot",
+            "position": [-21.16, 1.92, 2.45],
+            "direction": [-0.19, 0.56, 0.81]
+        }, {
+            "title": "Third Hotspot",
+            "position": [12.21, 4.76, 1.48],
+            "direction": [0.1, 0.87, 0.48]
+        }],
+        "groups": [{
+            "title": "Group Title",
+            "description": "Sed ut perspiciatis unde omnis iste natus error sit"
+        }]
+    }
+}

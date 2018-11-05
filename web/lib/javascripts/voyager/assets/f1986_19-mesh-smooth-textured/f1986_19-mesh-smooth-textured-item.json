@@ -1,0 +1,49 @@
+{
+    "meta": {
+        "name": "f1986_19-mesh-smooth-textured"
+    },
+    "process": {
+        "method": "photogrammetry"
+    },
+    "model": {
+        "units": "cm",
+        "derivatives": [{
+            "usage": "Web",
+            "quality": "Thumb",
+            "assets": [{
+                "type": "Model",
+                "uri": "f1986_19-mesh-smooth-textured-30k-512-web.glb"
+            },
+            {
+                "type": "Image",
+                "uri": "f1986_19-mesh-smooth-textured-thumb.jpg"
+            }]
+        }, {
+            "usage": "Web",
+            "quality": "Low",
+            "assets": [{
+                "type": "Model",
+                "uri": "f1986_19-mesh-smooth-textured-200k-1024-web.glb"
+            }]
+        }, {
+            "usage": "Web",
+            "quality": "Medium",
+            "assets": [{
+                "type": "Model",
+                "uri": "f1986_19-mesh-smooth-textured-200k-2048-web.glb"
+            }]
+        }, {
+            "usage": "Web",
+            "quality": "High",
+            "assets": [{
+                "type": "Model",
+                "uri": "f1986_19-mesh-smooth-textured-200k-4096-web.glb"
+            }]
+        }],
+        "boundingBox": {
+            "min": [-0.9883, 0.1424, -0.32585],
+            "max": [-0.7665, 0.3639, 0.138202]
+        },
+        "transform": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+    }
+}
