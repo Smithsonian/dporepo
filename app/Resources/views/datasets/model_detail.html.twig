@@ -5,11 +5,6 @@
     <link href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/css/bootstrap-datepicker3.css" rel="stylesheet" type="text/css">
     <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
     <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
-
-    <!--link rel="stylesheet" href="{{asset('lib/javascripts/voyager/css/normalize.css')}}"-->
-    <link rel="stylesheet" href="{{asset('lib/javascripts/voyager/css/fontawesome.min.css')}}">
-    <link rel="stylesheet" href="{{asset('lib/javascripts/voyager/css/fontawesome-solid.min.css')}}">
-    <link rel="stylesheet" href="{{asset('lib/javascripts/voyager/css/voyager-explorer.css')}}">
 {% endblock %}
 
 {% block content %}
@@ -89,7 +84,7 @@
             </div>
         </div>
         <div class="col-md-12">
-            <button class="btn btn-primary" data-toggle="modal" data-target="#viewer" >Preview 3D Model in Viewer</button>
+            <a class="btn btn-primary" href="/admin/projects/model/{{modeldetail.model_repository_id}}/viewer" target="_blank">Preview 3D Model in Viewer</a>
         </div>
     </div>
 
@@ -163,36 +158,11 @@
       </div>
 
     </div>
-    <div class="modal" id="viewer" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Voyager Viewer</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div id="main">
-                    </div>
-                    testing
-                    <div class="sv-carousel">
-                        <img data-item="{{asset('lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json')}}" src="{{asset('lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-thumb.jpg')}}"/>
-                    </div>
-                    testing
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
 {% endblock %}
 
 {% block javascripts %}
     {{ parent() }}
     <script src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/js/bootstrap-datepicker.min.js"></script>
-
 
     {% if modeldetail.model_repository_id is defined %}
         <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
@@ -208,34 +178,8 @@
         <script src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.html5.min.js"></script>
         <script src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.print.min.js "></script>
 
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/react/16.4.2/umd/react.production.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/16.4.2/umd/react-dom.production.min.js"></script>
-        <script src="https://code.jquery.com/pep/0.4.3/pep.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/97/three.min.js"></script>
-
-        <script src="{{asset('lib/javascripts/voyager/js/voyager-explorer.js')}}"></script>
-
         <script type="text/javascript">
         $(document).ready(function(){
-          function load(element) {
-            const itemUrl = element.getAttribute("data-item");
-            if (itemUrl) {
-              voyager.loadItem(itemUrl);
-              return;
-            }
-            const presentationUrl = element.getAttribute("data-presentation");
-            if (presentationUrl) {
-              voyager.loadPresentation(presentationUrl);
-            }
-          }
-
-          const voyager = new Voyager({ element: document.getElementById("main") });
-          const carouselItems = document.getElementsByClassName("sv-carousel")[0].children;
-          for (let i = 0; i < carouselItems.length; ++i) {
-            carouselItems[i].onclick = (e) => load(e.target);
-          }
-          load(carouselItems[0]);
-
           var  model_repository_id = $("#model_repository_id").val();
           $('#browse_uv_maps').dataTable( {
             "columns": [
