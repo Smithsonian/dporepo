@@ -975,6 +975,8 @@ class ImportController extends Controller
       $params = array('meshFile' => 'nmnh-usnm_v_512384522-skull-master_model-2018_10_22.ply');
       // Path to the directory or file.
       $local_path = $this->uploads_directory . '3df_5bd4c0846fd3f0.72669883/testupload04-1model/data/1/nmnh-usnm_v_512384522-skull-master_model-2018_10_22.ply';
+      // Modify the path for Windows if need be.
+      $local_path = str_replace('/', DIRECTORY_SEPARATOR, $local_path);
       // Need to pass the parent record type and ID so we can associate a processing job with something.
       $parent_record_data = array(
         'parent_record_id' => 7,

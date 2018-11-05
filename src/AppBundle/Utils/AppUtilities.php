@@ -16,7 +16,7 @@ class AppUtilities
    */
   public function __construct()
   {
-    $this->project_directory = str_replace(DIRECTORY_SEPARATOR . 'web', '', $_SERVER['DOCUMENT_ROOT']) . DIRECTORY_SEPARATOR;
+    $this->project_directory = str_replace('/web', '', $_SERVER['DOCUMENT_ROOT']);
   }
 
   /**

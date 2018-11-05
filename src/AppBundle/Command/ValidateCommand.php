@@ -30,7 +30,7 @@ class ValidateCommand extends Command
     // Uploads directory
     $this->kernel = $kernel;
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
-    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? $this->project_directory . str_replace('\\', '/', $uploads_directory) : $this->project_directory . $uploads_directory;
+    $this->uploads_directory = $this->project_directory . $uploads_directory;
     $this->external_file_storage_on = $external_file_storage_on;
     // This is required due to parent constructor, which sets up name.
     parent::__construct();
@@ -104,13 +104,13 @@ class ValidateCommand extends Command
     if (!empty($directory_to_validate)) {
 
       // Get job data
-      $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
+      $job_data = $this->repo_storage_controller->execute('getJobData', array($input->getArgument('uuid')));
 
       // Run the BagIt validation.
       $command_bagit = $this->getApplication()->find('app:bagit-validate');
       $arguments_bagit = array(
           'command' => 'app:bagit-validate',
-          'localpath' => $directory_to_validate
+          'uuid' => $input->getArgument('uuid')
       );
       $input_bagit = new ArrayInput($arguments_bagit);
       $return_bagit = $command_bagit->run($input_bagit, $output);
@@ -145,7 +145,7 @@ class ValidateCommand extends Command
         '<bg=blue;options=bold> Ingesting Metadata </>',
         '',
         'Parameters: ' . "\n",
-        'uuid: ' . $uuid,
+        'uuid: ' . $input->getArgument('uuid'),
         'parent_project_id: ' . $input->getArgument('parent_project_id'),
         'parent_record_id: ' . $input->getArgument('parent_record_id'),
         'parent_record_type: ' . $input->getArgument('parent_record_type') . "\n"
@@ -153,7 +153,7 @@ class ValidateCommand extends Command
 
       // Run the metadata ingest.
       $params = array(
-        'uuid' => $uuid,
+        'uuid' => $input->getArgument('uuid'),
         'parent_project_id' => $input->getArgument('parent_project_id'),
         'parent_record_id' => $input->getArgument('parent_record_id'),
         'parent_record_type' => $input->getArgument('parent_record_type'),
@@ -179,7 +179,7 @@ class ValidateCommand extends Command
 
           $arguments_file_transfer = array(
               'command' => 'app:transfer-files',
-              'uuid' => $uuid
+              'uuid' => $input->getArgument('uuid')
           );
 
           $input_file_transfer = new ArrayInput($arguments_file_transfer);
