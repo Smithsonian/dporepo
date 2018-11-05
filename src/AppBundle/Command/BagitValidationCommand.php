@@ -33,7 +33,7 @@ class BagitValidationCommand extends Command
       // the "--help" option.
       ->setHelp('This command validates a BagIt "bag", which consists of a "payload" (the arbitrary content) and "tags", which are metadata files intended to document the storage and transfer of the "bag".')
       // Add arguments...
-      ->addArgument('localpath', InputArgument::OPTIONAL, 'The path to the directory to validate.');
+      ->addArgument('uuid', InputArgument::OPTIONAL, 'The directory to validate.');
   }
 
   /**
@@ -49,14 +49,14 @@ class BagitValidationCommand extends Command
       '',
       '<bg=blue;options=bold> Validating Bagged Assets (BagIt) </>',
       '',
-      'Command: ' . 'php bin/console app:bagit-validate ' . $input->getArgument('localpath') . "\n",
+      'Command: ' . 'php bin/console app:bagit-validate ' . $input->getArgument('uuid') . "\n",
     ]);
 
-    if (!empty($input->getArgument('localpath'))) {
+    if (!empty($input->getArgument('uuid'))) {
 
       // Parameters to pass to the bagit_validate method.
       $params = array(
-        'localpath' => $input->getArgument('localpath'),
+        'uuid' => $input->getArgument('uuid'),
         'flag_warnings_as_errors' => false,
       );
 
@@ -77,8 +77,8 @@ class BagitValidationCommand extends Command
 
     }
 
-    // If there's no $input->getArgument('localpath'), display a message.
-    if(empty($input->getArgument('localpath'))) {
+    // If there's no $input->getArgument('uuid'), display a message.
+    if(empty($input->getArgument('uuid'))) {
       $output->writeln('<comment>No jobs found to validate</comment>');
     }   
   }
