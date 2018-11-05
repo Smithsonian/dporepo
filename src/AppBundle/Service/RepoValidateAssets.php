@@ -246,7 +246,10 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
       // Create an array of all of the file extensions.
       $all_file_extensions = array();
       foreach($data as $key => $value) {
-        array_push($all_file_extensions, $value['file_extension']);
+        // Exclude the 'file_name_map.csv' file.
+        if ($value['file_name'] !== 'file_name_map.csv') {
+          array_push($all_file_extensions, $value['file_extension']);
+        }
       }
 
       $unique_file_extensions = array_unique($all_file_extensions);
@@ -275,31 +278,33 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
             // The file's base name (without the extension).
             $file_basename = pathinfo($fkey, PATHINFO_FILENAME);
 
-            switch($fvalue) {
-              case 'cr2':
-              case 'dng':
+            if ($fkey !== 'file_name_map.csv') {
+              switch($fvalue) {
+                case 'cr2':
+                case 'dng':
 
-                // $this->u->dumper($image_pair_type,0);
-                // $this->u->dumper($file_basename . '.' . $image_pair_type,0);
-                // $this->u->dumper($all_files);
+                  // $this->u->dumper($image_pair_type,0);
+                  // $this->u->dumper($file_basename . '.' . $image_pair_type,0);
+                  // $this->u->dumper($all_files);
 
-                // Set an error if a corresponding jpg or tif file doesn't exist.
-                if (!array_key_exists($file_basename . '.' . $image_pair_type, $all_files)) {
-                  $return[]['errors'] = 'Corresponding ' . strtoupper($image_pair_type) . ' not found for ' . strtoupper($fvalue) . ': ' . $fkey;
-                }
-                break;
-              default:
+                  // Set an error if a corresponding jpg or tif file doesn't exist.
+                  if (!array_key_exists($file_basename . '.' . $image_pair_type, $all_files)) {
+                    $return[]['errors'] = 'Corresponding ' . strtoupper($image_pair_type) . ' not found for ' . strtoupper($fvalue) . ': ' . $fkey;
+                  }
+                  break;
+                default:
 
-                // We want to check against the "other" file type present.
-                // So, remove the $image_pair_type file extension from the $unique_file_extensions array.
-                $key = array_search($image_pair_type, $unique_file_extensions);
-                if (false !== $key) unset($unique_file_extensions[$key]);
-                $unique_file_extensions = array_values($unique_file_extensions);
+                  // We want to check against the "other" file type present.
+                  // So, remove the $image_pair_type file extension from the $unique_file_extensions array.
+                  $key = array_search($image_pair_type, $unique_file_extensions);
+                  if (false !== $key) unset($unique_file_extensions[$key]);
+                  $unique_file_extensions = array_values($unique_file_extensions);
 
-                // Set an error if a corresponding cr2 or dng doesn't exist.
-                if (!array_key_exists($file_basename . '.' . $unique_file_extensions[0], $all_files)) {
-                  $return[]['errors'] = 'Corresponding ' . strtoupper($unique_file_extensions[0]) . ' not found for ' . strtoupper($fvalue) . ': ' . $fkey;
-                }
+                  // Set an error if a corresponding cr2 or dng doesn't exist.
+                  if (!array_key_exists($file_basename . '.' . $unique_file_extensions[0], $all_files)) {
+                    $return[]['errors'] = 'Corresponding ' . strtoupper($unique_file_extensions[0]) . ' not found for ' . strtoupper($fvalue) . ': ' . $fkey;
+                  }
+              }
             }
 
           }
