@@ -77,11 +77,32 @@ class RepoImport implements RepoImportInterface {
   private $repoValidate;
 
   /**
+   * @var object $image_extensions
+   */
+  private $image_extensions;
+
+  /**
+   * @var object $model_extensions
+   */
+  private $model_extensions;
+
+  /**
+   * @var object $default_image_file_name_map
+   */
+  private $default_image_file_name_map;
+
+  /**
+   * @var object $default_model_file_name_map
+   */
+  private $default_model_file_name_map;
+
+  /**
    * Constructor
    * @param object  $kernel  Symfony's kernel object
    * @param string  $uploads_directory  Uploads directory path
    * @param string  $external_file_storage_path  External file storage path
    * @param string  $conn  The database connection
+   * @param string  $uploads_directory  Uploads directory path
    */
   public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn)
   {
@@ -92,12 +113,44 @@ class RepoImport implements RepoImportInterface {
     $this->modelsController = $modelsController;
     $this->kernel = $kernel;
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
-    // $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
-    $this->uploads_directory = __DIR__ . '/../../../web/uploads/repository/';
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
     $this->external_file_storage_path = $external_file_storage_path;
     $this->conn = $conn;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->repoValidate = new RepoValidateData($conn);
+
+    // Image extensions.
+    $this->image_extensions = array(
+      'tif',
+      'tiff',
+      'jpg',
+      'jpeg',
+      'cr2',
+      'dng',
+    );
+
+    // Model extensions.
+    $this->model_extensions = array(
+      'obj',
+      'ply',
+      'gltf',
+      'glb',
+    );
+
+    // Default image file name mapping.
+    $this->default_image_file_name_map = array(
+      'local_subject_id',
+      'capture_dataset_field_id',
+      'position_in_cluster_field_id',
+      'cluster_position_field_id',
+    );
+
+    // Default model file name mapping.
+    $this->default_model_file_name_map = array(
+      'local_subject_id',
+      'item_description',
+      'model_purpose',
+    );
   }
 
   /**
@@ -108,8 +161,6 @@ class RepoImport implements RepoImportInterface {
    */
   public function import_csv($params = array())
   {
-
-    // $this->u->dumper($this->uploads_directory);
 
     $return = $csv_types = array();
 
@@ -133,7 +184,7 @@ class RepoImport implements RepoImportInterface {
 
     // Throw a 404 if the job record doesn't exist.
     if (!$job_data) {
-      $return['errors'][] = 'The Job record doesn\'t exist';
+      $return['errors'][] = 'The Job record doesn\'t exist - import_csv()';
       return $return;
     }
 
@@ -163,7 +214,7 @@ class RepoImport implements RepoImportInterface {
 
     if (!empty($params['uuid']) && !empty($params['parent_project_id']) && !empty($params['parent_record_id']) && !empty($params['parent_record_type'])) {
 
-      $ids = (object)array(
+      $job_info = (object)array(
         'job_id' => $job_data['job_id'],
         'uuid' => $params['uuid'],
         'parent_project_id' => $params['parent_project_id'],
@@ -175,7 +226,7 @@ class RepoImport implements RepoImportInterface {
 
       if (!empty($job_type)) {
         // Prepare the data.
-        $data = $this->prepare_data($job_type, $this->uploads_directory . $ids->uuid);
+        $data = $this->prepare_data($job_type, $this->project_directory . $this->uploads_directory . $job_info->uuid);
 
         // Ingest data.
         if (!empty($data)) {
@@ -191,7 +242,7 @@ class RepoImport implements RepoImportInterface {
           if((count($csv_types) === 1) && in_array('model', $csv_types)) {
             $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => 'job',
-              'record_id' => $ids->job_id,
+              'record_id' => $job_info->job_id,
               'user_id' => 0,
               'values' => array(
                 'job_type' => 'models metadata import',
@@ -202,10 +253,9 @@ class RepoImport implements RepoImportInterface {
           // Execute the ingest.
           $i = 1;
           foreach ($data as $csv_key => $csv_value) {
-
             // Don't perform an ingest without CSV data (an empty CSV).
             if(isset($csv_value['csv'])) {
-              $return['job_log_ids'] = $this->ingest_csv_data($csv_value, $ids, $params['parent_record_type'], $i);
+              $return['job_log_ids'] = $this->ingest_csv_data($csv_value, $job_info, $params['parent_record_type'], $i);
             }
 
             $i++;
@@ -250,6 +300,8 @@ class RepoImport implements RepoImportInterface {
   }
 
   /**
+   * Prepare Data
+   *
    * @param string $job_type The job type (One of: subjects, items, capture datasets, models)
    * @param string $job_upload_directory The upload directory
    * @return array Import result and/or any messages
@@ -427,12 +479,16 @@ class RepoImport implements RepoImportInterface {
   }
 
   /**
-   * @param string $data  Data object
-   * @param int $job_id  Job ID
-   * @param int $parent_record_id  Parent record ID
+   * Ingest CSV Data
+   *
+   * @param obj $data  Data object
+   * @param array $job_data  Job data
+   * @param string $parent_record_type  Parent record type
+   * @param int $i  Iterator
    * @return array  An array of job log IDs
    */
-  public function ingest_csv_data($data = null, $ids = array(), $parent_record_type = null, $i = 1) {
+  public function ingest_csv_data($data = null, $job_data = array(), $parent_record_type = null, $i = 1)
+  {
 
     $session = new Session();
     $data = (object)$data;
@@ -448,10 +504,10 @@ class RepoImport implements RepoImportInterface {
     }
 
     // Job ID and parent record ID
-    $data->job_id = isset($ids->job_id) ? $ids->job_id : false;
-    $data->uuid = isset($ids->uuid) ? $ids->uuid : false;
-    $data->parent_project_id = isset($ids->parent_project_id) ? $ids->parent_project_id : false;
-    $data->parent_record_id = isset($ids->parent_record_id) ? $ids->parent_record_id : false;
+    $data->job_id = isset($job_data->job_id) ? $job_data->job_id : false;
+    $data->uuid = isset($job_data->uuid) ? $job_data->uuid : false;
+    $data->parent_project_id = isset($job_data->parent_project_id) ? $job_data->parent_project_id : false;
+    $data->parent_record_id = isset($job_data->parent_record_id) ? $job_data->parent_record_id : false;
     $data->parent_record_type = isset($parent_record_type) ? $parent_record_type : false;
 
     // Just in case: throw a 404 if either job ID or parent record ID aren't passed.
@@ -487,6 +543,15 @@ class RepoImport implements RepoImportInterface {
       $new_repository_ids[$i] = $session->get('new_repository_ids_' . ($i-1));
     }
 
+    // Extract subject, item, and model database column data from the processing server's 'inspect-mesh' results.
+    if ($data->type === 'model') {
+      $data = $this->extract_data_from_external('get_model_data_from_processing_service_results', $data);
+    }
+
+    // Extract subject and capture_dataset database column data from file names.
+    $data = $this->extract_data_from_external('get_data_from_file_names', $data);
+
+    // foreach() begins
     foreach ($data->csv as $csv_key => $csv_val) {
 
       // If the import_row_id is missing, set the job to failed and set the error.
@@ -562,7 +627,7 @@ class RepoImport implements RepoImportInterface {
               $csv_val->file_path = '/' . $data->uuid . $csv_val->file_path;
               // Get the file's checksum from the BagIt manifest.
               $finder = new Finder();
-              $finder->files()->in($this->uploads_directory . $data->uuid . '/');
+              $finder->files()->in($this->project_directory . $this->uploads_directory . $data->uuid . '/');
               $finder->files()->name('manifest*.txt');
               // Find the manifest file.
               foreach ($finder as $file) {
@@ -579,69 +644,10 @@ class RepoImport implements RepoImportInterface {
               }
             }
 
-            /////////////////////////////////////////////////////////////////////////////////////////
-            // Extract database column data from the processing server's 'inspect-mesh' results.
-            // Query the database for 'inspect-mesh' jobs.
-            $repo_processing_job_data = $this->repo_storage_controller->execute('getRecords', array(
-              'base_table' => 'processing_job',
-              'fields' => array(
-                array(
-                  'table_name' => 'processing_job_file',
-                  'field_name' => 'job_id',
-                ),
-                array(
-                  'table_name' => 'processing_job_file',
-                  'field_name' => 'file_contents',
-                ),
-              ),
-              // Joins
-              'related_tables' => array(
-                array(
-                  'table_name' => 'processing_job_file',
-                  'table_join_field' => 'job_id',
-                  'join_type' => 'LEFT JOIN',
-                  'base_join_table' => 'processing_job',
-                  'base_join_field' => 'processing_service_job_id',
-                )
-              ),
-              'limit' => 1,
-              'search_params' => array(
-                0 => array('field_names' => array('processing_job.job_id'), 'search_values' => array($data->uuid), 'comparison' => '='),
-                1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('inspect-mesh'), 'comparison' => '='),
-                2 => array('field_names' => array('processing_job.state'), 'search_values' => array('done'), 'comparison' => '='),
-                2 => array('field_names' => array('processing_job_file.file_name'), 'search_values' => array('model-report.json'), 'comparison' => '='),
-              ),
-              'search_type' => 'AND',
-              
-              'omit_active_field' => true,
-              )
-            );
-
-            // $this->u->dumper($repo_processing_job_data);
-
-            foreach ($repo_processing_job_data as $key => $value) {
-              // Get the processing job's model-report.json file's contents.
-              $file_contents = json_decode($value['file_contents'], true);
-              // $this->u->dumper($file_contents['id'],0);
-              // $this->u->dumper($file_contents['steps']['inspect']['result']['inspection']);
-              $model_file_name = $file_contents['parameters']['meshFile'];
-              // If the proceesing service's $model_file_name is found in the repository's file_path, 
-              // add values from the model-report.json file's contents.
-              if(stristr($csv_val->file_path, $model_file_name)) {
-                // Break-out the topology and statistics into dedicated variables (mainly for readability).
-                $topology = $file_contents['steps']['inspect']['result']['inspection']['topology'];
-                $statistics = $file_contents['steps']['inspect']['result']['inspection']['statistics'];
-                // Determine the model_modality (type of geometry) - 'point_cloud' or a 'mesh'.
-                $csv_val->model_modality = (($statistics['numFaces'] === 0) && ($statistics['numEdges'] === 0)) ? 'point_cloud' : 'mesh';
-                $csv_val->is_watertight = $topology['isWatertight'];
-                $csv_val->has_normals = $statistics['hasNormals'];
-                $csv_val->face_count = $statistics['numFaces'];
-                $csv_val->vertices_count = $statistics['numVertices'];
-                $csv_val->has_vertex_color = $statistics['hasVertexColors'];
-                $csv_val->has_uv_space = $statistics['hasTexCoords'];
-              }
-            }
-            /////////////////////////////////////////////////////////////////////////////////////////
+            // /////////////////////////////////////////////////////////////////////////////////////////
+            // // Extract database column data from the processing server's 'inspect-mesh' results.
+            // $csv_val = $this->extract_data_from_external('get_model_data_from_processing_service', $csv_val, $data);
+            // /////////////////////////////////////////////////////////////////////////////////////////
 
             // Set the parent_capture_dataset_repository_id or parent_item_repository_id (when a model is associated to an item).
             // TODO: add previous_parent_record_type to the mix, 
@@ -674,6 +680,11 @@ class RepoImport implements RepoImportInterface {
           'user_id' => $data->user_id,
           'values' => (array)$csv_val
         ));
+
+        // Insert capture data elements and capture data files into the metadata storage.
+        if (($data->type === 'capture_dataset') && isset($csv_val->capture_data_elements) && !empty($csv_val->capture_data_elements)) {
+          $this->insert_capture_data_elements_and_files($csv_val->capture_data_elements, $this_id, $data);
+        }
 
         // Create an array of all of the newly created repository IDs.
         $new_new_repository_ids[$csv_val->import_row_id] = $this_id;
@@ -708,6 +719,8 @@ class RepoImport implements RepoImportInterface {
         ));
       }
     }
+    // foreach() ends
+
     if (isset($new_new_repository_ids) && !empty($new_new_repository_ids)) {
       // Set the session variable 'new_repository_ids'.
       $session->set('new_repository_ids_' . $i, $new_new_repository_ids);
@@ -736,6 +749,548 @@ class RepoImport implements RepoImportInterface {
 
     // TODO: return something more than job log IDs?
     return $job_log_ids;
+  }
+
+  /**
+   * Insert Capture Data Elements
+   *
+   * @param array $capture_data_elements An array of capture data elements.
+   * @param int $capture_dataset_repository_id The capture dataset repository ID
+   * @param array $data Job data
+   * @return null
+   */
+  public function insert_capture_data_elements_and_files($capture_data_elements = array(), $capture_dataset_repository_id = null, $data = array()) {
+
+    if (!empty($capture_data_elements) && !empty($capture_dataset_repository_id) && !empty($data)) {
+      // Loop through capture data elements and add to storage.
+      foreach ($capture_data_elements as $ekey => $evalue) {
+
+        // Pluck-out capture data files and save for the next step.
+        if(isset($evalue['capture_data_files']) && !empty($evalue['capture_data_files'])) {
+          $capture_data_files = $evalue['capture_data_files'];
+          unset($evalue['capture_data_files']);
+        }
+
+        // Set the parent capture dataset ID.
+        $evalue['capture_dataset_repository_id'] = $capture_dataset_repository_id;
+        // Add to metadata storage.
+        $capture_data_element_id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'capture_data_element',
+          'user_id' => $data->user_id,
+          'values' => $evalue
+        ));
+
+        // Insert into the job_import_record table
+        $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_import_record',
+          'user_id' => $data->user_id,
+          'values' => array(
+            'job_id' => $data->job_id,
+            'record_id' => $capture_data_element_id,
+            'project_id' => (int)$data->parent_project_id,
+            'record_table' => 'capture_data_element',
+            'description' => 'imported capture data element',
+          )
+        ));
+
+        // Loop through capture data files and add to storage.
+        foreach ($capture_data_files as $fkey => $fvalue) {
+          // Set the parent capture data element ID.
+          $fvalue['parent_capture_data_element_repository_id'] = $capture_data_element_id;
+          // Add to metadata storage.
+          $capture_data_file_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'capture_data_file',
+            'user_id' => $data->user_id,
+            'values' => $fvalue
+          ));
+
+          // Insert into the job_import_record table
+          $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'job_import_record',
+            'user_id' => $data->user_id,
+            'values' => array(
+              'job_id' => $data->job_id,
+              'record_id' => $capture_data_file_id,
+              'project_id' => (int)$data->parent_project_id,
+              'record_table' => 'capture_data_file',
+              'description' => 'imported capture data file',
+            )
+          ));
+        }
+
+      }
+    }
+
+  }
+
+  /**
+   * Extract Data From External
+   *
+   * @param string $function_name Name of the function to call.
+   * @param string $data Job data
+   * @return array
+   */
+  public function extract_data_from_external($function_name = null, $data = array())
+  {
+
+    if (!empty($function_name) && !empty($data) && method_exists($this, $function_name)) {
+      $data = $this->$function_name($data);
+    }
+
+    return $data;
+  }
+
+  /**
+   * Get Model Data From Processing Service Results
+   *
+   * @param array $data Job data
+   * @return array
+   */
+  public function get_model_data_from_processing_service_results($data = array())
+  {
+    // Extract database column data from the processing server's 'inspect-mesh' results.
+    // Query the database for 'inspect-mesh' jobs.
+    if (!empty($data)) {
+
+      $repo_processing_job_data = $this->repo_storage_controller->execute('getRecords', array(
+        'base_table' => 'processing_job',
+        'fields' => array(
+          array(
+            'table_name' => 'processing_job_file',
+            'field_name' => 'job_id',
+          ),
+          array(
+            'table_name' => 'processing_job_file',
+            'field_name' => 'file_contents',
+          ),
+        ),
+        // Joins
+        'related_tables' => array(
+          array(
+            'table_name' => 'processing_job_file',
+            'table_join_field' => 'job_id',
+            'join_type' => 'LEFT JOIN',
+            'base_join_table' => 'processing_job',
+            'base_join_field' => 'processing_service_job_id',
+          )
+        ),
+        'limit' => 1,
+        'search_params' => array(
+          0 => array('field_names' => array('processing_job.processing_service_job_id'), 'search_values' => array($data->job_id), 'comparison' => '='),
+          1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('inspect-mesh'), 'comparison' => '='),
+          2 => array('field_names' => array('processing_job.state'), 'search_values' => array('done'), 'comparison' => '='),
+          3 => array('field_names' => array('processing_job_file.file_name'), 'search_values' => array('-report.json'), 'comparison' => 'LIKE'),
+        ),
+        'search_type' => 'AND',
+
+        'omit_active_field' => true,
+        )
+      );
+
+      foreach ($repo_processing_job_data as $key => $value) {
+        // Get the processing job's model-report.json file's contents.
+        $file_contents = json_decode($value['file_contents'], true);
+        $model_file_name = $file_contents['parameters']['meshFile'];
+
+        foreach ($data->csv as $csv_key => $csv_val) {
+          // If the processing service's $model_file_name is found in the repository's file_path,
+          // add values from the model-report.json file's contents.
+          if(stristr($csv_val->file_path, $model_file_name)) {
+            // Break-out the topology and statistics into dedicated variables (mainly for readability).
+            $topology = $file_contents['steps']['inspect']['result']['inspection']['topology'];
+            $statistics = $file_contents['steps']['inspect']['result']['inspection']['statistics'];
+            // Determine the model_modality (type of geometry) - 'point_cloud' or a 'mesh'.
+            $data->csv[$csv_key]->model_modality = (($statistics['numFaces'] === 0) && ($statistics['numEdges'] === 0)) ? 'point_cloud' : 'mesh';
+            $data->csv[$csv_key]->is_watertight = $topology['isWatertight'];
+            $data->csv[$csv_key]->has_normals = $statistics['hasNormals'];
+            $data->csv[$csv_key]->face_count = $statistics['numFaces'];
+            $data->csv[$csv_key]->vertices_count = $statistics['numVertices'];
+            $data->csv[$csv_key]->has_vertex_color = $statistics['hasVertexColors'];
+            $data->csv[$csv_key]->has_uv_space = $statistics['hasTexCoords'];
+          }
+        }
+
+      }
+    }
+
+    return $data;
+  }
+
+  /**
+   * Get Data From File Names
+   *
+   * @param array $data Job data
+   * @return array
+   */
+  public function get_data_from_file_names($data = array())
+  {
+
+    $image_file_names = $model_file_names = array();
+    $capture_datasets = $models = array();
+
+    if (!empty($data)) {
+
+      // Get the file's checksum from the BagIt manifest.
+      $finder = new Finder();
+      $finder->files()->in($this->project_directory . $this->uploads_directory . $data->uuid . '/');
+      // Loop through uploaded files.
+      foreach ($finder as $file) {
+
+        // Get the parent directory.
+        $dir = dirname($file->getPathname(), 1);
+        $dir_parts = explode(DIRECTORY_SEPARATOR, $dir);
+        $dir_parent = array_pop($dir_parts);
+
+        // Get image files.
+        // If this file's extension exists in the $this->image_extensions array, add to the $images array.
+        if (in_array($file->getExtension(), $this->image_extensions)) {
+          $image_file_names[$dir_parent][] = str_replace('.' . $file->getExtension(), '', $file->getFilename());
+        }
+
+        // Get model files.
+        // If this file's extension exists in the $this->model_extensions array, add to the $models array.
+        if (in_array($file->getExtension(), $this->model_extensions)) {
+          $model_file_names[] = str_replace('.' . $file->getExtension(), '', $file->getFilename());
+        }
+      }
+
+      // Remove duplicate image file names and sort.
+      foreach ($image_file_names as $ikey => $ivalue) {
+        $image_file_names[$ikey] = array_unique($image_file_names[$ikey]);
+        sort($image_file_names[$ikey]);
+      }
+
+      if (!empty($image_file_names)) {
+        ksort($image_file_names);
+        $data = $this->get_dataset_data_from_filenames($image_file_names, $data);
+      }
+
+      // Remove duplicate model file names and sort.
+      $model_file_names = array_unique($model_file_names);
+      sort($model_file_names);
+      if (!empty($model_file_names)) {
+        $data = $this->get_model_data_from_filenames($model_file_names, $data);
+      }
+
+    }
+
+    return $data;
+  }
+
+  /**
+   * Get Capture Dataset Data From Filenames
+   *
+   * @param array $image_file_names Image file names
+   * @param array $data Job data
+   * @return array
+   */
+  public function get_dataset_data_from_filenames($image_file_names = array(), $data = array())
+  {
+    // Insert into subject (local_subject_id)
+    // Insert into capture_dataset (capture_dataset_field_id)
+    // Insert into capture_data_element (position_in_cluster_field_id, cluster_position_field_id)
+    //
+    // Example file name mapping:
+    // usnm_160-s01-p01-01.jpg
+    // [local_subject_id]-s[capture_dataset_field_id]-p[position_in_cluster_field_id]-[cluster_position_field_id].jpg
+
+    if (!empty($image_file_names) && !empty($data)) {
+
+      // If there's a file_name_map.csv file at the root of the 'data' directory, use it.
+      $file_name_map_main = $this->get_filename_map($data);
+
+      // Add data to uploaded CSVs.
+      switch ($data->type) {
+        case 'subject':
+          // Grab the first file name to get the local_subject_id.
+          foreach ($image_file_names as $dir_name => $files) {
+            if (!empty($files)) {
+              // Get the file's info from the metadata storage.
+              $file_info = $this->get_file_info($data->uuid, $files[0]);
+              // Get the file name map, if one exists in this directory.
+              if (!empty($file_info)) {
+                $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                // If no file name map exists, use the main one in the root of the 'data' directory.
+                $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
+              }
+              // Establish the map key so we know which slot in the file name to obtain the data from.
+              $key = (isset($file_name_map) && array_search('local_subject_id', $file_name_map)) ? array_search('local_subject_id', $file_name_map) : array_search('local_subject_id', $this->default_image_file_name_map);
+              // Transform the file name to an array.
+              $file_name_parts = explode('-', $files[0]);
+              // Populate the CSV's subject entries with the local_subject_id from the file name.
+              foreach ($data->csv as $ck => $cv) {
+                $data->csv[$ck]->local_subject_id = $file_name_parts[ $key ];
+              }
+            }
+          }
+          break;
+        case 'capture_dataset':
+
+          $i = 0;
+          foreach ($image_file_names as $dir_name => $files) {
+
+            // Get the capture_dataset_field_id from the directory name.
+            $data->csv[$i]->capture_dataset_field_id = preg_replace('/[^0-9]/', '', $dir_name);
+
+            // Add 'capture_data_elements' and 'capture_data_files' to the 'capture_dataset' CSV.
+            if (!empty($files)) {
+              foreach ($files as $file) {
+
+                // Get the file's info from the metadata storage.
+                $file_info = $this->get_file_info($data->uuid, $file);
+
+                // Get the file name map, if one exists in this directory.
+                $file_name_map = array();
+                // if (!empty($file_info)) $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                if (!empty($file_info)) {
+                  $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                  // If no file name map exists, use the main one in the root of the 'data' directory.
+                  $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
+                }
+
+                // $this->u->dumper($file_name_map,0);
+
+                // Establish the file name map keys so we know which slot in the file name to obtain the data from.
+                // Default position_in_cluster_field_id key.
+                $key1 = array_search('position_in_cluster_field_id', $this->default_image_file_name_map);
+                // Default cluster_position_field_id key.
+                $key2 = array_search('cluster_position_field_id', $this->default_image_file_name_map);
+                // If the $file_name_map exists, then set the key using that.
+                if (!empty($file_name_map)) {
+                  // User-supplied position_in_cluster_field_id key.
+                  $key1 = array_search('position_in_cluster_field_id', $file_name_map)
+                      ? array_search('position_in_cluster_field_id', $file_name_map)
+                      : null;
+                  // User-supplied cluster_position_field_id key.
+                  $key2 = array_search('cluster_position_field_id', $file_name_map)
+                      ? array_search('cluster_position_field_id', $file_name_map)
+                      : null;
+                }
+
+                // $this->u->dumper($file_name_map,0);
+                // $this->u->dumper($key1,0);
+                // $this->u->dumper($key2);
+
+                // Transform the file name to an array.
+                $file_name_parts = explode('-', $file);
+
+                // Build-out the $capture_data_files array.
+                if (!empty($file_info)) {
+                  $capture_data_files = array();
+                  foreach ($file_info as $file_info_key => $file_info_value) {
+                    // File info for the capture_data_file columns
+                    $capture_data_files[] = array(
+                      'file_upload_id' => $file_info_value['file_upload_id'],
+                      'capture_data_file_name' => $file_info_value['file_name'],
+                      'capture_data_file_type' => $file_info_value['file_type'],
+                      'is_compressed_multiple_files' => 0,
+                    );
+                  }
+                }
+
+                // Build-out the $capture_data_elements array, adding in this capture data element's $capture_data_files array.
+                $data->csv[$i]->capture_data_elements[] = array(
+                  'position_in_cluster_field_id' => (!empty($key1) && stristr($file_name_parts[ $key1 ], 'p')) ? (int)str_replace('p', '', $file_name_parts[ $key1 ]) : null,
+                  'cluster_position_field_id' => (!empty($key2) && isset($file_name_parts[ $key2 ])) ? (int)$file_name_parts[ $key2 ] : null,
+                  'capture_data_files' => $capture_data_files,
+                );
+
+              }
+            }
+
+            $i++;
+          }
+          break;
+      }
+
+    }
+
+    return $data;
+  }
+
+  /**
+   * Get Data From File Names
+   *
+   * @param array $model_file_names Model file names
+   * @param array $data Job data
+   * @return array
+   */
+  public function get_model_data_from_filenames($model_file_names = array(), $data = array())
+  {
+    // Insert into subject (local_subject_id)
+    // Insert into item (item_description)
+    // Insert into model (model_purpose)
+    //
+    // Example file name mapping:
+    // nmnh-usnm_v_512384522-skull-master_model-2018_10_22.obj
+    // nmnh-[local_subject_id]-[item_description]-[model_purpose]-2018_10_22.obj
+
+    if (!empty($model_file_names)) {
+
+      // If there's a file_name_map.csv file at the root of the 'data' directory, use it.
+      $file_name_map_main = $this->get_filename_map($data);
+
+      // Add data to uploaded CSVs.
+      switch ($data->type) {
+        case 'subject':
+          // Get the local_subject_id from the file name.
+          foreach ($model_file_names as $key => $file) {
+            if (!empty($file)) {
+              // Get the file's info from the metadata storage.
+              $file_info = $this->get_file_info($data->uuid, $file);
+              // Get the file name map, if one exists in this directory.
+              if (!empty($file_info)) {
+                $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                // If no file name map exists, use the main one in the root of the 'data' directory.
+                $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
+              }
+              // Establish the file name map key so we know which slot in the file name to obtain the data from.
+              // local_subject_id
+              $key1 = (isset($file_name_map) && array_search('local_subject_id', $file_name_map))
+                  ? array_search('local_subject_id', $file_name_map)
+                  : array_search('local_subject_id', $this->default_model_file_name_map);
+              // Transform the file name to an array.
+              $file_name_parts = explode('-', $file);
+              // Populate the CSV's subject entries with the local_subject_id from the file name.
+              foreach ($data->csv as $ck => $cv) {
+                $data->csv[$ck]->local_subject_id = $file_name_parts[$key1];
+              }
+            }
+          }
+          break;
+        case 'item':
+          // Get the item_description from the file name.
+          foreach ($model_file_names as $key => $file) {
+            if (!empty($file)) {
+              // Get the file's info from the metadata storage.
+              $file_info = $this->get_file_info($data->uuid, $file);
+              // Get the file name map, if one exists in this directory.
+              if (!empty($file_info)) {
+                $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                // If no file name map exists, use the main one in the root of the 'data' directory.
+                $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
+              }
+              // Establish the file name map key so we know which slot in the file name to obtain the data from.
+              // item_description
+              $key1 = (isset($file_name_map) && array_search('item_description', $file_name_map))
+                  ? array_search('item_description', $file_name_map)
+                  : array_search('item_description', $this->default_model_file_name_map);
+              // Transform the file name to an array.
+              $file_name_parts = explode('-', $file);
+              // Populate the CSV's item entries with the item_description from the file name.
+              foreach ($data->csv as $ck => $cv) {
+                $data->csv[$ck]->item_description = $file_name_parts[$key1];
+              }
+            }
+          }
+          break;
+        case 'model':
+          // Get the model_purpose from the file name.
+          foreach ($model_file_names as $key => $file) {
+            if (!empty($file)) {
+              // Get the file's info from the metadata storage.
+              $file_info = $this->get_file_info($data->uuid, $file);
+              // Get the file name map, if one exists in this directory.
+              if (!empty($file_info)) {
+                $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                // If no file name map exists, use the main one in the root of the 'data' directory.
+                $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
+              }
+              // Establish the file name map key so we know which slot in the file name to obtain the data from.
+              // model_purpose
+              $key1 = (isset($file_name_map) && array_search('model_purpose', $file_name_map))
+                  ? array_search('model_purpose', $file_name_map)
+                  : array_search('model_purpose', $this->default_model_file_name_map);
+              // Transform the file name to an array.
+              $file_name_parts = explode('-', $file);
+              // Remove '_model' from the model_purpose chunk from the file name ('master_model' becomes 'model').
+              $data->csv[$key]->model_purpose = str_replace('_model', '', $file_name_parts[$key1]);
+            }
+          }
+          break;
+      }
+
+    }
+
+    return $data;
+  }
+
+  /**
+   * Get File Info
+   *
+   * @param string $uuid The job UUID
+   * @param string $file_name The file name
+   */
+  public function get_file_info($uuid = null, $file_name = null)
+  {
+    $data = array();
+
+    if (!empty($uuid) && !empty($file_name)) {
+      // Query the metadata storage for the file's info using the job UUID and filename.
+      $data = $this->repo_storage_controller->execute('getRecords', array(
+        'base_table' => 'file_upload',
+        'fields' => array(),
+        'limit' => 1,
+        'search_params' => array(
+          0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($uuid), 'comparison' => 'LIKE'),
+          1 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($file_name), 'comparison' => 'LIKE'),
+        ),
+        'search_type' => 'AND',
+        'omit_active_field' => true,
+        )
+      );
+    }
+
+    return $data;
+  }
+
+  /**
+   * Get File Name Map
+   *
+   * @param array $job_data Job data
+   * @param string $directory The target directory
+   * @return array
+   */
+  public function get_filename_map($job_data = array(), $directory = '')
+  {
+
+    $data = array();
+    $target_directory = $this->project_directory . $this->uploads_directory . $job_data->uuid;
+
+    if (!empty($job_data)) {
+
+      if (!empty($directory)) {
+        // Remove the file name to get the parent directory.
+        $file_path_array = explode(DIRECTORY_SEPARATOR, $directory);
+        array_pop($file_path_array);
+        $dir = implode(DIRECTORY_SEPARATOR, $file_path_array);
+        $dir = str_replace(DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'repository' . DIRECTORY_SEPARATOR, '', $dir);
+        $target_directory = $this->project_directory . $this->uploads_directory . $dir;
+      }
+
+      // $this->u->dumper($target_directory);
+
+      // Find the file_name_map.csv
+      $finder = new Finder();
+      $finder->files()->in($target_directory);
+      // By default, scan for the 'file_name_map.csv' file above the 'data' directory.
+      // Don't want to find 'file_name_map.csv' overrides within the 'data' directory unless we specifically ask for it.
+      if (empty($directory)) $finder->notPath('data' . DIRECTORY_SEPARATOR);
+      $finder->files()->name('file_name_map.csv');
+
+      foreach ($finder as $file) {
+        // Just to make sure we're dealing with the correct file.
+        if ($file->getFilename() === 'file_name_map.csv') {
+          $contents = $file->getContents();
+          // Remove spaces from the CSV if there are any.
+          $contents = preg_replace('/\s+/', '', $contents);
+          $data = explode(',', $contents);
+        }
+      }
+
+    }
+
+    return $data;
   }
 
 }

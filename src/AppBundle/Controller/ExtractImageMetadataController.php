@@ -113,7 +113,7 @@ class ExtractImageMetadataController extends Controller
     $localpath = !empty($params['localpath']) ? $params['localpath'] : false;
 
     // Throw an exception if the job record doesn't exist.
-    if (!$localpath) throw $this->createNotFoundException('The Job directory doesn\'t exist');
+    if (!$localpath) throw $this->createNotFoundException('The Job directory doesn\'t exist - extract_metadata()');
 
     // Get the job ID, so errors can be logged to the database.
     $dir_array = explode(DIRECTORY_SEPARATOR, $localpath);
@@ -153,12 +153,21 @@ class ExtractImageMetadataController extends Controller
           // Write the metadata for this file.
           if(array_key_exists('metadata', $data[$i])) {
 
+            // TODO: Remove dumps once tests on Windows are confirmed to work.
+            // $this->u->dumper($this->project_directory,0);
+            // $this->u->dumper($file->getPath(),0);
+
             // Create the clean directory path to the file, since that's how it's stored in the database.
-            // Turns this: /Users/gor/Documents/Sites/dporepo/src/AppBundle/Command/../../../web/uploads/repository/3df_5ba15aec7ebea7.06350365/testupload03/data
-            // Into this: /uploads/repository/3df_5ba15aec7ebea7.06350365/testupload03/data
-            $file_path = str_replace($this->project_directory . 'src' . DIRECTORY_SEPARATOR . 'AppBundle' . DIRECTORY_SEPARATOR . 'Command' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'web', '', $file->getPath());
+            // Turns this: /Users/gor/Documents/Sites/dporepo/web/uploads/repository/3df_5bd21fc4ccd253.95102447/testupload06_usnm_160/data/-s03-
+            // Into this: /uploads/repository/3df_5bd21fc4ccd253.95102447/testupload06_usnm_160/data/-s03-
+            $file_path = str_replace($this->project_directory . 'web', '', $file->getPath());
+
+            // TODO: Remove dumps once tests on Windows are confirmed to work.
+            // $this->u->dumper($file_path);
 
             // Windows file path fix.
+            // Turns this: /uploads/repository/3df_5bd21fc4ccd253.95102447/testupload06_usnm_160/data/-s03-
+            // Into this: \uploads\repository\3df_5bd21fc4ccd253.95102447\testupload06_usnm_160\data\-s03-
             $file_path = str_replace(DIRECTORY_SEPARATOR, '/', $file_path);
 
             // Get the file's id in the database.
