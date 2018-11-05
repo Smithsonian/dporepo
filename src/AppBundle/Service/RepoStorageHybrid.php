@@ -2186,7 +2186,7 @@ class RepoStorageHybrid implements RepoStorage {
           $c = count($query_params['search_params']);
           $query_params['search_params'][$c] = array(
             'field_names' => array(
-              'parent_capture_dataset_repository_id',
+            'model_repository_id',
             ),
             'search_values' => array($parent_id),
             'comparison' => '=',
