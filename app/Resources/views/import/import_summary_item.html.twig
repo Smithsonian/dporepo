@@ -24,9 +24,9 @@
               <dd>{{ project.project_name }}</dd>
             <dt>Date Uploaded:</dt>
               <dd>{{ project.date_created }}</dd>
-            {% if project.username is defined %}
+            {% if job_data.username is defined %}
               <dt>Uploaded By:</dt>
-                <dd>{{ project.username }}</dd>
+                <dd>{{ job_data.username }}</dd>
             {% endif %}
             <dt>Job Status:</dt>
             {% if job_data.job_status is defined %}
@@ -40,6 +40,8 @@
                 <dd class="status-target"><span class="in-progress"><img src="/lib/images/spinner-40px.gif" alt="Visual job status indicator" width="26" height="26"> In Progress:</span> <span class="status">{{ job_data.job_status }}</span></dd>
               {% endif %}
             {% endif %}
+            <dt>UUID:</dt>
+              <dd>{{ job_data.uuid }}</dd>
           </dl>
         </div>
         <div class="col-sm-6 col-md-6">
@@ -125,17 +127,17 @@
                 </ol>
               {% endif %}
               <hr>
-              <h3>Image Validation Results</h3>
-              {% if not project.image_validation_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' or job_data.job_status == 'image validation in progress' %}
-                <p><span class="glyphicon glyphicon-time"></span> Image validation pending. Please check back shortly.</p>
+              <h3>Asset Validation Results</h3>
+              {% if not project.asset_validation_errors and job_data.job_status == 'bagit validation starting' or job_data.job_status == 'bagit validation in progress' or job_data.job_status == 'image validation in progress' %}
+                <p><span class="glyphicon glyphicon-time"></span> Asset validation pending. Please check back shortly.</p>
               {% elseif job_data.job_status == 'cancelled' %}
                 <p><span class="glyphicon glyphicon-ban-circle"></span> Job cancelled</p>
               {% else %}
                 <ol class="list-unstyled">
-                  {% for image_validation_error in project.image_validation_errors %}
-                    <li class="text-danger"><strong><span class="glyphicon glyphicon-ban-circle"></span> {{ image_validation_error.job_log_description }}</strong></li>
+                  {% for asset_validation_error in project.asset_validation_errors %}
+                    <li class="text-danger"><strong><span class="glyphicon glyphicon-ban-circle"></span> {{ asset_validation_error.job_log_description }}</strong></li>
                   {% else %}
-                    <li class="text-success"><strong><span class="glyphicon glyphicon-ok"></span> No image validation errors found.</strong></li>
+                    <li class="text-success"><strong><span class="glyphicon glyphicon-ok"></span> No asset validation errors found.</strong></li>
                   {% endfor %}
                 </ol>
               {% endif %}

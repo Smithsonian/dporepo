@@ -36,6 +36,7 @@ use AppBundle\Entity\UploadsParentPicker;
 use AppBundle\Utils\AppUtilities;
 
 use AppBundle\Service\RepoFileTransfer;
+use AppBundle\Service\RepoProcessingService;
 
 class ImportController extends Controller
 {
@@ -62,10 +63,20 @@ class ImportController extends Controller
     private $fileTransfer;
 
     /**
+     * @var object $processing
+     */
+    private $processing;
+
+    /**
+     * @var string $external_file_storage_on
+     */
+    private $external_file_storage_on;
+
+    /**
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, RepoFileTransfer $fileTransfer) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, string $external_file_storage_on) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
@@ -76,6 +87,8 @@ class ImportController extends Controller
         $this->datasetsController = $datasetsController;
         $this->modelsController = $modelsController;
         $this->fileTransfer = $fileTransfer;
+        $this->processing = $processing;
+        $this->external_file_storage_on = $external_file_storage_on;
 
         // $this->logger = $logger;
         // Usage:
@@ -96,23 +109,27 @@ class ImportController extends Controller
      */
     public function import_summary_dashboard(Connection $conn, Request $request)
     {
+      
         $service_error = false;
         $obj = new UploadsParentPicker();
 
-        // Check to see if the external storage service is accessible.
-        // TODO: Send email alerts to admins?
-        // Set up flysystem.
-        $flysystem = $this->container->get('oneup_flysystem.assets_filesystem');
-        // Transfer files.
-        $result = $this->fileTransfer->checkExternalStorage('checker', $flysystem);
-        // If errors exist, serve out flash notifications.
-        if (!empty($result)) {
-          foreach ($result as $key => $value) {
-            if (isset($value['errors'])) {
-              $this->addFlash('error', '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).');
-              $service_error = true;
-              foreach ($value['errors'] as $ekey => $evalue) {
-                $this->addFlash('error', $evalue);
+        // If the external file storage service is turned on in parameters.yml, 
+        // check to see if the external storage service is accessible.
+        if($this->external_file_storage_on) {
+          // TODO: Send email alerts to admins?
+          // Set up flysystem.
+          $flysystem = $this->container->get('oneup_flysystem.assets_filesystem');
+          // Transfer files.
+          $result = $this->fileTransfer->checkExternalStorage('checker', $flysystem);
+          // If errors exist, serve out flash notifications.
+          if (!empty($result)) {
+            foreach ($result as $key => $value) {
+              if (isset($value['errors'])) {
+                $this->addFlash('error', '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).');
+                $service_error = true;
+                foreach ($value['errors'] as $ekey => $evalue) {
+                  $this->addFlash('error', $evalue);
+                }
               }
             }
           }
@@ -209,9 +226,9 @@ class ImportController extends Controller
       // $command = 'cd ' . $this->container->getParameter('kernel.project_dir') . ' && ';
       chdir($this->container->getParameter('kernel.project_dir'));
       if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {            
-        $command = $php_binary_path . ' bin/console app:validate ' . implode(' ', $input) . ' > NUL';
+        $command = $php_binary_path . ' bin/console app:validate-assets ' . implode(' ', $input) . ' > NUL';
       } else {
-        $command = $php_binary_path . ' bin/console app:validate ' . implode(' ', $input) . ' > /dev/null 2>&1 &';
+        $command = $php_binary_path . ' bin/console app:validate-assets ' . implode(' ', $input) . ' > /dev/null 2>&1 &';
       }
 
       // $this->u->dumper($php_binary_path,0);
@@ -320,7 +337,7 @@ class ImportController extends Controller
 
           $this->addFlash('message', 'Files have been successfully uploaded. Validations and metadata ingests are currently in progress.');
 
-          // Set the parameters for the app:validate command (passed to client side, then executed asynchronously via the /admin/execute_jobs route)
+          // Set the parameters for the app:validate-assets command (passed to client side, then executed asynchronously via the /admin/execute_jobs route)
           $project['execute_jobs_input'] = array(
             'uuid' => $job_data['uuid'],
             'parent_project_id' => $parent_project_id,
@@ -411,8 +428,8 @@ class ImportController extends Controller
           )
         );
 
-        // Get image validation errors if they exist.
-        $project['image_validation_errors'] = $this->repo_storage_controller->execute('getRecords', array(
+        // Get asset validation errors if they exist.
+        $project['asset_validation_errors'] = $this->repo_storage_controller->execute('getRecords', array(
             'base_table' => 'job_log',
             'fields' => array(),
             'search_params' => array(
@@ -439,7 +456,7 @@ class ImportController extends Controller
                   'job_log_label'
                 ),
                 'search_values' => array(
-                  'Image Validation'
+                  'Asset Validation'
                 ),
                 'comparison' => '='
               )
@@ -907,4 +924,37 @@ class ImportController extends Controller
         return $this->redirect('/admin/import');
       }
     }
+
+    /**
+     * @Route("/admin/pjobs/remove", name="remove_jobs_from_processing_server", methods="GET")
+     *
+     * @param object $request Symfony's request object
+     */
+    public function remove_jobs_from_processing_server(Request $request)
+    {
+      
+      $jobs = array();
+      $message_type = 'error';
+      $message = 'No processing jobs found to remove.';
+
+      // Get the machine state.
+      $jobs = $this->processing->get_jobs();
+
+      // Decode the JSON.
+      $json_decoded = json_decode($jobs['result'], true);
+
+      if (!empty($json_decoded)) {
+        // Loop through jobs and delete each one by ID.
+        foreach ($json_decoded as $key => $value) {
+          $this->processing->delete_job($value['id']);
+        }
+        $message_type = 'message';
+        $message = 'All processing jobs have been removed from the processing server.';
+      }
+
+      // The message
+      $this->addFlash($message_type, $message);
+      // Redirect to the main Uploads page.
+      return $this->redirect('/admin/import');
+  }
 }

@@ -980,13 +980,72 @@ class RepoStorageHybrid implements RepoStorage {
       // Query the database.
       $result = $this->getRecords(array(
         'base_table' => 'job',
-        'fields' => array(),
+        'fields' => array(
+          array(
+            'table_name' => 'job',
+            'field_name' => 'job_id',
+          ),
+          array(
+            'table_name' => 'job',
+            'field_name' => 'uuid',
+          ),
+          array(
+            'table_name' => 'job',
+            'field_name' => 'project_id',
+          ),
+          array(
+            'table_name' => 'job',
+            'field_name' => 'job_label',
+          ),
+          array(
+            'table_name' => 'job',
+            'field_name' => 'job_type',
+          ),
+          array(
+            'table_name' => 'job',
+            'field_name' => 'job_status',
+          ),
+          array(
+            'table_name' => 'job',
+            'field_name' => 'created_by_user_account_id',
+          ),
+          array(
+            'table_name' => 'job',
+            'field_name' => 'date_created',
+          ),
+          array(
+            'table_name' => 'job',
+            'field_name' => 'date_completed',
+          ),
+          array(
+            'table_name' => 'job',
+            'field_name' => 'qa_required',
+          ),
+          array(
+            'table_name' => 'job',
+            'field_name' => 'qa_approved_time',
+          ),
+          array(
+            'table_name' => 'fos_user',
+            'field_name' => 'username',
+          )
+        ),
+        // Joins
+        'related_tables' => array(
+          array(
+            'table_name' => 'fos_user',
+            'table_join_field' => 'id',
+            'join_type' => 'LEFT JOIN',
+            'base_join_table' => 'job',
+            'base_join_field' => 'created_by_user_account_id',
+          )
+        ),
         'limit' => 1,
         'search_params' => array(
           0 => array('field_names' => array('uuid'), 'search_values' => array($uuid[0]), 'comparison' => '='),
         ),
         'search_type' => 'AND',
-        'omit_active_field' => true,
+        'omit_active_field' => true
         )
       );
     }
@@ -1042,7 +1101,7 @@ class RepoStorageHybrid implements RepoStorage {
       job.date_created,
       job.date_completed,
       job.job_status,
-      fos_user.username
+      fos_user.username as fos_user_username
       FROM job_import_record
       LEFT JOIN job ON job.job_id = job_import_record.job_id
       LEFT JOIN fos_user ON fos_user.id = job.created_by_user_account_id
@@ -1081,7 +1140,10 @@ class RepoStorageHybrid implements RepoStorage {
             'job_import_record',
             'job_log',
             'file_upload'
-          )
+          ),
+          'processing_job_tables' => array(
+            'processing_job'
+          ),
         );
 
         // Remove data from tables containing repository data.
@@ -1114,6 +1176,23 @@ class RepoStorageHybrid implements RepoStorage {
           // Reset the auto increment value.
           $sql_job_reset = "ALTER TABLE {$job_table_name} MODIFY {$job_table_name}.{$job_table_name}_id INT(11) UNSIGNED;
           ALTER TABLE {$job_table_name} MODIFY {$job_table_name}.{$job_table_name}_id INT(11) UNSIGNED AUTO_INCREMENT";
+          $statement = $this->connection->prepare($sql_job_reset);
+          $statement->execute();
+        }
+
+        // Remove data from tables containing processing job-based data.
+        foreach ($table_names['processing_job_tables'] as $processing_job_table_name) {
+          // Remove records.
+          $sql_job = "DELETE pj, pjf FROM {$processing_job_table_name} pj
+            LEFT JOIN `processing_job_file` pjf ON pjf.`job_id` = pj.`processing_service_job_id`
+            WHERE pj.`job_id` = 3";
+          $statement = $this->connection->prepare($sql_job);
+          $statement->bindValue(":job_id", $job_data['job_id'], PDO::PARAM_INT);
+          $statement->execute();
+          $data[ $processing_job_table_name ] = $statement->rowCount();
+          // Reset the auto increment value.
+          $sql_job_reset = "ALTER TABLE {$processing_job_table_name} MODIFY {$processing_job_table_name}.{$processing_job_table_name}_id INT(11) UNSIGNED;
+          ALTER TABLE {$processing_job_table_name} MODIFY {$processing_job_table_name}.{$processing_job_table_name}_id INT(11) UNSIGNED AUTO_INCREMENT";
           $statement = $this->connection->prepare($sql_job_reset);
           $statement->execute();
         }
@@ -1504,6 +1583,7 @@ class RepoStorageHybrid implements RepoStorage {
 
       case 'model':
 
+        /*
         $query_params['related_tables'][] = array(
           'table_name' => 'model_file',
           'table_join_field' => 'model_repository_id',
@@ -1518,6 +1598,7 @@ class RepoStorageHybrid implements RepoStorage {
           'base_join_table' => 'model_file',
           'base_join_field' => 'file_upload_id',
         );
+        */
         $query_params['fields'][] = array(
           'table_name' => $record_type,
           'field_name' => $record_type . '_repository_id',
@@ -1604,6 +1685,7 @@ class RepoStorageHybrid implements RepoStorage {
           'table_name' => $record_type,
           'field_name' => 'model_maps',
         );
+        /*
         $query_params['fields'][] = array(
           'table_name' => 'file_upload',
           'field_name' => 'file_path',
@@ -1612,6 +1694,7 @@ class RepoStorageHybrid implements RepoStorage {
           'table_name' => 'file_upload',
           'field_name' => 'file_hash',
         );
+        */
       $query_params['fields'][] = array(
         'table_name' => $record_type,
         'field_name' => 'active',
@@ -1663,7 +1746,7 @@ class RepoStorageHybrid implements RepoStorage {
             $record_type . '.has_vertex_color',
             $record_type . '.has_uv_space',
             $record_type . '.model_maps',
-            $record_type . '.file_path',
+            //$record_type . '.file_path',
           ),
           'search_values' => array($search_value),
           'comparison' => 'LIKE',
@@ -2163,7 +2246,6 @@ class RepoStorageHybrid implements RepoStorage {
         }
 
         break;
-
 
     }
 

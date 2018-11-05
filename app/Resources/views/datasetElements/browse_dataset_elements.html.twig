@@ -145,21 +145,29 @@
                         <tr>
                             <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
                             <th class="text-center">Download</th>
-                            <!--th class="text-center">Date of Creation</th -->
-                            <th class="text-center">Model ID</th>
-                            <th class="text-center">Creation Method</th>
-                            <!--th class="text-center">Derived From</th>
-                            <th class="text-center">Modality</th>
-                            <th class="text-center">Units</th>
-                            <th class="text-center">Watertight?</th>
-                            <th class="text-center">Has Normals?</th-->
-                            <th class="text-center">Face Count</th>
-                            <th class="text-center">Vertices Count</th>
-                            <!--th class="text-center">Point Count</th>
-                            <th class="text-center">Has Vertex Color?</th>
-                            <th class="text-center">Has UV Space?</th-->
-                            <th class="text-center">Model Purpose</th>
-                            <th class="text-center">Last Modified</th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
+                            <th class="text-center"></th>
                         </tr>
                         </thead>
                     </table>
@@ -330,7 +338,7 @@
                 });
             }
           });
-        $(".datatables_bulk_actions").append(request_download_button);
+        $('#browse_wrapper').find('.datatables_bulk_actions').append(request_download_button);
 
         $('#browse_capture_dataset_rights').dataTable( {
           "columns": [
@@ -395,26 +403,41 @@
           "columns": [
             { "data": "manage" },
             { "data": "manage" },
-            { "data": "model_repository_id" },
-            //{ "data": "date_of_creation"},
-            { "data": "creation_method"},
-            //{ "data": "derived_from"},
-            //{ "data": "model_modality"},
-            //{ "data": "units"},
-            //{ "data": "is_watertight"},
-            //{ "data": "has_normals"},
-            { "data": "face_count"},
-            { "data": "vertices_count"},
-            //{ "data": "point_count"},
-            //{ "data": "has_vertex_color"},
-            //{ "data": "has_uv_space"},
-            { "data": "model_purpose"},
-            { "data": "last_modified" }
+            { "data": "model_repository_id", "title": "Model Repository ID"  },
+            { "data": "parent_capture_dataset_repository_id", "title": "Parent Capture Dataset Repository ID"  },
+            { "data": "parent_item_repository_id", "title": "Parent Item Repository ID"  },
+            { "data": "model_file_type", "title": "Model File Type"  },
+            { "data": "model_guid", "title": "Model Guid"  },
+            { "data": "date_of_creation", "title": "Date of Creation"  },
+            { "data": "model_modality", "title": "Model Modality"  },
+            { "data": "units", "title": "Units"  },
+            { "data": "is_watertight", "title": "Is Watertight"  },
+            { "data": "model_purpose", "title": "Model Purpose"  },
+            { "data": "point_count", "title": "Point Count"  },
+            { "data": "has_normals", "title": "Has Normals"  },
+            { "data": "face_count", "title": "Face Count"  },
+            { "data": "vertices_count", "title": "Vertices Count"  },
+            { "data": "has_vertex_color", "title": "Has Vertex Color"  },
+            { "data": "has_uv_space", "title": "Has UV Space"  },
+            { "data": "model_maps", "title": "Model Maps"  },
+            { "data": "derived_from", "title": "Derived From"  },
+            { "data": "creation_method", "title": "Creation Method"  },
+            { "data": "date_created", "title": "Date Created"  },
+            { "data": "created_by_user_account_id", "title": "Created by User Account ID"  },
+            { "data": "last_modified", "title": "Last Modified"  },
+            { "data": "last_modified_user_account_id", "title": "Last Modified User Account ID"  }
           ],
-          "dom": 'lfip<"datatables_bulk_actions">tip',
+          "dom": 'lfip<"datatables_bulk_actions"B>tip',
+          buttons: [
+            'csv', 'excel', 'pdf', 'print',
+            {
+              extend: 'colvis',
+              postfixButtons: [ 'colvisRestore' ]
+            }
+          ],
           "pagingType": "simple_numbers",
           "stateSave": true,
-          "order": [[4,"desc"]],
+          "order": [[6,"desc"]],
           // Show processing throbber.
           "processing": true,
           "serverMethod": "POST",
@@ -433,12 +456,17 @@
           "lengthMenu":[10,50,100,500],
           // Set some widths.
           "aoColumnDefs":[
-            {"sWidth":"106px","aTargets":[0]},
-            {"bSortable":false,"aTargets":[0]},
+            {
+              "targets": [ 0 ],
+              "sWidth": '106px',
+              "bSortable": false
+            },
+            {
+              "targets": [ 2, 3, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 ],
+              "visible": false,
+              "searchable": true
+            }
           ],
-          "data": {
-            "parent_id": capture_dataset_repository_id
-          },
           "fnRowCallback":function(nRow, aData, iDisplayIndex) {
 
             // This table row.
@@ -448,11 +476,11 @@
             thisTableRow.find('td:eq(0)')
               .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
               .addClass("manage_column");
-
             // Create the download checkboxes.
             thisTableRow.find('td:eq(1)')
               .html("<input type='checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
               .addClass("manage_column");
+
 
             // Send to details page when clicked.
             thisTableRow.find('td').click(function() {
@@ -460,32 +488,40 @@
               var thisTableCell = $(this);
               // Don't do anything if the table cell has the 'manage_column' CSS class.
               if(thisTableCell.hasClass('manage_column')) return;
+              // Don't do anything if the table cell has the 'download' CSS class.
+              if(thisTableCell.hasClass('download')) return;
               // Send to the details page.
               var this_id = thisTableCell.closest("tr").attr('id');
               window.location.href = '/admin/projects/model/' + this_id + '/detail';
             });
+
           }
         });
-        /*var models_add_button = $('<a />')
+
+        var models_add_button = $('<a />')
           .addClass('btn btn-default add-record-button')
-          .attr('href', '/admin/[ROUTE HERE TO ADD MODEL]/' + capture_dataset_repository_id)
+          .attr('href', '/admin/projects/model/manage/' + item_repository_id + '?from=item')
           .html('<span class="glyphicon glyphicon-plus"></span> Add a Model');
-        $('#browse_models').find('.datatables_bulk_actions').append(models_add_button);
-        */
-        //@todo
-        var request_model_download_button = $("<button></button>")
+        $('#browse_models_wrapper').find('.datatables_bulk_actions').prepend(models_add_button);
+
+        var request_model_download_button = $('<button></button>')
           .addClass('btn btn-default glyphicon glyphicon-download-alt')
           .attr('style', 'width: 13.8rem;')
-          .on("click", function(){
+          .attr('id', 'request-download-button')
+          .on('click', function(){
+
             var download_ids = new Array;
-            $('#browse_models [name="download_checkbox"]:checked').each(function(){
+            $('#browse [name="download_checkbox"]:checked').each(function(){
               download_ids.push($(this).val());
             });
+
             if(!download_ids.length) {
               swal('No Records Selected', 'Please choose at least one record.');
               return;
             }
+
             if(download_ids.length > 0) {
+
               swal({
                   title: "Send Download Request",
                   text: "Send a request to download chosen assets?",
@@ -497,16 +533,12 @@
                 },
                 function(){
                   // Placeholder
-                  //@todo
                 });
+
             }
           });
-        $(".datatables_bulk_actions").append(request_model_download_button);
 
-        // Hide the Export Metadata dropdown menu on menu item click.
-        $('.datatables_bulk_actions').on('click', '.buttons-html5', function(){
-            $(this).parent().hide();
-        });
+        $("#browse_models_wrapper").find(".datatables_bulk_actions").prepend(request_model_download_button);
 
         $('#browse_photogrammetry_scale_bars').dataTable( {
           "columns": [
