@@ -47,10 +47,6 @@ class DataRightsRestrictionTypesController extends Controller
      */
     public function browse(Connection $conn, Request $request)
     {
-        // Database tables are only created if not present.
-        
-        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => $this->table_name));
-
         return $this->render('resources/browse_data_rights_restriction_types.html.twig', array(
             'page_title' => "Browse Data Rights Restriction Types",
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),

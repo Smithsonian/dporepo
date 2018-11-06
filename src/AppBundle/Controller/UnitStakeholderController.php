@@ -51,10 +51,6 @@ class UnitStakeholderController extends Controller
      */
     public function browse(Request $request)
     {
-        // Database tables are only created if not present.
-        
-        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => $this->table_name));
-
         return $this->render('resources/browse_unit_stakeholder.html.twig', array(
             'page_title' => "Browse Unit/Stakeholder",
         ));
