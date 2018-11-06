@@ -22,7 +22,9 @@
                     <li><a href="/admin">Dashboard</a></li>
                     <li><a href="/logout">Logout</a></li>
                   {% else %}
-                    <li><a href="/login">Login</a></li>
+                    {% if dbexist %}
+                      <li><a href="/login">Login</a></li>
+                    {% endif %}
                   {% endif %}
                   
                 </ul>
@@ -36,7 +38,11 @@
             <p class="lead">UX prototype which facilitates manual and automated data entry, management, exploration, retrieval, and processing.</p>
             <p class="lead">
               {% if not is_granted('IS_AUTHENTICATED_REMEMBERED') %}
-                <a href="/login" class="btn btn-lg btn-default">Login</a>
+                {% if dbexist %}
+                  <a href="/login" class="btn btn-lg btn-default">Login</a>
+                {% else %}
+                  <a href="/install/cdb" class="btn btn-lg btn-default">Install</a>
+                {% endif %}
               {% endif %}
             </p>
           </div>
