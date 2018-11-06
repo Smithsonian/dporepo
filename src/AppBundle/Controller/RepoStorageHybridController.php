@@ -46,7 +46,12 @@ class RepoStorageHybridController extends Controller
       return NULL;
     }
     else {
-      return $this->repo_storage_structure->$function($parameters);
+      if ($parameters) {
+        return $this->repo_storage_structure->$function($parameters);
+      }else{
+        return $this->repo_storage_structure->$function();
+      }
+      
     }
 
   }
