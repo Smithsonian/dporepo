@@ -604,5 +604,70 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
       }
 
   }
+  public function installDatabase(){
 
+    // check if primary tables exist
+    $tables = array("project", "subject", "item", "model");
+    $tables_in_database = [];
+    $checker = 0;
+    $dbexist = $this->databaseExist();
+    if ($dbexist) {
+      foreach ($tables as $table) {
+        $exist = $this->connection->fetchAll("show tables like '$table'");
+        $flag = true;
+        if (!count($exist)) {
+          $flag = false;
+          $checker ++;
+          $tables_missing[] = array("name"=>$table,"exist"=>$flag);
+          $this->createTable( array('table_name' => $table));
+        }
+        
+      }
+      
+      return array("installed"=>false);
+    }else{
+      $flag = $this->install();
+      if ($flag) {
+        return array("installed"=>$flag);
+      }else{
+        return array("installed"=>$flag);
+      } 
+    }
+  }
+  public function databaseExist(){
+    $params = $this->connection->getParams();
+    $host = $params['host'];
+    $username = $params['user'];
+    $password = $params['password'];
+    $dbname = $params['dbname'];
+    $pdo = new \PDO('mysql:host='.$host.';dbname=INFORMATION_SCHEMA',
+               $username,
+               $password);
+    $statement = $pdo->prepare("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '$dbname'");
+    $statement->execute();
+    if (count($statement->fetchAll())) {
+      return true;
+    }else{
+      return false;
+    }
+  }
+  public function install(){
+    $file = 'sql';
+    if (file_exists($file)) {
+      $sql = file_get_contents($file);
+      $params = $this->connection->getParams();
+      $host = $params['host'];
+      $username = $params['user'];
+      $password = $params['password'];
+      $dbname = $params['dbname'];
+      $pdo = new \PDO('mysql:host='.$host.';dbname=INFORMATION_SCHEMA',
+                 $username,
+                 $password);
+      $qr = $pdo->exec($sql);
+      return true;
+    }else{
+      return false;
+    }
+    
+  }
 }
