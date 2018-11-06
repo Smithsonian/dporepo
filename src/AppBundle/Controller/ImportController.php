@@ -76,7 +76,7 @@ class ImportController extends Controller
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, string $external_file_storage_on) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
@@ -99,8 +99,6 @@ class ImportController extends Controller
         $this->uploads_path = '/uploads/repository';
     }
 
-    
-
     /**
      * @Route("/admin/import", name="import_summary_dashboard", methods="GET")
      *
@@ -109,11 +107,13 @@ class ImportController extends Controller
      */
     public function import_summary_dashboard(Connection $conn, Request $request)
     {
-      
+        // Patch vendor overrides.
+        $this->u->patchVendorOverrides();
+
         $service_error = false;
         $obj = new UploadsParentPicker();
 
-        // If the external file storage service is turned on in parameters.yml, 
+        // If the external file storage service is turned on in parameters.yml,
         // check to see if the external storage service is accessible.
         if($this->external_file_storage_on) {
           // TODO: Send email alerts to admins?
@@ -932,7 +932,7 @@ class ImportController extends Controller
      */
     public function remove_jobs_from_processing_server(Request $request)
     {
-      
+
       $jobs = array();
       $message_type = 'error';
       $message = 'No processing jobs found to remove.';
@@ -955,6 +955,86 @@ class ImportController extends Controller
       // The message
       $this->addFlash($message_type, $message);
       // Redirect to the main Uploads page.
-      return $this->redirect('/admin/import');
-  }
+      return $this->redirect('/admin');
+    }
+
+    /**
+     * Initialize a Processing Job
+     *
+     * @Route("/admin/initialize", name="initialize_processing_job", methods="GET")
+     *
+     * @param object $request Symfony's request object
+     */
+    public function initialize_processing_job(Request $request)
+    {
+
+      $data = $processing_results = array();
+      $filesystem = $this->container->get('oneup_flysystem.processing_filesystem');
+
+      // Parameters to send to the processing service API.
+      $params = array('meshFile' => 'nmnh-usnm_v_512384522-skull-master_model-2018_10_22.ply');
+      // Path to the directory or file.
+      $local_path = $this->uploads_directory . '3df_5bd4c0846fd3f0.72669883/testupload04-1model/data/1/nmnh-usnm_v_512384522-skull-master_model-2018_10_22.ply';
+      // Modify the path for Windows if need be.
+      $local_path = str_replace('/', DIRECTORY_SEPARATOR, $local_path);
+      // Need to pass the parent record type and ID so we can associate a processing job with something.
+      $parent_record_data = array(
+        'parent_record_id' => 7,
+        'parent_record_type' => 'model',
+      );
+
+      // Initialize the processing job.
+      $data = $this->processing->initialize_job('inspect-mesh', $params, $local_path, $this->getUser()->getId(), $parent_record_data, $filesystem);
+
+      // Send a message to the UI.
+      $this->addFlash('message', 'Initialized processing job');
+
+      // Render the page.
+      return $this->render('import/processing_job.html.twig', array(
+        'page_title' => 'Initialize Processing Job',
+        'data' => $data,
+        'processing_results' => $processing_results,
+      ));
+    }
+
+    /**
+     * Get Processing Job
+     *
+     * @Route("/admin/getjob/{job_id}", name="get_processing_job", defaults={"job_id" = null}, methods="GET")
+     *
+     * @param object $request Symfony's request object
+     */
+    public function get_processing_job($job_id, Request $request)
+    {
+      $data = $processing_results = array();
+
+      // if (empty($job_id)) throw $this->createNotFoundException('Job ID not provided');
+
+      if (!empty($job_id)) {
+
+        $filesystem = $this->container->get('oneup_flysystem.processing_filesystem');
+
+        // Path to the directory or file.
+        $local_path = $this->uploads_directory . '3df_5bd4c0846fd3f0.72669883/testupload04-1model/data/1/nmnh-usnm_v_512384522-skull-master_model-2018_10_22.ply';
+
+        // Get processing job status from the processing service.
+        $result = $this->processing->get_job( $job_id );
+
+        // Decode the returned JSON to a PHP array.
+        $data = json_decode($result['result'], true);
+
+        // Get processing results
+        if (in_array($data['state'], array('error', 'done'))) {
+          $processing_results = $this->processing->get_processing_results($data['id'], $this->getUser()->getId(), $local_path, $filesystem);
+        }
+
+      }
+
+      // Render the page.
+      return $this->render('import/processing_job.html.twig', array(
+        'page_title' => 'Get Processing Job',
+        'data' => $data,
+        'processing_results' => $processing_results,
+      ));
+    }
 }

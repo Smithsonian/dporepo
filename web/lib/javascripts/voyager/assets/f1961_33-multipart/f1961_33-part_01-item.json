@@ -1,0 +1,49 @@
+{
+    "meta": {
+        "name": "f1961_33-part_01-laser-ortery_texture"
+    },
+    "process": {
+        "method": "photogrammetry"
+    },
+    "model": {
+        "units": "cm",
+        "derivatives": [{
+            "usage": "Web",
+            "quality": "Thumb",
+            "assets": [{
+                "type": "Model",
+                "uri": "f1961_33-part_01-laser-ortery_texture-30k-512-web.glb"
+            },
+            {
+                "type": "Image",
+                "uri": "f1961_33-part_01-textured.jpg"
+            }]
+        }, {
+            "usage": "Web",
+            "quality": "Low",
+            "assets": [{
+                "type": "Model",
+                "uri": "f1961_33-part_01-laser-ortery_texture-200k-1024-web.glb"
+            }]
+        }, {
+            "usage": "Web",
+            "quality": "Medium",
+            "assets": [{
+                "type": "Model",
+                "uri": "f1961_33-part_01-laser-ortery_texture-200k-2048-web.glb"
+            }]
+        }, {
+            "usage": "Web",
+            "quality": "High",
+            "assets": [{
+                "type": "Model",
+                "uri": "f1961_33-part_01-laser-ortery_texture-200k-4096-web.glb"
+            }]
+        }],
+        "boundingBox": {
+            "min": [-0.06441, -0.07411, 0.16518],
+            "max": [0.196027, 0.06898, 0.311790]
+        },
+        "transform": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+    }
+}

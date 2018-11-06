@@ -689,7 +689,7 @@
         importLimitationValidation(file.parentRecordType, file.name);
 
         // Empty CSV warning
-        if(!JSON.parse(responseText.csv).length) {
+        if(!JSON.parse(responseText.csv).length && (file.name !== 'file_name_map.csv')) {
           swal({
             title: 'Error',
             text: file.name + ': CSV is empty',
@@ -1222,20 +1222,26 @@
     function requiredCsvValidation(parentRecordType, csvList) {
 
       let generateWarning = false,
-          requiredCsvFilenames = ['subjects.csv','items.csv','capture_datasets.csv','models.csv'],
+          requiredCsvFilenames = ['subjects.csv','items.csv','capture_datasets.csv','models.csv','file_name_map.csv'],
           csvTargetFile = '',
           errorText = '';
 
       if (parentRecordType.length && csvList.length) {
 
         if (parentRecordType === 'project') {
-          requiredCsvs = 'subjects.csv, items.csv, capture_datasets.csv';
+          requiredCsvs = 'file_name_map.csv, subjects.csv, items.csv, capture_datasets.csv';
         }
         if (parentRecordType === 'subject') {
-          requiredCsvs = 'items.csv, capture_datasets.csv';
+          requiredCsvs = 'file_name_map.csv, items.csv, capture_datasets.csv';
         }
         if (parentRecordType === 'item') {
-          requiredCsvs = 'capture_datasets.csv';
+          requiredCsvs = 'file_name_map.csv, capture_datasets.csv';
+        }
+
+        // File name map - no file_name_map.csv found
+        if ( csvList.indexOf('file_name_map.csv') === -1 ) {
+          csvTargetFile = 'file_name_map.csv';
+          generateWarning = true;
         }
 
         // Project as parent record - no subjects.csv found

@@ -95,14 +95,5 @@ class Model
      */
     public $model_maps;
 
-    /**
-     * @var string
-     */
-    public $file_path;
-
-    /**
-     * @var string
-     */
-    public $file_checksum;
 
 }

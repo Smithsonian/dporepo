@@ -24,6 +24,7 @@ services:
             $external_file_storage_on: '%external_file_storage_on%'
             $processing_service_location: '%processing_service_location%'
             $processing_service_client_id: '%processing_service_client_id%'
+            # $processing_service_on: '%processing_service_on%'
             $conn: '@doctrine.dbal.default_connection'
 
     # makes classes in src/AppBundle available to be used as services

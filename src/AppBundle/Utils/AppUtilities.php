@@ -7,6 +7,19 @@ use ReflectionClass;
 class AppUtilities
 {
   /**
+   * @var string $project_directory
+   */
+  private $project_directory;
+
+  /**
+   * Constructor
+   */
+  public function __construct()
+  {
+    $this->project_directory = str_replace('/web', '', $_SERVER['DOCUMENT_ROOT']);
+  }
+
+  /**
    * Dumper
    *
    * For debugging. Outputs data using var_dump(), encapsulated by the <pre> tag, with the option to die() or let it ride.
@@ -49,5 +62,42 @@ class AppUtilities
    */
   public function removeUnderscoresTitleCase($str) {
     return ucwords(str_replace('_', ' ', $str));
+  }
+
+  /**
+   * Patch Vendor Overrides
+   * $this->u->patchVendorOverrides();
+   *
+   * @return null
+   */
+  public function patchVendorOverrides() {
+
+    $vendor_directory = 'vendor/';
+    $overrides_directory = 'src/VendorOverrides/';
+    
+    $overrides = array(
+      'sabre' => '/http/lib/Client.php',
+      'scholarslab' => '/bagit/lib/bagit_utils.php',
+      'league' => '/flysystem-webdav/src/WebDAVAdapter.php',
+      'league' => '/flysystem/src/Filesystem.php',
+    );
+
+    foreach ($overrides as $key => $value) {
+      $source = $this->project_directory . $overrides_directory . $key . $value;
+      $destination = $this->project_directory . $vendor_directory . $key . $value;
+      $text_file = $this->project_directory . $vendor_directory . $key . '/overridden.txt';
+      // Check to see if 1) the source is a file, and 2) if the overridden.txt file hasn't been written 
+      // to the root of the vendor directory. (This means that the source has been updated via composer.)
+      if (is_file($source) && !is_file($text_file)) {
+        // Copy the source override to the destination.
+        copy($source, $destination);
+        // Write the overridden.txt file to the root of the vendor directory.
+        $handle = fopen($text_file, 'w');
+        fwrite($handle, '');
+        // Before calling fclose on the resource, check if it’s still valid using is_resource.
+        if (is_resource($handle)) fclose($handle);
+      }
+    }
+
   }
 }

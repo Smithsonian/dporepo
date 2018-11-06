@@ -7,6 +7,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Doctrine\DBAL\Driver\Connection;
+use Symfony\Component\HttpKernel\KernelInterface;
 
 use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Service\RepoValidateData;
@@ -23,6 +24,16 @@ class BagitController extends Controller
    * @var string $bagit_path
    */
   public $bagit_path;
+
+  /**
+   * @var object $kernel
+   */
+  public $kernel;
+
+  /**
+   * @var string $project_directory
+   */
+  private $project_directory;
 
   /**
    * @var string $uploads_directory
@@ -58,7 +69,7 @@ class BagitController extends Controller
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(TokenStorageInterface $token_storage, Connection $conn)
+  public function __construct(TokenStorageInterface $token_storage, KernelInterface $kernel, string $uploads_directory, Connection $conn)
   {
 
     $this->u = new AppUtilities();
@@ -68,10 +79,9 @@ class BagitController extends Controller
 
     $this->bagit_path = __DIR__ . '/../../../vendor/scholarslab/bagit/lib/bagit.php';
 
-    // TODO: move this to parameters.yml and bind in services.yml.
-    $ds = DIRECTORY_SEPARATOR;
-    // $this->uploads_directory = $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
-    $this->uploads_directory = __DIR__ . '' . $ds . '..' . $ds . '..' . $ds . '..' . $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
+    $this->kernel = $kernel;
+    $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_directory) : $uploads_directory;
 
     $this->bag_files_sha1 = array(
       'bag-info.txt',
@@ -223,7 +233,7 @@ class BagitController extends Controller
    *
    * Parameters include:
    *
-   * localpath
+   * uuid
    * flag_warnings_as_errors
    */
   public function bagit_validate($params = array()) {
@@ -236,18 +246,18 @@ class BagitController extends Controller
     // Include the BagIt PHP library
     require_once $this->bagit_path;
 
-    $data->localpath = !empty($params['localpath']) ? $params['localpath'] : false;
+    $data->uuid = !empty($params['uuid']) ? $params['uuid'] : false;
     $data->flag_warnings_as_errors = !empty($params['flag_warnings_as_errors']) ? $params['flag_warnings_as_errors'] : false;
 
     // If there is no directory path provided, return early.
-    if(!$data->localpath) {
+    if(!$data->uuid) {
       $return['errors'][] = 'Error: Directory path not provided.';
       return $return;
     }
 
     // Get the job ID, so errors can be logged to the database.
-    $dir_array = explode(DIRECTORY_SEPARATOR, $data->localpath);
-    $data->uuid = array_pop($dir_array);
+    // $dir_array = explode(DIRECTORY_SEPARATOR, $data->uuid);
+    // $data->uuid = array_pop($dir_array);
     $job_data = $this->repo_storage_controller->execute('getJobData', array($data->uuid));
 
     // Update the 'job_status' in the 'job' table from 'bagit validation in progress' to 'bagit validation in progress (confirmed)'.
@@ -261,7 +271,7 @@ class BagitController extends Controller
 
     // Validate that all of the BagIt files exist.
     // (bag-info.txt, bagit.txt, manifest-sha1.txt, tagmanifest-md5.txt)
-    $validate_folder = $this->validate_folder($data->localpath);
+    $validate_folder = $this->validate_folder($this->project_directory . $this->uploads_directory . $job_data['uuid']);
 
     if (isset($validate_folder['path_to_bag'])) {
       // The directory path to the bag.
@@ -318,7 +328,7 @@ class BagitController extends Controller
             if(!array_key_exists('data/' . $pdfilename, $manifest_contents)) {
               $return['warnings'][] = 'File ' . $pdfilename
                 . ' is not included in the manifest, but exists in the data directory for the Bagit package ('
-                . $data->localpath . '/data/' . $pdfilename . ').';
+                . '/data/' . $pdfilename . ').';
             }
           }
         }

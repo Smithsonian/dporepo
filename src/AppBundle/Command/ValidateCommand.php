@@ -7,26 +7,31 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\HttpKernel\KernelInterface;
 
-use AppBundle\Controller\ImportController;
-use AppBundle\Service\RepoValidateData;
 use AppBundle\Service\RepoImport;
+use AppBundle\Service\RepoValidateData;
+use AppBundle\Controller\RepoStorageHybridController;
 
 class ValidateCommand extends Command
 {
-  private $repoImport;
+  private $repo_import;
   private $validate;
+  private $project_directory;
 
-  public function __construct(RepoImport $repoImport, RepoValidateData $validate)
+  public function __construct(KernelInterface $kernel, RepoImport $repo_import, RepoValidateData $validate, string $uploads_directory, bool $external_file_storage_on, object $conn)
   {
     // Repo Import service
-    $this->repoImport = $repoImport;
+    $this->repo_import = $repo_import;
     // Repo Validate Data service
     $this->validate = $validate;
-    // TODO: move this to parameters.yml and bind in services.yml.
-    $ds = DIRECTORY_SEPARATOR;
-    // $this->uploads_directory = $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
-    $this->uploads_directory = __DIR__ . '' . $ds . '..' . $ds . '..' . $ds . '..' . $ds . 'web' . $ds . 'uploads' . $ds . 'repository' . $ds;
+    // Storage controller
+    $this->repo_storage_controller = new RepoStorageHybridController($conn);
+    // Uploads directory
+    $this->kernel = $kernel;
+    $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+    $this->uploads_directory = $this->project_directory . $uploads_directory;
+    $this->external_file_storage_on = $external_file_storage_on;
     // This is required due to parent constructor, which sets up name.
     parent::__construct();
   }
@@ -67,39 +72,45 @@ class ValidateCommand extends Command
       'Command: ' . 'php bin/console app:validate-assets ' . $input->getArgument('uuid') . ' ' . $input->getArgument('parent_project_id') . ' ' . $input->getArgument('parent_record_id') . ' ' . $input->getArgument('parent_record_type') . "\n",
     ]);
 
-    // First, check to see if the external storage is accessible (Drastic).
+    // First, check to see if the external storage is accessible (Drastic) - (if it's turned on in parameters.yml).
     // If the external storage is not accessible, then the job status will be set to 'failed', 
     // which will prevent any further validations and file transfers from executing.
-    $external_storage_check = $this->getApplication()->find('app:transfer-files');
+    if ($this->external_file_storage_on) {
+      $external_storage_check = $this->getApplication()->find('app:transfer-files');
 
-    $arguments_external_storage_check = array(
-        'command' => 'app:transfer-files',
-        'uuid' => $input->getArgument('uuid'),
-        'check_external_storage' => true
-    );
+      $arguments_external_storage_check = array(
+          'command' => 'app:transfer-files',
+          'uuid' => $input->getArgument('uuid'),
+          'check_external_storage' => true
+      );
 
-    $input_external_storage_check = new ArrayInput($arguments_external_storage_check);
-    $return_external_storage_check = $external_storage_check->run($input_external_storage_check, $output);
+      $input_external_storage_check = new ArrayInput($arguments_external_storage_check);
+      $return_external_storage_check = $external_storage_check->run($input_external_storage_check, $output);
+    }
 
     // If a localpath is passed, use it as the path to the files to validate.
     if ( !empty($input->getArgument('localpath')) ) {
       $directory_to_validate = $input->getArgument('localpath');
+      $uuid = $input->getArgument('uuid');
     }
 
     // If a localpath is NOT passed, check the database for a job with the 'job_status' set to 'bagit validation starting'.
     if ( empty($input->getArgument('localpath')) ) {
       $directory_to_validate = $this->validate->needsValidationChecker('bagit validation starting', $this->uploads_directory);
+      $directory_to_validate_parts = explode('/', $directory_to_validate);
+      $uuid = array_pop($directory_to_validate_parts);
     }
 
     if (!empty($directory_to_validate)) {
 
-      sleep(5);
+      // Get job data
+      $job_data = $this->repo_storage_controller->execute('getJobData', array($input->getArgument('uuid')));
 
       // Run the BagIt validation.
       $command_bagit = $this->getApplication()->find('app:bagit-validate');
       $arguments_bagit = array(
           'command' => 'app:bagit-validate',
-          'localpath' => $directory_to_validate
+          'uuid' => $input->getArgument('uuid')
       );
       $input_bagit = new ArrayInput($arguments_bagit);
       $return_bagit = $command_bagit->run($input_bagit, $output);
@@ -148,7 +159,7 @@ class ValidateCommand extends Command
         'parent_record_type' => $input->getArgument('parent_record_type'),
       );
 
-      $import_results = $this->repoImport->import_csv($params);
+      $import_results = $this->repo_import->import_csv($params);
       
       // echo '<pre>';
       // var_dump($import_results);
@@ -160,16 +171,38 @@ class ValidateCommand extends Command
       } else {
         $output->writeln('<comment>Metadata ingest complete.</comment>');
 
-        // Transfer files.
-        $command_file_transfer = $this->getApplication()->find('app:transfer-files');
+        // If the external file storage is turned on (in the parameters.yml config),
+        // transfer files to the external file storage.
+        if ($this->external_file_storage_on) {
+          // Transfer files.
+          $command_file_transfer = $this->getApplication()->find('app:transfer-files');
 
-        $arguments_file_transfer = array(
-            'command' => 'app:transfer-files',
-            'uuid' => $input->getArgument('uuid')
-        );
+          $arguments_file_transfer = array(
+              'command' => 'app:transfer-files',
+              'uuid' => $input->getArgument('uuid')
+          );
 
-        $input_file_transfer = new ArrayInput($arguments_file_transfer);
-        $return_file_transfer = $command_file_transfer->run($input_file_transfer, $output);
+          $input_file_transfer = new ArrayInput($arguments_file_transfer);
+          $return_file_transfer = $command_file_transfer->run($input_file_transfer, $output);
+        }
+
+        // If the external file storage is turned off (in the parameters.yml config),
+        // set the job record's job_status to 'complete'.
+        if (!$this->external_file_storage_on) {
+          // Set the status
+          $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'job',
+            'record_id' => $job_data['job_id'],
+            'user_id' => 0,
+            'values' => array(
+              'job_status' => 'complete',
+              'date_completed' => date('Y-m-d H:i:s'),
+              'qa_required' => 0,
+              'qa_approved_time' => null,
+            )
+          ));
+        }
+
       }
 
     }
