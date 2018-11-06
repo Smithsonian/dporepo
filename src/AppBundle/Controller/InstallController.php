@@ -36,32 +36,28 @@ class InstallController extends Controller
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
-        //$this->repo_storage_controller = new RepoStorageHybridController($conn);
+        $this->repo_storage_controller = new RepoStorageHybridController($conn);
     }
 
     /**
-     * @Route("/repo/install/", name="install", methods="GET")
+     * @Route("/install/", name="install", methods="GET")
+     * @Route("/install/{flag}", name="install-flag")
      */
-    public function install(Connection $conn, Request $request)
+    public function install(Connection $conn, Request $request,$flag = null)
     {
- 		//$tables = array("background_removal_method","calibration_object_type","camera_cluster_type","capture_data_element","capture_data_file","capture_dataset","capture_dataset_rights","capture_device","capture_device_component","capture_method","data_rights_restriction_type","dataset_type","favorite","file_package","file_upload","focus_type","fos_user","isni_data","item","item_position_type","item_type","job","job_import_record","job_log","light_source_type","model","model_file","photogrammetry_scale_bar","photogrammetry_scale_bar_target_pair","processing_action","project","scale_bar_barcode_type","status_type","subject","subject_type","target_type","unit","unit_stakeholder","uv_map","vz_export","workflow","workflow_status_log");
+    	$dbexist = $this->repo_storage_controller->build('databaseExist', null);
+    	if ($flag == 'cdb' && !$dbexist) {
+    		$this->repo_storage_controller->build('installDatabase', null);
+    	}
         
-
-        $tables = array("background_removal_method","calibration_object_type","camera_cluster_type","data_rights_restriction_type","dataset_type","item_position_type","light_source_type","target_type");
-        $tables_in_database = [];
-        foreach ($tables as $table) {
-        	$exist = $conn->fetchAll("show tables like '$table'");
-        	$flag = "does not exist";
-        	if (count($exist)) {
-        		$flag = "exist";
-        	}
-        	$tables_in_database[] = array("name"=>$table,"exist"=>$flag);
+        if (!$dbexist) {
+        	$this->repo_storage_controller->build('installDatabase', null);
+        	$flag = 'cdb';
+        	$dbexist= true;
         }
         return $this->render('install/install.html.twig', array(
-            'page_title' => 'Install Database',
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),"tables"=>$tables_in_database,
+            'page_title' => 'Install Database',"dbexist"=>$dbexist,"flag"=>$flag
         ));
-        
     }
 
 
