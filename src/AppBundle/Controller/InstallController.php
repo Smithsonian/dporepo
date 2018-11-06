@@ -51,14 +51,14 @@ class InstallController extends Controller
         $tables_in_database = [];
         foreach ($tables as $table) {
         	$exist = $conn->fetchAll("show tables like '$table'");
-        	$flag = "exist";
+        	$flag = "does not exist";
         	if (count($exist)) {
-        		$flag = "does not exist";
+        		$flag = "exist";
         	}
         	$tables_in_database[] = array("name"=>$table,"exist"=>$flag);
         }
         return $this->render('install/install.html.twig', array(
-            'page_title' => 'Install',
+            'page_title' => 'Install Database',
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),"tables"=>$tables_in_database,
         ));
         
