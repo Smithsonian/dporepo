@@ -1,0 +1,33 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block content %}
+
+  <div class="row">
+    <div class="col-md-4">
+      <h2>
+        Tables in database
+      </h2>
+      <div class="table-responsive">
+        <table class="table table-stripped">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Exist</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for table in tables %}
+              <tr>
+                <td>{{table.name}}</td>
+                <td class="text-capitalize">{{table.exist}}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <button class="btn btn-primary" id="install">Install Database</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}
