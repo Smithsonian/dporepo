@@ -1,52 +1,80 @@
-{% extends 'default_bootstrap_admin.html.twig' %}
+{% extends 'base.html.twig' %}
 
-{% block content %}
+{% block body %}
+    <div class="site-wrapper">
 
-  <div class="row">
-    <div class="col-md-4">
-      <h2>
-        Tables in database
-      </h2>
-      <div class="table-responsive">
-        <table class="table table-stripped">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Exist</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for table in tables %}
-              <tr>
-                <td>{{table.name}}</td>
-                <td class="text-capitalize">{{table.exist}}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="site-wrapper-inner">
+
+        <div class="cover-container">
+
+          <div class="masthead clearfix">
+
+            {% include 'default/banner.html.twig' %}
+
+            <div class="inner">
+              <h3 class="masthead-brand"></h3>
+             
+            </div>
+          </div>
+
+          <div class="inner cover">
+            <h1 class="cover-heading">{{ site_title|e }} (prototype)</h1>
+            
+            <div>
+              {% if dbexist %}
+                <p class="lead">
+                  {% if flag == 'cdb' %}
+                    Database has been generated successfully.
+                  {% else %}
+                    Database has already been generated.
+                  {% endif %}
+                  
+                </p>
+                
+                <p class="lead">
+                  {% if flag == 'cdb' %}
+                    {% if not is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                      <a href="/register" class="btn btn-lg btn-default">Register Account</a>
+                    {% endif %}
+                  {% else %}
+                    {% if not is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+                      {% if dbexist %}
+                        <a href="/login" class="btn btn-lg btn-default">Login</a>
+                      {% endif %}
+                    {% endif %}
+                  {% endif %}
+                </p>
+              {% endif %}
+            </div>
+          </div>
+          <div class="mastfoot">
+            <div class="inner">
+              {# {% if site_footer is not empty %}
+              {% include site_footer %}
+              {% endif %} #}
+            </div>
+          </div>
+
+        </div>
+
       </div>
-      <div>
-        <button class="btn btn-primary" data-toggle="modal" data-target="#confirmation-modal">Install Database</button>
-      </div>
+
     </div>
-  </div>
-  <div class="modal fade" id="confirmation-modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Confirmation</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="confirmation-message"></div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-primary" id="install">Install</button>
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        </div>
-      </div>
-    </div>
-  </div>
+{% endblock %}
+
+{% block stylesheets %}
+    <!-- Bootstrap core CSS -->
+    <link href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="{{ asset('lib/css/cover.css') }}" media="screen" />
+{% endblock %}
+
+{% block javascripts %}
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.3.1/jquery.cookie.min.js"></script>
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <script src="{{ asset('lib/javascripts/ie10-viewport-bug-workaround.js') }}"></script>
 {% endblock %}
