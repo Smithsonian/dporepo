@@ -11,7 +11,7 @@
   
   <ol class="breadcrumb">
     <li><a href="/admin">Dashboard</a></li>
-    <li><a href="/admin/import">Uploads</a></li>
+    <li><a href="/admin/ingest">Ingest</a></li>
     <li class="active">{{ project.project_name }}</li>
   </ol>
 
@@ -254,7 +254,7 @@
         // All data management will be done on the server side.
         "serverSide": true,
         // Path to the file that is going to handle the queries.
-        "ajax": "/admin/import/" + uuid + "/datatables_browse_import_details",
+        "ajax": "/admin/ingest/" + uuid + "/datatables_browse_import_details",
         // Method type.
         "serverMethod": "POST",
         // Values in the length dropdown.

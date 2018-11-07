@@ -1,0 +1,334 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link href="{{ asset('bundles/lifotypeahead/css/typeaheadbundle.css') }}" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.css') }}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block content %}
+
+  <ol class="breadcrumb">
+    <li><a href="/admin">Dashboard</a></li>
+    <li class="active">Ingest</li>
+  </ol>
+
+  <!-- row -->
+  <div class="row">
+    <!-- column -->
+    <div class="col-sm-12 col-md-12">
+      <!-- nav-tabs -->
+      <ul class="nav nav-tabs" id="uploadsTabs" role="tablist">
+        <li role="presentation">
+          <a href="#browseUploads" id="browse-tab" role="tab" data-toggle="tab" aria-controls="browse" aria-expanded="true">Browse Ingests</a>
+        </li>
+        <li role="presentation">
+          <a href="#simpleIngest" role="tab" id="simple-ingest-tab" data-toggle="tab" aria-controls="simple-ingest">Simple Ingest</a>
+        </li>
+        <li role="presentation" class="active">
+          <a href="#bulkIngest" role="tab" id="bulk-ingest-tab" data-toggle="tab" aria-controls="bulk-ingest">Bulk Ingest</a>
+        </li>
+      </ul>
+      <!-- tab-content -->
+      <div class="tab-content" id="uploadsTabContent" style="padding-top: 3rem;">
+        <!-- tab-pane 2 -->
+        <div class="tab-pane fade in active" role="tabpanel" id="bulkIngest" aria-labelledby="bulk-ingest-tab">
+          <!-- row -->
+          <div class="row">
+            <div class="col-lg-6">
+              <!-- Typeahead form element -->
+              <h3><span class="glyphicon glyphicon-briefcase" aria-hidden="true"></span> BagIt!</h3>
+              <p>Photogrammetry scans and Models must be bagged via BagIt before uploading to the repository.</p>
+              <p>For more information, and to download Bagger, please see the <a href="https://github.com/LibraryOfCongress/bagger" target="_blank">Library of Congress' Bagger GitHub repository</a>.</p>
+              <hr>
+              {{ form_start(form) }}
+              <h3><span class="glyphicon glyphicon-home" aria-hidden="true"></span> Choose a Parent Record</h3>
+              {{ form_row(form.parent_picker) }}
+              {{ form_end(form) }}
+            </div>
+            <div class="col-lg-6">
+              <h3><span class="glyphicon glyphicon-save-file" aria-hidden="true"></span> CSV Templates</h3>
+              <p>Please use the following templates to import data into the repository.</p>
+              <p>Before importing data to the repository, check out the <a href="javascript:void(0);" class="csv-modal-trigger">CSV Guide</a>. <em class="text-muted">Templates last updated: 6/12/2018</em></p>
+              <h5>Blank Templates</h5>
+              <div class="row">
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/subjects.csv" download="subjects.csv">subjects.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/items.csv" download="items.csv">items.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/capture_datasets.csv" download="capture_datasets.csv">capture_datasets.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/models.csv" download="models.csv">models.csv</a>
+                </div>
+              </div>
+              <h5>Templates With Example Data</h5>
+              <div class="row">
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/subjects_ex.csv" download="subjects_ex.csv">subjects_ex.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/items_ex.csv" download="items_ex.csv">items_ex.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/capture_datasets_ex.csv" download="capture_datasets_ex.csv">capture_datasets_ex.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/models_ex.csv" download="models_ex.csv">models_ex.csv</a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- // row -->
+          <!-- row -->
+          <div class="row">
+            <!-- column 1 -->
+            <div class="col-lg-6">
+              <!-- File Drag and Drop zone -->
+              <!-- panel -->
+              <div class="panel panel-default panel-uploads" data-set-number="1" data-file-count="0">
+                <div class="panel-heading">
+                  <p><span class="glyphicon glyphicon-upload" aria-hidden="true"></span> Uploads Stage</p>
+                  <p class="panel-uploads-info" style="font-size: 1.3rem; font-weight: normal;">Drag and drop files onto this page.</p> <!-- or click the "Add Files" button -->
+                  <p class="panel-uploads-info" style="font-size: 1.3rem; font-weight: normal;">Accepted file types: {{ accepted_file_types | e }}</p>
+                  <div class="overlay-uploading hidden">
+                    <span>Upload in progress...</span>
+                    <img src="/lib/images/spinner-dark-background.gif" alt="loading animation" style="width: 86px;">
+                  </div>
+                </div>
+                <!-- panel-body -->
+                <div class="panel-body" style="height: 40rem; overflow: scroll; padding: 0;">
+                  <!-- Template Begins -->
+                  <!-- HTML heavily inspired by http://blueimp.github.io/jQuery-File-Upload/ -->
+                  <div class="table table-striped" class="files" id="previews">
+                    <ul class="directory-structure" style="padding-left: 0;">
+                    </ul>
+                    <div id="template" class="row file-row">
+                      {# <div class="col-sm-7 col-md-7">
+                        <div class="pull-left"><span class="name" data-dz-name></span>, <span class="size" data-dz-size></span></div>
+                        <div class="pull-right"><strong class="error text-danger" data-dz-errormessage></strong></div>
+                      </div>
+                      <div class="col-sm-5 col-md-5">
+                        <div class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                          <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress></div>
+                        </div>
+                      </div> #}
+                      {# <div>
+                        <button class="btn btn-primary start" style="display: none;">
+                            <i class="glyphicon glyphicon-upload"></i>
+                            <span>Start</span>
+                        </button>
+                        <button data-dz-remove class="btn btn-warning cancel" style="display: none;">
+                            <i class="glyphicon glyphicon-ban-circle"></i>
+                            <span>Cancel</span>
+                        </button>
+                        <button data-dz-remove class="btn btn-danger delete" style="display: none;">
+                          <i class="glyphicon glyphicon-trash"></i>
+                          <span>Delete</span>
+                        </button>
+                      </div> #}
+                    </div>
+                  </div>
+                  <!-- Template Ends -->
+                </div>
+                <!-- // panel-body -->
+              </div>
+              <!-- // panel -->
+
+            </div>
+            <!-- // column 1 -->
+            <!-- column 2 -->
+            <div class="col-lg-6">
+              <div class="panel panel-default panel-validation-results">
+                <!-- Panel contents -->
+                <div class="panel-heading">
+                  <p><span class="glyphicon glyphicon-list" aria-hidden="true"></span> Pre-Validation Results</p>
+                  <p style="font-size: 1.3rem; font-weight: normal;">To revalidate, click the "Clear Upload Stage" button and add files back to the Uploads Stage.</p>
+                </div>
+                <div class="panel-body">
+                </div>
+              </div>
+            </div>
+            <!-- // column 2 -->
+          </div>
+          <!-- // row -->
+          <!-- row -->
+          <div id="actions" class="row">
+            <!-- column 1 -->
+            <div class="col-sm-10 col-md-9 col-lg-9">
+              <!-- The fileinput-button span is used to style the file input field as button -->
+              {% set disabled = '' %}
+              {% if (service_error) %}
+                {% set disabled = ' disabled="disabled"' %}
+              {% endif %}
+              {% if app.user.username == 'ghalusa' or app.user.username == 'halusag' %}
+              <button class="btn btn-success fileinput-button dz-clickable"{{disabled}}>
+                  <i class="glyphicon glyphicon-plus"></i>
+                  <span>Add Files</span>
+              </button>
+              {% endif %}
+              <button type="reset" class="btn btn-warning cancel"{{disabled}}>
+                  <i class="glyphicon glyphicon-ban-circle"></i>
+                  <span>Clear Upload Stage</span>
+              </button>
+              <button class="btn btn-default prevalidate-trigger"{{disabled}}>
+                  <i class="glyphicon glyphicon-cog"></i>
+                  <span>Pre-Validate</span>
+              </button>
+              <button type="submit" class="btn btn-primary start hidden">
+                  <i class="glyphicon glyphicon-upload"></i>
+                  <span>Start Upload</span>
+              </button>
+              <button type="submit" class="btn btn-primary pause hidden">
+                  <i class="glyphicon glyphicon-pause"></i>
+                  <span>Pause</span>
+              </button>
+              <button type="submit" class="btn btn-primary cancel-upload hidden">
+                  <i class="glyphicon glyphicon-stop"></i>
+                  <span>Cancel</span>
+              </button>
+            </div>
+            <!-- // column 1 -->
+            <!-- column 2 -->
+            <div class="col-sm-2 col-md-3 col-md-3">
+              <!-- The global file processing state -->
+              {# <span class="fileupload-process">
+                <div id="total-progress" class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress=""></div>
+                </div>
+              </span> #}
+            </div>
+            <!-- // column 2 -->
+          </div>
+          <div class="row hidden" id="panel-spreadsheets">
+            <div class="col-sm-12 col-md-12">
+              <!-- Spreadsheets container (Handsontable) -->
+            </div>
+          </div>
+          <!-- // row -->
+        </div>
+        <!-- // tab-pane 2 -->
+      </div>
+      <!-- // tab-content -->
+    </div>
+    <!-- // column -->
+  </div>
+  <!-- // row -->
+
+  <!-- Uploading Modal -->
+  <div class="modal fade" id="uploading-modal" tabindex="-1" role="dialog" aria-labelledby="uploadingLabel" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="uploadingLabel"><i class="glyphicon glyphicon-time"></i> <span id="uploading-modal-title"></span></h2>
+        </div>
+        <div class="modal-body" style="min-height: 24rem;">
+          <div class="text-center">
+            <span id="uploading-modal-message"></span>
+          </div>
+          <div class="center-block" style="width: 140px; margin-top: 3rem;">
+            <img src="/lib/images/spinner.gif" alt="loading animation" style="width: 140px;">
+          </div>
+        </div>
+        <div class="modal-footer">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CSV Help Modal -->
+  <div class="modal fade" id="csv-modal" tabindex="-1" role="dialog" aria-labelledby="csvLabel">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="csvLabel"><i class="glyphicon glyphicon-info-sign"></i> CSV Guide</h2>
+        </div>
+        <div class="modal-body" style="min-height: 24rem;">
+          <h4>The import_row_id and import_parent_id fields</h4>
+
+          <p>There are 2 integral fields which every CSV contains:</p>
+
+          <ol>
+            <li>import_row_id</li>
+            <li>import_parent_id</li>
+          </ol>
+
+          <p><span class="text-warning"><strong>subjects.csv</strong></span> is the exception. In the case of Subjects, the parent Project is always known so there is no need to specify an import_parent_id. Only import_row_id is used.</p>
+
+          <hr>
+
+          <h4>import_row_id</h4>
+
+          <p>The 'import_row_id' field should simply be a sequential number. During the Pre-validation process, if it is detected that the 'import_row_id' is not sequential, or contains gaps (no values), the Pre-validation will fail.<p>
+
+          <h4>import_parent_id</h4>
+
+          <p>The 'import_parent_id' field is leveraged to map to the parent record's ID. For instance, if a row in subjects.csv contains an 'import_row_id' of 22 for a Subject, the 'import_parent_id' for the corresponding Item(s) will be 22.</p>
+
+          <hr>
+
+          <h4>Single Record Imports vs Multiple Record Imports</h4>
+
+          <p>In order to acheive certain results when importing data, CSV files can be structured in 3 ways.</p>
+
+          <ol>
+            <li>For <strong>single record imports</strong>, the 'import_parent_id' field should have no value assigned to it - should be left blank. The parent is specified by selecting the parent record in the UI.</li>
+            <li>For <strong>multiple record imports</strong> where multiple types of records are imported (e.g. subjects, items, capture datasets), the 'import_parent_id' field is required to be mapped to the parent record's ID. Again, the only CSV file which this does not apply to is the <span class="text-warning"><strong>subjects.csv</strong></span> file.</li>
+            <li>For multiple record imports where the parent record is chosen via "Choose a Parent Record" AND the parent record is intended to remain the same for the first level of CSV data, the 'import_parent_id' field is NOT required. Should a value be found within the 'import_parent_id' field, it will be ignored.</li>
+          </ol>
+
+          <p>For detailed examples, please see the provided example CSV files.</p>
+        </div>
+        <div class="modal-footer">
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
+
+{% block js_bottom %}
+  {{ parent() }}
+  <script src="{{ asset('bundles/lifotypeahead/js/bootstrap-typeahead.js') }}"></script>
+  <script src="{{ asset('bundles/lifotypeahead/js/typeaheadbundle.js') }}"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/dropzone.js') }}"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.js') }}"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+      /**
+       * "Choose a Parent Record" form
+       * If the enter key is pressed before the dropdown populates, prevent the form from submitting.
+       */
+      $('form[name="uploads_parent_picker_form"]').submit(function(e){
+        e.preventDefault();
+      });
+
+      /**
+       * Browse Ingests tab click handler
+       * (navigate to the Browse Ingest page)
+       */
+      $('#browse-tab').on('click', function(e) {
+        window.location.href = '/admin/ingest';
+      });
+
+      /**
+       * Simple Ingest tab click handler
+       * (navigate to the Simple Inges page)
+       */
+      $('#simple-ingest-tab').on('click', function(e) {
+        window.location.href = '/admin/simple_ingest';
+      });
+    });
+
+    var dropzoneUrl = "{{ oneup_uploader_endpoint('repository') }}",
+        acceptedFiles = "{{ accepted_file_types }}";
+
+    // // Place focus on the parent record picker.
+    // $('form[name="uploads_parent_picker_form"]').find('#uploads_parent_picker_form_parent_picker_text').focus();
+    // console.log($('form[name="uploads_parent_picker_form"]').find('#uploads_parent_picker_form_parent_picker_text'));
+  </script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/ingest.js') }}"></script>
+{% endblock %}
