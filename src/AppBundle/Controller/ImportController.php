@@ -23,10 +23,6 @@ use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\PhpExecutableFinder;
 
-use AppBundle\Controller\ItemsController;
-use AppBundle\Controller\DatasetsController;
-use AppBundle\Controller\ModelController;
-
 // use Psr\Log\LoggerInterface;
 
 use AppBundle\Form\UploadsParentPickerForm;
@@ -37,6 +33,10 @@ use AppBundle\Utils\AppUtilities;
 
 use AppBundle\Service\RepoFileTransfer;
 use AppBundle\Service\RepoProcessingService;
+
+use AppBundle\Form\Dataset;
+use AppBundle\Entity\Datasets;
+use AppBundle\Controller\DatasetsController;
 
 class ImportController extends Controller
 {
@@ -57,9 +57,7 @@ class ImportController extends Controller
 
     private $repo_storage_controller;
     private $tokenStorage;
-    private $itemsController;
     private $datasetsController;
-    private $modelsController;
     private $fileTransfer;
 
     /**
@@ -76,16 +74,14 @@ class ImportController extends Controller
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, DatasetsController $datasetsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
         $this->tokenStorage = $tokenStorage;
 
-        $this->itemsController = $itemsController;
         $this->datasetsController = $datasetsController;
-        $this->modelsController = $modelsController;
         $this->fileTransfer = $fileTransfer;
         $this->processing = $processing;
         $this->external_file_storage_on = $external_file_storage_on;
@@ -201,8 +197,22 @@ class ImportController extends Controller
           }
         }
 
-        // Create the parent record picker typeahead form.
-        $form = $this->createForm(UploadsParentPickerForm::class, $obj);
+        $dataset = new Datasets();
+        // Get data from lookup tables.
+        $dataset->capture_methods_lookup_options = $this->datasetsController->get_capture_methods();
+        $dataset->dataset_types_lookup_options = $this->datasetsController->get_dataset_types();
+        $dataset->item_position_types_lookup_options = $this->datasetsController->get_item_position_types();
+        $dataset->focus_types_lookup_options = $this->datasetsController->get_focus_types();
+        $dataset->light_source_types_lookup_options = $this->datasetsController->get_light_source_types();
+        $dataset->background_removal_methods_lookup_options = $this->datasetsController->get_background_removal_methods();
+        $dataset->camera_cluster_types_lookup_options = $this->datasetsController->get_camera_cluster_types();
+        $dataset->calibration_object_type_options = $this->datasetsController->get_calibration_object_types();
+
+        // Create the form
+        $form = $this->createForm(Dataset::class, $dataset);
+        // Handle the request
+        // $form->handleRequest($request);
+
         $accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
 
         return $this->render('import/simple_ingest.html.twig', array(
@@ -210,6 +220,7 @@ class ImportController extends Controller
             'form' => $form->createView(),
             'accepted_file_types' => $accepted_file_types,
             'service_error' => $service_error,
+            'dataset_data' => $dataset,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
         ));
     }
