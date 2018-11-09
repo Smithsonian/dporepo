@@ -66,7 +66,7 @@ class ItemsController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/datatables_browse_items/{project_repository_id}/{subject_repository_id}", name="items_browse_datatables", methods="POST")
+     * @Route("/admin/projects/datatables_browse_items/{project_repository_id}/{subject_repository_id}", name="items_browse_datatables", methods="POST", defaults={"project_repository_id" = null, "subject_repository_id" = null})
      *
      * Browse items
      *

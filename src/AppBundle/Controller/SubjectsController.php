@@ -65,7 +65,7 @@ class SubjectsController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/datatables_browse_subjects/{project_repository_id}", name="subjects_browse_datatables", methods="POST")
+     * @Route("/admin/projects/datatables_browse_subjects/{project_repository_id}", name="subjects_browse_datatables", methods="POST", defaults={"project_repository_id" = null})
      *
      * Browse subjects
      *
