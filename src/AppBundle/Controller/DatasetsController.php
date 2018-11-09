@@ -152,10 +152,6 @@ class DatasetsController extends Controller
         $dataset->parent_subject_repository_id = !empty($request->attributes->get('parent_subject_repository_id')) ? $request->attributes->get('parent_subject_repository_id') : false;
         $dataset->parent_item_repository_id = !empty($request->attributes->get('parent_item_repository_id')) ? $request->attributes->get('parent_item_repository_id') : false;
 
-        $dataset->parent_project_repository_id = !empty($request->attributes->get('parent_project_repository_id')) ? $request->attributes->get('parent_project_repository_id') : false;
-        $dataset->parent_subject_repository_id = !empty($request->attributes->get('parent_subject_repository_id')) ? $request->attributes->get('parent_subject_repository_id') : false;
-        $dataset->parent_item_repository_id = !empty($request->attributes->get('parent_item_repository_id')) ? $request->attributes->get('parent_item_repository_id') : false;
-
         // Get data from lookup tables.
         $dataset->capture_methods_lookup_options = $this->get_capture_methods();
         $dataset->dataset_types_lookup_options = $this->get_dataset_types();
@@ -191,7 +187,7 @@ class DatasetsController extends Controller
         
         $dataset->capture_dataset_repository_id = !empty($id) ? $id : false;
 
-        return $this->render('datasets/dataset_form.html.twig', array(
+        return $this->render('datasets/dataset_form_page.html.twig', array(
             'page_title' => !empty($id) ? 'Dataset: ' . $dataset->capture_dataset_name : 'Create Dataset',
             'dataset_data' => $dataset,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
