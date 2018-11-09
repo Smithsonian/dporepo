@@ -94,16 +94,10 @@
       });
 
       // Display the record picker modal.
-      // $('#record-picker-modal-title').empty();
-      // $('#record-picker-modal-title').append('Pre-Validating...');
-      // $('#record-picker-modal-message').empty();
-      // $('#record-picker-modal-message').append('Pre-validation in progress');
       $('.select-record').on('click', function(e) {
 
         var thisTrigger = $(this);
         recordType = thisTrigger.attr('data-select');
-
-        console.log(recordType);
 
         switch (recordType) {
           case 'project':
@@ -117,22 +111,17 @@
             break;
         }
 
-        // Display the target table.
+        // Display the target Datatable.
         $('#' + recordType).removeClass('hidden');
-
-        $('#record-picker-modal-title').empty().append('Select ' + recordType);
-
+        // Add the title to the modal (Example: Select a Project).
+        $('#record-picker-modal-title').empty().append('Select a ' + convertCase(recordType));
         // Show the modal.
         $('#record-picker-modal').modal('show');
 
-        // When hiding the modal, hide the target table and destroy the datatable.
+        // When hiding the modal, hide the target Datatable and destroy the Datatable.
         $('#record-picker-modal').on('hidden.bs.modal', function(e) {
-
-          console.log(recordType);
-
           $('#' + thisTrigger.attr('data-select')).addClass('hidden');
           dt.fnDestroy();
-          recordType = null;
         });
       });
 
@@ -193,6 +182,16 @@
               thisTableRow.parent().children().removeClass('warning');
               thisTableRow.addClass('warning');
 
+              // Since the parent record selection is changing, remove data and hide child well(s).
+              if ($('div.item-well').html()) {
+                $('div.subject-well, div.item-well').empty().addClass('hidden');
+                // Disable Step 2 tab.
+                rootwizard.bootstrapWizard('disable', '1');
+                // Remove any previously-stored piece(s) of data.
+                $('body').removeData('subject_repository_id');
+                $('body').removeData('item_repository_id');
+              }
+
               // Transfer record metadata to the parent window.
               var fields = ['project_repository_id', 'project_name', 'last_modified', 'stakeholder_label', 'subjects_count'];
               var html = '<dl>';
@@ -237,8 +236,6 @@
             ? '/admin/projects/datatables_browse_subjects/' + data.project_repository_id
             : '/admin/projects/datatables_browse_subjects';
 
-        console.log(ajaxUrl);
-
         var subjectDt = $('#subject').dataTable( {
           "columns": [
               { "data": "subject_name" },
@@ -273,6 +270,15 @@
 
               thisTableRow.parent().children().removeClass('warning');
               thisTableRow.addClass('warning');
+
+              // Since the parent record selection is changing, remove data and hide child well(s).
+              if ($('div.item-well').html()) {
+                $('div.item-well').empty().addClass('hidden');
+                // Disable Step 2 tab.
+                rootwizard.bootstrapWizard('disable', '1');
+                // Remove any previously-stored piece(s) of data.
+                $('body').removeData('item_repository_id');
+              }
 
               // Transfer record metadata to the parent window.
               var fields = ['last_modified', 'local_subject_id', 'subject_name', 'subject_repository_id'];
@@ -318,8 +324,6 @@
             ? '/admin/projects/datatables_browse_items/' + data.project_repository_id + '/' + data.subject_repository_id
             : '/admin/projects/datatables_browse_items';
 
-        console.log(ajaxUrl);
-
         var itemDt = $('#item').dataTable( {
           "columns": [
               { "data": "item_description" },
@@ -337,7 +341,7 @@
           // All data management will be done on the server side.
           "serverSide": true,
           // Path to the file that is going to handle the queries.
-          "ajax": "/admin/projects/datatables_browse_items",
+          "ajax": ajaxUrl,
           // Method type.
           "serverMethod": "POST",
           // Values in the length dropdown.
@@ -359,7 +363,7 @@
               var fields = ['datasets_count', 'item_description', 'last_modified', 'local_item_id', 'DT_RowId'];
               var html = '<dl>';
               // Loop through the metadata and choose fileds in the 'fields' array.
-              console.log(aData);
+              // console.log(aData);
               $.each(aData, function(key, value){
                 if (fields.indexOf(key) !== -1) {
                   html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
@@ -376,8 +380,6 @@
 
               // Add the item_repository_id to data.
               $('body').data('item_repository_id', aData.DT_RowId);
-
-              // console.log($('body').data());
 
               // // This table cell.
               // var thisTableCell = $(this);
