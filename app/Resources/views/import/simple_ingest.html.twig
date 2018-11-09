@@ -1,8 +1,12 @@
 {% extends 'default_bootstrap_admin.html.twig' %}
+{% use 'import/ingest_wizard.html.twig' %}
+{% use 'import/record_picker_modal.html.twig' %}
 
 {% block stylesheets %}
   {{ parent() }}
-  <link href="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.css') }}" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <link href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/css/bootstrap-datepicker3.css" rel="stylesheet" type="text/css">
 {% endblock %}
 
 {% block content %}
@@ -12,9 +16,7 @@
     <li class="active">Ingest</li>
   </ol>
 
-  <!-- row -->
   <div class="row">
-    <!-- column -->
     <div class="col-sm-12 col-md-12">
       <!-- nav-tabs -->
       <ul class="nav nav-tabs" id="uploadsTabs" role="tablist">
@@ -30,34 +32,25 @@
       </ul>
       <!-- tab-content -->
       <div class="tab-content" id="uploadsTabContent" style="padding-top: 3rem;">
-        <!-- // tab-pane 2 -->
+        <!-- // tab-pane -->
         <div class="tab-pane fade in active" role="tabpanel" id="simpleIngest" aria-labelledby="simple-ingest-tab">
-          <!-- row -->
           <div class="row">
             <div class="col-lg-12">
               <!-- Ingest Wizard -->
-              {% include 'import/ingest_wizard.html.twig' %}
+              {% block ingestwizard %}{{ parent() }}{% endblock %}
+              {# {% include 'import/ingest_wizard.html.twig' %} #}
+              {# {% include 'datasets/dataset_form.html.twig' %} #}
             </div>
           </div>
-          <!-- // row -->
-
-          <!-- Uploads Stage -->
-          {% include 'import/uploads_stage.html.twig' %}
-
-          <div class="row hidden" id="panel-spreadsheets">
-            <div class="col-sm-12 col-md-12">
-              <!-- Spreadsheets container (Handsontable) -->
-            </div>
-          </div>
-          <!-- // row -->
         </div>
-        <!-- // tab-pane 2 -->
+        <!-- // tab-pane -->
       </div>
       <!-- // tab-content -->
     </div>
-    <!-- // column -->
   </div>
-  <!-- // row -->
+
+  <!-- Record Picker Modal -->
+  {% block record_picker_modal %}{{ parent() }}{% endblock %}
 
   <!-- Uploading Modal -->
   {% include 'import/uploading_modal.html.twig' %}
@@ -65,21 +58,24 @@
 {% endblock %}
 
 {% block js_bottom %}
-  {{ parent() }}
+  <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
   <script type="text/javascript" src="{{ asset('lib/javascripts/dropzone.js') }}"></script>
-  <script type="text/javascript" src="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.js') }}"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/js/bootstrap-datepicker.min.js"></script>
   <script type="text/javascript" src="{{ asset('lib/javascripts/jquery.bootstrap.wizard.min.js') }}"></script>
   <script type="text/javascript">
     $(document).ready(function() {
       /**
        * Bootstrap Wizard
        */
-      $('#rootwizard').bootstrapWizard();
-
-      $('#rootwizard').bootstrapWizard('disable', '1');
-      $('#rootwizard').bootstrapWizard('disable', '2');
-      $('#rootwizard').bootstrapWizard('disable', '3');
-      $('#rootwizard').bootstrapWizard('disable', '4');
+      var rootwizard = $('#rootwizard');
+      rootwizard.bootstrapWizard({'tabClass': 'nav nav-tabs nav-justified'});
+      // Initially disable all steps.
+      rootwizard.bootstrapWizard('disable', '1');
+      rootwizard.bootstrapWizard('disable', '2');
 
       /**
        * Browse Ingests tab click handler
@@ -96,6 +92,320 @@
       $('#bulk-ingest-tab').on('click', function(e) {
         window.location.href = '/admin/bulk_ingest';
       });
+
+      /**
+       * Skip record selection click handler
+       */
+      $('.skip-record').on('click', function(e) {
+        $('[data-select="subject"], [data-create="subject"]').removeAttr('disabled');
+        $(this).parent().find('button').attr('disabled', 'disabled');
+
+        // $(this).parent().parent().parent().hide();
+        $('.project-well').empty().addClass('hidden');
+        // Remove the project_repository_id value from the data attribute.
+        $('body').data('project_repository_id', null);
+      });
+
+      // Display the record picker modal.
+      // $('#record-picker-modal-title').empty();
+      // $('#record-picker-modal-title').append('Pre-Validating...');
+      // $('#record-picker-modal-message').empty();
+      // $('#record-picker-modal-message').append('Pre-validation in progress');
+      $('.select-record').on('click', function(e) {
+
+        var thisTrigger = $(this);
+        recordType = thisTrigger.attr('data-select');
+
+        console.log(recordType);
+
+        switch (recordType) {
+          case 'project':
+            var dt = browseProjects();
+            break;
+          case 'subject':
+            var dt = browseSubjects();
+            break;
+          case 'item':
+            var dt = browseItems();
+            break;
+        }
+
+        // Display the target table.
+        $('#' + recordType).removeClass('hidden');
+
+        $('#record-picker-modal-title').empty().append('Select ' + recordType);
+
+        // Show the modal.
+        $('#record-picker-modal').modal('show');
+
+        // When hiding the modal, hide the target table and destroy the datatable.
+        $('#record-picker-modal').on('hidden.bs.modal', function(e) {
+
+          console.log(recordType);
+
+          $('#' + thisTrigger.attr('data-select')).addClass('hidden');
+          dt.fnDestroy();
+          recordType = null;
+        });
+      });
+
+      // Datepicker
+      var dateInput = $('input[name="dataset[date_of_capture]"]');
+      var thisContainer = $('form.dataset_form').length>0 ? $('form.dataset_form').parent() : 'body';
+      var options = {
+        format: 'yyyy-mm-dd 00:00:00',
+        container: thisContainer,
+        todayHighlight: true,
+        autoclose: true,
+      };
+      dateInput.datepicker(options);
+
+      function convertCase(str) {
+        var lower = String(str).toLowerCase();
+        return lower.replace(/(^| )(\w)/g, function(x) {
+          return x.toUpperCase();
+        });
+      }
+
+      // Browse Projects Datatable
+      function browseProjects() {
+
+        var projectDt = $('#project').dataTable({
+          "columns": [
+            { "data": "project_name" },
+            { "data": "stakeholder_label" },
+            { "data": "subjects_count" },
+            { "data": "date_created" },
+            { "data": "last_modified" }
+          ],
+          "dom": 'lfip<"datatables_bulk_actions">tip',
+          "pagingType": "simple_numbers",
+          "stateSave": true,
+          "order": [[4,"desc"]],
+          // Show processing throbber.
+          "processing": true,
+          "serverMethod": "POST",
+          // All data management will be done on the server side.
+          "serverSide": true,
+          // Path to the file that is going to handle the queries.
+          "ajax": "/admin/projects/datatables_browse_projects",
+          // Method type.
+          "serverMethod": "POST",
+          // Values in the length dropdown.
+          "lengthMenu":[10,50,100,500],
+          // Set some widths.
+          "columnDefs":[
+            {"sWidth":"105px","aTargets":[0]},
+            {"bSortable":false,"aTargets":[0,3]}
+          ],
+          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+            // This table row.
+            var thisTableRow = $(nRow);            
+            thisTableRow.find('td').click(function() {
+
+              thisTableRow.parent().children().removeClass('warning');
+              thisTableRow.addClass('warning');
+
+              // Transfer record metadata to the parent window.
+              var fields = ['project_repository_id', 'project_name', 'last_modified', 'stakeholder_label', 'subjects_count'];
+              var html = '<dl>';
+              // Loop through the metadata and choose fileds in the 'fields' array.
+              // console.log(aData);
+              $.each(aData, function(key, value){
+                if (fields.indexOf(key) !== -1) {
+                  html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
+                  html += '<dd class="' + key + '">' + value + '</dd>'
+                }
+              });
+              html += '</dl>';
+
+              $('div.project-well').html(html);
+              $('div.project-well').removeClass('hidden');
+
+              // Enable the Subject buttons.
+              $('[data-select="subject"], [data-create="subject"]').removeAttr('disabled');
+
+              // Add the project_repository_id to data.
+              $('body').data('project_repository_id', aData.DT_RowId);
+
+              // // This table cell.
+              // var thisTableCell = $(this);
+              // // Don't do anything if the table cell has the 'manage_column' CSS class.
+              // if(thisTableCell.hasClass('manage_column')) return;
+              // // Send to the details page.
+              // var project_repository_id = thisTableCell.closest("tr").attr('id');
+              // // window.location.href = "/admin/projects/subjects/" + project_repository_id;
+            });
+          }
+        });
+
+        return projectDt;
+      }
+
+      // Browse Subjects
+      function browseSubjects(projectId) {
+
+        var data = $('body').data();
+        var ajaxUrl = data.project_repository_id
+            ? '/admin/projects/datatables_browse_subjects/' + data.project_repository_id
+            : '/admin/projects/datatables_browse_subjects';
+
+        console.log(ajaxUrl);
+
+        var subjectDt = $('#subject').dataTable( {
+          "columns": [
+              { "data": "subject_name" },
+              { "data": "holding_entity_guid" },
+              { "data": "items_count" },
+              { "data": "last_modified" }
+            ],
+          "dom": 'lfip<"datatables_bulk_actions">tip',
+          "pagingType": "simple_numbers",
+          "stateSave": true,
+          "order": [[3,"desc"]],
+          // Show processing throbber.
+          "processing": true,
+          "serverMethod": "POST",
+          // All data management will be done on the server side.
+          "serverSide": true,
+          // Path to the file that is going to handle the queries.
+          "ajax": ajaxUrl,
+          // Method type.
+          "serverMethod": "POST",
+          // Values in the length dropdown.
+          "lengthMenu":[10,50,100,500],
+          // Set some widths.
+          "aoColumnDefs":[
+              {"sWidth":"105px","aTargets":[0]},
+              {"bSortable":false,"aTargets":[0,3]}
+          ],
+          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+            // This table row.
+            var thisTableRow = $(nRow);
+            thisTableRow.find('td').click(function() {
+
+              thisTableRow.parent().children().removeClass('warning');
+              thisTableRow.addClass('warning');
+
+              // Transfer record metadata to the parent window.
+              var fields = ['last_modified', 'local_subject_id', 'subject_name', 'subject_repository_id'];
+              var html = '<dl>';
+              // Loop through the metadata and choose fileds in the 'fields' array.
+              // console.log(aData);
+              $.each(aData, function(key, value){
+                if (fields.indexOf(key) !== -1) {
+                  html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
+                  html += '<dd class="' + key + '">' + value + '</dd>'
+                }
+              });
+              html += '</dl>';
+
+              $('div.subject-well').html(html);
+              $('div.subject-well').removeClass('hidden');
+
+              // Enable the Item buttons.
+              $('[data-select="item"], [data-create="item"]').removeAttr('disabled');
+
+              // Add the subject_repository_id to data.
+              $('body').data('subject_repository_id', aData.DT_RowId);
+
+              // // This table cell.
+              // var thisTableCell = $(this);
+              // // Don't do anything if the table cell has the 'manage_column' CSS class.
+              // if(thisTableCell.hasClass('manage_column')) return;
+              // // Send to the details page.
+              // var subject_repository_id = thisTableCell.closest("tr").attr('id');
+              // // window.location.href = "/admin/projects/items/" + project_repository_id + '/' + subject_repository_id;
+            });
+          }
+        });
+
+        return subjectDt;
+      }
+
+      // Browse Items
+      function browseItems(subjectId) {
+
+        var data = $('body').data();
+        var ajaxUrl = (data.subject_repository_id && data.project_repository_id)
+            ? '/admin/projects/datatables_browse_items/' + data.project_repository_id + '/' + data.subject_repository_id
+            : '/admin/projects/datatables_browse_items';
+
+        console.log(ajaxUrl);
+
+        var itemDt = $('#item').dataTable( {
+          "columns": [
+              { "data": "item_description" },
+              { "data": "local_item_id" },
+              { "data": "datasets_count" },
+              { "data": "last_modified" },
+            ],
+          "dom": 'lfip<"datatables_bulk_actions">tip',
+          "pagingType": "simple_numbers",
+          "stateSave": true,
+          "order": [[3,"desc"]],
+          // Show processing throbber.
+          "processing": true,
+          "serverMethod": "POST",
+          // All data management will be done on the server side.
+          "serverSide": true,
+          // Path to the file that is going to handle the queries.
+          "ajax": "/admin/projects/datatables_browse_items",
+          // Method type.
+          "serverMethod": "POST",
+          // Values in the length dropdown.
+          "lengthMenu":[10,50,100,500],
+          // Set some widths.
+          "aoColumnDefs":[
+              {"sWidth":"105px","aTargets":[0]},
+              {"sWidth":"92px","aTargets":[1]}
+          ],
+          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+            // This table row.
+            var thisTableRow = $(nRow);
+            thisTableRow.find('td').click(function() {
+
+              thisTableRow.parent().children().removeClass('warning');
+              thisTableRow.addClass('warning');
+
+              // Transfer record metadata to the parent window.
+              var fields = ['datasets_count', 'item_description', 'last_modified', 'local_item_id', 'DT_RowId'];
+              var html = '<dl>';
+              // Loop through the metadata and choose fileds in the 'fields' array.
+              console.log(aData);
+              $.each(aData, function(key, value){
+                if (fields.indexOf(key) !== -1) {
+                  html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
+                  html += '<dd class="' + key + '">' + value + '</dd>'
+                }
+              });
+              html += '</dl>';
+
+              $('div.item-well').html(html);
+              $('div.item-well').removeClass('hidden');
+
+              // Enable Step 2 tab.
+              rootwizard.bootstrapWizard('enable', '1');
+
+              // Add the item_repository_id to data.
+              $('body').data('item_repository_id', aData.DT_RowId);
+
+              // console.log($('body').data());
+
+              // // This table cell.
+              // var thisTableCell = $(this);
+              // // Don't do anything if the table cell has the 'manage_column' CSS class.
+              // if(thisTableCell.hasClass('manage_column')) return;
+              // // Send to the details page.
+              // var item_repository_id = thisTableCell.closest("tr").attr('id');
+              // // window.location.href = details_page + project_repository_id + '/' + subject_repository_id + '/' + item_repository_id;
+            });
+          }
+        });
+
+        return itemDt;
+      }
+
     });
 
     var dropzoneUrl = "{{ oneup_uploader_endpoint('repository') }}",

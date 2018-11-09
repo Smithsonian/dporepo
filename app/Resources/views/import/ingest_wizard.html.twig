@@ -1,38 +1,62 @@
-<div id="rootwizard">
+{% use 'datasets/dataset_form.html.twig' %}
+{% use 'import/uploads_stage.html.twig' %}
+{% use 'import/record_picker_panels.html.twig' %}
+
+{% block ingestwizard %}
+<div id="rootwizard" class="tabbable tabs-left">
   <div class="navbar">
     <div class="navbar-inner">
       {# <div class="container"> #}
         <ul>
-          <li><a href="#tab1" data-toggle="tab">Step 1</a></li>
-          <li><a href="#tab2" data-toggle="tab">Step 2</a></li>
-          <li><a href="#tab3" data-toggle="tab">Step 3</a></li>
-          <li><a href="#tab4" data-toggle="tab">Step 4</a></li>
-          <li><a href="#tab5" data-toggle="tab">Step 5</a></li>
+          {# <li><a href="#simple_ingest_tab_1" data-toggle="tab"><span class="tab-header">Step 1</span><br>Select Project</a></li>
+          <li><a href="#simple_ingest_tab_2" data-toggle="tab"><span class="tab-header">Step 2</span><br>Select Subject</a></li>
+          <li><a href="#simple_ingest_tab_3" data-toggle="tab"><span class="tab-header">Step 3</span><br>Select Item</a></li> #}
+          <li><a href="#simple_ingest_tab_3" data-toggle="tab"><span class="tab-header">Step 1</span><br>Select Parent Records</a></li>
+          <li><a href="#simple_ingest_tab_4" data-toggle="tab"><span class="tab-header">Step 2</span><br>Dataset Metadata</a></li>
+          <li><a href="#simple_ingest_tab_5" data-toggle="tab"><span class="tab-header">Step 3</span><br>Upload Assets</a></li>
         </ul>
       {# </div> #}
     </div>
   </div>
   <div class="tab-content">
-    <div class="tab-pane" id="tab1">
-      Step 1
+    <ul class="pager wizard">
+      {# <li class="previous first" style="display:none;"><a href="#">First</a></li> #}
+      <li class="previous"><a href="#"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Previous Step</a></li>
+      {# <li class="next last" style="display:none;"><a href="#">Last</a></li> #}
+      <li class="next"><a href="#">Next Step <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span></a></li>
+    </ul>
+    <!-- Select Project -->
+    {# <div class="tab-pane" id="simple_ingest_tab_1">
+      <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> This step is optional. If no project is 
+        associated to the target Subject, you can proceed to Step 2.</p>
+      {% include 'import/record_picker_panels.html.twig' %}
+    </div> #}
+    <!-- Select Subject -->
+    {# <div class="tab-pane" id="simple_ingest_tab_2">
+      {% include 'import/record_picker_panels.html.twig' %}
+    </div> #}
+    <!-- Select Item -->
+    {# <div class="tab-pane" id="simple_ingest_tab_3">
+      {% include 'import/record_picker_panels.html.twig' %}
+    </div> #}
+    <!-- Select Parent Records -->
+    <div class="tab-pane" id="simple_ingest_tab_3">
+      {% include 'import/record_picker_panels.html.twig' %}
     </div>
-    <div class="tab-pane" id="tab2">
-      Step 2
+    <!-- Dataset Form -->
+    <div class="tab-pane" id="simple_ingest_tab_4">
+      {% block dataset_form %}{{ parent() }}{% endblock %}
     </div>
-    <div class="tab-pane" id="tab3">
-      Step 3
-    </div>
-    <div class="tab-pane" id="tab4">
-      Step 4
-    </div>
-    <div class="tab-pane" id="tab5">
-      Step 5
+    <!-- Uploads Stage -->
+    <div class="tab-pane" id="simple_ingest_tab_5">
+      {% block uploads_stage %}{{ parent() }}{% endblock %}
     </div>
     <ul class="pager wizard">
       {# <li class="previous first" style="display:none;"><a href="#">First</a></li> #}
-      <li class="previous"><a href="#">Previous</a></li>
+      <li class="previous"><a href="#"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Previous Step</a></li>
       {# <li class="next last" style="display:none;"><a href="#">Last</a></li> #}
-      <li class="next"><a href="#">Next</a></li>
+      <li class="next"><a href="#">Next Step <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span></a></li>
     </ul>
   </div>
 </div>
+{% endblock %}
