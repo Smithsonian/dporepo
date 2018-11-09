@@ -93,19 +93,6 @@
         window.location.href = '/admin/bulk_ingest';
       });
 
-      /**
-       * Skip record selection click handler
-       */
-      $('.skip-record').on('click', function(e) {
-        $('[data-select="subject"], [data-create="subject"]').removeAttr('disabled');
-        $(this).parent().find('button').attr('disabled', 'disabled');
-
-        // $(this).parent().parent().parent().hide();
-        $('.project-well').empty().addClass('hidden');
-        // Remove the project_repository_id value from the data attribute.
-        $('body').data('project_repository_id', null);
-      });
-
       // Display the record picker modal.
       // $('#record-picker-modal-title').empty();
       // $('#record-picker-modal-title').append('Pre-Validating...');
