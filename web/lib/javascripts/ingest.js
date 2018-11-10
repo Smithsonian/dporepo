@@ -296,7 +296,7 @@ uploadsDropzone.on("success", function(file, responseText) {
     importLimitationValidation(file.parentRecordType, file.name);
 
     // Empty CSV warning
-    if(!JSON.parse(responseText.csv).length && (file.name !== 'file_name_map.csv')) {
+    if(responseText.csv && !JSON.parse(responseText.csv).length && (file.name !== 'file_name_map.csv')) {
       swal({
         title: 'Error',
         text: file.name + ': CSV is empty',
@@ -305,7 +305,7 @@ uploadsDropzone.on("success", function(file, responseText) {
     }
 
     // If no errors are returned, display a message.
-    if(responseText && JSON.parse(responseText.csv).length && (typeof responseText.error === 'undefined')) {
+    if(responseText.csv && JSON.parse(responseText.csv).length && (typeof responseText.error === 'undefined')) {
       // The message.
       let message = $('<div />').addClass('alert alert-success cvs-validation-success').attr('role', 'alert').html('<h4>CSV Pre-validation</h4><p><strong>' + file.name + '</strong></p><p>No CSV validation errors found.</p>');
       // Append the message to the panel-body container.
@@ -334,7 +334,7 @@ uploadsDropzone.on("success", function(file, responseText) {
 
     }
 
-    if(JSON.parse(responseText.csv).length) {
+    if(responseText.csv && JSON.parse(responseText.csv).length) {
       // Display the CSV within a spreadsheet interface, highlighting errors.
       // TODO: Make it possible to edit the spreadsheet and resubmit for pre-validation.
       // See: Handsontable
@@ -474,7 +474,11 @@ uploadsDropzone.on("sending", function(file, xhr, formData) {
 uploadsDropzone.on("queuecomplete", function(file) {
 
   let jobId = $('.prevalidate-trigger').attr('data-jobid'),
-      parentProjectId = $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
+      // For the Simple Ingest, the value is stored in $('body').data('project_repository_id')
+      // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker').attr('data-project-id')
+      parentProjectId = $('body').data('project_repository_id')
+          ? $('body').data('project_repository_id')
+          : $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
       parentRecordId = parentRecordChecker(),
       parentRecordType = getRecordType();
 
@@ -569,7 +573,11 @@ document.querySelector("#actions .cancel-upload").onclick = function() {
       case "yes":
         // Set the status of the job from 'uploading' to 'failed'.
         let jobId = $('.prevalidate-trigger').attr('data-jobid'),
-            parentProjectId = $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
+            // For the Simple Ingest, the value is stored in $('body').data('project_repository_id')
+            // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker').attr('data-project-id')
+            parentProjectId = $('body').data('project_repository_id')
+                ? $('body').data('project_repository_id')
+                : $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
             parentRecordId = parentRecordChecker(),
             parentRecordType = getRecordType();
         
@@ -636,8 +644,8 @@ function startUpload(restart, dropzoneFilesCopy) {
     $('#previews').find('.badge-temp').removeClass('badge-temp').addClass('badge');
     // Get the job ID from the data attribute of the prevalidate-trigger.
     let jobId = $('.prevalidate-trigger').attr('data-jobid');
-    // Begin the uploading process.
 
+    // Begin the uploading process.
     if(restart) {
 
       // Set the status back to 'uploading'.
@@ -694,7 +702,11 @@ function startUpload(restart, dropzoneFilesCopy) {
 
 function parentRecordChecker() {
   // Parent record ID value.
-  let parentRecordId = $('#uploads_parent_picker_form_parent_picker').val();
+  // For the Simple Ingest, the value is stored in $('body').data('item_repository_id')
+  // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker')
+  let parentRecordId = $('body').data('item_repository_id')
+      ? $('body').data('item_repository_id')
+      : $('#uploads_parent_picker_form_parent_picker').val();
   // If there is no parent ID selected, then display an alert.
   if(!parentRecordId.length) {
     swal({
@@ -710,7 +722,9 @@ function parentRecordChecker() {
 
 function getRecordType() {
   // Parent record text value.
-  let parentRecordText = $('#uploads_parent_picker_form_parent_picker_text').val();
+  // For the Simple Ingest, the value is automatically 'capture_dataset'.
+  // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker_text').val()
+  let parentRecordText = $('body').data('ajax') ? '[ item ]' : $('#uploads_parent_picker_form_parent_picker_text').val();
   // Get the string found between the brackets (e.g. [ subject ] would return 'subject').
   parentRecordText = parentRecordText.substring(parentRecordText.lastIndexOf("[")+1,parentRecordText.lastIndexOf("]"));
   // Clean it up...
@@ -881,8 +895,9 @@ function requiredCsvValidation(parentRecordType, csvList) {
       generateWarning = true;
     }
 
+    // If this is not a Simple Ingest - $('body').data('ajax'), perform the check.
     // Item as parent record - no capture_datasets.csv found
-    if ( (parentRecordType === 'item') && (csvList.indexOf('capture_datasets.csv') === -1) ) {
+    if ( !$('body').data('ajax') && (parentRecordType === 'item') && (csvList.indexOf('capture_datasets.csv') === -1) ) {
       csvTargetFile = 'capture_datasets.csv';
       generateWarning = true;
     }
@@ -985,7 +1000,11 @@ function checkStatus() {
 
           // Set the status of the job from 'uploading' to 'failed'.
           let jobId = $('.prevalidate-trigger').attr('data-jobid'),
-              parentProjectId = $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
+              // For the Simple Ingest, the value is stored in $('body').data('project_repository_id')
+              // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker').attr('data-project-id')
+              parentProjectId = $('body').data('project_repository_id')
+                  ? $('body').data('project_repository_id')
+                  : $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
               parentRecordId = parentRecordChecker(),
               parentRecordType = getRecordType();
           
