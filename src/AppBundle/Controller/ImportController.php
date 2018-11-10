@@ -412,6 +412,9 @@ class ImportController extends Controller
         // Get job import data (query the 'job_import_record' table).
         $job_record_data = $this->repo_storage_controller->execute('getImportedItems', array('job_id' => $job_data['job_id']));
 
+        // [Slight Hack!] Fake it for the Simple Ingest since the 'job_import_record' table has already been populated.
+        $job_record_data = isset($_GET['simpleIngest']) ? false : $job_record_data;
+
         // If a record is NOT found within the 'job_import_record' table, add a message and execute validations and metadata ingests.
         if (!$job_record_data && ($job_data['job_status'] !== 'cancelled') && ($job_data['job_status'] !== 'failed') && ($job_data['job_status'] !== 'complete')) {
 
@@ -1116,5 +1119,41 @@ class ImportController extends Controller
         'data' => $data,
         'processing_results' => $processing_results,
       ));
+    }
+
+    /**
+     * Get Processing Job
+     *
+     * @Route("/admin/post_job_import_record", name="post_job_import_record", methods="POST")
+     *
+     * @param object $request Symfony's request object
+     */
+    public function post_job_import_record(Request $request)
+    {
+      $response = $this->json(array());
+      $req = $request->request->all();
+      
+      if (!empty($req['record_table']) && !empty($req['job_uuid']) && !empty($req['project_repository_id']) && !empty($req['capture_dataset_repository_id'])) {
+
+        // Get the job data (for the job_id).
+        $job_data = $this->repo_storage_controller->execute('getJobData', array($req['job_uuid']));
+
+        // Insert into the job_import_record table
+        $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_import_record',
+          'user_id' => $this->getUser()->getId(),
+          'values' => array(
+            'job_id' => $job_data['job_id'],
+            'record_id' => $req['capture_dataset_repository_id'],
+            'project_id' => (int)$req['project_repository_id'],
+            'record_table' => $req['record_table'],
+            'description' => null,
+          )
+        ));
+        // Return the $job_import_record_id
+        if ($job_import_record_id) $response = $this->json(array('id' => $job_import_record_id));
+      }
+
+      return $response;
     }
 }

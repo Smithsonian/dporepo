@@ -496,8 +496,10 @@ uploadsDropzone.on("queuecomplete", function(file) {
             ,'url': '/admin/set_job_status/' + jobId + '/bagit validation starting'
             ,success: function(result) {
               if(result && result.statusSet) {
+                // If this is a Simple Ingest, set a $_GET parameter.
+                $getParam = $('body').data('ajax') ? '?simpleIngest' : '';
                 // Redirect to the Upload overview page.
-                document.location.href = '/admin/ingest/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
+                document.location.href = '/admin/ingest/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType + $getParam;
               } else {
                 // TODO: catch error?
               }
@@ -644,6 +646,36 @@ function startUpload(restart, dropzoneFilesCopy) {
     $('#previews').find('.badge-temp').removeClass('badge-temp').addClass('badge');
     // Get the job ID from the data attribute of the prevalidate-trigger.
     let jobId = $('.prevalidate-trigger').attr('data-jobid');
+    
+    // If this is a Simple Ingest, we still need to add the capture_dataset to the job_import_record metadata storage.
+    if ($('body').data('ajax')) {
+
+      var postData = {
+        'record_table': 'capture_dataset',
+        'job_uuid': jobId,
+        'project_repository_id': $('body').data('project_repository_id'),
+        'capture_dataset_repository_id': $('body').data('capture_dataset_repository_id')
+      };
+
+      // AJAX: add the capture_dataset to the job_import_record metadata storage.
+      $.ajax({
+        'type': 'POST'
+        ,'dataType': 'json'
+        ,'url': '/admin/post_job_import_record'
+        ,'data': postData
+        ,success: function(data) {
+          if(data) {
+            // Response data handler.
+            if(data.id) {
+              // Does anything need to be returned. Not really.
+            } else {
+              // Error handling???
+            }
+          }
+        }
+      });
+      
+    }
 
     // Begin the uploading process.
     if(restart) {
@@ -895,7 +927,7 @@ function requiredCsvValidation(parentRecordType, csvList) {
       generateWarning = true;
     }
 
-    // If this is not a Simple Ingest - $('body').data('ajax'), perform the check.
+    // If this is not a Simple Ingest - !$('body').data('ajax'), perform the check.
     // Item as parent record - no capture_datasets.csv found
     if ( !$('body').data('ajax') && (parentRecordType === 'item') && (csvList.indexOf('capture_datasets.csv') === -1) ) {
       csvTargetFile = 'capture_datasets.csv';
