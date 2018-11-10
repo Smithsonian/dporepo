@@ -144,7 +144,7 @@
         var form = $('form[name="dataset"]');
         var formData = form.serializeObject();
         // Avoid submitting the form multiple times.
-        $('#dataset_save').attr('disabled', true);
+        // $('#dataset_save').attr('disabled', true);
 
         // AJAX: Create a new dataset record.
         $.ajax({
@@ -171,7 +171,9 @@
                 $('form[name="dataset"]').find('input, select, textarea').attr('disabled', true);
                 $('form[name="dataset"]').find('select').trigger("chosen:updated");
 
-                console.log($('body').data());
+                // Enable Step 3 tab.
+                rootwizard.bootstrapWizard('enable', '2');
+
                 // Example of $('body').data() values:
                 // {
                 //     capture_dataset_repository_id: "12"
