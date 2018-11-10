@@ -136,6 +136,75 @@
       };
       dateInput.datepicker(options);
 
+      // Dataset form submit handler.
+      $(document).on('submit', 'form[name="dataset"]', function(e){
+        // Avoid submitting the form non-ajax.
+        e.preventDefault();
+        // Get the properties and values from the form.
+        var form = $('form[name="dataset"]');
+        var formData = form.serializeObject();
+        // Avoid submitting the form multiple times.
+        $('#dataset_save').attr('disabled', true);
+
+        // AJAX: Create a new dataset record.
+        $.ajax({
+          'type': 'POST'
+          ,'dataType': 'json'
+          ,'url': '/admin/projects/dataset/' + $('body').data('project_repository_id') + '/' + $('body').data('subject_repository_id') + '/' + $('body').data('item_repository_id') + '/ajax'
+          ,'data': formData
+          ,success: function(data) {
+            if(data) {
+              // Response data handler.
+              if(data.id) {
+
+                // Add the capture_dataset_repository_id to data.
+                $('body').data('capture_dataset_repository_id', data.id);
+
+                // Display a success message in the UI.
+                swal({
+                  title: 'Saved',
+                  content: 'The dataset has been successfully saved.',
+                  icon: 'success',
+                });
+
+                // Disable all fields in the form
+                $('form[name="dataset"]').find('input, select, textarea').attr('disabled', true);
+                $('form[name="dataset"]').find('select').trigger("chosen:updated");
+
+                console.log($('body').data());
+                // Example of $('body').data() values:
+                // {
+                //     capture_dataset_repository_id: "12"
+                //     item_repository_id: "2573"
+                //     project_repository_id: "2"
+                //     subject_repository_id: "796"
+                // }
+
+              } else {
+                // Error handling???
+              }
+            }
+          }
+        });
+
+      });
+
+      $.fn.serializeObject = function() {
+          var o = {};
+          var a = this.serializeArray();
+          $.each(a, function() {
+              if (o[this.name] !== undefined) {
+                  if (!o[this.name].push) {
+                      o[this.name] = [o[this.name]];
+                  }
+                  o[this.name].push(this.value || '');
+              } else {
+                  o[this.name] = this.value || '';
+              }
+          });
+          return o;
+      };
+
       function convertCase(str) {
         var lower = String(str).toLowerCase();
         return lower.replace(/(^| )(\w)/g, function(x) {
@@ -213,6 +282,11 @@
 
               // Add the project_repository_id to data.
               $('body').data('project_repository_id', aData.DT_RowId);
+              // Add the project_repository_id to the hidden input.
+              $('input[name="dataset[parent_project_repository_id]"]').val($('body').data('project_repository_id'));
+
+              // Also, take this opportunity to set the ajax data value.
+              $('body').data('ajax', true);
 
               // // This table cell.
               // var thisTableCell = $(this);
@@ -301,6 +375,8 @@
 
               // Add the subject_repository_id to data.
               $('body').data('subject_repository_id', aData.DT_RowId);
+              // Add the subject_repository_id to the hidden input.
+              $('input[name="dataset[parent_subject_repository_id]"]').val($('body').data('subject_repository_id'));
 
               // // This table cell.
               // var thisTableCell = $(this);
@@ -380,6 +456,8 @@
 
               // Add the item_repository_id to data.
               $('body').data('item_repository_id', aData.DT_RowId);
+              // Add the item_repository_id to the hidden input.
+              $('input[name="dataset[parent_item_repository_id]"]').val($('body').data('item_repository_id'));
 
               // // This table cell.
               // var thisTableCell = $(this);

@@ -128,7 +128,7 @@ class DatasetsController extends Controller
     /**
      * Matches /admin/projects/dataset/*
      *
-     * @Route("/admin/projects/dataset/{parent_project_repository_id}/{parent_subject_repository_id}/{parent_item_repository_id}/{capture_dataset_repository_id}", name="datasets_manage", methods={"GET","POST"}, defaults={"capture_dataset_repository_id" = null})     *
+     * @Route("/admin/projects/dataset/{parent_project_repository_id}/{parent_subject_repository_id}/{parent_item_repository_id}/{capture_dataset_repository_id}", name="datasets_manage", methods={"GET","POST"}, defaults={"capture_dataset_repository_id" = null})
      * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
      * @return  array|bool            The query result
@@ -137,8 +137,15 @@ class DatasetsController extends Controller
     {
         $dataset = new Datasets();
         $post = $request->request->all();
-        $id = !empty($request->attributes->get('capture_dataset_repository_id')) ? $request->attributes->get('capture_dataset_repository_id') : false;
+        $id = false;
+        $ajax = false;
 
+        if ((!empty($request->attributes->get('capture_dataset_repository_id')) && ($request->attributes->get('capture_dataset_repository_id') !== 'ajax'))) {
+          $id = $request->attributes->get('capture_dataset_repository_id');
+        } else {
+          $ajax = true;
+        }
+        
         // Retrieve data from the database.
         if (!empty($id) && empty($post)) {
             $dataset_array = $this->repo_storage_controller->execute('getCaptureDataset', array(
@@ -181,18 +188,29 @@ class DatasetsController extends Controller
               'values' => $dataset_array
             ));
 
-            $this->addFlash('message', 'Capture Dataset successfully updated.');
-            return $this->redirect('/admin/projects/dataset_elements/' . $dataset->parent_project_repository_id . '/' . $dataset->parent_subject_repository_id . '/' . $dataset->parent_item_repository_id . '/' . $id);
+            if ($ajax) {
+              // Return the ID of the new record.
+              $response = new JsonResponse(array('id' => $id));
+              return $response;
+            } else {
+              $this->addFlash('message', 'Capture Dataset successfully updated.');
+              return $this->redirect('/admin/projects/dataset_elements/' . $dataset->parent_project_repository_id . '/' . $dataset->parent_subject_repository_id . '/' . $dataset->parent_item_repository_id . '/' . $id);
+            }
         }
         
         $dataset->capture_dataset_repository_id = !empty($id) ? $id : false;
 
-        return $this->render('datasets/dataset_form_page.html.twig', array(
-            'page_title' => !empty($id) ? 'Dataset: ' . $dataset->capture_dataset_name : 'Create Dataset',
-            'dataset_data' => $dataset,
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-            'form' => $form->createView(),
-        ));
+        if ($ajax) {
+          $response = new JsonResponse($dataset);
+          return $response;
+        } else {
+          return $this->render('datasets/dataset_form_page.html.twig', array(
+              'page_title' => !empty($id) ? 'Dataset: ' . $dataset->capture_dataset_name : 'Create Dataset',
+              'dataset_data' => $dataset,
+              'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+              'form' => $form->createView(),
+          ));
+        }
 
     }
 
