@@ -249,6 +249,27 @@ $('.prevalidate-trigger').on('click', function(e) {
       });
       
     }
+
+    // // Pre-validate texture map images on ingest.
+    // var textureMapFileNameParts = {'diffuse', 'normal', 'occlusion'};
+    // if (textureMapFileNameParts.indexOf(queuedFiles[i].name) === -1) {
+
+    //   function powerOf2(num) {
+    //     if (typeof num !== 'number') 
+    //         return false;
+    //     return Number.isInteger(Math.log2(num));
+    //   }
+
+    //   console.log(powerOf2('ddd'));
+    //   console.log(powerOf2(18));
+    //   console.log(powerOf2(8192));
+
+    //   var img = new Image();
+    //   img.src= _file.target.result;
+    //   console.log(img.width);
+    //   console.log(img.height);
+      
+    // }
     
   }
 
