@@ -23,10 +23,6 @@ use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\PhpExecutableFinder;
 
-use AppBundle\Controller\ItemsController;
-use AppBundle\Controller\DatasetsController;
-use AppBundle\Controller\ModelController;
-
 // use Psr\Log\LoggerInterface;
 
 use AppBundle\Form\UploadsParentPickerForm;
@@ -37,6 +33,10 @@ use AppBundle\Utils\AppUtilities;
 
 use AppBundle\Service\RepoFileTransfer;
 use AppBundle\Service\RepoProcessingService;
+
+use AppBundle\Form\Dataset;
+use AppBundle\Entity\Datasets;
+use AppBundle\Controller\DatasetsController;
 
 class ImportController extends Controller
 {
@@ -57,9 +57,7 @@ class ImportController extends Controller
 
     private $repo_storage_controller;
     private $tokenStorage;
-    private $itemsController;
     private $datasetsController;
-    private $modelsController;
     private $fileTransfer;
 
     /**
@@ -76,16 +74,14 @@ class ImportController extends Controller
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, DatasetsController $datasetsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
         $this->tokenStorage = $tokenStorage;
 
-        $this->itemsController = $itemsController;
         $this->datasetsController = $datasetsController;
-        $this->modelsController = $modelsController;
         $this->fileTransfer = $fileTransfer;
         $this->processing = $processing;
         $this->external_file_storage_on = $external_file_storage_on;
@@ -100,58 +96,25 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/import", name="import_summary_dashboard", methods="GET")
+     * @Route("/admin/ingest", name="import_summary_dashboard", methods="GET")
+     *
+     * Browse Ingests
      *
      * @param object $conn Database connection object
      * @param object $request Symfony's request object
      */
     public function import_summary_dashboard(Connection $conn, Request $request)
     {
-        // Patch vendor overrides.
-        $this->u->patchVendorOverrides();
-
-        $service_error = false;
-        $obj = new UploadsParentPicker();
-
-        // If the external file storage service is turned on in parameters.yml,
-        // check to see if the external storage service is accessible.
-        if($this->external_file_storage_on) {
-          // TODO: Send email alerts to admins?
-          // Set up flysystem.
-          $flysystem = $this->container->get('oneup_flysystem.assets_filesystem');
-          // Transfer files.
-          $result = $this->fileTransfer->checkExternalStorage('checker', $flysystem);
-          // If errors exist, serve out flash notifications.
-          if (!empty($result)) {
-            foreach ($result as $key => $value) {
-              if (isset($value['errors'])) {
-                $this->addFlash('error', '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).');
-                $service_error = true;
-                foreach ($value['errors'] as $ekey => $evalue) {
-                  $this->addFlash('error', $evalue);
-                }
-              }
-            }
-          }
-        }
-
-        // Create the parent record picker typeahead form.
-        $form = $this->createForm(UploadsParentPickerForm::class, $obj);
-        $accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
-
-        return $this->render('import/import_summary_dashboard.html.twig', array(
-            'page_title' => 'Uploads',
-            'form' => $form->createView(),
-            'accepted_file_types' => $accepted_file_types,
-            'service_error' => $service_error,
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-        ));
+      return $this->render('import/import_summary_dashboard.html.twig', array(
+          'page_title' => 'Browse Ingests',
+          'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
+      ));
     }
 
     /**
-     * @Route("/admin/import/datatables_browse_imports", name="imports_browse_datatables", methods="POST")
+     * @Route("/admin/ingest/datatables_browse_imports", name="imports_browse_datatables", methods="POST")
      *
-     * Browse Imports
+     * Browse Ingests Datatable
      *
      * Run a query to retrieve all imports in the database.
      *
@@ -194,6 +157,123 @@ class ImportController extends Controller
       }
 
       return $this->json($data);
+    }
+
+    /**
+     * @Route("/admin/simple_ingest", name="simple_ingest", methods="GET")
+     *
+     * Simple Ingest
+     *
+     * @param object $conn Database connection object
+     * @param object $request Symfony's request object
+     */
+    public function simple_ingest(Connection $conn, Request $request)
+    {
+        // Patch vendor overrides.
+        $this->u->patchVendorOverrides();
+
+        $service_error = false;
+        $obj = new UploadsParentPicker();
+
+        // If the external file storage service is turned on in parameters.yml,
+        // check to see if the external storage service is accessible.
+        if($this->external_file_storage_on) {
+          // TODO: Send email alerts to admins?
+          // Set up flysystem.
+          $flysystem = $this->container->get('oneup_flysystem.assets_filesystem');
+          // Transfer files.
+          $result = $this->fileTransfer->checkExternalStorage('checker', $flysystem);
+          // If errors exist, serve out flash notifications.
+          if (!empty($result)) {
+            foreach ($result as $key => $value) {
+              if (isset($value['errors'])) {
+                $this->addFlash('error', '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).');
+                $service_error = true;
+                foreach ($value['errors'] as $ekey => $evalue) {
+                  $this->addFlash('error', $evalue);
+                }
+              }
+            }
+          }
+        }
+
+        $dataset = new Datasets();
+        // Get data from lookup tables.
+        $dataset->capture_methods_lookup_options = $this->datasetsController->get_capture_methods();
+        $dataset->dataset_types_lookup_options = $this->datasetsController->get_dataset_types();
+        $dataset->item_position_types_lookup_options = $this->datasetsController->get_item_position_types();
+        $dataset->focus_types_lookup_options = $this->datasetsController->get_focus_types();
+        $dataset->light_source_types_lookup_options = $this->datasetsController->get_light_source_types();
+        $dataset->background_removal_methods_lookup_options = $this->datasetsController->get_background_removal_methods();
+        $dataset->camera_cluster_types_lookup_options = $this->datasetsController->get_camera_cluster_types();
+        $dataset->calibration_object_type_options = $this->datasetsController->get_calibration_object_types();
+
+        // Create the form
+        $form = $this->createForm(Dataset::class, $dataset);
+        // Handle the request
+        // $form->handleRequest($request);
+
+        $accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
+
+        return $this->render('import/simple_ingest.html.twig', array(
+            'page_title' => 'Simple Ingest',
+            'form' => $form->createView(),
+            'accepted_file_types' => $accepted_file_types,
+            'service_error' => $service_error,
+            'dataset_data' => $dataset,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
+        ));
+    }
+
+    /**
+     * @Route("/admin/bulk_ingest", name="bulk_ingest", methods="GET")
+     *
+     * Bulk Ingest
+     *
+     * @param object $conn Database connection object
+     * @param object $request Symfony's request object
+     */
+    public function bulk_ingest(Connection $conn, Request $request)
+    {
+        // Patch vendor overrides.
+        $this->u->patchVendorOverrides();
+
+        $service_error = false;
+        $obj = new UploadsParentPicker();
+
+        // If the external file storage service is turned on in parameters.yml,
+        // check to see if the external storage service is accessible.
+        if($this->external_file_storage_on) {
+          // TODO: Send email alerts to admins?
+          // Set up flysystem.
+          $flysystem = $this->container->get('oneup_flysystem.assets_filesystem');
+          // Transfer files.
+          $result = $this->fileTransfer->checkExternalStorage('checker', $flysystem);
+          // If errors exist, serve out flash notifications.
+          if (!empty($result)) {
+            foreach ($result as $key => $value) {
+              if (isset($value['errors'])) {
+                $this->addFlash('error', '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).');
+                $service_error = true;
+                foreach ($value['errors'] as $ekey => $evalue) {
+                  $this->addFlash('error', $evalue);
+                }
+              }
+            }
+          }
+        }
+
+        // Create the parent record picker typeahead form.
+        $form = $this->createForm(UploadsParentPickerForm::class, $obj);
+        $accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
+
+        return $this->render('import/bulk_ingest.html.twig', array(
+            'page_title' => 'Bulk Ingest',
+            'form' => $form->createView(),
+            'accepted_file_types' => $accepted_file_types,
+            'service_error' => $service_error,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
+        ));
     }
 
     /**
@@ -292,7 +372,7 @@ class ImportController extends Controller
     }
     
     /**
-     * @Route("/admin/import/{uuid}/{parent_project_id}/{parent_record_id}/{parent_record_type}", name="import_summary_details", defaults={"uuid" = null, "parent_project_id" = null, "parent_record_id" = null, "parent_record_type" = null}, methods="GET")
+     * @Route("/admin/ingest/{uuid}/{parent_project_id}/{parent_record_id}/{parent_record_type}", name="import_summary_details", defaults={"uuid" = null, "parent_project_id" = null, "parent_record_id" = null, "parent_record_type" = null}, methods="GET")
      *
      * @param int $uuid Job ID
      * @param int $parent_project_id Parent Project ID
@@ -563,7 +643,7 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/import/{uuid}/datatables_browse_import_details", name="import_details_browse_datatables", methods="POST")
+     * @Route("/admin/ingest/{uuid}/datatables_browse_import_details", name="import_details_browse_datatables", methods="POST")
      *
      * Browse Import Details
      *
@@ -609,7 +689,7 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/import/get_parent_records", name="get_parent_records", methods="POST")
+     * @Route("/admin/ingest/get_parent_records", name="get_parent_records", methods="POST")
      *
      * @param Request $request Symfony's request object
      * @return \Symfony\Component\HttpFoundation\JsonResponse The query result
@@ -921,7 +1001,7 @@ class ImportController extends Controller
         // The message
         $this->addFlash('message', 'Job data and files have been successfully removed' . $data);
         // Redirect to the main Uploads page.
-        return $this->redirect('/admin/import');
+        return $this->redirect('/admin/ingest');
       }
     }
 
@@ -1036,5 +1116,41 @@ class ImportController extends Controller
         'data' => $data,
         'processing_results' => $processing_results,
       ));
+    }
+
+    /**
+     * Get Processing Job
+     *
+     * @Route("/admin/post_job_import_record", name="post_job_import_record", methods="POST")
+     *
+     * @param object $request Symfony's request object
+     */
+    public function post_job_import_record(Request $request)
+    {
+      $response = $this->json(array());
+      $req = $request->request->all();
+      
+      if (!empty($req['record_table']) && !empty($req['job_uuid']) && !empty($req['project_repository_id']) && !empty($req['capture_dataset_repository_id'])) {
+
+        // Get the job data (for the job_id).
+        $job_data = $this->repo_storage_controller->execute('getJobData', array($req['job_uuid']));
+
+        // Insert into the job_import_record table
+        $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_import_record',
+          'user_id' => $this->getUser()->getId(),
+          'values' => array(
+            'job_id' => $job_data['job_id'],
+            'record_id' => $req['capture_dataset_repository_id'],
+            'project_id' => (int)$req['project_repository_id'],
+            'record_table' => $req['record_table'],
+            'description' => null,
+          )
+        ));
+        // Return the $job_import_record_id
+        if ($job_import_record_id) $response = $this->json(array('id' => $job_import_record_id));
+      }
+
+      return $response;
     }
 }

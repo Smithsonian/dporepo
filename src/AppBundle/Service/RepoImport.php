@@ -163,6 +163,7 @@ class RepoImport implements RepoImportInterface {
   {
 
     $return = $csv_types = array();
+    $skip_ingest = false;
 
     // If $params are empty, return an error.
     if(empty($params)) {
@@ -310,6 +311,7 @@ class RepoImport implements RepoImportInterface {
   {
 
     $data = array();
+    $csv = array();
 
     if (!empty($job_upload_directory)) {
 
@@ -337,138 +339,141 @@ class RepoImport implements RepoImportInterface {
         }
       }
 
-      // Sort the CSV array by key.
+      if (!empty($csv)) {
 
-      ksort($csv);
-      // Re-index the CSV array.
-      $csv = array_values($csv);
+        // Sort the CSV array by key.
+        ksort($csv);
+        // Re-index the CSV array.
+        $csv = array_values($csv);
 
-      foreach ($csv as $csv_key => $csv_value) {
+        foreach ($csv as $csv_key => $csv_value) {
 
-        // Convert the CSV to JSON.
-        $array = array_map('str_getcsv', explode("\n", $csv_value['data']));
-        $json = json_encode($array);
+          // Convert the CSV to JSON.
+          $array = array_map('str_getcsv', explode("\n", $csv_value['data']));
+          $json = json_encode($array);
 
-        // Convert the JSON to a PHP array.
-        $json_array = json_decode($json, false);
-        // Add the type to the array.
-        $json_array['type'] = $csv_value['type'];
+          // Convert the JSON to a PHP array.
+          $json_array = json_decode($json, false);
+          // Add the type to the array.
+          $json_array['type'] = $csv_value['type'];
 
-        // Read the first key from the array, which is the column headers.
-        $target_fields = $json_array[0];
+          // Read the first key from the array, which is the column headers.
+          $target_fields = $json_array[0];
 
-        // Remove the column headers from the array.
-        array_shift($json_array);
+          // Remove the column headers from the array.
+          array_shift($json_array);
 
-        foreach ($json_array as $key => $value) {
-          // Replace numeric keys with field names.
-          if (is_numeric($key)) {
-            foreach ($value as $k => $v) {
+          foreach ($json_array as $key => $value) {
+            // Replace numeric keys with field names.
+            if (is_numeric($key)) {
+              foreach ($value as $k => $v) {
 
-              $field_name = $target_fields[$k];
+                $field_name = $target_fields[$k];
 
-              unset($json_array[$key][$k]);
+                unset($json_array[$key][$k]);
 
-              // If present, bring the project_repository_id into the array.
-              // $json_array[$key][$field_name] = ($field_name === 'project_repository_id') ? (int)$id : null;
+                // If present, bring the project_repository_id into the array.
+                // $json_array[$key][$field_name] = ($field_name === 'project_repository_id') ? (int)$id : null;
 
-              // Set the value of the field name.
-              $json_array[$key][$field_name] = $v;
+                // Set the value of the field name.
+                $json_array[$key][$field_name] = $v;
 
-              // ITEM LOOKUPS
-              // Look-up the ID for the 'item_type'.
-              if ($field_name === 'item_type') {
-                $item_type_lookup_options = $this->itemsController->get_item_types();
-                $json_array[$key][$field_name] = (int)$item_type_lookup_options[$v];
+                // ITEM LOOKUPS
+                // Look-up the ID for the 'item_type'.
+                if ($field_name === 'item_type') {
+                  $item_type_lookup_options = $this->itemsController->get_item_types();
+                  $json_array[$key][$field_name] = (int)$item_type_lookup_options[$v];
+                }
+
+                // CAPTURE DATASET LOOKUPS
+                // Look-up the ID for the 'capture_method'.
+                if ($field_name === 'capture_method') {
+                  $capture_method_lookup_options = $this->datasetsController->get_capture_methods();
+                  $json_array[$key][$field_name] = (int)$capture_method_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'capture_dataset_type'.
+                if ($field_name === 'capture_dataset_type') {
+                  $capture_dataset_type_lookup_options = $this->datasetsController->get_dataset_types();
+                  $json_array[$key][$field_name] = (int)$capture_dataset_type_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'item_position_type'.
+                if ($field_name === 'item_position_type') {
+                  $item_position_type_lookup_options = $this->datasetsController->get_item_position_types();
+                  $json_array[$key][$field_name] = (int)$item_position_type_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'focus_type'.
+                if ($field_name === 'focus_type') {
+                  $focus_type_lookup_options = $this->datasetsController->get_focus_types();
+                  $json_array[$key][$field_name] = (int)$focus_type_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'light_source_type'.
+                if ($field_name === 'light_source_type') {
+                  $light_source_type_lookup_options = $this->datasetsController->get_light_source_types();
+                  $json_array[$key][$field_name] = (int)$light_source_type_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'background_removal_method'.
+                if ($field_name === 'background_removal_method') {
+                  $background_removal_method_lookup_options = $this->datasetsController->get_background_removal_methods();
+                  $json_array[$key][$field_name] = (int)$background_removal_method_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'cluster_type'.
+                if ($field_name === 'cluster_type') {
+                  $camera_cluster_types_lookup_options = $this->datasetsController->get_camera_cluster_types();
+                  $json_array[$key][$field_name] = (int)$camera_cluster_types_lookup_options[$v];
+                }
+
+                // MODEL LOOKUPS
+                // TODO:
+                // Model lookup options not in database! Need to either
+                // 1) place into database and create a way to manage
+                // 2) convert all lookups to draw from the JSON schema (preferred!)
+
+                // Look-up the ID for the 'creation_method'.
+                if ($field_name === 'creation_method') {
+                  $creation_method_lookup_options = array('scan-to-mesh' => 1, 'CAD' => 2);
+                  $json_array[$key][$field_name] = (int)$creation_method_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'model_modality'.
+                if ($field_name === 'model_modality') {
+                  $model_modality_lookup_options = array('point_cloud' => 1, 'mesh' => 2);
+                  $json_array[$key][$field_name] = (int)$model_modality_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'units'.
+                if ($field_name === 'units') {
+                  $units_lookup_options = $this->modelsController->get_unit();
+                  $json_array[$key][$field_name] = (int)$units_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'model_purpose'.
+                if ($field_name === 'model_purpose') {
+                  $model_purpose_lookup_options = array('master' => 1, 'delivery_web' => 2, 'delivery_print' => 3, 'intermediate_processing_step' => 4);
+                  $json_array[$key][$field_name] = (int)$model_purpose_lookup_options[$v];
+                }
+
               }
 
-              // CAPTURE DATASET LOOKUPS
-              // Look-up the ID for the 'capture_method'.
-              if ($field_name === 'capture_method') {
-                $capture_method_lookup_options = $this->datasetsController->get_capture_methods();
-                $json_array[$key][$field_name] = (int)$capture_method_lookup_options[$v];
+              // If an array of data contains 1 or fewer keys, then it means the row is empty.
+              // Unset the empty row, so it doesn't get inserted into the database.
+              if (count(array_keys((array)$json_array[$key])) > 1) {
+                // Convert the array to an object.
+                $data[$csv_key]['csv'][] = (object)$json_array[$key];
               }
-
-              // Look-up the ID for the 'capture_dataset_type'.
-              if ($field_name === 'capture_dataset_type') {
-                $capture_dataset_type_lookup_options = $this->datasetsController->get_dataset_types();
-                $json_array[$key][$field_name] = (int)$capture_dataset_type_lookup_options[$v];
-              }
-
-              // Look-up the ID for the 'item_position_type'.
-              if ($field_name === 'item_position_type') {
-                $item_position_type_lookup_options = $this->datasetsController->get_item_position_types();
-                $json_array[$key][$field_name] = (int)$item_position_type_lookup_options[$v];
-              }
-
-              // Look-up the ID for the 'focus_type'.
-              if ($field_name === 'focus_type') {
-                $focus_type_lookup_options = $this->datasetsController->get_focus_types();
-                $json_array[$key][$field_name] = (int)$focus_type_lookup_options[$v];
-              }
-
-              // Look-up the ID for the 'light_source_type'.
-              if ($field_name === 'light_source_type') {
-                $light_source_type_lookup_options = $this->datasetsController->get_light_source_types();
-                $json_array[$key][$field_name] = (int)$light_source_type_lookup_options[$v];
-              }
-
-              // Look-up the ID for the 'background_removal_method'.
-              if ($field_name === 'background_removal_method') {
-                $background_removal_method_lookup_options = $this->datasetsController->get_background_removal_methods();
-                $json_array[$key][$field_name] = (int)$background_removal_method_lookup_options[$v];
-              }
-
-              // Look-up the ID for the 'cluster_type'.
-              if ($field_name === 'cluster_type') {
-                $camera_cluster_types_lookup_options = $this->datasetsController->get_camera_cluster_types();
-                $json_array[$key][$field_name] = (int)$camera_cluster_types_lookup_options[$v];
-              }
-
-              // MODEL LOOKUPS
-              // TODO:
-              // Model lookup options not in database! Need to either
-              // 1) place into database and create a way to manage
-              // 2) convert all lookups to draw from the JSON schema (preferred!)
-
-              // Look-up the ID for the 'creation_method'.
-              if ($field_name === 'creation_method') {
-                $creation_method_lookup_options = array('scan-to-mesh' => 1, 'CAD' => 2);
-                $json_array[$key][$field_name] = (int)$creation_method_lookup_options[$v];
-              }
-
-              // Look-up the ID for the 'model_modality'.
-              if ($field_name === 'model_modality') {
-                $model_modality_lookup_options = array('point_cloud' => 1, 'mesh' => 2);
-                $json_array[$key][$field_name] = (int)$model_modality_lookup_options[$v];
-              }
-
-              // Look-up the ID for the 'units'.
-              if ($field_name === 'units') {
-                $units_lookup_options = $this->modelsController->get_unit();
-                $json_array[$key][$field_name] = (int)$units_lookup_options[$v];
-              }
-
-              // Look-up the ID for the 'model_purpose'.
-              if ($field_name === 'model_purpose') {
-                $model_purpose_lookup_options = array('master' => 1, 'delivery_web' => 2, 'delivery_print' => 3, 'intermediate_processing_step' => 4);
-                $json_array[$key][$field_name] = (int)$model_purpose_lookup_options[$v];
-              }
-
+              
             }
 
-            // If an array of data contains 1 or fewer keys, then it means the row is empty.
-            // Unset the empty row, so it doesn't get inserted into the database.
-            if (count(array_keys((array)$json_array[$key])) > 1) {
-              // Convert the array to an object.
-              $data[$csv_key]['csv'][] = (object)$json_array[$key];
+            if (!is_numeric($key)) {
+              $data[$csv_key]['type'] = $value;
             }
-            
           }
 
-          if (!is_numeric($key)) {
-            $data[$csv_key]['type'] = $value;
-          }
         }
 
       }
