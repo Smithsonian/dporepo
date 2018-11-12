@@ -142,14 +142,14 @@
       $(document).on('submit', 'form[name="dataset"]', function(e){
         // Avoid submitting the form non-ajax.
         e.preventDefault();
-        // Create a CSV file and make it downloadable.
-        createDownloadLink();
+        // Convert form data to a CSV and add it to the Uploads Stage.
+        addCsvToUploadsStage();
         // Avoid submitting the form multiple times.
         $('#dataset_save').attr('disabled', true);
         // Display a success message in the UI.
         swal({
-          title: 'Please download the CSV',
-          content: 'CSV',
+          title: 'Dataset Saved',
+          text: 'Please proceed to Step 3',
           icon: 'success',
         });
       });
@@ -170,7 +170,7 @@
           return o;
       };
 
-      function createDownloadLink() {
+      function addCsvToUploadsStage() {
         // Create a CSV file and make it downloadable.
         // Example data from formData:
         // "dataset[background_removal_method]": "4"
@@ -229,15 +229,11 @@
         // for( var i = 0; i < csvValues.length; i++){
         //   csvValues[i] = '"' + csvValues[i] + '"';
         // }
-        // Create the download button.
-        var downloadButton = $('<a />')
-            .attr('href',  encodeURI('data:text/csv;charset=utf-8,' + csvColumns + '\r\n' + csvValues))
-            .attr('download', 'capture_datasets.csv')
-            .addClass('download btn btn-success')
-            .attr('style', 'margin-left: 8px;')
-            .text('Download');
-        // Render the download button next to the "Save Edits" button.
-        $('#dataset_save').after(downloadButton);
+        // Add the CSV to the Uplaods Stage (Dropzone), in Step 3.
+        // See: https://stackoverflow.com/questions/17103398/convert-javascript-variable-value-to-csv-file
+        var blob = new Blob([csvColumns.join(',') + '\r\n' + csvValues.join(',')], {type: 'text/csv'});
+        blob.name = 'capture_datasets.csv';
+        uploadsDropzone.addFile(blob);
         // Disable all fields in the form
         $('form[name="dataset"]').find('input, select, textarea').attr('disabled', true);
         $('form[name="dataset"]').find('select').trigger("chosen:updated");
