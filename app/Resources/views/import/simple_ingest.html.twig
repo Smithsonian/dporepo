@@ -7,6 +7,7 @@
   <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
   <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
   <link href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/css/bootstrap-datepicker3.css" rel="stylesheet" type="text/css">
+  <link href="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.css') }}" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -64,6 +65,7 @@
   <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
   <script type="text/javascript" src="{{ asset('lib/javascripts/dropzone.js') }}"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.js') }}"></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/js/bootstrap-datepicker.min.js"></script>
   <script type="text/javascript" src="{{ asset('lib/javascripts/jquery.bootstrap.wizard.min.js') }}"></script>
   <script type="text/javascript">
@@ -140,55 +142,16 @@
       $(document).on('submit', 'form[name="dataset"]', function(e){
         // Avoid submitting the form non-ajax.
         e.preventDefault();
-        // Get the properties and values from the form.
-        var form = $('form[name="dataset"]');
-        var formData = form.serializeObject();
+        // Create a CSV file and make it downloadable.
+        createDownloadLink();
         // Avoid submitting the form multiple times.
-        // $('#dataset_save').attr('disabled', true);
-
-        // AJAX: Create a new dataset record.
-        $.ajax({
-          'type': 'POST'
-          ,'dataType': 'json'
-          ,'url': '/admin/projects/dataset/' + $('body').data('project_repository_id') + '/' + $('body').data('subject_repository_id') + '/' + $('body').data('item_repository_id') + '/ajax'
-          ,'data': formData
-          ,success: function(data) {
-            if(data) {
-              // Response data handler.
-              if(data.id) {
-
-                // Add the capture_dataset_repository_id to data.
-                $('body').data('capture_dataset_repository_id', data.id);
-
-                // Display a success message in the UI.
-                swal({
-                  title: 'Saved',
-                  content: 'The dataset has been successfully saved.',
-                  icon: 'success',
-                });
-
-                // Disable all fields in the form
-                $('form[name="dataset"]').find('input, select, textarea').attr('disabled', true);
-                $('form[name="dataset"]').find('select').trigger("chosen:updated");
-
-                // Enable Step 3 tab.
-                rootwizard.bootstrapWizard('enable', '2');
-
-                // Example of $('body').data() values:
-                // {
-                //     capture_dataset_repository_id: "12"
-                //     item_repository_id: "2573"
-                //     project_repository_id: "2"
-                //     subject_repository_id: "796"
-                // }
-
-              } else {
-                // Error handling???
-              }
-            }
-          }
+        $('#dataset_save').attr('disabled', true);
+        // Display a success message in the UI.
+        swal({
+          title: 'Please download the CSV',
+          content: 'CSV',
+          icon: 'success',
         });
-
       });
 
       $.fn.serializeObject = function() {
@@ -206,6 +169,81 @@
           });
           return o;
       };
+
+      function createDownloadLink() {
+        // Create a CSV file and make it downloadable.
+        // Example data from formData:
+        // "dataset[background_removal_method]": "4"
+        // ​"dataset[calibration_object_used]": "1"
+        // "dataset[capture_dataset_description]": "Lorem Ipsum"
+        //
+        // Get the properties and values from the form.
+        var form = $('form[name="dataset"]');
+        // Add the import_row_id and import_parent_id hidden fields to the form.
+        // Doing this here since unshift() was not working further on down the line (?)
+        var import_row_id_field = $('<input />').attr('type', 'hidden').attr('name', 'import_row_id').val('1');
+        var import_parent_id_field = $('<input />').attr('type', 'hidden').attr('name', 'import_parent_id').val( $('body').data('item_repository_id') );
+        form.prepend(import_row_id_field, import_parent_id_field);
+        // Serialize the form object.
+        var formData = form.serializeObject();
+        // Array of CSV columns.
+        var csvColumns = Object.keys(formData);
+        // Array of CSV values.
+        var csvValues = Object.values(formData);
+        // Remove the dataset[_token] key (in csvColumns) and the corresponding value (in csvValues).
+        // Looping through and finding the key is a bit more precise, as opposed to using csvColumns.pop() and csvValues.pop();
+        for(var i = 0; i < csvColumns.length; i++) {
+           if (csvColumns[i] === 'dataset[_token]') {
+             csvColumns.splice(i, 1);
+             csvValues.splice(i, 1);
+           }
+        }
+        // Remove "dataset[" and "]" from the CSV columns.
+        for( var i = 0; i < csvColumns.length; i++){
+          csvColumns[i] = csvColumns[i].replace('dataset[', '');
+          csvColumns[i] = csvColumns[i].replace(']', '');
+        }
+        // Massage the CSV data to required specs.
+        for(var i = 0; i < csvColumns.length; i++) {
+          switch(csvColumns[i]) {
+            // Strip the space and zeros from date
+            case 'date_of_capture':
+              csvValues[i] = csvValues[i].replace(' 00:00:00', '');
+              break;
+            // Swap out option value for option text.
+            case 'support_equipment':
+            case 'capture_method':
+            case 'capture_dataset_type':
+            case 'item_position_type':
+            case 'focus_type':
+            case 'light_source_type':
+            case 'background_removal_method':
+            case 'cluster_type':
+              csvValues[i] = $('select[name="dataset[' + csvColumns[i] + ']"] option[value="' + csvValues[i] + '"]').text();
+              break;
+            default:
+              // Do nothing
+          }
+        }
+        // // Add quotes around CSV values.
+        // for( var i = 0; i < csvValues.length; i++){
+        //   csvValues[i] = '"' + csvValues[i] + '"';
+        // }
+        // Create the download button.
+        var downloadButton = $('<a />')
+            .attr('href',  encodeURI('data:text/csv;charset=utf-8,' + csvColumns + '\r\n' + csvValues))
+            .attr('download', 'capture_datasets.csv')
+            .addClass('download btn btn-success')
+            .attr('style', 'margin-left: 8px;')
+            .text('Download');
+        // Render the download button next to the "Save Edits" button.
+        $('#dataset_save').after(downloadButton);
+        // Disable all fields in the form
+        $('form[name="dataset"]').find('input, select, textarea').attr('disabled', true);
+        $('form[name="dataset"]').find('select').trigger("chosen:updated");
+        // Enable Step 3 tab.
+        rootwizard.bootstrapWizard('enable', '2');
+      }
 
       function convertCase(str) {
         var lower = String(str).toLowerCase();

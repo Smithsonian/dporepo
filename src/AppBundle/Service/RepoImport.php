@@ -229,9 +229,6 @@ class RepoImport implements RepoImportInterface {
         // Prepare the data.
         $data = $this->prepare_data($job_type, $this->project_directory . $this->uploads_directory . $job_info->uuid);
 
-        // If $data is empty, then this is a Simple Ingest (we're not dealing with CSV's).
-        if (empty($data)) $skip_ingest = true;
-
         // Ingest data.
         if (!empty($data)) {
           // Associate a Model to an Item
@@ -269,7 +266,7 @@ class RepoImport implements RepoImportInterface {
     }
 
     // Update the job table to indicate that the CSV import failed.
-    if (!$skip_ingest && !empty($params['uuid']) && empty($return['job_log_ids'])) {
+    if (!empty($params['uuid']) && empty($return['job_log_ids'])) {
       $this->repo_storage_controller->execute('saveRecord', array(
         'base_table' => 'job',
         'record_id' => $job_data['job_id'],
