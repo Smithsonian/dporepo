@@ -78,6 +78,8 @@
       // Initially disable all steps.
       rootwizard.bootstrapWizard('disable', '1');
       rootwizard.bootstrapWizard('disable', '2');
+      // Disable the "Next Step" button.
+      rootwizard.find('.next').addClass('disabled');
 
       /**
        * Browse Ingests tab click handler
@@ -493,6 +495,8 @@
 
               // Enable Step 2 tab.
               rootwizard.bootstrapWizard('enable', '1');
+              // Disable the "Next Step" button.
+              rootwizard.find('.next').removeClass('disabled');
 
               // Add the item_repository_id to data.
               $('body').data('item_repository_id', aData.DT_RowId);
