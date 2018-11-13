@@ -33,15 +33,40 @@
         <dd>{{ item_data.item_type_label|e }}</dd>
       </dl>
     </div>
+
     <div class="col-sm-12 col-md-12">
       <dl class="dl-horizontal">
         <dt>Item Description</dt>
         <dd>{{ item_data.item_description|e|nl2br }}</dd>
       </dl>
+    </div>
+    <!-- carousel needs review
+    {% if files|length > 0 %}
+      <div class="col-sm-12 col-md-12">
+        <div id="carouselExampleControls" class="carousel slide" data-ride="carousel">
+          <div class="carousel-inner">
+            {% for file in files %}
+              <div class="carousel-item active">
+                <a href=""><img class="d-block w-50" src="{{file.file_path}}" alt="First slide"></a>
+              </div>
+            {% endfor %}
+          </div>
+          <a class="carousel-control-prev" href="#carouselExampleControls" role="button" data-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="sr-only">Previous</span>
+          </a>
+          <a class="carousel-control-next" href="#carouselExampleControls" role="button" data-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="sr-only">Next</span>
+          </a>
+        </div>
+      </div>
+    {% endif %}
+    -->
+    <div class="col-sm-12 col-md-12">
       <a href="/admin/projects/items/{{ project_repository_id }}/{{ subject_repository_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Subject</a>
       <a href="/admin/projects/item/{{ project_repository_id }}/{{ subject_repository_id }}/{{ item_repository_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span> Edit Item</a>
     </div>
-
     <div class="col-sm-12 col-md-12 child-data">
       <div class="panel panel-default">
         <div class="panel-body">
