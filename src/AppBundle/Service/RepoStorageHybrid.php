@@ -360,7 +360,69 @@ class RepoStorageHybrid implements RepoStorage {
     }
     return $return_data;
   }
+  public function getFiles($params){
+    $limit = '';
+    if (!isset($params['parent_record_id'])) {
+      return null;
+    }
+    if (isset($params['limit'])) {
+      $limit = "LIMIT ".$params['limit'];
+    }
+    $parent_record_id = $params['parent_record_id'];
+    $parent_record_type= $params['parent_record_type'];
+    $sql = "SELECT file_name,file_path,file_size,file_type,file_hash,metadata FROM file_upload WHERE parent_record_id=$parent_record_id and parent_record_type='$parent_record_type' $limit";
+    $statement = $this->connection->prepare($sql);
+    $statement->execute();
+    $files = $statement->fetchAll();
+    return $files;
+  }
+  public function getModelDetail($params){
+    if (!isset($params['model_repository_id'])) {
+      return false;
+    }
+    $id = $params['model_repository_id'];
+    $statement = $this->connection->prepare("SELECT * FROM model WHERE model_repository_id = $id LIMIT 1");
+    $statement->execute();
+    $modeldetail = $statement->fetchAll();
+    if (count($modeldetail) > 0) {
+      $model = $modeldetail[0];
+      $modelid = $model['model_repository_id'];
+      $model['uploads_path'] = '/uploads/repository';
+      $model['file_path'] = null;
+      $fileupload = $this->getFiles(array("parent_record_id"=>$modelid,"parent_record_type"=>"model","limit"=>1));
+      if (count($fileupload)) {
+        $model['file_path'] = $fileupload[0]['file_path'];
+      }
+      if ($model['parent_capture_dataset_repository_id'] != null) {
+        $capturedataset = $this->connection->fetchAll("SELECT * FROM capture_dataset WHERE capture_dataset_repository_id =".$model['parent_capture_dataset_repository_id']);
+        $itemid = $model['parent_item_repository_id'];
+        $model['capture_dataset'] = [];
+        if (count($capturedataset) > 0) {
+          if ($itemid == null) {
+            $itemid = $capturedataset[0]['parent_item_repository_id'];
+          }
+          $model['capture_dataset'] = $capturedataset[0];
+          
+        }
+        $item = $this->connection->fetchAll("SELECT item_description,subject_repository_id FROM item WHERE item_repository_id =".$itemid);
+        
 
+        if (count($item) > 0) {
+          $subject = $this->connection->fetchAll("SELECT project_repository_id,subject_name FROM subject WHERE subject_repository_id=".$item[0]['subject_repository_id']);
+          if (count($subject) > 0) {
+            $project = $this->connection->fetchAll("SELECT project_name FROM project WHERE project_repository_id=".$subject[0]['project_repository_id']);
+            $model['subject_name'] = $subject[0]['subject_name'];
+            $model['item_description'] = $item[0]['item_description'];
+            $model['project_name'] = $project[0]['project_name'];
+            $model['project_repository_id'] = $subject[0]['project_repository_id'];
+            $model['subject_repository_id'] = $item[0]['subject_repository_id'];
+          }
+        }
+        
+      }
+    }
+    return $model;
+  }
   public function getCaptureDataset($params) {
     //$params will be something like array('capture_dataset_repository_id' => '123');
     $return_data = array();
