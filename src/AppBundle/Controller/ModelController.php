@@ -257,30 +257,29 @@ class ModelController extends Controller
     }
     /**
    * @Route("/admin/projects/{type}/{id}/viewer", name="voyager_viewer", methods="GET", defaults={"id" = null,"type"=null})
-   *
+   * @Route("/admin/projects/{type}/{id}/viewer/{file_id}", name="voyager_viewer", methods="GET", defaults={"id" = null,"type"=null,"file_id"=null})
    * @param Connection $conn
    * @param Request $request
    */
-  public function voyagerViewer(Connection $conn, Request $request,$id,$type)
+  public function voyagerViewer(Connection $conn, Request $request,$id,$type,$file_id)
   {
-
+    $file = $files = [];
     if ($id == null || $type == null) {
       return $this->redirectToRoute('admin_home');
     }
-    //@todo use incoming model $id to retrieve model assets.
-    $model_url = '';
-    $files = $this->repo_storage_controller->execute('getFiles',array("parent_record_id"=>$id,"parent_record_type"=>$type,"limit"=>1));
-
-    if (count($files)) {
-      $file_url = $files[0]['file_path'];
+    if ($file_id != null) {
+      $file = $this->repo_storage_controller->execute('getFile',array("file_id"=>$file_id));
     }else{
-      return $this->redirectToRoute('admin_home');
+      $files = $this->repo_storage_controller->execute('getFiles',array("parent_record_id"=>$id,"parent_record_type"=>$type,"limit"=>1));
     }
     
+    if (count($files) == 0 && count($file) == 0) {
+      return $this->redirectToRoute('admin_home');
+    }
     return $this->render('datasets/model_viewer.html.twig', array(
       'page_title' => "Model Viewer",
       'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-      "file_url" => $file_url,
+      "files" => ($file_id == null) ? $files : $file
     ));
   }
 
