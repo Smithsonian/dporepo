@@ -370,11 +370,28 @@ class RepoStorageHybrid implements RepoStorage {
     }
     $parent_record_id = $params['parent_record_id'];
     $parent_record_type= $params['parent_record_type'];
-    $sql = "SELECT file_name,file_path,file_size,file_type,file_hash,metadata FROM file_upload WHERE parent_record_id=$parent_record_id and parent_record_type='$parent_record_type' $limit";
+    $sql = "SELECT file_upload_id,file_name,file_path,file_size,file_type,file_hash,metadata FROM file_upload WHERE parent_record_id=$parent_record_id and parent_record_type='$parent_record_type' $limit";
     $statement = $this->connection->prepare($sql);
     $statement->execute();
     $files = $statement->fetchAll();
     return $files;
+  }
+  public function getFile($params){
+    $limit = '';
+    if (!isset($params['file_id'])) {
+      return null;
+    }
+    $fileid = $params['file_id'];
+    $sql = "SELECT file_upload_id,file_name,file_path,file_size,file_type,file_hash,metadata FROM file_upload WHERE file_upload_id=$fileid LIMIT 1";
+    $statement = $this->connection->prepare($sql);
+    $statement->execute();
+    $file = $statement->fetchAll();
+    if (count($file)) {
+      return $file[0];
+    }else{
+      return $file;
+    }
+    
   }
   public function getModelDetail($params){
     if (!isset($params['model_repository_id'])) {
