@@ -27,7 +27,9 @@
     <div id="main">
     </div>
     <div class="sv-carousel">
-        <img data-item="/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json" src="/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-thumb.jpg"/>
+        {% for file in files %}
+            <img data-item="{{file.metadata}}" src="{{file.file_path}}"/>
+        {% endfor %}
     </div>
 {% endblock %}
 
