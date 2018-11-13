@@ -82,9 +82,11 @@
                 <div><label>Model Maps:</label> {{modeldetail.model_maps}}</div>
               {% endif %}
             </div>
-        </div>
-        <div class="col-md-12">
-            <a class="btn btn-primary" href="/admin/projects/model/{{modeldetail.model_repository_id}}/viewer" target="_blank">Preview 3D Model in Viewer</a>
+            {% if modeldetail.file_path != null %}
+              <div class="col-sm-12 col-md-12">
+                  <a class="btn btn-primary" href="/admin/projects/model/{{modeldetail.model_repository_id}}/viewer" target="_blank">Preview 3D Model in Viewer</a>
+              </div>
+            {% endif %}
         </div>
     </div>
 
