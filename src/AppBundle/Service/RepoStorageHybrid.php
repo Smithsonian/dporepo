@@ -385,11 +385,7 @@ class RepoStorageHybrid implements RepoStorage {
     $statement = $this->connection->prepare($sql);
     $statement->execute();
     $file = $statement->fetchAll();
-    if (count($file)) {
-      return $file[0];
-    }else{
-      return $file;
-    }
+    return $file;
     
   }
   public function getModelDetail($params){
@@ -821,7 +817,7 @@ class RepoStorageHybrid implements RepoStorage {
   public function getDatasets($params) {
 
     $item_repository_id = array_key_exists('item_repository_id', $params) ? $params['item_repository_id'] : NULL;
-
+    $project_repository_id = array_key_exists('project_repository_id', $params) ? $params['project_repository_id'] : NULL;
     $query_params = array(
       'fields' => array(),
       'base_table' => 'capture_dataset',
@@ -838,6 +834,15 @@ class RepoStorageHybrid implements RepoStorage {
           'capture_dataset.parent_item_repository_id',
         ),
         'search_values' => array((int)$item_repository_id),
+        'comparison' => '=',
+      );
+    }
+    if($project_repository_id && is_numeric($project_repository_id)) {
+      $query_params['search_params'][1] = array(
+        'field_names' => array(
+          'capture_dataset.parent_project_repository_id',
+        ),
+        'search_values' => array((int)$project_repository_id),
         'comparison' => '=',
       );
     }
