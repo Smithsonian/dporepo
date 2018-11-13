@@ -11,20 +11,27 @@ use AppBundle\Controller\RepoStorageHybridController;
 
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 
+use AppBundle\Service\RepoProcessingService;
 // Custom utility bundle
 use AppBundle\Utils\AppUtilities;
-
+use AppBundle\Form\BatchProcessingForm;
+use AppBundle\Form\WorkflowParamatersForm;
 class WorkflowController extends Controller {
 
   private $repo_storage_controller;
-
+  /**
+   * @var object $processing
+   */
+  private $processing;
   /**
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(AppUtilities $u, Connection $conn)
+  public function __construct(AppUtilities $u, Connection $conn,RepoProcessingService $processing)
   {
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
+    $this->processing = $processing;
+
   }
 
 
@@ -162,5 +169,77 @@ class WorkflowController extends Controller {
     return $this->json($data);
 
   }
+    /**
+   * @Route("/admin/workflow/{project_id}/batch-processing/", name="batch_processing", methods="GET")
+   * Given a record_id, record_type and values array, create or edit a record, and update the workflow status log.
+   *
+   * @param Request $request
+   * @return JsonResponse The query result in JSON
+   */
+  public function batchProcessing(Request $request,$project_id) {
+    $results = array();
+    // Get available recipes.
+    $results = $this->processing->get_recipes();
+    // Decode the JSON.
+
+    $query_params = array(
+        'project_repository_id' => $project_id,
+    );
+    $datasets = $this->repo_storage_controller->execute('getDatasets', $query_params);
+
+    if ($results['result'] == false) {
+      $results['result'] = '[{"id":"7ce5c5b1-00d2-4d7f-bebc-ea99ae5f6640","name":"decimate","description":"Decimate high poly mesh","version":"4"},{"id":"ee77ee05-d832-4729-9914-18a96939f205","name":"inspect-mesh","description":"Inspects a mesh and returns a report with results","version":"1"},{"id":"e06ade8e-b36a-4aa2-9145-6616ede1e5fa","name":"rc-to-hd","description":"[DRAFT!] Converts RC output files to HD web assets","version":"1"},{"id":"19f06147-d460-4e47-a55d-2b58dc84a4ab","name":"rc-to-play","description":"[DRAFT!] Converts RC output to PLAY assets, including mesh, textures and descriptor file","version":"1"},{"id":"967ed977-055e-41c8-a836-b1372be3b3ca","name":"unwrap","description":"Unwrap decimated mesh using Unfold","version":"2"},{"id":"1c795703-8ef9-4392-8a68-bb8680209516","name":"vz-to-play","description":"VZ Collection CT mesh to Web, decimate (preserve bounds, topo), fix, unwrap, and bake, generate PLAY-ready assets","version":"9"},{"id":"c3825c38-27ab-4909-8d9e-928182199c03","name":"web-hd","description":"Generates high definition (1M, 8k) web asset","version":"2"},{"id":"721d459c-af09-4525-a28b-e71a89439282","name":"web-multi","description":"Generates multi-level web assets","version":"3"},{"id":"05debd35-efab-40d4-9145-cb6d819d1859","name":"web-thumb","description":"Generates thumbnail web asset","version":"3"}]';
+    }
+    $json_decoded = json_decode($results['result'], true);
+
+    // Create the form
+    $batch['batch_processing_workflow_guid_picker'] = NULL;
+    $batch['batch_processing_workflow_guid_options'] = NULL;
+    $batch['batch_processing_assests_guid_options'] = NULL;
+    $batch['batch_processing_assests_guid_picker'] = NULL;
+
+    foreach ($json_decoded as $wk) {
+      $batch['batch_processing_workflow_guid_options'][$wk['name']] = $wk['id'];
+    }
+    foreach ($datasets as $data) {
+      $batch['batch_processing_assests_guid_options'][$data['capture_dataset_name']] = $data['parent_project_repository_id'];
+    }
+    $form = $this->createForm(BatchProcessingForm::class, $batch);
+
+    // Handle the request
+    $form->handleRequest($request);
+    return $this->render('workflow/batch_processing_form.html.twig', array(
+            'page_title' => 'Batch Processing',
+            //'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'form' => $form->createView(),
+        ));
+
+  }
+    /**
+   * @Route("/admin/workflow/{project_id}/batch-processing/{workflow_id}", name="workflow_batch_processing", methods="GET")
+   * Given a record_id, record_type and values array, create or edit a record, and update the workflow status log.
+   *
+   * @param Request $request
+   * @return JsonResponse The query result in JSON
+   */
+  public function WorkflowBatchProcessing(Request $request,$project_id,$workflow_id) {
+    
+    $workflow['point_of_contact_guid_options'] = array("Anderson, Max"=>0,"Blundell, Jon"=>1,"Conrad, Joe"=>2,"Dattoria, Megan"=>3);
+    $workflow['point_of_contact_guid_picker'] = NULL;
+
+    $form = $this->createForm(WorkflowParamatersForm::class, $workflow);
+
+    // Handle the request
+    $form->handleRequest($request);
+    return $this->render('workflow/workflow_parameters.html.twig', array(
+            'page_title' => 'Workflow Parameters',
+            //'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'form' => $form->createView(),
+        ));
+
+  }
+
+
+  
 
 }
