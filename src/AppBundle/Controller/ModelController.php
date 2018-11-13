@@ -243,68 +243,44 @@ class ModelController extends Controller
      */
     public function modelDetail(Connection $conn, Request $request,$id)
     {
+        $model =[];
          //$Model = new Model;
         if ($id !== null) {
-          $statement = $conn->prepare("SELECT * FROM model WHERE model_repository_id = $id LIMIT 1");
-          $statement->execute();
-          $modeldetail = $statement->fetchAll();
-          if (count($modeldetail) > 0) {
-            $modeldetail[0]['uploads_path'] = $this->uploads_path;
-            if ($modeldetail[0]['parent_capture_dataset_repository_id'] != null) {
-              $capturedataset = $conn->fetchAll("SELECT * FROM capture_dataset WHERE capture_dataset_repository_id =".$modeldetail[0]['parent_capture_dataset_repository_id']);
-              $itemid = $modeldetail[0]['parent_item_repository_id'];
-              $modeldetail[0]['capture_dataset'] = [];
-              if (count($capturedataset) > 0) {
-                if ($itemid == null) {
-                  $itemid = $capturedataset[0]['parent_item_repository_id'];
-                }
-                $modeldetail[0]['capture_dataset'] = $capturedataset[0];
-                
-              }
-              $item = $conn->fetchAll("SELECT item_description,subject_repository_id FROM item WHERE item_repository_id =".$itemid);
-              
-              if (count($item) > 0) {
-                $subject = $conn->fetchAll("SELECT project_repository_id,subject_name FROM subject WHERE subject_repository_id=".$item[0]['subject_repository_id']);
-                if (count($subject) > 0) {
-                  $project = $conn->fetchAll("SELECT project_name FROM project WHERE project_repository_id=".$subject[0]['project_repository_id']);
-                  $modeldetail[0]['subject_name'] = $subject[0]['subject_name'];
-                  $modeldetail[0]['item_description'] = $item[0]['item_description'];
-                  $modeldetail[0]['project_name'] = $project[0]['project_name'];
-                  $modeldetail[0]['project_repository_id'] = $subject[0]['project_repository_id'];
-                  $modeldetail[0]['subject_repository_id'] = $item[0]['subject_repository_id'];
-                }
-              }
-              
-            }
-          }
-          //dump($modeldetail);
-          //exit;
+          $model = $this->repo_storage_controller->execute('getModelDetail', array(
+            'model_repository_id' => $id));
         }
-         
-         // Database tables are only created if not present.
-         //$Model->createTable();
-
+        
          return $this->render('datasets/model_detail.html.twig', array(
              'page_title' => "Model Detail",
-             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),"modeldetail"=>$modeldetail[0],
+             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),"modeldetail"=>$model,
          ));
     }
     /**
-   * @Route("/admin/projects/model/{id}/viewer", name="model_viewer", methods="GET", defaults={"id" = null})
+   * @Route("/admin/projects/{type}/{id}/viewer", name="voyager_viewer", methods="GET", defaults={"id" = null,"type"=null})
    *
    * @param Connection $conn
    * @param Request $request
    */
-  public function modelViewer(Connection $conn, Request $request,$id)
+  public function voyagerViewer(Connection $conn, Request $request,$id,$type)
   {
 
+    if ($id == null || $type == null) {
+      return $this->redirectToRoute('admin_home');
+    }
     //@todo use incoming model $id to retrieve model assets.
-    $model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
+    $model_url = '';
+    $files = $this->repo_storage_controller->execute('getFiles',array("parent_record_id"=>$id,"parent_record_type"=>$type,"limit"=>1));
 
+    if (count($files)) {
+      $file_url = $files[0]['file_path'];
+    }else{
+      return $this->redirectToRoute('admin_home');
+    }
+    
     return $this->render('datasets/model_viewer.html.twig', array(
       'page_title' => "Model Viewer",
       'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-      "model_url" => $model_url,
+      "file_url" => $file_url,
     ));
   }
 
