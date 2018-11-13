@@ -377,7 +377,6 @@ class RepoStorageHybrid implements RepoStorage {
     return $files;
   }
   public function getFile($params){
-    $limit = '';
     if (!isset($params['file_id'])) {
       return null;
     }
