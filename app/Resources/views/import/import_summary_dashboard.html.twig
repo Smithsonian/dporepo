@@ -43,6 +43,7 @@
                 <th class="text-center">Total Models</th>
                 <th class="text-center">Date Uploaded</th>
                 <th class="text-center">Uploaded By</th>
+                <th></th>
               </tr>
             </thead>
           </table>
@@ -332,7 +333,11 @@
           { "data": "capture_datasets_total" },
           { "data": "models_total" },
           { "data": "date_created" },
-          { "data": "username" }       
+          { "data": "username" },
+          { "data":null,
+          render: function(data,type,row){
+            return "<a href='workflow/batch-processing/"+data.project_id+"'>Select Workflow</a>";
+          }}    
         ],
         //"dom": 'lfip<"datatables_bulk_actions">tip',
         "pagingType": "simple_numbers",
