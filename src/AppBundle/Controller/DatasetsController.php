@@ -49,12 +49,16 @@ class DatasetsController extends Controller
      */
     public function browse_datasets(Connection $conn, Request $request, ProjectsController $projects, SubjectsController $subjects)
     {
+
+
         // Database tables are only created if not present.
         $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'capture_dataset'));
 
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
         $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
+        $type = 'item';
+        $files = $this->repo_storage_controller->execute('getFiles', array("parent_record_id"=>$item_repository_id,"parent_record_type"=>$type));
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
         $item = new Items();
@@ -82,6 +86,7 @@ class DatasetsController extends Controller
             'project_data' => $project_data,
             'subject_data' => $subject_data,
             'item_data' => $item->item_data,
+            'files'=>$files,
             'destination' => $project_repository_id . '|' . $subject_repository_id . '|' . $item_repository_id,
             'uploads_path' => $this->uploads_path,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
