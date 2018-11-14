@@ -428,7 +428,8 @@ dd {
   -moz-outline-style: none;
 }
 
-#simple_ingest_tab_4 .chosen-container {
+#simple_ingest_tab_4 .chosen-container,
+#item-form-modal .chosen-container {
   width: 100% !important;
 }
 

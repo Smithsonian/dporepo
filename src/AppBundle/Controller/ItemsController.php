@@ -133,9 +133,16 @@ class ItemsController extends Controller
     {
         $item = new Items();
         $post = $request->request->all();
-        $id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
         $item->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $item->subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
+        $id = false;
+        $ajax = false;
+
+        if ((!empty($request->attributes->get('item_repository_id')) && ($request->attributes->get('item_repository_id') !== 'ajax'))) {
+          $id = $request->attributes->get('item_repository_id');
+        } else {
+          $ajax = true;
+        }
 
         // Retrieve data from the database.
         if (!empty($id) && empty($post)) {
@@ -165,23 +172,32 @@ class ItemsController extends Controller
               'user_id' => $this->getUser()->getId(),
               'values' => (array)$item
             ));
-            //$item_repository_id = $this->insert_update_item($item, $item->subject_repository_id, $item_repository_id, $conn);
 
-            $this->addFlash('message', 'Item successfully updated.');
-            return $this->redirect('/admin/projects/datasets/' . $item->project_repository_id . '/' . $item->subject_repository_id . '/' . $id);
-
+            if ($ajax) {
+              // Return the ID of the new record.
+              $response = new JsonResponse(array('id' => $id));
+              return $response;
+            } else {
+                $this->addFlash('message', 'Item successfully updated.');
+                return $this->redirect('/admin/projects/datasets/' . $item->project_repository_id . '/' . $item->subject_repository_id . '/' . $id);
+            }
         }
 
         // Truncate the item_description.
         $more_indicator = (strlen($item->item_description) > 50) ? '...' : '';
         $item->item_description_truncated = substr($item->item_description, 0, 50) . $more_indicator;
 
-        return $this->render('items/item_form.html.twig', array(
-            'page_title' => ((int)$id && isset($item->item_description_truncated)) ? 'Item: ' . $item->item_description_truncated : 'Add Item',
-            'item_data' => $item,
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-            'form' => $form->createView(),
-        ));
+        if ($ajax) {
+          $response = new JsonResponse($item);
+          return $response;
+        } else {
+            return $this->render('items/item_form.html.twig', array(
+                'page_title' => ((int)$id && isset($item->item_description_truncated)) ? 'Item: ' . $item->item_description_truncated : 'Add Item',
+                'item_data' => $item,
+                'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+                'form' => $form->createView(),
+            ));
+        }
 
     }
 
