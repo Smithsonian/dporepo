@@ -1,7 +1,15 @@
 var jobId,
     resultsContainer = $('#panel-spreadsheets').find('.col-md-12'),
     loadingGif = $('<img />').attr('src', '/lib/images/spinner.gif').attr('alt', 'loading animation').attr('style', 'width: 140px;'),
-    loadingGifContainer = $('<div />').addClass('center-block').attr('style', 'width: 140px;').append(loadingGif);
+    loadingGifContainer = $('<div />').addClass('center-block').attr('style', 'width: 140px;').append(loadingGif),
+    textureMapFileNameParts = ['diffuse', 'normal', 'occlusion'];
+
+// Pre-validate texture map images on ingest.
+let fileContainer = $('<div />')
+    .addClass('alert alert-danger files-validation-error')
+    .attr('role', 'alert')
+    .html('<h4>Texture Maps Pre-validation</h4>');
+let fileOL = $('<ol />');
 
 // Dropzone.js
 // Get the template HTML and remove it from the document.
@@ -29,7 +37,42 @@ var uploadsDropzone = new Dropzone(document.body, { // Make the whole body a dro
   retryChunks: true,
   retryChunksLimit: 2000,
   acceptedFiles: acceptedFiles,
-  dictInvalidFileType: "File type not allowed"
+  dictInvalidFileType: "File type not allowed",
+  accept: function(file, done) {
+
+    for (var t = 0; t < textureMapFileNameParts.length; t++) {
+      // Only check files which have diffuse, normal, or occlusion in the file name.
+      if (file.name.indexOf(textureMapFileNameParts[t]) !== -1) {
+        // FileReader() asynchronously reads the contents of files (or raw data buffers) stored on the user's computer.
+        var reader = new FileReader();
+        reader.onload = (function(entry) {
+          // The Image() constructor creates a new HTMLImageElement instance.
+          var image = new Image(); 
+          image.src = entry.target.result;
+          image.onload = function() {
+            // Check to see if the WIDTH is a power of 2.
+            if (!powerOf2(this.width)) {
+              fileOL.append('<li>Width is not a power of 2 (' + file.name + ')</li>');
+            }
+            // Check to see if the HEIGHT is a power of 2.
+            if (!powerOf2(this.height)) {
+              fileOL.append('<li>Height is not a power of 2 (' + file.name + ')</li>');
+            }
+          };
+        });
+        reader.readAsDataURL(file);
+      }
+    }
+
+    // Append the ordered list to the fileContainer.
+    if(fileOL.length) {
+      fileContainer.append(fileOL);
+      // Append the fileContainer to the panel-body container.
+      $('.panel-validation-results').find('.panel-body').append(fileContainer);
+    }
+
+    done();
+  }
 });
 
 // Add the ability to select directories from a file selection dialog window (when clicking the "Add Files" button).
@@ -249,27 +292,6 @@ $('.prevalidate-trigger').on('click', function(e) {
       });
       
     }
-
-    // // Pre-validate texture map images on ingest.
-    // var textureMapFileNameParts = {'diffuse', 'normal', 'occlusion'};
-    // if (textureMapFileNameParts.indexOf(queuedFiles[i].name) === -1) {
-
-    //   function powerOf2(num) {
-    //     if (typeof num !== 'number') 
-    //         return false;
-    //     return Number.isInteger(Math.log2(num));
-    //   }
-
-    //   console.log(powerOf2('ddd'));
-    //   console.log(powerOf2(18));
-    //   console.log(powerOf2(8192));
-
-    //   var img = new Image();
-    //   img.src= _file.target.result;
-    //   console.log(img.width);
-    //   console.log(img.height);
-      
-    // }
     
   }
 
@@ -1080,4 +1102,11 @@ function checkStatus() {
 
   }
 
+}
+
+// Determine whether an integer is a power of 2.
+function powerOf2(num) {
+  if (typeof num !== 'number') 
+      return false;
+  return Number.isInteger(Math.log2(num));
 }
