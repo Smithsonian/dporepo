@@ -2,7 +2,10 @@ var jobId,
     resultsContainer = $('#panel-spreadsheets').find('.col-md-12'),
     loadingGif = $('<img />').attr('src', '/lib/images/spinner.gif').attr('alt', 'loading animation').attr('style', 'width: 140px;'),
     loadingGifContainer = $('<div />').addClass('center-block').attr('style', 'width: 140px;').append(loadingGif),
-    textureMapFileNameParts = ['diffuse', 'normal', 'occlusion'];
+    textureMapFileNameParts = ['diffuse', 'normal', 'occlusion'],
+    // Set the spreadsheet count so unique IDs can be assigned to the Handsontable containers.
+    spreadsheetCount = 1,
+    dropzoneFilesCopy = [];
 
 // Texture map pre-validation error container.
 let fileContainer = $('<div />')
@@ -86,6 +89,7 @@ setTimeout(function() {
 // Add the ability to select directories from a file selection dialog window (when clicking the "Add Files" button).
 $('body').find('input.dz-hidden-input').attr('webkitdirectory', '').attr('directory', '');
 
+// Called when the user dropped something onto the dropzone.
 uploadsDropzone.on("drop", function(ev) {
   // Format directories and files hierarchically.
   if (ev.dataTransfer.items) {
@@ -94,25 +98,19 @@ uploadsDropzone.on("drop", function(ev) {
       // Get the item's properties via webkitGetAsEntry().
       let item = ev.dataTransfer.items[i].webkitGetAsEntry();
           listing = $('#previews ul');
-      // console.log('itemitemitemitem');
-      // console.log(item);
       // Add the file size and modified date to 'item'.
       item.detail = ev.dataTransfer.files[i];
-
-      // console.log(item);
-
       // Recursively scan files and add to the DOM.
       scanFiles(i, item, listing, uploadsDropzone.options);
     }
   }
 });
 
+// Called when files are added to the list.
 uploadsDropzone.on("addedfiles", function(files) {
 
   var fileInput = $('body').find('.dz-hidden-input'),
       items = fileInput[0].files;
-
-  // console.log(items);
 
   simulateDrop({ 
       dataTransfer: { items: [ items ] },
@@ -120,35 +118,7 @@ uploadsDropzone.on("addedfiles", function(files) {
   });
 });
 
-function simulateDrop(ev) {
-  ev.preventDefault();
-
-  // console.log(ev.dataTransfer);
-
-  // Format directories and files hierarchically.
-  if (ev.dataTransfer.items[0].length) {
-    // Use DataTransferItemList interface to access the file(s)
-    for (var i = 0; i < ev.dataTransfer.items[0].length; i++) {
-
-      // Get the item's properties via webkitGetAsEntry().
-      let item = ev.dataTransfer.items[0][i],
-          listing = $('#previews ul');
-
-      // console.log(item);
-
-      // Recursively scan files and add to the DOM.
-      scanFiles(i, item, listing, uploadsDropzone.options);
-    }
-  }
-}
-
-// uploadsDropzone.on("error", function(file, errorMessage, xhrObject) {
-//   console.log('UPLOAD ERROR');
-//   console.log(file);
-//   console.log(errorMessage);
-//   console.log(xhrObject);
-// });
-
+// Called periodically whenever the file upload progress changes.
 uploadsDropzone.on("uploadprogress", function(file) {
   // Find the list item for this file.
   let fileListItem = $('#previews').find('[data-file-name="' + file.name + '"]');
@@ -166,6 +136,230 @@ uploadsDropzone.on("uploadprogress", function(file) {
   }
 });
 
+// Called when a file has been uploaded successfully. Gets the server response as second argument.
+uploadsDropzone.on("success", function(file, responseText) {
+
+  let fileExtension = getExtension(file.name);
+
+  // If the uploaded file is being pre-validated...
+  if((typeof file.prevalidate !== 'undefined') && file.prevalidate && (fileExtension === 'csv')) {
+
+    // Set the file status back to 'added' and prevalidate to false.
+    file.status = 'added';
+    file.prevalidate = false;
+
+    // Import limitation validation
+    importLimitationValidation(file.parentRecordType, file.name);
+
+    // Empty CSV warning
+    if(responseText.csv && !JSON.parse(responseText.csv).length && (file.name !== 'file_name_map.csv')) {
+      swal({
+        title: 'Error',
+        text: file.name + ': CSV is empty',
+        icon: 'warning',
+      });
+    }
+
+    // If no errors are returned, display a message.
+    if(responseText.csv && JSON.parse(responseText.csv).length && (typeof responseText.error === 'undefined')) {
+      // The message.
+      let message = $('<div />').addClass('alert alert-success cvs-validation-success').attr('role', 'alert').html('<h4>CSV Pre-validation</h4><p><strong>' + file.name + '</strong></p><p>No CSV validation errors found.</p>');
+      // Append the message to the panel-body container.
+      $('.panel-validation-results').find('.panel-body').append(message);
+    }
+
+    // If errors are returned, populate the Pre-Validation Results container.
+    if(responseText && (typeof responseText.error !== 'undefined')) {
+
+      let validationErrors = JSON.parse(responseText.error);
+
+      // Display a general summary of validation errors.
+      if(validationErrors.length) {
+        let csvMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>CSV Pre-validation</h4><p><strong>' + file.name + '</strong></p>');
+        let csvMessageOrderedList = $('<ol />');
+        // Loop through the errors and append to the message.
+        for (var i = 0; i < validationErrors.length; i++) {
+          listItem = $('<li />').text(validationErrors[i].row + ': ' + validationErrors[i].error);
+          csvMessageOrderedList.append(listItem);
+        }
+        // Append the ordered list to the csvMessageContainer.
+        csvMessageContainer.append(csvMessageOrderedList);
+        // Append the csvMessageContainer to the panel-body container.
+        $('.panel-validation-results').find('.panel-body').append(csvMessageContainer);
+      }
+
+    }
+
+    if(responseText.csv && JSON.parse(responseText.csv).length) {
+      // Display the CSV within a spreadsheet interface, highlighting errors.
+      // TODO: Make it possible to edit the spreadsheet and resubmit for pre-validation.
+      // See: Handsontable
+      // https://github.com/handsontable/handsontable
+      let container,
+          hotVarName = 'hot',
+          panel = $('<div />').addClass('panel panel-default panel-spreadsheet'),
+          panelHeading = $('<div />').addClass('panel-heading').text(file.name),
+          panelHeadingContent = $('<span />')
+            .attr('style', 'font-size: 1.5rem; font-weight: normal;')
+            .html('<i class="glyphicon glyphicon-info-sign" style="margin-left: 1.5rem;"></i> For now, only for representation of the data. The goal is to allow for edits and resubmission.'),
+          csvsRowCount = responseText.csv_row_count,
+          csvsRowCountParsed = JSON.parse(csvsRowCount),
+          panelBody = $('<div />')
+              .addClass('panel-body')
+              .attr('id', 'csv-spreadsheet-' + spreadsheetCount)
+              .attr('style', 'height: ' + (csvsRowCountParsed*40) + 'px');
+          
+
+      // Show the panel-spreadsheet container.
+      $('#panel-spreadsheets').removeClass('hidden');
+      // Populate the panel with the heading and body.
+      panelHeading.append(panelHeadingContent);
+      panel.append(panelHeading, panelBody);
+      // Add the panel to the results container.
+      resultsContainer.append(panel);
+
+      // Initialize Handsontable.
+      container = document.getElementById('csv-spreadsheet-' + spreadsheetCount);
+      // Note: window[hotVarName + spreadsheetCount] is a dynamic variable.
+      // This basically allows for multiple Handsontable instances.
+      // See: https://stackoverflow.com/a/28130158/1298317
+      window[hotVarName + spreadsheetCount] = new Handsontable(container, {
+        data: JSON.parse(responseText.csv),
+        rowHeaders: true,
+        colHeaders: true,
+        outsideClickDeselects: false,
+        selectionMode: 'multiple',
+      });
+
+      // Style rows which have errors.
+      // https://docs.handsontable.com/2.0.0/demo-selecting-ranges.html#page-styling
+      // First, make sure there are errors to parse.
+      // If errors are returned, populate the Pre-Validation Results container.
+      if(responseText && (typeof responseText.error !== 'undefined')) {
+
+        let validationErrors = JSON.parse(responseText.error);
+
+        if((typeof validationErrors !== 'undefined') && validationErrors.length) {
+
+          for (var i = 0; i < validationErrors.length; i++) {
+            // validationErrors[i].row
+            // validationErrors[i].error
+            let row = validationErrors[i].row.match(/\d/g);
+            row = row.join('');
+            // Select the rows with errors.
+            window[hotVarName + spreadsheetCount].selectRows(parseInt(row));
+
+            var selected = window[hotVarName + spreadsheetCount].getSelected();
+
+            for (var index = 0; index < selected.length; index += 1) {
+              var item = selected[index];
+              var startRow = Math.min(item[0], item[2]);
+              var endRow = Math.max(item[0], item[2]);
+              var startCol = Math.min(item[1], item[3]);
+              var endCol = Math.max(item[1], item[3]);
+
+              for (var rowIndex = startRow; rowIndex <= endRow; rowIndex += 1) {
+                for (var columnIndex = startCol; columnIndex <= endCol; columnIndex += 1) {
+                  // Set the text-danger CSS class on the row containing the error.
+                  window[hotVarName + spreadsheetCount].setCellMeta(rowIndex, columnIndex, 'className', 'text-danger');
+                }
+              }
+            }
+
+          }
+          window[hotVarName + spreadsheetCount].deselectCell();
+          window[hotVarName + spreadsheetCount].render();
+        }
+      }
+    }
+
+  }
+
+  spreadsheetCount++;
+});
+
+// Called when sending files.
+uploadsDropzone.on("sending", function(file, xhr, formData) {
+
+  xhr.timeout = 99999999;
+
+  if((typeof file.prevalidate !== 'undefined') && !file.prevalidate) {
+    // If not prevalidating, disable all actionable buttons.
+    $('.start, .cancel, .prevalidate-trigger').attr('disabled', 'disabled');
+  }
+
+  // Append custom data to formData.
+  // NOTE: can't console.log formData after appending.
+  // If you want to view formData, pass it to the server side then dump/echo.
+  // See: https://github.com/enyo/dropzone/issues/1075
+
+  // Add the jobId to the formData
+  jobId = $('.prevalidate-trigger').attr('data-jobid');
+  formData.append('jobId', jobId);
+
+  // Add the prevalidate value to the formData
+  if((typeof file.prevalidate !== 'undefined') && file.prevalidate) {
+    formData.append('prevalidate', file.prevalidate);
+  }
+
+  // Add the parentRecordId value to the formData
+  if((typeof file.parentRecordId !== 'undefined') && file.parentRecordId) {
+    formData.append('parentRecordId', file.parentRecordId);
+  }
+
+  // Add the parentRecordType value to the formData
+  if((typeof file.parentRecordType !== 'undefined') && file.parentRecordType) {
+    formData.append('parentRecordType', file.parentRecordType);
+  }
+
+  // If the file is actually a folder, add the fullPath to the formData.
+  if(file.fullPath){
+    formData.append('fullPath', file.fullPath);
+  }
+
+});
+
+// Called when all files in the queue finish uploading.
+uploadsDropzone.on("queuecomplete", function(file) {
+
+  let jobId = $('.prevalidate-trigger').attr('data-jobid'),
+      // For the Simple Ingest, the value is stored in $('body').data('project_repository_id')
+      // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker').attr('data-project-id')
+      parentProjectId = $('body').data('project_repository_id')
+          ? $('body').data('project_repository_id')
+          : $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
+      parentRecordId = parentRecordChecker(),
+      parentRecordType = getRecordType();
+
+  setTimeout(function() {
+    $.ajax({
+      'type': 'GET'
+      ,'dataType': 'json'
+      ,'url': '/admin/get_job_status/' + jobId
+      ,success: function(result) {
+        if (result && (result !== 'cancelled') && (result !== 'paused')) {
+          // Set the status of the job from 'uploading' to 'bagit validation starting'.
+          $.ajax({
+            'type': 'GET'
+            ,'dataType': 'json'
+            ,'url': '/admin/set_job_status/' + jobId + '/bagit validation starting'
+            ,success: function(result) {
+              if(result && result.statusSet) {
+                // Redirect to the Upload overview page.
+                document.location.href = '/admin/ingest/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
+              } else {
+                // TODO: catch error?
+              }
+            }
+          });
+        }
+      }
+    });
+  }, 2000);
+  
+  
+});
+
 // CSV Help Dialog modal trigger.
 $('.csv-modal-trigger').on('click', function(e) {
   $('#csv-modal').modal('show');
@@ -173,6 +367,128 @@ $('.csv-modal-trigger').on('click', function(e) {
 
 // Prevalidate click handler.
 $('.prevalidate-trigger').on('click', function(e) {
+  preValidateCsvBagged();
+});
+
+// Start the internet connectivity checker.
+var connectionCheck = setInterval(checkStatus, 2000);
+
+// Begin uploads.
+document.querySelector("#actions .start").onclick = function() {
+  startUpload(false);
+};
+
+// Pause/Resume uploading.
+$('#actions .pause').on('click', function(e) {
+
+  let jobId = $('.prevalidate-trigger').attr('data-jobid');
+  let thisTrigger = $(this);
+
+  // Pause the upload process.
+  if (!$(this).hasClass('paused')) {
+    $.ajax({
+      'type': 'GET'
+      ,'dataType': 'json'
+      ,'url': '/admin/set_job_status/' + jobId + '/paused'
+      ,success: function(result) {
+        if(result && result.statusSet) {
+          thisTrigger.find('span').empty().text('Resume');
+          thisTrigger.addClass('paused');
+          // Make a copy of all files.
+          dropzoneFilesCopy = uploadsDropzone.files.slice(0);
+          // Remove all files.
+          uploadsDropzone.removeAllFiles();
+        }
+      }
+    });
+  }
+  // Resume the upload process.
+  else {
+    startUpload(true, dropzoneFilesCopy);
+    thisTrigger.find('span').empty().text('Pause');
+    thisTrigger.removeClass('paused');
+  }
+
+});
+
+// Cancel uploading.
+document.querySelector("#actions .cancel-upload").onclick = function() {
+
+  swal('Are you sure you wish to cancel uploading?', {
+    buttons: {
+      cancel: 'No',
+      catch: {
+        text: 'Yes',
+        value: 'yes',
+      }
+    },
+  })
+  .then((value) => {
+    switch (value) {
+      case "yes":
+        // Set the status of the job from 'uploading' to 'failed'.
+        let jobId = $('.prevalidate-trigger').attr('data-jobid'),
+            // For the Simple Ingest, the value is stored in $('body').data('project_repository_id')
+            // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker').attr('data-project-id')
+            parentProjectId = $('body').data('project_repository_id')
+                ? $('body').data('project_repository_id')
+                : $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
+            parentRecordId = parentRecordChecker(),
+            parentRecordType = getRecordType();
+        
+        $.ajax({
+          'type': 'GET'
+          ,'dataType': 'json'
+          ,'url': '/admin/set_job_status/' + jobId + '/cancelled'
+          ,success: function(result) {
+            if(result && result.statusSet) {
+              // Remove all files.
+              uploadsDropzone.removeAllFiles(true);
+              // Redirect to the Upload overview page.
+              document.location.href = '/admin/ingest/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
+            } else {
+              // TODO: catch error?
+            }
+          }
+        });
+        break;
+      default:
+    }
+  });
+
+};
+
+// Remove files from the uploads stage.
+document.querySelector("#actions .cancel").onclick = function() {
+  // Remove files from Dropzone.
+  uploadsDropzone.removeAllFiles(true);
+  $('#previews ul.directory-structure').empty();
+  // Clear previous validation results from the validation panel.
+  $('.panel-validation-results').find('.panel-body').empty();
+  // Hide the Start, Pause, and Cancel buttons.
+  $('.start, .pause, .cancel-upload').addClass('hidden');
+  // Remove spreadsheets.
+  resultsContainer.empty();
+};
+
+// Simulate Drop
+function simulateDrop(ev) {
+  ev.preventDefault();
+  // Format directories and files hierarchically.
+  if (ev.dataTransfer.items[0].length) {
+    // Use DataTransferItemList interface to access the file(s)
+    for (var i = 0; i < ev.dataTransfer.items[0].length; i++) {
+      // Get the item's properties via webkitGetAsEntry().
+      let item = ev.dataTransfer.items[0][i],
+          listing = $('#previews ul');
+      // Recursively scan files and add to the DOM.
+      scanFiles(i, item, listing, uploadsDropzone.options);
+    }
+  }
+}
+
+// Pre-validate CSV and Bagged Files
+function preValidateCsvBagged() {
 
   let csvList = [];
 
@@ -324,348 +640,7 @@ $('.prevalidate-trigger').on('click', function(e) {
   setTimeout(function() {
     $('#uploading-modal').modal('hide');
   }, 3000);
-
-});
-
-// Set the spreadsheet count so unique IDs can be assigned to the Handsontable containers.
-let spreadsheetCount = 1;
-
-uploadsDropzone.on("success", function(file, responseText) {
-
-  // console.log(file);
-
-  let fileExtension = getExtension(file.name);
-
-  // If the uploaded file is being pre-validated...
-  if((typeof file.prevalidate !== 'undefined') && file.prevalidate && (fileExtension === 'csv')) {
-
-    // Set the file status back to 'added' and prevalidate to false.
-    file.status = 'added';
-    file.prevalidate = false;
-
-    // Import limitation validation
-    importLimitationValidation(file.parentRecordType, file.name);
-
-    // Empty CSV warning
-    if(responseText.csv && !JSON.parse(responseText.csv).length && (file.name !== 'file_name_map.csv')) {
-      swal({
-        title: 'Error',
-        text: file.name + ': CSV is empty',
-        icon: 'warning',
-      });
-    }
-
-    // If no errors are returned, display a message.
-    if(responseText.csv && JSON.parse(responseText.csv).length && (typeof responseText.error === 'undefined')) {
-      // The message.
-      let message = $('<div />').addClass('alert alert-success cvs-validation-success').attr('role', 'alert').html('<h4>CSV Pre-validation</h4><p><strong>' + file.name + '</strong></p><p>No CSV validation errors found.</p>');
-      // Append the message to the panel-body container.
-      $('.panel-validation-results').find('.panel-body').append(message);
-    }
-
-    // If errors are returned, populate the Pre-Validation Results container.
-    if(responseText && (typeof responseText.error !== 'undefined')) {
-
-      let validationErrors = JSON.parse(responseText.error);
-
-      // Display a general summary of validation errors.
-      if(validationErrors.length) {
-        let csvMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>CSV Pre-validation</h4><p><strong>' + file.name + '</strong></p>');
-        let csvMessageOrderedList = $('<ol />');
-        // Loop through the errors and append to the message.
-        for (var i = 0; i < validationErrors.length; i++) {
-          listItem = $('<li />').text(validationErrors[i].row + ': ' + validationErrors[i].error);
-          csvMessageOrderedList.append(listItem);
-        }
-        // Append the ordered list to the csvMessageContainer.
-        csvMessageContainer.append(csvMessageOrderedList);
-        // Append the csvMessageContainer to the panel-body container.
-        $('.panel-validation-results').find('.panel-body').append(csvMessageContainer);
-      }
-
-    }
-
-    if(responseText.csv && JSON.parse(responseText.csv).length) {
-      // Display the CSV within a spreadsheet interface, highlighting errors.
-      // TODO: Make it possible to edit the spreadsheet and resubmit for pre-validation.
-      // See: Handsontable
-      // https://github.com/handsontable/handsontable
-      let container,
-          hotVarName = 'hot',
-          panel = $('<div />').addClass('panel panel-default panel-spreadsheet'),
-          panelHeading = $('<div />').addClass('panel-heading').text(file.name),
-          panelHeadingContent = $('<span />')
-            .attr('style', 'font-size: 1.5rem; font-weight: normal;')
-            .html('<i class="glyphicon glyphicon-info-sign" style="margin-left: 1.5rem;"></i> For now, only for representation of the data. The goal is to allow for edits and resubmission.'),
-          csvsRowCount = responseText.csv_row_count,
-          csvsRowCountParsed = JSON.parse(csvsRowCount),
-          panelBody = $('<div />')
-              .addClass('panel-body')
-              .attr('id', 'csv-spreadsheet-' + spreadsheetCount)
-              .attr('style', 'height: ' + (csvsRowCountParsed*40) + 'px');
-          
-
-      // Show the panel-spreadsheet container.
-      $('#panel-spreadsheets').removeClass('hidden');
-      // Populate the panel with the heading and body.
-      panelHeading.append(panelHeadingContent);
-      panel.append(panelHeading, panelBody);
-      // Add the panel to the results container.
-      resultsContainer.append(panel);
-
-      // Initialize Handsontable.
-      container = document.getElementById('csv-spreadsheet-' + spreadsheetCount);
-      // Note: window[hotVarName + spreadsheetCount] is a dynamic variable.
-      // This basically allows for multiple Handsontable instances.
-      // See: https://stackoverflow.com/a/28130158/1298317
-      window[hotVarName + spreadsheetCount] = new Handsontable(container, {
-        data: JSON.parse(responseText.csv),
-        rowHeaders: true,
-        colHeaders: true,
-        outsideClickDeselects: false,
-        selectionMode: 'multiple',
-      });
-
-      // Style rows which have errors.
-      // https://docs.handsontable.com/2.0.0/demo-selecting-ranges.html#page-styling
-      // First, make sure there are errors to parse.
-      // If errors are returned, populate the Pre-Validation Results container.
-      if(responseText && (typeof responseText.error !== 'undefined')) {
-
-        let validationErrors = JSON.parse(responseText.error);
-
-        if((typeof validationErrors !== 'undefined') && validationErrors.length) {
-
-          for (var i = 0; i < validationErrors.length; i++) {
-            // validationErrors[i].row
-            // validationErrors[i].error
-            let row = validationErrors[i].row.match(/\d/g);
-            row = row.join('');
-            // Select the rows with errors.
-            window[hotVarName + spreadsheetCount].selectRows(parseInt(row));
-
-            var selected = window[hotVarName + spreadsheetCount].getSelected();
-
-            for (var index = 0; index < selected.length; index += 1) {
-              var item = selected[index];
-              var startRow = Math.min(item[0], item[2]);
-              var endRow = Math.max(item[0], item[2]);
-              var startCol = Math.min(item[1], item[3]);
-              var endCol = Math.max(item[1], item[3]);
-
-              for (var rowIndex = startRow; rowIndex <= endRow; rowIndex += 1) {
-                for (var columnIndex = startCol; columnIndex <= endCol; columnIndex += 1) {
-                  // Set the text-danger CSS class on the row containing the error.
-                  window[hotVarName + spreadsheetCount].setCellMeta(rowIndex, columnIndex, 'className', 'text-danger');
-                }
-              }
-            }
-
-          }
-          window[hotVarName + spreadsheetCount].deselectCell();
-          window[hotVarName + spreadsheetCount].render();
-        }
-      }
-    }
-
-  }
-
-  spreadsheetCount++;
-});
-
-// // Update the total progress bar
-// uploadsDropzone.on("totaluploadprogress", function(progress) {
-//   document.querySelector("#total-progress .progress-bar").style.width = progress + "%";
-// });
-
-uploadsDropzone.on("sending", function(file, xhr, formData) {
-
-  // // Show the total progress bar when upload starts
-  // document.querySelector("#total-progress").style.opacity = "1";
-
-  xhr.timeout = 99999999;
-
-  if((typeof file.prevalidate !== 'undefined') && !file.prevalidate) {
-    // If not prevalidating, disable all actionable buttons.
-    $('.start, .cancel, .prevalidate-trigger').attr('disabled', 'disabled');
-  }
-
-  // Append custom data to formData.
-  // NOTE: can't console.log formData after appending.
-  // If you want to view formData, pass it to the server side then dump/echo.
-  // See: https://github.com/enyo/dropzone/issues/1075
-
-  // Add the jobId to the formData
-  jobId = $('.prevalidate-trigger').attr('data-jobid');
-  formData.append('jobId', jobId);
-
-  // Add the prevalidate value to the formData
-  if((typeof file.prevalidate !== 'undefined') && file.prevalidate) {
-    formData.append('prevalidate', file.prevalidate);
-  }
-
-  // Add the parentRecordId value to the formData
-  if((typeof file.parentRecordId !== 'undefined') && file.parentRecordId) {
-    formData.append('parentRecordId', file.parentRecordId);
-  }
-
-  // Add the parentRecordType value to the formData
-  if((typeof file.parentRecordType !== 'undefined') && file.parentRecordType) {
-    formData.append('parentRecordType', file.parentRecordType);
-  }
-
-  // If the file is actually a folder, add the fullPath to the formData.
-  if(file.fullPath){
-    formData.append('fullPath', file.fullPath);
-  }
-
-});
-
-// Called when all files in the queue finish uploading.
-uploadsDropzone.on("queuecomplete", function(file) {
-
-  let jobId = $('.prevalidate-trigger').attr('data-jobid'),
-      // For the Simple Ingest, the value is stored in $('body').data('project_repository_id')
-      // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker').attr('data-project-id')
-      parentProjectId = $('body').data('project_repository_id')
-          ? $('body').data('project_repository_id')
-          : $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
-      parentRecordId = parentRecordChecker(),
-      parentRecordType = getRecordType();
-
-  setTimeout(function() {
-    $.ajax({
-      'type': 'GET'
-      ,'dataType': 'json'
-      ,'url': '/admin/get_job_status/' + jobId
-      ,success: function(result) {
-        if (result && (result !== 'cancelled') && (result !== 'paused')) {
-          // Set the status of the job from 'uploading' to 'bagit validation starting'.
-          $.ajax({
-            'type': 'GET'
-            ,'dataType': 'json'
-            ,'url': '/admin/set_job_status/' + jobId + '/bagit validation starting'
-            ,success: function(result) {
-              if(result && result.statusSet) {
-                // Redirect to the Upload overview page.
-                document.location.href = '/admin/ingest/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
-              } else {
-                // TODO: catch error?
-              }
-            }
-          });
-        }
-      }
-    });
-  }, 2000);
-  
-  
-});
-
-// Start the internet connectivity checker.
-var connectionCheck = setInterval(checkStatus, 2000);
-
-// Begin uploads.
-document.querySelector("#actions .start").onclick = function() {
-  startUpload(false);
-};
-
-
-var dropzoneFilesCopy = [];
-
-// Pause/Resume uploading.
-$('#actions .pause').on('click', function(e) {
-
-  let jobId = $('.prevalidate-trigger').attr('data-jobid');
-  let thisTrigger = $(this);
-
-  // Pause the upload process.
-  if (!$(this).hasClass('paused')) {
-    $.ajax({
-      'type': 'GET'
-      ,'dataType': 'json'
-      ,'url': '/admin/set_job_status/' + jobId + '/paused'
-      ,success: function(result) {
-        if(result && result.statusSet) {
-          thisTrigger.find('span').empty().text('Resume');
-          thisTrigger.addClass('paused');
-          // Make a copy of all files.
-          dropzoneFilesCopy = uploadsDropzone.files.slice(0);
-          // Remove all files.
-          uploadsDropzone.removeAllFiles();
-        }
-      }
-    });
-  }
-  // Resume the upload process.
-  else {
-    startUpload(true, dropzoneFilesCopy);
-    thisTrigger.find('span').empty().text('Pause');
-    thisTrigger.removeClass('paused');
-  }
-
-});
-
-
-// Cancel uploading.
-document.querySelector("#actions .cancel-upload").onclick = function() {
-
-  swal('Are you sure you wish to cancel uploading?', {
-    buttons: {
-      cancel: 'No',
-      catch: {
-        text: 'Yes',
-        value: 'yes',
-      }
-    },
-  })
-  .then((value) => {
-    switch (value) {
-      case "yes":
-        // Set the status of the job from 'uploading' to 'failed'.
-        let jobId = $('.prevalidate-trigger').attr('data-jobid'),
-            // For the Simple Ingest, the value is stored in $('body').data('project_repository_id')
-            // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker').attr('data-project-id')
-            parentProjectId = $('body').data('project_repository_id')
-                ? $('body').data('project_repository_id')
-                : $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
-            parentRecordId = parentRecordChecker(),
-            parentRecordType = getRecordType();
-        
-        $.ajax({
-          'type': 'GET'
-          ,'dataType': 'json'
-          ,'url': '/admin/set_job_status/' + jobId + '/cancelled'
-          ,success: function(result) {
-            if(result && result.statusSet) {
-              // Remove all files.
-              uploadsDropzone.removeAllFiles(true);
-              // Redirect to the Upload overview page.
-              document.location.href = '/admin/ingest/' + jobId + '/' + parentProjectId + '/' + parentRecordId + '/' + parentRecordType;
-            } else {
-              // TODO: catch error?
-            }
-          }
-        });
-        break;
-      default:
-    }
-  });
-
-};
-
-// Remove files from the uploads stage.
-document.querySelector("#actions .cancel").onclick = function() {
-  // Remove files from Dropzone.
-  uploadsDropzone.removeAllFiles(true);
-  $('#previews ul.directory-structure').empty();
-  // Clear previous validation results from the validation panel.
-  $('.panel-validation-results').find('.panel-body').empty();
-  // Hide the Start, Pause, and Cancel buttons.
-  $('.start, .pause, .cancel-upload').addClass('hidden');
-  // Remove spreadsheets.
-  resultsContainer.empty();
-};
+}
 
 function startUpload(restart, dropzoneFilesCopy) {
 
@@ -695,36 +670,6 @@ function startUpload(restart, dropzoneFilesCopy) {
     $('#previews').find('.badge-temp').removeClass('badge-temp').addClass('badge');
     // Get the job ID from the data attribute of the prevalidate-trigger.
     let jobId = $('.prevalidate-trigger').attr('data-jobid');
-
-    // // If this is a Simple Ingest, we still need to add the capture_dataset to the job_import_record metadata storage.
-    // if ($('body').data('ajax')) {
-
-    //   var postData = {
-    //     'record_table': 'capture_dataset',
-    //     'job_uuid': jobId,
-    //     'project_repository_id': $('body').data('project_repository_id'),
-    //     'capture_dataset_repository_id': $('body').data('capture_dataset_repository_id')
-    //   };
-
-    //   // AJAX: add the capture_dataset to the job_import_record metadata storage.
-    //   $.ajax({
-    //     'type': 'POST'
-    //     ,'dataType': 'json'
-    //     ,'url': '/admin/post_job_import_record'
-    //     ,'data': postData
-    //     ,success: function(data) {
-    //       if(data) {
-    //         // Response data handler.
-    //         if(data.id) {
-    //           // Does anything need to be returned. Not really.
-    //         } else {
-    //           // Error handling???
-    //         }
-    //       }
-    //     }
-    //   });
-      
-    // }
 
     // Begin the uploading process.
     if(restart) {
