@@ -4,11 +4,12 @@ var jobId,
     loadingGifContainer = $('<div />').addClass('center-block').attr('style', 'width: 140px;').append(loadingGif),
     textureMapFileNameParts = ['diffuse', 'normal', 'occlusion'];
 
-// Pre-validate texture map images on ingest.
+// Texture map pre-validation error container.
 let fileContainer = $('<div />')
     .addClass('alert alert-danger files-validation-error')
     .attr('role', 'alert')
     .html('<h4>Texture Maps Pre-validation</h4>');
+// Texture map pre-validation unordered list.
 let fileOL = $('<ol />');
 
 // Dropzone.js
@@ -52,11 +53,15 @@ var uploadsDropzone = new Dropzone(document.body, { // Make the whole body a dro
           image.onload = function() {
             // Check to see if the WIDTH is a power of 2.
             if (!powerOf2(this.width)) {
-              fileOL.append('<li>Width is not a power of 2 (' + file.name + ')</li>');
+              var widthLI = $('<li />').text('Width is not a power of 2 (' + file.name + ')');
+              fileOL.append(widthLI);
+              // done('Width is not a power of 2 (' + file.name + ')');
             }
             // Check to see if the HEIGHT is a power of 2.
             if (!powerOf2(this.height)) {
-              fileOL.append('<li>Height is not a power of 2 (' + file.name + ')</li>');
+              var heightLI = $('<li />').text('Height is not a power of 2 (' + file.name + ')');
+              fileOL.append(heightLI);
+              // done('Height is not a power of 2 (' + file.name + ')');
             }
           };
         });
@@ -65,15 +70,18 @@ var uploadsDropzone = new Dropzone(document.body, { // Make the whole body a dro
     }
 
     // Append the ordered list to the fileContainer.
-    if(fileOL.length) {
-      fileContainer.append(fileOL);
-      // Append the fileContainer to the panel-body container.
-      $('.panel-validation-results').find('.panel-body').append(fileContainer);
-    }
-
+    fileContainer.append(fileOL);
     done();
   }
 });
+
+// Display the texture map pre-validation error container (if there are errors).
+setTimeout(function() {
+  if (fileOL.find('li').length) {
+    // Append the fileContainer to the panel-body container.
+    $('.panel-validation-results').find('.panel-body').append();
+  }
+}, 5000);
 
 // Add the ability to select directories from a file selection dialog window (when clicking the "Add Files" button).
 $('body').find('input.dz-hidden-input').attr('webkitdirectory', '').attr('directory', '');
