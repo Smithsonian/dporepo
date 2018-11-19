@@ -11,14 +11,14 @@
     <ol class="breadcrumb">
       <li><a href="/admin">Dashboard</a></li>
       <li><a href="/admin/workspace">Browse Projects</a></li>
-      <li>Project: <a href="/admin/projects/subjects/{{modeldetail.project_repository_id}}">{{modeldetail.project_name}}</a></li>
-      <li>Subject: <a href="/admin/projects/subjects/{{modeldetail.project_repository_id}}/{{modeldetail.subject_repository_id}}">{{modeldetail.subject_name}}</a></li>
+      <li>Project: <a href="/admin/projects/subjects/{{data.parent_records.project_repository_id}}">{{data.project_name}}</a></li>
+      <li>Subject: <a href="/admin/projects/items/{{data.parent_records.project_repository_id}}/{{data.parent_records.subject_repository_id}}">{{data.subject_name}}</a></li>
       
-      {% if modeldetail.capture_dataset|length %}
-        <li>Item: <a href="/admin/projects/datasets/{{modeldetail.project_repository_id}}/{{modeldetail.subject_repository_id}}/{{modeldetail.capture_dataset.parent_item_repository_id}}">{{ modeldetail.item_description|length > 50 ? modeldetail.item_description|slice(0, 50) ~ '...' : modeldetail.item_description  }}</a></li>
-        <li>Capture Dataset: <a href="/admin/projects/dataset_elements/{{modeldetail.project_repository_id}}/{{modeldetail.subject_repository_id}}/{{modeldetail.capture_dataset.parent_item_repository_id}}/{{modeldetail.capture_dataset.capture_dataset_repository_id}}">{{modeldetail.capture_dataset.capture_dataset_name}}</a></li>
+      {% if data.capture_dataset|length %}
+        <li>Item: <a href="/admin/projects/datasets/{{data.parent_records.project_repository_id}}/{{data.parent_records.subject_repository_id}}/{{data.parent_records.item_repository_id}}">{{ data.item_description|length > 50 ? data.item_description|slice(0, 50) ~ '...' : data.item_description  }}</a></li>
+        <li>Capture Dataset: <a href="/admin/projects/dataset_elements/{{data.parent_records.project_repository_id}}/{{data.parent_records.subject_repository_id}}/{{data.parent_records.item_repository_id}}/{{data.capture_dataset.capture_dataset_repository_id}}">{{data.capture_dataset.capture_dataset_name}}</a></li>
       {% else %}
-        <li>Item: <a href="/admin/projects/datasets/{{modeldetail.project_repository_id}}/{{modeldetail.subject_repository_id}}/{{modeldetail.parent_item_repository_id}}">{{ modeldetail.item_description|length > 50 ? modeldetail.item_description|slice(0, 50) ~ '...' : modeldetail.item_description  }}</a></li>
+        <li>Item: <a href="/admin/projects/datasets/{{data.parent_records.project_repository_id}}/{{data.parent_records.subject_repository_id}}/{{data.parent_records.item_repository_id}}">{{ data.item_description|length > 50 ? data.item_description|slice(0, 50) ~ '...' : data.item_description  }}</a></li>
       {% endif %}
       <li class="active">Model Detail</li>
     </ol>
@@ -26,7 +26,7 @@
     <div class="row">
         <div class="col-sm-12 col-md-12">
             <div class="form-group">
-                <a href="{% if modeldetail.capture_dataset|length %}/admin/projects/dataset_elements/{{modeldetail.project_repository_id}}/{{modeldetail.subject_repository_id}}/{{modeldetail.capture_dataset.parent_item_repository_id}}/{{modeldetail.capture_dataset.capture_dataset_repository_id}} {% else %}/admin/projects/datasets/{{modeldetail.project_repository_id}}/{{modeldetail.subject_repository_id}}/{{modeldetail.parent_item_repository_id}} {% endif %}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
+                <a href="{% if data.capture_dataset|length %}/admin/projects/dataset_elements/{{data.parent_records.project_repository_id}}/{{data.parent_records.subject_repository_id}}/{{data.parent_records.item_repository_id}}/{{data.capture_dataset.capture_dataset_repository_id}} {% else %}/admin/projects/datasets/{{data.parent_records.project_repository_id}}/{{data.parent_records.subject_repository_id}}/{{data.parent_records.item_repository_id}} {% endif %}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
             </div>
         </div>
     </div>
@@ -34,57 +34,57 @@
     <div class="row">
         <div class="col-sm-12 col-md-12">
             <div class="col-md-6">
-              <input type="hidden" id="model_repository_id" value="{{modeldetail.model_repository_id}}">
-                {% if modeldetail.parent_model_id %}
-                    <div><label><a href="/admin/projects/model/{{modeldetail.parent_model_id}}/detail">Parent Model</a></label></div>
+              <input type="hidden" id="model_repository_id" value="{{data.model_repository_id}}">
+                {% if data.parent_model_id %}
+                    <div><label><a href="/admin/projects/model/{{data.parent_model_id}}/detail">Parent Model</a></label></div>
                 {% endif %}
-              {% if modeldetail.capture_dataset|length %}
-                <div><label>Capture Dataset:</label> <a href="/admin/projects/dataset_elements/{{modeldetail.project_repository_id}}/{{modeldetail.subject_repository_id}}/{{modeldetail.capture_dataset.parent_item_repository_id}}/{{modeldetail.capture_dataset.capture_dataset_repository_id}}">{{modeldetail.capture_dataset.capture_dataset_name}}</a></div>
+              {% if data.capture_dataset|length %}
+                <div><label>Capture Dataset:</label> <a href="/admin/projects/dataset_elements/{{data.parent_records.project_repository_id}}/{{data.parent_records.subject_repository_id}}/{{data.parent_records.item_repository_id}}/{{data.capture_dataset.capture_dataset_repository_id}}">{{data.capture_dataset.capture_dataset_name}}</a></div>
               {% endif %}
-              <div><label>Model GUID: </label> {{modeldetail.model_guid}}</div>
-              {% if modeldetail.date_of_creation %}
-               <div><label>Date Of Creation: </label> {{modeldetail.date_of_creation|date("m/d/Y")}}</div>
+              <div><label>Model GUID: </label> {{data.model_guid}}</div>
+              {% if data.date_of_creation %}
+               <div><label>Date Of Creation: </label> {{data.date_of_creation|date("m/d/Y")}}</div>
               {% endif %}
-              {% if modeldetail.model_file_type != null %}
-                <div><label>Model File Type:</label> {{modeldetail.model_file_type}}</div>
+              {% if data.model_file_type != null %}
+                <div><label>Model File Type:</label> {{data.model_file_type}}</div>
               {% endif %}
-              {% if modeldetail.derived_from != null %}
-                <div><label>Derived From: </label> {{modeldetail.derived_from}}</div>
+              {% if data.derived_from != null %}
+                <div><label>Derived From: </label> {{data.derived_from}}</div>
               {% endif %}
-              <div><label>Creation Method: </label> {{modeldetail.creation_method}}</div>
-              <div><label>Model Modality: </label> {{modeldetail.model_modality}}</div>
-              <div><label>Units: </label> {{modeldetail.units}}</div>
-              {% if modeldetail.is_watertight == 1 %}
+              <div><label>Creation Method: </label> {{data.creation_method}}</div>
+              <div><label>Model Modality: </label> {{data.model_modality}}</div>
+              <div><label>Units: </label> {{data.units}}</div>
+              {% if data.is_watertight == 1 %}
                 <div><label>Is Watertight</label></div>
               {% endif %}
             </div>
             <div class="col-md-6">
-              <div><label>Model Purpose:  </label> {{modeldetail.model_purpose}}</div>
-              {% if modeldetail.point_count != null %}
-                <div><label>Point Count: </label> {{modeldetail.point_count}}</div>
+              <div><label>Model Purpose:  </label> {{data.model_purpose}}</div>
+              {% if data.point_count != null %}
+                <div><label>Point Count: </label> {{data.point_count}}</div>
               {% endif %}
-              {% if modeldetail.has_normals == 1 %}
+              {% if data.has_normals == 1 %}
                 <div><label>Has Normals</label></div>
               {% endif %}
-              {% if modeldetail.face_count != null %}
-                <div><label>Face Count: </label> {{modeldetail.face_count}}</div>
+              {% if data.face_count != null %}
+                <div><label>Face Count: </label> {{data.face_count}}</div>
               {% endif %}
-              {% if modeldetail.vertices_count != null %}
-                <div><label>Vertices Count: </label> {{modeldetail.vertices_count}}</div>
+              {% if data.vertices_count != null %}
+                <div><label>Vertices Count: </label> {{data.vertices_count}}</div>
               {% endif %}
-              {% if modeldetail.has_vertex_color != null %}
+              {% if data.has_vertex_color != null %}
                 <div><label>Has Vertex Color</label></div>
               {% endif %}
-              {% if modeldetail.has_uv_space != null %}
+              {% if data.has_uv_space != null %}
                 <div><label>Has UV Space</label></div>
               {% endif %}
-              {% if modeldetail.model_maps != null %}
-                <div><label>Model Maps:</label> {{modeldetail.model_maps}}</div>
+              {% if data.model_maps != null %}
+                <div><label>Model Maps:</label> {{data.model_maps}}</div>
               {% endif %}
             </div>
         </div>
         <div class="col-md-12">
-            <a class="btn btn-primary" href="/admin/projects/model/{{modeldetail.model_repository_id}}/viewer" target="_blank">Preview 3D Model in Viewer</a>
+            <a class="btn btn-primary" href="/admin/projects/model/{{data.model_repository_id}}/viewer" target="_blank">Preview 3D Model in Viewer</a>
         </div>
     </div>
 
@@ -164,7 +164,7 @@
     {{ parent() }}
     <script src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/js/bootstrap-datepicker.min.js"></script>
 
-    {% if modeldetail.model_repository_id is defined %}
+    {% if data.model_repository_id is defined %}
         <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
         <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
         <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
