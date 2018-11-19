@@ -14,6 +14,8 @@ use AppBundle\Controller\ItemsController;
 use AppBundle\Controller\DatasetsController;
 use AppBundle\Controller\ModelController;
 
+use Psr\Log\LoggerInterface;
+
 class RepoImport implements RepoImportInterface {
 
   /**
@@ -102,6 +104,11 @@ class RepoImport implements RepoImportInterface {
   private $default_model_file_name_map;
 
   /**
+   * @var object $logger
+   */
+  private $logger;
+
+  /**
    * Constructor
    * @param object  $kernel  Symfony's kernel object
    * @param string  $uploads_directory  Uploads directory path
@@ -109,7 +116,7 @@ class RepoImport implements RepoImportInterface {
    * @param string  $conn  The database connection
    * @param string  $uploads_directory  Uploads directory path
    */
-  public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn)
+  public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn, LoggerInterface $logger)
   {
     $this->u = new AppUtilities();
     $this->tokenStorage = $tokenStorage;
@@ -123,6 +130,10 @@ class RepoImport implements RepoImportInterface {
     $this->conn = $conn;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->repoValidate = new RepoValidateData($conn);
+
+    $this->logger = $logger;
+    // Usage:
+    // $this->logger->info('Import started. Job ID: ' . $job_id);
 
     // Image extensions.
     $this->image_extensions = array(
@@ -465,10 +476,10 @@ class RepoImport implements RepoImportInterface {
                 }
 
                 // Look-up the ID for the 'model_purpose'.
-                if ($field_name === 'model_purpose') {
-                  $model_purpose_lookup_options = array('master' => 1, 'delivery_web' => 2, 'delivery_print' => 3, 'intermediate_processing_step' => 4);
-                  $json_array[$key][$field_name] = (int)$model_purpose_lookup_options[$v];
-                }
+                // if ($field_name === 'model_purpose') {
+                //   $model_purpose_lookup_options = array('master' => 1, 'delivery_web' => 2, 'delivery_print' => 3, 'intermediate_processing_step' => 4);
+                //   $json_array[$key][$field_name] = (int)$model_purpose_lookup_options[$v];
+                // }
 
               }
 
@@ -697,6 +708,44 @@ class RepoImport implements RepoImportInterface {
           'user_id' => $data->user_id,
           'values' => (array)$csv_val
         ));
+
+        // Log the model file to the 'model_file' table.
+        if(!empty($csv_val->file_path)) {
+
+          $uploads_directory = str_replace('web', '', $this->uploads_directory);
+          $uploads_directory = substr($uploads_directory, 0, -1);
+
+          // Query the metadata storage for the file's ID using the file_path.
+          $file_info = $this->repo_storage_controller->execute('getRecords', array(
+            'base_table' => 'file_upload',
+            'fields' => array(
+              array(
+                'table_name' => 'file_upload',
+                'field_name' => 'file_upload_id',
+              ),
+            ),
+            'limit' => 1,
+            'search_params' => array(
+              0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($uploads_directory . $csv_val->file_path), 'comparison' => '='),
+            ),
+            'search_type' => 'AND',
+            'omit_active_field' => true,
+            )
+          );
+
+          // Log the model file to 'model_file' metadata storage.
+          if (!empty($file_info)) {
+            $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'model_file',
+              'user_id' => $data->user_id,
+              'values' => array(
+                'model_repository_id' => $this_id,
+                'file_upload_id' => $file_info[0]['file_upload_id'],
+              )
+            ));
+          }
+
+        }
 
         // Insert capture data elements and capture data files into the metadata storage.
         if (($data->type === 'capture_dataset') && isset($csv_val->capture_data_elements) && !empty($csv_val->capture_data_elements)) {
