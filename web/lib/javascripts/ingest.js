@@ -882,7 +882,7 @@ function requiredCsvValidation(parentRecordType, csvList) {
       requiredCsvs = 'file_name_map.csv, items.csv, capture_datasets.csv';
     }
     if (parentRecordType === 'item') {
-      requiredCsvs = 'file_name_map.csv, capture_datasets.csv';
+      requiredCsvs = 'file_name_map.csv'; // , capture_datasets.csv
     }
 
     // File name map - no file_name_map.csv found
@@ -922,10 +922,10 @@ function requiredCsvValidation(parentRecordType, csvList) {
     }
 
     // Item as parent record - no capture_datasets.csv found
-    if ( (parentRecordType === 'item') && (csvList.indexOf('capture_datasets.csv') === -1) ) {
-      csvTargetFile = 'capture_datasets.csv';
-      generateWarning = true;
-    }
+    // if ( (parentRecordType === 'item') && (csvList.indexOf('capture_datasets.csv') === -1) ) {
+    //   csvTargetFile = 'capture_datasets.csv';
+    //   generateWarning = true;
+    // }
 
     if (generateWarning) {
       errorText = '<strong>' + csvTargetFile + ':</strong> Not found. Required CSV files: ' + requiredCsvs;
