@@ -369,19 +369,39 @@ class ModelController extends Controller
   /**
    * @Route("/admin/projects/model/{id}/viewer", name="model_viewer", methods="GET", defaults={"id" = null})
    *
+   * @param $id The model ID
    * @param Connection $conn
    * @param Request $request
    */
-  public function modelViewer(Connection $conn, Request $request,$id)
+  public function modelViewer($id = null, Connection $conn, Request $request)
   {
+    //@TODO use incoming model $id to retrieve model assets.
+    // $model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
 
-    //@todo use incoming model $id to retrieve model assets.
-    $model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
+    $data = array();
+
+    if (!empty($id)) {
+
+      // Get the model record.
+      $data = $this->repo_storage_controller->execute('getRecord', array(
+          'base_table' => 'model',
+          'id_field' => 'model_repository_id',
+          'id_value' => (int)$id,
+        )
+      );
+
+      // If there are no results, throw a createNotFoundException (404).
+      if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
+
+      $model_url = substr($this->uploads_directory, 0, -1) . $data['file_path'];
+    }
+
+    // $this->u->dumper($model_url);
 
     return $this->render('datasets/model_viewer.html.twig', array(
-      'page_title' => "Model Viewer",
+      'page_title' => 'Model Viewer',
       'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-      "model_url" => $model_url,
+      'model_url' => $model_url,
     ));
   }
 
