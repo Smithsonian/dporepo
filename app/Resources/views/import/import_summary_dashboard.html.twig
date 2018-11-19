@@ -2,8 +2,8 @@
 
 {% block stylesheets %}
   {{ parent() }}
-  <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
-  <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/Datatable/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
   <link href="{{ asset('bundles/lifotypeahead/css/typeaheadbundle.css') }}" rel="stylesheet" type="text/css" />
   <link href="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.css') }}" rel="stylesheet" type="text/css" />
 {% endblock %}
@@ -309,11 +309,11 @@
 
 {% block js_bottom %}
   {{ parent() }}
-  <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
-  <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
+  <script src="{{ asset('lib/javascripts/Datatable/js/jquery.dataTables.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/buttons/js/dataTables.buttons.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/Datatable/js/dataTables.bootstrap.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/buttons/js/buttons.bootstrap.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/buttons/js/buttons.colVis.min.js') }}"></script>
   <script src="{{ asset('bundles/lifotypeahead/js/bootstrap-typeahead.js') }}"></script>
   <script src="{{ asset('bundles/lifotypeahead/js/typeaheadbundle.js') }}"></script>
   <script type="text/javascript" src="{{ asset('lib/javascripts/dropzone.js') }}"></script>

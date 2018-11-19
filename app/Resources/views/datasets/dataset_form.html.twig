@@ -2,7 +2,7 @@
 
 {% block stylesheets %}
   {{ parent() }}
-  <link href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/css/bootstrap-datepicker3.css" rel="stylesheet" type="text/css">
+  <link href="{{ asset('lib/javascripts/datepicker/css/bootstrap-datepicker3.css') }}" rel="stylesheet" type="text/css">
 {% endblock %}
 
 {% block content %}
@@ -71,7 +71,7 @@
 
 {% block javascripts %}
   {{ parent() }}
-  <script src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/js/bootstrap-datepicker.min.js"></script>
+  <script src="{{ asset('lib/javascripts/datepicker/js/bootstrap-datepicker.min.js') }}"></script>
   <script type="text/javascript">
     // Datepicker
     $(document).ready(function(){
