@@ -236,7 +236,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
   public function validate_image_pairs($data = array(), $job_status = '') {
 
     $return = array();
-    $exclude_model_extensions = array('obj', 'ply');
+    $exclude_model_extensions = array('obj', 'ply', 'gltf', 'glb');
 
     // // If no data is passed, set a message.
     // if (empty($data)) $return['messages'][] = 'No image pairs to validate. Please provide an array of files to validate.';
