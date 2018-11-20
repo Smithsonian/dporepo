@@ -44,6 +44,7 @@ var uploadsDropzone = new Dropzone(document.body, { // Make the whole body a dro
   dictInvalidFileType: "File type not allowed",
   accept: function(file, done) {
 
+    // Texture Maps Validation
     for (var t = 0; t < textureMapFileNameParts.length; t++) {
       // Only check files which have diffuse, normal, or occlusion in the file name.
       if (file.name.indexOf(textureMapFileNameParts[t]) !== -1) {
@@ -78,13 +79,8 @@ var uploadsDropzone = new Dropzone(document.body, { // Make the whole body a dro
   }
 });
 
-// Display the texture map pre-validation error container (if there are errors).
-setTimeout(function() {
-  if (fileOL.find('li').length) {
-    // Append the fileContainer to the panel-body container.
-    $('.panel-validation-results').find('.panel-body').append();
-  }
-}, 5000);
+// Poll to see if texture maps validation errors have been populated.
+var textureMapsCheck = setInterval(checkTextureMaps, 2000);
 
 // Add the ability to select directories from a file selection dialog window (when clicking the "Add Files" button).
 $('body').find('input.dz-hidden-input').attr('webkitdirectory', '').attr('directory', '');
@@ -1062,4 +1058,13 @@ function powerOf2(num) {
   if (typeof num !== 'number') 
       return false;
   return Number.isInteger(Math.log2(num));
+}
+
+// 
+function checkTextureMaps() {
+  if (fileOL.find('li').length) {
+    // Append the fileContainer to the panel-body container.
+    $('.panel-validation-results').find('.panel-body').append(fileContainer);
+    clearInterval(textureMapsCheck);
+  }
 }
