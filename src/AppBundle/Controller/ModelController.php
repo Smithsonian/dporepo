@@ -302,42 +302,36 @@ class ModelController extends Controller
     // $model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
 
     $data = array();
+    $model_url = NULL;
 
     if (!empty($id)) {
 
       // Get the model record.
-      $data = $this->repo_storage_controller->execute('getRecord', array(
-          'base_table' => 'model',
-          'id_field' => 'model_repository_id',
-          'id_value' => (int)$id,
-        )
-      );
-
-      /*
-      if ($file_id != null) {
-        $data = $this->repo_storage_controller->execute('getFile',array("file_id"=>$file_id));
-      }else{
-        $data = $this->repo_storage_controller->execute('getFiles',array("parent_record_id"=>$id,"parent_record_type"=>$type,"limit"=>1));
-      }
-      */
-
+      $data = $this->repo_storage_controller->execute('getModel', array(
+        'model_repository_id' => $id));
 
       // If there are no results, throw a createNotFoundException (404).
+      //if (empty($data) || empty($data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');
       if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
 
-      $model_url = substr($this->uploads_directory, 0, -1) . $data['file_path'];
+      // The repository's upload path.
+      $data['uploads_path'] = $this->uploads_directory;
+      //$this->u->dumper($data);
+
+      //@todo in the future perhaps this should be an array of all files
+      $model_url = 'file:/' . trim($this->uploads_directory) . $data['viewable_model']['file_name'];
               }
               
-    //@todo
-    $model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
-
+    //$model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
     // $this->u->dumper($model_url);
+    $data['model_url'] = $model_url;
+
+    //$this->u->dumper($data);
 
     return $this->render('datasets/model_viewer.html.twig', array(
       'page_title' => 'Model Viewer',
       'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-      'model_url' => $model_url,
-      //@todo this should actually be an array of all files
+      'data' => $data,
     ));
   }
 
