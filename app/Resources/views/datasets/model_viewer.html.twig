@@ -26,11 +26,7 @@
 {% block content %}
     <div id="main">
     </div>
-    <div class="sv-carousel">
-        <img data-item="/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json" src="/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-thumb.jpg"/>
-        <img data-item="/lib/javascripts/voyager/assets/nmafa-68_23_53_textured_cm/nmafa-68_23_53_textured_cm-item.json" src="/lib/javascripts/voyager/assets/nmafa-68_23_53_textured_cm/nmafa-68_23_53_textured_cm-thumb.jpg"/>
-        <img data-presentation="/lib/javascripts/voyager/assets/f1961_33-multipart/f1961_33-multipart-presentation.json" src="/lib/javascripts/voyager/assets/f1961_33-multipart/f1961_33-part_01-textured.jpg"/>
-    </div>
+    <input id="magic_url" type="hidden" value="{{ data.model_url }}" />
 {% endblock %}
 
 {% block javascripts %}
@@ -47,25 +43,10 @@
 
       $(document).ready(function(){
 
-        function load(element) {
-          const itemUrl = element.getAttribute("data-item");
-          if (itemUrl) {
-            voyager.loadItem(itemUrl);
-            console.log("loaded");
-            return;
-          }
-          const presentationUrl = element.getAttribute("data-presentation");
-          if (presentationUrl) {
-            voyager.loadPresentation(presentationUrl);
-          }
-        }
-
         const voyager = new Voyager({ element: document.getElementById("main") });
-        const carouselItems = document.getElementsByClassName("sv-carousel")[0].children;
-        for (let i = 0; i < carouselItems.length; ++i) {
-          carouselItems[i].onclick = (e) => load(e.target);
-        }
-        load(carouselItems[0]);
+        var model_url = $("#magic_url").val();
+        //var model_url = $('body').find('#magic_url').val();
+        voyager.loadGeometryAndTexture(model_url);
 
       });
     </script>
