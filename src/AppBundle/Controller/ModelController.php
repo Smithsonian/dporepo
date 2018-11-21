@@ -193,7 +193,7 @@ class ModelController extends Controller
         return $this->render('datasets/model_form.html.twig', array(
             'page_title' => !empty($id) ? 'Model: ' . $data->model_guid : 'Create Model',
             'data' => $data,
-            'uploads_path' => $this->uploads_directory,
+            'uploads_path' => $this->uploads_path,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
             'back_link' => $back_link,
@@ -256,107 +256,30 @@ class ModelController extends Controller
         return $this->redirect($referer);
     }
 
-  /**
-   * @Route("/admin/projects/model/{id}/detail", name="model_detail", methods="GET", defaults={"id" = null})
-   *
+    /**
+     * @Route("/admin/projects/model/{id}/detail", name="model_detail", methods="GET", defaults={"id" = null})
+     *
    * @param $id The model ID
-   * @param Connection $conn
-   * @param Request $request
-   */
+     * @param Connection $conn
+     * @param Request $request
+     */
   public function modelDetail($id = null, Connection $conn, Request $request)
-  {
+    {
     $data = array();
-
+                
     if (!empty($id)) {
 
       // Get the model record.
-      $data = $this->repo_storage_controller->execute('getRecord', array(
-          'base_table' => 'model',
-          'id_field' => 'model_repository_id',
-          'id_value' => (int)$id,
-        )
-      );
+      $data = $this->repo_storage_controller->execute('getModel', array(
+        'model_repository_id' => $id));
 
       // If there are no results, throw a createNotFoundException (404).
       if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
 
-      $data['capture_dataset'] = array();
-
       // The repository's upload path.
       $data['uploads_path'] = $this->uploads_directory;
 
-      // Get all of the parent records.
-      $record_type = !empty($data['parent_capture_dataset_repository_id']) ? 'model_with_capture_dataset_id' : 'model_with_item_id';
-      // Execute.
-      $data['parent_records'] = $this->repo_storage_controller->execute('getParentRecords', array(
-        'base_record_id' => $id,
-        'record_type' => $record_type,
-      ));
-
-      // Set the item ID.
-      $item_id = $data['parent_records']['item_repository_id'];
-
-      // Example output of getParentRecords:
-      // array(4) {
-      //   ["project_repository_id"]=>
-      //   string(1) "2"
-      //   ["subject_repository_id"]=>
-      //   string(3) "795"
-      //   ["item_repository_id"]=>
-      //   string(4) "2570"
-      //   ["model_repository_id"]=>
-      //   string(1) "9"
-      // }
-
-      if (!empty($data['parent_capture_dataset_repository_id'])) {
-        // Get the capture dataset record.
-        $capture_dataset = $this->repo_storage_controller->execute('getRecord', array(
-            'base_table' => 'capture_dataset',
-            'id_field' => 'capture_dataset_repository_id',
-            'id_value' => $data['parent_capture_dataset_repository_id'],
-          )
-        );
-        // Modify the item ID and set the capture dataset.
-        if (!empty($capture_dataset)) {
-          $item_id = $capture_dataset['parent_item_repository_id'];
-          $data['capture_dataset'] = $capture_dataset;
-        }
-      }
-
-      // Get the item record.
-      $item = $this->repo_storage_controller->execute('getRecord', array(
-          'base_table' => 'item',
-          'id_field' => 'item_repository_id',
-          'id_value' => $item_id,
-        )
-      );
-      
-      if (!empty($item)) {
-        // Get the subject record.
-        $subject = $this->repo_storage_controller->execute('getRecord', array(
-            'base_table' => 'subject',
-            'id_field' => 'subject_repository_id',
-            'id_value' => $item['subject_repository_id'],
-          )
-        );
-
-        if (!empty($subject)) {
-          // Get the project record.
-          $project = $this->repo_storage_controller->execute('getRecord', array(
-              'base_table' => 'project',
-              'id_field' => 'project_repository_id',
-              'id_value' => $subject['project_repository_id'],
-            )
-          );
-
-          $data['subject_name'] = $subject['subject_name'];
-          $data['item_description'] = $item['item_description'];
-          $data['project_name'] = $project['project_name'];
-        }
-      }
-      
     }
-
     // $this->u->dumper($data);
 
     return $this->render('datasets/model_detail.html.twig', array(
@@ -379,29 +302,36 @@ class ModelController extends Controller
     // $model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
 
     $data = array();
+    $model_url = NULL;
 
     if (!empty($id)) {
 
       // Get the model record.
-      $data = $this->repo_storage_controller->execute('getRecord', array(
-          'base_table' => 'model',
-          'id_field' => 'model_repository_id',
-          'id_value' => (int)$id,
-        )
-      );
+      $data = $this->repo_storage_controller->execute('getModel', array(
+        'model_repository_id' => $id));
 
       // If there are no results, throw a createNotFoundException (404).
+      //if (empty($data) || empty($data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');
       if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
 
-      $model_url = substr($this->uploads_directory, 0, -1) . $data['file_path'];
-    }
+      // The repository's upload path.
+      $data['uploads_path'] = $this->uploads_directory;
+      //$this->u->dumper($data);
 
+      //@todo in the future perhaps this should be an array of all files
+      $model_url = 'file:/' . trim($this->uploads_directory) . $data['viewable_model']['file_name'];
+              }
+              
+    //$model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
     // $this->u->dumper($model_url);
+    $data['model_url'] = $model_url;
+
+    //$this->u->dumper($data);
 
     return $this->render('datasets/model_viewer.html.twig', array(
       'page_title' => 'Model Viewer',
       'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-      'model_url' => $model_url,
+      'data' => $data,
     ));
   }
 
@@ -459,11 +389,10 @@ class ModelController extends Controller
           'sort_order' => $sort_order,
           'start_record' => $start_record,
           'stop_record' => $stop_record,
-          'parent_id' => isset($req['parent_model_id']) ? $req['parent_model_id'] : 0,
-          //'parent_id_field' => isset($req['parent_type']) ? 'parent_item_repository_id' : 'parent_capture_dataset_repository_id',
+          'parent_id' => isset($req['parent_id']) ? $req['parent_id'] : 0,
           'parent_id_field' => 'parent_model_id',
-
         );
+
         if ($search) {
           $query_params['search_value'] = $search;
         }

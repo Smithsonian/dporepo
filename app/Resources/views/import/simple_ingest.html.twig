@@ -1,6 +1,8 @@
 {% extends 'default_bootstrap_admin.html.twig' %}
 {% use 'import/ingest_wizard.html.twig' %}
 {% use 'import/record_picker_modal.html.twig' %}
+{% use 'import/subject_form_modal.html.twig' %}
+{% use 'import/item_form_modal.html.twig' %}
 
 {% block stylesheets %}
   {{ parent() }}
@@ -50,7 +52,12 @@
 
   <!-- Record Picker Modal -->
   {% block record_picker_modal %}{{ parent() }}{% endblock %}
-
+  <!-- Subject Form Modal -->
+  {# {% include 'import/subject_form_modal.html.twig' %} #}
+  {% block subject_form %}{{ parent() }}{% endblock %}
+  <!-- Item Form Modal -->
+  {# {% include 'import/item_form_modal.html.twig' %} #}
+  {% block item_form %}{{ parent() }}{% endblock %}
   <!-- Uploading Modal -->
   {% include 'import/uploading_modal.html.twig' %}
 
@@ -78,6 +85,17 @@
       rootwizard.bootstrapWizard('disable', '2');
       // Disable the "Next Step" button.
       rootwizard.find('.next').addClass('disabled');
+
+      /**
+       * Create a New Subject / Create a New Item click handler
+       */
+      $('.create-record').on('click', function(e) {
+        var thisTrigger = $(this);
+        // Show the modal.
+        $('#' + thisTrigger.attr('data-create') + '-form-modal').modal('show');
+
+        // console.log(thisTrigger.attr('data-create'));
+      });
 
       /**
        * Browse Ingests tab click handler
@@ -137,6 +155,28 @@
         autoclose: true,
       };
       dateInput.datepicker(options);
+
+      // Subject form submit handler.
+      $(document).on('submit', 'form[name="subject"]', function(e){
+        // Avoid submitting the form non-ajax.
+        e.preventDefault();
+        // Get the properties and values from the form.
+        var form = $('form[name="subject"]');
+        var formData = form.serializeObject();
+        // Submit via AJAX.
+        submitSubjectRecord(formData);
+      });
+
+      // Item form submit handler.
+      $(document).on('submit', 'form[name="item"]', function(e){
+        // Avoid submitting the form non-ajax.
+        e.preventDefault();
+        // Get the properties and values from the form.
+        var form = $('form[name="item"]');
+        var formData = form.serializeObject();
+        // Submit via AJAX.
+        itemSubjectRecord(formData);
+      });
 
       // Dataset form submit handler.
       $(document).on('submit', 'form[name="dataset"]', function(e){
@@ -489,7 +529,7 @@
 
               // Enable Step 2 tab.
               rootwizard.bootstrapWizard('enable', '1');
-              // Disable the "Next Step" button.
+              // Enable the "Next Step" button.
               rootwizard.find('.next').removeClass('disabled');
 
               // Add the item_repository_id to data.
@@ -509,6 +549,122 @@
         });
 
         return itemDt;
+      }
+
+      function submitSubjectRecord(formData) {
+        // Avoid submitting the form multiple times.
+        $('#subject_save').attr('disabled', true);
+
+        // AJAX: Create a new dataset record.
+        $.ajax({
+          'type': 'POST'
+          ,'dataType': 'json'
+          ,'url': '/admin/projects/subject/' + $('body').data('project_repository_id') + '/ajax'
+          ,'data': formData
+          ,success: function(data) {
+            if(data) {
+              // Response data handler.
+              if(data.id) {
+
+                // Add the subject_repository_id to data.
+                $('body').data('subject_repository_id', data.id);
+
+                // Transfer record metadata to the parent window.
+                var fields = ['holding_entity_guid', 'local_subject_id', 'subject_display_name', 'subject_guid', 'subject_name'];
+                var html = '<dl>';
+                // Loop through the metadata and choose fileds in the 'fields' array.
+                $.each(formData, function(key, value){
+                  key = key.replace('subject[', '');
+                  key = key.replace(']', '');
+                  if (fields.indexOf(key) !== -1) {
+                    html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
+                    html += '<dd class="' + key + '">' + value + '</dd>'
+                  }
+                });
+                html += '</dl>';
+
+                $('div.subject-well').html(html);
+                $('div.subject-well').removeClass('hidden');
+
+                // Display a success message in the UI.
+                swal({
+                  title: 'Saved',
+                  text: 'The subject has been successfully saved.',
+                  icon: 'success',
+                });
+
+                // Disable all fields in the form
+                $('form[name="subject"]').find('input, select, textarea').attr('disabled', true);
+                $('form[name="subject"]').find('select').trigger("chosen:updated");
+
+                // Enable the Item buttons.
+                $('[data-select="item"], [data-create="item"]').removeAttr('disabled');
+
+              } else {
+                // Error handling???
+              }
+            }
+          }
+        });
+      }
+
+      function itemSubjectRecord(formData) {
+        // Avoid submitting the form multiple times.
+        $('#item_save').attr('disabled', true);
+
+        // AJAX: Create a new dataset record.
+        $.ajax({
+          'type': 'POST'
+          ,'dataType': 'json'
+          ,'url': '/admin/projects/item/' + $('body').data('project_repository_id') + '/' + $('body').data('subject_repository_id') + '/ajax'
+          ,'data': formData
+          ,success: function(data) {
+            if(data) {
+              // Response data handler.
+              if(data.id) {
+
+                // Add the item_repository_id to data.
+                $('body').data('item_repository_id', data.id);
+
+                // Transfer record metadata to the parent window.
+                var fields = ['item_description', 'item_guid', 'item_type', 'local_item_id'];
+                var html = '<dl>';
+                // Loop through the metadata and choose fileds in the 'fields' array.
+                $.each(formData, function(key, value){
+                  key = key.replace('item[', '');
+                  key = key.replace(']', '');
+                  if (fields.indexOf(key) !== -1) {
+                    html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
+                    html += '<dd class="' + key + '">' + value + '</dd>'
+                  }
+                });
+                html += '</dl>';
+
+                $('div.item-well').html(html);
+                $('div.item-well').removeClass('hidden');
+
+                // Display a success message in the UI.
+                swal({
+                  title: 'Saved',
+                  text: 'The item has been successfully saved.',
+                  icon: 'success',
+                });
+
+                // Disable all fields in the form
+                $('form[name="item"]').find('input, select, textarea').attr('disabled', true);
+                $('form[name="item"]').find('select').trigger("chosen:updated");
+
+                // Enable Step 2 tab.
+                rootwizard.bootstrapWizard('enable', '1');
+                // Enable the "Next Step" button.
+                rootwizard.find('.next').removeClass('disabled');
+
+              } else {
+                // Error handling???
+              }
+            }
+          }
+        });
       }
 
     });

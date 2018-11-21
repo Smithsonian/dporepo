@@ -84,7 +84,9 @@
             </div>
         </div>
         <div class="col-md-12">
+            {% if data.viewable_model != false %}
             <a class="btn btn-primary" href="/admin/projects/model/{{data.model_repository_id}}/viewer" target="_blank">Preview 3D Model in Viewer</a>
+            {% endif %}
         </div>
     </div>
 
@@ -270,7 +272,16 @@
             {"sWidth":"106px","aTargets":[0]},
             {"bSortable":false,"aTargets":[0]},
           ],
+            "fnRowCallback":function(nRow, aData, iDisplayIndex) {
 
+              // This table row.
+              var thisTableRow = $(nRow);
+
+              // Create the delete record checkboxes.
+              thisTableRow.find('td:eq(0)')
+                .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+                .addClass("manage_column");
+            }
         });
 
         $('#browse_models').dataTable( {
@@ -319,7 +330,7 @@
           "serverSide": true,
           // Path to the file that is going to handle the queries.
           "ajax": {
-              "url": "/admin/projects/model/datatables_browse",
+              "url": "/admin/model/datatables_browse_derivative_models",
             "data": {
                 "parent_id": model_repository_id,
                 "parent_type": "parent_model_id"
@@ -375,7 +386,7 @@
         
           /*var models_add_button = $('<a />')
             .addClass('btn btn-default add-record-button')
-            .attr('href', '/admin/projects/model/manage/' + item_repository_id + '?from=item')
+            .attr('href', '/admin/projects/model/manage/' + item_repository_id + '?from=model')
             .html('<span class="glyphicon glyphicon-plus"></span> Add a Model');
           $('#browse_models_wrapper').find('.datatables_bulk_actions').prepend(models_add_button);
             */

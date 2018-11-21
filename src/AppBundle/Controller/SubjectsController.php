@@ -131,7 +131,6 @@ class SubjectsController extends Controller
      *
      * @Route("/admin/projects/subject/{project_repository_id}/{subject_repository_id}", name="subjects_manage", methods={"GET","POST"}, requirements={"project_repository_id"="\d+"}, defaults={"subject_repository_id" = null})
      *
-     * @param   int     $subject_repository_id  The subject ID
      * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
      * @return  array                 Redirect or render
@@ -140,8 +139,15 @@ class SubjectsController extends Controller
     {
         $subject = new Subjects();
         $post = $request->request->all();
-        $id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
         $subject->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
+        $id = false;
+        $ajax = false;
+
+        if ((!empty($request->attributes->get('subject_repository_id')) && ($request->attributes->get('subject_repository_id') !== 'ajax'))) {
+          $id = $request->attributes->get('subject_repository_id');
+        } else {
+          $ajax = true;
+        }
 
         // Retrieve data from the database.
         if(!empty($id) && empty($post)) {
@@ -169,17 +175,27 @@ class SubjectsController extends Controller
               'values' => (array)$subject
             ));
 
-            $this->addFlash('message', 'Subject successfully updated.');
-            return $this->redirect('/admin/projects/items/' . $subject->project_repository_id . '/' . $id);
-
+            if ($ajax) {
+              // Return the ID of the new record.
+              $response = new JsonResponse(array('id' => $id));
+              return $response;
+            } else {
+              $this->addFlash('message', 'Subject successfully updated.');
+              return $this->redirect('/admin/projects/items/' . $subject->project_repository_id . '/' . $id);
+            }
         }
 
-        return $this->render('subjects/subject_form.html.twig', array(
-            'page_title' => !empty($id) ? 'Subject: ' . $subject->subject_name : 'Create Subject',
-            'subject_data' => $subject,
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-            'form' => $form->createView(),
-        ));
+        if ($ajax) {
+          $response = new JsonResponse($subject);
+          return $response;
+        } else {
+          return $this->render('subjects/subject_form.html.twig', array(
+              'page_title' => !empty($id) ? 'Subject: ' . $subject->subject_name : 'Create Subject',
+              'subject_data' => $subject,
+              'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+              'form' => $form->createView(),
+          ));
+        }
 
     }
 

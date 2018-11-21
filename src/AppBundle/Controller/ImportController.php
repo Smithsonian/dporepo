@@ -34,6 +34,13 @@ use AppBundle\Utils\AppUtilities;
 use AppBundle\Service\RepoFileTransfer;
 use AppBundle\Service\RepoProcessingService;
 
+use AppBundle\Form\Subject;
+use AppBundle\Entity\Subjects;
+
+use AppBundle\Form\Item;
+use AppBundle\Entity\Items;
+use AppBundle\Controller\ItemsController;
+
 use AppBundle\Form\Dataset;
 use AppBundle\Entity\Datasets;
 use AppBundle\Controller\DatasetsController;
@@ -58,6 +65,7 @@ class ImportController extends Controller
     private $repo_storage_controller;
     private $tokenStorage;
     private $datasetsController;
+    private $itemsController;
     private $fileTransfer;
 
     /**
@@ -74,7 +82,7 @@ class ImportController extends Controller
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, DatasetsController $datasetsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, DatasetsController $datasetsController, ItemsController $itemsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
@@ -82,6 +90,7 @@ class ImportController extends Controller
         $this->tokenStorage = $tokenStorage;
 
         $this->datasetsController = $datasetsController;
+        $this->itemsController = $itemsController;
         $this->fileTransfer = $fileTransfer;
         $this->processing = $processing;
         $this->external_file_storage_on = $external_file_storage_on;
@@ -197,6 +206,17 @@ class ImportController extends Controller
           }
         }
 
+        // Create the subject form
+        $subject = new Subjects();
+        $subject_form = $this->createForm(Subject::class, $subject);
+
+        // Create the item form
+        $item = new Items();
+        // Get data from lookup tables.
+        $item->item_type_lookup_options = $this->itemsController->get_item_types();
+        $item_form = $this->createForm(Item::class, $item);
+
+        // Create the dataset form.
         $dataset = new Datasets();
         // Get data from lookup tables.
         $dataset->capture_methods_lookup_options = $this->datasetsController->get_capture_methods();
@@ -207,17 +227,16 @@ class ImportController extends Controller
         $dataset->background_removal_methods_lookup_options = $this->datasetsController->get_background_removal_methods();
         $dataset->camera_cluster_types_lookup_options = $this->datasetsController->get_camera_cluster_types();
         $dataset->calibration_object_type_options = $this->datasetsController->get_calibration_object_types();
-
         // Create the form
         $form = $this->createForm(Dataset::class, $dataset);
-        // Handle the request
-        // $form->handleRequest($request);
 
         $accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
 
         return $this->render('import/simple_ingest.html.twig', array(
             'page_title' => 'Simple Ingest',
             'form' => $form->createView(),
+            'subject_form' => $subject_form->createView(),
+            'item_form' => $item_form->createView(),
             'accepted_file_types' => $accepted_file_types,
             'service_error' => $service_error,
             'dataset_data' => $dataset,
