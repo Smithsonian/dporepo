@@ -296,6 +296,39 @@ class RepoStorageHybrid implements RepoStorage {
       'table_name' => 'model',
       'field_name' => 'model_maps',
     );
+
+    $query_params['records_values'] = array();
+    $ret = $this->getRecords($query_params);
+    //@todo do something if $ret has errors
+
+    if(array_key_exists(0, $ret)) {
+      $data = $ret[0];
+    }
+    if (empty($data)) return $data;
+
+
+    // Get model files.
+
+    $query_params = array(
+      'fields' => array(),
+      'base_table' => 'model_file',
+      'search_params' => array(
+        0 => array('field_names' => array('model_file.active'), 'search_values' => array(1), 'comparison' => '='),
+        1 => array('field_names' => array('model_file.model_repository_id'), 'search_values' => $params, 'comparison' => '=')
+      ),
+      'search_type' => 'AND',
+      'related_tables' => array(),
+    );
+
+    // Fields.
+    $query_params['fields'][] = array(
+      'table_name' => 'model_file',
+      'field_name' => 'model_file_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'file_upload',
+      'field_name' => 'file_name',
+    );
     $query_params['fields'][] = array(
       'table_name' => 'file_upload',
       'field_name' => 'file_path',
@@ -306,13 +339,6 @@ class RepoStorageHybrid implements RepoStorage {
     );
 
     // Joins.
-    $query_params['related_tables'][] = array(
-      'table_name' => 'model_file',
-      'table_join_field' => 'model_repository_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'model',
-      'base_join_field' => 'model_repository_id',
-    );
     $query_params['related_tables'][] = array(
       'table_name' => 'file_upload',
       'table_join_field' => 'file_upload_id',
@@ -325,10 +351,21 @@ class RepoStorageHybrid implements RepoStorage {
     $ret = $this->getRecords($query_params);
     //@todo do something if $ret has errors
 
+    $file_data = array();
     if(array_key_exists(0, $ret)) {
-      $data = $ret[0];
+      $file_data = $ret;
     }
-    if (empty($data)) return $data;
+    $data['files'] = $file_data;
+    $data['viewable_model'] = false;
+    foreach($file_data as $file) {
+      $fn = $file['file_name'];
+      $fn_exploded = explode('.', $fn);
+      if(count($fn_exploded) == 2 && strtolower($fn_exploded[1]) == 'obj') {
+        $data['viewable_model'] = $file;
+    }
+    }
+
+    // End get model files.
 
     $data['capture_dataset'] = array();
 
