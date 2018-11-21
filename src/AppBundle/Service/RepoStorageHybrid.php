@@ -198,7 +198,10 @@ class RepoStorageHybrid implements RepoStorage {
 
   public function getModel($params) {
     //$params will be something like array('model_repository_id' => '123');
-    $return_data = array();
+    $id = isset($params['model_repository_id']) ? (int)$params['model_repository_id'] : NULL;
+    if (!isset($id)) return array();
+
+    $data = array();
 
     $query_params = array(
       'fields' => array(),
@@ -213,16 +216,16 @@ class RepoStorageHybrid implements RepoStorage {
 
     // Fields.
     $query_params['fields'][] = array(
-      'table_name' => 'item',
-      'field_name' => 'subject_repository_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'subject',
-      'field_name' => 'project_repository_id',
+      'table_name' => 'model',
+      'field_name' => 'model_repository_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'model',
-      'field_name' => 'model_repository_id',
+      'field_name' => 'parent_model_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'parent_item_repository_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'model',
@@ -301,41 +304,8 @@ class RepoStorageHybrid implements RepoStorage {
       'table_name' => 'file_upload',
       'field_name' => 'file_hash',
     );
-    $query_params['fields'][] = array(
-      'table_name' => 'capture_dataset',
-      'field_name' => 'parent_item_repository_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'item',
-      'field_name' => 'subject_repository_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'subject',
-      'field_name' => 'project_repository_id',
-    );
 
     // Joins.
-    $query_params['related_tables'][] = array(
-      'table_name' => 'capture_dataset',
-      'table_join_field' => 'capture_dataset_repository_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'model',
-      'base_join_field' => 'parent_capture_dataset_repository_id',
-    );
-    $query_params['related_tables'][] = array(
-      'table_name' => 'item',
-      'table_join_field' => 'item_repository_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'capture_dataset',
-      'base_join_field' => 'parent_item_repository_id',
-    );
-    $query_params['related_tables'][] = array(
-      'table_name' => 'subject',
-      'table_join_field' => 'subject_repository_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'item',
-      'base_join_field' => 'subject_repository_id',
-    );
     $query_params['related_tables'][] = array(
       'table_name' => 'model_file',
       'table_join_field' => 'model_repository_id',
@@ -356,9 +326,84 @@ class RepoStorageHybrid implements RepoStorage {
     //@todo do something if $ret has errors
 
     if(array_key_exists(0, $ret)) {
-      $return_data = $ret[0];
+      $data = $ret[0];
     }
-    return $return_data;
+    if (empty($data)) return $data;
+
+    $data['capture_dataset'] = array();
+
+    // Get all of the parent records.
+    $record_type = !empty($data['parent_capture_dataset_repository_id']) ? 'model_with_capture_dataset_id' : 'model_with_item_id';
+
+    // Execute.
+    $data['parent_records'] = $this->getParentRecords(array(
+      'base_record_id' => $id,
+      'record_type' => $record_type,
+    ));
+
+    // Set the item ID.
+    $item_id = $data['parent_records']['item_repository_id'];
+
+    // Example output of getParentRecords:
+    // array(4) {
+    //   ["project_repository_id"]=>
+    //   string(1) "2"
+    //   ["subject_repository_id"]=>
+    //   string(3) "795"
+    //   ["item_repository_id"]=>
+    //   string(4) "2570"
+    //   ["model_repository_id"]=>
+    //   string(1) "9"
+    // }
+
+    if (!empty($data['parent_capture_dataset_repository_id'])) {
+      // Get the capture dataset record.
+      $capture_dataset = $this->getRecord(array(
+          'base_table' => 'capture_dataset',
+          'id_field' => 'capture_dataset_repository_id',
+          'id_value' => $data['parent_capture_dataset_repository_id'],
+        )
+      );
+      // Modify the item ID and set the capture dataset.
+      if (!empty($capture_dataset)) {
+        $item_id = $capture_dataset['parent_item_repository_id'];
+        $data['capture_dataset'] = $capture_dataset;
+      }
+    }
+
+    // Get the item record.
+    $item = $this->getRecord(array(
+        'base_table' => 'item',
+        'id_field' => 'item_repository_id',
+        'id_value' => $item_id,
+      )
+    );
+
+    if (!empty($item)) {
+      // Get the subject record.
+      $subject = $this->getRecord(array(
+          'base_table' => 'subject',
+          'id_field' => 'subject_repository_id',
+          'id_value' => $item['subject_repository_id'],
+        )
+      );
+
+      if (!empty($subject)) {
+        // Get the project record.
+        $project = $this->getRecord(array(
+            'base_table' => 'project',
+            'id_field' => 'project_repository_id',
+            'id_value' => $subject['project_repository_id'],
+          )
+        );
+
+        $data['subject_name'] = $subject['subject_name'];
+        $data['item_description'] = $item['item_description'];
+        $data['project_name'] = $project['project_name'];
+      }
+    }
+
+    return $data;
   }
 
   public function getCaptureDataset($params) {
@@ -3761,11 +3806,23 @@ class RepoStorageHybrid implements RepoStorage {
               LEFT JOIN project ON project.project_repository_id = subject.project_repository_id';
           break;
 
-        case 'model':
+        case 'model_with_item_id':
+          $params['record_type'] = 'model';
           $params['id_field_name'] = 'model.model_repository_id';
           $params['select'] = 'project.project_repository_id, subject.subject_repository_id, item.item_repository_id, model.model_repository_id';
           $params['left_joins'] = 'LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_repository_id = model.parent_capture_dataset_repository_id
-              LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
+              -- LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
+              LEFT JOIN item ON item.item_repository_id = model.parent_item_repository_id
+              LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
+              LEFT JOIN project ON project.project_repository_id = subject.project_repository_id';
+          break;
+
+        case 'model_with_capture_dataset_id':
+          $params['record_type'] = 'model';
+          $params['id_field_name'] = 'model.model_repository_id';
+          $params['select'] = 'project.project_repository_id, subject.subject_repository_id, item.item_repository_id, model.model_repository_id';
+          $params['left_joins'] = '
+              LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = model.parent_capture_dataset_repository_id
               LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
               LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
               LEFT JOIN project ON project.project_repository_id = subject.project_repository_id';
