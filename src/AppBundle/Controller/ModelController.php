@@ -314,12 +314,12 @@ class ModelController extends Controller
       //if (empty($data) || empty($data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');
       if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
 
-      // The repository's upload path.
-      $data['uploads_path'] = $this->uploads_directory;
       //$this->u->dumper($data);
 
       //@todo in the future perhaps this should be an array of all files
-      $model_url = 'file:/' . trim($this->uploads_directory) . $data['viewable_model']['file_name'];
+      // Replace local path with Drastic path. Twig template will serve the file using admin/get_file?path=blah
+      $model_url = str_replace($this->uploads_directory, $this->external_file_storage_path, $data['viewable_model']['file_path']);
+      //$model_url = 'file:/' . trim($this->uploads_directory) . $data['viewable_model']['file_name'];
               }
               
     //$model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
