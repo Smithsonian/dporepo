@@ -46,10 +46,15 @@ class ModelController extends Controller
     // private $uploads_path;
 
     /**
+     * @var string $external_file_storage_path
+     */
+    private $external_file_storage_path;
+
+    /**
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, KernelInterface $kernel, string $uploads_directory, Connection $conn)
+    public function __construct(AppUtilities $u, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, Connection $conn)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
@@ -57,6 +62,7 @@ class ModelController extends Controller
         $this->kernel = $kernel;
         $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
         $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+        $this->external_file_storage_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $external_file_storage_path) : $external_file_storage_path;;
     }
 
     /**
@@ -314,19 +320,20 @@ class ModelController extends Controller
       //if (empty($data) || empty($data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');
       if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
 
-      // The repository's upload path.
-      $data['uploads_path'] = $this->uploads_directory;
-      //$this->u->dumper($data);
+      // $this->u->dumper($data);
 
       //@todo in the future perhaps this should be an array of all files
-      $model_url = 'file:/' . trim($this->uploads_directory) . $data['viewable_model']['file_name'];
-              }
+      // Replace local path with Drastic path. Twig template will serve the file using admin/get_file?path=blah
+      $uploads_path = str_replace('web', '', $this->uploads_directory);
+      // Windows fix for the file path.
+      $uploads_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_path) : $uploads_path;
+      // Model URL.
+      $model_url = str_replace($uploads_path, $this->external_file_storage_path, $data['viewable_model']['file_path']);
+      // Windows fix for the file path.
+      $model_url = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $model_url) : $model_url;
+    }
               
-    //$model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
-    // $this->u->dumper($model_url);
     $data['model_url'] = $model_url;
-
-    //$this->u->dumper($data);
 
     return $this->render('datasets/model_viewer.html.twig', array(
       'page_title' => 'Model Viewer',
