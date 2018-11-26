@@ -388,7 +388,14 @@ class RepoStorageHybrid implements RepoStorage {
     return $file;
     
   }
+  public function getPointofContact(){
+    $statement = $this->connection->prepare("SELECT id,username FROM fos_user");
+    $statement->execute();
+    $contacts = $statement->fetchAll();
+    return $contacts;
+  }
   public function getModelDetail($params){
+    $model = [];
     if (!isset($params['model_repository_id'])) {
       return false;
     }
@@ -434,6 +441,15 @@ class RepoStorageHybrid implements RepoStorage {
       }
     }
     return $model;
+  }
+  public function getModelFiles($params){
+    if (!isset($params['model_repository_id'])) {
+      return false;
+    }
+    $statement = $this->connection->prepare("SELECT file_upload.file_upload_id,file_upload.file_name,file_upload.file_path,file_upload.file_type FROM model_file LEFT JOIN file_upload ON file_upload.file_upload_id = model_file.file_upload_id WHERE model_file.model_repository_id=".$params['model_repository_id']);
+    $statement->execute();
+    $files = $statement->fetchAll();
+    return $files;
   }
   public function getCaptureDataset($params) {
     //$params will be something like array('capture_dataset_repository_id' => '123');
