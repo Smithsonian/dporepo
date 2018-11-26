@@ -289,11 +289,9 @@
               details_page = '/admin/projects/dataset_elements/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id + '/' + aData.capture_dataset_repository_id;
             }
 
-            if(job_type === 'models metadata import') {              
-              // TODO: Not sure what to link to. Capture Dataset or Model? Probably Model...
-              // details_page = '/admin/projects/dataset_elements/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id + '/' + aData.capture_dataset_repository_id;
-              let parent_repository_id = aData.capture_dataset_repository_id ? aData.capture_dataset_repository_id : aData.item_repository_id;
-              details_page = '/admin/projects/model/manage/' + parent_repository_id + '/' + aData.model_repository_id;
+            if(job_type === 'models metadata import') {         
+              // let parent_repository_id = aData.capture_dataset_repository_id ? aData.capture_dataset_repository_id : aData.item_repository_id;
+              details_page = '/admin/projects/datasets/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
             }
 
             window.location.href = details_page;

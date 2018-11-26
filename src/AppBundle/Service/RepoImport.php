@@ -14,6 +14,8 @@ use AppBundle\Controller\ItemsController;
 use AppBundle\Controller\DatasetsController;
 use AppBundle\Controller\ModelController;
 
+use Psr\Log\LoggerInterface;
+
 class RepoImport implements RepoImportInterface {
 
   /**
@@ -87,6 +89,11 @@ class RepoImport implements RepoImportInterface {
   private $model_extensions;
 
   /**
+   * @var object $texture_map_file_name_parts
+   */
+  private $texture_map_file_name_parts;
+
+  /**
    * @var object $default_image_file_name_map
    */
   private $default_image_file_name_map;
@@ -97,6 +104,11 @@ class RepoImport implements RepoImportInterface {
   private $default_model_file_name_map;
 
   /**
+   * @var object $logger
+   */
+  private $logger;
+
+  /**
    * Constructor
    * @param object  $kernel  Symfony's kernel object
    * @param string  $uploads_directory  Uploads directory path
@@ -104,7 +116,7 @@ class RepoImport implements RepoImportInterface {
    * @param string  $conn  The database connection
    * @param string  $uploads_directory  Uploads directory path
    */
-  public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn)
+  public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn, LoggerInterface $logger)
   {
     $this->u = new AppUtilities();
     $this->tokenStorage = $tokenStorage;
@@ -118,6 +130,10 @@ class RepoImport implements RepoImportInterface {
     $this->conn = $conn;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->repoValidate = new RepoValidateData($conn);
+
+    $this->logger = $logger;
+    // Usage:
+    // $this->logger->info('Import started. Job ID: ' . $job_id);
 
     // Image extensions.
     $this->image_extensions = array(
@@ -135,6 +151,13 @@ class RepoImport implements RepoImportInterface {
       'ply',
       'gltf',
       'glb',
+    );
+
+    // Texture map file name parts.
+    $this->texture_map_file_name_parts = array(
+      '-diffuse-',
+      '-normal-',
+      '-occlusion-',
     );
 
     // Default image file name mapping.
@@ -453,10 +476,10 @@ class RepoImport implements RepoImportInterface {
                 }
 
                 // Look-up the ID for the 'model_purpose'.
-                if ($field_name === 'model_purpose') {
-                  $model_purpose_lookup_options = array('master' => 1, 'delivery_web' => 2, 'delivery_print' => 3, 'intermediate_processing_step' => 4);
-                  $json_array[$key][$field_name] = (int)$model_purpose_lookup_options[$v];
-                }
+                // if ($field_name === 'model_purpose') {
+                //   $model_purpose_lookup_options = array('master' => 1, 'delivery_web' => 2, 'delivery_print' => 3, 'intermediate_processing_step' => 4);
+                //   $json_array[$key][$field_name] = (int)$model_purpose_lookup_options[$v];
+                // }
 
               }
 
@@ -685,6 +708,44 @@ class RepoImport implements RepoImportInterface {
           'user_id' => $data->user_id,
           'values' => (array)$csv_val
         ));
+
+        // Log the model file to the 'model_file' table.
+        if(!empty($csv_val->file_path)) {
+
+          $uploads_directory = str_replace('web', '', $this->uploads_directory);
+          $uploads_directory = substr($uploads_directory, 0, -1);
+
+          // Query the metadata storage for the file's ID using the file_path.
+          $file_info = $this->repo_storage_controller->execute('getRecords', array(
+            'base_table' => 'file_upload',
+            'fields' => array(
+              array(
+                'table_name' => 'file_upload',
+                'field_name' => 'file_upload_id',
+              ),
+            ),
+            'limit' => 1,
+            'search_params' => array(
+              0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($uploads_directory . $csv_val->file_path), 'comparison' => '='),
+            ),
+            'search_type' => 'AND',
+            'omit_active_field' => true,
+            )
+          );
+
+          // Log the model file to 'model_file' metadata storage.
+          if (!empty($file_info)) {
+            $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'model_file',
+              'user_id' => $data->user_id,
+              'values' => array(
+                'model_repository_id' => $this_id,
+                'file_upload_id' => $file_info[0]['file_upload_id'],
+              )
+            ));
+          }
+
+        }
 
         // Insert capture data elements and capture data files into the metadata storage.
         if (($data->type === 'capture_dataset') && isset($csv_val->capture_data_elements) && !empty($csv_val->capture_data_elements)) {
@@ -1031,6 +1092,7 @@ class RepoImport implements RepoImportInterface {
           break;
         case 'capture_dataset':
 
+          $process = true;
           $i = 0;
           foreach ($image_file_names as $dir_name => $files) {
 
@@ -1044,61 +1106,73 @@ class RepoImport implements RepoImportInterface {
                 // Get the file's info from the metadata storage.
                 $file_info = $this->get_file_info($data->uuid, $file);
 
-                // Get the file name map, if one exists in this directory.
-                $file_name_map = array();
-                // if (!empty($file_info)) $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
-                if (!empty($file_info)) {
-                  $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
-                  // If no file name map exists, use the main one in the root of the 'data' directory.
-                  $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
-                }
-
-                // $this->u->dumper($file_name_map,0);
-
-                // Establish the file name map keys so we know which slot in the file name to obtain the data from.
-                // Default position_in_cluster_field_id key.
-                $key1 = array_search('position_in_cluster_field_id', $this->default_image_file_name_map);
-                // Default cluster_position_field_id key.
-                $key2 = array_search('cluster_position_field_id', $this->default_image_file_name_map);
-                // If the $file_name_map exists, then set the key using that.
-                if (!empty($file_name_map)) {
-                  // User-supplied position_in_cluster_field_id key.
-                  $key1 = array_search('position_in_cluster_field_id', $file_name_map)
-                      ? array_search('position_in_cluster_field_id', $file_name_map)
-                      : null;
-                  // User-supplied cluster_position_field_id key.
-                  $key2 = array_search('cluster_position_field_id', $file_name_map)
-                      ? array_search('cluster_position_field_id', $file_name_map)
-                      : null;
-                }
-
-                // $this->u->dumper($file_name_map,0);
-                // $this->u->dumper($key1,0);
-                // $this->u->dumper($key2);
-
-                // Transform the file name to an array.
-                $file_name_parts = explode('-', $file);
-
-                // Build-out the $capture_data_files array.
-                if (!empty($file_info)) {
-                  $capture_data_files = array();
-                  foreach ($file_info as $file_info_key => $file_info_value) {
-                    // File info for the capture_data_file columns
-                    $capture_data_files[] = array(
-                      'file_upload_id' => $file_info_value['file_upload_id'],
-                      'capture_data_file_name' => $file_info_value['file_name'],
-                      'capture_data_file_type' => $file_info_value['file_type'],
-                      'is_compressed_multiple_files' => 0,
-                    );
+                // Don't process model texture maps.
+                foreach ($this->texture_map_file_name_parts as $tkey => $tvalue) {
+                  if (!strstr($file_info[0]['file_name'], $tvalue)) {
+                    $process = false;
                   }
                 }
 
-                // Build-out the $capture_data_elements array, adding in this capture data element's $capture_data_files array.
-                $data->csv[$i]->capture_data_elements[] = array(
-                  'position_in_cluster_field_id' => (!empty($key1) && stristr($file_name_parts[ $key1 ], 'p')) ? (int)str_replace('p', '', $file_name_parts[ $key1 ]) : null,
-                  'cluster_position_field_id' => (!empty($key2) && isset($file_name_parts[ $key2 ])) ? (int)$file_name_parts[ $key2 ] : null,
-                  'capture_data_files' => $capture_data_files,
-                );
+                // Process anything except model texture maps.
+                if ($process) {
+
+                  // Get the file name map, if one exists in this directory.
+                  $file_name_map = array();
+                  // if (!empty($file_info)) $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                  if (!empty($file_info)) {
+                    $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                    // If no file name map exists, use the main one in the root of the 'data' directory.
+                    $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
+                  }
+
+                  // $this->u->dumper($file_name_map,0);
+
+                  // Establish the file name map keys so we know which slot in the file name to obtain the data from.
+                  // Default position_in_cluster_field_id key.
+                  $key1 = array_search('position_in_cluster_field_id', $this->default_image_file_name_map);
+                  // Default cluster_position_field_id key.
+                  $key2 = array_search('cluster_position_field_id', $this->default_image_file_name_map);
+                  // If the $file_name_map exists, then set the key using that.
+                  if (!empty($file_name_map)) {
+                    // User-supplied position_in_cluster_field_id key.
+                    $key1 = array_search('position_in_cluster_field_id', $file_name_map)
+                        ? array_search('position_in_cluster_field_id', $file_name_map)
+                        : null;
+                    // User-supplied cluster_position_field_id key.
+                    $key2 = array_search('cluster_position_field_id', $file_name_map)
+                        ? array_search('cluster_position_field_id', $file_name_map)
+                        : null;
+                  }
+
+                  // $this->u->dumper($file_name_map,0);
+                  // $this->u->dumper($key1,0);
+                  // $this->u->dumper($key2);
+
+                  // Transform the file name to an array.
+                  $file_name_parts = explode('-', $file);
+
+                  // Build-out the $capture_data_files array.
+                  if (!empty($file_info)) {
+                    $capture_data_files = array();
+                    foreach ($file_info as $file_info_key => $file_info_value) {
+                      // File info for the capture_data_file columns
+                      $capture_data_files[] = array(
+                        'file_upload_id' => $file_info_value['file_upload_id'],
+                        'capture_data_file_name' => $file_info_value['file_name'],
+                        'capture_data_file_type' => $file_info_value['file_type'],
+                        'is_compressed_multiple_files' => 0,
+                      );
+                    }
+                  }
+
+                  // Build-out the $capture_data_elements array, adding in this capture data element's $capture_data_files array.
+                  $data->csv[$i]->capture_data_elements[] = array(
+                    'position_in_cluster_field_id' => (!empty($key1) && stristr($file_name_parts[ $key1 ], 'p')) ? (int)str_replace('p', '', $file_name_parts[ $key1 ]) : null,
+                    'cluster_position_field_id' => (!empty($key2) && isset($file_name_parts[ $key2 ])) ? (int)$file_name_parts[ $key2 ] : null,
+                    'capture_data_files' => $capture_data_files,
+                  );
+
+                }
 
               }
             }
@@ -1209,7 +1283,9 @@ class RepoImport implements RepoImportInterface {
               // Transform the file name to an array.
               $file_name_parts = explode('-', $file);
               // Remove '_model' from the model_purpose chunk from the file name ('master_model' becomes 'model').
-              $data->csv[$key]->model_purpose = str_replace('_model', '', $file_name_parts[$key1]);
+              if (isset($file_name_parts[$key1])) {
+                $data->csv[$key]->model_purpose = str_replace('_model', '', $file_name_parts[$key1]);
+              }
             }
           }
           break;

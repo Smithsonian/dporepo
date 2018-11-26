@@ -190,7 +190,8 @@ class RepoValidateData implements RepoValidate {
           // if(!strstr($error['property'], $blacklisted_fields)) {
             $row = preg_replace("/[^0-9]+/", '', $error['property']);
             $property_parts = explode('.', $error['property']);
-            $return['messages'][] = array('row' => 'Row ' . ($row+1) . ' - ' . $property_parts[1], 'error' => $error['message']);
+            $property = isset($property_parts[1]) ? $property_parts[1] : $property_parts[0];
+            $return['messages'][] = array('row' => 'Row ' . ($row+1) . ' - ' . $property, 'error' => $error['message']);
           // }
         }
 
