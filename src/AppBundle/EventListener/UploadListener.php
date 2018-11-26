@@ -78,7 +78,7 @@ class UploadListener
       $file_data = $this->move_files($file, $data);
 
       // Windows fix for the file path.
-      $file_data->full_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $file_data->full_path) : $file_data->full_path;
+      $full_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $file_data->full_path) : $file_data->full_path;
 
       // Log the file to the 'file_uploads' table.
       if(!$file_data->prevalidate) {
@@ -90,8 +90,8 @@ class UploadListener
             'parent_record_id' => $file_data->parent_record_id,
             'parent_record_type' => $file_data->parent_record_type,
             'file_name' => $file->getBasename(),
-            'file_path' => DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'repository' . DIRECTORY_SEPARATOR . $file_data->target_directory . DIRECTORY_SEPARATOR . $file_data->full_path,
-            'file_size' => filesize($file_data->job_id_directory . '/' . $file_data->full_path),
+            'file_path' => DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'repository' . DIRECTORY_SEPARATOR . $file_data->target_directory . DIRECTORY_SEPARATOR . $full_path,
+            'file_size' => filesize($file_data->job_id_directory . '/' . $full_path),
             'file_type' => $file->getExtension(), // $file->getMimeType()
             'file_hash' => '',
           )
