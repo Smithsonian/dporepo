@@ -9,24 +9,177 @@
       </div>
     </div>
   </div>
-
-  {{ form_start(form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
-
+  {#{ form_start(form) }#} {# , {'attr': {'novalidate': 'novalidate'}} #}
+  <div id="batch_form">
     <div class="row">
-      <div class="col-sm-6 col-md-6">
-        {{ form_row(form.batch_processing_workflow) }}
+      <div class="col-sm-4 col-md-4">
+        <div>
+          <input type="hidden" name="modelID" id="modelID" value="{{modelID}}">
+          <label>Choose Workflow</label>
+          {% for wk in workflows %}
+            <div><label><input type="radio" name="workflow" class="workflow" value="{{wk.id}},{{wk.name}}"> {{wk.name}}</label></div>
+          {% endfor %}
+          <input type="hidden" name="workflow_description">
+        </div>
+      </div>
+      <div class="col-sm-8 col-md-8">
+        <div id="workflow_info"></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-sm-4 col-md-4">
         {{ form_row(form.batch_processing_assets) }}
+      </div>
+      <div class="col-sm-8 col-md-8">
+        <label>Point of Contanct:</label>
+        {% for contact in contacts %}
+          <div><label><input type="radio" name="contact" class="contact" value="{{contact.id}},{{contact.username}}"> {{contact.username}}</label></div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-sm-4 col-md-4">
+        <label>Parameters</label>
+        <div id="default-parameter-message">No workflow selected...</div>
+        <div id="parameters-container"></div>
+        <br>
       </div>
     </div>
     <div class="row">
       <div class="col-sm-6 col-md-6">
         <div class="field-group" style="clear:both;">
-          {{ form_row(form.save) }}
+          {#{ form_row(form.save) }#}
+          <button class="btn btn-default" id="btn_saveandreview">Save and Review</button>
+          <br>
+          <div id="message"></div>
         </div>
       </div>
     </div>
-    
+  {#{ form_end(form) }#}
+  </div>
 
-  {{ form_end(form) }}
+  <div id="saveandreview" style="display:none;">
+    <div class="row">
+      <div class="col-sm-4 col-md-4">
+        <div>
+          <label>Workflow:</label><span id='recipename_description'></span><br>
+          <label>Assets:</label>
+          <div id="assets"></div>
+          <label>Point of contact: </label> <span id='pointofcontact'></span>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn btn-default" id="btn-edit">Edit Processing Job</button>
+      <button class="btn btn-default" id="btn-launch">Launch Processing</button>
+    </div>
+  </div>
+{% endblock %}
+{% block javascripts %}
+    {{ parent() }}
+    <script type="text/javascript">
+      $(document).ready(function(){
+        $(".workflow").removeAttr("checked");
+        $("input[name='batch_processing_form[batch_processing_assets][]']").prop('checked', true);
+        getRecipeDetail();
+        saveandreview();
+        editprocessing();
+      });
+      function getRecipeDetail(){
+        $("input[name='workflow']").on('change',function(){
+          var workflow = $(this).val();
+          workflow = workflow.split(",");
+          recipeID = workflow[0];
+          var url = '/admin/batch/detail';
+          $.post(url,{recipeID : recipeID},function(response){
+            
+            $("#default-parameter-message").hide();
+            $("#parameters-container").html("");
+            $("#workflow_info").html("");
+            $("#workflow_info").append("<label>"+response.name+"</label>");
+            $("#workflow_info").append("<p>"+response.description+"</p>");
+            $("input[name='workflow_description']").val(response.description);
+            for (var i = 0; i < response.parameterSchema.required.length; i++) {
+              var filename = '';
+              if ((response.parameterSchema.required[i].toLowerCase()).indexOf('meshfile') !== -1) {
+                var files = $("input[name='batch_processing_form[batch_processing_assets][]']").val();
+                file = files.split(",");
+                filename = file[1];
+              }
+              $("#parameters-container").append("<div id='"+response.parameterSchema.required[i]+"_wkflow'><label>"+response.parameterSchema.required[i]+"</label><br /></div>");
+              if (i == 0) {
+                $("#"+response.parameterSchema.required[i]+"_wkflow").append("<input type='hidden' class='form-control' name='required_params' id='required_params' value='"+response.parameterSchema.required+"' />");
+              }
+              $("#"+response.parameterSchema.required[i]+"_wkflow").append("<input type='text' class='form-control' name='"+response.parameterSchema.required[i]+"' value='"+filename+"' />");
+            }
+          },'json');
+        });
+      }
+      function saveandreview(){
+        
+        $("#saveandreview").hide();
+        $("#btn_saveandreview").on("click",function(){
+          $("#message").html("");
+          validate = validateForm();
+            if (validate) {
+              $(".page-header").html("Batch Processing<span>: Review</span>");
+              $("#batch_form").hide();
+              $("#saveandreview").show();
+              var files = $("input[name='batch_processing_form[batch_processing_assets][]']").val();
+              file = files.split(",");
+              assets = file[1];
+              var workflow = $("input[name='workflow']").val();
+              workflow = workflow.split(",");
+              workflowname = workflow[1];
+              var contact = $("input[name='contact']").val();
+              contact = contact.split(",");
+              contact = contact[1];
+              var params = $("input[name='recipes[]']").val();
+              var workflowdescription = $("input[name='workflow_description']").val();
 
+              $("#recipename_description").html(" "+workflowname+" ("+workflowdescription+")");
+              $("#assets").html(assets);
+              $("#pointofcontact").html(" "+contact);
+              $('#btn-launch').attr('onclick','launch()');
+            }else{
+              $("#message").html("<div class='alert alert-warning'>Please complete form</div>");
+            }
+          });
+      }
+      function editprocessing(){
+        $("#btn-edit").on("click",function(){
+          $("#batch_form").show();
+          $("#saveandreview").hide();
+          $(".page-header span").remove();
+        });
+      }
+      function validateForm() {
+          var formValid = false;
+          var workflow = $("input[name='workflow']:checked").val();
+          var contact = $("input[name='contact']:checked").val();
+         if(!formValid && workflow != undefined && contact != undefined) {
+               formValid = true;    
+          }
+          return formValid;
+      }
+      function launch(){
+        var url = "/admin/batch/launch";
+        var modelID = $("#modelID").val();
+        var files = $("input[name='batch_processing_form[batch_processing_assets][]']").val();
+        file = files.split(",");
+        assets = file[0];
+        var workflow = $("input[name='workflow']").val();
+        var required_params = $("#required_params").val();
+        var required = $("input[name='required_params']").val();
+        required = required.split(",");
+        var params = [];
+        for (var i = 0; i < required.length; i++) {
+          params[required[i]] = $("input[name='"+required[i]+"']").val();
+        }
+        var parameters = {workflow:workflow,assets:assets,modelID:modelID,params:params};
+        $.post(url,parameters,function(response){
+
+        });
+      }
+    </script>
 {% endblock %}
