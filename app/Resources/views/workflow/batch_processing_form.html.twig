@@ -73,6 +73,7 @@
       <button class="btn btn-default" id="btn-edit">Edit Processing Job</button>
       <button class="btn btn-default" id="btn-launch">Launch Processing</button>
     </div>
+    <div id="message_launch"></div>
   </div>
 {% endblock %}
 {% block javascripts %}
@@ -165,10 +166,8 @@
       function launch(){
         var url = "/admin/batch/launch";
         var modelID = $("#modelID").val();
-        var files = $("input[name='batch_processing_form[batch_processing_assets][]']").val();
-        file = files.split(",");
-        assets = file[0];
-        var workflow = $("input[name='workflow']").val();
+        var files = $("input[name='batch_processing_form[batch_processing_assets][]']:checked").val();
+        var workflow = $("input[name='workflow']:checked").val();
         var required_params = $("#required_params").val();
         var required = $("input[name='required_params']").val();
         required = required.split(",");
@@ -176,9 +175,11 @@
         for (var i = 0; i < required.length; i++) {
           params[required[i]] = $("input[name='"+required[i]+"']").val();
         }
-        var parameters = {workflow:workflow,assets:assets,modelID:modelID,params:params};
+        var parameters = {workflow:workflow,assets:files,modelID:modelID,params:params};
         $.post(url,parameters,function(response){
-
+          if (response[0]['errors'][0]) {
+            $("#message_launch").html("<div class='alert alert-danger'>"+response[0]['errors'][0]+"</div>");
+          }
         });
       }
     </script>
