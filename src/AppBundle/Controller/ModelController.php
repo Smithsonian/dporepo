@@ -249,7 +249,9 @@ class ModelController extends Controller
           $model = $this->repo_storage_controller->execute('getModelDetail', array(
             'model_repository_id' => $id));
         }
-        
+        if (count($model) == 0) {
+          return $this->redirect('/admin/workspace/');
+        }
          return $this->render('datasets/model_detail.html.twig', array(
              'page_title' => "Model Detail",
              'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),"modeldetail"=>$model,
