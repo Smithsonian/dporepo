@@ -17,6 +17,7 @@ class BatchProcessingForm extends AbstractType
 
         $data = (array)$options['data'];
         $builder
+            /*
             ->add('batch_processing_workflow', ChoiceType::class, array(
                 'label' => 'Choose Workflow',
                 'placeholder'=>'Choose Workflow',
@@ -27,6 +28,7 @@ class BatchProcessingForm extends AbstractType
                 'data' => $data['batch_processing_workflow_guid_picker'],
                 'attr' => array('class' => 'stakeholder-chosen-select'),
               ))
+            */
             ->add('batch_processing_assets', ChoiceType::class, array(
                 'label' => 'Choose Assets for Batch Processing',
                 'placeholder'=>'Choose Assets for Batch Processing',
@@ -40,7 +42,7 @@ class BatchProcessingForm extends AbstractType
                 'attr' => array('class' => 'stakeholder-chosen-select'),
               ))
             ->add('save', SubmitType::class, array(
-                'label' => 'Process Selected Assets',
+                'label' => 'Save and Review',
                 'attr' => array('class' => 'btn btn-primary'),
               ))
         ;
