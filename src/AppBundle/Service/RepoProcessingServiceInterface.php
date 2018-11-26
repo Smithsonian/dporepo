@@ -160,11 +160,4 @@ interface RepoProcessingServiceInterface {
    */
   public function get_processing_results(string $job_id, string $user_id, string $path, $filesystem);
 
-  /**
-   * Create GUID
-   *
-   * @return string
-   */
-  public function create_guid();
-
 }
