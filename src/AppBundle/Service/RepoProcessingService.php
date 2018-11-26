@@ -76,6 +76,27 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   }
 
   /**
+   * Get recipe details
+   *
+   * @param string $id
+   * @return array
+   */
+  public function get_recipe_details($id = null) {
+
+    $data = array();
+
+    // /recipes/{id}
+    $params = array(
+      'recipes',
+      $id,
+    );
+
+    $data = $this->query_api($params, 'GET');
+
+    return $data;
+  }
+
+  /**
    * Get recipe by name
    *
    * @param string $recipe_name
