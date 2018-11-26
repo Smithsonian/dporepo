@@ -451,6 +451,15 @@ class RepoStorageHybrid implements RepoStorage {
     $files = $statement->fetchAll();
     return $files;
   }
+  public function getFileDetail($params){
+    if (!isset($params['file_upload_id'])) {
+      return false;
+    }
+    $statement = $this->connection->prepare("SELECT file_upload_id,file_name,file_path,file_type FROM file_upload WHERE file_upload_id=".$params['file_upload_id']);
+    $statement->execute();
+    $files = $statement->fetchAll();
+    return $files;
+  }
   public function getCaptureDataset($params) {
     //$params will be something like array('capture_dataset_repository_id' => '123');
     $return_data = array();
