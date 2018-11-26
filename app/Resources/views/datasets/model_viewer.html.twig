@@ -26,7 +26,7 @@
 {% block content %}
     <div id="main">
     </div>
-    <input id="magic_url" type="hidden" value="{{ data.model_url }}" />
+    <input id="magic_url" type="hidden" value="/admin/get_file?path={{ data.model_url }}" />
 {% endblock %}
 
 {% block javascripts %}

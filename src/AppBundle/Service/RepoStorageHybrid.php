@@ -459,6 +459,7 @@ class RepoStorageHybrid implements RepoStorage {
           ,capture_dataset.capture_dataset_description
           ,capture_dataset.collection_notes
           ,capture_dataset.support_equipment
+          ,capture_dataset.parent_item_repository_id
           ,capture_dataset.item_position_type
           ,capture_dataset.item_position_field_id
           ,capture_dataset.item_arrangement_field_id
@@ -1666,6 +1667,12 @@ class RepoStorageHybrid implements RepoStorage {
         break;
 
       case 'model':
+
+        // If we're showing all models pertaining to an Item,
+        // we need to show models that relate to the Item's Capture Datasets as well.
+        if($parent_id_field == 'parent_item_repository_id') {
+          return $this->getDatatableItemModels($params);
+        }
 
         /*
         $query_params['related_tables'][] = array(
@@ -3289,6 +3296,113 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     $data = $this->getRecordsDatatable($query_params);
+
+    return $data;
+
+  }
+
+  public function getDatatableItemModels($params) {
+
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+
+    $parent_id_field = array_key_exists('parent_id_field', $params) ? $params['parent_id_field'] : NULL;
+    $parent_id = array_key_exists('parent_id', $params) ? $params['parent_id'] : NULL;
+
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+
+    if($parent_id_field != 'parent_item_repository_id') {
+      return array();
+    }
+
+    $sql = " DISTINCT tmp.* FROM 
+    
+            (SELECT model_repository_id, model_repository_id as manage, parent_capture_dataset_repository_id,
+            parent_model_id, parent_item_repository_id, model_guid, date_of_creation, model_file_type,
+            derived_from, creation_method, model_modality, units, is_watertight, model_purpose, point_count,
+            has_normals, face_count, vertices_count, has_vertex_color, has_uv_space, model_maps, active,
+            date_created, created_by_user_account_id, last_modified, last_modified_user_account_id,
+            model_repository_id as DT_RowId
+            
+            FROM model
+            
+            WHERE parent_item_repository_id=:parent_item_repository_id
+
+            UNION 
+            
+            SELECT model_repository_id, model_repository_id as manage, parent_capture_dataset_repository_id,
+            parent_model_id, model.parent_item_repository_id, model_guid, date_of_creation, model_file_type,
+            derived_from, creation_method, model_modality, units, is_watertight, model_purpose, point_count,
+            has_normals, face_count, vertices_count, has_vertex_color, has_uv_space, model_maps, model.active,
+            model.date_created, model.created_by_user_account_id, model.last_modified, model.last_modified_user_account_id,
+            model_repository_id as DT_RowId
+            
+            FROM model
+            LEFT JOIN capture_dataset on parent_capture_dataset_repository_id = capture_dataset_repository_id
+            
+            WHERE 
+            capture_dataset.parent_item_repository_id=:parent_item_repository_id
+            and capture_dataset.active=1
+             
+            )
+            AS tmp 
+            WHERE active=1 ";
+    if(strlen(trim($search_value)) > 0) {
+      $sql .= " AND (
+        model_guid LIKE :search_value OR
+        parent_model_id LIKE :search_value OR
+        date_of_creation LIKE :search_value OR
+        model_file_type LIKE :search_value OR
+        derived_from LIKE :search_value OR
+        creation_method LIKE :search_value OR
+        model_modality LIKE :search_value OR
+        units LIKE :search_value OR
+        is_watertight LIKE :search_value OR
+        model_purpose LIKE :search_value OR
+        point_count LIKE :search_value OR
+        has_normals LIKE :search_value OR
+        face_count LIKE :search_value OR
+        vertices_count LIKE :search_value OR
+        has_vertex_color LIKE :search_value OR
+        has_uv_space LIKE :search_value OR
+        model_maps LIKE :search_value
+      )";
+    }
+
+    if($sort_field) {
+      $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+    }
+    else {
+      $sql .= " ORDER BY model_repository_id ";
+    }
+
+    if(NULL !== $stop_record) {
+      $sql .= " LIMIT {$start_record}, {$stop_record} ";
+    }
+    else {
+      $sql .= " LIMIT {$start_record} ";
+    }
+
+    $sql = "SELECT SQL_CALC_FOUND_ROWS " . $sql;
+
+    $statement = $this->connection->prepare($sql);
+
+    $statement->bindValue(":parent_item_repository_id", $parent_id, PDO::PARAM_INT);
+    if(strlen(trim($search_value)) > 0) {
+      $statement->bindValue(":search_value", $search_value, PDO::PARAM_STR);
+    }
+
+    $statement->execute();
+
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
+    $statement->execute();
+    $count = $statement->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+    $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
 
     return $data;
 
