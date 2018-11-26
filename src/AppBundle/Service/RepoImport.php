@@ -713,7 +713,11 @@ class RepoImport implements RepoImportInterface {
         if(!empty($csv_val->file_path)) {
 
           $uploads_directory = str_replace('web', '', $this->uploads_directory);
+          // Windows fix for the model's file path.
+          $uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_directory) : $uploads_directory;
           $uploads_directory = substr($uploads_directory, 0, -1);
+          // Windows fix for the model's file path.
+          $file_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $csv_val->file_path) : $csv_val->file_path;
 
           // Query the metadata storage for the file's ID using the file_path.
           $file_info = $this->repo_storage_controller->execute('getRecords', array(
@@ -726,7 +730,7 @@ class RepoImport implements RepoImportInterface {
             ),
             'limit' => 1,
             'search_params' => array(
-              0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($uploads_directory . $csv_val->file_path), 'comparison' => '='),
+              0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($uploads_directory . $file_path), 'comparison' => '='),
             ),
             'search_type' => 'AND',
             'omit_active_field' => true,

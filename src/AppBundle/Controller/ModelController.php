@@ -62,7 +62,7 @@ class ModelController extends Controller
         $this->kernel = $kernel;
         $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
         $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
-        $this->external_file_storage_path = $external_file_storage_path;
+        $this->external_file_storage_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $external_file_storage_path) : $external_file_storage_path;;
     }
 
     /**
@@ -325,14 +325,13 @@ class ModelController extends Controller
       //@todo in the future perhaps this should be an array of all files
       // Replace local path with Drastic path. Twig template will serve the file using admin/get_file?path=blah
       $uploads_path = str_replace('web', '', $this->uploads_directory);
+      // Windows fix for the file path.
+      $uploads_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_path) : $uploads_path;
+      // Final model URL.
       $model_url = str_replace($uploads_path, $this->external_file_storage_path, $data['viewable_model']['file_path']);
     }
               
-    //$model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
-    // $this->u->dumper($model_url);
     $data['model_url'] = $model_url;
-
-    //$this->u->dumper($data);
 
     return $this->render('datasets/model_viewer.html.twig', array(
       'page_title' => 'Model Viewer',

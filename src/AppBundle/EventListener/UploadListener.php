@@ -77,6 +77,9 @@ class UploadListener
       // Move the files.
       $file_data = $this->move_files($file, $data);
 
+      // Windows fix for the file path.
+      $file_data->full_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $file_data->full_path) : $file_data->full_path;
+
       // Log the file to the 'file_uploads' table.
       if(!$file_data->prevalidate) {
         $this->repo_storage_controller->execute('saveRecord', array(
