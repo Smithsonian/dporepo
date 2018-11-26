@@ -1,4 +1,4 @@
-{% use 'default_bootstrap_side_nav.html.twig' %}
+{#% use 'default_bootstrap_side_nav.html.twig' %#} 
 {% extends 'base.html.twig' %}
 
 {% set checked = '' %}
@@ -56,10 +56,11 @@
 
         {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and is_granted('ROLE_ADMIN') %}
           {% block side_nav %}
-            {{ parent() }}
+            {#{ parent() }#}
           {% endblock %}
           {% if (app.request.pathInfo == '/admin/workspace/') or (project_repository_id is defined) %}
-            <div class="col-sm-9 col-sm-offset-3 col-md-9 col-md-offset-3 main resizable">
+            <!-- <div class="col-sm-9 col-sm-offset-3 col-md-9 col-md-offset-3 main resizable"> -->
+            <div class="col-sm-12 col-md-12 main resizable"> 
           {% else %}
             <div class="col-sm-12 main">
           {% endif %}
@@ -139,6 +140,6 @@
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
     <script src="{{ asset('lib/javascripts/ie10-viewport-bug-workaround.js') }}"></script>
     <script src="{{ asset('lib/javascripts/javascript.js') }}"></script>
-    <script src="{{ asset('lib/javascripts/vakata-jstree/dist/jstree.min.js') }}"></script>
-    <script src="{{ asset('lib/javascripts/treeJavascript.js') }}"></script>
+    <!-- <script src="{{ asset('lib/javascripts/vakata-jstree/dist/jstree.min.js') }}"></script> -->
+    <!-- <script src="{{ asset('lib/javascripts/treeJavascript.js') }}"></script> -->
 {% endblock %}
