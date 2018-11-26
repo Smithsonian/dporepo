@@ -82,15 +82,22 @@
                 <div><label>Model Maps:</label> {{modeldetail.model_maps}}</div>
               {% endif %}
             </div>
-            {% if modeldetail.file_path != null %}
-              <div class="col-sm-12 col-md-12">
-                  <a class="btn btn-primary" href="/admin/projects/model/{{modeldetail.model_repository_id}}/viewer" target="_blank">Preview 3D Model in Viewer</a>
-              </div>
-            {% endif %}
+            
         </div>
     </div>
-
-<div class="col-sm-12 col-md-12 child-data">
+    <div class="row">
+      <div class="col-md-12">
+          <div class="col-sm-12 col-md-12">
+            {% if modeldetail.file_path != null %}
+              <a class="btn btn-default" href="/admin/projects/model/{{modeldetail.model_repository_id}}/viewer" target="_blank">Preview 3D Model in Viewer</a>
+            {% endif %}
+            {% if modeldetail.capture_dataset|length > 0 %}
+              <a href='/admin/batch/{{modeldetail.model_repository_id}}' class="btn btn-default" role="button">Select Workflow</a>
+            {% endif %}
+          </div>
+      </div>
+    </div>
+  <div class="col-sm-12 col-md-12 child-data">
     <div class="panel panel-default">
         <div class="panel-body">
             <h2>Derivative Models</h2>
@@ -158,7 +165,6 @@
               </table>
           </div>
       </div>
-
     </div>
 {% endblock %}
 
