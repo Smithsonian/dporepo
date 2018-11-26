@@ -318,7 +318,7 @@ class ModelController extends Controller
 
       //@todo in the future perhaps this should be an array of all files
       // Replace local path with Drastic path. Twig template will serve the file using admin/get_file?path=blah
-      $model_url = str_replace($this->uploads_directory, $this->external_file_storage_path, $data['viewable_model']['file_path']);
+      $model_url = str_replace($this->uploads_directory, '', $data['viewable_model']['file_path']);
       //$model_url = 'file:/' . trim($this->uploads_directory) . $data['viewable_model']['file_name'];
               }
               
