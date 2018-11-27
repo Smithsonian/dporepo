@@ -2694,107 +2694,6 @@ class RepoStorageHybrid implements RepoStorage {
    * @param $params
    * @return mixed
    */
-  public function getDatatableCaptureDataFile($params) {
-
-    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
-    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
-    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
-    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
-    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
-    $parent_id = array_key_exists('parent_id', $params) ? $params['parent_id'] : NULL;
-
-    $query_params = array(
-      'fields' => array(),
-      'distinct' => true,
-      'base_table' => 'capture_data_file',
-      'search_params' => array(
-        0 => array('field_names' => array('capture_data_file.active'), 'search_values' => array(1), 'comparison' => '='),
-      ),
-      'search_type' => 'AND',
-    );
-
-    if ($search_value) {
-      $query_params['search_params'][] = array(
-        'field_names' => array(
-          'capture_data_file.capture_data_file_name',
-          'capture_data_file.capture_data_file_type',
-          'capture_data_file.is_compressed_multiple_files'
-        ),
-        'search_values' => array($search_value),
-        'comparison' => 'LIKE',
-      );
-    }
-    if ($parent_id) {
-      $query_params['search_params'][] = array(
-        'field_names' => array(
-          'parent_capture_data_element_repository_id'
-        ),
-        'search_values' => array($parent_id),
-        'comparison' => '=',
-      );
-    }
-
-    // Fields.
-    $query_params['fields'][] = array(
-      'table_name' => 'capture_data_file',
-      'field_name' => 'capture_data_file_repository_id',
-      'field_alias' => 'manage',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'capture_data_file',
-      'field_name' => 'capture_data_file_repository_id',
-      'field_alias' => 'DT_RowId',
-    );
-    $query_params['fields'][] = array(
-      'field_name' => 'capture_data_file_name',
-    );
-    $query_params['fields'][] = array(
-      'field_name' => 'capture_data_file_type',
-    );
-    $query_params['fields'][] = array(
-      'field_name' => 'is_compressed_multiple_files',
-    );
-    $query_params['fields'][] = array(
-      'field_name' => 'active',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'capture_data_file',
-      'field_name' => 'last_modified',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'capture_data_file',
-      'field_name' => 'last_modified_user_account_id',
-    );
-
-    $query_params['records_values'] = array();
-
-    $query_params['limit'] = array(
-      'limit_start' => $start_record,
-      'limit_stop' => $stop_record,
-    );
-
-    if (!empty($sort_field) && !empty($sort_order)) {
-      $query_params['sort_fields'][] = array(
-        'field_name' => $sort_field,
-        'sort_order' => $sort_order,
-      );
-    } else {
-      $query_params['sort_fields'][] = array(
-        'field_name' => 'capture_data_file.last_modified',
-        'sort_order' => 'DESC',
-      );
-    }
-
-    $data = $this->getRecordsDatatable($query_params);
-
-    return $data;
-
-  }
-
-  /**
-   * @param $params
-   * @return mixed
-   */
   public function getDatatableCaptureDataset($params) {
 
     $item_repository_id = array_key_exists('item_repository_id', $params) ? $params['item_repository_id'] : NULL;
@@ -3066,117 +2965,170 @@ class RepoStorageHybrid implements RepoStorage {
 
   public function getDatatableCaptureDataElement($params) {
 
-      $record_type = 'capture_data_element';
       $capture_dataset_repository_id = array_key_exists('capture_dataset_repository_id', $params) ? $params['capture_dataset_repository_id'] : NULL;
       $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
       $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
-      $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+      $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : 0;
       $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
 
       $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
       //@todo- allow match on ID- specify ID field and value $record_match = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
 
-      $query_params = array(
-        'distinct' => true, // @todo Do we always want this to be true?
-        'base_table' => $record_type,
-        'fields' => array(),
-      );
+      $sql = "
+            capture_data_element.capture_data_element_repository_id
+            ,capture_data_element.capture_data_element_repository_id as manage
+            ,capture_data_element.capture_data_element_repository_id as DT_RowId
+            ,capture_data_element.capture_dataset_repository_id
+            ,capture_data_element.capture_device_configuration_id
+            ,capture_data_element.capture_device_field_id
+            ,capture_data_element.capture_sequence_number
+            ,capture_data_element.cluster_position_field_id
+            ,capture_data_element.position_in_cluster_field_id
+            ,capture_data_element.date_created
+            ,capture_data_element.created_by_user_account_id
+            ,capture_data_element.last_modified
+            ,capture_data_element.last_modified_user_account_id          
+            , ( SELECT GROUP_CONCAT(file_upload.metadata) from file_upload 
+                  WHERE file_upload.parent_record_id = capture_data_element.capture_data_element_repository_id
+                  AND file_upload.parent_record_type = 'capture_data_element'
+                  GROUP BY parent_record_type, parent_record_id
+              )
+                as metadata
+          FROM capture_data_element
+          WHERE capture_data_element.active = 1";
 
-      $query_params['limit'] = array(
-        'limit_start' => $start_record,
-        'limit_stop' => $stop_record,
-      );
+      if(strlen(trim($search_value)) > 0) {
+        $sql .= " AND (
+          capture_device_configuration_id LIKE :search_value OR
+          capture_device_field_id LIKE :search_value OR
+          capture_sequence_number LIKE :search_value OR
+          cluster_position_field_id LIKE :search_value OR
+          position_in_cluster_field_id LIKE :search_value OR
+        )";
 
-      if (!empty($sort_field) && !empty($sort_order)) {
-        $query_params['sort_fields'][] = array(
-          'field_name' => $sort_field,
-          'sort_order' => $sort_order,
-        );
-      } else {
-        $query_params['sort_fields'][] = array(
-          'field_name' => $record_type . '.last_modified',
-          'sort_order' => 'DESC',
-        );
       }
 
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => $record_type . '_repository_id',
-        'field_alias' => 'manage',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'capture_dataset_repository_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'capture_device_configuration_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'capture_device_field_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'capture_sequence_number',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'cluster_position_field_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'position_in_cluster_field_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'date_created',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'created_by_user_account_id',
-      );
+      if(NULL !== $capture_dataset_repository_id) {
+        $sql .= " AND capture_data_element.capture_dataset_repository_id = :capture_dataset_repository_id";
+      }
 
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'last_modified',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'last_modified_user_account_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => $record_type . '_repository_id',
-        'field_alias' => 'DT_RowId',
-      );
-      $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
-      $query_params['search_type'] = 'AND';
-      if (NULL !== $search_value) {
-        $query_params['search_params'][1] = array(
-          'field_names' => array(
-            $record_type . '.capture_device_configuration_id',
-            $record_type . '.capture_device_field_id',
-            $record_type . '.capture_sequence_number',
-            $record_type . '.cluster_position_field_id',
-            $record_type . '.position_in_cluster_field_id',
-          ),
-          'search_values' => array($search_value),
-          'comparison' => 'LIKE',
-        );
+      if($sort_field) {
+        $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+      }
+      else {
+        $sql .= " ORDER BY capture_data_element_repository_id ";
+      }
+
+      if(NULL !== $stop_record) {
+        $sql .= " LIMIT {$start_record}, {$stop_record} ";
+      }
+      else {
+        $sql .= " LIMIT {$start_record} ";
+      }
+
+      $sql = "SELECT SQL_CALC_FOUND_ROWS " . $sql;
+
+      $statement = $this->connection->prepare($sql);
+      if(strlen(trim($search_value)) > 0) {
+        $statement->bindValue(":search_value", $search_value, PDO::PARAM_STR);
       }
       if(NULL !== $capture_dataset_repository_id) {
-        $c = count($query_params['search_params']);
-        $query_params['search_params'][$c] = array(
-          'field_names' => array(
-            $record_type . '.capture_dataset_repository_id',
-          ),
-          'search_values' => array((int)$capture_dataset_repository_id),
-          'comparison' => '=',
-        );
+        $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, PDO::PARAM_INT);
       }
 
-      $data = $this->getRecordsDatatable($query_params);
+      $statement->execute();
+      $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
+      $statement->execute();
+      $count = $statement->fetch(PDO::FETCH_ASSOC);
+      $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+      $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
+
+      return $data;
+
+  }
+
+  /**
+   * @param $params
+   * @return mixed
+   */
+  public function getDatatableCaptureDataFile($params) {
+
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+    $parent_id = array_key_exists('parent_id', $params) ? $params['parent_id'] : NULL;
+
+    $sql = "
+          capture_data_file.capture_data_file_repository_id
+          ,capture_data_file.capture_data_file_repository_id as manage
+          ,capture_data_file.capture_data_file_repository_id as DT_RowId
+          ,capture_data_file.capture_data_file_name
+          ,capture_data_file.capture_data_file_type
+          ,capture_data_file.is_compressed_multiple_files
+          ,capture_data_file.date_created
+          ,capture_data_file.created_by_user_account_id
+          ,capture_data_file.last_modified
+          ,capture_data_file.last_modified_user_account_id          
+          , ( SELECT GROUP_CONCAT(file_upload.metadata) from file_upload 
+                WHERE file_upload.parent_record_id = capture_data_file.capture_data_file_repository_id
+                AND file_upload.parent_record_type = 'capture_data_file'
+                GROUP BY parent_record_type, parent_record_id
+            )
+              as metadata
+        FROM capture_data_file
+        WHERE capture_data_file.active = 1 ";
+
+    if(NULL !== $parent_id) {
+      $sql .= " AND capture_data_file.parent_capture_data_element_repository_id = :parent_capture_data_element_repository_id";
+    }
+
+    if(strlen(trim($search_value)) > 0) {
+      $sql .= " AND (
+        capture_data_file_name LIKE :search_value OR
+        capture_data_file_type LIKE :search_value OR
+        is_compressed_multiple_files LIKE :search_value OR
+      )";
+    }
+
+    if($sort_field) {
+      $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+    }
+    else {
+      $sql .= " ORDER BY capture_data_file_repository_id ";
+    }
+
+    if(NULL !== $stop_record) {
+      $sql .= " LIMIT {$start_record}, {$stop_record} ";
+    }
+    else {
+      $sql .= " LIMIT {$start_record} ";
+    }
+
+    $sql = "SELECT SQL_CALC_FOUND_ROWS " . $sql;
+
+    $statement = $this->connection->prepare($sql);
+
+    $statement = $this->connection->prepare($sql);
+    if(strlen(trim($search_value)) > 0) {
+      $statement->bindValue(":search_value", $search_value, PDO::PARAM_STR);
+    }
+    if(NULL !== $parent_id) {
+      $statement->bindValue(":parent_capture_data_element_repository_id", $parent_id, PDO::PARAM_INT);
+    }
+
+    $statement->execute();
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
+    $statement->execute();
+    $count = $statement->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+    $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
+
       return $data;
 
   }
