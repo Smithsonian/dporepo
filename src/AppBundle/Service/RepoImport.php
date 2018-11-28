@@ -1112,7 +1112,7 @@ class RepoImport implements RepoImportInterface {
 
                 // Don't process model texture maps.
                 foreach ($this->texture_map_file_name_parts as $tkey => $tvalue) {
-                  if (!strstr($file_info[0]['file_name'], $tvalue)) {
+                  if (strstr($file_info[0]['file_name'], $tvalue)) {
                     $process = false;
                   }
                 }
