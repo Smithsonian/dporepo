@@ -505,6 +505,45 @@ class RepoStorageHybrid implements RepoStorage {
     return $return_data;
   }
 
+  public function getCaptureDataElement($params) {
+    //$params will be something like array('capture_data_element_repository_id' => '123');
+    $return_data = array();
+//@TODO HERE
+    $capture_data_element_repository_id = array_key_exists('capture_data_element_repository_id', $params) ? $params['capture_data_element_repository_id'] : NULL;
+    $sql = "SELECT
+          capture_data_element.capture_data_element_repository_id
+          ,capture_data_element.capture_dataset_repository_id
+          ,capture_data_element.capture_device_configuration_id
+          ,capture_data_element.capture_device_field_id
+          ,capture_data_element.capture_sequence_number
+          ,capture_data_element.cluster_position_field_id
+          ,capture_data_element.position_in_cluster_field_id
+          ,capture_data_element.date_created
+          ,capture_data_element.created_by_user_account_id
+          ,capture_data_element.last_modified
+          ,capture_data_element.last_modified_user_account_id          
+          , ( SELECT GROUP_CONCAT(file_upload.metadata) from file_upload 
+                LEFT JOIN capture_data_file on file_upload.file_upload_id = capture_data_file.file_upload_id
+                WHERE capture_data_file.parent_capture_data_element_repository_id = capture_data_element.capture_data_element_repository_id                
+                GROUP BY capture_data_file.parent_capture_data_element_repository_id
+            )
+              as metadata
+        FROM capture_data_element
+        WHERE capture_data_element.active = 1
+        AND capture_data_element.capture_data_element_repository_id = :capture_data_element_repository_id";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":capture_data_element_repository_id", $capture_data_element_repository_id, PDO::PARAM_INT);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    if(array_key_exists(0, $ret)) {
+      $return_data = $ret[0];
+    }
+
+    return $return_data;
+  }
+
   public function getCaptureDevice($params) {
     //$params will be something like array('capture_device_repository_id' => '123');
     $return_data = array();
@@ -2990,12 +3029,13 @@ class RepoStorageHybrid implements RepoStorage {
             ,capture_data_element.last_modified_user_account_id          
             , ( SELECT GROUP_CONCAT(file_upload.metadata) from file_upload 
                   LEFT JOIN capture_data_file on file_upload.file_upload_id = capture_data_file.file_upload_id    
-                  WHERE capture_data_file.parent_capture_data_element_repository_id = capture_data_element.capture_data_element_repository_id              
-                  GROUP BY capture_data_file.capture_data_file_repository_id
+                  WHERE capture_data_file.parent_capture_data_element_repository_id = capture_data_element.capture_data_element_repository_id
+                  AND file_upload.metadata IS NOT NULL AND file_upload.metadata NOT LIKE ''              
+                  GROUP BY capture_data_file.parent_capture_data_element_repository_id
               )
                 as metadata
           FROM capture_data_element
-          WHERE capture_data_element.active = 1";
+          WHERE capture_data_element.active = 1 ";
 
       if(strlen(trim($search_value)) > 0) {
         $sql .= " AND (
@@ -3076,10 +3116,11 @@ class RepoStorageHybrid implements RepoStorage {
           , file_upload.metadata
         FROM capture_data_file
         LEFT JOIN file_upload ON capture_data_file.file_upload_id = file_upload.file_upload_id
-        WHERE capture_data_file.active = 1 ";
+        WHERE capture_data_file.active = 1 
+        AND file_upload.metadata IS NOT NULL AND file_upload.metadata NOT LIKE '' ";
 
     if(NULL !== $parent_id) {
-      $sql .= " AND capture_data_file.parent_capture_data_element_repository_id = :parent_capture_data_element_repository_id";
+      $sql .= " AND capture_data_file.parent_capture_data_element_repository_id = :parent_capture_data_element_repository_id ";
     }
 
     if(strlen(trim($search_value)) > 0) {
