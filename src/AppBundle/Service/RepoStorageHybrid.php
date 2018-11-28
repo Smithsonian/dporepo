@@ -2989,9 +2989,9 @@ class RepoStorageHybrid implements RepoStorage {
             ,capture_data_element.last_modified
             ,capture_data_element.last_modified_user_account_id          
             , ( SELECT GROUP_CONCAT(file_upload.metadata) from file_upload 
-                  WHERE file_upload.parent_record_id = capture_data_element.capture_data_element_repository_id
-                  AND file_upload.parent_record_type = 'capture_data_element'
-                  GROUP BY parent_record_type, parent_record_id
+                  LEFT JOIN capture_data_file on file_upload.file_upload_id = capture_data_file.file_upload_id    
+                  WHERE capture_data_file.parent_capture_data_element_repository_id = capture_data_element.capture_data_element_repository_id              
+                  GROUP BY capture_data_file.capture_data_file_repository_id
               )
                 as metadata
           FROM capture_data_element
@@ -3073,13 +3073,9 @@ class RepoStorageHybrid implements RepoStorage {
           ,capture_data_file.created_by_user_account_id
           ,capture_data_file.last_modified
           ,capture_data_file.last_modified_user_account_id          
-          , ( SELECT GROUP_CONCAT(file_upload.metadata) from file_upload 
-                WHERE file_upload.parent_record_id = capture_data_file.capture_data_file_repository_id
-                AND file_upload.parent_record_type = 'capture_data_file'
-                GROUP BY parent_record_type, parent_record_id
-            )
-              as metadata
+          , file_upload.metadata
         FROM capture_data_file
+        LEFT JOIN file_upload ON capture_data_file.file_upload_id = file_upload.file_upload_id
         WHERE capture_data_file.active = 1 ";
 
     if(NULL !== $parent_id) {
