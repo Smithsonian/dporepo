@@ -121,6 +121,7 @@
                 <th class="text-center"></th>
                 <th class="text-center"></th>
                 <th class="text-center"></th>
+                <th class="text-center"></th>
               </tr>
             </thead>
           </table>
@@ -287,6 +288,18 @@
         "columns": [
           { "data": "manage" },
           { "data": "manage" },
+          { "data": "model_repository_id",
+            "title": "Preview",
+            "render": function(data, type, row, meta){
+              if(row.file_name){
+                data = '<a class="btn btn-primary" href="/admin/projects/model/' + row.model_repository_id + '/viewer" target="_blank">Preview</a>';
+              }
+              else {
+                data = '';
+              }
+              return data;
+            }
+          },
           { "data": "model_repository_id", "title": "Model Repository ID"  },
           { "data": "parent_capture_dataset_repository_id", "title": "Parent Capture Dataset Repository ID"  },
           { "data": "parent_item_repository_id", "title": "Parent Item Repository ID"  },

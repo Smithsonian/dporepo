@@ -11,7 +11,7 @@
   
   <ol class="breadcrumb">
     <li><a href="/admin">Dashboard</a></li>
-    <li><a href="/admin/import">Uploads</a></li>
+    <li><a href="/admin/ingest">Ingest</a></li>
     <li class="active">{{ project.project_name }}</li>
   </ol>
 
@@ -254,7 +254,7 @@
         // All data management will be done on the server side.
         "serverSide": true,
         // Path to the file that is going to handle the queries.
-        "ajax": "/admin/import/" + uuid + "/datatables_browse_import_details",
+        "ajax": "/admin/ingest/" + uuid + "/datatables_browse_import_details",
         // Method type.
         "serverMethod": "POST",
         // Values in the length dropdown.
@@ -289,11 +289,9 @@
               details_page = '/admin/projects/dataset_elements/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id + '/' + aData.capture_dataset_repository_id;
             }
 
-            if(job_type === 'models metadata import') {              
-              // TODO: Not sure what to link to. Capture Dataset or Model? Probably Model...
-              // details_page = '/admin/projects/dataset_elements/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id + '/' + aData.capture_dataset_repository_id;
-              let parent_repository_id = aData.capture_dataset_repository_id ? aData.capture_dataset_repository_id : aData.item_repository_id;
-              details_page = '/admin/projects/model/manage/' + parent_repository_id + '/' + aData.model_repository_id;
+            if(job_type === 'models metadata import') {         
+              // let parent_repository_id = aData.capture_dataset_repository_id ? aData.capture_dataset_repository_id : aData.item_repository_id;
+              details_page = '/admin/projects/datasets/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
             }
 
             window.location.href = details_page;
@@ -426,9 +424,9 @@
 
       function execute_jobs(uuid, parent_project_id, parent_record_id, parent_record_type) {
 
-        console.log('executing job...');
-
         if (uuid && parent_project_id && parent_record_id && parent_record_type) {
+
+          console.log('executing job...');
 
           $.ajax({
             'type': 'GET'
@@ -436,11 +434,9 @@
             ,'url': '/admin/execute_jobs/' + uuid + '/' + parent_project_id + '/' + parent_record_id + '/' + parent_record_type
             ,success: function(result) {
               if(result) {
-
-                console.log(result);
-                
+                // Does anything need to be returned. Not really.
               } else {
-               alert(123);
+                // Error handling???
               }
             }
           });

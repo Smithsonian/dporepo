@@ -408,3 +408,31 @@ dd {
   font-size: 1.8rem;
   font-weight: normal;
 }
+
+/**
+ * Simple Ingest Interface
+ */
+
+#rootwizard .tab-header {
+  font-size: 1.75rem;
+}
+
+#rootwizard .nav-tabs > li {
+  font-weight: bold;
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+#rootwizard .nav-tabs > li > a {
+  outline: 0;
+  -moz-outline-style: none;
+}
+
+#simple_ingest_tab_4 .chosen-container,
+#item-form-modal .chosen-container {
+  width: 100% !important;
+}
+
+.project-well, .subject-well, .item-well {
+  margin-top: 1rem;
+}

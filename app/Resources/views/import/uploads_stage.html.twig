@@ -1,0 +1,102 @@
+{% block uploads_stage %}
+<!-- row -->
+<div class="row">
+  <!-- column 1 -->
+  <div class="col-lg-6">
+    <!-- File Drag and Drop zone -->
+    <!-- panel -->
+    <div class="panel panel-default panel-uploads" data-set-number="1" data-file-count="0">
+      <div class="panel-heading">
+        <p><span class="glyphicon glyphicon-upload" aria-hidden="true"></span> Uploads Stage</p>
+        <p class="panel-uploads-info" style="font-size: 1.3rem; font-weight: normal;">Drag and drop files onto this page.</p> <!-- or click the "Add Files" button -->
+        <p class="panel-uploads-info" style="font-size: 1.3rem; font-weight: normal;">Accepted file types: {{ accepted_file_types | e }}</p>
+        <div class="overlay-uploading hidden">
+          <span>Upload in progress...</span>
+          <img src="/lib/images/spinner-dark-background.gif" alt="loading animation" style="width: 86px;">
+        </div>
+      </div>
+      <!-- panel-body -->
+      <div class="panel-body" style="height: 40rem; overflow: scroll; padding: 0;">
+        <!-- Template Begins -->
+        <!-- HTML heavily inspired by http://blueimp.github.io/jQuery-File-Upload/ -->
+        <div class="table table-striped" class="files" id="previews">
+          <ul class="directory-structure" style="padding-left: 0;">
+          </ul>
+          <div id="template" class="row file-row">
+            <!-- Empty -->
+          </div>
+        </div>
+        <!-- Template Ends -->
+      </div>
+      <!-- // panel-body -->
+    </div>
+    <!-- // panel -->
+
+  </div>
+  <!-- // column 1 -->
+  <!-- column 2 -->
+  <div class="col-lg-6">
+    <div class="panel panel-default panel-validation-results">
+      <!-- Panel contents -->
+      <div class="panel-heading">
+        <p><span class="glyphicon glyphicon-list" aria-hidden="true"></span> Pre-Validation Results</p>
+        <p style="font-size: 1.3rem; font-weight: normal;">To revalidate, click the "Clear Upload Stage" button and add files back to the Uploads Stage.</p>
+      </div>
+      <div class="panel-body">
+      </div>
+    </div>
+  </div>
+  <!-- // column 2 -->
+</div>
+<!-- // row -->
+<!-- row -->
+<div id="actions" class="row">
+  <!-- column 1 -->
+  <div class="col-sm-10 col-md-9 col-lg-9">
+    <!-- The fileinput-button span is used to style the file input field as button -->
+    {% set disabled = '' %}
+    {% if (service_error) %}
+      {% set disabled = ' disabled="disabled"' %}
+    {% endif %}
+    {% if app.user.username == 'ghalusa' or app.user.username == 'halusag' %}
+    <button class="btn btn-success fileinput-button dz-clickable"{{disabled}}>
+        <i class="glyphicon glyphicon-plus"></i>
+        <span>Add Files</span>
+    </button>
+    {% endif %}
+    <button type="reset" class="btn btn-warning cancel"{{disabled}}>
+        <i class="glyphicon glyphicon-ban-circle"></i>
+        <span>Clear Upload Stage</span>
+    </button>
+    <button class="btn btn-default prevalidate-trigger"{{disabled}}>
+        <i class="glyphicon glyphicon-cog"></i>
+        <span>Pre-Validate</span>
+    </button>
+    <button type="submit" class="btn btn-primary start hidden">
+        <i class="glyphicon glyphicon-upload"></i>
+        <span>Start Upload</span>
+    </button>
+    <button type="submit" class="btn btn-primary pause hidden">
+        <i class="glyphicon glyphicon-pause"></i>
+        <span>Pause</span>
+    </button>
+    <button type="submit" class="btn btn-primary cancel-upload hidden">
+        <i class="glyphicon glyphicon-stop"></i>
+        <span>Cancel</span>
+    </button>
+  </div>
+  <!-- // column 1 -->
+  <!-- column 2 -->
+  <div class="col-sm-2 col-md-3 col-md-3">
+    <!-- Empty -->
+  </div>
+  <!-- // column 2 -->
+</div>
+
+<div class="row hidden" id="panel-spreadsheets">
+  <div class="col-sm-12 col-md-12">
+    <!-- Spreadsheets container (Handsontable) -->
+  </div>
+</div>
+
+{% endblock %}

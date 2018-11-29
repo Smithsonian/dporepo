@@ -1,0 +1,148 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link href="{{ asset('bundles/lifotypeahead/css/typeaheadbundle.css') }}" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.css') }}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block content %}
+
+  <ol class="breadcrumb">
+    <li><a href="/admin">Dashboard</a></li>
+    <li class="active">Ingest</li>
+  </ol>
+
+  <!-- row -->
+  <div class="row">
+    <!-- column -->
+    <div class="col-sm-12 col-md-12">
+      <!-- nav-tabs -->
+      <ul class="nav nav-tabs" id="uploadsTabs" role="tablist">
+        <li role="presentation">
+          <a href="#browseUploads" id="browse-tab" role="tab" data-toggle="tab" aria-controls="browse" aria-expanded="true">Browse Ingests</a>
+        </li>
+        <li role="presentation">
+          <a href="#simpleIngest" role="tab" id="simple-ingest-tab" data-toggle="tab" aria-controls="simple-ingest">Simple Ingest</a>
+        </li>
+        <li role="presentation" class="active">
+          <a href="#bulkIngest" role="tab" id="bulk-ingest-tab" data-toggle="tab" aria-controls="bulk-ingest">Bulk Ingest</a>
+        </li>
+      </ul>
+      <!-- tab-content -->
+      <div class="tab-content" id="uploadsTabContent" style="padding-top: 3rem;">
+        <!-- tab-pane 2 -->
+        <div class="tab-pane fade in active" role="tabpanel" id="bulkIngest" aria-labelledby="bulk-ingest-tab">
+          <!-- row -->
+          <div class="row">
+            <div class="col-lg-6">
+              <!-- Typeahead form element -->
+              <h3><span class="glyphicon glyphicon-briefcase" aria-hidden="true"></span> BagIt!</h3>
+              <p>Photogrammetry scans and Models must be bagged via BagIt before uploading to the repository.</p>
+              <p>For more information, and to download Bagger, please see the <a href="https://github.com/LibraryOfCongress/bagger" target="_blank">Library of Congress' Bagger GitHub repository</a>.</p>
+              <hr>
+              {{ form_start(form) }}
+              <h3><span class="glyphicon glyphicon-home" aria-hidden="true"></span> Choose a Parent Record</h3>
+              {{ form_row(form.parent_picker) }}
+              {{ form_end(form) }}
+            </div>
+            <div class="col-lg-6">
+              <h3><span class="glyphicon glyphicon-save-file" aria-hidden="true"></span> CSV Templates</h3>
+              <p>Please use the following templates to import data into the repository.</p>
+              <p>Before importing data to the repository, check out the <a href="javascript:void(0);" class="csv-modal-trigger">CSV Guide</a>. <em class="text-muted">Templates last updated: 6/12/2018</em></p>
+              <h5>Blank Templates</h5>
+              <div class="row">
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/subjects.csv" download="subjects.csv">subjects.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/items.csv" download="items.csv">items.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/capture_datasets.csv" download="capture_datasets.csv">capture_datasets.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/models.csv" download="models.csv">models.csv</a>
+                </div>
+              </div>
+              <h5>Templates With Example Data</h5>
+              <div class="row">
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/subjects_ex.csv" download="subjects_ex.csv">subjects_ex.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/items_ex.csv" download="items_ex.csv">items_ex.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/capture_datasets_ex.csv" download="capture_datasets_ex.csv">capture_datasets_ex.csv</a>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg-6">
+                  <a href="/csv/models_ex.csv" download="models_ex.csv">models_ex.csv</a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- // row -->
+          
+          <!-- Uploads Stage -->
+          {% include 'import/uploads_stage.html.twig' %}
+
+        </div>
+        <!-- // tab-pane 2 -->
+      </div>
+      <!-- // tab-content -->
+    </div>
+    <!-- // column -->
+  </div>
+  <!-- // row -->
+
+  <!-- Uploading Modal -->
+  {% include 'import/uploading_modal.html.twig' %}
+
+  <!-- CSV Help Modal -->
+  {% include 'import/csv_help_modal.html.twig' %}
+
+{% endblock %}
+
+{% block js_bottom %}
+  {{ parent() }}
+  <script src="{{ asset('bundles/lifotypeahead/js/bootstrap-typeahead.js') }}"></script>
+  <script src="{{ asset('bundles/lifotypeahead/js/typeaheadbundle.js') }}"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/dropzone.js') }}"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.js') }}"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+      /**
+       * "Choose a Parent Record" form
+       * If the enter key is pressed before the dropdown populates, prevent the form from submitting.
+       */
+      $('form[name="uploads_parent_picker_form"]').submit(function(e){
+        e.preventDefault();
+      });
+
+      /**
+       * Browse Ingests tab click handler
+       * (navigate to the Browse Ingest page)
+       */
+      $('#browse-tab').on('click', function(e) {
+        window.location.href = '/admin/ingest';
+      });
+
+      /**
+       * Simple Ingest tab click handler
+       * (navigate to the Simple Inges page)
+       */
+      $('#simple-ingest-tab').on('click', function(e) {
+        window.location.href = '/admin/simple_ingest';
+      });
+    });
+
+    var dropzoneUrl = "{{ oneup_uploader_endpoint('repository') }}",
+        acceptedFiles = "{{ accepted_file_types }}";
+
+    // // Place focus on the parent record picker.
+    // $('form[name="uploads_parent_picker_form"]').find('#uploads_parent_picker_form_parent_picker_text').focus();
+    // console.log($('form[name="uploads_parent_picker_form"]').find('#uploads_parent_picker_form_parent_picker_text'));
+  </script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/ingest.js') }}"></script>
+{% endblock %}
