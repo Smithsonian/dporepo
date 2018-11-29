@@ -166,7 +166,7 @@
     {{ parent() }}
     <script src="{{ asset('lib/javascripts/datepicker/js/bootstrap-datepicker.min.js') }}"></script>
 
-    {% if modeldetail.model_repository_id is defined %}
+    {% if data.model_repository_id is defined %}
         <script src="{{ asset('lib/javascripts/datatables/js/jquery.dataTables.min.js') }}"></script>
         <script src="{{ asset('lib/javascripts/datatables/js/dataTables.buttons.min.js') }}"></script>
         <script src="{{ asset('lib/javascripts/datatables/js/dataTables.bootstrap.min.js') }}"></script>
