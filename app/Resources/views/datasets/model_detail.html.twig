@@ -85,7 +85,7 @@
         </div>
         <div class="col-md-12">
             {% if data.viewable_model != false %}
-                <a class="btn btn-primary" href="/admin/projects/model/{{data.model_repository_id}}/viewer" target="_blank">Preview 3D Model in Viewer</a>
+              <a class="btn btn-primary" href="/admin/projects/model/{{data.model_repository_id}}/viewer" target="_blank">Preview 3D Model in Viewer</a>
             {% endif %}
         </div>
     </div>
@@ -293,7 +293,7 @@
             { "data": "parent_item_repository_id", "title": "Parent Item Repository ID"  },
             { "data": "model_file_type", "title": "Model File Type"  },
             { "data": "model_guid", "title": "Model Guid"  },
-            { "data": "date_of_creation", "title": "Date of Creation"  },            
+            { "data": "date_of_creation", "title": "Date of Creation"  },
             { "data": "model_modality", "title": "Model Modality"  },
             { "data": "units", "title": "Units"  },
             { "data": "is_watertight", "title": "Is Watertight"  },
@@ -330,7 +330,7 @@
           "serverSide": true,
           // Path to the file that is going to handle the queries.
           "ajax": {
-            "url": "/admin/model/datatables_browse_derivative_models",
+              "url": "/admin/model/datatables_browse_derivative_models",
             "data": {
                 "parent_id": model_repository_id,
                 "parent_type": "parent_model_id"
@@ -383,7 +383,7 @@
 
           }
         });
-        
+
           /*var models_add_button = $('<a />')
             .addClass('btn btn-default add-record-button')
             .attr('href', '/admin/projects/model/manage/' + item_repository_id + '?from=model')

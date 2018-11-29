@@ -1,45 +1,42 @@
 {% block dataset_form %}
-  {{ form_start(form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
+{{ form_start(form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
 
-    <div class="row">
-      <div class="col-sm-6 col-md-6">
-        {{ form_row(form.capture_method) }}
-        {{ form_row(form.capture_dataset_type) }}
-        {{ form_row(form.capture_dataset_name) }}
-        {{ form_row(form.collected_by) }}
-        {{ form_row(form.date_of_capture) }}
-        {{ form_row(form.capture_dataset_description) }}
-        {{ form_row(form.collection_notes) }}
-        {{ form_row(form.item_position_type) }}
-      </div>
-      <div class="col-sm-6 col-md-6">
-        {{ form_row(form.positionally_matched_capture_datasets) }}
-        {{ form_row(form.focus_type) }}
-        {{ form_row(form.light_source_type) }}
-        {{ form_row(form.background_removal_method) }}
-        {{ form_row(form.cluster_type) }}
-        {{ form_row(form.cluster_geometry_field_id) }}
-        {{ form_row(form.capture_dataset_guid) }}
-        {{ form_row(form.capture_dataset_field_id) }}
-        {{ form_row(form.support_equipment) }}
-        {{ form_row(form.item_position_field_id) }}
-        {{ form_row(form.item_arrangement_field_id) }}
-        {{ form_row(form.resource_capture_datasets) }}
-        {{ form_row(form.calibration_object_used) }}
-        {{ form_row(form.directory_path) }}
+  <div class="row">
+    <div class="col-sm-6 col-md-6">
+      {{ form_row(form.capture_method) }}
+      {{ form_row(form.capture_dataset_type) }}
+      {{ form_row(form.capture_dataset_name) }}
+      {{ form_row(form.collected_by) }}
+      {{ form_row(form.date_of_capture) }}
+      {{ form_row(form.capture_dataset_description) }}
+      {{ form_row(form.collection_notes) }}
+      {{ form_row(form.item_position_type) }}
+    </div>
+    <div class="col-sm-6 col-md-6">
+      {{ form_row(form.positionally_matched_capture_datasets) }}
+      {{ form_row(form.focus_type) }}
+      {{ form_row(form.light_source_type) }}
+      {{ form_row(form.background_removal_method) }}
+      {{ form_row(form.cluster_type) }}
+      {{ form_row(form.cluster_geometry_field_id) }}
+      {{ form_row(form.capture_dataset_guid) }}
+      {{ form_row(form.capture_dataset_field_id) }}
+      {{ form_row(form.support_equipment) }}
+      {{ form_row(form.item_position_field_id) }}
+      {{ form_row(form.item_arrangement_field_id) }}
+      {{ form_row(form.resource_capture_datasets) }}
+      {{ form_row(form.calibration_object_used) }}
+      {{ form_row(form.directory_path) }}
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-sm-12 col-md-12">
+      <div class="field-group" style="clear:both;">
+        {{ form_row(form.save) }}
       </div>
     </div>
+  </div>
 
-    <div class="row">
-      <div class="col-sm-12 col-md-12">
-        <div class="field-group" style="clear:both;">
-          {{ form_row(form.save) }}
-        </div>
-      </div>
-    </div>
-
-  {{ form_end(form) }}
-
-
-
+{{ form_end(form) }}
 {% endblock %}
