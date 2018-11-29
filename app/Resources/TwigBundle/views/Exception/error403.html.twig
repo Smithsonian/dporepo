@@ -1,0 +1,13 @@
+{# app/Resources/TwigBundle/views/Exception/error403.html.twig #}
+{% extends 'default_bootstrap_admin.html.twig' %}
+{% set back_home_link = '<a href="/">home page</a>' %}
+{% if is_granted('IS_AUTHENTICATED_REMEMBERED') %}
+    {% set back_home_link = '<a href="/admin/">Dashboard</a>' %}    
+{% endif %}
+
+{% block content %}
+    <h1>Oops!</h1>
+    <p>
+        You do not have access to this resource. return to the {{ back_home_link|raw }}.
+    </p>
+{% endblock %}
