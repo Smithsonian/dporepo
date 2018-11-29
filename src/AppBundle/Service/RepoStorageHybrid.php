@@ -3306,14 +3306,24 @@ class RepoStorageHybrid implements RepoStorage {
       return array();
     }
 
-    $sql = " DISTINCT tmp.* FROM 
+    $sql = " DISTINCT tmp.*
+            FROM 
     
             (SELECT model_repository_id, model_repository_id as manage, parent_capture_dataset_repository_id,
             parent_model_id, parent_item_repository_id, model_guid, date_of_creation, model_file_type,
             derived_from, creation_method, model_modality, units, is_watertight, model_purpose, point_count,
             has_normals, face_count, vertices_count, has_vertex_color, has_uv_space, model_maps, active,
             date_created, created_by_user_account_id, last_modified, last_modified_user_account_id,
-            model_repository_id as DT_RowId
+            model_repository_id as DT_RowId,           
+            (
+              SELECT file_name
+              FROM file_upload
+              LEFT JOIN model_file on file_upload.file_upload_id = model_file.file_upload_id
+              WHERE file_upload.active = 1 AND model_file.active = 1
+              AND model_file.model_repository_id=model.model_repository_id              
+              AND (file_upload.file_name LIKE '%.obj' OR file_upload.file_name IS NULL)
+              LIMIT 0, 1
+            ) as file_name
             
             FROM model
             
@@ -3326,7 +3336,16 @@ class RepoStorageHybrid implements RepoStorage {
             derived_from, creation_method, model_modality, units, is_watertight, model_purpose, point_count,
             has_normals, face_count, vertices_count, has_vertex_color, has_uv_space, model_maps, model.active,
             model.date_created, model.created_by_user_account_id, model.last_modified, model.last_modified_user_account_id,
-            model_repository_id as DT_RowId
+            model_repository_id as DT_RowId,
+            (
+              SELECT file_name
+              FROM file_upload
+              LEFT JOIN model_file on file_upload.file_upload_id = model_file.file_upload_id
+              WHERE file_upload.active = 1 AND model_file.active = 1
+              AND model_file.model_repository_id=model.model_repository_id              
+              AND (file_upload.file_name LIKE '%.obj' OR file_upload.file_name IS NULL)
+              LIMIT 0, 1
+            ) as file_name
             
             FROM model
             LEFT JOIN capture_dataset on parent_capture_dataset_repository_id = capture_dataset_repository_id
@@ -3336,8 +3355,13 @@ class RepoStorageHybrid implements RepoStorage {
             and capture_dataset.active=1
              
             )
-            AS tmp 
-            WHERE active=1 ";
+            AS tmp
+            
+            WHERE tmp.active = 1 
+             
+            ";
+    //@todo instead of looking at the extension, check for model = web ready, and check resolution is viewable
+
     if(strlen(trim($search_value)) > 0) {
       $sql .= " AND (
         model_guid LIKE :search_value OR
