@@ -4,7 +4,7 @@
     {{ parent() }}
     <link href="{{ asset('lib/javascripts/datepicker/css/bootstrap-datepicker3.css') }}" rel="stylesheet" type="text/css">
     {% if data.capture_device_repository_id is defined %}
-        <link href="{{ asset('lib/javascripts/Datatable/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+        <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
         <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
     {% endif %}
 {% endblock %}
@@ -72,9 +72,9 @@
 {% block javascripts %}
     {{ parent() }}
     {% if data.capture_device_repository_id is defined %}
-        <script src="{{ asset('lib/javascripts/Datatable/js/jquery.dataTables.min.js') }}"></script>
+        <script src="{{ asset('lib/javascripts/datatables/js/jquery.dataTables.min.js') }}"></script>
         <script src="{{ asset('lib/javascripts/buttons/js/dataTables.buttons.min.js') }}"></script>
-        <script src="{{ asset('lib/javascripts/Datatable/js/dataTables.bootstrap.min.js') }}"></script>
+        <script src="{{ asset('lib/javascripts/datatables/js/dataTables.bootstrap.min.js') }}"></script>
         <script src="{{ asset('lib/javascripts/buttons/js/buttons.bootstrap.min.js') }}"></script>
         <script src="{{ asset('lib/javascripts/buttons/js/buttons.colVis.min.js') }}"></script>
         <script type="text/javascript">
