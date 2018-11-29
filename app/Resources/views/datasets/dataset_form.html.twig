@@ -1,20 +1,4 @@
-{% extends 'default_bootstrap_admin.html.twig' %}
-
-{% block stylesheets %}
-  {{ parent() }}
-  <link href="{{ asset('lib/javascripts/datepicker/css/bootstrap-datepicker3.css') }}" rel="stylesheet" type="text/css">
-{% endblock %}
-
-{% block content %}
-
-  <div class="row">
-    <div class="col-sm-12 col-md-12">
-      <div class="form-group">
-        <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
-      </div>
-    </div>
-  </div>
-
+{% block dataset_form %}
   {{ form_start(form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
 
     <div class="row">
@@ -56,73 +40,6 @@
 
   {{ form_end(form) }}
 
-  <div class="row">
-    <div class="col-sm-6 col-md-6">
-      {% if dataset_data.directory_path is defined and dataset_data.directory_path %}
-      <hr>
-      <h3>Uploaded Files</h3>
-      <div id="jstreeContainer"></div>
-      <hr>
-      {% endif %}
-    </div>
-  </div>
 
-{% endblock %}
 
-{% block javascripts %}
-  {{ parent() }}
-  <script src="{{ asset('lib/javascripts/datepicker/js/bootstrap-datepicker.min.js') }}"></script>
-  <script type="text/javascript">
-    // Datepicker
-    $(document).ready(function(){
-
-      var capture_dataset_repository_id =  "{{ dataset_data.capture_dataset_repository_id }}",
-          directory_path = "{{ dataset_data.directory_path }}";
-
-      // Initialize jsTree.
-      // See: https://www.jstree.com/
-      $('#jstreeContainer').jstree({
-          'cache': false,
-          'state': { 'key': 'dpoJsTreeFiles' },
-          'core': {
-            'data': {
-              'url': '/admin/get_directory_contents/false?path=' + directory_path + '&record_id=' + capture_dataset_repository_id,
-              'data': function (node) {
-                  return { 'id' : node.id };
-              },
-              'force_text' : true
-            },
-          },
-          'sort': function(a, b) {
-              return this.get_type(a) === this.get_type(b) ? (this.get_text(a) > this.get_text(b) ? 1 : -1) : (this.get_type(a) >= this.get_type(b) ? 1 : -1);
-          },
-          'types': {
-              'default' : { 'icon' : 'glyphicon glyphicon-folder-close' },
-              'file' : { 'valid_children' : [], 'icon' : 'file' }
-          },
-          'unique': {
-              'duplicate' : function (name, counter) {
-                  return name + ' ' + counter;
-              }
-          },
-          'plugins': ['sort','types','unique']
-      });
-
-      // jsTree prevents the default anchor href action, so it need to be overridden.
-      $('#jstreeContainer').on('click', 'a', function(e) {
-        document.location.href = this.href;
-      });
-
-      // Datepicker
-      var dateInput = $('input[name="dataset[date_of_capture]"]');
-      var thisContainer = $('form.dataset_form').length>0 ? $('form.dataset_form').parent() : 'body';
-      var options = {
-        format: 'yyyy-mm-dd 00:00:00',
-        container: thisContainer,
-        todayHighlight: true,
-        autoclose: true,
-      };
-      dateInput.datepicker(options);
-    });
-  </script>
 {% endblock %}
