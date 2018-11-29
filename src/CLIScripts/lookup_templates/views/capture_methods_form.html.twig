@@ -1,7 +1,7 @@
 {% extends 'default_bootstrap_admin.html.twig' %}
 {% block stylesheets %}
   {{ parent() }}
-  <link href="//cdnjs.cloudflare.com/ajax/libs/chosen/0.9.11/chosen.css" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/chose_v0.9.11/chosen.css')}}" rel="stylesheet" type="text/css" />
 {% endblock %}
 {% block content %}
     
@@ -47,5 +47,5 @@
 {% endblock %}
 {% block js_bottom %}
   {{ parent() }}
-  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/underscore/underscore-min.js')}}"></script>
 {% endblock %}
