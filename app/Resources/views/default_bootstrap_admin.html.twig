@@ -1,4 +1,4 @@
-{% use 'default_bootstrap_side_nav.html.twig' %}
+{#% use 'default_bootstrap_side_nav.html.twig' %#}
 {% extends 'base.html.twig' %}
 
 {% set checked = '' %}
@@ -56,10 +56,11 @@
 
         {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and is_granted('ROLE_ADMIN') %}
           {% block side_nav %}
-            {{ parent() }}
+            {#{ parent() }#}
           {% endblock %}
           {% if (app.request.pathInfo == '/admin/workspace/') or (project_repository_id is defined) %}
-            <div class="col-sm-9 col-sm-offset-3 col-md-9 col-md-offset-3 main resizable">
+            <!-- <div class="col-sm-9 col-sm-offset-3 col-md-9 col-md-offset-3 main resizable"> -->
+            <div class="col-sm-12 col-md-12 main resizable">
           {% else %}
             <div class="col-sm-12 main">
           {% endif %}
@@ -117,12 +118,12 @@
 
 {% block stylesheets %}
     <!-- Bootstrap core CSS -->
-    <link href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="{{ asset('lib/javascripts/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('lib/javascripts/vakata-jstree/dist/themes/proton/style.min.css') }}" rel="stylesheet" />
-    <!-- <link href="{ asset('lib/javascripts/vakata-jstree/dist/themes/default/style.min.css') }" rel="stylesheet" /> -->
+    <link href="{{ asset('lib/javascripts/vakata-jstree/dist/themes/default/style.min.css') }}" rel="stylesheet" />
     <!-- <link href="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.css" rel="stylesheet" type="text/css" /> -->
     <link href="{{ asset('lib/javascripts/chosen_v1.8.2/chosen.min.css') }}" rel="stylesheet" type="text/css" />
-    <link href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css" rel="stylesheet" />
+    <link href="{{ asset('lib/javascripts/jquery-ui/css/jquery-ui.css') }}" rel="stylesheet" />
     <link href="{{ asset('lib/css/styles.css') }}" rel="stylesheet" />
 {% endblock %}
 
@@ -130,12 +131,12 @@
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/js/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.3.1/jquery.cookie.min.js"></script>
+    <script src="{{ asset('lib/javascripts/jquery/jquery.min.js') }}"></script>
+    <script src="{{ asset('lib/javascripts/bootstrap/js/bootstrap.min.js') }}"></script>
+    <script src="{{ asset('lib/javascripts/jquery-cookie/jquery.cookie.min.js') }}"></script>
     <script src="{{ asset('lib/javascripts/chosen_v1.8.2/chosen.jquery.min.js') }}"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/2.1.0/sweetalert.min.js"></script>
-    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script src="{{ asset('lib/javascripts/sweetalert/js/sweetalert.min.js') }}"></script>
+    <script src="{{ asset('lib/javascripts/jquery-ui/js/jquery-ui.js') }}"></script>
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
     <script src="{{ asset('lib/javascripts/ie10-viewport-bug-workaround.js') }}"></script>
     <script src="{{ asset('lib/javascripts/javascript.js') }}"></script>

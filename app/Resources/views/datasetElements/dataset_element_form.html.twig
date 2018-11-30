@@ -3,8 +3,8 @@
 {% block stylesheets %}
     {{ parent() }}
     {% if dataset_element_data.capture_data_element_repository_id is defined %}
-        <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
-        <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
+        <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+        <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
     {% endif %}
 {% endblock %}
 
@@ -65,6 +65,7 @@
                                 <th class="text-center">Capture Data File Name</th>
                                 <th class="text-center">Capture Data File Type</th>
                                 <th class="text-center">Is Compressed Multiple Files</th>
+                                <th class="text-center">EXIF Metadata</th>
                                 <th class="text-center">Last Modified</th>
                             </tr>
                             </thead>
@@ -97,11 +98,11 @@
 {% block js_bottom %}
     {{ parent() }}
     {% if dataset_element_data.capture_data_element_repository_id is defined %}
-        <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
-        <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
-        <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
-        <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
-        <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
+        <script src="{{ asset('lib/javascripts/datatables/js/jquery.dataTables.min.js') }}"></script>
+        <script src="{{ asset('lib/javascripts/datatables/js/dataTables.buttons.min.js') }}"></script>
+        <script src="{{ asset('lib/javascripts/datatables/js/dataTables.bootstrap.min.js') }}"></script>
+        <script src="{{ asset('lib/javascripts/buttons/js/buttons.bootstrap.min.js') }}"></script>
+        <script src="{{ asset('lib/javascripts/buttons/js/buttons.colVis.min.js') }}"></script>
         <script type="text/javascript">
           $(document).ready(function() {
             var capture_data_element_repository_id =  "{{ dataset_element_data.capture_data_element_repository_id }}";
@@ -111,12 +112,13 @@
                 { "data": "capture_data_file_name" },
                 { "data": "capture_data_file_type" },
                 { "data": "is_compressed_multiple_files" },
+                { "data": "metadata" },
                 { "data": "last_modified" }
               ],
               "dom": 'lfip<"datatables_bulk_actions">tip',
               "pagingType": "simple_numbers",
               "stateSave": true,
-              "order": [[4,"desc"]],
+              "order": [[5,"desc"]],
               // Show processing throbber.
               "processing": true,
               "serverMethod": "POST",

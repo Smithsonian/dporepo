@@ -2,8 +2,8 @@
 
 {% block stylesheets %}
   {{ parent() }}
-  <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
-  <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -121,6 +121,7 @@
                 <th class="text-center"></th>
                 <th class="text-center"></th>
                 <th class="text-center"></th>
+                <th class="text-center"></th>
               </tr>
             </thead>
           </table>
@@ -132,18 +133,19 @@
 {% endblock %}
 {% block js_bottom %}
   {{ parent() }}
-  <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
-  <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
+  
+  <script src="{{ asset('lib/javascripts/datatables/js/jquery.dataTables.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/datatables/js/dataTables.buttons.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/datatables/js/dataTables.bootstrap.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/buttons/js/buttons.bootstrap.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/buttons/js/buttons.colVis.min.js') }}"></script>
   <!-- The following Javascript is needed for download CSV, download Excel, and print capabilities -->
-  <script src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.flash.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.html5.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.print.min.js "></script>
+  <script src="{{ asset('lib/javascripts/buttons/js/buttons.flash.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/datatables/js/jszip.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/pdfmake/js/pdfmake.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/pdfmake/js/vfs_fonts.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/buttons/js/buttons.html5.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/buttons/js/buttons.print.min.js') }}"></script>
   <script type="text/javascript">
     $(document).ready(function() {
 
@@ -286,6 +288,18 @@
         "columns": [
           { "data": "manage" },
           { "data": "manage" },
+          { "data": "model_repository_id",
+            "title": "Preview",
+            "render": function(data, type, row, meta){
+              if(row.file_name){
+                data = '<a class="btn btn-primary" href="/admin/projects/model/' + row.model_repository_id + '/viewer" target="_blank">Preview</a>';
+              }
+              else {
+                data = '';
+              }
+              return data;
+            }
+          },
           { "data": "model_repository_id", "title": "Model Repository ID"  },
           { "data": "parent_capture_dataset_repository_id", "title": "Parent Capture Dataset Repository ID"  },
           { "data": "parent_item_repository_id", "title": "Parent Item Repository ID"  },
