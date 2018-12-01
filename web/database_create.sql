@@ -1,5 +1,3 @@
-Create database dporepo;
-use dporepo;
 CREATE TABLE IF NOT EXISTS `background_removal_method` (
   `background_removal_method_repository_id` int(11) NOT NULL AUTO_INCREMENT,
   `label` varchar(255) NOT NULL DEFAULT '',
