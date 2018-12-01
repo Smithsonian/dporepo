@@ -40,23 +40,29 @@ class InstallController extends Controller
     }
 
     /**
-     * @Route("/install/", name="install", methods="GET")
-     * @Route("/install/{flag}", name="install-flag")
+     * @Route("/install/", name="install")
      */
     public function install(Connection $conn, Request $request,$flag = null)
     {
-    	$dbexist = $this->repo_storage_controller->build('databaseExist', null);
-    	if ($flag == 'cdb' && !$dbexist) {
-    		$this->repo_storage_controller->build('installDatabase', null);
-    	}
-        
-        if (!$dbexist) {
-        	$this->repo_storage_controller->build('installDatabase', null);
-        	$flag = 'cdb';
-        	$dbexist= true;
+
+      $ret = $this->repo_storage_controller->build('installDatabase', null);
+
+      $database_installed = false;
+      $database_error = '';
+
+      if(is_array($ret)) {
+        if(isset($ret['installed'])) {
+          $database_installed = $ret['installed'];
         }
+        if(isset($ret['error'])) {
+          $database_error = $ret['error'];
+    	}
+      }
+        
         return $this->render('install/install.html.twig', array(
-            'page_title' => 'Install Database',"dbexist"=>$dbexist,"flag"=>$flag
+        'page_title' => 'Install Database',
+        'database_installed' => $database_installed,
+        'database_error' => $database_error
         ));
     }
 
