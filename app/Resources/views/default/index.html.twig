@@ -13,6 +13,11 @@
 
             <div class="inner">
               <h3 class="masthead-brand"></h3>
+                {% if database_error %}
+                    <div class="alert alert-danger">
+                        {{ database_error }}
+                    </div>
+                {% endif %}
               <nav>
                 
                 <ul class="nav masthead-nav">
@@ -22,7 +27,7 @@
                     <li><a href="/admin">Dashboard</a></li>
                     <li><a href="/logout">Logout</a></li>
                   {% else %}
-                    {% if dbexist %}
+                    {% if database_exists == true %}
                       <li><a href="/login">Login</a></li>
                     {% endif %}
                   {% endif %}
@@ -38,10 +43,10 @@
             <p class="lead">UX prototype which facilitates manual and automated data entry, management, exploration, retrieval, and processing.</p>
             <p class="lead">
               {% if not is_granted('IS_AUTHENTICATED_REMEMBERED') %}
-                {% if dbexist %}
+                {% if database_exists == true %}
                   <a href="/login" class="btn btn-lg btn-default">Login</a>
                 {% else %}
-                  <a href="/install/cdb" class="btn btn-lg btn-default">Install</a>
+                  <a href="/install" class="btn btn-lg btn-default">Install</a>
                 {% endif %}
               {% endif %}
             </p>

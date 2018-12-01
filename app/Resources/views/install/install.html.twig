@@ -13,7 +13,11 @@
 
             <div class="inner">
               <h3 class="masthead-brand"></h3>
-             
+                {% if database_error %}
+                    <div class="alert alert-danger">
+                        {{ database_error }}
+                    </div>
+                {% endif %}
             </div>
           </div>
 
@@ -21,28 +25,15 @@
             <h1 class="cover-heading">{{ site_title|e }} (prototype)</h1>
             
             <div>
-              {% if dbexist %}
+              {% if database_installed %}
                 <p class="lead">
-                  {% if flag == 'cdb' %}
                     Database has been generated successfully.
-                  {% else %}
-                    Database has already been generated.
-                  {% endif %}
-                  
                 </p>
                 
                 <p class="lead">
-                  {% if flag == 'cdb' %}
                     {% if not is_granted('IS_AUTHENTICATED_REMEMBERED') %}
-                      <a href="/register" class="btn btn-lg btn-default">Register Account</a>
-                    {% endif %}
-                  {% else %}
-                    {% if not is_granted('IS_AUTHENTICATED_REMEMBERED') %}
-                      {% if dbexist %}
                         <a href="/login" class="btn btn-lg btn-default">Login</a>
                       {% endif %}
-                    {% endif %}
-                  {% endif %}
                 </p>
               {% endif %}
             </div>
