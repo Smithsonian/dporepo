@@ -4,11 +4,13 @@ namespace AppBundle\Controller;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\ResponseHeaderBag;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use AppBundle\Controller\RepoStorageHybridController;
+use Symfony\Component\HttpKernel\KernelInterface;
+use Sabre\DAV;
 
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
@@ -26,18 +28,58 @@ class AuthoringController extends Controller
   private $repo_storage_controller;
 
   /**
+   * @var object $kernel
+   */
+  public $kernel;
+
+  /**
+   * @var string $project_directory
+   */
+  private $project_directory;
+
+  /**
+   * @var string $uploads_directory
+   */
+  private $uploads_directory;
+
+  /**
+   * @var string $external_file_storage_path
+   */
+  private $external_file_storage_path;
+
+  /**
    * @var array $accepted_types
    */
   private $accepted_types;
 
   /**
+   * @var object $rootDirectory
+   */
+  private $rootDirectory;
+
+  /**
+   * @var object $server
+   */
+  private $server;
+
+  /**
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(Connection $conn)
+  public function __construct(AppUtilities $u, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, Connection $conn)
   {
-    $this->u = new AppUtilities();
+    $this->u = $u;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
+    $this->kernel = $kernel;
+    $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR . '';
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+
+    // $this->u->dumper($this->project_directory,0);
+    // $this->u->dumper($this->uploads_directory);
+
+    $this->rootDirectory = new DAV\FS\Directory($this->project_directory . $this->uploads_directory);
+    $this->server = new DAV\Server($this->rootDirectory);
+
     $this->accepted_types = array('item', 'presentation');
   }
 
@@ -79,6 +121,39 @@ class AuthoringController extends Controller
     }
 
     return $this->json($data);
+  }
+
+  /**
+   * @Route("/webdav{path}", name="webdav", methods={"GET","POST"}, defaults={"path" = null}, requirements={"path"=".+"})
+   *
+   * Author
+   *
+   * @param object  $request  Request object
+   * @return string
+   */
+  public function webdav(Request $request) {
+
+    // $req = $request->request->all();
+    // $this->u->dumper($req);
+    
+    // If your server is not on your webroot, make sure the following line has the
+    // correct information
+    $this->server->setBaseUri('/webdav');
+
+    // The lock manager is reponsible for making sure users don't overwrite
+    // each others changes.
+    $lockBackend = new DAV\Locks\Backend\File('data/locks');
+    $lockPlugin = new DAV\Locks\Plugin($lockBackend);
+    $this->server->addPlugin($lockPlugin);
+
+    // This ensures that we get a pretty index in the browser, but it is
+    // optional.
+    $this->server->addPlugin(new DAV\Browser\Plugin());
+
+    // All we need to do now, is to fire up the server
+    $this->server->exec();
+
+    die();
   }
 
 }
