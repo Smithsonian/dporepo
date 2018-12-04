@@ -58,7 +58,7 @@
 
 {% block stylesheets %}
     <!-- Bootstrap core CSS -->
-    <link href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ asset('lib/javascripts/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="{{ asset('lib/css/cover.css') }}" media="screen" />
 {% endblock %}
 
@@ -66,9 +66,9 @@
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/js/bootstrap.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.3.1/jquery.cookie.min.js"></script>
+    <script src="{{ asset('lib/javascripts/jquery/jquery.min.js') }}"></script>
+    <script src="{{ asset('lib/javascripts/bootstrap/js/bootstrap.min.js') }}"></script>
+    <script src="{{ asset('lib/javascripts/jquery-cookie/jquery.cookie.min.js') }}"></script>
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
     <script src="{{ asset('lib/javascripts/ie10-viewport-bug-workaround.js') }}"></script>
 {% endblock %}

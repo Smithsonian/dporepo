@@ -9,7 +9,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use AppBundle\Controller\RepoStorageHybridController;
-use PDO;
+use Symfony\Component\HttpKernel\KernelInterface;
 
 use AppBundle\Form\ModelForm;
 use AppBundle\Entity\Model;
@@ -23,19 +23,46 @@ class ModelController extends Controller
      * @var object $u
      */
     public $u;
+
+    /**
+     * @var object $repo_storage_controller
+     */
     private $repo_storage_controller;
-    private $uploads_path;
+
+    /**
+     * @var object $kernel
+     */
+    public $kernel;
+
+    /**
+     * @var string $project_directory
+     */
+    private $project_directory;
+
+    /**
+     * @var string $uploads_directory
+     */
+    private $uploads_directory;
+    // private $uploads_path;
+
+    /**
+     * @var string $external_file_storage_path
+     */
+    private $external_file_storage_path;
 
     /**
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, Connection $conn)
+    public function __construct(AppUtilities $u, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, Connection $conn)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
-        $this->uploads_path = '/uploads/repository';
+        $this->kernel = $kernel;
+        $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+        $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+        $this->external_file_storage_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $external_file_storage_path) : $external_file_storage_path;;
     }
 
     /**
@@ -238,73 +265,80 @@ class ModelController extends Controller
     /**
      * @Route("/admin/projects/model/{id}/detail", name="model_detail", methods="GET", defaults={"id" = null})
      *
+   * @param $id The model ID
      * @param Connection $conn
      * @param Request $request
      */
-    public function modelDetail(Connection $conn, Request $request,$id)
+  public function modelDetail($id = null, Connection $conn, Request $request)
     {
-         //$Model = new Model;
-        if ($id !== null) {
-          $statement = $conn->prepare("SELECT * FROM model WHERE model_repository_id = $id LIMIT 1");
-          $statement->execute();
-          $modeldetail = $statement->fetchAll();
-          if (count($modeldetail) > 0) {
-            $modeldetail[0]['uploads_path'] = $this->uploads_path;
-            if ($modeldetail[0]['parent_capture_dataset_repository_id'] != null) {
-              $capturedataset = $conn->fetchAll("SELECT * FROM capture_dataset WHERE capture_dataset_repository_id =".$modeldetail[0]['parent_capture_dataset_repository_id']);
-              $itemid = $modeldetail[0]['parent_item_repository_id'];
-              $modeldetail[0]['capture_dataset'] = [];
-              if (count($capturedataset) > 0) {
-                if ($itemid == null) {
-                  $itemid = $capturedataset[0]['parent_item_repository_id'];
-                }
-                $modeldetail[0]['capture_dataset'] = $capturedataset[0];
+    $data = array();
                 
-              }
-              $item = $conn->fetchAll("SELECT item_description,subject_repository_id FROM item WHERE item_repository_id =".$itemid);
-              
-              if (count($item) > 0) {
-                $subject = $conn->fetchAll("SELECT project_repository_id,subject_name FROM subject WHERE subject_repository_id=".$item[0]['subject_repository_id']);
-                if (count($subject) > 0) {
-                  $project = $conn->fetchAll("SELECT project_name FROM project WHERE project_repository_id=".$subject[0]['project_repository_id']);
-                  $modeldetail[0]['subject_name'] = $subject[0]['subject_name'];
-                  $modeldetail[0]['item_description'] = $item[0]['item_description'];
-                  $modeldetail[0]['project_name'] = $project[0]['project_name'];
-                  $modeldetail[0]['project_repository_id'] = $subject[0]['project_repository_id'];
-                  $modeldetail[0]['subject_repository_id'] = $item[0]['subject_repository_id'];
-                }
-              }
-              
-            }
-          }
-          //dump($modeldetail);
-          //exit;
-        }
-         
-         // Database tables are only created if not present.
-         //$Model->createTable();
+    if (!empty($id)) {
 
-         return $this->render('datasets/model_detail.html.twig', array(
-             'page_title' => "Model Detail",
-             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),"modeldetail"=>$modeldetail[0],
-         ));
+      // Get the model record.
+      $data = $this->repo_storage_controller->execute('getModel', array(
+        'model_repository_id' => $id));
+
+      // If there are no results, throw a createNotFoundException (404).
+      if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
+
+      // The repository's upload path.
+      $data['uploads_path'] = $this->uploads_directory;
+
     }
-    /**
+    // $this->u->dumper($data);
+
+    return $this->render('datasets/model_detail.html.twig', array(
+      'page_title' => 'Model Detail',
+      'data' => $data,
+      'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+    ));
+  }
+
+  /**
    * @Route("/admin/projects/model/{id}/viewer", name="model_viewer", methods="GET", defaults={"id" = null})
    *
+   * @param $id The model ID
    * @param Connection $conn
    * @param Request $request
    */
-  public function modelViewer(Connection $conn, Request $request,$id)
+  public function modelViewer($id = null, Connection $conn, Request $request)
   {
+    //@TODO use incoming model $id to retrieve model assets.
+    // $model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
 
-    //@todo use incoming model $id to retrieve model assets.
-    $model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
+    $data = array();
+    $model_url = NULL;
+
+    if (!empty($id)) {
+
+      // Get the model record.
+      $data = $this->repo_storage_controller->execute('getModel', array(
+        'model_repository_id' => $id));
+
+      // If there are no results, throw a createNotFoundException (404).
+      //if (empty($data) || empty($data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');
+      if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
+
+      // $this->u->dumper($data);
+
+      //@todo in the future perhaps this should be an array of all files
+      // Replace local path with Drastic path. Twig template will serve the file using admin/get_file?path=blah
+      $uploads_path = str_replace('web', '', $this->uploads_directory);
+      // Windows fix for the file path.
+      $uploads_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_path) : $uploads_path;
+      // Model URL.
+      $model_url = str_replace($uploads_path, $this->external_file_storage_path, $data['viewable_model']['file_path']);
+      // Windows fix for the file path.
+      $model_url = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $model_url) : $model_url;
+    }
+              
+    $data['model_url'] = $model_url;
 
     return $this->render('datasets/model_viewer.html.twig', array(
-      'page_title' => "Model Viewer",
+      'page_title' => 'Model Viewer',
       'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-      "model_url" => $model_url,
+      'data' => $data,
     ));
   }
 
@@ -362,11 +396,10 @@ class ModelController extends Controller
           'sort_order' => $sort_order,
           'start_record' => $start_record,
           'stop_record' => $stop_record,
-          'parent_id' => isset($req['parent_model_id']) ? $req['parent_model_id'] : 0,
-          //'parent_id_field' => isset($req['parent_type']) ? 'parent_item_repository_id' : 'parent_capture_dataset_repository_id',
+          'parent_id' => isset($req['parent_id']) ? $req['parent_id'] : 0,
           'parent_id_field' => 'parent_model_id',
-
         );
+
         if ($search) {
           $query_params['search_value'] = $search;
         }

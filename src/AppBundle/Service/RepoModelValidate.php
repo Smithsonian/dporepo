@@ -130,7 +130,7 @@ class RepoModelValidate implements RepoModelValidateInterface {
       $processing_job = $this->run_validate_models($path, $job_data, $filesystem);
 
       // Continue only if job_ids are returned.
-      if (!empty($processing_job)) {
+      if (!empty($processing_job) && !empty($processing_job['job_ids'])) {
 
         // Check to see if jobs are running. Don't pass "Go" until all jobs are finished.
         while ($this->processing->are_jobs_running($processing_job['job_ids'])) {

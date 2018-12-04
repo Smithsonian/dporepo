@@ -236,6 +236,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
   public function validate_image_pairs($data = array(), $job_status = '') {
 
     $return = array();
+    $exclude_model_extensions = array('obj', 'ply', 'gltf', 'glb');
 
     // // If no data is passed, set a message.
     // if (empty($data)) $return['messages'][] = 'No image pairs to validate. Please provide an array of files to validate.';
@@ -246,8 +247,8 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
       // Create an array of all of the file extensions.
       $all_file_extensions = array();
       foreach($data as $key => $value) {
-        // Exclude the 'file_name_map.csv' file.
-        if ($value['file_name'] !== 'file_name_map.csv') {
+        // Exclude the 'file_name_map.csv' file, and ignore model file extensions.
+        if (($value['file_name'] !== 'file_name_map.csv') && !in_array($value['file_extension'], $exclude_model_extensions)) {
           array_push($all_file_extensions, $value['file_extension']);
         }
       }

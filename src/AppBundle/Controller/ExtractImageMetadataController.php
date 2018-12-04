@@ -168,7 +168,7 @@ class ExtractImageMetadataController extends Controller
             // Windows file path fix.
             // Turns this: /uploads/repository/3df_5bd21fc4ccd253.95102447/testupload06_usnm_160/data/-s03-
             // Into this: \uploads\repository\3df_5bd21fc4ccd253.95102447\testupload06_usnm_160\data\-s03-
-            $file_path = str_replace(DIRECTORY_SEPARATOR, '/', $file_path);
+            $file_path = str_replace('/', DIRECTORY_SEPARATOR, $file_path);
 
             // Get the file's id in the database.
             $file_data = $this->repo_storage_controller->execute('getRecords', array(
@@ -176,7 +176,7 @@ class ExtractImageMetadataController extends Controller
               'fields' => array(),
               'limit' => 1,
               'search_params' => array(
-                array('field_names' => array('file_path'), 'search_values' => array($file_path . '/' . $file->getBasename()), 'comparison' => '='),
+                array('field_names' => array('file_path'), 'search_values' => array($file_path . DIRECTORY_SEPARATOR . $file->getBasename()), 'comparison' => '='),
               ),
               'search_type' => 'AND',
               'omit_active_field' => true,
@@ -184,7 +184,7 @@ class ExtractImageMetadataController extends Controller
             );
 
             // Log an error if the file is not found within the database.
-            if (empty($file_data)) $data[$i]['errors'][] = 'Extract Image Metadata - file not found in the database: ' . $file_path . '/' . $file->getBasename();
+            if (empty($file_data)) $data[$i]['errors'][] = 'Extract Image Metadata - file not found in the database: ' . $file_path . DIRECTORY_SEPARATOR . $file->getBasename();
 
             // If the record is found, save the metadata to the record.
             if (!empty($file_data) && (count($file_data)) === 1) {

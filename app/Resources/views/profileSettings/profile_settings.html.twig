@@ -2,8 +2,8 @@
 
 {% block stylesheets %}
   {{ parent() }}
-  <link href="//cdn.datatables.net/plug-ins/3cfcc339e89/integration/bootstrap/3/dataTables.bootstrap.css" rel="stylesheet" type="text/css" />
-  <link href="{{ asset('lib/javascripts/DataTables-extended/css/bootstrap_datatables.css') }}" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.css') }}" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/datatables/extended/css/bootstrap_datatables.css') }}" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -26,8 +26,8 @@
 
 {% block js_bottom %}
   {{ parent() }}
-  <script src="//cdn.datatables.net/1.10.4/js/jquery.dataTables.min.js"></script>
-  <script src="//cdn.datatables.net/plug-ins/3cfcc339e89/integration/bootstrap/3/dataTables.bootstrap.js"></script>
+  <script src="{{ asset('lib/javascripts/datatables/js/jquery.dataTables.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/datatables/js/dataTables.bootstrap.js') }}"></script>
   <script type="text/javascript">
     $(document).ready(function() {
       // Page-specific JavaScript goes here.
