@@ -42,9 +42,6 @@ class SubjectsController extends Controller
      */
     public function browse_subjects(Connection $conn, Request $request, ProjectsController $projects)
     {
-        // Database tables are only created if not present.
-        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'subject'));
-
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).

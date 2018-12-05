@@ -49,9 +49,6 @@ class DatasetsController extends Controller
      */
     public function browse_datasets(Connection $conn, Request $request, ProjectsController $projects, SubjectsController $subjects)
     {
-        // Database tables are only created if not present.
-        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => 'capture_dataset'));
-
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
         $item_repository_id = !empty($request->attributes->get('item_repository_id')) ? $request->attributes->get('item_repository_id') : false;
