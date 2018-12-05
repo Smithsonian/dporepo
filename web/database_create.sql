@@ -397,6 +397,18 @@ CREATE TABLE IF NOT EXISTS `model` (
   KEY `created_by_user_account_id` (`created_by_user_account_id`),
   KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COMMENT='This table stores model metadata';
+CREATE TABLE IF NOT EXISTS `permission` (
+  `permission_id` int(11) NOT NULL,
+  `permission_name` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `permission_detail` varchar(2000) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `permission_group` varchar(80) COLLATE utf8_unicode_ci DEFAULT 'general',
+  `route_name` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `date_created` datetime NOT NULL,
+  `created_by_user_account_id` int(11) NOT NULL,
+  `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `last_modified_user_account_id` int(11) NOT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT '1'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 CREATE TABLE IF NOT EXISTS `photogrammetry_scale_bar` (
   `photogrammetry_scale_bar_repository_id` int(11) NOT NULL AUTO_INCREMENT,
   `parent_capture_dataset_repository_id` int(11) DEFAULT NULL,
@@ -447,6 +459,33 @@ CREATE TABLE IF NOT EXISTS `processing_action` (
   KEY `created_by_user_account_id` (`created_by_user_account_id`),
   KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='This table stores processing_action metadata';
+CREATE TABLE IF NOT EXISTS `processing_job` (
+  `processing_job_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `parent_record_id` int(11) DEFAULT NULL,
+  `parent_record_type` varchar(30) DEFAULT '',
+  `processing_service_job_id` varchar(50) NOT NULL DEFAULT '',
+  `recipe` varchar(50) NOT NULL DEFAULT '',
+  `job_json` text NOT NULL,
+  `state` varchar(20) DEFAULT NULL,
+  `asset_path` varchar(300) NOT NULL DEFAULT '',
+  `date_created` datetime DEFAULT NULL,
+  `created_by_user_account_id` int(11) NOT NULL,
+  `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `last_modified_user_account_id` int(11) NOT NULL,
+  PRIMARY KEY (`processing_job_id`),
+  KEY `job_id` (`processing_service_job_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+CREATE TABLE IF NOT EXISTS `processing_job_file` (
+  `processing_job_assets_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `job_id` varchar(50) NOT NULL DEFAULT '',
+  `file_name` varchar(255) DEFAULT NULL,
+  `file_contents` text,
+  `date_created` datetime DEFAULT NULL,
+  `created_by_user_account_id` int(11) NOT NULL,
+  `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `last_modified_user_account_id` int(11) NOT NULL,
+  PRIMARY KEY (`processing_job_assets_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 CREATE TABLE IF NOT EXISTS `project` (
   `project_repository_id` int(11) NOT NULL AUTO_INCREMENT,
   `project_name` varchar(255) DEFAULT '',
@@ -462,6 +501,32 @@ CREATE TABLE IF NOT EXISTS `project` (
   KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
   KEY `projects_label` (`project_name`,`stakeholder_guid`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8 COMMENT='This table stores project metadata';
+CREATE TABLE IF NOT EXISTS `role` (
+  `role_id` int(11) NOT NULL,
+  `rolename_canonical` varchar(80) COLLATE utf8_unicode_ci NOT NULL,
+  `rolename` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `role_description` varchar(2000) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `date_created` datetime NOT NULL,
+  `created_by_user_account_id` int(11) NOT NULL,
+  `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `last_modified_user_account_id` int(11) NOT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT '1'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+CREATE TABLE IF NOT EXISTS `role_permission` (
+  `role_permission_id` int(11) NOT NULL AUTO_INCREMENT,
+  `role_id` int(11) NOT NULL,
+  `permission_id` int(11) NOT NULL,
+  `date_created` datetime NOT NULL,
+  `created_by_user_account_id` int(11) NOT NULL,
+  `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `last_modified_user_account_id` int(11) NOT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`role_permission_id`),
+  KEY `role_id` (`role_id`),
+  KEY `permission_id` (`permission_id`),
+  KEY `created_by_user_account_id` (`created_by_user_account_id`),
+  KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 CREATE TABLE IF NOT EXISTS `scale_bar_barcode_type` (
   `scale_bar_barcode_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
   `label` varchar(255) NOT NULL DEFAULT '',
@@ -557,6 +622,38 @@ CREATE TABLE IF NOT EXISTS `unit` (
   KEY `created_by_user_account_id` (`created_by_user_account_id`),
   KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8 COMMENT='This table stores unit metadata';
+CREATE TABLE IF NOT EXISTS `user_detail` (
+  `user_detail_id` int(11) NOT NULL AUTO_INCREMENT,
+  `username_canonical` varchar(180) COLLATE utf8_unicode_ci NOT NULL,
+  `unit_id` int(11) DEFAULT NULL,
+  `user_type` varchar(16) COLLATE utf8_unicode_ci NOT NULL DEFAULT 'unit',
+  `date_created` datetime NOT NULL,
+  `created_by_user_account_id` int(11) NOT NULL,
+  `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `last_modified_user_account_id` int(11) NOT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`user_detail_id`),
+  KEY `unit_id` (`unit_id`),
+  KEY `created_by_user_account_id` (`created_by_user_account_id`),
+  KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+CREATE TABLE IF NOT EXISTS `user_role` (
+  `user_role_id` int(11) NOT NULL AUTO_INCREMENT,
+  `username_canonical` varchar(180) COLLATE utf8_unicode_ci NOT NULL,
+  `stakeholder_id` int(11) DEFAULT NULL,
+  `project_id` int(11) DEFAULT NULL,
+  `role_id` int(11) NOT NULL,
+  `date_created` datetime NOT NULL,
+  `created_by_user_account_id` int(11) NOT NULL,
+  `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `last_modified_user_account_id` int(11) NOT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`user_role_id`),
+  KEY `role_id` (`role_id`),
+  KEY `project_id` (`project_id`),
+  KEY `created_by_user_account_id` (`created_by_user_account_id`),
+  KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 CREATE TABLE IF NOT EXISTS `uv_map` (
   `uv_map_repository_id` int(11) NOT NULL AUTO_INCREMENT,
   `model_repository_id` int(11) DEFAULT NULL,
@@ -640,5 +737,6 @@ INSERT INTO `camera_cluster_type` VALUES (1,'none','2017-10-23 02:04:06',2,'2018
 INSERT INTO `data_rights_restriction_type` VALUES (1,'none','2017-10-23 15:49:48',2,'2018-02-10 18:44:00',1,1),(2,'copyrighted','2017-10-23 15:50:07',2,'2017-10-23 19:50:07',2,1),(3,'culturally_sensitive','2017-10-23 15:50:15',2,'2018-07-10 19:06:25',2,1),(4,'si_terms_of_use','2017-10-23 15:50:26',2,'2018-07-10 19:06:34',1,1),(5,'embargo','2017-10-23 15:50:33',2,'2017-10-23 19:50:33',2,1);
 INSERT INTO `dataset_type` VALUES (1,'photogrammetry_image_set','2017-10-22 21:14:11',2,'2018-07-10 19:06:45',1,1),(2,'grey_card','2017-10-22 21:14:26',2,'2018-07-10 19:06:48',2,1),(3,'background_removal_image_set','2018-04-04 09:46:26',1,'2018-07-10 19:06:56',1,1),(4,'array_calibration_image_set','2018-04-04 09:46:42',1,'2018-07-10 19:07:06',1,1);
 INSERT INTO `item_position_type` VALUES (1,'relative_to_environment','standard capture','','2017-10-22 21:35:33',2,'2018-07-10 19:07:25',1,1),(2,'relative_to_turntable','turntable capture','','2017-10-22 21:35:56',2,'2018-07-10 19:07:31',1,1);
+INSERT INTO `item_type` (`item_type_repository_id`, `label`, `date_created`, `created_by_user_account_id`, `last_modified`, `last_modified_user_account_id`, `active`)VALUES (1,'object','2017-10-23 15:46:39',2,'2018-03-18 14:24:52',1,1), (2,'location','2017-10-23 15:46:50',2,'2017-10-23 15:46:50',2,1);
 INSERT INTO `light_source_type` VALUES (1,'ambient','2017-10-22 22:26:13',2,'2017-10-23 02:26:23',2,1),(2,'strobe_standard','2017-10-22 22:26:30',2,'2018-07-10 19:07:44',1,1),(3,'strobe_cross','2017-10-22 22:26:38',2,'2018-07-10 19:07:47',1,1),(4,'patterned/structured','2017-10-22 22:26:47',2,'2017-10-23 02:26:47',2,1);
 INSERT INTO `target_type` VALUES (1,'dot','2017-10-23 15:53:51',2,'2018-02-10 20:42:59',1,1),(2,'cross','2017-10-23 15:54:01',2,'2017-10-23 19:54:01',2,1),(3,'curricular_12_bit','2017-10-23 15:54:09',2,'2018-07-10 19:08:09',5,1),(4,'RAD','2017-10-23 15:54:15',2,'2018-04-04 14:03:50',1,1);
