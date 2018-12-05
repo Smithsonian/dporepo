@@ -53,9 +53,9 @@ class AuthoringController extends Controller
   private $accepted_types;
 
   /**
-   * @var object $rootDirectory
+   * @var object $root_directory
    */
-  private $rootDirectory;
+  private $root_directory;
 
   /**
    * @var object $server
@@ -73,12 +73,8 @@ class AuthoringController extends Controller
     $this->kernel = $kernel;
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR . '';
     $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
-
-    // $this->u->dumper($this->project_directory,0);
-    // $this->u->dumper($this->uploads_directory);
-
-    $this->rootDirectory = new DAV\FS\Directory($this->project_directory . $this->uploads_directory);
-    $this->server = new DAV\Server($this->rootDirectory);
+    $this->root_directory = new DAV\FS\Directory($this->project_directory . $this->uploads_directory);
+    $this->server = new DAV\Server($this->root_directory);
 
     $this->accepted_types = array('item', 'presentation');
   }
@@ -107,7 +103,6 @@ class AuthoringController extends Controller
 
       // Remove any "pretty print" formatting from the JSON.
       $json = json_encode(json_decode($req['json'], true));
-      // $this->u->dumper($json);
 
       // Save to metadata storage.
       $id = $this->repo_storage_controller->execute('saveRecord', array(
@@ -124,27 +119,27 @@ class AuthoringController extends Controller
   }
 
   /**
-   * @Route("/webdav{path}", name="webdav", methods={"GET","POST","PUT", "DELETE","MKCOL","PROPFIND"}, defaults={"path" = null}, requirements={"path"=".+"})
+   * @Route("/webdav{path}", name="webdav", methods={"GET","POST","PUT","DELETE","MKCOL","PROPFIND"}, defaults={"path" = null}, requirements={"path"=".+"})
    *
-   * Author
+   * WebDAV Server
    *
    * @param object  $request  Request object
    * @return string
    */
   public function webdav(Request $request) {
     
-    // If your server is not on your webroot, make sure the following line has the correct information
+    // If the server is not in the webroot, make sure the following line has the correct information
     $this->server->setBaseUri('/webdav');
 
     // The lock manager is reponsible for making sure users don't overwrite each others changes.
-    $lockBackend = new DAV\Locks\Backend\File('data/locks');
-    $lockPlugin = new DAV\Locks\Plugin($lockBackend);
-    $this->server->addPlugin($lockPlugin);
+    $lock_backend = new DAV\Locks\Backend\File('data/locks');
+    $lock_plugin = new DAV\Locks\Plugin($lock_backend);
+    $this->server->addPlugin($lock_plugin);
 
     // This ensures that we get a pretty index in the browser, but it is optional.
     $this->server->addPlugin(new DAV\Browser\Plugin());
 
-    // All we need to do now, is to fire up the server
+    // Fire up the server.
     $this->server->exec();
 
     die();
