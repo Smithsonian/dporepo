@@ -390,7 +390,17 @@ class WorkflowController extends Controller
 
   }
 
-
-  
-
 }
+
+// This is one way to check for the status of a processing job or multiple processing jobs
+
+// // Check to see if jobs are running. Don't pass "Go" until all jobs are finished.
+// while ($this->processing->are_jobs_running($processing_job['job_ids'])) {
+//   $this->processing->are_jobs_running($processing_job['job_ids']);
+//   sleep(5);
+// }
+
+// // Retrieve all of the logs produced by the processing service.
+// foreach ($processing_job['job_ids'] as $job_id_value) {
+//   $processing_assets[] = $this->processing->get_processing_assets($filesystem, $job_id_value);
+// }
