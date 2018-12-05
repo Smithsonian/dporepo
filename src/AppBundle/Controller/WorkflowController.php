@@ -5,34 +5,64 @@ namespace AppBundle\Controller;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Doctrine\DBAL\Driver\Connection;
-
-use AppBundle\Controller\RepoStorageHybridController;
-
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Doctrine\DBAL\Driver\Connection;
+use Symfony\Component\HttpKernel\KernelInterface;
+
 use AppBundle\Service\RepoProcessingService;
-// Custom utility bundle
-use AppBundle\Utils\AppUtilities;
+use AppBundle\Controller\RepoStorageHybridController;
+
 use AppBundle\Form\BatchProcessingForm;
 use AppBundle\Form\WorkflowParamatersForm;
-class WorkflowController extends Controller {
 
+// Custom utility bundles
+use AppBundle\Utils\AppUtilities;
+
+class WorkflowController extends Controller
+{
+
+  /**
+   * @var object $u
+   */
+  public $u;
+
+  /**
+   * @var object $repo_storage_controller
+   */
   private $repo_storage_controller;
+
   /**
    * @var object $processing
    */
   private $processing;
+
+  /**
+   * @var object $kernel
+   */
+  public $kernel;
+
+  /**
+   * @var string $project_directory
+   */
+  private $project_directory;
+
+  /**
+   * @var string $uploads_directory
+   */
+  private $uploads_directory;
+
   /**
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(AppUtilities $u, Connection $conn,RepoProcessingService $processing)
+  public function __construct(AppUtilities $u, Connection $conn, RepoProcessingService $processing, KernelInterface $kernel, string $uploads_directory)
   {
+    $this->u = $u;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->processing = $processing;
-    $this->uploads_directory = __DIR__ . '/../../../web/uploads/repository/';
-    $this->uploads_path = '/uploads/repository';
+    $this->kernel = $kernel;
+    $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR  . 'web';
   }
 
 
@@ -186,8 +216,8 @@ class WorkflowController extends Controller {
     }
     */
     $recipeArray = [];
-    if (isset($recipe['result'][$recipeID])) {
-      $recipeArray = json_decode($recipe['result'][$recipeID], true);
+    if (!empty($recipe['result'])) {
+      $recipeArray = json_decode($recipe['result'], true);
       $recipeArray['name'] = str_replace("-", " ",$recipeArray['name']);
       $recipeArray['name'] = ucwords($recipeArray['name']);
     }
@@ -200,10 +230,14 @@ class WorkflowController extends Controller {
    * @param Request $request
    */
     public function batchProcessingLaunch(Request $request) {
+
+      $data = array();
+
       $filesystem = $this->container->get("oneup_flysystem.processing_filesystem");
       $recipe = $request->request->get("workflow");
       $workflow = explode(",", $recipe);
-      $workflow_name = $workflow[1];
+      // Need to replace spaces with dashes and convert the capitalized words to lower case.
+      $workflow_name = strtolower(str_replace(' ', '-', $workflow[1]));
       $assets = $request->request->get("assets");
       $assets =  explode(",", $assets);
 
@@ -212,13 +246,57 @@ class WorkflowController extends Controller {
       $query_params = array(
         'file_id' => $assets[0],
       );
+
       $files = $this->repo_storage_controller->execute('getFile', $query_params);
-      for ($i=0; $i < count($files); $i++) { 
-        $local_path = $this->uploads_directory."".$files[$i]['file_path'];
+
+      for ($i=0; $i < count($files); $i++) {
+        // The path to the file.
+        $local_path = $this->project_directory . $files[$i]['file_path'];
+        // Windows path fix.
         $local_path = str_replace("/", DIRECTORY_SEPARATOR, $local_path);
-        $parent_record_data = array("parent_record_id"=>$modelID,"parent_record_type"=>'model');
-        $data = $this->processing->initialize_job($workflow_name,$params,$local_path,$this->getUser()->getId(),$parent_record_data,$filesystem);
+        $parent_record_data = array('parent_record_id' => $modelID, 'parent_record_type' => 'model');
+        // Initialize the processing job.
+        // TODO: Since this is being called from a loop, this will need to return as a multi-dimentional array ( example: $data[] ).
+        $data = $this->processing->initialize_job($workflow_name, $params, $local_path, $this->getUser()->getId(), $parent_record_data, $filesystem);
       }
+
+      // On success, this is what's returned by initialize_job()
+      // array(12) {
+      //   ["id"]=>
+      //   string(36) "A63B2CCE-969B-F065-0691-85000961D601"
+      //   ["name"]=>
+      //   string(20) "2018-12-05T19:32:42Z"
+      //   ["clientId"]=>
+      //   string(36) "7210f16c-d71a-4845-837f-b598ea38d36b"
+      //   ["recipe"]=>
+      //   array(4) {
+      //     ["id"]=>
+      //     string(36) "ee77ee05-d832-4729-9914-18a96939f205"
+      //     ["name"]=>
+      //     string(12) "inspect-mesh"
+      //     ["description"]=>
+      //     string(49) "Inspects a mesh and returns a report with results"
+      //     ["version"]=>
+      //     string(1) "1"
+      //   }
+      //   ["priority"]=>
+      //   string(6) "normal"
+      //   ["submission"]=>
+      //   string(20) "2018-12-05T19:32:42Z"
+      //   ["start"]=>
+      //   string(0) ""
+      //   ["end"]=>
+      //   string(0) ""
+      //   ["duration"]=>
+      //   int(0)
+      //   ["state"]=>
+      //   string(7) "created"
+      //   ["step"]=>
+      //   string(0) ""
+      //   ["error"]=>
+      //   string(0) ""
+      // }
+
       return new JsonResponse($data);
     }
     /**

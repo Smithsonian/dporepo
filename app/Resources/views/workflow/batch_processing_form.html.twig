@@ -2,14 +2,6 @@
 
 {% block content %}
 
-  <div class="row">
-    <div class="col-sm-12 col-md-12">
-      <div class="form-group">
-        <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
-      </div>
-    </div>
-  </div>
-  {#{ form_start(form) }#} {# , {'attr': {'novalidate': 'novalidate'}} #}
   <div id="batch_form">
     <div class="row">
       <div class="col-sm-4 col-md-4">
@@ -71,9 +63,8 @@
     </div>
     <div class="row">
       <button class="btn btn-default" id="btn-edit">Edit Processing Job</button>
-      <button class="btn btn-default" id="btn-launch">Launch Processing</button>
+      <button class="btn btn-primary" id="btn-launch">Launch Processing</button>
     </div>
-    <div id="message_launch"></div>
   </div>
 {% endblock %}
 {% block javascripts %}
@@ -129,7 +120,7 @@
               var files = $("input[name='batch_processing_form[batch_processing_assets][]']").val();
               file = files.split(",");
               assets = file[1];
-              var workflow = $("input[name='workflow']").val();
+              var workflow = $("input[name='workflow']:checked").val();
               workflow = workflow.split(",");
               workflowname = workflow[1];
               var contact = $("input[name='contact']").val();
@@ -171,14 +162,53 @@
         var required_params = $("#required_params").val();
         var required = $("input[name='required_params']").val();
         required = required.split(",");
-        var params = [];
+        var params = {};
         for (var i = 0; i < required.length; i++) {
           params[required[i]] = $("input[name='"+required[i]+"']").val();
         }
+
         var parameters = {workflow:workflow,assets:files,modelID:modelID,params:params};
-        $.post(url,parameters,function(response){
-          if (response[0]['errors'][0]) {
-            $("#message_launch").html("<div class='alert alert-danger'>"+response[0]['errors'][0]+"</div>");
+
+        $.post(url, parameters, function(response) {
+
+          // Return errors, or an alert on success.
+          if (response.length && (typeof response[0]['errors'] !== 'undefined')) {
+
+            // Return errors via an alert.
+            swal({
+              title: 'Error',
+              text: response[0]['errors'][0],
+              icon: 'error',
+            });
+
+          } else {
+
+            var span = document.createElement('span');
+            span.innerHTML = 'Processing ID: ' + response.id + '<br>';
+            span.innerHTML += 'Recipe: ' + response.recipe.name + '<br>';
+            span.innerHTML += 'Timestamp: ' + response.submission;
+
+            // Return a success message via an alert.
+            swal({
+              title: 'Processing Initialized Successfully',
+              icon: 'success',
+              content: span,
+              buttons: {
+                catch: {
+                  text: 'Close',
+                  value: 'close',
+                }
+              },
+            })
+            .then((value) => {
+              switch (value) {
+                case 'close':
+                  // Send to the details page.
+                  window.location.href = '/admin/projects/model/' + modelID + '/detail';
+                  break;
+              }
+            });
+
           }
         });
       }
