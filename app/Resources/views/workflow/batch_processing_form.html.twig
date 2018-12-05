@@ -7,14 +7,14 @@
       <div class="col-sm-4 col-md-4">
         <div>
           <input type="hidden" name="modelID" id="modelID" value="{{modelID}}">
-          <label>Choose Workflow</label>
+          <h3>Choose Workflow</h3>
           {% for wk in workflows %}
             <div><label><input type="radio" name="workflow" class="workflow" value="{{wk.id}},{{wk.name}}"> {{wk.name}}</label></div>
           {% endfor %}
           <input type="hidden" name="workflow_description">
         </div>
       </div>
-      <div class="col-sm-8 col-md-8">
+      <div class="col-sm-4 col-md-4">
         <div id="workflow_info"></div>
       </div>
     </div>
@@ -23,7 +23,7 @@
         {{ form_row(form.batch_processing_assets) }}
       </div>
       <div class="col-sm-8 col-md-8">
-        <label>Point of Contanct:</label>
+        <h3>Point of Contact</h3>
         {% for contact in contacts %}
           <div><label><input type="radio" name="contact" class="contact" value="{{contact.id}},{{contact.username}}"> {{contact.username}}</label></div>
         {% endfor %}
@@ -31,7 +31,7 @@
     </div>
     <div class="row">
       <div class="col-sm-4 col-md-4">
-        <label>Parameters</label>
+        <h3>Parameters</h3>
         <div id="default-parameter-message">No workflow selected...</div>
         <div id="parameters-container"></div>
         <br>
@@ -87,9 +87,11 @@
             
             $("#default-parameter-message").hide();
             $("#parameters-container").html("");
-            $("#workflow_info").html("");
-            $("#workflow_info").append("<label>"+response.name+"</label>");
-            $("#workflow_info").append("<p>"+response.description+"</p>");
+            $("#workflow_info").empty();
+            var workflowInfoContainer = $('<div />').addClass('well');
+            workflowInfoContainer.append('<h4>'+response.name+'</h4>');
+            workflowInfoContainer.append("<p>"+response.description+"</p>");
+            $("#workflow_info").append(workflowInfoContainer);
             $("input[name='workflow_description']").val(response.description);
             for (var i = 0; i < response.parameterSchema.required.length; i++) {
               var filename = '';
