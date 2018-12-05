@@ -855,7 +855,7 @@ class ImportController extends Controller
       if (!empty($project)) {
         // Get the job type (what's being ingested?).
         $job_type = $this->get_job_type($record_type);
-        $uuid = uniqid('3df_', true);
+        $uuid = $this->u->create_uuid();
         // Insert a record into the job table.
         // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI?
         $job_id = $this->repo_storage_controller->execute('saveRecord', array(

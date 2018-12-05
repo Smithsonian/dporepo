@@ -141,7 +141,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
       );
 
       $post_params = array(
-        'id' => $this->create_guid(),
+        'id' => $this->u->create_uuid(),
         'name' => $job_name,
         'clientId' => $this->processing_service_client_id,
         'recipeId' => $recipe_id,
@@ -925,29 +925,6 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
     ksort($data);
 
     return $data;
-  }
-
-  /**
-   * Create GUID
-   *
-   * @return string
-   */
-  public function create_guid() {
-
-    if (function_exists('com_create_guid')){
-      return com_create_guid();
-    } else {
-      mt_srand((double)microtime()*10000);//optional for php 4.2.0 and up.
-      $charid = strtoupper(md5(uniqid(rand(), true)));
-      $hyphen = chr(45);// "-"
-      $uuid = substr($charid, 0, 8).$hyphen
-          .substr($charid, 8, 4).$hyphen
-          .substr($charid,12, 4).$hyphen
-          .substr($charid,16, 4).$hyphen
-          .substr($charid,20,12);
-      return $uuid;
-    }
-
   }
 
 }
