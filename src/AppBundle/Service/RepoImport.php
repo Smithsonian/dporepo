@@ -724,34 +724,11 @@ class RepoImport implements RepoImportInterface {
         // Log the model file to the 'model_file' table.
         if(!empty($csv_val->file_path)) {
 
-          $uploads_directory = str_replace('web', '', $this->uploads_directory);
-          // Windows fix for the model's file path.
-          $uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_directory) : $uploads_directory;
-          $uploads_directory = substr($uploads_directory, 0, -1);
           // Windows fix for the model's file path.
           $file_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $csv_val->file_path) : $csv_val->file_path;
 
-          // Scan the model's directory for UV maps, and insert into metadata storage.
-          $this->insert_uv_maps($file_path, $this_id, $data->user_id);
-
           // Log the model file to 'model_file' metadata storage.
-          // Query the metadata storage for the file's ID using the file_path.
-          $file_info = $this->repo_storage_controller->execute('getRecords', array(
-            'base_table' => 'file_upload',
-            'fields' => array(
-              array(
-                'table_name' => 'file_upload',
-                'field_name' => 'file_upload_id',
-              ),
-            ),
-            'limit' => 1,
-            'search_params' => array(
-              0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($uploads_directory . $file_path), 'comparison' => '='),
-            ),
-            'search_type' => 'AND',
-            'omit_active_field' => true,
-            )
-          );
+          $this->insert_model_files($file_path, $this_id, $data->user_id);
 
           // Insert the model into the metadata storage.
           if (!empty($file_info)) {
@@ -764,6 +741,8 @@ class RepoImport implements RepoImportInterface {
               )
             ));
           }
+          // Scan the model's directory for UV maps, and insert into metadata storage.
+          $this->insert_uv_maps($file_path, $this_id, $data->user_id);
 
         }
 
@@ -1441,6 +1420,56 @@ class RepoImport implements RepoImportInterface {
     }
 
     return $data;
+  }
+
+  /**
+   * Insert Model Files
+   *
+   * @param string $file_path The file path
+   * @param string $model_repository_id The model's ID
+   * @param string $user_id The user's ID
+   * @return null
+   */
+  public function insert_model_files($file_path = null, $model_repository_id = null, $user_id = null) {
+
+    if (!empty($file_path) && !empty($model_repository_id)) {
+
+      $uploads_directory = str_replace('web', '', $this->uploads_directory);
+      // Windows fix for the model's file path.
+      $uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_directory) : $uploads_directory;
+      $uploads_directory = substr($uploads_directory, 0, -1);
+
+      // Query the metadata storage for the file's ID using the file_path.
+      $file_info = $this->repo_storage_controller->execute('getRecords', array(
+        'base_table' => 'file_upload',
+        'fields' => array(
+          array(
+            'table_name' => 'file_upload',
+            'field_name' => 'file_upload_id',
+          ),
+        ),
+        'limit' => 1,
+        'search_params' => array(
+          0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($uploads_directory . $file_path), 'comparison' => '='),
+        ),
+        'search_type' => 'AND',
+        'omit_active_field' => true,
+        )
+      );
+
+      // Insert the model into the metadata storage.
+      if (!empty($file_info)) {
+        $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'model_file',
+          'user_id' => $user_id,
+          'values' => array(
+            'model_repository_id' => $model_repository_id,
+            'file_upload_id' => $file_info[0]['file_upload_id'],
+          )
+        ));
+      }
+
+    }
   }
 
   /**
