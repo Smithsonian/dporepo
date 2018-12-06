@@ -731,6 +731,10 @@ class RepoImport implements RepoImportInterface {
           // Windows fix for the model's file path.
           $file_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $csv_val->file_path) : $csv_val->file_path;
 
+          // Scan the model's directory for UV maps, and insert into metadata storage.
+          $this->insert_uv_maps($file_path, $this_id, $data->user_id);
+
+          // Log the model file to 'model_file' metadata storage.
           // Query the metadata storage for the file's ID using the file_path.
           $file_info = $this->repo_storage_controller->execute('getRecords', array(
             'base_table' => 'file_upload',
@@ -749,7 +753,7 @@ class RepoImport implements RepoImportInterface {
             )
           );
 
-          // Log the model file to 'model_file' metadata storage.
+          // Insert the model into the metadata storage.
           if (!empty($file_info)) {
             $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => 'model_file',
@@ -1437,6 +1441,76 @@ class RepoImport implements RepoImportInterface {
     }
 
     return $data;
+  }
+
+  /**
+   * Insert UV Maps
+   *
+   * @param string $file_path The file path
+   * @param string $model_repository_id The model's ID
+   * @param string $user_id The user's ID
+   * @return null
+   */
+  public function insert_uv_maps($file_path = null, $model_repository_id = null, $user_id = null) {
+
+    if (!empty($file_path) && !empty($model_repository_id)) {
+
+      $file_path_parts = explode(DIRECTORY_SEPARATOR, $file_path);
+      array_pop($file_path_parts);
+      $file_path_root_directory = implode(DIRECTORY_SEPARATOR, $file_path_parts);
+      $file_path_absolute_root_directory = $this->project_directory . substr($this->uploads_directory, 0, -1) . $file_path_root_directory;
+
+      $finder = new Finder();
+      $finder->files()->in($file_path_absolute_root_directory);
+      // Loop through uploaded files.
+      foreach ($finder as $file) {
+
+        // Loop through the texture map file name parts, and see if there's a match.
+        foreach ($this->texture_map_file_name_parts as $tkey => $tvalue) {
+          
+          if (strstr($file->getFilename(), $tvalue)) {
+
+            $uploads_directory = substr(str_replace('web', '', $this->uploads_directory), 0, -1);
+            $uv_map_file_path = str_replace($this->project_directory . substr($this->uploads_directory, 0, -1), '', $file->getPathname());
+
+            // Query the metadata storage for the file's data using the file_path.
+            $file_info = $this->repo_storage_controller->execute('getRecords', array(
+              'base_table' => 'file_upload',
+              'fields' => array(),
+              'limit' => 1,
+              'search_params' => array(
+                0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($uploads_directory . $uv_map_file_path), 'comparison' => '='),
+              ),
+              'search_type' => 'AND',
+              'omit_active_field' => true,
+              )
+            );
+
+            // Log the UV map file to 'uv_map' metadata storage.
+            if (!empty($file_info)) {
+              $this->repo_storage_controller->execute('saveRecord', array(
+                'base_table' => 'uv_map',
+                'user_id' => $user_id,
+                'values' => array(
+                  'model_repository_id' => $model_repository_id,
+                  'file_upload_id' => $file_info[0]['file_upload_id'],
+                  'map_type' => str_replace('-', '', $tvalue),
+                  'map_file_type' => $file_info[0]['file_type'],
+                  'map_size' => $file_info[0]['file_size'],
+                  'file_path' => $file_info[0]['file_path'],
+                  'file_checksum' => $file_info[0]['file_hash'],
+                  'created_by_user_account_id' => $user_id,
+                  'last_modified_user_account_id' => $user_id,
+                )
+              ));
+            }
+          }
+
+        }
+        
+      }
+
+    }
   }
 
 }

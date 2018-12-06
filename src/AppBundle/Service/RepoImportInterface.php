@@ -105,4 +105,14 @@ interface RepoImportInterface {
    */
   public function getFilenameMap(array $job_data);
 
+  /**
+   * Insert UV Maps
+   *
+   * @param string $file_path The file path
+   * @param string $model_repository_id The model's ID
+   * @param string $user_id The user's ID
+   * @return null
+   */
+  public function insert_uv_maps($file_path = null, $model_repository_id = null, $user_id = null);
+
 }
