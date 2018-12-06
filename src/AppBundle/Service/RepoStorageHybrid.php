@@ -1595,7 +1595,9 @@ class RepoStorageHybrid implements RepoStorage {
             'capture_dataset',
             'capture_data_element',
             'capture_data_file',
-            'model'
+            'model',
+            'model_file',
+            'uv_map'
           ),
           'job_and_file_tables' => array(
             'job',
@@ -1610,9 +1612,17 @@ class RepoStorageHybrid implements RepoStorage {
 
         // Remove data from tables containing repository data.
         foreach ($table_names['data_tables'] as $data_table_name) {
+          // TODO: won't need this after refactoring... be sure to remove it!
+          switch($data_table_name) {
+            case 'model_file':
+              $id_append = '_id';
+              break;
+            default:
+              $id_append = '_repository_id';
+          }
           // Remove records.
           $sql_data = "DELETE FROM {$data_table_name}
-            WHERE {$data_table_name}.{$data_table_name}_id IN (SELECT record_id
+            WHERE {$data_table_name}.{$data_table_name}{$id_append} IN (SELECT record_id
             FROM job_import_record
             WHERE job_import_record.job_id = :job_id
             AND job_import_record.record_table = '{$data_table_name}')";
@@ -1621,8 +1631,8 @@ class RepoStorageHybrid implements RepoStorage {
           $statement->execute();
           $data[ $data_table_name ] = $statement->rowCount();
           // Reset the auto increment value.
-          $sql_data_reset = "ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_id INT(11) UNSIGNED;
-          ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_id INT(11) UNSIGNED AUTO_INCREMENT";
+          $sql_data_reset = "ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}{$id_append} INT(11) UNSIGNED;
+          ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}{$id_append} INT(11) UNSIGNED AUTO_INCREMENT";
           $statement = $this->connection->prepare($sql_data_reset);
           $statement->execute();
         }

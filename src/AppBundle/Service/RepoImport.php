@@ -728,7 +728,7 @@ class RepoImport implements RepoImportInterface {
           $file_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $csv_val->file_path) : $csv_val->file_path;
 
           // Log the model file to 'model_file' metadata storage.
-          $this->insert_model_files($file_path, $this_id, $data->user_id);
+          $this->insert_model_files($file_path, $this_id, $data);
 
           // Insert the model into the metadata storage.
           if (!empty($file_info)) {
@@ -742,7 +742,7 @@ class RepoImport implements RepoImportInterface {
             ));
           }
           // Scan the model's directory for UV maps, and insert into metadata storage.
-          $this->insert_uv_maps($file_path, $this_id, $data->user_id);
+          $this->insert_uv_maps($file_path, $this_id, $data);
 
         }
 
@@ -1427,12 +1427,12 @@ class RepoImport implements RepoImportInterface {
    *
    * @param string $file_path The file path
    * @param string $model_repository_id The model's ID
-   * @param string $user_id The user's ID
+   * @param string $data The data array
    * @return null
    */
-  public function insert_model_files($file_path = null, $model_repository_id = null, $user_id = null) {
+  public function insert_model_files($file_path = null, $model_repository_id = null, $data = array()) {
 
-    if (!empty($file_path) && !empty($model_repository_id)) {
+    if (!empty($file_path) && !empty($model_repository_id) && !empty($data)) {
 
       $uploads_directory = str_replace('web', '', $this->uploads_directory);
       // Windows fix for the model's file path.
@@ -1442,12 +1442,7 @@ class RepoImport implements RepoImportInterface {
       // Query the metadata storage for the file's ID using the file_path.
       $file_info = $this->repo_storage_controller->execute('getRecords', array(
         'base_table' => 'file_upload',
-        'fields' => array(
-          array(
-            'table_name' => 'file_upload',
-            'field_name' => 'file_upload_id',
-          ),
-        ),
+        'fields' => array(),
         'limit' => 1,
         'search_params' => array(
           0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($uploads_directory . $file_path), 'comparison' => '='),
@@ -1459,12 +1454,25 @@ class RepoImport implements RepoImportInterface {
 
       // Insert the model into the metadata storage.
       if (!empty($file_info)) {
-        $this->repo_storage_controller->execute('saveRecord', array(
+        $id = $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'model_file',
-          'user_id' => $user_id,
+          'user_id' => $data->user_id,
           'values' => array(
-            'model_repository_id' => $model_repository_id,
+            'model_repository_id' => (int)$model_repository_id,
             'file_upload_id' => $file_info[0]['file_upload_id'],
+          )
+        ));
+
+        // Insert into the job_import_record table
+        $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_import_record',
+          'user_id' => $data->user_id,
+          'values' => array(
+            'job_id' => $data->job_id,
+            'record_id' => (int)$id,
+            'project_id' => (int)$data->parent_project_id,
+            'record_table' => 'model_file',
+            'description' => $file_info[0]['file_name'],
           )
         ));
       }
@@ -1477,12 +1485,12 @@ class RepoImport implements RepoImportInterface {
    *
    * @param string $file_path The file path
    * @param string $model_repository_id The model's ID
-   * @param string $user_id The user's ID
+   * @param string $data The data array
    * @return null
    */
-  public function insert_uv_maps($file_path = null, $model_repository_id = null, $user_id = null) {
+  public function insert_uv_maps($file_path = null, $model_repository_id = null, $data = array()) {
 
-    if (!empty($file_path) && !empty($model_repository_id)) {
+    if (!empty($file_path) && !empty($model_repository_id) && !empty($data)) {
 
       $file_path_parts = explode(DIRECTORY_SEPARATOR, $file_path);
       array_pop($file_path_parts);
@@ -1517,17 +1525,30 @@ class RepoImport implements RepoImportInterface {
 
             // Log the UV map file to 'uv_map' metadata storage.
             if (!empty($file_info)) {
-              $this->repo_storage_controller->execute('saveRecord', array(
+              $id = $this->repo_storage_controller->execute('saveRecord', array(
                 'base_table' => 'uv_map',
-                'user_id' => $user_id,
+                'user_id' => $data->user_id,
                 'values' => array(
-                  'model_repository_id' => $model_repository_id,
+                  'model_repository_id' => (int)$model_repository_id,
                   'file_upload_id' => $file_info[0]['file_upload_id'],
                   'map_type' => str_replace('-', '', $tvalue),
                   'map_file_type' => $file_info[0]['file_type'],
                   'map_size' => $file_info[0]['file_size'],
                   'file_path' => $file_info[0]['file_path'],
                   'file_checksum' => $file_info[0]['file_hash'],
+                )
+              ));
+
+              // Insert into the job_import_record table
+              $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+                'base_table' => 'job_import_record',
+                'user_id' => $data->user_id,
+                'values' => array(
+                  'job_id' => $data->job_id,
+                  'record_id' => (int)$id,
+                  'project_id' => (int)$data->parent_project_id,
+                  'record_table' => 'uv_map',
+                  'description' => $file_info[0]['file_name'],
                 )
               ));
             }

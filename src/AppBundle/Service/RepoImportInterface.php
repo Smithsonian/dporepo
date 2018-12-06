@@ -110,19 +110,19 @@ interface RepoImportInterface {
    *
    * @param string $file_path The file path
    * @param string $model_repository_id The model's ID
-   * @param string $user_id The user's ID
+   * @param string $data The data array
    * @return null
    */
-  public function insert_model_files($file_path = null, $model_repository_id = null, $user_id = null);
+  public function insert_model_files($file_path = null, $model_repository_id = null, $data = array());
 
   /**
    * Insert UV Maps
    *
    * @param string $file_path The file path
    * @param string $model_repository_id The model's ID
-   * @param string $user_id The user's ID
+   * @param string $data The data array
    * @return null
    */
-  public function insert_uv_maps($file_path = null, $model_repository_id = null, $user_id = null);
+  public function insert_uv_maps($file_path = null, $model_repository_id = null, $data = array());
 
 }
