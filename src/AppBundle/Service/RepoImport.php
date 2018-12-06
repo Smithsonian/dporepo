@@ -1528,8 +1528,6 @@ class RepoImport implements RepoImportInterface {
                   'map_size' => $file_info[0]['file_size'],
                   'file_path' => $file_info[0]['file_path'],
                   'file_checksum' => $file_info[0]['file_hash'],
-                  'created_by_user_account_id' => $user_id,
-                  'last_modified_user_account_id' => $user_id,
                 )
               ));
             }
