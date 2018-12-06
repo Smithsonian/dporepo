@@ -155,9 +155,10 @@ class RepoImport implements RepoImportInterface {
 
     // Texture map file name parts.
     $this->texture_map_file_name_parts = array(
-      '-diffuse-',
-      '-normal-',
-      '-occlusion-',
+      '-diffuse',
+      '-normal_t',
+      '-normal_w',
+      '-occlusion',
     );
 
     // Default image file name mapping.
