@@ -93,7 +93,7 @@ class UploadListener
             'file_path' => DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'repository' . DIRECTORY_SEPARATOR . $file_data->target_directory . DIRECTORY_SEPARATOR . $full_path,
             'file_size' => filesize($file_data->job_id_directory . '/' . $full_path),
             'file_type' => $file->getExtension(), // $file->getMimeType()
-            'file_hash' => '',
+            'file_hash' => md5_file($file_data->job_id_directory . '/' . $full_path),
           )
         ));
       }
@@ -108,6 +108,7 @@ class UploadListener
           // Run the CSV validation.
           $validation_results = $this->validateMetadata($data->job_id, $data->job_id_directory, $data->record_type, $file_data->record_id, $file->getBasename());
           // Remove the CSV file.
+          // TODO: Remove the temporary directory.
           $finder = new Finder();
           $finder->files()->in($data->job_id_directory . '/');
           $finder->files()->name($file->getBasename());
