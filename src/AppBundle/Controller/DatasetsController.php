@@ -18,6 +18,7 @@ use AppBundle\Entity\Items;
 
 // Custom utility bundle
 use AppBundle\Utils\AppUtilities;
+use AppBundle\Service\RepoUserAccess;
 
 class DatasetsController extends Controller
 {
@@ -26,6 +27,7 @@ class DatasetsController extends Controller
      */
     public $u;
     private $repo_storage_controller;
+    private $repo_user_access;
 
     /**
      * @var string
@@ -41,6 +43,7 @@ class DatasetsController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
+        $this->repo_user_access = new RepoUserAccess($conn);
         $this->uploads_path = str_replace('web', '', $uploads_directory);
     }
 

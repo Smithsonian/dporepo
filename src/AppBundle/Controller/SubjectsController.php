@@ -18,6 +18,8 @@ use AppBundle\Entity\Subjects;
 // Custom utility bundle
 use AppBundle\Utils\AppUtilities;
 
+use AppBundle\Service\RepoUserAccess;
+
 class SubjectsController extends Controller
 {
     /**
@@ -25,6 +27,7 @@ class SubjectsController extends Controller
      */
     public $u;
     private $repo_storage_controller;
+    private $repo_user_access;
 
     /**
     * Constructor
@@ -35,6 +38,7 @@ class SubjectsController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
+        $this->repo_user_access = new RepoUserAccess($conn);
     }
 
     /**
@@ -43,6 +47,27 @@ class SubjectsController extends Controller
     public function browse_subjects(Connection $conn, Request $request, ProjectsController $projects)
     {
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
+
+        $username = $this->getUser()->getUsernameCanonical();
+        $user_can_edit = $user_can_edit_project = false;
+        if(false !== $project_repository_id) {
+          $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $project_repository_id);
+          if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+            $response = new Response();
+            $response->setStatusCode(403);
+            return $response;
+          }
+
+          $access = $this->repo_user_access->get_user_access($username, 'edit_projects', $project_repository_id);
+          if(array_key_exists('project_ids', $access) && in_array($project_repository_id, $access['project_ids'])) {
+            $user_can_edit_project = true;
+          }
+
+          $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $project_repository_id);
+          if(array_key_exists('project_ids', $access) && in_array($project_repository_id, $access['project_ids'])) {
+            $user_can_edit = true;
+          }
+        }
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $project_repository_id));
@@ -58,6 +83,8 @@ class SubjectsController extends Controller
             'project_data' => $project_data,
             'upload_metadata_button' => !empty($subjects) ? true : false,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'user_can_edit_project' => $user_can_edit_project,
+            'user_can_edit' => $user_can_edit,
         ));
     }
 
@@ -75,6 +102,14 @@ class SubjectsController extends Controller
     {
         $req = $request->request->all();
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
+
+        $username = $this->getUser()->getUsernameCanonical();
+        if(false !== $project_repository_id) {
+          $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $project_repository_id);
+          if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+            return $this->json(array());
+          }
+        }
 
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
@@ -146,6 +181,22 @@ class SubjectsController extends Controller
           $ajax = true;
         }
 
+        $username = $this->getUser()->getUsernameCanonical();
+        $user_can_edit = false;
+        if(false !== $subject->project_repository_id && false !== $id) {
+          $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $subject->project_repository_id);
+          if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+            $response = new Response();
+            $response->setStatusCode(403);
+            return $response;
+          }
+
+          $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $subject->project_repository_id);
+          if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+            $user_can_edit = true;
+          }
+        }
+
         // Retrieve data from the database.
         if(!empty($id) && empty($post)) {
           $rec = $this->repo_storage_controller->execute('getRecordById', array(
@@ -190,6 +241,7 @@ class SubjectsController extends Controller
               'page_title' => !empty($id) ? 'Subject: ' . $subject->subject_name : 'Create Subject',
               'subject_data' => $subject,
               'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+              'user_can_edit' => $user_can_edit,
               'form' => $form->createView(),
           ));
         }
@@ -247,6 +299,15 @@ class SubjectsController extends Controller
     public function get_subjects_tree_browser(Request $request, ItemsController $items)
     {      
       $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
+
+      $username = $this->getUser()->getUsernameCanonical();
+      if(false !== $project_repository_id) {
+        $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $project_repository_id);
+        if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+          return new JsonResponse(array());
+        }
+      }
+
       $subjects = $this->get_subjects($project_repository_id);
 
       foreach ($subjects as $key => $value) {
@@ -285,6 +346,16 @@ class SubjectsController extends Controller
     {
         $ids = $request->query->get('ids');
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
+
+        $username = $this->getUser()->getUsernameCanonical();
+        if(false !== $project_repository_id) {
+          $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $project_repository_id);
+          if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+            $this->addFlash('message', 'No access. You are not allowed to delete subjects.');
+            return;
+          }
+        }
+
 
         if(!empty($ids) && $project_repository_id) {
 

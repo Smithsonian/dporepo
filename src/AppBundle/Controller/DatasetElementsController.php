@@ -17,6 +17,7 @@ use AppBundle\Entity\DatasetElements;
 
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
+use AppBundle\Service\RepoUserAccess;
 
 class DatasetElementsController extends Controller
 {
@@ -25,6 +26,7 @@ class DatasetElementsController extends Controller
      */
     public $u;
     private $repo_storage_controller;
+    private $repo_user_access;
 
     /**
      * @var string $uploads_path
@@ -40,6 +42,7 @@ class DatasetElementsController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
+        $this->repo_user_access = new RepoUserAccess($conn);
         $this->uploads_path = '/uploads/repository';
     }
 
@@ -139,6 +142,14 @@ class DatasetElementsController extends Controller
     function show_dataset_elements_form( Connection $conn, Request $request, ProjectsController $projects, SubjectsController $subjects, ItemsController $items, DatasetsController $datasets )
     {
         
+      $username = $this->getUser()->getUsernameCanonical();
+      $access = $this->repo_user_access->get_user_access_any($username, 'create_project_details');
+
+      if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
+        $response = new Response();
+        $response->setStatusCode(403);
+        return $response;
+      }
 
         $dataset_element = new DatasetElements();
         $post = $request->request->all();
@@ -286,6 +297,15 @@ class DatasetElementsController extends Controller
      */
     public function delete_multiple_capture_data_element(Request $request)
     {
+      $username = $this->getUser()->getUsernameCanonical();
+      $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');
+
+      if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
+        $response = new Response();
+        $response->setStatusCode(403);
+        return $response;
+      }
+
         $ids = $request->query->get('ids');
         $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;

@@ -16,6 +16,7 @@ use AppBundle\Entity\Model;
 
 // Custom utility bundle
 use AppBundle\Utils\AppUtilities;
+use AppBundle\Service\RepoUserAccess;
 
 class ModelController extends Controller
 {

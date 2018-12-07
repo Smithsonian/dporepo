@@ -20,6 +20,9 @@ use AppBundle\Controller\SubjectsController;
 // Items methods
 use AppBundle\Controller\ItemsController;
 
+// Access control methods
+use AppBundle\Service\RepoUserAccess;
+
 class AdminController extends Controller
 {
     /**
@@ -27,6 +30,7 @@ class AdminController extends Controller
      */
     public $u;
     private $repo_storage_controller;
+    private $repo_user_access_controller;
 
     /**
     * Constructor
@@ -37,6 +41,7 @@ class AdminController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
+        $this->repo_user_access_controller = new RepoUserAccess($conn);
     }
 
     /**
@@ -44,6 +49,15 @@ class AdminController extends Controller
      */
     public function show_admin(Connection $conn, Request $request)
     {
+        $username = $this->getUser()->getUsernameCanonical();
+        $access = $this->repo_user_access_controller->get_user_access_any($username, 'view_projects');
+
+        if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
+          $response = new Response();
+          $response->setStatusCode(403);
+          return $response;
+        }
+
         // Database tables are only created if not present.
         $create_favorites_table = $this->create_favorites_table($conn);
         $roles = $this->getUser()->getRoles();
