@@ -1,0 +1,91 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block content %}
+
+    <div class="col-sm-12 col-md-12 child-data">
+        <div class="panel panel-default">
+            <div class="panel-body">
+
+                <a href="/admin/users/{{ username_canonical }}/role/add" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Role for this user</a>
+
+                <table id="browse_user_roles" class="table table-striped table-bordered" cellspacing="0" width="100%">
+                    <thead>
+                    <tr>
+                        <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                        <th class="text-center">Stakeholder</th>
+                        <th class="text-center">Project</th>
+                        <th class="text-center">Role</th>
+                    </tr>
+                    </thead>
+                </table>
+
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block js_bottom %}
+    {{ parent() }}
+    <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
+    <script type="text/javascript">
+      $(document).ready(function() {
+
+        // Favorites
+        $('#browse_user_roles').dataTable( {
+          "columns": [
+            { "data": "manage" },
+            { "data": "stakeholder" },
+            { "data": "project" },
+            { "data": "rolename" },
+          ],
+          "dom": 'lfip<"datatables_bulk_actions">tip',
+          "pagingType": "simple_numbers",
+          "stateSave": true,
+          "order": [[2,"desc"]],
+          // Show processing throbber.
+          "processing": true,
+          // All data management will be done on the server side.
+          "serverSide": true,
+          // Path to the file that is going to handle the queries.
+          "ajax": "/admin/datatables_browse_user_roles/{{ username_canonical }}",
+          // Method type.
+          "serverMethod": "GET",
+          // Values in the length dropdown.
+          "lengthMenu":[10,20,50,100],
+          // Set some widths.
+          "aoColumnDefs":[
+            {"sWidth":"15%","aTargets":[2]}
+            ,{"bSortable":false,"aTargets":[0]}
+          ],
+          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+            // // Create the checkboxes.
+             $(nRow).find('td:eq(0)').html(
+              "<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
+             )
+             .addClass("manage_column");
+          }
+        });
+
+        // Send to details page when clicked.
+        var user_role_details_page = "/admin/users/{{ username_canonical }}/role/";
+        $('#browse_user_roles tbody').on('click','td',function(event){
+          if(!$(this).hasClass("manage_column")){
+            var user_role_id = $(this).closest("tr").attr('id');
+            window.location.href = user_role_details_page + user_role_id;
+          }
+        });
+
+      });
+    </script>
+{% endblock %}
