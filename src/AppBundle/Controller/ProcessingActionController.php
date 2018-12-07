@@ -195,9 +195,6 @@ class ProcessingActionController extends Controller
     // {
     //     $ProcessingAction = new ProcessingAction;
 
-    //     // Database tables are only created if not present.
-    //     $ProcessingAction->createTable();
-
     //     return $this->render('datasetElements/processing_action_browse.html.twig', array(
     //         'page_title' => "Browse Processing Action",
     //         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),

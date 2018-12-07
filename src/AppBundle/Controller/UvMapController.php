@@ -193,8 +193,7 @@ class UvMapController extends Controller
   // public function browse(Connection $conn, Request $request)
   // {
   //     $UvMap = new UvMap;
-  //     // Database tables are only created if not present.
-  //     $UvMap->createTable();
+
   //     return $this->render('datasetElements/uv_map_browse.html.twig', array(
   //         'page_title' => "Browse UV Maps",
   //         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),

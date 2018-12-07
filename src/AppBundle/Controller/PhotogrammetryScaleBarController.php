@@ -231,9 +231,6 @@ class PhotogrammetryScaleBarController extends Controller
     // {
     //     $PhotogrammetryScaleBar = new PhotogrammetryScaleBar;
 
-    //     // Database tables are only created if not present.
-    //     $PhotogrammetryScaleBar->createTable();
-
     //     return $this->render('datasetElements/photogrammetry_scale_bar_browse.html.twig', array(
     //         'page_title' => "Browse Photogrammetry Scale Bar",
     //         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),

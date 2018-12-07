@@ -222,9 +222,6 @@ class CaptureDatasetRightsController extends Controller
     // {
     //     $captureDatasetRights = new CaptureDatasetRights;
 
-    //     // Database tables are only created if not present.
-    //     $captureDatasetRights->createTable();
-
     //     return $this->render('datasetElements/capture_dataset_rights_browse.html.twig', array(
     //         'page_title' => "Browse Capture Dataset Rights",
     //         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),

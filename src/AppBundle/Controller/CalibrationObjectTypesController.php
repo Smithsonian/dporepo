@@ -51,7 +51,6 @@ class CalibrationObjectTypesController extends Controller
      */
     public function browse(Connection $conn, Request $request)
     {
-        // Database tables are only created if not present.
         return $this->render('resources/browse_calibration_object_types.html.twig', array(
             'page_title' => "Browse Calibration Object Types",
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)

@@ -194,9 +194,6 @@ class CaptureDeviceComponentController extends Controller
     // {
     //     $CaptureDeviceComponent = new CaptureDeviceComponent;
 
-    //     // Database tables are only created if not present.
-    //     $CaptureDeviceComponent->createTable();
-
     //     return $this->render('datasetElements/capture_device_component_browse.html.twig', array(
     //         'page_title' => "Browse Capture Device Component",
     //         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),

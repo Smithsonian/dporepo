@@ -249,9 +249,6 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
     // {
     //     $PhotogrammetryScaleBarTargetPair = new PhotogrammetryScaleBarTargetPair;
 
-    //     // Database tables are only created if not present.
-    //     $PhotogrammetryScaleBarTargetPair->createTable();
-
     //     return $this->render('datasetElements/photogrammetry_scale_bar_target_pair_browse.html.twig', array(
     //         'page_title' => "Browse Photogrammetry Scale Bar Target Pair",
     //         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),

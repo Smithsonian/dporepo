@@ -195,9 +195,6 @@ class CaptureDataFileController extends Controller
     // {
     //     $captureDataFile = new CaptureDataFile;
 
-    //     // Database tables are only created if not present.
-    //     $captureDataFile->createTable();
-
     //     return $this->render('datasetElements/capture_data_files_browse.html.twig', array(
     //         'page_title' => "Browse Capture Data Files",
     //         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
