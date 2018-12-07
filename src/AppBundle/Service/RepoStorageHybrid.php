@@ -55,6 +55,12 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'project_description',
     );
     $query_params['fields'][] = array(
+      'field_name' => 'api_published',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'api_discoverable',
+    );
+    $query_params['fields'][] = array(
       'table_name' => 'project',
       'field_name' => 'date_created',
     );
@@ -109,26 +115,145 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   public function getSubject($params) {
-    //$params will be something like array('subject_repository_id' => '123');
-    $return_data = array();
 
-    $query_params = array(
-      'fields' => array(),
-      'base_table' => 'subject',
-      'search_params' => array(
-        0 => array('field_names' => array('subject.active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array('subject.subject_repository_id'), 'search_values' => $params, 'comparison' => '=')
-      ),
-      'search_type' => 'AND'
-    );
+    $sql = "SELECT * FROM subject WHERE subject.active=1 and subject.subject_repository_id= :subject_id";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":subject_id", $params['record_id'], PDO::PARAM_STR);
+    $statement->execute();
+    $data = $statement->fetch(PDO::FETCH_ASSOC);
 
-    $ret = $this->getRecords($query_params);
-    //@todo do something if $ret has errors
+    $sql = "SELECT model_purpose_description, sm.model_purpose_id FROM subject_model_purpose sm
+      LEFT JOIN model_purpose on sm.model_purpose_id = model_purpose.model_purpose_id
+      WHERE sm.subject_id= :subject_id";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":subject_id", $params['record_id'], PDO::PARAM_STR);
+    $statement->execute();
+    $purpose_data = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-    if(array_key_exists(0, $ret)) {
-      $return_data = $ret[0];
+    $subject_model_purpose_data = array();
+    foreach($purpose_data as $k => $p) {
+      $desc = $p['model_purpose_description'];
+      $id = $p['model_purpose_id'];
+      $subject_model_purpose_data[$desc] = $id;
     }
-    return $return_data;
+
+    $data['access_model_purpose'] = is_array($subject_model_purpose_data) ? $subject_model_purpose_data : array();
+
+    return $data;
+  }
+
+  public function saveSubject($params) {
+
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
+    $subject_id = $this->saveRecord($params);
+
+    $model_purpose_values = $params['values']['model_purpose_picker'];
+
+    if(NULL !== $subject_id && $subject_id > 0) {
+      // Delete existing values.
+      $sql = "DELETE FROM subject_model_purpose
+      WHERE subject_id= :subject_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":subject_id", $subject_id, PDO::PARAM_STR);
+      $statement->execute();
+
+      // Re-save new values.
+      foreach($model_purpose_values as $k => $mp_id) {
+        $sql = "INSERT INTO subject_model_purpose (model_purpose_id, subject_id, api_access, created_by_user_account_id, last_modified_user_account_id) 
+        VALUES(:model_purpose_id, :subject_id, 1, :user_id, :user_id)";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":model_purpose_id", $mp_id, PDO::PARAM_STR);
+        $statement->bindValue(":subject_id", $subject_id, PDO::PARAM_STR);
+        $statement->bindValue(":user_id", $user_id, PDO::PARAM_STR);
+        $statement->execute();
+      }
+
+    }
+    return $subject_id;
+
+  }
+
+  public function saveItem($params) {
+
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
+    $item_id = $this->saveRecord($params);
+
+    $model_purpose_values = $params['values']['model_purpose_picker'];
+
+    if(NULL !== $item_id && $item_id > 0) {
+      // Delete existing values.
+      $sql = "DELETE FROM item_model_purpose
+      WHERE item_id= :item_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":item_id", $item_id, PDO::PARAM_STR);
+      $statement->execute();
+
+      // Re-save new values.
+      foreach($model_purpose_values as $k => $mp_id) {
+        $sql = "INSERT INTO item_model_purpose (model_purpose_id, item_id, api_access, created_by_user_account_id, last_modified_user_account_id) 
+        VALUES(:model_purpose_id, :item_id, 1, :user_id, :user_id)";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":model_purpose_id", $mp_id, PDO::PARAM_STR);
+        $statement->bindValue(":item_id", $item_id, PDO::PARAM_STR);
+        $statement->bindValue(":user_id", $user_id, PDO::PARAM_STR);
+        $statement->execute();
+      }
+
+    }
+    return $item_id;
+
+  }
+
+  public function saveCaptureDataset($params) {
+
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
+    $capture_dataset_id = $this->saveRecord($params);
+
+    $model_purpose_values = $params['values']['model_purpose_picker'];
+
+    if(NULL !== $capture_dataset_id && $capture_dataset_id > 0) {
+      // Delete existing values.
+      $sql = "DELETE FROM capture_dataset_model_purpose
+      WHERE capture_dataset_id= :capture_dataset_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":capture_dataset_id", $capture_dataset_id, PDO::PARAM_STR);
+      $statement->execute();
+
+      // Re-save new values.
+      foreach($model_purpose_values as $k => $mp_id) {
+        $sql = "INSERT INTO capture_dataset_model_purpose (model_purpose_id, capture_dataset_id, api_access, created_by_user_account_id, last_modified_user_account_id) 
+        VALUES(:model_purpose_id, :capture_dataset_id, 1, :user_id, :user_id)";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":model_purpose_id", $mp_id, PDO::PARAM_STR);
+        $statement->bindValue(":capture_dataset_id", $capture_dataset_id, PDO::PARAM_STR);
+        $statement->bindValue(":user_id", $user_id, PDO::PARAM_STR);
+        $statement->execute();
+
+      }
+    }
+    return $capture_dataset_id;
+
+  }
+
+  public function getDataForLookup($params) {
+
+    $table = $params['table_name'];
+    $value_field = $params['value_field'];
+    $id_field = $params['id_field'];
+
+    $sql = "SELECT " . $id_field. " as id, " . $value_field . " as val FROM " . $table . " WHERE active=1 ";
+    $statement = $this->connection->prepare($sql);
+    $statement->execute();
+    $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $data = array();
+    foreach($tmp as $k => $p) {
+      $val = $p['val'];
+      $id = $p['id'];
+      $data[$val] = $id;
+    }
+
+    return $data;
   }
 
   public function getItem($params) {
@@ -171,11 +296,31 @@ class RepoStorageHybrid implements RepoStorage {
         'table_name' => 'item',
         'field_name' => 'item_repository_id',
       );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'subject_repository_id',
+    );
       $query_params['fields'][] = array(
         'table_name' => 'item_type',
         'field_name' => 'label',
         'field_alias' => 'item_type_label',
       );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'api_published',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'api_discoverable',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'api_access_model_face_count_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'api_access_uv_map_size_id',
+    );
 
       // Joins.
       $query_params['related_tables'][] = array(
@@ -193,6 +338,42 @@ class RepoStorageHybrid implements RepoStorage {
       if(array_key_exists(0, $ret)) {
         $return_data = $ret[0];
       }
+
+    //@todo
+    $return_data['inherit_api_published'] = NULL;
+    $return_data['inherit_api_discoverable'] = NULL;
+    if(isset($return_data['subject_repository_id'])) {
+      $sql = "SELECT api_published, api_discoverable FROM project 
+      LEFT JOIN subject on project.project_repository_id = subject.project_repository_id 
+      WHERE subject.subject_repository_id= :subject_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":subject_id", $return_data['subject_repository_id'], PDO::PARAM_STR);
+      $statement->execute();
+      $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      if(count($tmp) > 0) {
+        $return_data['inherit_api_published'] = $tmp[0]['api_published'];
+        $return_data['inherit_api_discoverable'] = $tmp[0]['api_discoverable'];
+      }
+    }
+
+    $sql = "SELECT model_purpose_description, im.model_purpose_id FROM item_model_purpose im
+      LEFT JOIN model_purpose on im.model_purpose_id = model_purpose.model_purpose_id
+      WHERE im.item_id= :item_id";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":item_id", $params['item_repository_id'], PDO::PARAM_STR);
+    $statement->execute();
+    $purpose_data = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $model_purpose_data = array();
+    foreach($purpose_data as $k => $p) {
+      $desc = $p['model_purpose_description'];
+      $id = $p['model_purpose_id'];
+      $model_purpose_data[$desc] = $id;
+    }
+
+    $return_data['api_access_model_purpose'] = is_array($model_purpose_data) ? $model_purpose_data : array();
+
       return $return_data;
   }
 
@@ -476,6 +657,10 @@ class RepoStorageHybrid implements RepoStorage {
           ,capture_dataset.created_by_user_account_id
           ,capture_dataset.last_modified
           ,capture_dataset.last_modified_user_account_id
+          ,capture_dataset.api_published
+          ,capture_dataset.api_discoverable
+          ,capture_dataset.api_access_model_face_count_id
+          ,capture_dataset.api_access_uv_map_size_id
           ,capture_method.label AS capture_method_label
           ,dataset_type.label AS capture_dataset_type_label
           ,item_position_type.label_alias AS item_position_type_label
@@ -502,6 +687,57 @@ class RepoStorageHybrid implements RepoStorage {
     if(array_key_exists(0, $ret)) {
       $return_data = $ret[0];
     }
+
+    //@todo
+    $return_data['inherit_api_published'] = NULL;
+    $return_data['inherit_api_discoverable'] = NULL;
+    if(isset($return_data['parent_item_repository_id'])) {
+      $sql = "SELECT item.api_published, item.api_discoverable FROM item 
+      LEFT JOIN capture_dataset on item.item_repository_id = capture_dataset.parent_item_repository_id 
+      WHERE capture_dataset.capture_dataset_repository_id= :item_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":item_id", $return_data['parent_item_repository_id'], PDO::PARAM_STR);
+      $statement->execute();
+      $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      if(count($tmp) > 0) {
+        $return_data['inherit_api_published'] = $tmp[0]['api_published'];
+        $return_data['inherit_api_discoverable'] = $tmp[0]['api_discoverable'];
+      }
+      else {
+        // Get from project
+        $sql = "SELECT p.api_published, p.api_discoverable FROM project p
+          LEFT JOIN subject on p.project_repository_id = subject.project_repository_id
+          LEFT JOIN item on subject.subject_repository_id = item.subject_repository_id
+          WHERE item.item_repository_id= :item_id";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":item_id", $return_data['parent_item_repository_id'], PDO::PARAM_STR);
+        $statement->execute();
+        $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
+        if(count($tmp) > 0) {
+          $return_data['inherit_api_published'] = $tmp[0]['api_published'];
+          $return_data['inherit_api_discoverable'] = $tmp[0]['api_discoverable'];
+        }
+      }
+    }
+
+    $sql = "SELECT model_purpose_description, cm.model_purpose_id FROM capture_dataset_model_purpose cm
+      LEFT JOIN model_purpose on cm.model_purpose_id = model_purpose.model_purpose_id
+      WHERE cm.capture_dataset_id= :capture_dataset_id";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":capture_dataset_id", $params['capture_dataset_repository_id'], PDO::PARAM_STR);
+    $statement->execute();
+    $purpose_data = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $model_purpose_data = array();
+    foreach($purpose_data as $k => $p) {
+      $desc = $p['model_purpose_description'];
+      $id = $p['model_purpose_id'];
+      $model_purpose_data[$desc] = $id;
+    }
+
+    $return_data['api_access_model_purpose'] = is_array($model_purpose_data) ? $model_purpose_data : array();
+
     return $return_data;
   }
 
