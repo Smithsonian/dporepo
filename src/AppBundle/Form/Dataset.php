@@ -166,6 +166,49 @@ class Dataset extends AbstractType
                 'label' => 'Directory Path',
                 'required' => false,
               ))
+            ->add('api_publication_picker', ChoiceType::class, array(
+              'label' => 'API Publication Status',
+              'required' => false,
+              'placeholder' => '--Inherit from item (' . $data['inherit_publication_default'] . ') --',
+              // All options
+              'choices' => $data['api_publication_options'],
+              // Selected option
+              'data' => $data['api_publication_picker'],
+              'attr' => array('class' => 'publication-chosen-select'),
+            ))
+
+            ->add('api_access_model_face_count_id', ChoiceType::class, array(
+              'label' => 'Face Count',
+              'required' => false,
+              'placeholder' => '--Inherit from subject--',
+              // All options
+              'choices' => $data['model_face_count_options'],
+              // Selected option
+              'data' => $data['api_access_model_face_count_id'],
+              'attr' => array('class' => 'publication-chosen-select'),
+            ))
+            ->add('api_access_uv_map_size_id', ChoiceType::class, array(
+              'label' => 'UV Map Size',
+              'required' => false,
+              'placeholder' => '--Inherit from subject--',
+              // All options
+              'choices' => $data['uv_map_size_options'],
+              // Selected option
+              'data' => $data['api_access_uv_map_size_id'],
+              'attr' => array('class' => 'publication-chosen-select'),
+            ))
+            ->add('model_purpose_picker', ChoiceType::class, array(
+              'label' => 'Published Content Types',
+              'required' => false,
+              'placeholder' => '--Inherit from subject--',
+              // All options
+              'choices' => $data['model_purpose_options'],
+              // Selected option
+              'data' => $data['model_purpose_picker'],
+              'attr' => array('class' => 'publication-chosen-select'),
+              'expanded' => true,
+              'multiple' => true,
+            ))
             ->add('save', SubmitType::class, array(
                 'label' => 'Save Edits',
                 'attr' => array('class' => 'btn btn-primary'),

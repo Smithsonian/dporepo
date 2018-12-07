@@ -31,6 +31,17 @@ class Project extends AbstractType
                 'required' => false,
                 'attr' => array('rows' => '10'),
               ))
+
+            ->add('api_publication_picker', ChoiceType::class, array(
+              'label' => 'API Publication Status',
+              'required' => false,
+              'placeholder' => '--not set--',
+              // All options
+              'choices' => $data['api_publication_options'],
+              // Selected option
+              'data' => $data['api_publication_picker'],
+              'attr' => array('class' => 'publication-chosen-select'),
+            ))
             ->add('stakeholder_guid_picker', ChoiceType::class, array(
                 'label' => 'Stakeholder',
                 'required' => false,

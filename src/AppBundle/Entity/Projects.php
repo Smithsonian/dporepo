@@ -28,12 +28,22 @@ class Projects
     /**
      * @var string
      */
+    public $api_publication_picker;
+
+    /**
+     * @var string
+     */
     public $project_description;
 
     /**
      * @var string
      */
     public $stakeholder_label;
+
+    /**
+     * @var array
+     */
+    public $api_publication_options;
 
     /**
      * @var array

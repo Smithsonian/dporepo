@@ -31,6 +31,35 @@ class Subjects
     public $holding_entity_guid;
 
     /**
+     * @var string
+     */
+    public $api_access_uv_map_size_id;
+    /**
+     * @var array
+     */
+    public $uv_map_size_options;
+
+    /**
+     * @var string
+     */
+    public $api_access_model_face_count_id;
+    /**
+     * @var array
+     */
+    public $model_face_count_options;
+
+    /**
+     * @var int
+     */
+    public $model_purpose_picker;
+
+    /**
+     * @var array
+     */
+    public $model_purpose_options;
+
+
+    /**
      * @var int
      */
     public $local_subject_id;
