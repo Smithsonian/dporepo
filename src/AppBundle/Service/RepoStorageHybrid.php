@@ -5699,11 +5699,29 @@ class RepoStorageHybrid implements RepoStorage {
         foreach($field_names as $fn) {
           if(count($search_values) == 1) {
             $k = array_keys($search_values)[0];
-            if(array_key_exists('comparison', $p) && (($p['comparison'] !== 'LIKE') && ($p['comparison'] !== 'IS NOT NULL'))) {
+            $comparison_type = 'STR';
+            if(array_key_exists('comparison_type', $p)) {
+              $comparison_type = 'INT';
+            }
+            $comparison = 'LIKE';
+            if(array_key_exists('comparison', $p)) {
+              $comparison = $p['comparison'];
+            }
+
+            if($comparison == 'IN' && $comparison_type == 'INT') {
+              $in_placeholders = array();
+              $t = is_array($search_values[$k]) ? $search_values[$k] : explode(',',$search_values[$k]);
+              foreach($t as $m) {
+                $in_placeholders[] = '?';
+                $search_params[] = $m;
+              }
+              $this_search_param[] = $fn . ' IN (' . implode(',', $in_placeholders) . ')';
+            }
+            elseif($comparison !== 'IN' && $comparison !== 'LIKE' && $comparison !== 'IS NOT NULL') {
               $this_search_param[] = $fn . ' ' . $p['comparison'] . ' ?';
               $search_params[] = $search_values[$k];
             }
-            else if(array_key_exists('comparison', $p) && (($p['comparison'] !== 'LIKE') && ($p['comparison'] === 'IS NOT NULL'))) {
+            else if($comparison !== 'LIKE' && $comparison === 'IS NOT NULL') {
               $this_search_param[] = $fn . ' IS NOT NULL';
             }
             else {
@@ -5712,8 +5730,8 @@ class RepoStorageHybrid implements RepoStorage {
             }
           }
           else {
-            $this_search_param[] = $fn['field_name'] . ' IN (?)';
-            $search_params[] = '%' . implode('%, %', $search_values) . '%';
+            $this_search_param[] = $fn['field_name'] . ' IN ( ? )';
+            $search_params[] = '(%' . implode('%, %', $search_values) . '%)';
           }
         }
 
