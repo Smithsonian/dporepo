@@ -3056,8 +3056,8 @@ class RepoStorageHybrid implements RepoStorage {
           capture_device_field_id LIKE :search_value OR
           capture_sequence_number LIKE :search_value OR
           cluster_position_field_id LIKE :search_value OR
-          position_in_cluster_field_id LIKE :search_value OR
-        )";
+          position_in_cluster_field_id LIKE :search_value
+        ) ";
 
       }
 
@@ -3130,7 +3130,7 @@ class RepoStorageHybrid implements RepoStorage {
         FROM capture_data_file
         LEFT JOIN file_upload ON capture_data_file.file_upload_id = file_upload.file_upload_id
         WHERE capture_data_file.active = 1 
-        AND file_upload.metadata IS NOT NULL AND file_upload.metadata NOT LIKE '' ";
+        ";
 
     if(NULL !== $parent_id) {
       $sql .= " AND capture_data_file.parent_capture_data_element_repository_id = :parent_capture_data_element_repository_id ";
@@ -3140,7 +3140,7 @@ class RepoStorageHybrid implements RepoStorage {
       $sql .= " AND (
         capture_data_file_name LIKE :search_value OR
         capture_data_file_type LIKE :search_value OR
-        is_compressed_multiple_files LIKE :search_value OR
+        is_compressed_multiple_files LIKE :search_value
       )";
     }
 
