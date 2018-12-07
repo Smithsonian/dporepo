@@ -170,15 +170,20 @@ class SubjectsController extends Controller
     function show_subjects_form( $subject_repository_id, Connection $conn, Request $request )
     {
         $subject = new Subjects();
+        $subject->access_model_purpose = NULL;
+
         $post = $request->request->all();
         $subject->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $id = false;
         $ajax = false;
 
-        if ((!empty($request->attributes->get('subject_repository_id')) && ($request->attributes->get('subject_repository_id') !== 'ajax'))) {
-          $id = $request->attributes->get('subject_repository_id');
-        } else {
-          $ajax = true;
+        if (!empty($request->attributes->get('subject_repository_id'))) {
+          if ($request->attributes->get('subject_repository_id') !== 'ajax') {
+            $id = $request->attributes->get('subject_repository_id');
+          }
+          else {
+            $ajax = true;
+          }
         }
 
         $username = $this->getUser()->getUsernameCanonical();
@@ -197,15 +202,40 @@ class SubjectsController extends Controller
           }
         }
 
+        // Get values for options.
+        $model_purpose_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_purpose',
+          'value_field' => 'model_purpose_description',
+          'id_field' => 'model_purpose_id',
+          ));
+        $model_face_count_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_face_count',
+          'value_field' => 'model_face_count',
+          'id_field' => 'model_face_count_id',
+        ));
+        $uv_map_size_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'uv_map_size',
+          'value_field' => 'uv_map_size',
+          'id_field' => 'uv_map_size_id',
+        ));
+
         // Retrieve data from the database.
         if(!empty($id) && empty($post)) {
-          $rec = $this->repo_storage_controller->execute('getRecordById', array(
+          $rec = $this->repo_storage_controller->execute('getSubject', array(
             'record_type' => 'subject',
             'record_id' => $id));
           if(isset($rec)) {
             $subject = (object)$rec;
           }
+
+          $subject->model_purpose_picker = $subject->access_model_purpose;
         }
+
+        $subject->model_face_count_options = $model_face_count_options;
+        $subject->uv_map_size_options = $uv_map_size_options;
+        $subject->model_purpose_options = $model_purpose_options;
+
+        $subject = (array)$subject;
 
         // Create the form
         $form = $this->createForm(Subject::class, $subject);
@@ -216,7 +246,7 @@ class SubjectsController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $subject = $form->getData();
-            $id = $this->repo_storage_controller->execute('saveRecord', array(
+            $id = $this->repo_storage_controller->execute('saveSubject', array(
               'base_table' => 'subject',
               'record_id' => $id,
               'user_id' => $this->getUser()->getId(),

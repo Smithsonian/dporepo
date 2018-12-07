@@ -158,9 +158,8 @@ class DatasetElementsController extends Controller
         // Retrieve data from the database.
         if (!empty($id) && empty($post)) {
 
-          $dataset_element_array = $this->repo_storage_controller->execute('getRecordById', array(
-            'record_type' => 'capture_data_element',
-            'record_id' => $id,
+          $dataset_element_array = $this->repo_storage_controller->execute('getCaptureDataElement', array(
+            'capture_data_element_repository_id' => $id,
           ));
           if(is_array($dataset_element_array) && !empty($dataset_element_array)) {
             $dataset_element = (object)$dataset_element_array;

@@ -159,10 +159,20 @@ class ProjectsController extends Controller
                   $project->stakeholder_guid_picker = $stakeholder['unit_stakeholder_repository_id'];
               }
           }
+
+          $project->api_publication_picker = NULL;
+          $picker_val = (string)$project->api_published;
+          $picker_val .= (string)$project->api_discoverable;
+          $project->api_publication_picker = $picker_val;
         }
 
         // Get data from lookup tables.
         $project->stakeholder_guid_options = $this->get_units_stakeholders();
+        $project->api_publication_options = array(
+          'Published, Discoverable' => '11',
+          'Published, Not Discoverable' => '10',
+          'Not Published' => '00',
+        );
 
         // Create the form
         $form = $this->createForm(Project::class, $project);
@@ -340,6 +350,24 @@ class ProjectsController extends Controller
           }
         }
 
+        if(isset($data->api_publication_picker)) {
+          if($data->api_publication_picker == '11') {
+            $data->api_published = 1;
+            $data->api_discoverable = 1;
+          }
+          elseif($data->api_publication_picker == '10') {
+            $data->api_published = 1;
+            $data->api_discoverable = 0;
+          }
+          elseif($data->api_publication_picker == '00') {
+            $data->api_published = 0;
+            $data->api_discoverable = 0;
+          }
+        }
+        else {
+          $data->api_published = NULL;
+          $data->api_discoverable = NULL;
+        }
         $id = $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'project',
           'record_id' => $project_repository_id,

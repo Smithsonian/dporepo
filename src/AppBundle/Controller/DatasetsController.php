@@ -136,16 +136,22 @@ class DatasetsController extends Controller
     function show_datasets_form( Connection $conn, Request $request )
     {
         $dataset = new Datasets();
+        $dataset->access_model_purpose = NULL;
+        $dataset->inherit_publication_default = '';
+
         $post = $request->request->all();
         $id = false;
         $ajax = false;
 
-        if ((!empty($request->attributes->get('capture_dataset_repository_id')) && ($request->attributes->get('capture_dataset_repository_id') !== 'ajax'))) {
-          $id = $request->attributes->get('capture_dataset_repository_id');
-        } else {
-          $ajax = true;
+        if (!empty($request->attributes->get('capture_dataset_repository_id'))) {
+          if ($request->attributes->get('capture_dataset_repository_id') !== 'ajax') {
+            $id = $request->attributes->get('capture_dataset_repository_id');
+          }
+          else {
+            $ajax = true;
+          }
         }
-        
+
         // Retrieve data from the database.
         if (!empty($id) && empty($post)) {
             $dataset_array = $this->repo_storage_controller->execute('getCaptureDataset', array(
@@ -154,6 +160,35 @@ class DatasetsController extends Controller
             if(is_array($dataset_array)) {
               $dataset = (object)$dataset_array;
             }
+
+            $dataset->api_publication_picker = NULL;
+            $picker_val = (string)$dataset->api_published;
+            $picker_val .= (string)$dataset->api_discoverable;
+            $dataset->api_publication_picker = $picker_val;
+
+            $dataset->model_purpose_picker = $dataset->access_model_purpose;
+
+            $tmp = '';
+            if(NULL == $dataset->inherit_api_published) {
+              $tmp = "Publication not set, ";
+            }
+            elseif($dataset->inherit_api_published == 1) {
+              $tmp = "Published, ";
+            }
+            elseif($dataset->inherit_api_published == 0) {
+              $tmp = "Not Published, ";
+            }
+            if(NULL == $dataset->inherit_api_discoverable) {
+              $tmp .= "Discoverable not set";
+            }
+            elseif($dataset->inherit_api_discoverable == 1) {
+              $tmp .= "Discoverable";
+            }
+            elseif($dataset->inherit_api_discoverable == 0) {
+              $tmp .= "Not Discoverable";
+            }
+            $dataset->inherit_publication_default = $tmp;
+
         }
         $dataset->parent_project_repository_id = !empty($request->attributes->get('parent_project_repository_id')) ? $request->attributes->get('parent_project_repository_id') : false;
         $dataset->parent_subject_repository_id = !empty($request->attributes->get('parent_subject_repository_id')) ? $request->attributes->get('parent_subject_repository_id') : false;
@@ -169,6 +204,32 @@ class DatasetsController extends Controller
         $dataset->camera_cluster_types_lookup_options = $this->get_camera_cluster_types();
         $dataset->calibration_object_type_options = $this->get_calibration_object_types();
 
+        $dataset->api_publication_options = array(
+          'Published, Discoverable' => '11',
+          'Published, Not Discoverable' => '10',
+          'Not Published' => '00',
+        );
+        $model_purpose_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_purpose',
+          'value_field' => 'model_purpose_description',
+          'id_field' => 'model_purpose_id',
+        ));
+        $model_face_count_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_face_count',
+          'value_field' => 'model_face_count',
+          'id_field' => 'model_face_count_id',
+        ));
+        $uv_map_size_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'uv_map_size',
+          'value_field' => 'uv_map_size',
+          'id_field' => 'uv_map_size_id',
+        ));
+
+        $dataset->model_face_count_options = $model_face_count_options;
+        $dataset->uv_map_size_options = $uv_map_size_options;
+        $dataset->model_purpose_options = $model_purpose_options;
+
+
         // Create the form
         $form = $this->createForm(Dataset::class, $dataset);
         // Handle the request
@@ -178,10 +239,31 @@ class DatasetsController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $dataset = $form->getData();
+
+            if(isset($dataset->api_publication_picker)) {
+              if($dataset->api_publication_picker == '11') {
+                $dataset->api_published = 1;
+                $dataset->api_discoverable = 1;
+              }
+              elseif($dataset->api_publication_picker == '10') {
+                $dataset->api_published = 1;
+                $dataset->api_discoverable = 0;
+              }
+              elseif($dataset->api_publication_picker == '00') {
+                $dataset->api_published = 0;
+                $dataset->api_discoverable = 0;
+              }
+            }
+            else {
+              $dataset->api_published = NULL;
+              $dataset->api_discoverable = NULL;
+            }
+
+
             $dataset_array = (array)$dataset;
             //$dataset_array['item_repository_id'] = $dataset_array['item_repository_id'];
 
-            $id = $this->repo_storage_controller->execute('saveRecord', array(
+            $id = $this->repo_storage_controller->execute('saveCaptureDataset', array(
               'base_table' => 'capture_dataset',
               'record_id' => $id,
               'user_id' => $this->getUser()->getId(),

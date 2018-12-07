@@ -132,16 +132,22 @@ class ItemsController extends Controller
     function show_items_form( Connection $conn, Request $request )
     {
         $item = new Items();
+        $item->access_model_purpose = NULL;
+        $item->inherit_publication_default = '';
+
         $post = $request->request->all();
         $item->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
         $item->subject_repository_id = !empty($request->attributes->get('subject_repository_id')) ? $request->attributes->get('subject_repository_id') : false;
         $id = false;
         $ajax = false;
 
-        if ((!empty($request->attributes->get('item_repository_id')) && ($request->attributes->get('item_repository_id') !== 'ajax'))) {
-          $id = $request->attributes->get('item_repository_id');
-        } else {
-          $ajax = true;
+        if (!empty($request->attributes->get('item_repository_id'))) {
+          if ($request->attributes->get('item_repository_id') !== 'ajax') {
+            $id = $request->attributes->get('item_repository_id');
+          }
+          else {
+            $ajax = true;
+          }
         }
 
         // Retrieve data from the database.
@@ -152,10 +158,63 @@ class ItemsController extends Controller
           if(is_array($item_array)) {
             $item = (object)$item_array;
           }
+
+          $item->api_publication_picker = NULL;
+          $picker_val = (string)$item->api_published;
+          $picker_val .= (string)$item->api_discoverable;
+          $item->api_publication_picker = $picker_val;
+
+          $tmp = '';
+          if(NULL == $item->inherit_api_published) {
+            $tmp = "Publication not set, ";
+          }
+          elseif($item->inherit_api_published == 1) {
+            $tmp = "Published, ";
+          }
+          elseif($item->inherit_api_published == 0) {
+            $tmp = "Not Published, ";
+          }
+          if(NULL == $item->inherit_api_discoverable) {
+            $tmp .= "Discoverable not set";
+          }
+          elseif($item->inherit_api_discoverable == 1) {
+            $tmp .= "Discoverable";
+          }
+          elseif($item->inherit_api_discoverable == 0) {
+            $tmp .= "Not Discoverable";
+          }
+          $item->inherit_publication_default = $tmp;
+
+          $item->model_purpose_picker = $item->api_access_model_purpose;
         }
 
         // Get data from lookup tables.
         $item->item_type_lookup_options = $this->get_item_types();
+        $item->api_publication_options = array(
+          'Published, Discoverable' => '11',
+          'Published, Not Discoverable' => '10',
+          'Not Published' => '00',
+        );
+        $model_purpose_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_purpose',
+          'value_field' => 'model_purpose_description',
+          'id_field' => 'model_purpose_id',
+        ));
+        $model_face_count_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_face_count',
+          'value_field' => 'model_face_count',
+          'id_field' => 'model_face_count_id',
+        ));
+        $uv_map_size_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'uv_map_size',
+          'value_field' => 'uv_map_size',
+          'id_field' => 'uv_map_size_id',
+        ));
+
+        $item->model_face_count_options = $model_face_count_options;
+        $item->uv_map_size_options = $uv_map_size_options;
+        $item->model_purpose_options = $model_purpose_options;
+
 
         // Create the form
         $form = $this->createForm(Item::class, $item);
@@ -166,7 +225,27 @@ class ItemsController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $item = $form->getData();
-            $id = $this->repo_storage_controller->execute('saveRecord', array(
+
+            if(isset($item->api_publication_picker)) {
+              if($item->api_publication_picker == '11') {
+                $item->api_published = 1;
+                $item->api_discoverable = 1;
+              }
+              elseif($item->api_publication_picker == '10') {
+                $item->api_published = 1;
+                $item->api_discoverable = 0;
+              }
+              elseif($item->api_publication_picker == '00') {
+                $item->api_published = 0;
+                $item->api_discoverable = 0;
+              }
+            }
+            else {
+              $item->api_published = NULL;
+              $item->api_discoverable = NULL;
+            }
+
+            $id = $this->repo_storage_controller->execute('saveItem', array(
               'base_table' => 'item',
               'record_id' => $id,
               'user_id' => $this->getUser()->getId(),
