@@ -10,8 +10,8 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Utils\AppUtilities;
 
-use AppBundle\Controller\ItemsController;
-use AppBundle\Controller\DatasetsController;
+use AppBundle\Controller\ItemController;
+use AppBundle\Controller\CaptureDatasetController;
 use AppBundle\Controller\ModelController;
 
 use Psr\Log\LoggerInterface;
@@ -116,7 +116,7 @@ class RepoImport implements RepoImportInterface {
    * @param string  $conn  The database connection
    * @param string  $uploads_directory  Uploads directory path
    */
-  public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn, LoggerInterface $logger)
+  public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemController $itemsController, CaptureDatasetController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn, LoggerInterface $logger)
   {
     $this->u = new AppUtilities();
     $this->tokenStorage = $tokenStorage;

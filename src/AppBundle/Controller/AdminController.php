@@ -15,10 +15,10 @@ use PDO;
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
 
-// Subjects methods
-use AppBundle\Controller\SubjectsController;
-// Items methods
-use AppBundle\Controller\ItemsController;
+// Subject methods
+use AppBundle\Controller\SubjectController;
+// Item methods
+use AppBundle\Controller\ItemController;
 
 // Access control methods
 use AppBundle\Service\RepoUserAccess;
@@ -89,7 +89,7 @@ class AdminController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_recent_projects(Request $request, SubjectsController $subjects)
+    public function datatables_browse_recent_projects(Request $request, SubjectController $subjects)
     {
         $data = array();
         $req = $request->request->all();
@@ -140,7 +140,7 @@ class AdminController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_recent_subjects(Request $request, ItemsController $items)
+    public function datatables_browse_recent_subjects(Request $request, ItemController $items)
     {
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;

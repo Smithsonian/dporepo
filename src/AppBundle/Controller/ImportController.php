@@ -34,16 +34,16 @@ use AppBundle\Utils\AppUtilities;
 use AppBundle\Service\RepoFileTransfer;
 use AppBundle\Service\RepoProcessingService;
 
-use AppBundle\Form\Subject;
-use AppBundle\Entity\Subjects;
+use AppBundle\Form\SubjectForm;
+use AppBundle\Entity\Subject;
 
-use AppBundle\Form\Item;
-use AppBundle\Entity\Items;
-use AppBundle\Controller\ItemsController;
+use AppBundle\Form\ItemForm;
+use AppBundle\Entity\Item;
+use AppBundle\Controller\ItemController;
 
-use AppBundle\Form\Dataset;
-use AppBundle\Entity\Datasets;
-use AppBundle\Controller\DatasetsController;
+use AppBundle\Form\CaptureDatasetForm;
+use AppBundle\Entity\CaptureDataset;
+use AppBundle\Controller\CaptureDatasetController;
 
 class ImportController extends Controller
 {
@@ -82,7 +82,7 @@ class ImportController extends Controller
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, DatasetsController $datasetsController, ItemsController $itemsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, CaptureDatasetController $datasetsController, ItemController $itemsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
@@ -207,17 +207,17 @@ class ImportController extends Controller
         }
 
         // Create the subject form
-        $subject = new Subjects();
-        $subject_form = $this->createForm(Subject::class, $subject);
+        $subject = new Subject();
+        $subject_form = $this->createForm(SubjectForm::class, $subject);
 
         // Create the item form
-        $item = new Items();
+        $item = new Item();
         // Get data from lookup tables.
         $item->item_type_lookup_options = $this->itemsController->get_item_types();
-        $item_form = $this->createForm(Item::class, $item);
+        $item_form = $this->createForm(ItemForm::class, $item);
 
         // Create the dataset form.
-        $dataset = new Datasets();
+        $dataset = new CaptureDataset();
         // Get data from lookup tables.
         $dataset->capture_methods_lookup_options = $this->datasetsController->get_capture_methods();
         $dataset->dataset_types_lookup_options = $this->datasetsController->get_dataset_types();
@@ -228,7 +228,7 @@ class ImportController extends Controller
         $dataset->camera_cluster_types_lookup_options = $this->datasetsController->get_camera_cluster_types();
         $dataset->calibration_object_type_options = $this->datasetsController->get_calibration_object_types();
         // Create the form
-        $form = $this->createForm(Dataset::class, $dataset);
+        $form = $this->createForm(CaptureDatasetForm::class, $dataset);
 
         $accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
 

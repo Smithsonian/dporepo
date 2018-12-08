@@ -15,7 +15,7 @@ use GUMP;
 use AppBundle\Utils\GumpParseErrors;
 use AppBundle\Utils\AppUtilities;
 
-class CaptureMethodsController extends Controller
+class CaptureMethodController extends Controller
 {
     /**
      * @var object $u

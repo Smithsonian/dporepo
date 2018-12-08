@@ -16,7 +16,7 @@ use GUMP;
 use AppBundle\Utils\GumpParseErrors;
 use AppBundle\Utils\AppUtilities;
 
-use AppBundle\Controller\ProjectsController;
+use AppBundle\Controller\ProjectController;
 use AppBundle\Service\RepoUserAccess;
 
 class UnitStakeholderController extends Controller
@@ -116,7 +116,7 @@ class UnitStakeholderController extends Controller
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_unit_stakeholder_form(Request $request, GumpParseErrors $gump_parse_errors, ProjectsController $projects, IsniController $isni)
+    function show_unit_stakeholder_form(Request $request, GumpParseErrors $gump_parse_errors, ProjectController $projects, IsniController $isni)
     {
         $errors = false;
         $data = array();

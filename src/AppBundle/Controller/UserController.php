@@ -179,7 +179,7 @@ class UserController extends Controller {
     }
 
     // Create the form
-    $form = $this->createForm(\AppBundle\Form\Role::class, $role);
+    $form = $this->createForm(\AppBundle\Form\RoleForm::class, $role);
 
     // Handle the request
     $form->handleRequest($request);
@@ -392,7 +392,7 @@ class UserController extends Controller {
     $user_role['username_canonical'] = $username_canonical;
 
     // Create the form
-    $form = $this->createForm(\AppBundle\Form\UserRole::class, $user_role);
+    $form = $this->createForm(\AppBundle\Form\UserRoleForm::class, $user_role);
 
     // Handle the request
     $form->handleRequest($request);
