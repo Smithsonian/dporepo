@@ -5933,16 +5933,17 @@ class RepoStorageHybrid implements RepoStorage {
 
         $this_search_param = array();
         foreach($field_names as $fn) {
+          $comparison_type = 'STR';
+          if(array_key_exists('comparison_type', $p)) {
+            $comparison_type = 'INT';
+          }
+          $comparison = 'LIKE';
+          if(array_key_exists('comparison', $p)) {
+            $comparison = $p['comparison'];
+          }
+
           if(count($search_values) == 1) {
             $k = array_keys($search_values)[0];
-            $comparison_type = 'STR';
-            if(array_key_exists('comparison_type', $p)) {
-              $comparison_type = 'INT';
-            }
-            $comparison = 'LIKE';
-            if(array_key_exists('comparison', $p)) {
-              $comparison = $p['comparison'];
-            }
 
             if($comparison == 'IN' && $comparison_type == 'INT') {
               $in_placeholders = array();
@@ -5952,6 +5953,15 @@ class RepoStorageHybrid implements RepoStorage {
                 $search_params[] = $m;
               }
               $this_search_param[] = $fn . ' IN (' . implode(',', $in_placeholders) . ')';
+            }
+            elseif($comparison == 'IN' && $comparison_type == 'STR') {
+              $in_placeholders = array();
+              $t = is_array($search_values[$k]) ? $search_values[$k] : explode(',',$search_values[$k]);
+              foreach($t as $m) {
+                $in_placeholders[] = '?';
+                $search_params[] = $m;
+              }
+              $this_search_param[] = $fn . ' IN (%' . implode('%,%', $in_placeholders) . '%)';
             }
             elseif($comparison !== 'IN' && $comparison !== 'LIKE' && $comparison !== 'IS NOT NULL') {
               $this_search_param[] = $fn . ' ' . $p['comparison'] . ' ?';
@@ -5965,9 +5975,25 @@ class RepoStorageHybrid implements RepoStorage {
               $search_params[] = '%' . $search_values[$k] . '%';
             }
           }
-          else {
-            $this_search_param[] = $fn['field_name'] . ' IN ( ? )';
-            $search_params[] = '(%' . implode('%, %', $search_values) . '%)';
+          elseif(count($search_values) > 1) {
+            if($comparison == 'IN' && $comparison_type == 'INT') {
+              $in_placeholders = array();
+              $t = is_array($search_values) ? $search_values : explode(',',$search_values);
+              foreach($t as $m) {
+                $in_placeholders[] = '?';
+                $search_params[] = $m;
+              }
+              $this_search_param[] = $fn . ' IN (' . implode(',', $in_placeholders) . ')';
+            }
+            elseif($comparison == 'IN' && $comparison_type == 'STR') {
+              $in_placeholders = array();
+              $t = is_array($search_values) ? $search_values : explode(',',$search_values);
+              foreach($t as $m) {
+                $in_placeholders[] = '?';
+                $search_params[] = $m;
+              }
+              $this_search_param[] = $fn . ' IN (%' . implode('%,%', $in_placeholders) . '%)';
+            }
           }
         }
 
