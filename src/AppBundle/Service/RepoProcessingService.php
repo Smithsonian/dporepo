@@ -751,7 +751,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
           //   'user_id' => $user_id,
           //   'values' => array(
           //     'uuid' => $uuid,
-          //     'project_id' => (int)$project_data['project_repository_id'],
+          //     'project_id' => (int)$project_data['project_id'],
           //     'job_label' => 'Processing Job (' . $data['recipe']['name'] . '): "' . $project_data['project_name'] . '"',
           //     'job_type' => 'processing job',
           //     'job_status' => 'created',
@@ -766,8 +766,8 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
             'base_table' => 'processing_job',
             'user_id' => $user_id,
             'values' => array(
-              'parent_record_id' => $parent_record_data['parent_record_id'],
-              'parent_record_type' => $parent_record_data['parent_record_type'],
+              'record_id' => $parent_record_data['record_id'],
+              'record_type' => $parent_record_data['record_type'],
               'processing_service_job_id' => $data['id'],
               'recipe' =>  $data['recipe']['name'],
               'job_json' => json_encode($data),
@@ -951,7 +951,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 //     'user_id' => $user_id,
 //     'values' => array(
 //       'uuid' => $uuid,
-//       'project_id' => (int)$project['project_repository_id'],
+//       'project_id' => (int)$project['project_id'],
 //       'job_label' => 'Processing Job: "' . $project['project_name'] . '"',
 //       'job_type' => 'processing job',
 //       'job_status' => 'initialized',

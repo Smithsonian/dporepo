@@ -18,10 +18,10 @@ class Dataset extends AbstractType
         $data = (array)$options['data'];
 
         $builder
-            ->add('parent_project_repository_id', HiddenType::class, array(
+            ->add('project_id', HiddenType::class, array(
                 'required' => true,
               ))
-            ->add('parent_item_repository_id', HiddenType::class, array(
+            ->add('item_id', HiddenType::class, array(
                 'required' => true,
               ))
             ->add('capture_method', ChoiceType::class, array(

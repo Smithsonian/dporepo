@@ -12,7 +12,7 @@ class CaptureDevice
      * @Assert\NotBlank()
      * @var int
      */
-    public $parent_capture_data_element_repository_id;
+    public $capture_data_element_id;
 
     /**
      * @Assert\NotBlank()

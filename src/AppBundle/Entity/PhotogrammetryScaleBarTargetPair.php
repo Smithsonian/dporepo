@@ -12,7 +12,7 @@ class PhotogrammetryScaleBarTargetPair
      * @Assert\NotBlank()
      * @var int
      */
-    public $parent_photogrammetry_scale_bar_repository_id;
+    public $photogrammetry_scale_bar_id;
 
     /**
      * @Assert\NotBlank()

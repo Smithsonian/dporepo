@@ -61,7 +61,7 @@ class ProcessingActionController extends Controller
           'start_record' => $start_record,
           'stop_record' => $stop_record,
           'parent_id' => $req['parent_id'],
-          'parent_id_field' => 'parent_model_repository_id',
+          'parent_id_field' => 'model_id',
         );
         if ($search) {
           $query_params['search_value'] = $search;
@@ -113,7 +113,7 @@ class ProcessingActionController extends Controller
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
-        $data->parent_model_repository_id = $parent_id;
+        $data->model_id = $parent_id;
 
         // Create the form
         $form = $this->createForm(ProcessingActionForm::class, $data);
@@ -133,7 +133,7 @@ class ProcessingActionController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/processing_action/manage/' . $data->parent_model_repository_id . '/' . $id);
+            return $this->redirect('/admin/projects/processing_action/manage/' . $data->model_id . '/' . $id);
         }
 
         return $this->render('datasets/processing_action_form.html.twig', array(

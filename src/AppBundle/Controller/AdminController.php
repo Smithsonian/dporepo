@@ -122,7 +122,7 @@ class AdminController extends Controller
         // Get the subjects count
         if(!empty($data['aaData'])) {
           foreach ($data['aaData'] as $key => $value) {
-            $project_subjects = $subjects->get_subjects($value['project_repository_id']);
+            $project_subjects = $subjects->get_subjects($value['project_id']);
             $data['aaData'][$key]['subjects_count'] = count($project_subjects);
           }
         }
@@ -164,7 +164,7 @@ class AdminController extends Controller
         // Get the items count
         if(!empty($data['aaData'])) {
             foreach ($data['aaData'] as $key => $value) {
-                $subject_items = $items->get_items($value['subject_repository_id']);
+                $subject_items = $items->get_items($value['subject_id']);
                 $data['aaData'][$key]['items_count'] = count($subject_items);
             }
         }

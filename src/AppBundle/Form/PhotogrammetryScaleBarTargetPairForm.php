@@ -17,7 +17,7 @@ class PhotogrammetryScaleBarTargetPairForm extends AbstractType
         $data = (array)$options['data'];
 
         $builder
-            ->add('parent_photogrammetry_scale_bar_repository_id', HiddenType::class, array(
+            ->add('photogrammetry_scale_bar_id', HiddenType::class, array(
                 'required' => true,
               ))
             ->add('target_type', null, array(

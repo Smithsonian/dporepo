@@ -2,7 +2,7 @@
 
 {% block stylesheets %}
     {{ parent() }}
-    {% if data.photogrammetry_scale_bar_repository_id is defined %}
+    {% if data.photogrammetry_scale_bar_id is defined %}
         <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
         <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
     {% endif %}
@@ -36,7 +36,7 @@
     </div>
 
   {{ form_end(form) }}
-    {% if data.photogrammetry_scale_bar_repository_id is defined %}
+    {% if data.photogrammetry_scale_bar_id is defined %}
         <div class="row">
             <div class="col-sm-12 col-md-12 child-data">
                 <div class="panel panel-default">
@@ -66,7 +66,7 @@
 
 {% block js_bottom %}
     {{ parent() }}
-    {% if data.photogrammetry_scale_bar_repository_id is defined %}
+    {% if data.photogrammetry_scale_bar_id is defined %}
         <script src="{{ asset('lib/javascripts/datatables/js/jquery.dataTables.min.js') }}"></script>
         <script src="{{ asset('lib/javascripts/datatables/js/dataTables.buttons.min.js') }}"></script>
         <script src="{{ asset('lib/javascripts/datatables/js/dataTables.bootstrap.min.js') }}"></script>
@@ -74,7 +74,7 @@
         <script src="{{ asset('lib/javascripts/buttons/js/buttons.colVis.min.js') }}"></script>
         <script type="text/javascript">
           $(document).ready(function() {
-            var parent_id = "{{ data.photogrammetry_scale_bar_repository_id }}";
+            var parent_id = "{{ data.photogrammetry_scale_bar_id }}";
 
             console.log(parent_id);
 

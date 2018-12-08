@@ -17,7 +17,7 @@ class PhotogrammetryScaleBarForm extends AbstractType
         $data = (array)$options['data'];
 
         $builder
-            ->add('parent_capture_dataset_repository_id', HiddenType::class, array(
+            ->add('capture_dataset_id', HiddenType::class, array(
                 'required' => true,
               ))
             ->add('scale_bar_id', null, array(

@@ -109,7 +109,7 @@ class UvMapController extends Controller
     if(!$data) throw $this->createNotFoundException('The record does not exist');
 
     // Add the parent_id to the $data object
-    $data->model_repository_id = $parent_id;
+    $data->model_id = $parent_id;
 
     // Create the form
     $form = $this->createForm(UvMapForm::class, $data);
@@ -129,7 +129,7 @@ class UvMapController extends Controller
       ));
 
       $this->addFlash('message', 'Record successfully updated.');
-      return $this->redirect('/admin/projects/uv_map/manage/' . $data['model_repository_id'] . '/' . $id);
+      return $this->redirect('/admin/projects/uv_map/manage/' . $data['model_id'] . '/' . $id);
     }
     return $this->render('datasets/uv_map_form.html.twig', array(
       'page_title' => !empty($id) ? 'UV Map: ' . $data->map_type : 'Create UV Map',

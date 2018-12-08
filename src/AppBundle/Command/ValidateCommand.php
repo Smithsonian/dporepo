@@ -48,9 +48,9 @@ class ValidateCommand extends Command
       ->setHelp('This command will 1) validate a BagIt "bag", which consists of a "payload" (the arbitrary content) and "tags", which are metadata files intended to document the storage and transfer of the "bag", and 2) validate the integrity of uploaded files.')
       // Add arguments...
       ->addArgument('uuid', InputArgument::OPTIONAL, 'Job UUID.')
-      ->addArgument('parent_project_id', InputArgument::OPTIONAL, 'parent_project_id.')
-      ->addArgument('parent_record_id', InputArgument::OPTIONAL, 'parent_record_id.')
-      ->addArgument('parent_record_type', InputArgument::OPTIONAL, 'parent_record_type.')
+      ->addArgument('project_id', InputArgument::OPTIONAL, 'project_id.')
+      ->addArgument('record_id', InputArgument::OPTIONAL, 'record_id.')
+      ->addArgument('record_type', InputArgument::OPTIONAL, 'record_type.')
       ->addArgument('localpath', InputArgument::OPTIONAL, 'The path to the directory to validate.');
   }
 
@@ -69,7 +69,7 @@ class ValidateCommand extends Command
       '<bg=green;options=bold>  == Validate Assets ==  </>',
       '<bg=green;options=bold>  =====================  </>',
       '',
-      'Command: ' . 'php bin/console app:validate-assets ' . $input->getArgument('uuid') . ' ' . $input->getArgument('parent_project_id') . ' ' . $input->getArgument('parent_record_id') . ' ' . $input->getArgument('parent_record_type') . "\n",
+      'Command: ' . 'php bin/console app:validate-assets ' . $input->getArgument('uuid') . ' ' . $input->getArgument('project_id') . ' ' . $input->getArgument('record_id') . ' ' . $input->getArgument('record_type') . "\n",
     ]);
 
     // First, check to see if the external storage is accessible (Drastic) - (if it's turned on in parameters.yml).
@@ -146,17 +146,17 @@ class ValidateCommand extends Command
         '',
         'Parameters: ' . "\n",
         'uuid: ' . $input->getArgument('uuid'),
-        'parent_project_id: ' . $input->getArgument('parent_project_id'),
-        'parent_record_id: ' . $input->getArgument('parent_record_id'),
-        'parent_record_type: ' . $input->getArgument('parent_record_type') . "\n"
+        'project_id: ' . $input->getArgument('project_id'),
+        'record_id: ' . $input->getArgument('record_id'),
+        'record_type: ' . $input->getArgument('record_type') . "\n"
       ]);
 
       // Run the metadata ingest.
       $params = array(
         'uuid' => $input->getArgument('uuid'),
-        'parent_project_id' => $input->getArgument('parent_project_id'),
-        'parent_record_id' => $input->getArgument('parent_record_id'),
-        'parent_record_type' => $input->getArgument('parent_record_type'),
+        'project_id' => $input->getArgument('project_id'),
+        'record_id' => $input->getArgument('record_id'),
+        'record_type' => $input->getArgument('record_type'),
       );
 
       $import_results = $this->repo_import->import_csv($params);

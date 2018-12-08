@@ -39,7 +39,7 @@ class LightSourceTypesController extends Controller
 
         // Table name and field names.
         $this->table_name = 'light_source_type';
-        $this->id_field_name_raw = 'light_source_type_repository_id';
+        $this->id_field_name_raw = 'light_source_type_id';
         $this->id_field_name = 'light_source_type.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
         $this->label_field_name = 'light_source_type.' . $this->label_field_name_raw;

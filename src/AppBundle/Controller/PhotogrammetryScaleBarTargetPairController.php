@@ -105,7 +105,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
         
         if(!empty($id) && empty($post)) {
           $rec = $this->repo_storage_controller->execute('getPhotogrammetryScaleBarTargetPair', array(
-            'photogrammetry_scale_bar_target_pair_repository_id' => $id));
+            'photogrammetry_scale_bar_target_pair_id' => $id));
           if(isset($rec)) {
             $data = (object)$rec;
           }
@@ -113,7 +113,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
-        $data->parent_photogrammetry_scale_bar_repository_id = $parent_id;
+        $data->parent_photogrammetry_scale_bar_id = $parent_id;
 
         // Get data from lookup tables.
         $data->unit_options = $this->get_unit();
@@ -137,7 +137,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/photogrammetry_scale_bar_target_pair/manage/' . $data->parent_photogrammetry_scale_bar_repository_id . '/' . $id);
+            return $this->redirect('/admin/projects/photogrammetry_scale_bar_target_pair/manage/' . $data->photogrammetry_scale_bar_id . '/' . $id);
         }
 
         return $this->render('datasets/photogrammetry_scale_bar_target_pair_form.html.twig', array(
@@ -166,7 +166,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
 
       foreach ($temp as $key => $value) {
         $label = $value['label'];
-        $data[$label] = $value['unit_repository_id'];
+        $data[$label] = $value['unit_id'];
       }
 
       return $data;
@@ -190,7 +190,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
 
       foreach ($temp as $key => $value) {
         $label = $value['label'];
-        $data[$label] = $value['target_type_repository_id'];
+        $data[$label] = $value['target_type_id'];
       }
 
       return $data;

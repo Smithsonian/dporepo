@@ -106,7 +106,7 @@ class ProjectsController extends Controller
         // Get the subjects count
         if(!empty($data['aaData'])) {
             foreach ($data['aaData'] as $key => $value) {
-                $project_subjects = $subjects->get_subjects($value['project_repository_id']);
+                $project_subjects = $subjects->get_subjects($value['project_id']);
                 $data['aaData'][$key]['subjects_count'] = count($project_subjects);
             }
         }
@@ -118,7 +118,7 @@ class ProjectsController extends Controller
      *
      * @Route("/admin/projects/manage/{id}", name="projects_manage", methods={"GET","POST"}, defaults={"id" = null})
      *
-     * @param   int     $project_repository_id  The project ID
+     * @param   int     $project_id  The project ID
      * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
      * @return  array                 Redirect or render
@@ -148,7 +148,7 @@ class ProjectsController extends Controller
 
         // Retrieve data from the database.
         if (!empty($id) && empty($post)) {
-          $project = (object)$this->repo_storage_controller->execute('getProject', array('project_repository_id' => $id));
+          $project = (object)$this->repo_storage_controller->execute('getProject', array('project_id' => $id));
           $project->stakeholder_guid_picker = NULL;
 
           if ($project->stakeholder_guid) {
@@ -156,7 +156,7 @@ class ProjectsController extends Controller
                 'record_id' => $project->stakeholder_guid));
 
               if(!empty($stakeholder)) {
-                  $project->stakeholder_guid_picker = $stakeholder['unit_stakeholder_repository_id'];
+                  $project->stakeholder_guid_picker = $stakeholder['unit_stakeholder_id'];
               }
           }
 
@@ -184,10 +184,10 @@ class ProjectsController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $project = $form->getData();
-            $project_repository_id = $this->insert_update_project($project, $id);
+            $project_id = $this->insert_update_project($project, $id);
 
             $this->addFlash('message', 'Project successfully updated.');
-            return $this->redirect('/admin/projects/subjects/' . $project_repository_id);
+            return $this->redirect('/admin/projects/subjects/' . $project_id);
         }
 
         return $this->render('projects/project_form.html.twig', array(
@@ -232,7 +232,7 @@ class ProjectsController extends Controller
           'search_params' => array(
             0 => array('field_names' => array('project.active'), 'search_values' => array(1), 'comparison' => '='),
             1 => array('field_names' => array('project.project_name'), 'search_values' => $params['query'], 'comparison' => 'LIKE'),
-            2 => array('field_names' => array('project.project_repository_id'), 'search_values' => $project_ids, 'comparison' => 'IN')
+            2 => array('field_names' => array('project.project_id'), 'search_values' => $project_ids, 'comparison' => 'IN')
           ),
           'search_type' => 'AND',
           )
@@ -285,7 +285,7 @@ class ProjectsController extends Controller
             ),
             'search_params' => array(
               0 => array('field_names' => array('stakeholder_guid'), 'search_values' => array($stakeholder_guid), 'comparison' => '='),
-              1 => array('field_names' => array('project.project_repository_id'), 'search_values' => $project_ids, 'comparison' => 'IN')
+              1 => array('field_names' => array('project.project_id'), 'search_values' => $project_ids, 'comparison' => 'IN')
             ),
             'search_type' => 'AND'
           )
@@ -294,13 +294,13 @@ class ProjectsController extends Controller
         foreach ($projects as $key => $value) {
 
             // Check for child dataset records so the 'children' key can be set accordingly.
-            $subject_data = $subjects->get_subjects((int)$value['project_repository_id']);
+            $subject_data = $subjects->get_subjects((int)$value['project_id']);
 
             $data[$key] = array(
-                'id' => 'projectId-' . $value['project_repository_id'],
+                'id' => 'projectId-' . $value['project_id'],
                 'text' => $value['project_name'],
                 'children' => count($subject_data) ? true : false,
-                'a_attr' => array('href' => '/admin/projects/subjects/' . $value['project_repository_id']),
+                'a_attr' => array('href' => '/admin/projects/subjects/' . $value['project_id']),
             );
         }
 
@@ -317,13 +317,13 @@ class ProjectsController extends Controller
      * @param   int     $project_id  The project ID
      * @return  int     The project ID
      */
-    public function insert_update_project($data, $project_repository_id = FALSE)
+    public function insert_update_project($data, $project_id = FALSE)
     {
 
         $username = $this->getUser()->getUsernameCanonical();
 
-        if(FALSE !== $project_repository_id) {
-          $access = $this->repo_user_access->get_user_access($username, 'edit_projects', $project_repository_id);
+        if(FALSE !== $project_id) {
+          $access = $this->repo_user_access->get_user_access($username, 'edit_projects', $project_id);
           if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
             $response = new Response();
             $response->setStatusCode(403);
@@ -370,7 +370,7 @@ class ProjectsController extends Controller
         }
         $id = $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'project',
-          'record_id' => $project_repository_id,
+          'record_id' => $project_id,
           'user_id' => $this->getUser()->getId(),
           'values' => (array)$data
         ));
@@ -396,7 +396,7 @@ class ProjectsController extends Controller
 
       foreach ($temp as $key => $value) {
         $akey = $value['unit_stakeholder_label'] . ' - ' . $value['unit_stakeholder_full_name'];
-        $data[$akey] = $value['unit_stakeholder_repository_id'];
+        $data[$akey] = $value['unit_stakeholder_id'];
       }
 
       return $data;

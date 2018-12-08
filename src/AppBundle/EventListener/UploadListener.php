@@ -53,8 +53,8 @@ class UploadListener
     $post = $request->request->all();
     $data->full_path = !empty($post['fullPath']) ? $post['fullPath'] : false;
     $data->job_id = !empty($post['jobId']) ? $post['jobId'] : false;
-    $data->parent_record_id = !empty($post['parentRecordId']) ? $post['parentRecordId'] : false;
-    $data->parent_record_type = !empty($post['parentRecordType']) ? $post['parentRecordType'] : false;
+    $data->record_id = !empty($post['parentRecordId']) ? $post['parentRecordId'] : false;
+    $data->record_type = !empty($post['parentRecordType']) ? $post['parentRecordType'] : false;
     $data->prevalidate = (!empty($post['prevalidate']) && ($post['prevalidate'] === 'true')) ? true : false;
     // User data.
     $user = $this->tokenStorage->getToken()->getUser();
@@ -72,7 +72,7 @@ class UploadListener
     }
 
     // Move uploaded files into the original directory structures, under a parent directory the jobId.
-    if ($data->job_id && $data->parent_record_id) {
+    if ($data->job_id && $data->record_id) {
 
       // Move the files.
       $file_data = $this->move_files($file, $data);
@@ -87,8 +87,8 @@ class UploadListener
           'user_id' => $file_data->user_id,
           'values' => array(
             'job_id' => $file_data->job_id,
-            'parent_record_id' => $file_data->parent_record_id,
-            'parent_record_type' => $file_data->parent_record_type,
+            'record_id' => $file_data->record_id,
+            'record_type' => $file_data->record_type,
             'file_name' => $file->getBasename(),
             'file_path' => DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'repository' . DIRECTORY_SEPARATOR . $file_data->target_directory . DIRECTORY_SEPARATOR . $full_path,
             'file_size' => filesize($file_data->job_id_directory . '/' . $full_path),
@@ -101,12 +101,12 @@ class UploadListener
     }
 
     // Pre-validate
-    if ($data->prevalidate && $data->job_id && $data->parent_record_type) {
+    if ($data->prevalidate && $data->job_id && $data->record_type) {
 
       switch ($file->getExtension()) {
         case 'csv':
           // Run the CSV validation.
-          $validation_results = $this->validate_metadata($data->job_id, $data->job_id_directory, $data->parent_record_type, $file_data->parent_record_id, $file->getBasename());
+          $validation_results = $this->validate_metadata($data->job_id, $data->job_id_directory, $data->record_type, $file_data->record_id, $file->getBasename());
           // Remove the CSV file.
           $finder = new Finder();
           $finder->files()->in($data->job_id_directory . '/');
@@ -138,7 +138,7 @@ class UploadListener
    */
   public function move_files($file = null, $data = null)
   {
-    if (!empty($file) && !empty($data) && $data->job_id && $data->parent_record_id) {
+    if (!empty($file) && !empty($data) && $data->job_id && $data->record_id) {
 
       // If pre-validating, the target directory is a temporary directory. Otherwise, it's the job's UUID.
       $data->target_directory = $data->prevalidate ? $data->job_id : $data->uuid;
@@ -192,7 +192,7 @@ class UploadListener
    * @param int $job_id_directory  The job directory
    * @return json
    */
-  public function validate_metadata($job_id = null, $job_id_directory = null, $parent_record_type = null, $parent_record_id, $filename = null)
+  public function validate_metadata($job_id = null, $job_id_directory = null, $record_type = null, $record_id, $filename = null)
   {
     $schema = false;
     $blacklisted_fields = array();
@@ -201,7 +201,7 @@ class UploadListener
     // TODO: feed this into this method.
     if(empty($job_id)) {
       $blacklisted_fields = array(
-        'project_repository_id',
+        'project_id',
       );
     }
 
@@ -256,7 +256,7 @@ class UploadListener
         // Validate that the values within the capture_dataset_field_id fields are not already in the database.
         if($schema === 'capture_dataset') {
 
-          switch($parent_record_type) {
+          switch($record_type) {
             case 'subject':
               // Validate that the 'capture_dataset_field_id' value is unique within the CSV when the parent record is a subject.
               $data->capture_dataset_field_id_results = $repoValidate->validateCaptureDatasetFieldIdInCsv($data->csv);
@@ -264,8 +264,8 @@ class UploadListener
             case 'item':
               // Get the parent records.
               $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
-                'base_record_id' => $parent_record_id,
-                'record_type' => $parent_record_type,
+                'base_record_id' => $record_id,
+                'record_type' => $record_type,
               ));
               // Validate that the 'capture_dataset_field_id' value is unique for datasets that share the same Project and Item (within the database).
               if (!empty($parent_records)) {
@@ -277,7 +277,7 @@ class UploadListener
         }
 
         // Execute the validation against the JSON schema.
-        $data->results = (object)$repoValidate->validateData($data->csv, $schema, $parent_record_type, $blacklisted_fields);
+        $data->results = (object)$repoValidate->validateData($data->csv, $schema, $record_type, $blacklisted_fields);
 
         // Add the column headers back to the array.
         array_unshift($data->csv, $column_headers);

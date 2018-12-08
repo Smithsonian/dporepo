@@ -112,7 +112,7 @@ class CaptureDataFileController extends Controller
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
-        $data->parent_capture_data_element_repository_id = $parent_id;
+        $data->parent_capture_data_element_id = $parent_id;
         
         // Create the form
         $form = $this->createForm(CaptureDataFileForm::class, $data);
@@ -132,7 +132,7 @@ class CaptureDataFileController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/capture_data_files/manage/' . $data->parent_capture_data_element_repository_id . '/' . $id);
+            return $this->redirect('/admin/projects/capture_data_files/manage/' . $data->parent_capture_data_element_id . '/' . $id);
         }
 
         return $this->render('datasetElements/capture_data_file_form.html.twig', array(

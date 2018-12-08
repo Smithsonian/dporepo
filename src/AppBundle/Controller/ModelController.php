@@ -81,7 +81,7 @@ class ModelController extends Controller
         $start_record = !empty($req['start']) ? $req['start'] : 0;
         $stop_record = !empty($req['length']) ? $req['length'] : 20;
         $parent_id = !empty($req['parent_id']) ? $req['parent_id'] : 0;
-        $parent_id_field = isset($req['parent_type']) ? $req['parent_type'] : 'parent_capture_dataset_repository_id';
+        $parent_id_field = isset($req['parent_type']) ? $req['parent_type'] : 'capture_dataset_id';
 
         $query_params = array(
           'record_type' => 'model',
@@ -134,7 +134,7 @@ class ModelController extends Controller
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
         if(!empty($id) && empty($post)) {
           $rec = $this->repo_storage_controller->execute('getModel', array(
-            'model_repository_id' => $id));
+            'model_id' => $id));
           if(isset($rec)) {
             $data = (object)$rec;
           }
@@ -147,22 +147,22 @@ class ModelController extends Controller
       // Add the parent_id to the $data object
       if(empty($id)) {
         if($parent_type == "item") {
-          $data->parent_item_repository_id = $parent_id;
+          $data->item_id = $parent_id;
         }
         else {
-          $data->parent_capture_dataset_repository_id = $parent_id;
+          $data->capture_dataset_id = $parent_id;
         }
       }
       else {
         //@todo we need a way to get the backlink for new models, too
         if($parent_type == "item") {
-          $back_link = "/admin/projects/datasets/{$data->project_repository_id}/{$data->subject_repository_id}/{$data->parent_item_repository_id}";
+          $back_link = "/admin/projects/datasets/{$data->project_id}/{$data->subject_id}/{$data->item_id}";
         }
         else {
           //@todo- this is problematic since subjects are only linked through items
           // A model might be linked to a capture dataset, which links to project and item; or it may be linked to an item, which links to a project and a subject.
           // We'll need to modify the URL for capture datasets- we shouldn't need the subject repository ID.
-          //$back_link = "/admin/projects/dataset_elements/{$data->project_repository_id}/{$data->subject_repository_id}/{$data->parent_item_repository_id}/{$data->parent_capture_dataset_repository_id}";
+          //$back_link = "/admin/projects/dataset_elements/{$data->project_id}/{$data->subject_id}/{$data->item_id}/{$data->capture_dataset_id}";
         }
         }
 
@@ -180,10 +180,10 @@ class ModelController extends Controller
 
             $data = $form->getData();
 
-            // Set the parent_item_repository_id if adding a Model from an Item record.
+            // Set the item_id if adding a Model from an Item record.
             if(empty($id) && (!empty($request->query->get('from')) && $request->query->get('from') === 'item')) {
-                $data->parent_item_repository_id = $parent_id;
-                $data->parent_capture_dataset_repository_id = 0;
+                $data->item_id = $parent_id;
+                $data->capture_dataset_id = 0;
             }
             $id = $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => 'model',
@@ -224,7 +224,7 @@ class ModelController extends Controller
 
       foreach ($temp as $key => $value) {
         $label = $value['label'];
-        $data[$label] = $value['unit_repository_id'];
+        $data[$label] = $value['unit_id'];
       }
 
       return $data;
@@ -278,7 +278,7 @@ class ModelController extends Controller
 
       // Get the model record.
       $data = $this->repo_storage_controller->execute('getModel', array(
-        'model_repository_id' => $id));
+        'model_id' => $id));
 
       // If there are no results, throw a createNotFoundException (404).
       if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
@@ -315,7 +315,7 @@ class ModelController extends Controller
 
       // Get the model record.
       $data = $this->repo_storage_controller->execute('getModel', array(
-        'model_repository_id' => $id));
+        'model_id' => $id));
 
       // If there are no results, throw a createNotFoundException (404).
       //if (empty($data) || empty($data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');

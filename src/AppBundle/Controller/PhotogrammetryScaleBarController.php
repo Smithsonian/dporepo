@@ -104,20 +104,20 @@ class PhotogrammetryScaleBarController extends Controller
         
         if(!empty($id) && empty($post)) {
           $rec = $this->repo_storage_controller->execute('getPhotogrammetryScaleBar', array(
-            'photogrammetry_scale_bar_repository_id' => $id));
+            'photogrammetry_scale_bar_id' => $id));
           if(isset($rec)) {
             $data = (object)$rec;
           }
-          $data->photogrammetry_scale_bar_repository_id = $id;
+          $data->photogrammetry_scale_bar_id = $id;
         }
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
-        $data->parent_capture_dataset_repository_id = $parent_id;
+        $data->capture_dataset_id = $parent_id;
 
         $back_link = $request->headers->get('referer');
-        if(isset($data->project_repository_id)) {
-            $back_link = "/admin/projects/dataset_elements/{$data->project_repository_id}/{$data->subject_repository_id}/{$data->parent_item_repository_id}/{$data->parent_capture_dataset_repository_id}";
+        if(isset($data->project_id)) {
+            $back_link = "/admin/projects/dataset_elements/{$data->project_id}/{$data->subject_id}/{$data->item_id}/{$data->capture_dataset_id}";
         }
 
         // Get data from lookup tables.
@@ -171,7 +171,7 @@ class PhotogrammetryScaleBarController extends Controller
 
       foreach ($temp as $key => $value) {
         $label = $value['label'];
-        $data[$label] = $value['scale_bar_barcode_type_repository_id'];
+        $data[$label] = $value['scale_bar_barcode_type_id'];
       }
 
       return $data;

@@ -11,7 +11,7 @@ class Model
      * @Assert\NotBlank()
      * @var int
      */
-    public $parent_capture_dataset_repository_id;
+    public $capture_dataset_id;
 
     /**
      * @Assert\NotBlank()

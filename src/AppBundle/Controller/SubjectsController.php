@@ -42,44 +42,44 @@ class SubjectsController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/subjects/{project_repository_id}", name="subjects_browse", methods="GET", requirements={"project_repository_id"="\d+"})
+     * @Route("/admin/projects/subjects/{project_id}", name="subjects_browse", methods="GET", requirements={"project_id"="\d+"})
      */
     public function browse_subjects(Connection $conn, Request $request, ProjectsController $projects)
     {
-        $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
+        $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
 
         $username = $this->getUser()->getUsernameCanonical();
         $user_can_edit = $user_can_edit_project = false;
-        if(false !== $project_repository_id) {
-          $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $project_repository_id);
+        if(false !== $project_id) {
+          $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $project_id);
           if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
             $response = new Response();
             $response->setStatusCode(403);
             return $response;
           }
 
-          $access = $this->repo_user_access->get_user_access($username, 'edit_projects', $project_repository_id);
-          if(array_key_exists('project_ids', $access) && in_array($project_repository_id, $access['project_ids'])) {
+          $access = $this->repo_user_access->get_user_access($username, 'edit_projects', $project_id);
+          if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
             $user_can_edit_project = true;
           }
 
-          $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $project_repository_id);
-          if(array_key_exists('project_ids', $access) && in_array($project_repository_id, $access['project_ids'])) {
+          $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $project_id);
+          if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
             $user_can_edit = true;
           }
         }
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $project_data = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $project_repository_id));
+        $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => $project_id));
 
         if(!$project_data) throw $this->createNotFoundException('The record does not exist');
 
         // Check to see if there are any subjects, to present the Upload Metadata button or not.
-        $subjects = $this->get_subjects((int)$project_data['project_repository_id']);
+        $subjects = $this->get_subjects((int)$project_data['project_id']);
 
         return $this->render('subjects/browse_subjects.html.twig', array(
             'page_title' => 'Project: ' . $project_data['project_name'],
-            'project_repository_id' => $project_repository_id,
+            'project_id' => $project_id,
             'project_data' => $project_data,
             'upload_metadata_button' => !empty($subjects) ? true : false,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
@@ -89,7 +89,7 @@ class SubjectsController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/datatables_browse_subjects/{project_repository_id}", name="subjects_browse_datatables", methods="POST", defaults={"project_repository_id" = null})
+     * @Route("/admin/projects/datatables_browse_subjects/{project_id}", name="subjects_browse_datatables", methods="POST", defaults={"project_id" = null})
      *
      * Browse subjects
      *
@@ -101,11 +101,11 @@ class SubjectsController extends Controller
     public function datatables_browse_subjects(Request $request, ItemsController $items)
     {
         $req = $request->request->all();
-        $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
+        $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
 
         $username = $this->getUser()->getUsernameCanonical();
-        if(false !== $project_repository_id) {
-          $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $project_repository_id);
+        if(false !== $project_id) {
+          $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $project_id);
           if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
             return $this->json(array());
           }
@@ -122,7 +122,7 @@ class SubjectsController extends Controller
           'sort_order' => $sort_order,
           'start_record' => $start_record,
           'stop_record' => $stop_record,
-          'project_repository_id' => $project_repository_id,
+          'project_id' => $project_id,
         );
         if ($search) {
           $query_params['search_value'] = $search;
@@ -150,7 +150,7 @@ class SubjectsController extends Controller
                 $data['aaData'][$key]['active'] = '<span class="label label-' . $label . '"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span> ' . $text . '</span>';
 
                 // Get the items count
-                $subject_items = $items->get_items($value['subject_repository_id']);
+                $subject_items = $items->get_items($value['subject_id']);
                 $data['aaData'][$key]['items_count'] = count($subject_items);
             }
         }
@@ -161,25 +161,25 @@ class SubjectsController extends Controller
     /**
      * Matches /admin/projects/subject/*
      *
-     * @Route("/admin/projects/subject/{project_repository_id}/{subject_repository_id}", name="subjects_manage", methods={"GET","POST"}, requirements={"project_repository_id"="\d+"}, defaults={"subject_repository_id" = null})
+     * @Route("/admin/projects/subject/{project_id}/{subject_id}", name="subjects_manage", methods={"GET","POST"}, requirements={"project_id"="\d+"}, defaults={"subject_id" = null})
      *
      * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
      * @return  array                 Redirect or render
      */
-    function show_subjects_form( $subject_repository_id, Connection $conn, Request $request )
+    function show_subjects_form( $subject_id, Connection $conn, Request $request )
     {
         $subject = new Subjects();
         $subject->access_model_purpose = NULL;
 
         $post = $request->request->all();
-        $subject->project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
+        $subject->project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
         $id = false;
         $ajax = false;
 
-        if (!empty($request->attributes->get('subject_repository_id'))) {
-          if ($request->attributes->get('subject_repository_id') !== 'ajax') {
-            $id = $request->attributes->get('subject_repository_id');
+        if (!empty($request->attributes->get('subject_id'))) {
+          if ($request->attributes->get('subject_id') !== 'ajax') {
+            $id = $request->attributes->get('subject_id');
           }
           else {
             $ajax = true;
@@ -188,15 +188,15 @@ class SubjectsController extends Controller
 
         $username = $this->getUser()->getUsernameCanonical();
         $user_can_edit = false;
-        if(false !== $subject->project_repository_id && false !== $id) {
-          $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $subject->project_repository_id);
+        if(false !== $subject->project_id && false !== $id) {
+          $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $subject->project_id);
           if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
             $response = new Response();
             $response->setStatusCode(403);
             return $response;
           }
 
-          $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $subject->project_repository_id);
+          $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $subject->project_id);
           if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
             $user_can_edit = true;
           }
@@ -259,7 +259,7 @@ class SubjectsController extends Controller
               return $response;
             } else {
               $this->addFlash('message', 'Subject successfully updated.');
-              return $this->redirect('/admin/projects/items/' . $subject->project_repository_id . '/' . $id);
+              return $this->redirect('/admin/projects/items/' . $subject->project_id . '/' . $id);
             }
         }
 
@@ -299,10 +299,10 @@ class SubjectsController extends Controller
      *
      * Run a query to retrieve all subjects from the database.
      *
-     * @param   int $project_repository_id  The project ID
+     * @param   int $project_id  The project ID
      * @return  array|bool  The query result
      */
-    public function get_subjects($project_repository_id = false)
+    public function get_subjects($project_id = false)
     {
 
       $data = $this->repo_storage_controller->execute('getRecords', array(
@@ -312,7 +312,7 @@ class SubjectsController extends Controller
             0 => array('field_name' => 'subject_name')
           ),
           'search_params' => array(
-            0 => array('field_names' => array('project_repository_id'), 'search_values' => array($project_repository_id), 'comparison' => '=')
+            0 => array('field_names' => array('project_id'), 'search_values' => array($project_id), 'comparison' => '=')
           ),
           'search_type' => 'AND',
         )
@@ -324,31 +324,31 @@ class SubjectsController extends Controller
     /**
      * Get Subjects (for the tree browser)
      *
-     * @Route("/admin/projects/get_subjects/{project_repository_id}/{number_first}", name="get_subjects_tree_browser", methods="GET", defaults={"number_first" = false})
+     * @Route("/admin/projects/get_subjects/{project_id}/{number_first}", name="get_subjects_tree_browser", methods="GET", defaults={"number_first" = false})
      */
     public function get_subjects_tree_browser(Request $request, ItemsController $items)
     {      
-      $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
+      $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
 
       $username = $this->getUser()->getUsernameCanonical();
-      if(false !== $project_repository_id) {
-        $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $project_repository_id);
+      if(false !== $project_id) {
+        $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $project_id);
         if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
           return new JsonResponse(array());
         }
       }
 
-      $subjects = $this->get_subjects($project_repository_id);
+      $subjects = $this->get_subjects($project_id);
 
       foreach ($subjects as $key => $value) {
 
           // Check for child dataset records so the 'children' key can be set accordingly.
-          $item_data = $items->get_items((int)$value['subject_repository_id']);
+          $item_data = $items->get_items((int)$value['subject_id']);
 
           $data[$key] = array(
-            'id' => 'subjectId-' . $value['subject_repository_id'],
+            'id' => 'subjectId-' . $value['subject_id'],
             'children' => count($item_data) ? true : false,
-            'a_attr' => array('href' => '/admin/projects/items/' . $project_repository_id . '/' . $value['subject_repository_id']),
+            'a_attr' => array('href' => '/admin/projects/items/' . $project_id . '/' . $value['subject_id']),
           );
           
           if($request->attributes->get('number_first') === 'true') {
@@ -365,7 +365,7 @@ class SubjectsController extends Controller
     /**
      * Delete Multiple Subjects
      *
-     * @Route("/admin/projects/subjects/{project_repository_id}/delete", name="subjects_remove_records", methods={"GET"})
+     * @Route("/admin/projects/subjects/{project_id}/delete", name="subjects_remove_records", methods={"GET"})
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
@@ -375,11 +375,11 @@ class SubjectsController extends Controller
     public function delete_multiple_subjects(Request $request)
     {
         $ids = $request->query->get('ids');
-        $project_repository_id = !empty($request->attributes->get('project_repository_id')) ? $request->attributes->get('project_repository_id') : false;
+        $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
 
         $username = $this->getUser()->getUsernameCanonical();
-        if(false !== $project_repository_id) {
-          $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $project_repository_id);
+        if(false !== $project_id) {
+          $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $project_id);
           if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
             $this->addFlash('message', 'No access. You are not allowed to delete subjects.');
             return;
@@ -387,7 +387,7 @@ class SubjectsController extends Controller
         }
 
 
-        if(!empty($ids) && $project_repository_id) {
+        if(!empty($ids) && $project_id) {
 
           $ids_array = explode(',', $ids);
 
@@ -404,7 +404,7 @@ class SubjectsController extends Controller
           $this->addFlash('message', 'Missing data. No records removed.');
         }
 
-        return $this->redirectToRoute('subjects_browse', array('project_repository_id' => $project_repository_id));
+        return $this->redirectToRoute('subjects_browse', array('project_id' => $project_id));
     }
 
 }

@@ -39,7 +39,7 @@ class CameraClusterTypesController extends Controller
 
         // Table name and field names.
         $this->table_name = 'camera_cluster_type';
-        $this->id_field_name_raw = 'camera_cluster_type_repository_id';
+        $this->id_field_name_raw = 'camera_cluster_type_id';
         $this->id_field_name = 'camera_cluster_type.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
         $this->label_field_name = 'camera_cluster_type.' . $this->label_field_name_raw;

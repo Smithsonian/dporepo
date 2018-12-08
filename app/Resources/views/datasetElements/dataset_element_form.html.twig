@@ -2,7 +2,7 @@
 
 {% block stylesheets %}
     {{ parent() }}
-    {% if dataset_element_data.capture_data_element_repository_id is defined %}
+    {% if dataset_element_data.capture_data_element_id is defined %}
         <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
         <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
     {% endif %}
@@ -15,10 +15,10 @@
     <ol class="breadcrumb">
         <li><a href="/admin">Dashboard</a></li>
         <li><a href="/admin/workspace">Browse Projects</a></li>
-        <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ project_repository_id }}">{{ project_data.project_name|e }}</a></li>
-        <li><strong>Subject:</strong> <a href="/admin/projects/items/{{ project_repository_id }}/{{ subject_repository_id }}">{{ subject_data.subject_name|e }}</a></li>
-        <li><strong>Item:</strong> <a href="/admin/projects/datasets/{{ project_repository_id }}/{{ subject_repository_id }}/{{ item_repository_id }}">{{ item_data.item_description_truncated|e }}</a></li>
-        <li><strong>Capture Dataset:</strong> <a href="/admin/projects/dataset_elements/{{ project_repository_id }}/{{ subject_repository_id }}/{{ item_repository_id }}/{{ capture_dataset_repository_id }}">{{ dataset_data.capture_dataset_name|e }}</a></li>
+        <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ project_id }}">{{ project_data.project_name|e }}</a></li>
+        <li><strong>Subject:</strong> <a href="/admin/projects/items/{{ project_id }}/{{ subject_id }}">{{ subject_data.subject_name|e }}</a></li>
+        <li><strong>Item:</strong> <a href="/admin/projects/datasets/{{ project_id }}/{{ subject_id }}/{{ item_id }}">{{ item_data.item_description_truncated|e }}</a></li>
+        <li><strong>Capture Dataset:</strong> <a href="/admin/projects/dataset_elements/{{ project_id }}/{{ subject_id }}/{{ item_id }}/{{ capture_dataset_id }}">{{ dataset_data.capture_dataset_name|e }}</a></li>
         <li class="active">{% if dataset_element_data.capture_sequence_number is defined %}<strong>Capture Data Element:</strong> {{ dataset_element_data.capture_sequence_number|e }}{% else %}Add a Capture Data Element{% endif %}</li>
     </ol>
 
@@ -50,7 +50,7 @@
 
     {{ form_end(form) }}
 
-    {% if dataset_element_data.capture_data_element_repository_id is defined %}
+    {% if dataset_element_data.capture_data_element_id is defined %}
         <div class="row">
             <div class="col-sm-12 col-md-12 child-data">
 
@@ -97,7 +97,7 @@
 {% endblock %}
 {% block js_bottom %}
     {{ parent() }}
-    {% if dataset_element_data.capture_data_element_repository_id is defined %}
+    {% if dataset_element_data.capture_data_element_id is defined %}
         <script src="{{ asset('lib/javascripts/datatables/js/jquery.dataTables.min.js') }}"></script>
         <script src="{{ asset('lib/javascripts/datatables/js/dataTables.buttons.min.js') }}"></script>
         <script src="{{ asset('lib/javascripts/datatables/js/dataTables.bootstrap.min.js') }}"></script>
@@ -105,7 +105,7 @@
         <script src="{{ asset('lib/javascripts/buttons/js/buttons.colVis.min.js') }}"></script>
         <script type="text/javascript">
           $(document).ready(function() {
-            var capture_data_element_repository_id =  "{{ dataset_element_data.capture_data_element_repository_id }}";
+            var capture_data_element_id =  "{{ dataset_element_data.capture_data_element_id }}";
             $('#browse_capture_data_files').dataTable( {
               "columns": [
                 { "data": "manage" },
@@ -128,7 +128,7 @@
               "ajax": {
                 "url": "/admin/projects/capture_data_files/datatables_browse",
                 "data": {
-                  "parent_id": capture_data_element_repository_id
+                  "parent_id": capture_data_element_id
                 }
               },
               // Method type.
@@ -156,13 +156,13 @@
                   if(thisTableCell.hasClass('manage_column')) return;
                   // Send to the details page.
                   var this_id = thisTableCell.closest("tr").attr('id');
-                  window.location.href = '/admin/projects/capture_data_files/manage' + '/' + capture_data_element_repository_id + '/' + this_id;
+                  window.location.href = '/admin/projects/capture_data_files/manage' + '/' + capture_data_element_id + '/' + this_id;
                 });
               }
             });
             var capture_data_file_add_button = $('<a />')
               .addClass('btn btn-default add-record-button')
-              .attr('href', '/admin/projects/capture_data_files/manage/' + capture_data_element_repository_id)
+              .attr('href', '/admin/projects/capture_data_files/manage/' + capture_data_element_id)
               .html('<span class="glyphicon glyphicon-plus"></span> Add a Capture Data File');
             $('#browse_capture_data_files_wrapper').find('.datatables_bulk_actions').append(capture_data_file_add_button);
             $('#browse_capture_devices').dataTable( {
@@ -185,7 +185,7 @@
               "ajax": {
                 "url": "/admin/projects/capture_device/datatables_browse",
                 "data": {
-                  "parent_id": capture_data_element_repository_id
+                  "parent_id": capture_data_element_id
                 }
               },
               // Method type.
@@ -213,13 +213,13 @@
                   if(thisTableCell.hasClass('manage_column')) return;
                   // Send to the details page.
                   var this_id = thisTableCell.closest("tr").attr('id');
-                  window.location.href = '/admin/projects/capture_device/manage' + '/' + capture_data_element_repository_id + '/' + this_id;
+                  window.location.href = '/admin/projects/capture_device/manage' + '/' + capture_data_element_id + '/' + this_id;
                 });
               }
             });
             var capture_device_add_button = $('<a />')
               .addClass('btn btn-default add-record-button')
-              .attr('href', '/admin/projects/capture_device/manage/' + capture_data_element_repository_id)
+              .attr('href', '/admin/projects/capture_device/manage/' + capture_data_element_id)
               .html('<span class="glyphicon glyphicon-plus"></span> Add a Capture Device');
             $('#browse_capture_devices_wrapper').find('.datatables_bulk_actions').append(capture_device_add_button);
           });

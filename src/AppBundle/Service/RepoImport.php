@@ -179,7 +179,7 @@ class RepoImport implements RepoImportInterface {
   /**
    * Import CSV
    *
-   * @param array $params Parameters: job_id, project_id, parent_record_id, parent_record_type
+   * @param array $params Parameters: job_id, project_id, record_id, record_type
    * @return array
    */
   public function import_csv($params = array())
@@ -236,13 +236,13 @@ class RepoImport implements RepoImportInterface {
     // Set the job type (e.g. subjects metadata import, items metadata import, capture datasets metadata import, models metadata import).
     // $job_data = $this->repo_storage_controller->execute('getJobData', array($params['uuid']));
 
-    if (!empty($params['uuid']) && !empty($params['parent_project_id']) && !empty($params['parent_record_id']) && !empty($params['parent_record_type'])) {
+    if (!empty($params['uuid']) && !empty($params['project_id']) && !empty($params['record_id']) && !empty($params['record_type'])) {
 
       $job_info = (object)array(
         'job_id' => $job_data['job_id'],
         'uuid' => $params['uuid'],
-        'parent_project_id' => $params['parent_project_id'],
-        'parent_record_id' => $params['parent_record_id'],
+        'project_id' => $params['project_id'],
+        'record_id' => $params['record_id'],
       );
 
       // Remove 'metadata import' from the $job_data['job_type'].
@@ -279,7 +279,7 @@ class RepoImport implements RepoImportInterface {
           foreach ($data as $csv_key => $csv_value) {
             // Don't perform an ingest without CSV data (an empty CSV).
             if(isset($csv_value['csv'])) {
-              $return['job_log_ids'] = $this->ingest_csv_data($csv_value, $job_info, $params['parent_record_type'], $i);
+              $return['job_log_ids'] = $this->ingest_csv_data($csv_value, $job_info, $params['record_type'], $i);
             }
 
             $i++;
@@ -395,8 +395,8 @@ class RepoImport implements RepoImportInterface {
 
                 unset($json_array[$key][$k]);
 
-                // If present, bring the project_repository_id into the array.
-                // $json_array[$key][$field_name] = ($field_name === 'project_repository_id') ? (int)$id : null;
+                // If present, bring the project_id into the array.
+                // $json_array[$key][$field_name] = ($field_name === 'project_id') ? (int)$id : null;
 
                 // Set the value of the field name.
                 $json_array[$key][$field_name] = $v;
@@ -511,11 +511,11 @@ class RepoImport implements RepoImportInterface {
    *
    * @param obj $data  Data object
    * @param array $job_data  Job data
-   * @param string $parent_record_type  Parent record type
+   * @param string $record_type  Parent record type
    * @param int $i  Iterator
    * @return array  An array of job log IDs
    */
-  public function ingest_csv_data($data = null, $job_data = array(), $parent_record_type = null, $i = 1)
+  public function ingest_csv_data($data = null, $job_data = array(), $record_type = null, $i = 1)
   {
 
     $session = new Session();
@@ -534,19 +534,19 @@ class RepoImport implements RepoImportInterface {
     // Job ID and parent record ID
     $data->job_id = isset($job_data->job_id) ? $job_data->job_id : false;
     $data->uuid = isset($job_data->uuid) ? $job_data->uuid : false;
-    $data->parent_project_id = isset($job_data->parent_project_id) ? $job_data->parent_project_id : false;
-    $data->parent_record_id = isset($job_data->parent_record_id) ? $job_data->parent_record_id : false;
-    $data->parent_record_type = isset($parent_record_type) ? $parent_record_type : false;
+    $data->project_id = isset($job_data->project_id) ? $job_data->project_id : false;
+    $data->record_id = isset($job_data->record_id) ? $job_data->record_id : false;
+    $data->record_type = isset($record_type) ? $record_type : false;
 
     // Just in case: throw a 404 if either job ID or parent record ID aren't passed.
     if (!$data->job_id) throw $this->createNotFoundException('Job ID not provided.');
     if (!$data->uuid) throw $this->createNotFoundException('UUID not provided.');
-    if (!$data->parent_project_id) throw $this->createNotFoundException('Parent Project record ID not provided.');
-    if (!$data->parent_record_id) throw $this->createNotFoundException('Parent record ID not provided.');
+    if (!$data->project_id) throw $this->createNotFoundException('Parent Project record ID not provided.');
+    if (!$data->record_id) throw $this->createNotFoundException('Parent record ID not provided.');
 
     // Check to see if the parent project record exists/active, and if it doesn't, throw a createNotFoundException (404).
-    if (!empty($data->parent_project_id)) {
-      $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $data->parent_project_id));
+    if (!empty($data->project_id)) {
+      $project = $this->repo_storage_controller->execute('getProject', array('project_id' => $data->project_id));
       // If no project is returned, throw a createNotFoundException (404).
       if (!$project) throw $this->createNotFoundException('The Project record doesn\'t exist');
     }
@@ -566,7 +566,7 @@ class RepoImport implements RepoImportInterface {
       )
     ));
 
-    // If data type is not a 'subject', set the array of $new_repository_ids.
+    // If data type is not a 'subject', set the array of $new_ids.
     if ($data->type !== 'subject') {
       $new_repository_ids[$i] = $session->get('new_repository_ids_' . ($i-1));
     }
@@ -619,32 +619,32 @@ class RepoImport implements RepoImportInterface {
         // Set the parent record's repository ID.
         switch ($data->type) {
           case 'subject':
-            // Set the project_repository_id
-            $csv_val->project_repository_id = (int)$data->parent_project_id;
+            // Set the project_id
+            $csv_val->project_id = (int)$data->project_id;
             break;
           case 'item':
-            // Set the subject_repository_id.
-            if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
-              $csv_val->subject_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+            // Set the subject_id.
+            if (!empty($new_ids[$i]) && !empty($csv_val->import_parent_id)) {
+              $csv_val->subject_id = $new_ids[$i][$csv_val->import_parent_id];
             } else {
-              $csv_val->subject_repository_id = $data->parent_record_id;
+              $csv_val->subject_id = $data->record_id;
             }
             break;
           case 'capture_dataset':
-            // Set the parent_item_repository_id.
-            if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
-              $csv_val->parent_item_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+            // Set the item_id.
+            if (!empty($new_ids[$i]) && !empty($csv_val->import_parent_id)) {
+              $csv_val->item_id = $new_ids[$i][$csv_val->import_parent_id];
             } else {
-              $csv_val->parent_item_repository_id = $data->parent_record_id;
+              $csv_val->item_id = $data->record_id;
             }
 
             // Get the parent project ID.
             $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
-              'base_record_id' => $csv_val->parent_item_repository_id,
+              'base_record_id' => $csv_val->item_id,
               'record_type' => 'item',
             ));
             if (!empty($parent_records)) {
-              $csv_val->parent_project_repository_id = $parent_records['project_repository_id'];
+              $csv_val->project_id = $parent_records['project_id'];
             }
             break;
           case 'model':
@@ -677,26 +677,26 @@ class RepoImport implements RepoImportInterface {
             // $csv_val = $this->extract_data_from_external('get_model_data_from_processing_service', $csv_val, $data);
             // /////////////////////////////////////////////////////////////////////////////////////////
 
-            // Set the parent_capture_dataset_repository_id or parent_item_repository_id (when a model is associated to an item).
-            // TODO: add previous_parent_record_type to the mix, 
+            // Set the capture_dataset_id or item_id (when a model is associated to an item).
+            // TODO: add previous_record_type to the mix,
             // so the system will automatically detect what to associate a model to (to make it a bit more bullet-proof).
             if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
               // If a model maps to an item, set the value for the 'parent_item_repository_id' field.
-              if ($data->parent_record_type === 'item') {
-                $csv_val->parent_item_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+              if ($data->record_type === 'item') {
+                $csv_val->item_id = $new_repository_ids[$i][$csv_val->import_parent_id];
               }
-              // Otherwise, set the value for the 'parent_capture_dataset_repository_id' field.
+              // Otherwise, set the value for the 'capture_dataset_id' field.
               else {
-                $csv_val->parent_capture_dataset_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+                $csv_val->capture_dataset_id = $new_repository_ids[$i][$csv_val->import_parent_id];
               }
             } else {
-              // If a model maps to an item, set the value for the 'parent_item_repository_id' field.
-              if ($data->parent_record_type === 'item') {
-                $csv_val->parent_item_repository_id = $data->parent_record_id;
+              // If a model maps to an item, set the value for the 'item_id' field.
+              if ($data->record_type === 'item') {
+                $csv_val->item_id = $data->record_id;
               }
-              // Otherwise, set the value for the 'parent_capture_dataset_repository_id' field.
+              // Otherwise, set the value for the 'capture_dataset_id' field.
               else {
-                $csv_val->parent_capture_dataset_repository_id = $data->parent_record_id;
+                $csv_val->capture_dataset_id = $data->record_id;
               }
             }
             break;
@@ -743,7 +743,7 @@ class RepoImport implements RepoImportInterface {
               'base_table' => 'model_file',
               'user_id' => $data->user_id,
               'values' => array(
-                'model_repository_id' => $this_id,
+                'model_id' => $this_id,
                 'file_upload_id' => $file_info[0]['file_upload_id'],
               )
             ));
@@ -782,7 +782,7 @@ class RepoImport implements RepoImportInterface {
           'values' => array(
             'job_id' => $data->job_id,
             'record_id' => $this_id,
-            'project_id' => (int)$data->parent_project_id,
+            'project_id' => (int)$data->project_id,
             'record_table' => $data->type,
             'description' => $data->description,
           )
@@ -825,13 +825,13 @@ class RepoImport implements RepoImportInterface {
    * Insert Capture Data Elements
    *
    * @param array $capture_data_elements An array of capture data elements.
-   * @param int $capture_dataset_repository_id The capture dataset repository ID
+   * @param int $capture_dataset_id The capture dataset repository ID
    * @param array $data Job data
    * @return null
    */
-  public function insert_capture_data_elements_and_files($capture_data_elements = array(), $capture_dataset_repository_id = null, $data = array()) {
+  public function insert_capture_data_elements_and_files($capture_data_elements = array(), $capture_dataset_id = null, $data = array()) {
 
-    if (!empty($capture_data_elements) && !empty($capture_dataset_repository_id) && !empty($data)) {
+    if (!empty($capture_data_elements) && !empty($capture_dataset_id) && !empty($data)) {
       // Loop through capture data elements and add to storage.
       foreach ($capture_data_elements as $ekey => $evalue) {
 
@@ -842,7 +842,7 @@ class RepoImport implements RepoImportInterface {
         }
 
         // Set the parent capture dataset ID.
-        $evalue['capture_dataset_repository_id'] = $capture_dataset_repository_id;
+        $evalue['capture_dataset_id'] = $capture_dataset_id;
         // Add to metadata storage.
         $capture_data_element_id = $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'capture_data_element',
@@ -857,7 +857,7 @@ class RepoImport implements RepoImportInterface {
           'values' => array(
             'job_id' => $data->job_id,
             'record_id' => $capture_data_element_id,
-            'project_id' => (int)$data->parent_project_id,
+            'project_id' => (int)$data->project_id,
             'record_table' => 'capture_data_element',
             'description' => 'imported capture data element',
           )
@@ -866,7 +866,7 @@ class RepoImport implements RepoImportInterface {
         // Loop through capture data files and add to storage.
         foreach ($capture_data_files as $fkey => $fvalue) {
           // Set the parent capture data element ID.
-          $fvalue['parent_capture_data_element_repository_id'] = $capture_data_element_id;
+          $fvalue['capture_data_element_id'] = $capture_data_element_id;
           // Add to metadata storage.
           $capture_data_file_id = $this->repo_storage_controller->execute('saveRecord', array(
             'base_table' => 'capture_data_file',
@@ -881,7 +881,7 @@ class RepoImport implements RepoImportInterface {
             'values' => array(
               'job_id' => $data->job_id,
               'record_id' => $capture_data_file_id,
-              'project_id' => (int)$data->parent_project_id,
+              'project_id' => (int)$data->project_id,
               'record_table' => 'capture_data_file',
               'description' => 'imported capture data file',
             )

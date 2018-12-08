@@ -20,13 +20,13 @@ class Datasets
      * @Assert\Length(min="1", max="10")
      * @var int
      */
-    public $parent_project_repository_id;
+    public $project_id;
 
     /**
      * @Assert\Length(min="1", max="10")
      * @var int
      */
-    public $parent_item_repository_id;
+    public $item_id;
 
     /**
      * @Assert\NotBlank()

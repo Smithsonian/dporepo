@@ -11,7 +11,7 @@ interface RepoImportInterface {
   /**
    * Import CSV
    *
-   * @param array $params Parameters: job_id, project_id, parent_record_id, parent_record_type
+   * @param array $params Parameters: job_id, project_id, record_id, record_type
    * @return array
    */
   public function import_csv(array $params);
@@ -30,21 +30,21 @@ interface RepoImportInterface {
    *
    * @param obj $data  Data object
    * @param array $job_data  Job data
-   * @param string $parent_record_type  Parent record type
+   * @param string $record_type  Parent record type
    * @param int $i  Iterator
    * @return array  An array of job log IDs
    */
-  public function ingest_csv_data(obj $data, array $job_data, $parent_record_type, int $i);
+  public function ingest_csv_data(obj $data, array $job_data, $record_type, int $i);
 
   /**
    * Insert Capture Data Elements
    *
    * @param array $capture_data_elements An array of capture data elements.
-   * @param int $capture_dataset_repository_id The capture dataset repository ID
+   * @param int $capture_dataset_id The capture dataset repository ID
    * @param array $data Job data
    * @return null
    */
-  public function insert_capture_data_elements_and_files(array $capture_data_elements, int $capture_dataset_repository_id, array $data);
+  public function insert_capture_data_elements_and_files(array $capture_data_elements, int $capture_dataset_id, array $data);
 
   /**
    * Extract Data From External

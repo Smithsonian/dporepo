@@ -14,7 +14,7 @@ class UvMapForm extends AbstractType
     $data = (array)$options['data'];
 
     $builder
-      ->add('parent_capture_dataset_repository_id', HiddenType::class, array(
+      ->add('capture_dataset_id', HiddenType::class, array(
         'required' => true,
       ))
       // TODO: hook-up to JSON schema

@@ -39,7 +39,7 @@ class UnitsController extends Controller
 
         // Table name and field names.
         $this->table_name = 'unit';
-        $this->id_field_name_raw = 'unit_repository_id';
+        $this->id_field_name_raw = 'unit_id';
         $this->id_field_name = 'unit.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
         $this->label_field_name = 'unit.' . $this->label_field_name_raw;

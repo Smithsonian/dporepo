@@ -111,7 +111,7 @@ class CaptureDeviceComponentController extends Controller
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
-        $data->parent_capture_device_repository_id = $parent_id;
+        $data->capture_device_id = $parent_id;
         
         // Create the form
         $form = $this->createForm(CaptureDeviceComponentForm::class, $data);
@@ -131,7 +131,7 @@ class CaptureDeviceComponentController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/capture_device_component/manage/' . $data->parent_capture_device_repository_id . '/' . $id);
+            return $this->redirect('/admin/projects/capture_device_component/manage/' . $data->capture_device_id . '/' . $id);
         }
 
         return $this->render('datasetElements/capture_device_component_form.html.twig', array(

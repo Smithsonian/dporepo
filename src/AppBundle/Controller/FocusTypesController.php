@@ -39,7 +39,7 @@ class FocusTypesController extends Controller
 
         // Table name and field names.
         $this->table_name = 'focus_type';
-        $this->id_field_name_raw = 'focus_type_repository_id';
+        $this->id_field_name_raw = 'focus_type_id';
         $this->id_field_name = 'focus_type.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
         $this->label_field_name = 'focus_type.' . $this->label_field_name_raw;

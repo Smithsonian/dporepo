@@ -296,21 +296,21 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/execute_jobs/{uuid}/{parent_project_id}/{parent_record_id}/{parent_record_type}", name="execute_jobs", defaults={"uuid" = null, "parent_project_id" = null, "parent_record_id" = null, "parent_record_type" = null}, methods="GET")
+     * @Route("/admin/execute_jobs/{uuid}/{project_id}/{record_id}/{record_type}", name="execute_jobs", defaults={"uuid" = null, "parent_project_id" = null, "record_id" = null, "record_type" = null}, methods="GET")
      *
      * @param int $uuid Job ID
-     * @param int $parent_project_id Parent Project ID
-     * @param int $parent_record_id Parent Record ID
-     * @param int $parent_record_type Parent Record Type
+     * @param int $project_id Parent Project ID
+     * @param int $record_id Parent Record ID
+     * @param int $record_type Parent Record Type
      * @param object $kernel KernelInterface class
      */
-    public function execute_jobs($uuid, $parent_project_id, $parent_record_id, $parent_record_type, KernelInterface $kernel) {
+    public function execute_jobs($uuid, $project_id, $record_id, $record_type, KernelInterface $kernel) {
 
       $input = array(
         'uuid' => $uuid,
-        'parent_project_id' => $parent_project_id,
-        'parent_record_id' => $parent_record_id,
-        'parent_record_type' => $parent_record_type,
+        'project_id' => $project_id,
+        'record_id' => $record_id,
+        'record_type' => $record_type,
       );
 
       // Hack for XAMPP on Windows.
@@ -391,23 +391,23 @@ class ImportController extends Controller
     }
     
     /**
-     * @Route("/admin/ingest/{uuid}/{parent_project_id}/{parent_record_id}/{parent_record_type}", name="import_summary_details", defaults={"uuid" = null, "parent_project_id" = null, "parent_record_id" = null, "parent_record_type" = null}, methods="GET")
+     * @Route("/admin/ingest/{uuid}/{project_id}/{record_id}/{record_type}", name="import_summary_details", defaults={"uuid" = null, "parent_project_id" = null, "record_id" = null, "record_type" = null}, methods="GET")
      *
      * @param int $uuid Job ID
-     * @param int $parent_project_id Parent Project ID
-     * @param int $parent_record_id Parent Record ID
-     * @param int $parent_record_type Parent Record Type
+     * @param int $project_id Parent Project ID
+     * @param int $record_id Parent Record ID
+     * @param int $record_type Parent Record Type
      * @param object $conn Database connection object
      * @param object $project ProjectsController class
      * @param object $request Symfony's request object
      */
-    public function import_summary_details($uuid, $parent_project_id, $parent_record_id, $parent_record_type, Connection $conn, Request $request)
+    public function import_summary_details($uuid, $project_id, $record_id, $record_type, Connection $conn, Request $request)
     {
 
       // $this->u->dumper($uuid,0);
-      // $this->u->dumper($parent_project_id,0);
-      // $this->u->dumper($parent_record_id,0);
-      // $this->u->dumper($parent_record_type);
+      // $this->u->dumper($project_id,0);
+      // $this->u->dumper($record_id,0);
+      // $this->u->dumper($record_type);
 
       $project = [];
 
@@ -417,9 +417,9 @@ class ImportController extends Controller
         if (empty($job_data)) throw $this->createNotFoundException('The Job record does not exist');
       }
 
-      if (!empty($parent_project_id)) {
+      if (!empty($project_id)) {
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $parent_project_id));
+        $project = $this->repo_storage_controller->execute('getProject', array('project_id' => $project_id));
         if (!$project) throw $this->createNotFoundException('The Project record does not exist');
       }
 
@@ -439,9 +439,9 @@ class ImportController extends Controller
           // Set the parameters for the app:validate-assets command (passed to client side, then executed asynchronously via the /admin/execute_jobs route)
           $project['execute_jobs_input'] = array(
             'uuid' => $job_data['uuid'],
-            'parent_project_id' => $parent_project_id,
-            'parent_record_id' => $parent_record_id,
-            'parent_record_type' => $parent_record_type,
+            'project_id' => $project_id,
+            'record_id' => $record_id,
+            'record_type' => $record_type,
           );
           
         }
@@ -737,19 +737,19 @@ class ImportController extends Controller
         switch($value) {
           case 'subject':
             $params['field_name'] = 'subject_name';
-            $params['id_field_name'] = 'subject_repository_id';
+            $params['id_field_name'] = 'subject_id';
             break;
           case 'item':
             $params['field_name'] = 'item_description';
-            $params['id_field_name'] = 'item_repository_id';
+            $params['id_field_name'] = 'item_id';
             break;
           case 'capture_dataset':
             $params['field_name'] = 'capture_dataset_name';
-            $params['id_field_name'] = 'capture_dataset_repository_id';
+            $params['id_field_name'] = 'capture_dataset_id';
             break;
           default: // project
             $params['field_name'] = 'project_name';
-            $params['id_field_name'] = 'project_repository_id';
+            $params['id_field_name'] = 'project_id';
         }
 
         // Query the database.
@@ -789,13 +789,13 @@ class ImportController extends Controller
 
     
     /**
-     * @param string $parent_record_type The record type (e.g. subject)
+     * @param string $record_type The record type (e.g. subject)
      * @return string
      */
-    public function get_job_type($parent_record_type = null)
+    public function get_job_type($record_type = null)
     {
 
-      switch ($parent_record_type) {
+      switch ($record_type) {
         case 'project':
           $data = 'subjects';
           break;
@@ -840,15 +840,15 @@ class ImportController extends Controller
         ));
       } else {
         // If the $record_type is a 'project', just use the $base_record_id, since that's the project ID.
-        $parent_records['project_repository_id'] = $base_record_id;
+        $parent_records['project_id'] = $base_record_id;
       }
 
       // If there are no results for a parent Project record ID, throw a createNotFoundException (404).
       if (empty($parent_records)) throw $this->createNotFoundException('Could not establish the parent project ID');
 
-      if (!empty($parent_records) && isset($parent_records['project_repository_id'])) {
+      if (!empty($parent_records) && isset($parent_records['project_id'])) {
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $parent_records['project_repository_id']));
+        $project = $this->repo_storage_controller->execute('getProject', array('project_id' => $parent_records['project_id']));
         if (!$project) throw $this->createNotFoundException('The Project record does not exist');
       }
 
@@ -863,7 +863,7 @@ class ImportController extends Controller
           'user_id' => $this->getUser()->getId(),
           'values' => array(
             'uuid' => $uuid,
-            'project_id' => (int)$project['project_repository_id'],
+            'project_id' => (int)$project['project_id'],
             'job_label' => 'Metadata Import: "' . $project['project_name'] . '"',
             'job_type' => $job_type . ' metadata import',
             'job_status' => 'uploading',
@@ -874,7 +874,7 @@ class ImportController extends Controller
         ));
       }
 
-      return $this->json(array('jobId' => (int)$job_id, 'uuid' => $uuid, 'projectId' => (int)$project['project_repository_id']));
+      return $this->json(array('jobId' => (int)$job_id, 'uuid' => $uuid, 'projectId' => (int)$project['project_id']));
     }
 
     /**
@@ -1078,8 +1078,8 @@ class ImportController extends Controller
       $local_path = str_replace('/', DIRECTORY_SEPARATOR, $local_path);
       // Need to pass the parent record type and ID so we can associate a processing job with something.
       $parent_record_data = array(
-        'parent_record_id' => 7,
-        'parent_record_type' => 'model',
+        'record_id' => 7,
+        'record_type' => 'model',
       );
 
       // Initialize the processing job.
@@ -1149,7 +1149,7 @@ class ImportController extends Controller
       $response = $this->json(array());
       $req = $request->request->all();
       
-      if (!empty($req['record_table']) && !empty($req['job_uuid']) && !empty($req['project_repository_id']) && !empty($req['capture_dataset_repository_id'])) {
+      if (!empty($req['record_table']) && !empty($req['job_uuid']) && !empty($req['project_id']) && !empty($req['capture_dataset_id'])) {
 
         // Get the job data (for the job_id).
         $job_data = $this->repo_storage_controller->execute('getJobData', array($req['job_uuid']));
@@ -1160,8 +1160,8 @@ class ImportController extends Controller
           'user_id' => $this->getUser()->getId(),
           'values' => array(
             'job_id' => $job_data['job_id'],
-            'record_id' => $req['capture_dataset_repository_id'],
-            'project_id' => (int)$req['project_repository_id'],
+            'record_id' => $req['capture_dataset_id'],
+            'project_id' => (int)$req['project_id'],
             'record_table' => $req['record_table'],
             'description' => null,
           )

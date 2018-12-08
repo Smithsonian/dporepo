@@ -61,7 +61,7 @@ class CaptureDeviceController extends Controller
           'start_record' => $start_record,
           'stop_record' => $stop_record,
           'parent_id' => $req['parent_id'],
-          'parent_id_field' => 'parent_capture_data_element_repository_id',
+          'parent_id_field' => 'capture_data_element_id',
         );
         if ($search) {
           $query_params['search_value'] = $search;
@@ -112,12 +112,12 @@ class CaptureDeviceController extends Controller
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
-        $data->parent_capture_data_element_repository_id = $parent_id;
+        $data->capture_data_element_id = $parent_id;
 
         // Back link
         $back_link = $request->headers->get('referer');
-        if(isset($data->parent_project_repository_id)) {
-            $back_link = "/admin/projects/dataset_element/{$data->parent_project_repository_id}/{$data->subject_repository_id}/{$data->parent_item_repository_id}/{$data->capture_dataset_repository_id}/{$data->parent_capture_data_element_repository_id}";
+        if(isset($data->project_id)) {
+            $back_link = "/admin/projects/dataset_element/{$data->project_id}/{$data->subject_id}/{$data->item_id}/{$data->capture_dataset_id}/{$data->capture_data_element_id}";
         }
 
         // Create the form
@@ -139,7 +139,7 @@ class CaptureDeviceController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/capture_device/manage/' . $data->parent_capture_data_element_repository_id . '/' . $id);
+            return $this->redirect('/admin/projects/capture_device/manage/' . $data->capture_data_element_id . '/' . $id);
         }
 
         return $this->render('datasetElements/capture_device_form.html.twig', array(

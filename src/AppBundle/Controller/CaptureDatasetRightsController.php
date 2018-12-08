@@ -112,7 +112,7 @@ class CaptureDatasetRightsController extends Controller
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
-        $data->parent_capture_dataset_repository_id = $parent_id;
+        $data->parent_capture_dataset_id = $parent_id;
 
         // Get data from lookup tables.
         $data->data_rights_restriction_type_options = $this->get_data_rights_restriction_type();
@@ -136,7 +136,7 @@ class CaptureDatasetRightsController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/capture_dataset_rights/manage/' . $data->parent_capture_dataset_repository_id . '/' . $id);
+            return $this->redirect('/admin/projects/capture_dataset_rights/manage/' . $data->capture_dataset_id . '/' . $id);
         }
 
         return $this->render('datasets/capture_dataset_rights_form.html.twig', array(
@@ -164,7 +164,7 @@ class CaptureDatasetRightsController extends Controller
 
       foreach ($temp as $key => $value) {
         $label = $this->u->removeUnderscoresTitleCase($value['label']);
-        $data[$label] = $value['data_rights_restriction_type_repository_id'];
+        $data[$label] = $value['data_rights_restriction_type_id'];
       }
 
       return $data;
