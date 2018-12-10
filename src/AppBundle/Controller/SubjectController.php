@@ -44,7 +44,7 @@ class SubjectController extends Controller
     /**
      * @Route("/admin/projects/subjects/{project_id}", name="subjects_browse", methods="GET", requirements={"project_id"="\d+"})
      */
-    public function browse_subjects(Connection $conn, Request $request, ProjectController $projects)
+    public function browseSubjects(Connection $conn, Request $request, ProjectController $projects)
     {
         $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
 
@@ -75,7 +75,7 @@ class SubjectController extends Controller
         if(!$project_data) throw $this->createNotFoundException('The record does not exist');
 
         // Check to see if there are any subjects, to present the Upload Metadata button or not.
-        $subjects = $this->get_subjects((int)$project_data['project_id']);
+        $subjects = $this->getSubjects((int)$project_data['project_id']);
 
         return $this->render('subjects/browse_subjects.html.twig', array(
             'page_title' => 'Project: ' . $project_data['project_name'],
@@ -98,7 +98,7 @@ class SubjectController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_subjects(Request $request, ItemController $items)
+    public function datatablesBrowseSubjects(Request $request, ItemController $items)
     {
         $req = $request->request->all();
         $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
@@ -150,7 +150,7 @@ class SubjectController extends Controller
                 $data['aaData'][$key]['active'] = '<span class="label label-' . $label . '"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span> ' . $text . '</span>';
 
                 // Get the items count
-                $subject_items = $items->get_items($value['subject_id']);
+                $subject_items = $items->getItems($value['subject_id']);
                 $data['aaData'][$key]['items_count'] = count($subject_items);
             }
         }
@@ -167,7 +167,7 @@ class SubjectController extends Controller
      * @param   object  Request       Request object
      * @return  array                 Redirect or render
      */
-    function show_subjects_form( $subject_id, Connection $conn, Request $request )
+    function showSubjectsForm( $subject_id, Connection $conn, Request $request )
     {
         $subject = new Subject();
         $subject->access_model_purpose = NULL;
@@ -245,12 +245,12 @@ class SubjectController extends Controller
         // If form is submitted and passes validation, insert/update the database record.
         if ($form->isSubmitted() && $form->isValid()) {
 
-            $subject = $form->getData();
+            $subject = (array)($form->getData());
             $id = $this->repo_storage_controller->execute('saveSubject', array(
               'base_table' => 'subject',
               'record_id' => $id,
               'user_id' => $this->getUser()->getId(),
-              'values' => (array)$subject
+              'values' => $subject
             ));
 
             if ($ajax) {
@@ -259,7 +259,7 @@ class SubjectController extends Controller
               return $response;
             } else {
               $this->addFlash('message', 'Subject successfully updated.');
-              return $this->redirect('/admin/projects/items/' . $subject->project_id . '/' . $id);
+              return $this->redirect('/admin/projects/items/' . $subject['project_id'] . '/' . $id);
             }
         }
 
@@ -286,7 +286,7 @@ class SubjectController extends Controller
      * @param   int $subject_id  The subject ID
      * @return  array|bool       The query result
      */
-    public function get_subject($subject_id)
+    public function getSubject($subject_id)
     {
         $data = $this->repo_storage_controller->execute('getRecordById', array(
           'record_type' => 'subject',
@@ -302,7 +302,7 @@ class SubjectController extends Controller
      * @param   int $project_id  The project ID
      * @return  array|bool  The query result
      */
-    public function get_subjects($project_id = false)
+    public function getSubjects($project_id = false)
     {
 
       $data = $this->repo_storage_controller->execute('getRecords', array(
@@ -326,7 +326,7 @@ class SubjectController extends Controller
      *
      * @Route("/admin/projects/get_subjects/{project_id}/{number_first}", name="get_subjects_tree_browser", methods="GET", defaults={"number_first" = false})
      */
-    public function get_subjects_tree_browser(Request $request, ItemController $items)
+    public function getSubjectsTreeBrowser(Request $request, ItemController $items)
     {      
       $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
 
@@ -338,12 +338,12 @@ class SubjectController extends Controller
         }
       }
 
-      $subjects = $this->get_subjects($project_id);
+      $subjects = $this->getSubjects($project_id);
 
       foreach ($subjects as $key => $value) {
 
           // Check for child dataset records so the 'children' key can be set accordingly.
-          $item_data = $items->get_items((int)$value['subject_id']);
+          $item_data = $items->getItems((int)$value['subject_id']);
 
           $data[$key] = array(
             'id' => 'subjectId-' . $value['subject_id'],
@@ -372,7 +372,7 @@ class SubjectController extends Controller
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple_subjects(Request $request)
+    public function deleteMultipleSubjects(Request $request)
     {
         $ids = $request->query->get('ids');
         $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;

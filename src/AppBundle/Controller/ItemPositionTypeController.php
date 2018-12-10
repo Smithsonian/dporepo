@@ -67,7 +67,7 @@ class ItemPositionTypeController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_item_position_types(Request $request)
+    public function datatablesBrowseItemPositionTypes(Request $request)
     {
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -114,7 +114,7 @@ class ItemPositionTypeController extends Controller
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_item_position_types_form(Connection $conn, Request $request, GumpParseErrors $gump_parse_errors)
+    function showItemPositionTypesForm(Connection $conn, Request $request, GumpParseErrors $gump_parse_errors)
     {
         $errors = false;
         $data = array();
@@ -178,7 +178,7 @@ class ItemPositionTypeController extends Controller
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple(Request $request)
+    public function deleteMultiple(Request $request)
     {
       $ids = $request->query->get('ids');
 

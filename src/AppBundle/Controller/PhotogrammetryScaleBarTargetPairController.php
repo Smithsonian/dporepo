@@ -116,8 +116,8 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
         $data->parent_photogrammetry_scale_bar_id = $parent_id;
 
         // Get data from lookup tables.
-        $data->unit_options = $this->get_unit();
-        $data->target_type_options = $this->get_target_type();
+        $data->unit_options = $this->getUnit();
+        $data->target_type_options = $this->getTargetType();
         
         // Create the form
         $form = $this->createForm(PhotogrammetryScaleBarTargetPairForm::class, $data);
@@ -152,7 +152,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
      * Get Unit
      * @return  array|bool  The query result
      */
-    public function get_unit()
+    public function getUnit()
     {
       $data = array();
       
@@ -176,7 +176,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
      * Get Target Types
      * @return  array|bool  The query result
      */
-    public function get_target_type()
+    public function getTargetType()
     {
       $data = array();
       

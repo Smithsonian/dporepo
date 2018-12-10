@@ -75,7 +75,7 @@ class UploadListener
     if ($data->job_id && $data->record_id) {
 
       // Move the files.
-      $file_data = $this->move_files($file, $data);
+      $file_data = $this->moveFiles($file, $data);
 
       // Windows fix for the file path.
       $full_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $file_data->full_path) : $file_data->full_path;
@@ -106,7 +106,7 @@ class UploadListener
       switch ($file->getExtension()) {
         case 'csv':
           // Run the CSV validation.
-          $validation_results = $this->validate_metadata($data->job_id, $data->job_id_directory, $data->record_type, $file_data->record_id, $file->getBasename());
+          $validation_results = $this->validateMetadata($data->job_id, $data->job_id_directory, $data->record_type, $file_data->record_id, $file->getBasename());
           // Remove the CSV file.
           $finder = new Finder();
           $finder->files()->in($data->job_id_directory . '/');
@@ -136,7 +136,7 @@ class UploadListener
    * @param object $file  File object.
    * @return array
    */
-  public function move_files($file = null, $data = null)
+  public function moveFiles($file = null, $data = null)
   {
     if (!empty($file) && !empty($data) && $data->job_id && $data->record_id) {
 
@@ -192,7 +192,7 @@ class UploadListener
    * @param int $job_id_directory  The job directory
    * @return json
    */
-  public function validate_metadata($job_id = null, $job_id_directory = null, $record_type = null, $record_id, $filename = null)
+  public function validateMetadata($job_id = null, $job_id_directory = null, $record_type = null, $record_id, $filename = null)
   {
     $schema = false;
     $blacklisted_fields = array();
@@ -206,7 +206,7 @@ class UploadListener
     }
 
     // Construct the data.
-    $data->csv = $this->import_controller->construct_import_data($job_id_directory, $filename); // $itemsController
+    $data->csv = $this->import_controller->constructImportData($job_id_directory, $filename); // $itemsController
 
     // Remove the column headers from the array.
     $column_headers = $data->csv['0'];

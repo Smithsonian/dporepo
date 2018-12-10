@@ -39,7 +39,7 @@ class ProfileSettingController extends Controller
     /**
      * @Route("/admin/settings/", name="settings", methods="GET")
      */
-    public function show_profile_settings(Connection $conn, Request $request)
+    public function showProfileSettings(Connection $conn, Request $request)
     {
         $roles = $this->getUser()->getRoles();
 

@@ -69,7 +69,7 @@ class UnitStakeholderController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_unit_stakeholder(Request $request)
+    public function datatablesBrowseUnitStakeholder(Request $request)
     {
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -116,7 +116,7 @@ class UnitStakeholderController extends Controller
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_unit_stakeholder_form(Request $request, GumpParseErrors $gump_parse_errors, ProjectController $projects, IsniController $isni)
+    function showUnitStakeholderForm(Request $request, GumpParseErrors $gump_parse_errors, ProjectController $projects, IsniController $isni)
     {
         $errors = false;
         $data = array();
@@ -157,7 +157,7 @@ class UnitStakeholderController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-          $id = $this->insert_update($post, $id);
+          $id = $this->insertUpdate($post, $id);
             $this->addFlash('message', 'Unit/Stakeholder successfully updated.');
             return $this->redirectToRoute('unit_stakeholder_browse');
         } else {
@@ -179,7 +179,7 @@ class UnitStakeholderController extends Controller
      * @param   int $id      The id value
      * @return  void
      */
-    public function insert_update($data, $id = false)
+    public function insertUpdate($data, $id = false)
     {
         // Query the isni_data table to see if there's an entry.
         $isni_data = $this->repo_storage_controller->execute('getIsniRecordById', array (
@@ -217,7 +217,7 @@ class UnitStakeholderController extends Controller
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple(Request $request)
+    public function deleteMultiple(Request $request)
     {
         $ids = $request->query->get('ids');
 

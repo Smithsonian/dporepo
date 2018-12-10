@@ -50,7 +50,7 @@ class CaptureDatasetController extends Controller
     /**
      * @Route("/admin/projects/datasets/{project_id}/{subject_id}/{item_id}", name="datasets_browse", methods="GET")
      */
-    public function browse_datasets(Connection $conn, Request $request, ProjectController $projects, SubjectController $subjects)
+    public function browseDatasets(Connection $conn, Request $request, ProjectController $projects, SubjectController $subjects)
     {
         $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
         $subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
@@ -68,7 +68,7 @@ class CaptureDatasetController extends Controller
         if(!isset($item->item_data->item_id)) throw $this->createNotFoundException('The record does not exist');
 
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => (int)$project_id));
-        $subject_data = $subjects->get_subject((int)$subject_id);
+        $subject_data = $subjects->getSubject((int)$subject_id);
 
         // Truncate the item_description so the breadcrumb don't blow up.
         $more_indicator = (strlen($item->item_data->item_description) > 50) ? '...' : '';
@@ -98,7 +98,7 @@ class CaptureDatasetController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_datasets(Request $request)
+    public function datatablesBrowseDatasets(Request $request)
     {
         $req = $request->request->all();
         $item_id = !empty($request->attributes->get('item_id')) ? $request->attributes->get('item_id') : false;
@@ -133,7 +133,7 @@ class CaptureDatasetController extends Controller
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_datasets_form( Connection $conn, Request $request )
+    function showDatasetsForm( Connection $conn, Request $request )
     {
         $dataset = new CaptureDataset();
         $dataset->access_model_purpose = NULL;
@@ -195,14 +195,14 @@ class CaptureDatasetController extends Controller
         $dataset->item_id = !empty($request->attributes->get('item_id')) ? $request->attributes->get('item_id') : false;
 
         // Get data from lookup tables.
-        $dataset->capture_methods_lookup_options = $this->get_capture_methods();
-        $dataset->dataset_types_lookup_options = $this->get_dataset_types();
-        $dataset->item_position_types_lookup_options = $this->get_item_position_types();
-        $dataset->focus_types_lookup_options = $this->get_focus_types();
-        $dataset->light_source_types_lookup_options = $this->get_light_source_types();
-        $dataset->background_removal_methods_lookup_options = $this->get_background_removal_methods();
-        $dataset->camera_cluster_types_lookup_options = $this->get_camera_cluster_types();
-        $dataset->calibration_object_type_options = $this->get_calibration_object_types();
+        $dataset->capture_methods_lookup_options = $this->getCaptureMethods();
+        $dataset->dataset_types_lookup_options = $this->getDatasetTypes();
+        $dataset->item_position_types_lookup_options = $this->getItemPositionTypes();
+        $dataset->focus_types_lookup_options = $this->getFocusTypes();
+        $dataset->light_source_types_lookup_options = $this->getLightSourceTypes();
+        $dataset->background_removal_methods_lookup_options = $this->getBackgroundRemovalMethods();
+        $dataset->camera_cluster_types_lookup_options = $this->getCameraClusterTypes();
+        $dataset->calibration_object_type_options = $this->getCalibrationObjectTypes();
 
         $dataset->api_publication_options = array(
           'Published, Discoverable' => '11',
@@ -304,7 +304,7 @@ class CaptureDatasetController extends Controller
      * @param       int $item_id    The item ID
      * @return      array|bool       The query result
      */
-    public function get_datasets($item_id = false)
+    public function getDatasets($item_id = false)
     {
 
       $query_params = array(
@@ -321,15 +321,15 @@ class CaptureDatasetController extends Controller
      *
      * @Route("/admin/projects/get_datasets/{item_id}", name="get_datasets_tree_browser", methods="GET")
      */
-    public function get_datasets_tree_browser(Request $request, CaptureDatasetElementController $dataset_elements)
+    public function getDatasetsTreeBrowser(Request $request, CaptureDatasetElementController $dataset_elements)
     {      
         $item_id = !empty($request->attributes->get('item_id')) ? $request->attributes->get('item_id') : false;
-        $datasets = $this->get_datasets($item_id);
+        $datasets = $this->getDatasets($item_id);
 
         foreach ($datasets as $key => $value) {
 
             // Check for child dataset records so the 'children' key can be set accordingly.
-            $dataset_elements_data = $dataset_elements->get_dataset_elements((int)$value['capture_dataset_id']);
+            $dataset_elements_data = $dataset_elements->getDatasetElements((int)$value['capture_dataset_id']);
             $data[$key] = array(
                 'id' => 'datasetId-' . $value['capture_dataset_id'],
                 'children' => count($dataset_elements_data) ? true : false,
@@ -350,7 +350,7 @@ class CaptureDatasetController extends Controller
      * @param       int $capture_dataset_id    The data value
      * @return      array|bool              The query result
      */
-    public function get_dataset($capture_dataset_id = false)
+    public function getDataset($capture_dataset_id = false)
     {
       $query_params = array(
         'capture_dataset_id' => $capture_dataset_id,
@@ -363,7 +363,7 @@ class CaptureDatasetController extends Controller
      * Get capture_methods
      * @return  array|bool  The query result
      */
-    public function get_capture_methods()
+    public function getCaptureMethods()
     {
       $data = array();
       $temp = $this->repo_storage_controller->execute('getRecords', array(
@@ -387,7 +387,7 @@ class CaptureDatasetController extends Controller
      * Get dataset_types
      * @return  array|bool  The query result
      */
-    public function get_dataset_types()
+    public function getDatasetTypes()
     {
       $data = array();
       $temp = $this->repo_storage_controller->execute('getRecords', array(
@@ -411,7 +411,7 @@ class CaptureDatasetController extends Controller
      * Get item_position_types
      * @return  array|bool  The query result
      */
-    public function get_item_position_types()
+    public function getItemPositionTypes()
     {
       $data = array();
       $temp = $this->repo_storage_controller->execute('getRecords', array(
@@ -435,7 +435,7 @@ class CaptureDatasetController extends Controller
      * Get focus_types
      * @return  array|bool  The query result
      */
-    public function get_focus_types()
+    public function getFocusTypes()
     {
       $data = array();
       $temp = $this->repo_storage_controller->execute('getRecords', array(
@@ -459,7 +459,7 @@ class CaptureDatasetController extends Controller
      * Get light_source_types
      * @return  array|bool  The query result
      */
-    public function get_light_source_types()
+    public function getLightSourceTypes()
     {
       $data = array();
       $temp = $this->repo_storage_controller->execute('getRecords', array(
@@ -483,7 +483,7 @@ class CaptureDatasetController extends Controller
      * Get background_removal_methods
      * @return  array|bool  The query result
      */
-    public function get_background_removal_methods()
+    public function getBackgroundRemovalMethods()
     {
       $data = array();
       $temp = $this->repo_storage_controller->execute('getRecords', array(
@@ -506,7 +506,7 @@ class CaptureDatasetController extends Controller
      * Get camera_cluster_types
      * @return  array|bool  The query result
      */
-    public function get_camera_cluster_types()
+    public function getCameraClusterTypes()
     {
       $data = array();
       $temp = $this->repo_storage_controller->execute('getRecords', array(
@@ -529,7 +529,7 @@ class CaptureDatasetController extends Controller
      * Get calibration_object_types
      * @return  array|bool  The query result
      */
-    public function get_calibration_object_types()
+    public function getCalibrationObjectTypes()
     {
         $data = array();
 
@@ -556,7 +556,7 @@ class CaptureDatasetController extends Controller
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple_datasets(Request $request)
+    public function deleteMultipleDatasets(Request $request)
     {
         $ids = $request->query->get('ids');
         $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;

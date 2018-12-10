@@ -67,7 +67,7 @@ class CaptureMethodController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_capture_methods(Request $request)
+    public function datatablesBrowseCaptureMethods(Request $request)
     {
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -110,7 +110,7 @@ class CaptureMethodController extends Controller
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_capture_methods_form( Connection $conn, Request $request, GumpParseErrors $gump_parse_errors )
+    function showCaptureMethodsForm( Connection $conn, Request $request, GumpParseErrors $gump_parse_errors )
     {
       $username = $this->getUser()->getUsernameCanonical();
       $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');
@@ -183,7 +183,7 @@ class CaptureMethodController extends Controller
    * @param   object  $request  Request object
    * @return  void
    */
-  public function delete_multiple(Request $request)
+  public function deleteMultiple(Request $request)
   {
     $username = $this->getUser()->getUsernameCanonical();
     $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');

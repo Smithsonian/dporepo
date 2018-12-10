@@ -113,6 +113,7 @@ class CaptureDeviceController extends Controller
 
         // Add the parent_id to the $data object
         $data->capture_data_element_id = $parent_id;
+        $data = (array)$data;
 
         // Back link
         $back_link = $request->headers->get('referer');

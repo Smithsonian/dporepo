@@ -67,7 +67,7 @@ class CalibrationObjectTypeController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_calibration_object_types(Request $request)
+    public function datatablesBrowseCalibrationObjectTypes(Request $request)
     {
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -109,7 +109,7 @@ class CalibrationObjectTypeController extends Controller
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_calibration_object_types_form(Connection $conn, Request $request, GumpParseErrors $gump_parse_errors)
+    function showCalibrationObjectTypesForm(Connection $conn, Request $request, GumpParseErrors $gump_parse_errors)
     {
       $username = $this->getUser()->getUsernameCanonical();
       $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');
@@ -181,7 +181,7 @@ class CalibrationObjectTypeController extends Controller
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple(Request $request)
+    public function deleteMultiple(Request $request)
     {
       $username = $this->getUser()->getUsernameCanonical();
       $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');

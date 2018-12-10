@@ -35,7 +35,7 @@ class ResourceController extends Controller
     /**
      * @Route("/admin/resources/", name="resources_home", methods="GET")
      */
-    public function show_admin(Connection $conn, Request $request)
+    public function showAdmin(Connection $conn, Request $request)
     {
         return $this->render('resources/resources.html.twig', array(
             'page_title' => 'Resources',

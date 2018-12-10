@@ -102,7 +102,7 @@ class RepoFileTransfer implements RepoFileTransferInterface {
     // Get the job's data via job_uuid.
     $job_data = $this->repo_storage_controller->execute('getJobData', array($job_uuid));
     // Absolute external path.
-    $uuid = $this->u->create_uuid(); // (append a unique ID to the file name)
+    $uuid = $this->u->createUuid(); // (append a unique ID to the file name)
     $path_external = $this->external_file_storage_path . '_checker/' . $uuid . '_robots.txt';
     // Local file to be written.
     $stream = fopen($this->project_directory . 'web/robots.txt', 'r+');

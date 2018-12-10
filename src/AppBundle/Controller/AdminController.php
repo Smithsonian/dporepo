@@ -47,7 +47,7 @@ class AdminController extends Controller
     /**
      * @Route("/admin/", name="admin_home", methods="GET")
      */
-    public function show_admin(Connection $conn, Request $request)
+    public function showAdmin(Connection $conn, Request $request)
     {
         $username = $this->getUser()->getUsernameCanonical();
         $access = $this->repo_user_access_controller->get_user_access_any($username, 'view_projects');
@@ -59,7 +59,7 @@ class AdminController extends Controller
         }
 
         // Database tables are only created if not present.
-        $create_favorites_table = $this->create_favorites_table($conn);
+        $create_favorites_table = $this->createFavoritesTable($conn);
         $roles = $this->getUser()->getRoles();
 
         // Check to see if the firstLogin session variable is set.
@@ -89,7 +89,7 @@ class AdminController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_recent_projects(Request $request, SubjectController $subjects)
+    public function datatablesBrowseRecentProjects(Request $request, SubjectController $subjects)
     {
         $data = array();
         $req = $request->request->all();
@@ -122,7 +122,7 @@ class AdminController extends Controller
         // Get the subjects count
         if(!empty($data['aaData'])) {
           foreach ($data['aaData'] as $key => $value) {
-            $project_subjects = $subjects->get_subjects($value['project_id']);
+            $project_subjects = $subjects->getSubjects($value['project_id']);
             $data['aaData'][$key]['subjects_count'] = count($project_subjects);
           }
         }
@@ -140,7 +140,7 @@ class AdminController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_recent_subjects(Request $request, ItemController $items)
+    public function datatablesBrowseRecentSubjects(Request $request, ItemController $items)
     {
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -164,7 +164,7 @@ class AdminController extends Controller
         // Get the items count
         if(!empty($data['aaData'])) {
             foreach ($data['aaData'] as $key => $value) {
-                $subject_items = $items->get_items($value['subject_id']);
+                $subject_items = $items->getItems($value['subject_id']);
                 $data['aaData'][$key]['items_count'] = count($subject_items);
             }
         }
@@ -182,7 +182,7 @@ class AdminController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_get_favorites(Connection $conn, Request $request)
+    public function datatablesGetFavorites(Connection $conn, Request $request)
     {
         $sort = '';
         $search_sql = '';
@@ -259,7 +259,7 @@ class AdminController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function add_favorite(Connection $conn, Request $request)
+    public function addFavorite(Connection $conn, Request $request)
     {
         $req = $request->request->all();
         $last_inserted_id = false;
@@ -291,7 +291,7 @@ class AdminController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function remove_favorite(Connection $conn, Request $request)
+    public function removeFavorite(Connection $conn, Request $request)
     {
         $req = $request->request->all();
 
@@ -316,7 +316,7 @@ class AdminController extends Controller
      * @param   object $conn  Database connection object
      * @return  void
      */
-    public function create_favorites_table($conn)
+    public function createFavoritesTable($conn)
     {
         $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `favorite` (
           `id` int(11) unsigned NOT NULL AUTO_INCREMENT,

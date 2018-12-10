@@ -95,7 +95,7 @@ class FilesValidationCommand extends ContainerAwareCommand
       }
 
       // Extract the metadata.
-      $result = $this->extract_image_metadata->extract_metadata($params);
+      $result = $this->extract_image_metadata->extractMetadata($params);
 
       // Output metadata results.
       if (!empty($result)) {

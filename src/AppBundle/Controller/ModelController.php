@@ -167,7 +167,7 @@ class ModelController extends Controller
         }
 
         // Get data from lookup tables.
-        $data->unit_options = $this->get_unit();
+        $data->unit_options = $this->getUnit();
 
         // Create the form
         $form = $this->createForm(ModelForm::class, $data);
@@ -211,7 +211,7 @@ class ModelController extends Controller
      * Get Unit
      * @return  array|bool  The query result
      */
-    public function get_unit()
+    public function getUnit()
     {
       $data = array();
       $temp = $this->repo_storage_controller->execute('getRecords', array(
@@ -266,90 +266,90 @@ class ModelController extends Controller
     /**
      * @Route("/admin/projects/model/{id}/detail", name="model_detail", methods="GET", defaults={"id" = null})
      *
-   * @param $id The model ID
+     * @param $id The model ID
      * @param Connection $conn
      * @param Request $request
      */
-  public function modelDetail($id = null, Connection $conn, Request $request)
-    {
-    $data = array();
-                
-    if (!empty($id)) {
+    public function modelDetail($id = null, Connection $conn, Request $request)
+      {
+      $data = array();
 
-      // Get the model record.
-      $data = $this->repo_storage_controller->execute('getModel', array(
-        'model_id' => $id));
+      if (!empty($id)) {
 
-      // If there are no results, throw a createNotFoundException (404).
-      if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
+        // Get the model record.
+        $data = $this->repo_storage_controller->execute('getModel', array(
+          'model_id' => $id));
 
-      // The repository's upload path.
-      $data['uploads_path'] = $this->uploads_directory;
+        // If there are no results, throw a createNotFoundException (404).
+        if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
 
-    }
-    // $this->u->dumper($data);
+        // The repository's upload path.
+        $data['uploads_path'] = $this->uploads_directory;
 
-    return $this->render('datasets/model_detail.html.twig', array(
-      'page_title' => 'Model Detail',
-      'data' => $data,
-      'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-    ));
-  }
-
-  /**
-   * @Route("/admin/projects/model/{id}/viewer", name="model_viewer", methods="GET", defaults={"id" = null})
-   *
-   * @param $id The model ID
-   * @param Connection $conn
-   * @param Request $request
-   */
-  public function modelViewer($id = null, Connection $conn, Request $request)
-  {
-    //@TODO use incoming model $id to retrieve model assets.
-    // $model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
-
-    $data = array();
-    $model_url = NULL;
-
-    if (!empty($id)) {
-
-      // Get the model record.
-      $data = $this->repo_storage_controller->execute('getModel', array(
-        'model_id' => $id));
-
-      // If there are no results, throw a createNotFoundException (404).
-      //if (empty($data) || empty($data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');
-      if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
-
+      }
       // $this->u->dumper($data);
 
-      //@todo in the future perhaps this should be an array of all files
-      // Replace local path with Drastic path. Twig template will serve the file using admin/get_file?path=blah
-      $uploads_path = str_replace('web', '', $this->uploads_directory);
-      // Windows fix for the file path.
-      $uploads_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_path) : $uploads_path;
-      // Model URL.
-      $model_url = str_replace($uploads_path, $this->external_file_storage_path, $data['viewable_model']['file_path']);
-      // Windows fix for the file path.
-      $model_url = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $model_url) : $model_url;
+      return $this->render('datasets/model_detail.html.twig', array(
+        'page_title' => 'Model Detail',
+        'data' => $data,
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+      ));
     }
-              
-    $data['model_url'] = $model_url;
 
-    return $this->render('datasets/model_viewer.html.twig', array(
-      'page_title' => 'Model Viewer',
-      'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-      'data' => $data,
-    ));
-  }
+    /**
+     * @Route("/admin/projects/model/{id}/viewer", name="model_viewer", methods="GET", defaults={"id" = null})
+     *
+     * @param $id The model ID
+     * @param Connection $conn
+     * @param Request $request
+     */
+    public function modelViewer($id = null, Connection $conn, Request $request)
+    {
+      //@TODO use incoming model $id to retrieve model assets.
+      // $model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
 
-  /**
+      $data = array();
+      $model_url = NULL;
+
+      if (!empty($id)) {
+
+        // Get the model record.
+        $data = $this->repo_storage_controller->execute('getModel', array(
+          'model_id' => $id));
+
+        // If there are no results, throw a createNotFoundException (404).
+        //if (empty($data) || empty($data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');
+        if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
+
+        // $this->u->dumper($data);
+
+        //@todo in the future perhaps this should be an array of all files
+        // Replace local path with Drastic path. Twig template will serve the file using admin/get_file?path=blah
+        $uploads_path = str_replace('web', '', $this->uploads_directory);
+        // Windows fix for the file path.
+        $uploads_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_path) : $uploads_path;
+        // Model URL.
+        $model_url = str_replace($uploads_path, $this->external_file_storage_path, $data['viewable_model']['file_path']);
+        // Windows fix for the file path.
+        $model_url = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $model_url) : $model_url;
+      }
+
+      $data['model_url'] = $model_url;
+
+      return $this->render('datasets/model_viewer.html.twig', array(
+        'page_title' => 'Model Viewer',
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'data' => $data,
+      ));
+    }
+
+    /**
      * @Route("/admin/model/files/datatables_browse", name="datatables_browse_files", methods={"POST","GET"})
      *
      * @param Connection $conn
      * @param Request $request
      */
-    public function browse_model_files(Connection $conn, Request $request)
+    public function browseModelFiles(Connection $conn, Request $request)
     {
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -382,7 +382,7 @@ class ModelController extends Controller
      * @param Connection $conn
      * @param Request $request
      */
-    public function browse_derivative_models(Connection $conn, Request $request)
+    public function browseDerivativeModels(Connection $conn, Request $request)
     {
       $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;

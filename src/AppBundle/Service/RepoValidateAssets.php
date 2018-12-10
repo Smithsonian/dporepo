@@ -197,7 +197,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
             }
 
             // Validate the mime type.
-            $mime_type = $this->get_mime_type($file->getPathname());
+            $mime_type = $this->getMimeType($file->getPathname());
 
             // $this->u->dumper($mime_type,0);
 
@@ -217,7 +217,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
           $data[$i]['file_name'] = strtolower($file->getFilename());
           $data[$i]['file_size'] = $file->getSize();
           $data[$i]['file_extension'] = strtolower($file->getExtension());
-          $data[$i]['file_mime_type'] = $this->get_mime_type($file->getPathname());
+          $data[$i]['file_mime_type'] = $this->getMimeType($file->getPathname());
 
           $i++;
         }
@@ -323,7 +323,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
    * @param string  $filename  The file name
    * @return string
    */
-  public function get_mime_type($filename = null) {
+  public function getMimeType($filename = null) {
 
     if (!empty($filename)) {
       $buffer = file_get_contents($filename);

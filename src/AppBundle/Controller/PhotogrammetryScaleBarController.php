@@ -121,7 +121,7 @@ class PhotogrammetryScaleBarController extends Controller
         }
 
         // Get data from lookup tables.
-        $data->scale_bar_barcode_type_options = $this->get_scale_bar_barcode_type();
+        $data->scale_bar_barcode_type_options = $this->getScaleBarBarcodeType();
 
         // Create the form
         $form = $this->createForm(PhotogrammetryScaleBarForm::class, (array)$data);
@@ -157,7 +157,7 @@ class PhotogrammetryScaleBarController extends Controller
      * Get Scale Bar Barcode Type
      * @return  array|bool  The query result
      */
-    public function get_scale_bar_barcode_type()
+    public function getScaleBarBarcodeType()
     {
       $data = array();
       

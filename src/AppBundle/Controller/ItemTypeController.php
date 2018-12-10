@@ -66,7 +66,7 @@ class ItemTypeController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_item_types(Request $request)
+    public function datatablesBrowseItemTypes(Request $request)
     {
         $sort = '';
         $search_sql = '';
@@ -113,7 +113,7 @@ class ItemTypeController extends Controller
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_item_types_form(Connection $conn, Request $request, GumpParseErrors $gump_parse_errors)
+    function showItemTypesForm(Connection $conn, Request $request, GumpParseErrors $gump_parse_errors)
     {
       $username = $this->getUser()->getUsernameCanonical();
       $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');
@@ -187,7 +187,7 @@ class ItemTypeController extends Controller
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple(Request $request)
+    public function deleteMultiple(Request $request)
     {
       $username = $this->getUser()->getUsernameCanonical();
       $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');

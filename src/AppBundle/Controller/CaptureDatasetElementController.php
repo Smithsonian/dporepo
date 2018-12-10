@@ -49,7 +49,7 @@ class CaptureDatasetElementController extends Controller
     /**
      * @Route("/admin/projects/dataset_elements/{project_id}/{subject_id}/{item_id}/{capture_dataset_id}", name="dataset_elements_browse", methods="GET")
      */
-    public function browse_dataset_elements(Connection $conn, Request $request, ProjectController $projects, SubjectController $subjects, ItemController $items, CaptureDatasetController $datasets)
+    public function browseDatasetElements(Connection $conn, Request $request, ProjectController $projects, SubjectController $subjects, ItemController $items, CaptureDatasetController $datasets)
     {
 
         $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
@@ -58,14 +58,14 @@ class CaptureDatasetElementController extends Controller
         $id = !empty($request->attributes->get('capture_dataset_id')) ? $request->attributes->get('capture_dataset_id') : false;
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $dataset_data = $datasets->get_dataset((int)$id);
+        $dataset_data = $datasets->getDataset((int)$id);
         if(!$dataset_data) throw $this->createNotFoundException('The record does not exist');
         
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => $project_id));
 
-        $subject_data = $subjects->get_subject((int)$subject_id);
-        $item_data = $items->get_item((int)$item_id);
-        $dataset_element_data = $this->get_dataset_element((int)$id);
+        $subject_data = $subjects->getSubject((int)$subject_id);
+        $item_data = $items->getItem((int)$item_id);
+        $dataset_element_data = $this->getDatasetElement((int)$id);
 
         // Truncate the item_description.
         $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
@@ -97,7 +97,7 @@ class CaptureDatasetElementController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_dataset_elements(Request $request)
+    public function datatablesBrowseDatasetElements(Request $request)
     {
         $req = $request->request->all();
         $id = !empty($request->attributes->get('capture_dataset_id')) ? $request->attributes->get('capture_dataset_id') : false;
@@ -139,7 +139,7 @@ class CaptureDatasetElementController extends Controller
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_dataset_elements_form( Connection $conn, Request $request, ProjectController $projects, SubjectController $subjects, ItemController $items, CaptureDatasetController $datasets )
+    function showDatasetElementsForm( Connection $conn, Request $request, ProjectController $projects, SubjectController $subjects, ItemController $items, CaptureDatasetController $datasets )
     {
         
       $username = $this->getUser()->getUsernameCanonical();
@@ -174,9 +174,9 @@ class CaptureDatasetElementController extends Controller
         // Get data for the breadcumbs.
         // TODO: find a better way?
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => (int)$dataset_element->project_id));
-        $subject_data = $subjects->get_subject((int)$dataset_element->subject_id);
-        $item_data = $items->get_item((int)$dataset_element->item_id);
-        $dataset_data = $datasets->get_dataset((int)$dataset_element->capture_dataset_id);
+        $subject_data = $subjects->getSubject((int)$dataset_element->subject_id);
+        $item_data = $items->getItem((int)$dataset_element->item_id);
+        $dataset_data = $datasets->getDataset((int)$dataset_element->capture_dataset_id);
         
         // Truncate the item_description so the breadcrumb don't blow up.
         $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
@@ -232,7 +232,7 @@ class CaptureDatasetElementController extends Controller
      * @param       int $capture_dataset_id  The dataset ID
      * @return      array|bool        The query result
      */
-    public function get_dataset_elements($capture_dataset_id = false)
+    public function getDatasetElements($capture_dataset_id = false)
     {
         $query_params = array(
           'capture_dataset_id' => $capture_dataset_id,
@@ -246,10 +246,10 @@ class CaptureDatasetElementController extends Controller
      *
      * @Route("/admin/projects/get_dataset_elements/{capture_dataset_id}", name="get_dataset_elements_tree_browser", methods="GET")
      */
-    public function get_dataset_elements_tree_browser(Request $request)
+    public function getDatasetElementsTreeBrowser(Request $request)
     {
         $capture_dataset_id = !empty($request->attributes->get('capture_dataset_id')) ? $request->attributes->get('capture_dataset_id') : false;
-        $capture_data_element = $this->get_dataset_elements($capture_dataset_id);
+        $capture_data_element = $this->getDatasetElements($capture_dataset_id);
 
         foreach ($capture_data_element as $key => $value) {
             $data[$key] = array(
@@ -272,7 +272,7 @@ class CaptureDatasetElementController extends Controller
      * @param       int $capture_data_element_id  The dataset element ID
      * @return      array|bool                The query result
      */
-    public function get_dataset_element($capture_data_element_id = false)
+    public function getDatasetElement($capture_data_element_id = false)
     {
         $record = $this->repo_storage_controller->execute('getRecordById',
           array(
@@ -294,7 +294,7 @@ class CaptureDatasetElementController extends Controller
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple_capture_data_element(Request $request)
+    public function deleteMultipleCaptureDataElement(Request $request)
     {
       $username = $this->getUser()->getUsernameCanonical();
       $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');

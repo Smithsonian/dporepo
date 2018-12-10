@@ -112,10 +112,10 @@ class CaptureDatasetRightsController extends Controller
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
-        $data->parent_capture_dataset_id = $parent_id;
+        $data->capture_dataset_id = $parent_id;
 
         // Get data from lookup tables.
-        $data->data_rights_restriction_type_options = $this->get_data_rights_restriction_type();
+        $data->data_rights_restriction_type_options = $this->getDataRightsRestrictionType();
         
         // Create the form
         $form = $this->createForm(CaptureDatasetRightsForm::class, $data);
@@ -151,7 +151,7 @@ class CaptureDatasetRightsController extends Controller
      * Get Data Rights Restriction Type
      * @return  array|bool  The query result
      */
-    public function get_data_rights_restriction_type()
+    public function getDataRightsRestrictionType()
     {
       $data = array();
       $temp = $this->repo_storage_controller->execute('getRecords', array(

@@ -112,7 +112,7 @@ class ImportController extends Controller
      * @param object $conn Database connection object
      * @param object $request Symfony's request object
      */
-    public function import_summary_dashboard(Connection $conn, Request $request)
+    public function importSummaryDashboard(Connection $conn, Request $request)
     {
       return $this->render('import/import_summary_dashboard.html.twig', array(
           'page_title' => 'Browse Ingests',
@@ -130,7 +130,7 @@ class ImportController extends Controller
      * @param Request $request Symfony's request object
      * @return \Symfony\Component\HttpFoundation\JsonResponse The query result
      */
-    public function datatables_browse_imports(Request $request)
+    public function datatablesBrowseImports(Request $request)
     {
       $req = $request->request->all();
       $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -176,7 +176,7 @@ class ImportController extends Controller
      * @param object $conn Database connection object
      * @param object $request Symfony's request object
      */
-    public function simple_ingest(Connection $conn, Request $request)
+    public function simpleIngest(Connection $conn, Request $request)
     {
         // Patch vendor overrides.
         $this->u->patchVendorOverrides();
@@ -213,20 +213,20 @@ class ImportController extends Controller
         // Create the item form
         $item = new Item();
         // Get data from lookup tables.
-        $item->item_type_lookup_options = $this->itemsController->get_item_types();
+        $item->item_type_lookup_options = $this->itemsController->getItemTypes();
         $item_form = $this->createForm(ItemForm::class, $item);
 
         // Create the dataset form.
         $dataset = new CaptureDataset();
         // Get data from lookup tables.
-        $dataset->capture_methods_lookup_options = $this->datasetsController->get_capture_methods();
-        $dataset->dataset_types_lookup_options = $this->datasetsController->get_dataset_types();
-        $dataset->item_position_types_lookup_options = $this->datasetsController->get_item_position_types();
-        $dataset->focus_types_lookup_options = $this->datasetsController->get_focus_types();
-        $dataset->light_source_types_lookup_options = $this->datasetsController->get_light_source_types();
-        $dataset->background_removal_methods_lookup_options = $this->datasetsController->get_background_removal_methods();
-        $dataset->camera_cluster_types_lookup_options = $this->datasetsController->get_camera_cluster_types();
-        $dataset->calibration_object_type_options = $this->datasetsController->get_calibration_object_types();
+        $dataset->capture_methods_lookup_options = $this->datasetsController->getCaptureMethods();
+        $dataset->dataset_types_lookup_options = $this->datasetsController->getDatasetTypes();
+        $dataset->item_position_types_lookup_options = $this->datasetsController->getItemPositionTypes();
+        $dataset->focus_types_lookup_options = $this->datasetsController->getFocusTypes();
+        $dataset->light_source_types_lookup_options = $this->datasetsController->getLightSourceTypes();
+        $dataset->background_removal_methods_lookup_options = $this->datasetsController->getBackgroundRemovalMethods();
+        $dataset->camera_cluster_types_lookup_options = $this->datasetsController->getCameraClusterTypes();
+        $dataset->calibration_object_type_options = $this->datasetsController->getCalibrationObjectTypes();
         // Create the form
         $form = $this->createForm(CaptureDatasetForm::class, $dataset);
 
@@ -252,7 +252,7 @@ class ImportController extends Controller
      * @param object $conn Database connection object
      * @param object $request Symfony's request object
      */
-    public function bulk_ingest(Connection $conn, Request $request)
+    public function bulkIngest(Connection $conn, Request $request)
     {
         // Patch vendor overrides.
         $this->u->patchVendorOverrides();
@@ -296,7 +296,7 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/execute_jobs/{uuid}/{project_id}/{record_id}/{record_type}", name="execute_jobs", defaults={"uuid" = null, "parent_project_id" = null, "record_id" = null, "record_type" = null}, methods="GET")
+     * @Route("/admin/execute_jobs/{uuid}/{project_id}/{record_id}/{record_type}", name="execute_jobs", defaults={"uuid" = null, "project_id" = null, "record_id" = null, "record_type" = null}, methods="GET")
      *
      * @param int $uuid Job ID
      * @param int $project_id Parent Project ID
@@ -304,7 +304,7 @@ class ImportController extends Controller
      * @param int $record_type Parent Record Type
      * @param object $kernel KernelInterface class
      */
-    public function execute_jobs($uuid, $project_id, $record_id, $record_type, KernelInterface $kernel) {
+    public function executeJobs($uuid, $project_id, $record_id, $record_type, KernelInterface $kernel) {
 
       $input = array(
         'uuid' => $uuid,
@@ -391,7 +391,7 @@ class ImportController extends Controller
     }
     
     /**
-     * @Route("/admin/ingest/{uuid}/{project_id}/{record_id}/{record_type}", name="import_summary_details", defaults={"uuid" = null, "parent_project_id" = null, "record_id" = null, "record_type" = null}, methods="GET")
+     * @Route("/admin/ingest/{uuid}/{project_id}/{record_id}/{record_type}", name="import_summary_details", defaults={"uuid" = null, "project_id" = null, "record_id" = null, "record_type" = null}, methods="GET")
      *
      * @param int $uuid Job ID
      * @param int $project_id Parent Project ID
@@ -401,7 +401,7 @@ class ImportController extends Controller
      * @param object $project ProjectsController class
      * @param object $request Symfony's request object
      */
-    public function import_summary_details($uuid, $project_id, $record_id, $record_type, Connection $conn, Request $request)
+    public function importSummaryDetails($uuid, $project_id, $record_id, $record_type, Connection $conn, Request $request)
     {
 
       // $this->u->dumper($uuid,0);
@@ -476,7 +476,7 @@ class ImportController extends Controller
           $finder = new Finder();
           $finder->files()->name('*.csv');
           foreach ($finder->in($dir) as $file) {
-            $project['csv'][$file->getBasename()] = $this->construct_import_data($dir, $file->getBasename());
+            $project['csv'][$file->getBasename()] = $this->constructImportData($dir, $file->getBasename());
             $project['csv_row_count'][$file->getBasename()] = count($project['csv'][$file->getBasename()]);
           }
           // If there's csv data, encode to JSON so it can be passed on to Handsontables (JavaScript).
@@ -672,7 +672,7 @@ class ImportController extends Controller
      * @param Request $request Symfony's request object
      * @return \Symfony\Component\HttpFoundation\JsonResponse The query result
      */
-    public function datatables_browse_import_details($uuid, Request $request)
+    public function datatablesBrowseImportDetails($uuid, Request $request)
     {
       $req = $request->request->all();
       $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -713,7 +713,7 @@ class ImportController extends Controller
      * @param Request $request Symfony's request object
      * @return \Symfony\Component\HttpFoundation\JsonResponse The query result
      */
-    public function get_parent_records(Request $request)
+    public function getParentRecords(Request $request)
     {
       $data = $params = array();
 
@@ -792,7 +792,7 @@ class ImportController extends Controller
      * @param string $record_type The record type (e.g. subject)
      * @return string
      */
-    public function get_job_type($record_type = null)
+    public function getJobType($record_type = null)
     {
 
       switch ($record_type) {
@@ -827,7 +827,7 @@ class ImportController extends Controller
      * @param string $record_type The record type (e.g. subject)
      * @return JSON
      */
-    public function create_job($base_record_id, $record_type, Request $request)
+    public function createJob($base_record_id, $record_type, Request $request)
     {
       $job_id = null;
       $parent_records = [];
@@ -854,8 +854,8 @@ class ImportController extends Controller
 
       if (!empty($project)) {
         // Get the job type (what's being ingested?).
-        $job_type = $this->get_job_type($record_type);
-        $uuid = $this->u->create_uuid();
+        $job_type = $this->getJobType($record_type);
+        $uuid = $this->u->createUuid();
         // Insert a record into the job table.
         // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI?
         $job_id = $this->repo_storage_controller->execute('saveRecord', array(
@@ -886,7 +886,7 @@ class ImportController extends Controller
      * @param object $request Symfony's request object
      * @return bool
      */
-    public function set_job_status($job_id, $status, Request $request)
+    public function setJobStatus($job_id, $status, Request $request)
     {
 
       // If $job_id is empty, throw a createNotFoundException (404).
@@ -909,7 +909,7 @@ class ImportController extends Controller
      * @param object $request Symfony's request object
      * @return string
      */
-    public function get_job_status($uuid = null, Request $request)
+    public function getJobStatus($uuid = null, Request $request)
     {
       $result = array();
 
@@ -930,7 +930,7 @@ class ImportController extends Controller
      * @param string $filename  The file name
      * @return array  Import result and/or any messages
      */
-    public function construct_import_data($job_id_directory = null, $filename = null)
+    public function constructImportData($job_id_directory = null, $filename = null)
     {
 
       $json_object = array();
@@ -979,7 +979,7 @@ class ImportController extends Controller
      * @param object $request Symfony's request object
      * @return array
      */
-    public function purge_imported_data_and_files($uuid, Connection $conn, Request $request)
+    public function purgeImportedDataAndFiles($uuid, Connection $conn, Request $request)
     {
       if (empty($uuid)) throw $this->createNotFoundException('UUID not provided');
 
@@ -1029,7 +1029,7 @@ class ImportController extends Controller
      *
      * @param object $request Symfony's request object
      */
-    public function remove_jobs_from_processing_server(Request $request)
+    public function removeJobsFromProcessingServer(Request $request)
     {
 
       $jobs = array();
@@ -1037,7 +1037,7 @@ class ImportController extends Controller
       $message = 'No processing jobs found to remove.';
 
       // Get the machine state.
-      $jobs = $this->processing->get_jobs();
+      $jobs = $this->processing->getJobs();
 
       // Decode the JSON.
       $json_decoded = json_decode($jobs['result'], true);
@@ -1045,7 +1045,7 @@ class ImportController extends Controller
       if (!empty($json_decoded)) {
         // Loop through jobs and delete each one by ID.
         foreach ($json_decoded as $key => $value) {
-          $this->processing->delete_job($value['id']);
+          $this->processing->deleteJob($value['id']);
         }
         $message_type = 'message';
         $message = 'All processing jobs have been removed from the processing server.';
@@ -1064,7 +1064,7 @@ class ImportController extends Controller
      *
      * @param object $request Symfony's request object
      */
-    public function initialize_processing_job(Request $request)
+    public function initializeProcessingJob(Request $request)
     {
 
       $data = $processing_results = array();
@@ -1083,7 +1083,7 @@ class ImportController extends Controller
       );
 
       // Initialize the processing job.
-      $data = $this->processing->initialize_job('inspect-mesh', $params, $local_path, $this->getUser()->getId(), $parent_record_data, $filesystem);
+      $data = $this->processing->initializeJob('inspect-mesh', $params, $local_path, $this->getUser()->getId(), $parent_record_data, $filesystem);
 
       // Send a message to the UI.
       $this->addFlash('message', 'Initialized processing job');
@@ -1103,7 +1103,7 @@ class ImportController extends Controller
      *
      * @param object $request Symfony's request object
      */
-    public function get_processing_job($job_id, Request $request)
+    public function getProcessingJob($job_id, Request $request)
     {
       $data = $processing_results = array();
 
@@ -1117,14 +1117,14 @@ class ImportController extends Controller
         $local_path = $this->uploads_directory . '3df_5bd4c0846fd3f0.72669883/testupload04-1model/data/1/nmnh-usnm_v_512384522-skull-master_model-2018_10_22.ply';
 
         // Get processing job status from the processing service.
-        $result = $this->processing->get_job( $job_id );
+        $result = $this->processing->getJob( $job_id );
 
         // Decode the returned JSON to a PHP array.
         $data = json_decode($result['result'], true);
 
         // Get processing results
         if (in_array($data['state'], array('error', 'done'))) {
-          $processing_results = $this->processing->get_processing_results($data['id'], $this->getUser()->getId(), $local_path, $filesystem);
+          $processing_results = $this->processing->getProcessingResults($data['id'], $this->getUser()->getId(), $local_path, $filesystem);
         }
 
       }
@@ -1144,7 +1144,7 @@ class ImportController extends Controller
      *
      * @param object $request Symfony's request object
      */
-    public function post_job_import_record(Request $request)
+    public function postJobImportRecord(Request $request)
     {
       $response = $this->json(array());
       $req = $request->request->all();

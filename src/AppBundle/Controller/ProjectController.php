@@ -44,7 +44,7 @@ class ProjectController extends Controller
     /**
      * @Route("/admin/workspace/", name="projects_browse", methods="GET")
      */
-    public function browse_projects(Connection $conn, Request $request, IsniController $isni)
+    public function browseProjects(Connection $conn, Request $request, IsniController $isni)
     {
 
       $username = $this->getUser()->getUsernameCanonical();
@@ -73,7 +73,7 @@ class ProjectController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_projects(Request $request, SubjectController $subjects)
+    public function datatablesBrowseProjects(Request $request, SubjectController $subjects)
     {
         $username = $this->getUser()->getUsernameCanonical();
         $access = $this->repo_user_access->get_user_access_any($username, 'view_projects');
@@ -106,7 +106,7 @@ class ProjectController extends Controller
         // Get the subjects count
         if(!empty($data['aaData'])) {
             foreach ($data['aaData'] as $key => $value) {
-                $project_subjects = $subjects->get_subjects($value['project_id']);
+                $project_subjects = $subjects->getSubjects($value['project_id']);
                 $data['aaData'][$key]['subjects_count'] = count($project_subjects);
             }
         }
@@ -123,7 +123,7 @@ class ProjectController extends Controller
      * @param   object  Request       Request object
      * @return  array                 Redirect or render
      */
-    function show_projects_form( $id, Connection $conn, Request $request)
+    function showProjectsForm( $id, Connection $conn, Request $request)
     {
 
         $project = new Project();
@@ -184,7 +184,7 @@ class ProjectController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $project = $form->getData();
-            $project_id = $this->insert_update_project($project, $id);
+            $project_id = $this->insertUpdateProject($project, $id);
 
             $this->addFlash('message', 'Project successfully updated.');
             return $this->redirect('/admin/projects/subjects/' . $project_id);
@@ -210,7 +210,7 @@ class ProjectController extends Controller
      *
      * @return array|bool The query result
      */
-    public function get_projects($params = array())
+    public function getProjects($params = array())
     {
 
       $username = $this->getUser()->getUsernameCanonical();
@@ -246,7 +246,7 @@ class ProjectController extends Controller
      *
      * @Route("/admin/projects/get_stakeholder_guids", name="get_stakeholder_guids_tree_browser", methods="GET")
      */
-    public function get_stakeholder_guids_tree_browser()
+    public function getStakeholderGuidsTreeBrowser()
     {
       $data = array();
       $projects = $this->repo_storage_controller->execute('getStakeholderGuids');
@@ -265,7 +265,7 @@ class ProjectController extends Controller
      *
      * @Route("/admin/projects/get_stakeholder_projects/{stakeholder_guid}", name="get_stakeholder_projects_tree_browser", methods="GET")
      */
-    public function get_stakeholder_projects_tree_browser(Request $request, SubjectController $subjects)
+    public function getStakeholderProjectsTreeBrowser(Request $request, SubjectController $subjects)
     {
         $data = array();
         $stakeholder_guid = !empty($request->attributes->get('stakeholder_guid')) ? $request->attributes->get('stakeholder_guid') : false;
@@ -294,7 +294,7 @@ class ProjectController extends Controller
         foreach ($projects as $key => $value) {
 
             // Check for child dataset records so the 'children' key can be set accordingly.
-            $subject_data = $subjects->get_subjects((int)$value['project_id']);
+            $subject_data = $subjects->getSubjects((int)$value['project_id']);
 
             $data[$key] = array(
                 'id' => 'projectId-' . $value['project_id'],
@@ -317,7 +317,7 @@ class ProjectController extends Controller
      * @param   int     $project_id  The project ID
      * @return  int     The project ID
      */
-    public function insert_update_project($data, $project_id = FALSE)
+    public function insertUpdateProject($data, $project_id = FALSE)
     {
 
         $username = $this->getUser()->getUsernameCanonical();

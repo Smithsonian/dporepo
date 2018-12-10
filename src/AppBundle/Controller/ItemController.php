@@ -43,14 +43,14 @@ class ItemController extends Controller
     /**
      * @Route("/admin/projects/items/{project_id}/{subject_id}", name="items_browse", methods="GET")
      */
-    public function browse_items(Connection $conn, Request $request, ProjectController $projects, SubjectController $subjects)
+    public function browseItems(Connection $conn, Request $request, ProjectController $projects, SubjectController $subjects)
     {
 
         $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
         $subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
 
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $subject_data = $subjects->get_subject((int)$subject_id);
+        $subject_data = $subjects->getSubject((int)$subject_id);
         if(!$subject_data) throw $this->createNotFoundException('The record does not exist');
 
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => (int)$project_id));
@@ -75,7 +75,7 @@ class ItemController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_items(Request $request)
+    public function datatablesBrowseItems(Request $request)
     {
         $req = $request->request->all();
         $subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
@@ -129,7 +129,7 @@ class ItemController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    function show_items_form( Connection $conn, Request $request )
+    function showItemsForm( Connection $conn, Request $request )
     {
         $item = new Item();
         $item->access_model_purpose = NULL;
@@ -189,7 +189,7 @@ class ItemController extends Controller
         }
 
         // Get data from lookup tables.
-        $item->item_type_lookup_options = $this->get_item_types();
+        $item->item_type_lookup_options = $this->getItemTypes();
         $item->api_publication_options = array(
           'Published, Discoverable' => '11',
           'Published, Not Discoverable' => '10',
@@ -288,7 +288,7 @@ class ItemController extends Controller
      * @param   int $item_id   The subject ID
      * @return  array|bool     The query result
      */
-    public function get_item($item_id)
+    public function getItem($item_id)
     {
         $data = $this->repo_storage_controller->execute('getItem', array(
             'item_id' => $item_id,
@@ -305,7 +305,7 @@ class ItemController extends Controller
      * @param   int $subject_id  The subject ID
      * @return  array|bool     The query result
      */
-    public function get_items($subject_id = false)
+    public function getItems($subject_id = false)
     {
 
         $items_data = $this->repo_storage_controller->execute('getItemsBySubjectId',
@@ -321,10 +321,10 @@ class ItemController extends Controller
      *
      * @Route("/admin/projects/get_items/{subject_id}", name="get_items_tree_browser", methods="GET")
      */
-    public function get_items_tree_browser(Request $request, CaptureDatasetController $datasets)
+    public function getItemsTreeBrowser(Request $request, CaptureDatasetController $datasets)
     {      
         $subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
-        $items = $this->get_items($subject_id);
+        $items = $this->getItems($subject_id);
 
         foreach ($items as $key => $value) {
 
@@ -333,7 +333,7 @@ class ItemController extends Controller
             $value['item_description_truncated'] = substr($value['item_description'], 0, 38) . $more_indicator;
 
             // Check for child dataset records so the 'children' key can be set accordingly.
-            $dataset_data = $datasets->get_datasets((int)$value['item_id']);
+            $dataset_data = $datasets->getDatasets((int)$value['item_id']);
             $data[$key] = array(
                 'id' => 'itemId-' . $value['item_id'],
                 'children' => count($dataset_data) ? true : false,
@@ -350,7 +350,7 @@ class ItemController extends Controller
      * Get item_types
      * @return  array|bool  The query result
      */
-    public function get_item_types()
+    public function getItemTypes()
     {
         $data = array();
         $temp = $this->repo_storage_controller->execute('getRecords', array(
@@ -381,7 +381,7 @@ class ItemController extends Controller
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple_items(Request $request)
+    public function deleteMultipleItems(Request $request)
     {
         $ids = $request->query->get('ids');
         $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;

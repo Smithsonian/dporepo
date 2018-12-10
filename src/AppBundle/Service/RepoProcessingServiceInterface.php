@@ -13,7 +13,7 @@ interface RepoProcessingServiceInterface {
    *
    * @return array
    */
-  public function get_recipes();
+  public function getRecipes();
 
   /**
    * Get recipe by name
@@ -21,7 +21,7 @@ interface RepoProcessingServiceInterface {
    * @param string $recipe_name
    * @return array
    */
-  public function get_recipe_by_name(string $recipe_name);
+  public function getRecipeByName(string $recipe_name);
 
   /**
    * Post job
@@ -31,7 +31,7 @@ interface RepoProcessingServiceInterface {
    * @param array $params
    * @return array
    */
-  public function post_job(string $recipe_id, string $job_name, array $params);
+  public function postJob(string $recipe_id, string $job_name, array $params);
 
   /**
    * Run job
@@ -39,7 +39,7 @@ interface RepoProcessingServiceInterface {
    * @param $job_id
    * @return array
    */
-  public function run_job(string $job_id);
+  public function runJob(string $job_id);
 
   /**
    * Cancel job
@@ -47,7 +47,7 @@ interface RepoProcessingServiceInterface {
    * @param $job_id
    * @return array
    */
-  public function cancel_job(string $job_id);
+  public function cancelJob(string $job_id);
 
   /**
    * Delete job
@@ -55,7 +55,7 @@ interface RepoProcessingServiceInterface {
    * @param $job_id
    * @return array
    */
-  public function delete_job(string $job_id);
+  public function deleteJob(string $job_id);
 
   /**
    * Get job
@@ -63,14 +63,14 @@ interface RepoProcessingServiceInterface {
    * @param $job_id
    * @return array
    */
-  public function get_job(string $job_id);
+  public function getJob(string $job_id);
 
   /**
    * Get jobs
    *
    * @return array
    */
-  public function get_jobs();
+  public function getJobs();
 
   /**
    * Get job by name
@@ -78,7 +78,7 @@ interface RepoProcessingServiceInterface {
    * @param string $job_name
    * @return array
    */
-  public function get_job_by_name(string $job_name);
+  public function getJobByName(string $job_name);
 
   /**
    * Retrieve the server machine state
@@ -127,7 +127,7 @@ interface RepoProcessingServiceInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function initialize_job(string $recipe, array $params, string $path, string $user_id, array $project_data, obj $filesystem);
+  public function initializeJob(string $recipe, array $params, string $path, string $user_id, array $project_data, obj $filesystem);
 
   /**
    * @param string $path The path to the assets to be processed.
@@ -139,14 +139,14 @@ interface RepoProcessingServiceInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function send_job(string $path, string $recipe, string $user_id, array $params, $project_data = array(), obj $filesystem);
+  public function sendJob(string $path, string $recipe, string $user_id, array $params, $project_data = array(), obj $filesystem);
 
   /**
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function execute_job(obj $filesystem);
+  public function executeJob(obj $filesystem);
 
   /**
    * Get Processing Results
@@ -158,6 +158,6 @@ interface RepoProcessingServiceInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return
    */
-  public function get_processing_results(string $job_id, string $user_id, string $path, $filesystem);
+  public function getProcessingResults(string $job_id, string $user_id, string $path, $filesystem);
 
 }

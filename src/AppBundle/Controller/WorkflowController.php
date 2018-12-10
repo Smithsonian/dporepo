@@ -33,7 +33,7 @@ class WorkflowController extends Controller {
    * Given a record_type and record_id, set the status details as indicated.
    *
    */
-  public function set_workflow_status(Request $request)
+  public function setWorkflowStatus(Request $request)
   {
 
     $req = $request->request->all();
@@ -74,7 +74,7 @@ class WorkflowController extends Controller {
    * @param Request $request
    * @return JsonResponse The query result in JSON
    */
-  public function get_workflow_status(Request $request)
+  public function getWorkflowStatus(Request $request)
   {
 
     $req = $request->query->all();

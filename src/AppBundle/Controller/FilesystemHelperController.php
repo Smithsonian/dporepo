@@ -75,7 +75,7 @@ class FilesystemHelperController extends Controller
    * @param object  $request  Request object
    * @return string
    */
-  public function get_directory_contents(Request $request) {
+  public function getDirectoryContents(Request $request) {
 
     $data = $job_data = $parent_job_data = [];
     $data_directory_path = '';
@@ -206,7 +206,7 @@ class FilesystemHelperController extends Controller
    * @param object  $request  Request object
    * @return string
    */
-  public function get_file(Request $request) {
+  public function getFile(Request $request) {
 
     $path = !empty($request->get('path')) ? $request->get('path') : '';
     $file_path_array = explode('/', $path);

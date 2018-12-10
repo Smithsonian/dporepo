@@ -66,7 +66,7 @@ class UnitController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_units(Request $request)
+    public function datatablesBrowseUnits(Request $request)
     {
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -109,7 +109,7 @@ class UnitController extends Controller
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_units_form(Connection $conn, Request $request, GumpParseErrors $gump_parse_errors)
+    function showUnitsForm(Connection $conn, Request $request, GumpParseErrors $gump_parse_errors)
     {
 
       $username = $this->getUser()->getUsernameCanonical();
@@ -182,7 +182,7 @@ class UnitController extends Controller
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple(Request $request)
+    public function deleteMultiple(Request $request)
     {
 
       $username = $this->getUser()->getUsernameCanonical();

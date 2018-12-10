@@ -159,7 +159,7 @@ class ValidateCommand extends Command
         'record_type' => $input->getArgument('record_type'),
       );
 
-      $import_results = $this->repo_import->import_csv($params);
+      $import_results = $this->repo_import->importCsv($params);
       
       // echo '<pre>';
       // var_dump($import_results);

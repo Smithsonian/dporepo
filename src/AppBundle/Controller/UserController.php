@@ -41,7 +41,7 @@ class UserController extends Controller {
   /**
    * @Route("/admin/datatables_browse_roles/", name="datatables_browse_roles", methods={"GET","POST"})
    */
-  public function datatables_browse_roles(Request $request) {
+  public function datatablesBrowseRoles(Request $request) {
 
     $username = $this->getUser()->getUsernameCanonical();
     $access = $this->repo_user_access->get_user_access_any($username, 'user_edit');
@@ -212,7 +212,7 @@ class UserController extends Controller {
   /**
    * @Route("/admin/datatables_browse_users/", name="datatables_browse_users", methods={"GET","POST"})
    */
-  public function datatables_browse_users(Request $request) {
+  public function datatablesBrowseUsers(Request $request) {
 
     $username = $this->getUser()->getUsernameCanonical();
     $access = $this->repo_user_access->get_user_access_any($username, 'user_edit');
@@ -260,7 +260,7 @@ class UserController extends Controller {
   /**
    * @Route("/admin/users/", name="users_list", methods={"GET","POST"})
    */
-  public function browse_users(Request $request)
+  public function browseUsers(Request $request)
   {
     $username = $this->getUser()->getUsernameCanonical();
     $access = $this->repo_user_access->get_user_access_any($username, 'user_edit');
@@ -280,7 +280,7 @@ class UserController extends Controller {
   /**
    * @Route("/admin/datatables_browse_user_roles/{username_canonical}", name="datatables_browse_user_roles", methods={"GET","POST"})
    */
-  public function datatables_browse_user_roles(Request $request) {
+  public function datatablesBrowseUserRoles(Request $request) {
 
     $username = $this->getUser()->getUsernameCanonical();
     $access = $this->repo_user_access->get_user_access_any($username, 'user_edit');
@@ -324,7 +324,7 @@ class UserController extends Controller {
   /**
    * @Route("/admin/users/{username_canonical}", name="user_roles_list", methods={"GET","POST"})
    */
-  public function browse_user_roles(Request $request, $username_canonical)
+  public function browseUserRoles(Request $request, $username_canonical)
   {
 
     $username = $this->getUser()->getUsernameCanonical();
