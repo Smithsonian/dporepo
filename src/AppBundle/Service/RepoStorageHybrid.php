@@ -15,7 +15,6 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   /**
-   * ----------------------------------------------------------------
    * Getters for single records.
    * ----------------------------------------------------------------
    */
@@ -1092,12 +1091,11 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
+
   /**
-   * ----------------------------------------------------------------
    * Getters for multiple records.
    * ----------------------------------------------------------------
    */
-
   public function getDatasets($params) {
 
     $item_id = array_key_exists('item_id', $params) ? $params['item_id'] : NULL;
@@ -1583,7 +1581,6 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   /**
-   * ----------------------------------------------------------------
    * Delete for single record.
    * ----------------------------------------------------------------
    */
@@ -1612,7 +1609,6 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   /**
-   * ----------------------------------------------------------------
    * Datatables queries- returns rows needed for rendering client-side tables
    * ----------------------------------------------------------------
    */
@@ -4493,7 +4489,9 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
-  // User access control functions.
+  /**
+   * User access control functions.
+   */
   public function getUserAccessByProject($params = array()) {
 
     $data = false;
@@ -4702,7 +4700,7 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
 
   }
-  // End user access functions.
+
 
   public function markProjectInactive($params) {
     $user_id = $params['user_id'];
@@ -4781,7 +4779,7 @@ class RepoStorageHybrid implements RepoStorage {
           $params['record_type'] = 'model';
           $params['id_field_name'] = 'model.model_id';
           $params['select'] = 'project.project_id, subject.subject_id, item.item_id, model.model_id';
-          $params['left_joins'] = 'LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_id = model.parent_capture_dataset_id
+          $params['left_joins'] = 'LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_id = model.capture_dataset_id
               -- LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = capture_data_element.capture_dataset_id
               LEFT JOIN item ON item.item_id = model.item_id
               LEFT JOIN subject ON subject.subject_id = item.subject_id
@@ -4793,7 +4791,7 @@ class RepoStorageHybrid implements RepoStorage {
           $params['id_field_name'] = 'model.model_id';
           $params['select'] = 'project.project_id, subject.subject_id, item.item_id, model.model_id';
           $params['left_joins'] = '
-              LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = model.parent_capture_dataset_id
+              LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = model.capture_dataset_id
               LEFT JOIN item ON item.item_id = capture_dataset.item_id
               LEFT JOIN subject ON subject.subject_id = item.subject_id
               LEFT JOIN project ON project.project_id = subject.project_id';
@@ -5411,7 +5409,6 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   /**
-   * ----------------------------------------------------------------
    * Generic functions for getting, setting, deleting and marking inactive.
    * ----------------------------------------------------------------
    */
@@ -6348,7 +6345,6 @@ class RepoStorageHybrid implements RepoStorage {
 
     return array('return' => 'success'); //, 'data' => $return);
   }
-
 
   /**
    * @param $base_table
