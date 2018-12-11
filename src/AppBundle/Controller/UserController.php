@@ -343,6 +343,48 @@ class UserController extends Controller {
 
   }
 
+  /**
+   * Delete Multiple User Roles
+   *
+   * @Route("/admin/user/role/{username_canonical}/delete", name="user_role_delete", methods={"GET"})
+   * Run a query to delete multiple records.
+   *
+   * @param   int     $ids      The record ids
+   * @param   object  $request  Request object
+   * @return  void
+   */
+  public function deleteUserRole(Request $request, $username_canonical)
+  {
+    $username = $this->getUser()->getUsernameCanonical();
+    $access = $this->repo_user_access->get_user_access_any($username, 'user_edit');
+    if(!array_key_exists('username_canonical', $access) || !isset($access['username_canonical'])) {
+      $response = new Response();
+      $response->setStatusCode(403);
+      return $response;
+    }
+
+    $ids = $request->query->get('ids');
+
+    if(!empty($ids) && !empty($username_canonical)) {
+
+      $ids_array = explode(',', $ids);
+
+      foreach ($ids_array as $key => $id) {
+        $ret = $this->repo_storage_controller->execute('deleteUserRole', array(
+          'user_role_id' => $id,
+          'username_canonical' => $username_canonical,
+          'user_id' => $this->getUser()->getId(),
+        ));
+      }
+
+      $this->addFlash('message', 'User roles successfully removed.');
+
+    } else {
+      $this->addFlash('message', 'Missing data. No records removed.');
+    }
+
+    return $this->redirectToRoute('user_roles_list', array('username_canonical' => $username_canonical));
+  }
 
   /**
    * @Route("/admin/user/role/{username_canonical}/add", name="user_role_add", methods={"GET","POST"}, defaults={"user_role_id" = null})
@@ -417,49 +459,6 @@ class UserController extends Controller {
       'data' => (array)$user_role,
       'form' => $form->createView(),
     ));
-  }
-
-  /**
-   * Delete Multiple User Roles
-   *
-   * @Route("/admin/user/role/{username_canonical}/delete", name="user_role_delete", methods={"GET"})
-   * Run a query to delete multiple records.
-   *
-   * @param   int     $ids      The record ids
-   * @param   object  $request  Request object
-   * @return  void
-   */
-  public function deleteUserRole(Request $request, $username_canonical)
-  {
-    $username = $this->getUser()->getUsernameCanonical();
-    $access = $this->repo_user_access->get_user_access_any($username, 'user_edit');
-    if(!array_key_exists('username_canonical', $access) || !isset($access['username_canonical'])) {
-      $response = new Response();
-      $response->setStatusCode(403);
-      return $response;
-    }
-
-    $ids = $request->query->get('ids');
-
-    if(!empty($ids) && !empty($username_canonical)) {
-
-      $ids_array = explode(',', $ids);
-
-      foreach ($ids_array as $key => $id) {
-        $ret = $this->repo_storage_controller->execute('deleteUserRole', array(
-          'user_role_id' => $id,
-          'username_canonical' => $username_canonical,
-          'user_id' => $this->getUser()->getId(),
-        ));
-      }
-
-      $this->addFlash('message', 'User roles successfully removed.');
-
-    } else {
-      $this->addFlash('message', 'Missing data. No records removed.');
-    }
-
-    return $this->redirectToRoute('user_roles_list', array('username_canonical' => $username_canonical));
   }
 
 
