@@ -1154,7 +1154,7 @@ class RepoStorageHybrid implements RepoStorage {
       'table_name' => 'project',
       'table_join_field' => 'project_id',
       'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'subject',
+      'base_join_table' => 'item',
       'base_join_field' => 'project_id',
     );
 
@@ -1218,7 +1218,7 @@ class RepoStorageHybrid implements RepoStorage {
           'table_name' => 'project',
           'table_join_field' => 'project_id',
           'join_type' => 'LEFT JOIN',
-          'base_join_table' => 'subject',
+          'base_join_table' => 'item',
           'base_join_field' => 'project_id',
         )
       ),
