@@ -345,12 +345,11 @@ class RepoStorageHybrid implements RepoStorage {
     //@todo
     $return_data['inherit_api_published'] = NULL;
     $return_data['inherit_api_discoverable'] = NULL;
-    if(isset($return_data['subject_id'])) {
+    if(isset($return_data['project_id'])) {
       $sql = "SELECT api_published, api_discoverable FROM project 
-      LEFT JOIN subject on project.project_id = subject.project_id 
-      WHERE subject.subject_id= :subject_id";
+      WHERE project.project_id= :project_id";
       $statement = $this->connection->prepare($sql);
-      $statement->bindValue(":subject_id", $return_data['subject_id'], PDO::PARAM_STR);
+      $statement->bindValue(":project_id", $return_data['project_id'], PDO::PARAM_STR);
       $statement->execute();
       $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
 
