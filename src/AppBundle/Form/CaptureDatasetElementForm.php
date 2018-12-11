@@ -3,6 +3,7 @@
 namespace AppBundle\Form;
 
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
@@ -16,6 +17,9 @@ class CaptureDatasetElementForm extends AbstractType
         $data = (array)$options['data'];
 
         $builder
+            ->add('capture_dataset_id', HiddenType::class, array(
+              'required' => true,
+            ))
             ->add('capture_device_configuration_id', null, array(
                 'label' => 'Capture Device Configuration ID',
               ))

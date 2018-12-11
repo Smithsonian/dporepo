@@ -16,13 +16,6 @@ class CaptureDataset
     public $capture_dataset_guid;
 
     /**
-     * @Assert\NotBlank()
-     * @Assert\Length(min="1", max="10")
-     * @var int
-     */
-    public $project_id;
-
-    /**
      * @Assert\Length(min="1", max="10")
      * @var int
      */

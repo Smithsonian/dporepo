@@ -78,7 +78,7 @@
         });
 
         // Send to details page when clicked.
-        var user_role_details_page = "/admin/users/{{ username_canonical }}/role/";
+        var user_role_details_page = "/admin/user/role/{{ username_canonical }}/";
         $('#browse_user_roles tbody').on('click','td',function(event){
           if(!$(this).hasClass("manage_column")){
             var user_role_id = $(this).closest("tr").attr('id');

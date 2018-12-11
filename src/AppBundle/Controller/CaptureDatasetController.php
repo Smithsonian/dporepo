@@ -48,48 +48,7 @@ class CaptureDatasetController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/datasets/{project_id}/{subject_id}/{item_id}", name="datasets_browse", methods="GET")
-     */
-    public function browseDatasets(Connection $conn, Request $request, ProjectController $projects, SubjectController $subjects)
-    {
-        $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
-        $subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
-        $item_id = !empty($request->attributes->get('item_id')) ? $request->attributes->get('item_id') : false;
-
-        // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $item = new Item();
-        $item_array = $this->repo_storage_controller->execute('getItem', array(
-          'item_id' => $item_id,
-        ));
-        if(is_array($item_array)) {
-          $item->item_data = (object)$item_array;
-        }
-        // Throw a createNotFoundException (404).
-        if(!isset($item->item_data->item_id)) throw $this->createNotFoundException('The record does not exist');
-
-        $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => (int)$project_id));
-        $subject_data = $subjects->getSubject((int)$subject_id);
-
-        // Truncate the item_description so the breadcrumb don't blow up.
-        $more_indicator = (strlen($item->item_data->item_description) > 50) ? '...' : '';
-        $item->item_data->item_description_truncated = substr($item->item_data->item_description, 0, 50) . $more_indicator;
-
-        return $this->render('datasets/browse_datasets.html.twig', array(
-            'page_title' => isset($item->item_data->item_description_truncated) ? 'Item: ' . $item->item_data->item_description_truncated : 'Item',
-            'project_id' => $project_id,
-            'subject_id' => $subject_id,
-            'item_id' => $item_id,
-            'project_data' => $project_data,
-            'subject_data' => $subject_data,
-            'item_data' => $item->item_data,
-            'destination' => $project_id . '|' . $subject_id . '|' . $item_id,
-            'uploads_path' => $this->uploads_path,
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        ));
-    }
-
-    /**
-     * @Route("/admin/projects/datatables_browse_datasets/{project_id}/{subject_id}/{item_id}", name="datasets_browse_datatables", methods="POST")
+     * @Route("/admin/datatables_browse_datasets/{item_id}", name="datasets_browse_datatables", methods={"POST","GET"})
      *
      * Browse datasets
      *
@@ -126,9 +85,10 @@ class CaptureDatasetController extends Controller
     }
 
     /**
-     * Matches /admin/projects/dataset/*
+     * Matches /admin/capture_dataset/*
      *
-     * @Route("/admin/projects/dataset/{project_id}/{subject_id}/{item_id}/{capture_dataset_id}", name="datasets_manage", methods={"GET","POST"}, defaults={"capture_dataset_id" = null})
+     * @Route("/admin/capture_dataset/add/{item_id}", name="dataset_add", methods={"GET","POST"}, defaults={"capture_dataset_id" = null})
+     * @Route("/admin/capture_dataset/manage/{capture_dataset_id}", name="datasets_manage", methods={"GET","POST"})
      * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
      * @return  array|bool            The query result
@@ -151,6 +111,8 @@ class CaptureDatasetController extends Controller
             $ajax = true;
           }
         }
+
+        $item_id = !empty($request->attributes->get('item_id')) ? $request->attributes->get('item_id') : false;
 
         // Retrieve data from the database.
         if (!empty($id) && empty($post)) {
@@ -190,9 +152,9 @@ class CaptureDatasetController extends Controller
             $dataset->inherit_publication_default = $tmp;
 
         }
-        $dataset->project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
-        $dataset->subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
-        $dataset->item_id = !empty($request->attributes->get('item_id')) ? $request->attributes->get('item_id') : false;
+        elseif(empty($id)) {
+          $dataset->item_id = $item_id;
+        }
 
         // Get data from lookup tables.
         $dataset->capture_methods_lookup_options = $this->getCaptureMethods();
@@ -276,10 +238,10 @@ class CaptureDatasetController extends Controller
               return $response;
             } else {
               $this->addFlash('message', 'Capture Dataset successfully updated.');
-              return $this->redirect('/admin/projects/dataset_elements/' . $dataset->project_id . '/' . $dataset->subject_id . '/' . $dataset->item_id . '/' . $id);
+              return $this->redirect('/admin/capture_dataset/view/' . $id);
             }
         }
-        
+
         $dataset->capture_dataset_id = !empty($id) ? $id : false;
 
         if ($ajax) {
@@ -297,6 +259,41 @@ class CaptureDatasetController extends Controller
     }
 
     /**
+     * @Route("/admin/capture_dataset/view/{capture_dataset_id}", name="dataset_elements_browse", methods="GET")
+     */
+    public function browseDatasetElements(Connection $conn, Request $request, ItemController $item)
+    {
+      $id = !empty($request->attributes->get('capture_dataset_id')) ? $request->attributes->get('capture_dataset_id') : false;
+
+      // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
+      $dataset_data = $this->getDataset((int)$id);
+      if(!$dataset_data) throw $this->createNotFoundException('The record does not exist');
+
+      $item_id = $dataset_data['item_id'];
+      $item_data = $item->getItem((int)$item_id);
+
+      $project_id = $item_data['project_id'];
+      $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => $project_id));
+
+      // Truncate the item_description.
+      $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
+      $item_data['item_description_truncated'] = substr($item_data['item_description'], 0, 50) . $more_indicator;
+
+      return $this->render('datasetElements/browse_dataset_elements.html.twig', array(
+        'page_title' => 'Capture Dataset: ' .  $dataset_data['capture_dataset_name'],
+        'project_id' => $project_id,
+        'item_id' => $item_id,
+        'capture_dataset_id' => $id,
+        'project_data' => $project_data,
+        'item_data' => $item_data,
+        'dataset_data' => $dataset_data,
+        'uploads_path' => $this->uploads_path,
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+      ));
+    }
+
+
+  /**
      * Get Datasets
      *
      * Get datasets from the database.
@@ -549,7 +546,7 @@ class CaptureDatasetController extends Controller
     /**
      * Delete Multiple Datasets
      *
-     * @Route("/admin/projects/datasets/{project_id}/{subject_id}/{item_id}/delete", name="datasets_remove_records", methods={"GET"})
+     * @Route("/admin/capture_dataset/delete/{item_id}", name="datasets_remove_records", methods={"GET"})
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
@@ -559,11 +556,9 @@ class CaptureDatasetController extends Controller
     public function deleteMultipleDatasets(Request $request)
     {
         $ids = $request->query->get('ids');
-        $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
-        $subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
         $item_id = !empty($request->attributes->get('item_id')) ? $request->attributes->get('item_id') : false;
 
-        if(!empty($ids) && $project_id && $subject_id && $item_id) {
+        if(!empty($ids) && $item_id) {
 
           $ids_array = explode(',', $ids);
 
@@ -580,7 +575,7 @@ class CaptureDatasetController extends Controller
           $this->addFlash('message', 'Missing data. No records removed.');
         }
 
-        return $this->redirectToRoute('datasets_browse', array('project_id' => $project_id, 'subject_id' => $subject_id, 'item_id' => $item_id));
+        return $this->redirectToRoute('item_view', array('item_id' => $item_id));
     }
 
 }

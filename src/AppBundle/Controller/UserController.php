@@ -142,7 +142,7 @@ class UserController extends Controller {
 
   /**
    *
-   * @Route("/admin/roles/{role_slug}", name="role_edit", methods={"GET","POST"}, defaults={"role_slug" = null})
+   * @Route("/admin/role/view/{role_slug}", name="role_edit", methods={"GET","POST"}, defaults={"role_slug" = null})
    *
    * @param   string  $role_slug    The slug/shortname for the role
    * @param   object  Request       Request object
@@ -165,7 +165,7 @@ class UserController extends Controller {
     }
 
     // Retrieve data from the database.
-    if (!empty($role_slug) && $role_slug !== "new" && empty($post)) {
+    if (!empty($role_slug) && $role_slug !== "add" && empty($post)) {
       $role = $this->repo_storage_controller->execute('getRole',
         array('rolename_canonical' => $role_slug)
       );
@@ -322,7 +322,7 @@ class UserController extends Controller {
   }
 
   /**
-   * @Route("/admin/users/{username_canonical}", name="user_roles_list", methods={"GET","POST"})
+   * @Route("/admin/user/view/{username_canonical}", name="user_roles_list", methods={"GET","POST"})
    */
   public function browseUserRoles(Request $request, $username_canonical)
   {
@@ -344,7 +344,7 @@ class UserController extends Controller {
 
 
   /**
-   * @Route("/admin/users/{username_canonical}/role/{user_role_id}", name="user_role_edit", methods={"GET","POST"}, defaults={"username_canonical" = null, "role_id" = null})
+   * @Route("/admin/user/role/{username_canonical}/{user_role_id}", name="user_role_edit", methods={"GET","POST"}, defaults={"username_canonical" = null, "role_id" = null})
    *
    * @param   string  username_canonical   The canonical username
    * @param   object  Request           Request object
@@ -407,7 +407,7 @@ class UserController extends Controller {
       $user_role_id = $this->repo_storage_controller->execute('saveUserRole', $user_role );
 
       $this->addFlash('message', 'User role successfully updated.');
-      return $this->redirect('/admin/users/' . $username_canonical);
+      return $this->redirect('/admin/user/view/' . $username_canonical);
     }
 
     return $this->render('users/userrole_form.html.twig', array(
@@ -420,7 +420,7 @@ class UserController extends Controller {
   /**
    * Delete Multiple User Roles
    *
-   * @Route("/admin/users/{username_canonical}/roles/delete", name="user_role_delete", methods={"GET"})
+   * @Route("/admin/user/role/{username_canonical}/delete", name="user_role_delete", methods={"GET"})
    * Run a query to delete multiple records.
    *
    * @param   int     $ids      The record ids

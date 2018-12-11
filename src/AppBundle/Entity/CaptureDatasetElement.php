@@ -10,6 +10,12 @@ class CaptureDatasetElement
 
     /**
      * @Assert\NotBlank()
+     * @var int
+     */
+    public $capture_dataset_id;
+
+    /**
+     * @Assert\NotBlank()
      * @Assert\Type(
      *     type="integer",
      *     message="The value {{ value }} is not a valid {{ type }}."

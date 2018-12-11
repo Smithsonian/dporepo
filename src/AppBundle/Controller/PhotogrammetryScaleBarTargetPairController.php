@@ -40,7 +40,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/photogrammetry_scale_bar_target_pair/datatables_browse", name="photogrammetry_scale_bar_target_pair_browse_datatables", methods="POST")
+     * @Route("/admin/datatables_browse_photogrammetry_scale_bar_target_pair", name="photogrammetry_scale_bar_target_pair_browse_datatables", methods={"GET","POST"})
      *
      * @param Request $request
      * @return JsonResponse The query result in JSON
@@ -74,9 +74,10 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
     }
 
     /**
-     * Matches /admin/projects/photogrammetry_scale_bar_target_pair/manage/*
+     * Matches /admin/photogrammetry_scale_bar_target_pair/manage/*
      *
-     * @Route("/admin/projects/photogrammetry_scale_bar_target_pair/manage/{parent_id}/{id}", name="photogrammetry_scale_bar_target_pair_manage", methods={"GET","POST"}, defaults={"parent_id" = null, "id" = null})
+     * @Route("/admin/photogrammetry_scale_bar_target_pair/add/{parent_id}", name="photogrammetry_scale_bar_target_pair_add", methods={"GET","POST"}, defaults={"id" = null})
+     * @Route("/admin/photogrammetry_scale_bar_target_pair/manage/{id}", name="photogrammetry_scale_bar_target_pair_manage", methods={"GET","POST"})
      *
      * @param Connection $conn
      * @param Request $request
@@ -99,7 +100,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
         $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         // If no parent_id is passed, throw a createNotFoundException (404).
-        if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
+        if(!$parent_id && !$id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
         
@@ -113,7 +114,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
-        $data->parent_photogrammetry_scale_bar_id = $parent_id;
+        $data->photogrammetry_scale_bar_id = $parent_id;
 
         // Get data from lookup tables.
         $data->unit_options = $this->getUnit();
@@ -137,7 +138,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/photogrammetry_scale_bar_target_pair/manage/' . $data->photogrammetry_scale_bar_id . '/' . $id);
+            return $this->redirect('/admin/photogrammetry_scale_bar_target_pair/manage/' . $id);
         }
 
         return $this->render('datasets/photogrammetry_scale_bar_target_pair_form.html.twig', array(
@@ -197,7 +198,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/photogrammetry_scale_bar_target_pair/delete", name="photogrammetry_scale_bar_target_pair_remove_records", methods={"GET"})
+     * @Route("/admin/photogrammetry_scale_bar_target_pair/delete", name="photogrammetry_scale_bar_target_pair_remove_records", methods={"GET"})
      *
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\RedirectResponse|Response Redirect or render
@@ -236,7 +237,8 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
             $this->addFlash('message', 'Missing data. No records removed.');
         }
 
-        return $this->redirectToRoute('photogrammetry_scale_bar_target_pair_browse');
+        $referer = $request->headers->get('referer');
+        return $this->redirect($referer);
     }
 
     /**

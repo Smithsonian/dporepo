@@ -63,7 +63,7 @@ class ProjectController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/datatables_browse_projects", name="projects_browse_datatables", methods="POST")
+     * @Route("/admin/datatables_browse_projects", name="project_browse_datatables", methods="POST")
      *
      * Browse Projects
      *
@@ -73,7 +73,7 @@ class ProjectController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatablesBrowseProjects(Request $request, SubjectController $subjects)
+    public function datatablesBrowseProjects(Request $request)
     {
         $username = $this->getUser()->getUsernameCanonical();
         $access = $this->repo_user_access->get_user_access_any($username, 'view_projects');
@@ -102,21 +102,14 @@ class ProjectController extends Controller
         $query_params['project_ids'] = $project_ids;
 
         $data = $this->repo_storage_controller->execute('getDatatableProject', $query_params);
-
-        // Get the subjects count
-        if(!empty($data['aaData'])) {
-            foreach ($data['aaData'] as $key => $value) {
-                $project_subjects = $subjects->getSubjects($value['project_id']);
-                $data['aaData'][$key]['subjects_count'] = count($project_subjects);
-            }
-        }
         return $this->json($data);
     }
 
     /**
-     * Matches /admin/projects/manage/*
+     * Matches /admin/project/manage/*
      *
-     * @Route("/admin/projects/manage/{id}", name="projects_manage", methods={"GET","POST"}, defaults={"id" = null})
+     * @Route("/admin/project/add/", name="project_add", methods={"GET","POST"}, defaults={"id" = null})
+     * @Route("/admin/project/manage/{id}", name="project_manage", methods={"GET","POST"})
      *
      * @param   int     $project_id  The project ID
      * @param   object  Connection    Database connection object
@@ -167,7 +160,7 @@ class ProjectController extends Controller
         }
 
         // Get data from lookup tables.
-        $project->stakeholder_guid_options = $this->get_units_stakeholders();
+        $project->stakeholder_guid_options = $this->getUnitsStakeholders();
         $project->api_publication_options = array(
           'Published, Discoverable' => '11',
           'Published, Not Discoverable' => '10',
@@ -187,7 +180,7 @@ class ProjectController extends Controller
             $project_id = $this->insertUpdateProject($project, $id);
 
             $this->addFlash('message', 'Project successfully updated.');
-            return $this->redirect('/admin/projects/subjects/' . $project_id);
+            return $this->redirect('/admin/project/view/' . $project_id);
         }
 
         return $this->render('projects/project_form.html.twig', array(
@@ -199,6 +192,50 @@ class ProjectController extends Controller
         ));
 
     }
+
+    /**
+     * @Route("/admin/project/view/{project_id}", name="project_view", methods="GET", requirements={"project_id"="\d+"})
+     */
+    public function viewProject(Connection $conn, Request $request, ProjectController $projects)
+    {
+      $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
+
+      $username = $this->getUser()->getUsernameCanonical();
+      $user_can_edit = $user_can_edit_project = false;
+      if(false !== $project_id) {
+        $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $project_id);
+        if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+          $response = new Response();
+          $response->setStatusCode(403);
+          return $response;
+        }
+
+        $access = $this->repo_user_access->get_user_access($username, 'edit_projects', $project_id);
+        if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
+          $user_can_edit_project = true;
+        }
+
+        $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $project_id);
+        if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
+          $user_can_edit = true;
+        }
+      }
+
+      // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
+      $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => $project_id));
+
+      if(!$project_data) throw $this->createNotFoundException('The record does not exist');
+
+      return $this->render('items/browse_project_items.html.twig', array(
+        'page_title' => 'Project: ' . $project_data['project_name'],
+        'project_id' => $project_id,
+        'project_data' => $project_data,
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'user_can_edit_project' => $user_can_edit_project,
+        'user_can_edit' => $user_can_edit,
+      ));
+    }
+
 
     /**
      * Get Projects
@@ -382,7 +419,7 @@ class ProjectController extends Controller
      * Get unit_stakeholder
      * @return  array|bool  The query result
      */
-    public function get_units_stakeholders()
+    public function getUnitsStakeholders()
     {
       $data = array();
 
@@ -405,16 +442,17 @@ class ProjectController extends Controller
     /**
      * Delete Multiple Projects
      *
-     * Matches /admin/workspace/delete
+     * Matches /admin/project/delete
      *
-     * @Route("/admin/workspace/delete", name="projects_remove_records", methods={"GET"})
+     * @Route("/admin/workspace/delete", name="workspace_projects_remove_records", methods={"GET"})
+     * @Route("/admin/project/delete", name="projects_remove_records", methods={"GET"})
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple_projects(Request $request)
+    public function deleteMultipleProjects(Request $request)
     {
         $ids = $request->query->get('ids');
 

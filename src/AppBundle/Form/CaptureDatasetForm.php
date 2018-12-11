@@ -18,9 +18,6 @@ class CaptureDatasetForm extends AbstractType
         $data = (array)$options['data'];
 
         $builder
-            ->add('project_id', HiddenType::class, array(
-                'required' => true,
-              ))
             ->add('item_id', HiddenType::class, array(
                 'required' => true,
               ))

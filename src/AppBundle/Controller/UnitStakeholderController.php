@@ -132,7 +132,7 @@ class UnitStakeholderController extends Controller
         }
 
         // Get data from lookup tables.
-        $data['units_stakeholders'] = $projects->get_units_stakeholders();
+        $data['units_stakeholders'] = $projects->getUnitsStakeholders();
         if(!array_key_exists('isni_id', $data)) {
           $data['isni_id'] = NULL;
         }

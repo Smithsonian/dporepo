@@ -40,7 +40,7 @@ class PhotogrammetryScaleBarController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/photogrammetry_scale_bar/datatables_browse", name="photogrammetry_scale_bar_browse_datatables", methods="POST")
+     * @Route("/admin/datatables_browse_photogrammetry_scale_bars", name="photogrammetry_scale_bar_browse_datatables", methods="POST")
      *
      * @param Request $request
      * @return JsonResponse The query result in JSON
@@ -73,9 +73,10 @@ class PhotogrammetryScaleBarController extends Controller
     }
 
     /**
-     * Matches /admin/projects/photogrammetry_scale_bar/manage/*
+     * Matches /admin/photogrammetry_scale_bar/manage/*
      *
-     * @Route("/admin/projects/photogrammetry_scale_bar/manage/{parent_id}/{id}", name="photogrammetry_scale_bar_manage", methods={"GET","POST"}, defaults={"parent_id" = null, "id" = null})
+     * @Route("/admin/photogrammetry_scale_bar/add/{parent_id}", name="photogrammetry_scale_bar_add", methods={"GET","POST"}, defaults={"id" = null})
+     * @Route("/admin/photogrammetry_scale_bar/manage/{id}", name="photogrammetry_scale_bar_manage", methods={"GET","POST"})
      *
      * @param Connection $conn
      * @param Request $request
@@ -98,10 +99,9 @@ class PhotogrammetryScaleBarController extends Controller
         $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         // If no parent_id is passed, throw a createNotFoundException (404).
-        if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
+        if(!$parent_id && !$id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
-        
         if(!empty($id) && empty($post)) {
           $rec = $this->repo_storage_controller->execute('getPhotogrammetryScaleBar', array(
             'photogrammetry_scale_bar_id' => $id));
@@ -117,7 +117,7 @@ class PhotogrammetryScaleBarController extends Controller
 
         $back_link = $request->headers->get('referer');
         if(isset($data->project_id)) {
-            $back_link = "/admin/projects/dataset_elements/{$data->project_id}/{$data->subject_id}/{$data->item_id}/{$data->capture_dataset_id}";
+            $back_link = "/admin/capture_dataset_elements/{$data->capture_dataset_id}";
         }
 
         // Get data from lookup tables.
@@ -141,7 +141,7 @@ class PhotogrammetryScaleBarController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/photogrammetry_scale_bar/manage/' . $parent_id . '/' . $id);
+            return $this->redirect('/admin/photogrammetry_scale_bar/manage/' . $id);
         }
 
         return $this->render('datasets/photogrammetry_scale_bar_form.html.twig', array(
@@ -178,7 +178,7 @@ class PhotogrammetryScaleBarController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/photogrammetry_scale_bar/delete", name="photogrammetry_scale_bar_remove_records", methods={"GET"})
+     * @Route("/admin/photogrammetry_scale_bar/delete", name="photogrammetry_scale_bar_remove_records", methods={"GET"})
      *
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\RedirectResponse|Response Redirect or render

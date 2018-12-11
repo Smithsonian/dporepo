@@ -11,6 +11,11 @@ class Model
      * @Assert\NotBlank()
      * @var int
      */
+    public $item_id;
+
+    /**
+     * @var int
+     */
     public $capture_dataset_id;
 
     /**

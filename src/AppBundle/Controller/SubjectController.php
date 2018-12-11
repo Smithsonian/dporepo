@@ -41,6 +41,7 @@ class SubjectController extends Controller
         $this->repo_user_access = new RepoUserAccess($conn);
     }
 
+    //@todo this is deprecated, go ahead and delete it
     /**
      * @Route("/admin/projects/subjects/{project_id}", name="subjects_browse", methods="GET", requirements={"project_id"="\d+"})
      */
@@ -88,8 +89,9 @@ class SubjectController extends Controller
         ));
     }
 
+    //@todo this is deprecated, go ahead and delete it
     /**
-     * @Route("/admin/projects/datatables_browse_subjects/{project_id}", name="subjects_browse_datatables", methods="POST", defaults={"project_id" = null})
+     * @Route("/admin/datatables_browse_subjects/{project_id}", name="subjects_browse_datatables", methods="POST", defaults={"project_id" = null})
      *
      * Browse subjects
      *
@@ -159,15 +161,16 @@ class SubjectController extends Controller
     }
 
     /**
-     * Matches /admin/projects/subject/*
+     * Matches /admin/subject/*
      *
-     * @Route("/admin/projects/subject/{project_id}/{subject_id}", name="subjects_manage", methods={"GET","POST"}, requirements={"project_id"="\d+"}, defaults={"subject_id" = null})
+     * @Route("/admin/subject/add/", name="subject_add", methods={"GET","POST"}, defaults={"subject_id" = null})
+     * @Route("/admin/subject/manage/{subject_id}", name="subject_manage", methods={"GET","POST"})
      *
      * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
      * @return  array                 Redirect or render
      */
-    function showSubjectsForm( $subject_id, Connection $conn, Request $request )
+    function showSubjectForm( $subject_id, Connection $conn, Request $request )
     {
         $subject = new Subject();
         $subject->access_model_purpose = NULL;
@@ -259,7 +262,7 @@ class SubjectController extends Controller
               return $response;
             } else {
               $this->addFlash('message', 'Subject successfully updated.');
-              return $this->redirect('/admin/projects/items/' . $subject['project_id'] . '/' . $id);
+              return $this->redirect('/admin/subject/view/' . $id);
             }
         }
 
@@ -279,6 +282,27 @@ class SubjectController extends Controller
     }
 
     /**
+     * @Route("/admin/subject/view/{subject_id}", name="view_subject", methods="GET")
+     */
+    public function browseSubjectItems(Connection $conn, Request $request)
+    {
+
+      $subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
+
+      // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
+      $subject_data = $this->getSubject((int)$subject_id);
+      if(!$subject_data) throw $this->createNotFoundException('The record does not exist');
+
+      return $this->render('items/browse_subject_items.html.twig', array(
+        'page_title' => 'Subject: ' .  $subject_data['subject_name'],
+        'subject_id' => $subject_id,
+        'subject_data' => $subject_data,
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+      ));
+    }
+
+
+  /**
      * Get Subject
      *
      * Run a query to retrieve one subject from the database.
@@ -365,7 +389,7 @@ class SubjectController extends Controller
     /**
      * Delete Multiple Subjects
      *
-     * @Route("/admin/projects/subjects/{project_id}/delete", name="subjects_remove_records", methods={"GET"})
+     * @Route("/admin/subjects/delete", name="subjects_remove_records", methods={"GET"})
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids

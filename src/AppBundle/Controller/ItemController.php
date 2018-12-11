@@ -41,32 +41,7 @@ class ItemController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/items/{project_id}/{subject_id}", name="items_browse", methods="GET")
-     */
-    public function browseItems(Connection $conn, Request $request, ProjectController $projects, SubjectController $subjects)
-    {
-
-        $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
-        $subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
-
-        // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $subject_data = $subjects->getSubject((int)$subject_id);
-        if(!$subject_data) throw $this->createNotFoundException('The record does not exist');
-
-        $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => (int)$project_id));
-
-        return $this->render('items/browse_items.html.twig', array(
-            'page_title' => 'Subject: ' .  $subject_data['subject_name'],
-            'project_id' => $project_id,
-            'subject_id' => $subject_id,
-            'subject_data' => $subject_data,
-            'project_data' => $project_data,
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        ));
-    }
-
-    /**
-     * @Route("/admin/projects/datatables_browse_items/{project_id}/{subject_id}", name="items_browse_datatables", methods="POST", defaults={"project_id" = null, "subject_id" = null})
+     * @Route("/admin/datatables_browse_project_items/{project_id}", name="projects_items_browse_datatables", methods="POST", defaults={"project_id" = null})
      *
      * Browse items
      *
@@ -75,12 +50,14 @@ class ItemController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatablesBrowseItems(Request $request)
+    public function datatablesBrowseProjectItems(Request $request, $project_id)
     {
         $req = $request->request->all();
-        $subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
+        if(empty($req)) {$req = $request->query->all();}
+        $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
 
         // First, perform a 3D model generation status check, and update statuses in the database accordingly.
+        /*
         $results = $this->repo_storage_controller->execute('getItemGuidsBySubjectId', array(
             'subject_id' => (int)$subject_id,
           )
@@ -96,6 +73,7 @@ class ItemController extends Controller
               // $this->getDirectoryStatuses($value['item_guid']);
             }
         }
+      */
 
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
         $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
@@ -109,7 +87,7 @@ class ItemController extends Controller
           'sort_order' => $sort_order,
           'start_record' => $start_record,
           'stop_record' => $stop_record,
-          'subject_id' => $subject_id,
+          'project_id' => $project_id,
         );
         if ($search) {
           $query_params['search_value'] = $search;
@@ -121,9 +99,113 @@ class ItemController extends Controller
     }
 
     /**
-     * Matches /admin/projects/item/*
+     * @Route("/admin/datatables_browse_subject_items/{subject_id}", name="subjectitems_browse_datatables", methods="POST", defaults={"subject_id" = null})
      *
-     * @Route("/admin/projects/item/{project_id}/{subject_id}/{item_id}", name="items_manage", methods={"GET","POST"}, defaults={"item_id" = null})
+     * Browse items
+     *
+     * Run a query to retrieve all items in the database.
+     *
+     * @param   object  Request     Request object
+     * @return  array|bool          The query result
+     */
+    public function datatablesBrowseSubjectItems(Request $request)
+    {
+      $req = $request->request->all();
+      $subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
+
+      // First, perform a 3D model generation status check, and update statuses in the database accordingly.
+      /*
+      $results = $this->repo_storage_controller->execute('getItemGuidsBySubjectId', array(
+          'subject_id' => (int)$subject_id,
+        )
+      );
+
+      if(!empty($results)) {
+        foreach ($results as $key => $value) {
+          // Set 3D model generation statuses.
+          //@todo
+          // An item may have 1 or more of either or both capture_datasets and models.
+          // Processing status may exist for each model, for each capture_dataset.
+          // How should we show those individual statuses rolled up as one status for the item?
+          // $this->getDirectoryStatuses($value['item_guid']);
+        }
+      }
+      */
+
+      $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+      $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
+      $sort_order = $req['order'][0]['dir'];
+      $start_record = !empty($req['start']) ? $req['start'] : 0;
+      $stop_record = !empty($req['length']) ? $req['length'] : 20;
+
+      $query_params = array(
+        'record_type' => 'item',
+        'sort_field' => $sort_field,
+        'sort_order' => $sort_order,
+        'start_record' => $start_record,
+        'stop_record' => $stop_record,
+        'subject_id' => $subject_id,
+      );
+      if ($search) {
+        $query_params['search_value'] = $search;
+      }
+
+      $data = $this->repo_storage_controller->execute('getDatatableItem', $query_params);
+
+      return $this->json($data);
+    }
+
+  /**
+     * @Route("/admin/item/view/{item_id}", name="item_view", methods="GET")
+     */
+    public function viewItem(Connection $conn, Request $request, ProjectController $projects, SubjectController $subjects)
+    {
+      $item_id = !empty($request->attributes->get('item_id')) ? $request->attributes->get('item_id') : false;
+
+      $item = new Item();
+      $item_array = $this->repo_storage_controller->execute('getItem', array(
+        'item_id' => $item_id,
+      ));
+      if(is_array($item_array)) {
+        $item->item_data = (object)$item_array;
+      }
+      // Throw a createNotFoundException (404).
+      if(!isset($item->item_data->item_id)) throw $this->createNotFoundException('The record does not exist');
+
+      $subject_data = $project_data = array();
+      $project_id = isset($item->item_data->project_id) ? $item->item_data->project_id : NULL;
+      if(NULL !== $project_id) {
+        $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => (int)$project_id));
+      }
+      $subject_id = isset($item->item_data->subject_id) ? $item->item_data->subject_id : NULL;
+      if(NULL !== $project_id) {
+        $subject_data = $this->repo_storage_controller->execute('getSubject', array('subject_id' => (int)$subject_id));
+      }
+
+      // Truncate the item_description so the breadcrumb don't blow up.
+      $more_indicator = (strlen($item->item_data->item_description) > 50) ? '...' : '';
+      $item->item_data->item_description_truncated = substr($item->item_data->item_description, 0, 50) . $more_indicator;
+
+      return $this->render('datasets/browse_datasets.html.twig', array(
+        'page_title' => isset($item->item_data->item_description_truncated) ? 'Item: ' . $item->item_data->item_description_truncated : 'Item',
+        'project_id' => $project_id,
+        'subject_id' => $subject_id,
+        'item_id' => $item_id,
+        'project_data' => $project_data,
+        'subject_data' => $subject_data,
+        'item_data' => $item->item_data,
+        'destination' => $project_id . '|' . $subject_id . '|' . $item_id,
+        'uploads_path' => $this->uploads_path,
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+      ));
+    }
+
+
+  /**
+     * Matches /admin/item/*
+     *
+     * @Route("/admin/item/add/{project_id}/{subject_id}", name="item_add", methods={"GET","POST"}, defaults={"item_id" = null, "project_id" = null, "subject_id" = null})
+     * @Route("/admin/item/manage/{item_id}", name="items_manage", methods={"GET","POST"}, defaults={"item_id" = null})
      *
      * @param   object  Connection  Database connection object
      * @param   object  Request     Request object
@@ -138,6 +220,7 @@ class ItemController extends Controller
         $post = $request->request->all();
         $item->project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
         $item->subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
+
         $id = false;
         $ajax = false;
 
@@ -258,7 +341,7 @@ class ItemController extends Controller
               return $response;
             } else {
                 $this->addFlash('message', 'Item successfully updated.');
-                return $this->redirect('/admin/projects/datasets/' . $item->project_id . '/' . $item->subject_id . '/' . $id);
+                return $this->redirect('/admin/item/view/' . $id);
             }
         }
 
@@ -374,7 +457,7 @@ class ItemController extends Controller
     /**
      * Delete Multiple Items
      *
-     * @Route("/admin/projects/items/{project_id}/{subject_id}/delete", name="items_remove_records", methods={"GET"})
+     * @Route("/admin/item/delete/{project_id}", name="items_remove_records", methods={"GET"})
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
@@ -385,10 +468,8 @@ class ItemController extends Controller
     {
         $ids = $request->query->get('ids');
         $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
-        $subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
 
-        if(!empty($ids) && $project_id && $subject_id) {
-
+        if(!empty($ids) && $project_id) { // && $subject_id) {
           $ids_array = explode(',', $ids);
 
           foreach ($ids_array as $key => $id) {
@@ -403,8 +484,7 @@ class ItemController extends Controller
         } else {
           $this->addFlash('message', 'Missing data. No records removed.');
         }
-
-        return $this->redirectToRoute('items_browse', array('project_id' => $project_id, 'subject_id' => $subject_id));
+        return $this->redirectToRoute('project_view', array('project_id' => $project_id));
     }
 
     /**

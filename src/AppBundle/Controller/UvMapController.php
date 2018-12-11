@@ -35,44 +35,10 @@ class UvMapController extends Controller
   }
 
   /**
-   * @Route("/admin/projects/uv_map/datatables_browse", name="uv_map_browse_datatables", methods="POST")
+   * Matches /admin/uv_map/manage/*
    *
-   * @param Connection $conn
-   * @param Request $request
-   * @return JsonResponse The query result in JSON
-   */
-  public function datatablesBrowse(Connection $conn, Request $request)
-  {
-    $req = $request->request->all();
-    $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
-    $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
-    $sort_order = $req['order'][0]['dir'];
-    $start_record = !empty($req['start']) ? $req['start'] : 0;
-    $stop_record = !empty($req['length']) ? $req['length'] : 20;
-
-    $query_params = array(
-      'record_type' => 'uv_map',
-      'sort_field' => $sort_field,
-      'sort_order' => $sort_order,
-      'start_record' => $start_record,
-      'stop_record' => $stop_record,
-      'parent_id' => $req['parent_id']
-    );
-    if ($search) {
-      $query_params['search_value'] = $search;
-    }
-
-    
-    $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
-
-    return $this->json($data);
-
-  }
-
-  /**
-   * Matches /admin/projects/uv_map/manage/*
-   *
-   * @Route("/admin/projects/uv_map/manage/{parent_id}/{id}", name="uv_map_manage", methods={"GET","POST"}, defaults={"parent_id" = null, "id" = null})
+   * @Route("/admin/uv_map/add/{parent_id}", name="uv_map_manage", methods={"GET","POST"}, defaults={"id" = null})
+   * @Route("/admin/uv_map/manage/{id}", name="uv_map_manage", methods={"GET","POST"})
    *
    * @param Connection $conn
    * @param Request $request
@@ -140,7 +106,7 @@ class UvMapController extends Controller
   }
 
   /**
-   * @Route("/admin/projects/uv_map/delete", name="uv_map_remove_records", methods={"GET"})
+   * @Route("/admin/uv_map/delete", name="uv_map_remove_records", methods={"GET"})
    *
    * @param Connection $conn
    * @param Request $request
@@ -185,7 +151,7 @@ class UvMapController extends Controller
   }
 
   /**
-   * /\/\/\/ Route("/admin/projects/uv_map/{id}", name="uv_map_browse", methods="GET", defaults={"id" = null})
+   * /\/\/\/ Route("/admin/uv_map/{id}", name="uv_map_browse", methods="GET", defaults={"id" = null})
    *
    * @param Connection $conn
    * @param Request $request

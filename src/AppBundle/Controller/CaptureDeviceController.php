@@ -40,7 +40,7 @@ class CaptureDeviceController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/capture_device/datatables_browse", name="capture_device_browse_datatables", methods="POST")
+     * @Route("/admin/datatables_browse_capture_device", name="capture_device_browse_datatables", methods={"GET","POST"})
      *
      * @param Request $request
      * @return JsonResponse The query result in JSON
@@ -73,9 +73,10 @@ class CaptureDeviceController extends Controller
     }
 
     /**
-     * Matches /admin/projects/capture_device/manage/*
+     * Matches /admin/capture_device/manage/*
      *
-     * @Route("/admin/projects/capture_device/manage/{parent_id}/{id}", name="capture_device_manage", methods={"GET","POST"}, defaults={"parent_id" = null, "id" = null})
+     * @Route("/admin/capture_device/add/{parent_id}", name="capture_device_add", methods={"GET","POST"}, defaults={"id" = null})
+     * @Route("/admin/capture_device/manage/{id}", name="capture_device_manage", methods={"GET","POST"})
      *
      * @param Connection $conn
      * @param Request $request
@@ -98,7 +99,7 @@ class CaptureDeviceController extends Controller
         $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         // If no parent_id is passed, throw a createNotFoundException (404).
-        if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
+        if(!$parent_id && !$id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
         if(!empty($id) && empty($post)) {
@@ -112,25 +113,28 @@ class CaptureDeviceController extends Controller
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
-        $data->capture_data_element_id = $parent_id;
+        if(empty($id)) {
+          $data->capture_data_element_id = $parent_id;
+        }
         $data = (array)$data;
 
         // Back link
         $back_link = $request->headers->get('referer');
         if(isset($data->project_id)) {
-            $back_link = "/admin/projects/dataset_element/{$data->project_id}/{$data->subject_id}/{$data->item_id}/{$data->capture_dataset_id}/{$data->capture_data_element_id}";
+          $back_link = "/admin/dataset_element/{$data->capture_data_element_id}";
         }
 
         // Create the form
         $form = $this->createForm(CaptureDeviceForm::class, $data);
-        
+
         // Handle the request
         $form->handleRequest($request);
-        
+
         // If form is submitted and passes validation, insert/update the database record.
         if ($form->isSubmitted() && $form->isValid()) {
 
             $data = $form->getData();
+            print_r($data);
             $id = $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => 'capture_device',
               'record_id' => $id,
@@ -140,12 +144,14 @@ class CaptureDeviceController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/capture_device/manage/' . $data->capture_data_element_id . '/' . $id);
+            //$referer = $request->headers->get('referer');
+            //return $this->redirect($referer);
+            return $this->redirect('/admin/dataset_element/manage/' . $data['capture_data_element_id']);
         }
 
         return $this->render('datasetElements/capture_device_form.html.twig', array(
             'page_title' => !empty($id) ? 'Capture Device: ' . $data->calibration_file : 'Create Capture Device',
-            'data' => $data,
+            'data' => (array)$data,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
             'back_link' => $back_link,
@@ -153,7 +159,7 @@ class CaptureDeviceController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/capture_device/delete", name="capture_device_remove_records", methods={"GET"})
+     * @Route("/admin/capture_device/delete", name="capture_device_remove_records", methods={"GET"})
      *
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\RedirectResponse|Response Redirect or render

@@ -40,7 +40,7 @@ class ProcessingActionController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/processing_action/datatables_browse", name="processing_action_browse_datatables", methods="POST")
+     * @Route("/admin/processing_action/datatables_browse", name="processing_action_browse_datatables", methods="POST")
      *
      * @param Request $request
      * @return JsonResponse The query result in JSON
@@ -73,9 +73,10 @@ class ProcessingActionController extends Controller
     }
 
     /**
-     * Matches /admin/projects/processing_action/manage/*
+     * Matches /admin/processing_action/manage/*
      *
-     * @Route("/admin/projects/processing_action/manage/{parent_id}/{id}", name="processing_action_manage", methods={"GET","POST"}, defaults={"parent_id" = null, "id" = null})
+     * @Route("/admin/processing_action/add/{parent_id}", name="processing_action_manage", methods={"GET","POST"}, defaults={"id" = null})
+     * @Route("/admin/processing_action/manage/{id}", name="processing_action_manage", methods={"GET","POST"})
      *
      * @param Connection $conn
      * @param Request $request
@@ -145,7 +146,7 @@ class ProcessingActionController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/processing_action/delete", name="processing_action_remove_records", methods={"GET"})
+     * @Route("/admin/processing_action/delete", name="processing_action_remove_records", methods={"GET"})
      *
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\RedirectResponse|Response Redirect or render
@@ -182,7 +183,8 @@ class ProcessingActionController extends Controller
             $this->addFlash('message', 'Missing data. No records removed.');
         }
 
-        return $this->redirectToRoute('processing_action_browse');
+        $referer = $request->headers->get('referer');
+        return $this->redirect($referer);
     }
 
     /**

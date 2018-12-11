@@ -79,8 +79,45 @@ class AdminController extends Controller
         }
     }
 
+  /**
+   * @Route("/admin/datatables_browse", name="browse_datatables", methods="POST")
+   *
+   * @param Request $request
+   * @return JsonResponse The query result in JSON
+   */
+  public function datatablesBrowse(Request $request)
+  {
+    $req = $request->request->all();
+    $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+    $sort_field = isset($req['columns']) && isset($req['order'][0]['column']['data']) ? $req['columns'][ $req['order'][0]['column'] ]['data'] : '';
+    $sort_order = isset($req['order'][0]['dir']) ? $req['order'][0]['dir'] : 'asc';
+    $start_record = !empty($req['start']) ? $req['start'] : 0;
+    $stop_record = !empty($req['length']) ? $req['length'] : 20;
+    $parent_id = !empty($req['parent_id']) ? $req['parent_id'] : 0;
+    $record_type = isset($req['record_type']) ? $req['record_type'] : NULL;
+    $parent_id_field = isset($req['parent_type']) ? $req['parent_type'] : NULL;
+
+    $query_params = array(
+      'record_type' => $record_type,
+      'sort_field' => $sort_field,
+      'sort_order' => $sort_order,
+      'start_record' => $start_record,
+      'stop_record' => $stop_record,
+      'parent_id' => $parent_id,
+      'parent_id_field' => $parent_id_field,
+    );
+
+    if ($search) {
+      $query_params['search_value'] = $search;
+    }
+
+    $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
+
+    return $this->json($data);
+  }
+
     /**
-     * @Route("/admin/datatables_browse_recent_projects/", name="browse_recent_projects", methods="POST")
+     * @Route("/admin/datatables_browse_recent_projects/", name="browse_recent_projects", methods={"GET","POST"})
      *
      * Browse recent projects
      *
@@ -89,7 +126,7 @@ class AdminController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatablesBrowseRecentProjects(Request $request, SubjectController $subjects)
+    public function datatablesBrowseRecentProjects(Request $request)
     {
         $data = array();
         $req = $request->request->all();
@@ -118,14 +155,6 @@ class AdminController extends Controller
         }
 
         $data = $this->repo_storage_controller->execute('getDatatableProject', $query_params);
-
-        // Get the subjects count
-        if(!empty($data['aaData'])) {
-          foreach ($data['aaData'] as $key => $value) {
-            $project_subjects = $subjects->getSubjects($value['project_id']);
-            $data['aaData'][$key]['subjects_count'] = count($project_subjects);
-          }
-        }
 
       return $this->json($data);
     }
@@ -160,14 +189,6 @@ class AdminController extends Controller
         }
 
         $data = $this->repo_storage_controller->execute('getDatatableSubject', $query_params); //@todo or getDatatableSubjectItem ?
-
-        // Get the items count
-        if(!empty($data['aaData'])) {
-            foreach ($data['aaData'] as $key => $value) {
-                $subject_items = $items->getItems($value['subject_id']);
-                $data['aaData'][$key]['items_count'] = count($subject_items);
-            }
-        }
 
         return $this->json($data);
     }

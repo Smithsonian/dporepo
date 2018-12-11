@@ -42,7 +42,7 @@
                 <div class="panel panel-default">
                     <div class="panel-body">
                         <h2>Photogrammetry Scale Bar Pair</h2>
-                        <input type="hidden" id="delete-path" value="admin/projects/photogrammetry_scale_bar_target_pair/delete" />
+                        <input type="hidden" id="delete-path" value="admin/photogrammetry_scale_bar_target_pair/delete" />
                         <table id="browse_photogrammetry_scale_bar_target_pairs" class="table table-striped table-bordered" cellspacing="0" width="100%">
                             <thead>
                             <tr>
@@ -99,7 +99,7 @@
               "serverSide": true,
               // Path to the file that is going to handle the queries.
               "ajax": {
-                "url": "/admin/projects/photogrammetry_scale_bar_target_pair/datatables_browse",
+                "url": "/admin/datatables_browse_photogrammetry_scale_bar_target_pair",
                 "data": {
                   "parent_id": parent_id
                 }
@@ -129,13 +129,13 @@
                   if(thisTableCell.hasClass('manage_column')) return;
                   // Send to the details page.
                   var this_id = thisTableCell.closest("tr").attr('id');
-                  window.location.href = '/admin/projects/photogrammetry_scale_bar_target_pair/manage/' + parent_id + '/' + this_id;
+                  window.location.href = '/admin/photogrammetry_scale_bar_target_pair/manage/' + this_id;
                 });
               }
             });
             var add_button = $('<a />')
               .addClass('btn btn-default add-record-button')
-              .attr('href', '/admin/projects/photogrammetry_scale_bar_target_pair/manage/' + parent_id)
+              .attr('href', '/admin/photogrammetry_scale_bar_target_pair/add/' + parent_id)
               .html('<span class="glyphicon glyphicon-plus"></span> Add a Photogrammetry Scale Bar Pair');
             $('.datatables_bulk_actions').append(add_button);
           });

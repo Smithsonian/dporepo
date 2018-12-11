@@ -10,8 +10,7 @@
 
   <ol class="breadcrumb">
     <li><a href="/admin">Dashboard</a></li>
-    <li><a href="/admin/workspace">Browse Projects</a></li>
-    <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ project_id }}">{{ project_data.project_name|default('')|e }}</a></li>
+    <li><a href="/admin/workspace">Browse Subjects</a></li>
     <li class="active"><strong>Subject:</strong> {{ subject_data.subject_name|e }}</li>
   </ol>
 
@@ -35,8 +34,7 @@
       </dl>
     </div>
     <div class="col-sm-12 col-md-12">
-      <a href="/admin/projects/subjects/{{ project_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Project</a>
-      <a href="/admin/projects/subject/{{ project_id }}/{{ subject_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span> Edit Subject</a>
+      <a href="/admin/subject/manage/{{ subject_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span> Edit Subject</a>
     </div>
 
     <div class="col-sm-12 col-md-12 child-data">
@@ -44,7 +42,7 @@
         <div class="panel-body">
 
           <h2>Items</h2>
-          <a href="/admin/projects/item/{{ project_id }}/{{ subject_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add an Item</a>
+          <a href="/admin/item/add//{{ subject_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add an Item</a>
 
           <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
@@ -76,9 +74,8 @@
   <script type="text/javascript">
     $(document).ready(function() {
 
-      var project_id = "{{ project_id }}",
-          subject_id = "{{ subject_id }}",
-          details_page = "/admin/projects/datasets/";
+      var subject_id = "{{ subject_id }}",
+          details_page = "/admin/item/view/";
 
       $('#browse').dataTable( {
         "columns": [
@@ -100,7 +97,7 @@
         // All data management will be done on the server side.
         "serverSide": true,
         // Path to the file that is going to handle the queries.
-        "ajax": "/admin/projects/datatables_browse_items/{{ project_id }}/{{ subject_id }}",
+        "ajax": "/admin/datatables_browse_subject_items/{{ subject_id }}",
         // Method type.
         "serverMethod": "POST",
         // Values in the length dropdown.
@@ -134,7 +131,7 @@
             if(thisTableCell.hasClass('manage_column')) return;
             // Send to the details page.
             var item_id = thisTableCell.closest("tr").attr('id');
-            window.location.href = details_page + project_id + '/' + subject_id + '/' + item_id;
+            window.location.href = details_page + item_id;
           });
 
         }

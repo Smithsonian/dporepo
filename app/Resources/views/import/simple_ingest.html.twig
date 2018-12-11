@@ -295,7 +295,7 @@
           "columns": [
             { "data": "project_name" },
             { "data": "stakeholder_label" },
-            { "data": "subjects_count" },
+            { "data": "items_count" },
             { "data": "date_created" },
             { "data": "last_modified" }
           ],
@@ -309,7 +309,7 @@
           // All data management will be done on the server side.
           "serverSide": true,
           // Path to the file that is going to handle the queries.
-          "ajax": "/admin/projects/datatables_browse_projects",
+          "ajax": "/admin/datatables_browse_projects",
           // Method type.
           "serverMethod": "POST",
           // Values in the length dropdown.
@@ -338,7 +338,7 @@
               }
 
               // Transfer record metadata to the parent window.
-              var fields = ['project_id', 'project_name', 'last_modified', 'stakeholder_label', 'subjects_count'];
+              var fields = ['project_id', 'project_name', 'last_modified', 'stakeholder_label', 'items_count'];
               var html = '<dl>';
               // Loop through the metadata and choose fileds in the 'fields' array.
               // console.log(aData);
@@ -370,7 +370,7 @@
               // if(thisTableCell.hasClass('manage_column')) return;
               // // Send to the details page.
               // var project_id = thisTableCell.closest("tr").attr('id');
-              // // window.location.href = "/admin/projects/subjects/" + project_id;
+              // // window.location.href = "/admin/project/view/" + project_id;
             });
           }
         });
@@ -382,9 +382,7 @@
       function browseSubjects(projectId) {
 
         var data = $('body').data();
-        var ajaxUrl = data.project_id
-            ? '/admin/projects/datatables_browse_subjects/' + data.project_id
-            : '/admin/projects/datatables_browse_subjects';
+        var ajaxUrl = '/admin/datatables_browse_subjects';
 
         var subjectDt = $('#subject').dataTable( {
           "columns": [
@@ -460,7 +458,7 @@
               // if(thisTableCell.hasClass('manage_column')) return;
               // // Send to the details page.
               // var subject_id = thisTableCell.closest("tr").attr('id');
-              // // window.location.href = "/admin/projects/items/" + project_id + '/' + subject_id;
+              // // window.location.href = "/admin/subject/view/" + '/' + subject_id;
             });
           }
         });
@@ -472,9 +470,9 @@
       function browseItems(subjectId) {
 
         var data = $('body').data();
-        var ajaxUrl = (data.subject_id && data.project_id)
-            ? '/admin/projects/datatables_browse_items/' + data.project_id + '/' + data.subject_id
-            : '/admin/projects/datatables_browse_items';
+        var ajaxUrl = (data.project_id)
+            ? '/admin/datatables_project_browse_items/' + data.project_id
+            : '/admin/datatables_subject_browse_items'  + data.subject_id;
 
         var itemDt = $('#item').dataTable( {
           "columns": [
@@ -559,7 +557,7 @@
         $.ajax({
           'type': 'POST'
           ,'dataType': 'json'
-          ,'url': '/admin/projects/subject/' + $('body').data('project_id') + '/ajax'
+          ,'url': '/admin/subject/add/ajax'
           ,'data': formData
           ,success: function(data) {
             if(data) {
@@ -612,11 +610,11 @@
         // Avoid submitting the form multiple times.
         $('#item_save').attr('disabled', true);
 
-        // AJAX: Create a new dataset record.
+        // AJAX: Create a new item record.
         $.ajax({
           'type': 'POST'
           ,'dataType': 'json'
-          ,'url': '/admin/projects/item/' + $('body').data('project_id') + '/' + $('body').data('subject_id') + '/ajax'
+          ,'url': '/admin/item/add/' + $('body').data('project_id') + '/' + $('body').data('subject_id') + '/ajax'
           ,'data': formData
           ,success: function(data) {
             if(data) {

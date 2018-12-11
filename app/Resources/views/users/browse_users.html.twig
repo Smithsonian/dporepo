@@ -79,7 +79,7 @@
        });
 
       // Send to details page when clicked.
-      var users_details_page = "/admin/users/";
+      var users_details_page = "/admin/user/view/";
       $('#browse_users tbody').on('click','td',function(event){
         if(!$(this).hasClass("manage_column")){
           var user_id = $(this).closest("tr").attr('id');

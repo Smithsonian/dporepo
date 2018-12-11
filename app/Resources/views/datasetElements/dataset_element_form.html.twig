@@ -15,10 +15,9 @@
     <ol class="breadcrumb">
         <li><a href="/admin">Dashboard</a></li>
         <li><a href="/admin/workspace">Browse Projects</a></li>
-        <li><strong>Project:</strong> <a href="/admin/projects/subjects/{{ project_id }}">{{ project_data.project_name|e }}</a></li>
-        <li><strong>Subject:</strong> <a href="/admin/projects/items/{{ project_id }}/{{ subject_id }}">{{ subject_data.subject_name|e }}</a></li>
-        <li><strong>Item:</strong> <a href="/admin/projects/datasets/{{ project_id }}/{{ subject_id }}/{{ item_id }}">{{ item_data.item_description_truncated|e }}</a></li>
-        <li><strong>Capture Dataset:</strong> <a href="/admin/projects/dataset_elements/{{ project_id }}/{{ subject_id }}/{{ item_id }}/{{ capture_dataset_id }}">{{ dataset_data.capture_dataset_name|e }}</a></li>
+        <li><strong>Project:</strong> <a href="/admin/project/view/{{ project_id }}">{{ project_data.project_name|e }}</a></li>
+        <li><strong>Item:</strong> <a href="/admin/item/view/{{ item_id }}">{{ item_data.item_description_truncated|e }}</a></li>
+        <li><strong>Capture Dataset:</strong> <a href="/admin/capture_dataset_view/{{ capture_dataset_id }}">{{ dataset_data.capture_dataset_name|e }}</a></li>
         <li class="active">{% if dataset_element_data.capture_sequence_number is defined %}<strong>Capture Data Element:</strong> {{ dataset_element_data.capture_sequence_number|e }}{% else %}Add a Capture Data Element{% endif %}</li>
     </ol>
 
@@ -57,7 +56,7 @@
                 <div class="panel panel-default">
                     <div class="panel-body">
                         <h2>Capture Data Files</h2>
-                        <input type="hidden" id="delete-path" value="admin/projects/capture_data_files/delete" />
+                        <input type="hidden" id="delete-path" value="admin/capture_data_file/delete" />
                         <table id="browse_capture_data_files" class="table table-striped table-bordered" cellspacing="0" width="100%">
                             <thead>
                             <tr>
@@ -76,7 +75,7 @@
                 <div class="panel panel-default">
                     <div class="panel-body">
                         <h2>Capture Devices</h2>
-                        <input type="hidden" id="delete-path" value="admin/projects/capture_device/delete" />
+                        <input type="hidden" id="delete-path" value="admin/capture_device/delete" />
                         <table id="browse_capture_devices" class="table table-striped table-bordered" cellspacing="0" width="100%">
                             <thead>
                             <tr>
@@ -126,7 +125,7 @@
               "serverSide": true,
               // Path to the file that is going to handle the queries.
               "ajax": {
-                "url": "/admin/projects/capture_data_files/datatables_browse",
+                "url": "/admin/datatables_browse_capture_data_files",
                 "data": {
                   "parent_id": capture_data_element_id
                 }
@@ -156,13 +155,13 @@
                   if(thisTableCell.hasClass('manage_column')) return;
                   // Send to the details page.
                   var this_id = thisTableCell.closest("tr").attr('id');
-                  window.location.href = '/admin/projects/capture_data_files/manage' + '/' + capture_data_element_id + '/' + this_id;
+                  window.location.href = '/admin/capture_data_file/manage' + '/' + this_id;
                 });
               }
             });
             var capture_data_file_add_button = $('<a />')
               .addClass('btn btn-default add-record-button')
-              .attr('href', '/admin/projects/capture_data_files/manage/' + capture_data_element_id)
+              .attr('href', '/admin/capture_data_file/add/' + capture_data_element_id)
               .html('<span class="glyphicon glyphicon-plus"></span> Add a Capture Data File');
             $('#browse_capture_data_files_wrapper').find('.datatables_bulk_actions').append(capture_data_file_add_button);
             $('#browse_capture_devices').dataTable( {
@@ -183,7 +182,7 @@
               "serverSide": true,
               // Path to the file that is going to handle the queries.
               "ajax": {
-                "url": "/admin/projects/capture_device/datatables_browse",
+                "url": "/admin/datatables_browse_capture_device",
                 "data": {
                   "parent_id": capture_data_element_id
                 }
@@ -213,13 +212,13 @@
                   if(thisTableCell.hasClass('manage_column')) return;
                   // Send to the details page.
                   var this_id = thisTableCell.closest("tr").attr('id');
-                  window.location.href = '/admin/projects/capture_device/manage' + '/' + capture_data_element_id + '/' + this_id;
+                  window.location.href = '/admin/capture_device/manage/' + this_id;
                 });
               }
             });
             var capture_device_add_button = $('<a />')
               .addClass('btn btn-default add-record-button')
-              .attr('href', '/admin/projects/capture_device/manage/' + capture_data_element_id)
+              .attr('href', '/admin/capture_device/add/' + capture_data_element_id)
               .html('<span class="glyphicon glyphicon-plus"></span> Add a Capture Device');
             $('#browse_capture_devices_wrapper').find('.datatables_bulk_actions').append(capture_device_add_button);
           });

@@ -295,10 +295,14 @@ class RepoStorageHybrid implements RepoStorage {
         'table_name' => 'item',
         'field_name' => 'item_id',
       );
-    $query_params['fields'][] = array(
-      'table_name' => 'item',
-      'field_name' => 'subject_id',
-    );
+      $query_params['fields'][] = array(
+        'table_name' => 'item',
+        'field_name' => 'project_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'item',
+        'field_name' => 'subject_id',
+      );
       $query_params['fields'][] = array(
         'table_name' => 'item_type',
         'field_name' => 'label',
@@ -488,7 +492,6 @@ class RepoStorageHybrid implements RepoStorage {
 
 
     // Get model files.
-
     $query_params = array(
       'fields' => array(),
       'base_table' => 'model_file',
@@ -706,8 +709,7 @@ class RepoStorageHybrid implements RepoStorage {
       else {
         // Get from project
         $sql = "SELECT p.api_published, p.api_discoverable FROM project p
-          LEFT JOIN subject on p.project_id = subject.project_id
-          LEFT JOIN item on subject.subject_id = item.subject_id
+          LEFT JOIN item on p.project_id = item.project_id
           WHERE item.item_id= :item_id";
         $statement = $this->connection->prepare($sql);
         $statement->bindValue(":item_id", $return_data['item_id'], PDO::PARAM_STR);
@@ -792,7 +794,7 @@ class RepoStorageHybrid implements RepoStorage {
               capture_data_element.capture_dataset_id,
               capture_dataset.item_id,
               item.subject_id,
-              subject.project_id
+              item.project_id
             FROM capture_device
             LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_id = capture_device.capture_data_element_id
             LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = capture_data_element.capture_dataset_id
@@ -860,7 +862,7 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'subject_id',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'subject',
+      'table_name' => 'item',
       'field_name' => 'project_id',
     );
     $query_params['fields'][] = array(
@@ -941,6 +943,7 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'photogrammetry_scale_bar_id',
     );
     $query_params['fields'][] = array(
+      'table_name' => 'photogrammetry_scale_bar',
       'field_name' => 'capture_dataset_id',
     );
     $query_params['fields'][] = array(
@@ -967,7 +970,7 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'subject_id',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'subject',
+      'table_name' => 'item',
       'field_name' => 'project_id',
     );
     $query_params['fields'][] = array(
@@ -1091,7 +1094,6 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
-
   /**
    * Getters for multiple records.
    * ----------------------------------------------------------------
@@ -1187,7 +1189,7 @@ class RepoStorageHybrid implements RepoStorage {
             LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = capture_data_element.capture_dataset_id
             LEFT JOIN item ON item.item_id = capture_dataset.item_id
             LEFT JOIN subject ON subject.subject_id = item.subject_id
-            LEFT JOIN project ON project.project_id = subject.project_id
+            LEFT JOIN project ON project.project_id = item.project_id
             WHERE capture_data_element.active = 1
             AND capture_data_element.capture_dataset_id = :capture_dataset_id";
 
@@ -2623,132 +2625,91 @@ class RepoStorageHybrid implements RepoStorage {
    */
   public function getDatatableProject($params) {
 
-    $record_type = 'project';
     $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
-    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
-    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
-    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : 'asc';
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : 0;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : 20;
 
     $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
     $project_ids = array_key_exists('project_ids', $params) ? $params['project_ids'] : NULL;
     $date_range_start = array_key_exists('date_range_start', $params) ? $params['date_range_start'] : NULL;
     $date_range_end = array_key_exists('date_range_end', $params) ? $params['date_range_end'] : NULL;
 
-    $query_params = array(
-      'distinct' => true, // @todo Do we always want this to be true?
-      'base_table' => $record_type,
-      'fields' => array(),
-    );
+    $select_sql = " DISTINCT 
+          project.project_id as manage, project.project_id, project.project_name, project.stakeholder_guid, 
+          project.date_created, project.last_modified, project.active, project.project_id as DT_RowId, 
+          isni_data.isni_label as stakeholder_label, COUNT(item.item_id) as items_count
+          FROM project 
+          LEFT JOIN isni_data ON project.stakeholder_guid = isni_data.isni_id 
+          LEFT JOIN item ON project.project_id = item.project_id
+          ";
 
-    $query_params['limit'] = array(
-      'limit_start' => $start_record,
-      'limit_stop' => $stop_record,
-    );
-
-    if (!empty($sort_field) && !empty($sort_order)) {
-      $query_params['sort_fields'][] = array(
-        'field_name' => $sort_field,
-        'sort_order' => $sort_order,
-      );
-    } else {
-      $query_params['sort_fields'][] = array(
-        'field_name' => $record_type . '.last_modified',
-        'sort_order' => 'DESC',
-      );
+    $where_sql = " WHERE (project.active = 1) AND (item.active = 1 OR item.active IS NULL) ";
+    if(NULL !== $search_value) {
+      $where_sql .= " AND (
+        project.project_name LIKE :search_value
+        OR isni_data.isni_label LIKE :search_value
+        OR project.date_created LIKE :search_value
+        OR project.last_modified LIKE :search_value
+      )";
     }
-
-    $query_params['related_tables'][] = array(
-      'table_name' => 'isni_data',
-      'table_join_field' => 'isni_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'project',
-      'base_join_field' => 'stakeholder_guid',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => $record_type . '_id',
-      'field_alias' => 'manage',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => 'project_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => 'project_name',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => 'stakeholder_guid',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => 'date_created',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => 'last_modified',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => 'active',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => $record_type . '_id',
-      'field_alias' => 'DT_RowId',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'isni_data',
-      'field_name' => 'isni_label',
-      'field_alias' => 'stakeholder_label',
-    );
-
-    $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
-    $query_params['search_type'] = 'AND';
-    if (NULL !== $search_value) {
-      $query_params['search_params'][1] = array(
-        'field_names' => array(
-          $record_type . '.project_name',
-          'isni_data.isni_label',
-          $record_type . '.date_created',
-          $record_type . '.last_modified',
-        ),
-        'search_values' => array($search_value),
-        'comparison' => 'LIKE',
-      );
-    }
-
     if (NULL !== $project_ids && is_array($project_ids)) {
-      $i = count($query_params['search_params']);
-      $query_params['search_params'][$i] = array(
-        'field_names' => array(
-          $record_type . '.project_id',
-        ),
-        'search_values' => $project_ids,
-        'comparison' => 'IN',
-        'comparison_type' => 'INT',
-      );
+      $project_ids_placeholder = array();
+      foreach($project_ids as $k => $pid) {
+        $project_ids_placeholder[] = ':project_id_' . $k;
+      }
+      if(count($project_ids_placeholder) > 0) {
+        $where_sql .= " AND ( project.project_id IN (" . implode(',', $project_ids_placeholder) . " ) )";
+      }
     }
 
     if(NULL !== $date_range_start) {
-      $c = count($query_params['search_params']);
-      $query_params['search_params'][$c] = array(
-        'field_names' => array('project.last_modified'),
-        'search_values' => array($date_range_start),
-        'comparison' => '<',
-      );
+      $where_sql .= " AND (project.last_modified < :date_range_start) ";
     }
     if(NULL !== $date_range_end) {
-      $c = count($query_params['search_params']);
-      $query_params['search_params'][$c] = array(
-        'field_names' => array('project.last_modified'),
-        'search_values' => array($date_range_end),
-        'comparison' => '>',
-      );
+      $where_sql .= " AND (project.last_modified > :date_range_end) ";
     }
 
-    $data = $this->getRecordsDatatable($query_params);
+    $where_sql .= " GROUP BY project.project_id ";
+    $sql = "SELECT SQL_CALC_FOUND_ROWS "
+      . $select_sql. $where_sql;
+
+    if($sort_field) {
+      $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+    }
+    else {
+      $sql .= " ORDER BY project_name";
+    }
+
+    if(NULL !== $stop_record) {
+      $sql .= " LIMIT {$start_record}, {$stop_record} ";
+    }
+
+    $statement = $this->connection->prepare($sql);
+    if(strlen(trim($search_value)) > 0) {
+      //$statement->bindValue(":search_value", "%", PDO::PARAM_STR);
+      $statement->bindValue(":search_value", '%' . $search_value . '%', PDO::PARAM_STR);
+    }
+    if (NULL !== $project_ids && is_array($project_ids)) {
+      foreach($project_ids as $k => $pid) {
+        $statement->bindValue(":project_id_" . $k, $pid, PDO::PARAM_INT);
+      }
+    }
+    if(NULL !== $date_range_start) {
+      $statement->bindValue(":date_range_start", $date_range_start);
+    }
+    if(NULL !== $date_range_end) {
+      $statement->bindValue(":date_range_end", $date_range_end);
+    }
+    $statement->execute();
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
+    $statement->execute();
+    $count = $statement->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+    $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
+
     return $data;
 
   }
@@ -2759,117 +2720,87 @@ class RepoStorageHybrid implements RepoStorage {
    */
   public function getDatatableSubject($params) {
 
-      $project_id = array_key_exists('project_id', $params) ? $params['project_id'] : NULL;
-      $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
-      $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
-      $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
-      $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
-      $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : 'asc';
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : 0;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : 20;
 
-      $query_params = array(
-        'fields' => array(),
-        'base_table' => 'subject',
-        'distinct' => true,
-        'search_params' => array(
-          0 => array('field_names' => array('subject.active'), 'search_values' => array(1), 'comparison' => '='),
-        ),
-        'search_type' => 'AND',
-      );
-      $query_params['limit'] = array(
-        'limit_start' => $start_record,
-        'limit_stop' => $stop_record,
-      );
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $project_ids = array_key_exists('project_ids', $params) ? $params['project_ids'] : NULL;
+    $date_range_start = array_key_exists('date_range_start', $params) ? $params['date_range_start'] : NULL;
+    $date_range_end = array_key_exists('date_range_end', $params) ? $params['date_range_end'] : NULL;
 
-      $query_params['related_tables'][] = array(
-        'table_name' => 'item',
-        'table_join_field' => 'subject_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'subject',
-        'base_join_field' => 'subject_id',
-      );
+    $select_sql = " DISTINCT 
+          subject.subject_id as manage, subject.subject_id, subject.subject_name, 
+          subject.holding_entity_guid, subject.local_subject_id, subject.subject_name, subject.subject_display_name,
+          subject.subject_guid, subject.last_modified, subject.active, subject.subject_id as DT_RowId, 
+          COUNT(item.item_id) as items_count
+          FROM subject 
+          LEFT JOIN item ON subject.subject_id = item.subject_id
+          ";
 
-      if ($search_value) {
-        $query_params['search_params'][1] = array(
-          'field_names' => array(
-            'subject.subject_name',
-            'subject.holding_entity_guid',
-            'subject.last_modified',
-          ),
-          'search_values' => array($search_value),
-          'comparison' => 'LIKE',
-        );
+    $where_sql = " WHERE (subject.active = 1) AND (item.active = 1 OR item.active IS NULL) ";
+    if(NULL !== $search_value) {
+      $where_sql .= " AND (
+        subject.subject_name LIKE :search_value
+        OR subject.subject_name LIKE :search_value
+        OR subject.subject_display_name LIKE :search_value
+        OR subject.holding_entity_guid LIKE :search_value
+        OR subject.subject_guid LIKE :search_value
+      )";
+    }
+
+    if(NULL !== $date_range_start) {
+      $where_sql .= " AND (subject.last_modified < :date_range_start) ";
+    }
+    if(NULL !== $date_range_end) {
+      $where_sql .= " AND (subject.last_modified > :date_range_end) ";
+    }
+
+    $where_sql = $where_sql . " GROUP BY subject.subject_id ";
+
+
+    $sql = "SELECT SQL_CALC_FOUND_ROWS "
+      . $select_sql. $where_sql;
+
+
+    if($sort_field) {
+      $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+    }
+    else {
+      $sql .= " ORDER BY subject.last_modified DESC";
+    }
+
+    if(NULL !== $stop_record) {
+      $sql .= " LIMIT {$start_record}, {$stop_record} ";
+    }
+
+    $statement = $this->connection->prepare($sql);
+    if(strlen(trim($search_value)) > 0) {
+      //$statement->bindValue(":search_value", "%", PDO::PARAM_STR);
+      $statement->bindValue(":search_value", '%' . $search_value . '%', PDO::PARAM_STR);
+    }
+    if (NULL !== $project_ids && is_array($project_ids)) {
+      foreach($project_ids as $k => $pid) {
+        $statement->bindValue(":project_id_" . $k, $pid, PDO::PARAM_INT);
       }
+    }
+    if(NULL !== $date_range_start) {
+      $statement->bindValue(":date_range_start", $date_range_start);
+    }
+    if(NULL !== $date_range_end) {
+      $statement->bindValue(":date_range_end", $date_range_end);
+    }
+    $statement->execute();
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-      if($project_id && is_numeric($project_id)) {
-        $count_params = count($query_params['search_params']);
-        $query_params['search_params'][$count_params] = array(
-          'field_names' => array(
-            'subject.project_id',
-          ),
-          'search_values' => array((int)$project_id),
-          'comparison' => '=',
-        );
-      }
+    $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
+    $statement->execute();
+    $count = $statement->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+    $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
 
-      // Fields.
-      $query_params['fields'][] = array(
-        'table_name' => 'subject',
-        'field_name' => 'subject_id',
-        'field_alias' => 'manage',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'subject',
-        'field_name' => 'subject_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'subject',
-        'field_name' => 'project_id',
-      );
-      $query_params['fields'][] = array(
-        'field_name' => 'holding_entity_guid',
-      );
-      $query_params['fields'][] = array(
-        'field_name' => 'local_subject_id',
-      );
-      $query_params['fields'][] = array(
-        'field_name' => 'subject_guid',
-      );
-      $query_params['fields'][] = array(
-        'field_name' => 'subject_name',
-      );
-      $query_params['fields'][] = array(
-        'field_name' => 'subject_display_name',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'subject',
-        'field_name' => 'last_modified',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'subject',
-        'field_name' => 'active',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'subject',
-        'field_name' => 'subject_id',
-        'field_alias' => 'DT_RowId',
-      );
-
-      $query_params['records_values'] = array();
-
-      if (!empty($sort_field) && !empty($sort_order)) {
-        $query_params['sort_fields'][] = array(
-          'field_name' => $sort_field,
-          'sort_order' => $sort_order,
-        );
-      } else {
-        $query_params['sort_fields'][] = array(
-          'field_name' => 'subject.last_modified',
-          'sort_order' => 'DESC',
-        );
-      }
-
-      $data = $this->getRecordsDatatable($query_params);
-      return $data;
+    return $data;
 
   }
 
@@ -3426,6 +3357,7 @@ class RepoStorageHybrid implements RepoStorage {
     $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
     $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
     $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+    $project_id = array_key_exists('project_id', $params) ? $params['project_id'] : NULL;
     $subject_id = array_key_exists('subject_id', $params) ? $params['subject_id'] : NULL;
 
     $query_params = array(
@@ -3448,6 +3380,16 @@ class RepoStorageHybrid implements RepoStorage {
         ),
         'search_values' => array($search_value),
         'comparison' => 'LIKE',
+      );
+    }
+    if($project_id && is_numeric($project_id)) {
+      $count_params = count($query_params['search_params']);
+      $query_params['search_params'][$count_params] = array(
+        'field_names' => array(
+          'item.project_id',
+        ),
+        'search_values' => array((int)$project_id),
+        'comparison' => '=',
       );
     }
     if($subject_id && is_numeric($subject_id)) {
@@ -3554,7 +3496,7 @@ class RepoStorageHybrid implements RepoStorage {
     $sql = " DISTINCT tmp.*
             FROM 
     
-            (SELECT model_id, model_id as manage, capture_dataset_id,
+            (SELECT model_id, model_id as manage, model.capture_dataset_id,
             parent_model_id, item_id, model_guid, date_of_creation, model_file_type,
             derived_from, creation_method, model_modality, units, is_watertight, model_purpose, point_count,
             has_normals, face_count, vertices_count, has_vertex_color, has_uv_space, model_maps, active,
@@ -3576,7 +3518,7 @@ class RepoStorageHybrid implements RepoStorage {
 
             UNION 
             
-            SELECT model_id, model_id as manage, capture_dataset_id,
+            SELECT model_id, model_id as manage, model.capture_dataset_id,
             parent_model_id, model.item_id, model_guid, date_of_creation, model_file_type,
             derived_from, creation_method, model_modality, units, is_watertight, model_purpose, point_count,
             has_normals, face_count, vertices_count, has_vertex_color, has_uv_space, model_maps, model.active,
@@ -3593,7 +3535,7 @@ class RepoStorageHybrid implements RepoStorage {
             ) as file_name
             
             FROM model
-            LEFT JOIN capture_dataset on capture_dataset_id = capture_dataset_id
+            LEFT JOIN capture_dataset on model.capture_dataset_id = capture_dataset.capture_dataset_id
             
             WHERE 
             capture_dataset.item_id=:item_id
@@ -4708,14 +4650,11 @@ class RepoStorageHybrid implements RepoStorage {
 
     //@todo trap for missing user_id or record_id.
     $sql = "UPDATE project
-                LEFT JOIN subject ON subject.project_id = project.project_id
-                LEFT JOIN item ON item.subject_id = subject.subject_id
+                LEFT JOIN item ON project.project_id = item.project_id
                 LEFT JOIN capture_dataset ON capture_dataset.item_id = item.item_id
                 LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_id = capture_dataset.capture_dataset_id
                 SET project.active = 0,
                     project.last_modified_user_account_id = :last_modified_user_account_id,
-                    subject.active = 0,
-                    subject.last_modified_user_account_id = :last_modified_user_account_id,
                     item.active = 0,
                     item.last_modified_user_account_id = :last_modified_user_account_id,
                     capture_dataset.active = 0,
@@ -4755,7 +4694,7 @@ class RepoStorageHybrid implements RepoStorage {
           $params['id_field_name'] = 'item.item_id';
           $params['select'] = 'project.project_id, subject.subject_id, item.item_id';
           $params['left_joins'] = 'LEFT JOIN subject ON subject.subject_id = item.subject_id
-              LEFT JOIN project ON project.project_id = subject.project_id';
+              LEFT JOIN project ON project.project_id = item.project_id';
           break;
 
         case 'capture_dataset':
@@ -4763,7 +4702,7 @@ class RepoStorageHybrid implements RepoStorage {
           $params['select'] = 'project.project_id, subject.subject_id, item.item_id, capture_dataset.capture_dataset_id';
           $params['left_joins'] = 'LEFT JOIN item ON item.item_id = capture_dataset.item_id
               LEFT JOIN subject ON subject.subject_id = item.subject_id
-              LEFT JOIN project ON project.project_id = subject.project_id';
+              LEFT JOIN project ON project.project_id = item.project_id';
           break;
 
         case 'capture_dataset_element':
@@ -4772,35 +4711,34 @@ class RepoStorageHybrid implements RepoStorage {
           $params['left_joins'] = 'LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = capture_data_element.capture_dataset_id
               LEFT JOIN item ON item.item_id = capture_dataset.item_id
               LEFT JOIN subject ON subject.subject_id = item.subject_id
-              LEFT JOIN project ON project.project_id = subject.project_id';
+              LEFT JOIN project ON project.project_id = item.project_id';
           break;
 
         case 'model_with_item_id':
           $params['record_type'] = 'model';
           $params['id_field_name'] = 'model.model_id';
-          $params['select'] = 'project.project_id, subject.subject_id, item.item_id, model.model_id';
+          $params['select'] = 'project.project_id, project.project_name, subject.subject_id, item.item_id, item.item_description, model.model_id';
           $params['left_joins'] = 'LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_id = model.capture_dataset_id
               -- LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = capture_data_element.capture_dataset_id
               LEFT JOIN item ON item.item_id = model.item_id
               LEFT JOIN subject ON subject.subject_id = item.subject_id
-              LEFT JOIN project ON project.project_id = subject.project_id';
+              LEFT JOIN project ON project.project_id = item.project_id';
           break;
-
         case 'model_with_capture_dataset_id':
           $params['record_type'] = 'model';
           $params['id_field_name'] = 'model.model_id';
-          $params['select'] = 'project.project_id, subject.subject_id, item.item_id, model.model_id';
+          $params['select'] = 'project.project_id, project.project_name, subject.subject_id, item.item_id, item.item_description, model.model_id';
           $params['left_joins'] = '
               LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = model.capture_dataset_id
               LEFT JOIN item ON item.item_id = capture_dataset.item_id
               LEFT JOIN subject ON subject.subject_id = item.subject_id
-              LEFT JOIN project ON project.project_id = subject.project_id';
+              LEFT JOIN project ON project.project_id = item.project_id';
           break;
 
         default: // subject
+          //@todo- subject does not have a parent
           $params['id_field_name'] = 'subject.subject_id';
-          $params['select'] = 'project.project_id, subject.subject_id';
-          $params['left_joins'] = 'LEFT JOIN project ON project.project_id = subject.project_id';
+          $params['select'] = 'subject.subject_id';
 
       }
 

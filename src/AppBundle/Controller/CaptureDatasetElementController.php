@@ -47,48 +47,7 @@ class CaptureDatasetElementController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/dataset_elements/{project_id}/{subject_id}/{item_id}/{capture_dataset_id}", name="dataset_elements_browse", methods="GET")
-     */
-    public function browseDatasetElements(Connection $conn, Request $request, ProjectController $projects, SubjectController $subjects, ItemController $items, CaptureDatasetController $datasets)
-    {
-
-        $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
-        $subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
-        $item_id = !empty($request->attributes->get('item_id')) ? $request->attributes->get('item_id') : false;
-        $id = !empty($request->attributes->get('capture_dataset_id')) ? $request->attributes->get('capture_dataset_id') : false;
-
-        // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $dataset_data = $datasets->getDataset((int)$id);
-        if(!$dataset_data) throw $this->createNotFoundException('The record does not exist');
-        
-        $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => $project_id));
-
-        $subject_data = $subjects->getSubject((int)$subject_id);
-        $item_data = $items->getItem((int)$item_id);
-        $dataset_element_data = $this->getDatasetElement((int)$id);
-
-        // Truncate the item_description.
-        $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
-        $item_data['item_description_truncated'] = substr($item_data['item_description'], 0, 50) . $more_indicator;
-
-        return $this->render('datasetElements/browse_dataset_elements.html.twig', array(
-            'page_title' => 'Capture Dataset: ' .  $dataset_data['capture_dataset_name'],
-            'project_id' => $project_id,
-            'subject_id' => $subject_id,
-            'item_id' => $item_id,
-            'capture_dataset_id' => $id,
-            'project_data' => $project_data,
-            'subject_data' => $subject_data,
-            'item_data' => $item_data,
-            'dataset_data' => $dataset_data,
-            'dataset_element_data' => $dataset_element_data,
-            'uploads_path' => $this->uploads_path,
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        ));
-    }
-
-    /**
-     * @Route("/admin/projects/datatables_browse_dataset_elements/{project_id}/{subject_id}/{item_id}/{capture_dataset_id}", name="dataset_elements_browse_datatables", methods="POST")
+     * @Route("/admin/datatables_browse_dataset_elements/{capture_dataset_id}", name="dataset_elements_browse_datatables", methods="POST")
      *
      * Browse dataset_elements
      *
@@ -128,18 +87,16 @@ class CaptureDatasetElementController extends Controller
     }
 
     /**
-     * Matches /admin/projects/dataset_element/*
+     * Matches /admin/dataset_element/*
      *
-     * @Route("/admin/projects/dataset_element/{project_id}/{subject_id}/{item_id}/{capture_dataset_id}/{capture_data_element_rep_id}", name="dataset_elements_manage", methods={"GET","POST"}, defaults={"capture_data_element_rep_id" = null})
-     *
-     * Note: capture_data_element_rep_id does not follow naming convention due to a 32 character limit for route variables in Symfony.
-     * The error - "Variable name "capture_data_element_id" cannot be longer than 32 characters in route pattern"
+     * @Route("/admin/dataset_element/add/{capture_dataset_id}", name="dataset_elements_add", methods={"GET","POST"}, defaults={"capture_data_element_id" = null})
+     * @Route("/admin/dataset_element/manage/{capture_data_element_id}", name="dataset_elements_manage", methods={"GET","POST"})
      *
      * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function showDatasetElementsForm( Connection $conn, Request $request, ProjectController $projects, SubjectController $subjects, ItemController $items, CaptureDatasetController $datasets )
+    function showDatasetElementsForm( Connection $conn, Request $request, SubjectController $subjects, ItemController $items, CaptureDatasetController $datasets )
     {
         
       $username = $this->getUser()->getUsernameCanonical();
@@ -153,7 +110,7 @@ class CaptureDatasetElementController extends Controller
 
         $dataset_element = new CaptureDatasetElement();
         $post = $request->request->all();
-        $id = !empty($request->attributes->get('capture_data_element_rep_id')) ? $request->attributes->get('capture_data_element_rep_id') : false;
+        $id = !empty($request->attributes->get('capture_data_element_id')) ? $request->attributes->get('capture_data_element_id') : false;
 
         // Retrieve data from the database.
         if (!empty($id) && empty($post)) {
@@ -166,18 +123,15 @@ class CaptureDatasetElementController extends Controller
           }
         }
 
-        $dataset_element->project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
-        $dataset_element->subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
-        $dataset_element->item_id = !empty($request->attributes->get('item_id')) ? $request->attributes->get('item_id') : false;
         $dataset_element->capture_dataset_id = !empty($request->attributes->get('capture_dataset_id')) ? $request->attributes->get('capture_dataset_id') : false;
         
         // Get data for the breadcumbs.
         // TODO: find a better way?
-        $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => (int)$dataset_element->project_id));
-        $subject_data = $subjects->getSubject((int)$dataset_element->subject_id);
-        $item_data = $items->getItem((int)$dataset_element->item_id);
         $dataset_data = $datasets->getDataset((int)$dataset_element->capture_dataset_id);
-        
+        $item_data = $items->getItem((int)$dataset_data['item_id']);
+        $subject_data = $subjects->getSubject((int)$item_data['subject_id']);
+        $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => (int)$item_data['project_id']));
+
         // Truncate the item_description so the breadcrumb don't blow up.
         $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
         $item_data['item_description_truncated'] = substr($item_data['item_description'], 0, 50) . $more_indicator;
@@ -287,7 +241,7 @@ class CaptureDatasetElementController extends Controller
     /**
      * Delete Multiple Capture Data Elements
      *
-     * @Route("/admin/projects/dataset_elements/{project_id}/{subject_id}/{item_id}/{id}/delete", name="dataset_elements_remove_records", methods={"GET"})
+     * @Route("/admin/capture_dataset_element/delete", name="dataset_elements_remove_records", methods={"GET"})
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
@@ -306,17 +260,12 @@ class CaptureDatasetElementController extends Controller
       }
 
         $ids = $request->query->get('ids');
-        $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
-        $subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
-        $item_id = !empty($request->attributes->get('item_id')) ? $request->attributes->get('item_id') : false;
-        $capture_dataset_id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
+        //$capture_dataset_id = !empty($request->attributes->get('capture_dataset_id')) ? $request->attributes->get('capture_dataset_id') : false;
 
 
-        if(!empty($ids) && $project_id && $subject_id && $item_id && $capture_dataset_id) {
+        if(!empty($ids)) {
 
           $ids_array = explode(',', $ids);
-
-          
 
           // Loop thorough the ids.
           foreach ($ids_array as $key => $id) {
@@ -336,8 +285,7 @@ class CaptureDatasetElementController extends Controller
 
       $referer = $request->headers->get('referer');
       return $this->redirect($referer);
-
-     // return $this->redirectToRoute('dataset_elements_browse', array('project_id' => $project_id, 'subject_id' => $subject_id, 'item_id' => $item_id, 'capture_dataset_id' => $capture_dataset_id));
+     // return $this->redirectToRoute('dataset_elements_browse', array('capture_dataset_id' => $capture_dataset_id));
     }
 
 }

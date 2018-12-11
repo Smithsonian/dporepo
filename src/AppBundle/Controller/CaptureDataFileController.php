@@ -41,7 +41,7 @@ class CaptureDataFileController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/capture_data_files/datatables_browse", name="capture_data_files_browse_datatables", methods="POST")
+     * @Route("/admin/datatables_browse_capture_data_files", name="capture_data_files_browse_datatables", methods="POST")
      *
      * @param Request $request
      * @return JsonResponse The query result in JSON
@@ -73,9 +73,10 @@ class CaptureDataFileController extends Controller
     }
 
     /**
-     * Matches /admin/projects/capture_data_files/manage/*
+     * Matches /admin/capture_data_file/manage/*
      *
-     * @Route("/admin/projects/capture_data_files/manage/{parent_id}/{id}", name="capture_data_files_manage", methods={"GET","POST"}, defaults={"parent_id" = null, "id" = null})
+     * @Route("/admin/capture_data_file/add/{parent_id}", name="capture_data_files_add", methods={"GET","POST"}, defaults={"id" = null})
+     * @Route("/admin/capture_data_file/manage/{id}", name="capture_data_files_manage", methods={"GET","POST"})
      *
      * @param Connection $conn
      * @param Request $request
@@ -98,7 +99,7 @@ class CaptureDataFileController extends Controller
         $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         // If no parent_id is passed, throw a createNotFoundException (404).
-        if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
+        if(!$parent_id && !$id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
         if(!empty($id) && empty($post)) {
@@ -112,7 +113,7 @@ class CaptureDataFileController extends Controller
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
-        $data->parent_capture_data_element_id = $parent_id;
+        $data->capture_data_element_id = $parent_id;
         
         // Create the form
         $form = $this->createForm(CaptureDataFileForm::class, $data);
@@ -132,7 +133,9 @@ class CaptureDataFileController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/capture_data_files/manage/' . $data->parent_capture_data_element_id . '/' . $id);
+            $referer = $request->headers->get('referer');
+            return $this->redirect($referer);
+
         }
 
         return $this->render('datasetElements/capture_data_file_form.html.twig', array(
@@ -144,7 +147,7 @@ class CaptureDataFileController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/capture_data_files/delete", name="capture_data_files_remove_records", methods={"GET"})
+     * @Route("/admin/capture_data_file/delete", name="capture_data_files_remove_records", methods={"GET"})
      *
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\RedirectResponse|Response Redirect or render
@@ -185,20 +188,4 @@ class CaptureDataFileController extends Controller
         return $this->redirect($referer);
     }
 
-    /**
-     * /\/\/\/ Route("/admin/projects/capture_data_files/{id}", name="capture_data_files_browse", methods="GET", defaults={"id" = null})
-     *
-     * @param Connection $conn
-     * @param Request $request
-     */
-    // public function browse(Connection $conn, Request $request)
-    // {
-    //     $captureDataFile = new CaptureDataFile;
-
-    //     return $this->render('datasetElements/capture_data_files_browse.html.twig', array(
-    //         'page_title' => "Browse Capture Data Files",
-    //         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-    //     ));
-    // }
-  
 }

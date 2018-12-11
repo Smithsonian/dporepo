@@ -67,7 +67,7 @@ class ModelController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/model/datatables_browse", name="model_browse_datatables", methods="POST")
+     * @Route("/admin/datatables_browse_models", name="model_browse_datatables", methods="POST")
      *
      * @param Request $request
      * @return JsonResponse The query result in JSON
@@ -103,33 +103,38 @@ class ModelController extends Controller
     }
 
     /**
-     * Matches /admin/projects/model/manage/*
+     * Matches /admin/model/manage/*
      *
-     * @Route("/admin/projects/model/manage/{parent_id}/{id}", name="model_manage", methods={"GET","POST"}, defaults={"parent_id" = null, "id" = null})
+     * @Route("/admin/model/add/{parent_id}", name="model_add", methods={"GET","POST"}, defaults={"id" = null})
+     * @Route("/admin/model/manage/{id}", name="model_manage", methods={"GET","POST"})
      *
      * @param Connection $conn
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\RedirectResponse|Response Redirect or render
      */
-    function formView(Connection $conn, Request $request)
+    function formView(Connection $conn, Request $request, CaptureDatasetController $dataset)
     {
         $data = new Model();
-      $get = $request->query->all();
-      $parent_type = "capture_dataset";
+        $parent_type = null;
+        $item_id = NULL;
 
-      if(!empty($request->attributes->get('type'))) {
-        $parent_type = $request->attributes->get('type');
-        if($parent_type !== "item") {
-          $parent_type = "capture_dataset";
+        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
+        $parent_id = !empty($request->attributes->get('parent_id')) ? $request->attributes->get('parent_id') : false;
+
+        if(false != $parent_id) {
+          $parent_type = $request->attributes->get('parent_type');
+          if(empty($parent_type)) {
+            $parent_type = !empty($request->query->get('parent_type')) ? $request->query->get('parent_type') : false;
+          }
+          if($parent_type != "item_id") {
+            $parent_type = "capture_dataset_id";
+          }
         }
-      }
 
         $post = $request->request->all();
-        $parent_id = !empty($request->attributes->get('parent_id')) ? $request->attributes->get('parent_id') : false;
-        $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         // If no parent_id is passed, throw a createNotFoundException (404).
-        if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
+        if(!$parent_id && !$id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
         if(!empty($id) && empty($post)) {
@@ -144,26 +149,29 @@ class ModelController extends Controller
         // Back link
         $back_link = $request->headers->get('referer');
 
-      // Add the parent_id to the $data object
-      if(empty($id)) {
-        if($parent_type == "item") {
-          $data->item_id = $parent_id;
+        // Add the parent_id to the $data object
+        if(empty($id)) {
+          if($parent_type == "item_id" && !empty($parent_id)) {
+            $data->item_id = $parent_id;
+          }
+          else {
+            $data->capture_dataset_id = $parent_id;
+
+            $dataset_data = $dataset->getDataset((int)$parent_id);
+            $data->item_id = $dataset_data['item_id'];
+          }
         }
         else {
-          $data->capture_dataset_id = $parent_id;
-        }
-      }
-      else {
-        //@todo we need a way to get the backlink for new models, too
-        if($parent_type == "item") {
-          $back_link = "/admin/projects/datasets/{$data->project_id}/{$data->subject_id}/{$data->item_id}";
-        }
-        else {
-          //@todo- this is problematic since subjects are only linked through items
-          // A model might be linked to a capture dataset, which links to project and item; or it may be linked to an item, which links to a project and a subject.
-          // We'll need to modify the URL for capture datasets- we shouldn't need the subject repository ID.
-          //$back_link = "/admin/projects/dataset_elements/{$data->project_id}/{$data->subject_id}/{$data->item_id}/{$data->capture_dataset_id}";
-        }
+          //@todo we need a way to get the backlink for new models, too
+          if($parent_type == "item_id") {
+            $back_link = "/admin/capture_datasets/{$data->item_id}";
+          }
+          else {
+            //@todo- this is problematic since subjects are only linked through items
+            // A model might be linked to a capture dataset, which links to project and item; or it may be linked to an item, which links to a project and a subject.
+            // We'll need to modify the URL for capture datasets- we shouldn't need the subject repository ID.
+            //$back_link = "/admin/projects/dataset_elements/{$data->project_id}/{$data->subject_id}/{$data->item_id}/{$data->capture_dataset_id}";
+          }
         }
 
         // Get data from lookup tables.
@@ -181,7 +189,7 @@ class ModelController extends Controller
             $data = $form->getData();
 
             // Set the item_id if adding a Model from an Item record.
-            if(empty($id) && (!empty($request->query->get('from')) && $request->query->get('from') === 'item')) {
+            if(empty($id) && (!empty($request->query->get('parent_type')) && $request->query->get('parent_type') === 'item_id')) {
                 $data->item_id = $parent_id;
                 $data->capture_dataset_id = 0;
             }
@@ -194,7 +202,10 @@ class ModelController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/model/manage/' . $parent_id . '/' . $id);
+            return $this->redirect('/admin/model/view/' . $id);
+        }
+        else {
+          print("NOT VALID");
         }
 
         return $this->render('datasets/model_form.html.twig', array(
@@ -231,7 +242,7 @@ class ModelController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/model/delete", name="model_remove_records", methods={"GET"})
+     * @Route("/admin/model/delete", name="model_remove_records", methods={"GET"})
      *
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\RedirectResponse|Response Redirect or render
@@ -264,7 +275,7 @@ class ModelController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/model/{id}/detail", name="model_detail", methods="GET", defaults={"id" = null})
+     * @Route("/admin/model/view/{id}", name="model_detail", methods="GET", defaults={"id" = null})
      *
      * @param $id The model ID
      * @param Connection $conn
@@ -297,7 +308,7 @@ class ModelController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/model/{id}/viewer", name="model_viewer", methods="GET", defaults={"id" = null})
+     * @Route("/admin/model/{id}/viewer", name="model_viewer", methods="GET", defaults={"id" = null})
      *
      * @param $id The model ID
      * @param Connection $conn
@@ -377,7 +388,7 @@ class ModelController extends Controller
 
     }
     /**
-     * @Route("/admin/model/datatables_browse_derivative_models", name="datatables_browse_derivative_models", methods="POST")
+     * @Route("/admin/datatables_browse_derivative_models", name="datatables_browse_derivative_models", methods="POST")
      *
      * @param Connection $conn
      * @param Request $request

@@ -40,7 +40,7 @@ class CaptureDatasetRightsController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/capture_dataset_rights/datatables_browse", name="capture_dataset_rights_browse_datatables", methods="POST")
+     * @Route("/admin/datatables_browse_capture_dataset_rights", name="capture_dataset_rights_browse_datatables", methods={"GET","POST"})
      *
      * @param Request $request
      * @return JsonResponse The query result in JSON
@@ -67,14 +67,14 @@ class CaptureDatasetRightsController extends Controller
         }
 
         $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
-
         return $this->json($data);
     }
 
     /**
-     * Matches /admin/projects/capture_dataset_rights/manage/*
+     * Matches /admin/capture_dataset_rights/manage/*
      *
-     * @Route("/admin/projects/capture_dataset_rights/manage/{parent_id}/{id}", name="capture_dataset_rights_manage", methods={"GET","POST"}, defaults={"parent_id" = null, "id" = null})
+     * @Route("/admin/capture_dataset_rights/add/{parent_id}", name="capture_dataset_rights_add", methods={"GET","POST"}, defaults={"id" = null})
+     * @Route("/admin/capture_dataset_rights/manage/{id}", name="capture_dataset_rights_manage", methods={"GET","POST"})
      *
      * @param Connection $conn
      * @param Request $request
@@ -82,14 +82,14 @@ class CaptureDatasetRightsController extends Controller
      */
     function formView(Connection $conn, Request $request)
     {
-      $username = $this->getUser()->getUsernameCanonical();
-      $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');
+        $username = $this->getUser()->getUsernameCanonical();
+        $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');
 
-      if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
-        $response = new Response();
-        $response->setStatusCode(403);
-        return $response;
-      }
+        if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
+          $response = new Response();
+          $response->setStatusCode(403);
+          return $response;
+        }
 
         $data = new CaptureDatasetRights();
         $post = $request->request->all();
@@ -97,7 +97,7 @@ class CaptureDatasetRightsController extends Controller
         $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         // If no parent_id is passed, throw a createNotFoundException (404).
-        if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
+        if(!$id && !$parent_id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
         if(!empty($id) && empty($post)) {
@@ -136,7 +136,7 @@ class CaptureDatasetRightsController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/projects/capture_dataset_rights/manage/' . $data->capture_dataset_id . '/' . $id);
+            return $this->redirect('/admin/capture_dataset/view/' . $parent_id);
         }
 
         return $this->render('datasets/capture_dataset_rights_form.html.twig', array(
@@ -171,7 +171,7 @@ class CaptureDatasetRightsController extends Controller
     }
 
     /**
-     * @Route("/admin/projects/capture_dataset_rights/delete", name="capture_dataset_rights_remove_records", methods={"GET"})
+     * @Route("/admin/capture_dataset_rights/delete", name="capture_dataset_rights_remove_records", methods={"GET"})
      *
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\RedirectResponse|Response Redirect or render
@@ -213,7 +213,7 @@ class CaptureDatasetRightsController extends Controller
     }
 
     /**
-     * /\/\/\/ Route("/admin/projects/capture_dataset_rights/{id}", name="capture_dataset_rights_browse", methods="GET", defaults={"id" = null})
+     * /\/\/\/ Route("/admin/capture_dataset_rights/{id}", name="capture_dataset_rights_browse", methods="GET", defaults={"id" = null})
      *
      * @param Connection $conn
      * @param Request $request
