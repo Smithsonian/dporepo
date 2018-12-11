@@ -12,8 +12,8 @@
         <div class="panel panel-default">
             <div class="panel-body">
 
-                <a href="/admin/users/{{ username_canonical }}/role/add" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Role for this user</a>
-
+                <a href="/admin/user/role/{{ username_canonical }}/add" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Role for this user</a>
+                <input type="hidden" id="delete-path" value="admin/user/role/{{ username_canonical }}/delete" />
                 <table id="browse_user_roles" class="table table-striped table-bordered" cellspacing="0" width="100%">
                     <thead>
                     <tr>
