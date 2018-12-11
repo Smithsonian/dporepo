@@ -142,7 +142,8 @@ class UserController extends Controller {
 
   /**
    *
-   * @Route("/admin/role/view/{role_slug}", name="role_edit", methods={"GET","POST"}, defaults={"role_slug" = null})
+   * @Route("/admin/role/add", name="role_add", methods={"GET","POST"}, defaults={"role_slug" = null})
+   * @Route("/admin/role/view/{role_slug}", name="role_edit", methods={"GET","POST"})
    *
    * @param   string  $role_slug    The slug/shortname for the role
    * @param   object  Request       Request object
@@ -344,7 +345,8 @@ class UserController extends Controller {
 
 
   /**
-   * @Route("/admin/user/role/{username_canonical}/{user_role_id}", name="user_role_edit", methods={"GET","POST"}, defaults={"username_canonical" = null, "role_id" = null})
+   * @Route("/admin/user/role/{username_canonical}/add", name="user_role_add", methods={"GET","POST"}, defaults={"user_role_id" = null})
+   * @Route("/admin/user/role/{username_canonical}/{user_role_id}", name="user_role_edit", methods={"GET","POST"})
    *
    * @param   string  username_canonical   The canonical username
    * @param   object  Request           Request object
