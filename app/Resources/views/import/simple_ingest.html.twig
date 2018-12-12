@@ -179,7 +179,7 @@
       });
 
       // Dataset form submit handler.
-      $(document).on('submit', 'form[name="dataset"]', function(e){
+      $(document).on('submit', 'form[name="capture_dataset_form"]', function(e){
         // Avoid submitting the form non-ajax.
         e.preventDefault();
         // Convert form data to a CSV and add it to the Uploads Stage.
@@ -213,12 +213,12 @@
       function addCsvToUploadsStage() {
         // Create a CSV file and make it downloadable.
         // Example data from formData:
-        // "dataset[background_removal_method]": "4"
-        // ​"dataset[calibration_object_used]": "1"
-        // "dataset[capture_dataset_description]": "Lorem Ipsum"
+        // "capture_dataset_form[background_removal_method]": "4"
+        // ​"capture_dataset_form[calibration_object_used]": "1"
+        // "capture_dataset_form[capture_dataset_description]": "Lorem Ipsum"
         //
         // Get the properties and values from the form.
-        var form = $('form[name="dataset"]');
+        var form = $('form[name="capture_dataset_form"]');
         // Add the import_row_id and import_parent_id hidden fields to the form.
         // Doing this here since unshift() was not working further on down the line (?)
         var import_row_id_field = $('<input />').attr('type', 'hidden').attr('name', 'import_row_id').val('1');
@@ -230,17 +230,17 @@
         var csvColumns = Object.keys(formData);
         // Array of CSV values.
         var csvValues = Object.values(formData);
-        // Remove the dataset[_token] key (in csvColumns) and the corresponding value (in csvValues).
+        // Remove the capture_dataset_form[_token] key (in csvColumns) and the corresponding value (in csvValues).
         // Looping through and finding the key is a bit more precise, as opposed to using csvColumns.pop() and csvValues.pop();
         for(var i = 0; i < csvColumns.length; i++) {
-           if (csvColumns[i] === 'dataset[_token]') {
+           if (csvColumns[i] === 'capture_dataset_form[_token]') {
              csvColumns.splice(i, 1);
              csvValues.splice(i, 1);
            }
         }
         // Remove "dataset[" and "]" from the CSV columns.
         for( var i = 0; i < csvColumns.length; i++){
-          csvColumns[i] = csvColumns[i].replace('dataset[', '');
+          csvColumns[i] = csvColumns[i].replace('capture_dataset_form[', '');
           csvColumns[i] = csvColumns[i].replace(']', '');
         }
         // Massage the CSV data to required specs.
@@ -259,7 +259,7 @@
             case 'light_source_type':
             case 'background_removal_method':
             case 'cluster_type':
-              csvValues[i] = $('select[name="dataset[' + csvColumns[i] + ']"] option[value="' + csvValues[i] + '"]').text();
+              csvValues[i] = $('select[name="capture_dataset_form[' + csvColumns[i] + ']"] option[value="' + csvValues[i] + '"]').text();
               break;
             default:
               // Do nothing
@@ -275,8 +275,8 @@
         blob.name = 'capture_datasets.csv';
         uploadsDropzone.addFile(blob);
         // Disable all fields in the form
-        $('form[name="dataset"]').find('input, select, textarea').attr('disabled', true);
-        $('form[name="dataset"]').find('select').trigger("chosen:updated");
+        $('form[name="capture_dataset_form"]').find('input, select, textarea').attr('disabled', true);
+        $('form[name="capture_dataset_form"]').find('select').trigger("chosen:updated");
         // Enable Step 3 tab.
         rootwizard.bootstrapWizard('enable', '2');
       }
