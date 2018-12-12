@@ -623,6 +623,8 @@ class RepoImport implements RepoImportInterface {
             $csv_val->project_id = (int)$data->project_id;
             break;
           case 'item':
+            // Set the project_id
+            $csv_val->project_id = (int)$data->project_id;
             // Set the subject_id.
             if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
               $csv_val->subject_id = $new_repository_ids[$i][$csv_val->import_parent_id];
