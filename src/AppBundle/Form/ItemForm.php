@@ -4,6 +4,7 @@ namespace AppBundle\Form;
 
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
@@ -17,6 +18,12 @@ class ItemForm extends AbstractType
         $data = (array)$options['data'];
 
         $builder
+            ->add('project_id', HiddenType::class, array(
+              'required' => true,
+            ))
+            ->add('subject_id', HiddenType::class, array(
+              'required' => true,
+            ))
             ->add('item_guid', null, array(
                 'label' => 'Item GUID',
                 'required' => false,
