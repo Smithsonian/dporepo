@@ -608,17 +608,17 @@ class RepoStorageHybrid implements RepoStorage {
       );
 
       if (!empty($subject)) {
-        // Get the project record.
-        $project = $this->getRecord(array(
-            'base_table' => 'project',
-            'id_field' => 'project_id',
-            'id_value' => $subject['project_id'],
-          )
-        );
+        // // Get the project record.
+        // $project = $this->getRecord(array(
+        //     'base_table' => 'project',
+        //     'id_field' => 'project_id',
+        //     'id_value' => $subject['project_id'],
+        //   )
+        // );
 
         $data['subject_name'] = $subject['subject_name'];
         $data['item_description'] = $item['item_description'];
-        $data['project_name'] = $project['project_name'];
+        $data['project_name'] = $item['project_id'];
       }
     }
 
@@ -4726,7 +4726,7 @@ class RepoStorageHybrid implements RepoStorage {
         case 'model_with_capture_dataset_id':
           $params['record_type'] = 'model';
           $params['id_field_name'] = 'model.model_id';
-          $params['select'] = 'project.project_id, project.project_name, subject.subject_id, item.item_id, item.item_description, model.model_id';
+          $params['select'] = 'project.project_id, project.project_name, subject.subject_id, item.item_id, item.item_description, model.model_id, capture_dataset.capture_dataset_id, capture_dataset.capture_dataset_name';
           $params['left_joins'] = '
               LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = model.capture_dataset_id
               LEFT JOIN item ON item.item_id = capture_dataset.item_id
