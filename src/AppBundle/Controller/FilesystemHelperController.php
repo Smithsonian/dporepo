@@ -103,13 +103,15 @@ class FilesystemHelperController extends Controller
         )
       );
 
-      $parent_job_data = $this->repo_storage_controller->execute('getRecord', array(
-          'base_table' => 'job',
-          'id_field' => 'job_id',
-          'id_value' => $job_data[0]['job_id'],
-          'omit_active_field' => true,
-        )
-      );
+      if (!empty($job_data)) {
+        $parent_job_data = $this->repo_storage_controller->execute('getRecord', array(
+            'base_table' => 'job',
+            'id_field' => 'job_id',
+            'id_value' => $job_data[0]['job_id'],
+            'omit_active_field' => true,
+          )
+        );
+      }
     }
 
     // Overwrite the $job_id if pulling data from the 'job_import_record' table.
