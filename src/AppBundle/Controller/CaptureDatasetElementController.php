@@ -123,7 +123,7 @@ class CaptureDatasetElementController extends Controller
           }
         }
 
-        // $dataset_element->capture_dataset_id = !empty($request->attributes->get('capture_dataset_id')) ? $request->attributes->get('capture_dataset_id') : false;
+        $dataset_element->capture_dataset_id = !empty($request->attributes->get('capture_dataset_id')) ? $request->attributes->get('capture_dataset_id') : $dataset_element->capture_dataset_id;
         
         // Get data for the breadcumbs.
         // TODO: find a better way?
@@ -162,7 +162,7 @@ class CaptureDatasetElementController extends Controller
         }
 
         return $this->render('datasetElements/dataset_element_form.html.twig', array(
-            'page_title' => ((int)$id && isset($dataset_element->capture_sequence_number)) ? 'Capture Data Element: ' . $dataset_element->capture_sequence_number : 'Add a Capture Data Element',
+            'page_title' => ((int)$id && isset($dataset_element->capture_data_element_id)) ? 'Capture Data Element: ' . $dataset_element->capture_data_element_id : 'Add a Capture Data Element',
             'project_id' => $project_data['project_id'],
             'subject_id' => $subject_data['subject_id'],
             'item_id' => $item_data['item_id'],
