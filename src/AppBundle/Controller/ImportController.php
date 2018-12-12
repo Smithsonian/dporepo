@@ -212,12 +212,43 @@ class ImportController extends Controller
 
         // Create the item form
         $item = new Item();
+        $item->access_model_purpose = NULL;
+        $item->inherit_publication_default = '';
+
         // Get data from lookup tables.
         $item->item_type_lookup_options = $this->itemsController->getItemTypes();
+        $item->api_publication_options = array(
+          'Published, Discoverable' => '11',
+          'Published, Not Discoverable' => '10',
+          'Not Published' => '00',
+        );
+        $model_purpose_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_purpose',
+          'value_field' => 'model_purpose_description',
+          'id_field' => 'model_purpose_id',
+        ));
+        $model_face_count_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_face_count',
+          'value_field' => 'model_face_count',
+          'id_field' => 'model_face_count_id',
+        ));
+        $uv_map_size_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'uv_map_size',
+          'value_field' => 'uv_map_size',
+          'id_field' => 'uv_map_size_id',
+        ));
+
+        $item->model_face_count_options = $model_face_count_options;
+        $item->uv_map_size_options = $uv_map_size_options;
+        $item->model_purpose_options = $model_purpose_options;
+
         $item_form = $this->createForm(ItemForm::class, $item);
 
         // Create the dataset form.
         $dataset = new CaptureDataset();
+        $dataset->access_model_purpose = NULL;
+        $dataset->inherit_publication_default = '';
+
         // Get data from lookup tables.
         $dataset->capture_methods_lookup_options = $this->datasetsController->getCaptureMethods();
         $dataset->dataset_types_lookup_options = $this->datasetsController->getDatasetTypes();
@@ -227,6 +258,32 @@ class ImportController extends Controller
         $dataset->background_removal_methods_lookup_options = $this->datasetsController->getBackgroundRemovalMethods();
         $dataset->camera_cluster_types_lookup_options = $this->datasetsController->getCameraClusterTypes();
         $dataset->calibration_object_type_options = $this->datasetsController->getCalibrationObjectTypes();
+
+        $dataset->api_publication_options = array(
+          'Published, Discoverable' => '11',
+          'Published, Not Discoverable' => '10',
+          'Not Published' => '00',
+        );
+        $model_purpose_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_purpose',
+          'value_field' => 'model_purpose_description',
+          'id_field' => 'model_purpose_id',
+        ));
+        $model_face_count_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_face_count',
+          'value_field' => 'model_face_count',
+          'id_field' => 'model_face_count_id',
+        ));
+        $uv_map_size_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'uv_map_size',
+          'value_field' => 'uv_map_size',
+          'id_field' => 'uv_map_size_id',
+        ));
+
+        $dataset->model_face_count_options = $model_face_count_options;
+        $dataset->uv_map_size_options = $uv_map_size_options;
+        $dataset->model_purpose_options = $model_purpose_options;
+
         // Create the form
         $form = $this->createForm(CaptureDatasetForm::class, $dataset);
 
