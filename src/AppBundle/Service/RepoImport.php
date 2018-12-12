@@ -1039,7 +1039,7 @@ class RepoImport implements RepoImportInterface {
       $model_file_names = array_unique($model_file_names);
       sort($model_file_names);
       if (!empty($model_file_names)) {
-        $data = $this->get_model_data_from_filenames($model_file_names, $data);
+        $data = $this->getModelDataFromFilenames($model_file_names, $data);
       }
 
     }
