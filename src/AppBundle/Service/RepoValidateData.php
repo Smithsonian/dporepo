@@ -246,7 +246,6 @@ class RepoValidateData implements RepoValidate {
     // If data is passed, go ahead and perform the validation.
     if(!empty($data) && !empty($parent_records)) {
 
-
       foreach($data as $key => $value) {
         if(!empty($value->capture_dataset_field_id)) {
           // Check the database to see if there is a capture_dataset_field_id with the same value as what's in the CSV.
@@ -265,15 +264,6 @@ class RepoValidateData implements RepoValidate {
                   ),
                   'search_values' => array(
                     $value->capture_dataset_field_id
-                  ),
-                  'comparison' => '='
-                ),
-                array(
-                  'field_names' => array(
-                    'project_id'
-                  ),
-                  'search_values' => array(
-                    $parent_records['project_id']
                   ),
                   'comparison' => '='
                 ),
