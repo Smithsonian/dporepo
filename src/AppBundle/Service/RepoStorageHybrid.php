@@ -956,10 +956,10 @@ class RepoStorageHybrid implements RepoStorage {
       'table_name' => 'photogrammetry_scale_bar',
       'field_name' => 'scale_bar_barcode_type',
     );
-    $query_params['fields'][] = array(
-      'table_name' => 'photogrammetry_scale_bar',
-      'field_name' => 'scale_bar_target_pairs',
-    );
+    // $query_params['fields'][] = array(
+    //   'table_name' => 'photogrammetry_scale_bar',
+    //   'field_name' => 'scale_bar_target_pairs',
+    // );
     $query_params['fields'][] = array(
       'table_name' => 'capture_dataset',
       'field_name' => 'item_id',
@@ -2298,10 +2298,10 @@ class RepoStorageHybrid implements RepoStorage {
           'table_name' => $record_type,
           'field_name' => 'scale_bar_barcode_type',
         );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'scale_bar_target_pairs',
-        );
+        // $query_params['fields'][] = array(
+        //   'table_name' => $record_type,
+        //   'field_name' => 'scale_bar_target_pairs',
+        // );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
           'field_name' => 'active',
@@ -2323,7 +2323,7 @@ class RepoStorageHybrid implements RepoStorage {
               $record_type . '.scale_bar_id',
               $record_type . '.scale_bar_manufacturer',
               $record_type . '.scale_bar_barcode_type',
-              $record_type . '.scale_bar_target_pairs',
+              // $record_type . '.scale_bar_target_pairs',
             ),
             'search_values' => array($search_value),
             'comparison' => 'LIKE',
