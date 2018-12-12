@@ -38,10 +38,10 @@ class PhotogrammetryScaleBarForm extends AbstractType
                 'data' => $data['scale_bar_barcode_type'],
                 'attr' => array('class' => 'default-chosen-select'),
               ))
-            ->add('scale_bar_target_pairs', null, array(
-                'label' => 'Scale Bar Target Pairs',
-                'required' => false,
-              ))
+            // ->add('scale_bar_target_pairs', null, array(
+            //     'label' => 'Scale Bar Target Pairs',
+            //     'required' => false,
+            //   ))
             ->add('save', SubmitType::class, array(
                 'label' => 'Save Edits',
                 'attr' => array('class' => 'btn btn-primary'),
