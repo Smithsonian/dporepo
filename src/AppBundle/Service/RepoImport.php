@@ -566,7 +566,7 @@ class RepoImport implements RepoImportInterface {
       )
     ));
 
-    // If data type is not a 'subject', set the array of $new_ids.
+    // If data type is not a 'subject', set the array of $new_repository_ids.
     if ($data->type !== 'subject') {
       $new_repository_ids[$i] = $session->get('new_repository_ids_' . ($i-1));
     }
@@ -624,20 +624,19 @@ class RepoImport implements RepoImportInterface {
             break;
           case 'item':
             // Set the subject_id.
-            if (!empty($new_ids[$i]) && !empty($csv_val->import_parent_id)) {
-              $csv_val->subject_id = $new_ids[$i][$csv_val->import_parent_id];
+            if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
+              $csv_val->subject_id = $new_repository_ids[$i][$csv_val->import_parent_id];
             } else {
               $csv_val->subject_id = $data->record_id;
             }
             break;
           case 'capture_dataset':
             // Set the item_id.
-            if (!empty($new_ids[$i]) && !empty($csv_val->import_parent_id)) {
-              $csv_val->item_id = $new_ids[$i][$csv_val->import_parent_id];
+            if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
+              $csv_val->item_id = $new_repository_ids[$i][$csv_val->import_parent_id];
             } else {
               $csv_val->item_id = $data->record_id;
             }
-
             // Get the parent project ID.
             $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
               'base_record_id' => $csv_val->item_id,
