@@ -9,22 +9,30 @@
         {{ form_start(item_form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
           <div class="row">
             <div class="col-sm-6 col-md-6">
+              {{ form_row(item_form.item_description) }}
+              {{ form_row(item_form.item_type) }}
               {{ form_row(item_form.item_guid) }}
               {{ form_row(item_form.local_item_id) }}
             </div>
             <div class="col-sm-6 col-md-6">
-              {{ form_row(item_form.item_type) }}
-              {{ form_row(item_form.item_description) }}
+              <fieldset>
+                <legend>API Delivery Integration</legend>
+                {{ form_row(item_form.api_publication_picker) }}
+                {{ form_row(item_form.model_purpose_picker) }}
+                <h4>API Model Resolution Restrictions</h4>
+                {{ form_row(item_form.api_access_model_face_count_id) }}
+                {{ form_row(item_form.api_access_uv_map_size_id) }}
+              </fieldset>
             </div>
           </div>
           <div class="field-group" style="clear:both;">
             {{ form_row(item_form.save) }}
           </div>
-        {{ form_end(item_form) }}
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
       </div>
+      {{ form_end(item_form) }}
     </div>
   </div>
 </div>
