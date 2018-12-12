@@ -208,6 +208,35 @@ class ImportController extends Controller
 
         // Create the subject form
         $subject = new Subject();
+        $subject->access_model_purpose = NULL;
+        $subject->inherit_publication_default = '';
+        $subject->api_publication_options = array(
+          'Published, Discoverable' => '11',
+          'Published, Not Discoverable' => '10',
+          'Not Published' => '00',
+        );
+        // Get values for options.
+        $model_purpose_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_purpose',
+          'value_field' => 'model_purpose_description',
+          'id_field' => 'model_purpose_id',
+          ));
+        $model_face_count_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_face_count',
+          'value_field' => 'model_face_count',
+          'id_field' => 'model_face_count_id',
+        ));
+        $uv_map_size_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'uv_map_size',
+          'value_field' => 'uv_map_size',
+          'id_field' => 'uv_map_size_id',
+        ));
+        $subject->model_face_count_options = $model_face_count_options;
+        $subject->uv_map_size_options = $uv_map_size_options;
+        $subject->model_purpose_options = $model_purpose_options;
+
+        $subject = (array)$subject;
+        
         $subject_form = $this->createForm(SubjectForm::class, $subject);
 
         // Create the item form
