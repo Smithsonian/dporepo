@@ -7,6 +7,16 @@ use Doctrine\DBAL\Driver\Connection;
 
 class Item
 {
+    
+    /**
+     * @var int
+     */
+    public $project_id;
+
+    /**
+     * @var int
+     */
+    public $subject_id;
 
     /**
      * @Assert\Length(min="1", max="255")
