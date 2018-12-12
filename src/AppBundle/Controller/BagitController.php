@@ -313,7 +313,7 @@ class BagitController extends Controller
         $return['errors'][] = 'The data directory for this package is missing.';
       }
       else {
-        $package_data_files = $this->getPackageDataFilesv($return['path_to_bag'] . '/data');
+        $package_data_files = $this->getPackageDataFiles($return['path_to_bag'] . '/data');
       }
 
       // Is the manifest empty? If so, return this as a warning.
