@@ -157,22 +157,22 @@
       dateInput.datepicker(options);
 
       // Subject form submit handler.
-      $(document).on('submit', 'form[name="subject"]', function(e){
+      $(document).on('submit', 'form[name="subject_form"]', function(e){        
         // Avoid submitting the form non-ajax.
         e.preventDefault();
         // Get the properties and values from the form.
-        var form = $('form[name="subject"]');
+        var form = $('form[name="subject_form"]');
         var formData = form.serializeObject();
         // Submit via AJAX.
         submitSubjectRecord(formData);
       });
 
       // Item form submit handler.
-      $(document).on('submit', 'form[name="item"]', function(e){
+      $(document).on('submit', 'form[name="item_form"]', function(e){
         // Avoid submitting the form non-ajax.
         e.preventDefault();
         // Get the properties and values from the form.
-        var form = $('form[name="item"]');
+        var form = $('form[name="item_form"]');
         var formData = form.serializeObject();
         // Submit via AJAX.
         itemSubjectRecord(formData);
@@ -558,6 +558,7 @@
           ,'url': '/admin/subject/add/ajax'
           ,'data': formData
           ,success: function(data) {
+
             if(data) {
               // Response data handler.
               if(data.id) {
@@ -570,7 +571,7 @@
                 var html = '<dl>';
                 // Loop through the metadata and choose fileds in the 'fields' array.
                 $.each(formData, function(key, value){
-                  key = key.replace('subject[', '');
+                  key = key.replace('subject_form[', '');
                   key = key.replace(']', '');
                   if (fields.indexOf(key) !== -1) {
                     html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
@@ -590,8 +591,8 @@
                 });
 
                 // Disable all fields in the form
-                $('form[name="subject"]').find('input, select, textarea').attr('disabled', true);
-                $('form[name="subject"]').find('select').trigger("chosen:updated");
+                $('form[name="subject_form"]').find('input, select, textarea').attr('disabled', true);
+                $('form[name="subject_form"]').find('select').trigger("chosen:updated");
 
                 // Enable the Item buttons.
                 $('[data-select="item"], [data-create="item"]').removeAttr('disabled');
@@ -605,6 +606,7 @@
       }
 
       function itemSubjectRecord(formData) {
+
         // Avoid submitting the form multiple times.
         $('#item_save').attr('disabled', true);
 
@@ -627,7 +629,7 @@
                 var html = '<dl>';
                 // Loop through the metadata and choose fileds in the 'fields' array.
                 $.each(formData, function(key, value){
-                  key = key.replace('item[', '');
+                  key = key.replace('item_form[', '');
                   key = key.replace(']', '');
                   if (fields.indexOf(key) !== -1) {
                     html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
@@ -647,8 +649,8 @@
                 });
 
                 // Disable all fields in the form
-                $('form[name="item"]').find('input, select, textarea').attr('disabled', true);
-                $('form[name="item"]').find('select').trigger("chosen:updated");
+                $('form[name="item_form"]').find('input, select, textarea').attr('disabled', true);
+                $('form[name="item_form"]').find('select').trigger("chosen:updated");
 
                 // Enable Step 2 tab.
                 rootwizard.bootstrapWizard('enable', '1');
