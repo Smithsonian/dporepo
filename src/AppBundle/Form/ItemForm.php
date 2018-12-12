@@ -54,7 +54,7 @@ class ItemForm extends AbstractType
               'choices' => $data['api_publication_options'],
               // Selected option
               'data' => $data['api_publication_picker'],
-              'attr' => array('class' => 'publication-chosen-select'),
+              'attr' => array('class' => 'default-chosen-select'),
             ))
 
             ->add('api_access_model_face_count_id', ChoiceType::class, array(
@@ -65,7 +65,7 @@ class ItemForm extends AbstractType
               'choices' => $data['model_face_count_options'],
               // Selected option
               'data' => $data['api_access_model_face_count_id'],
-              'attr' => array('class' => 'publication-chosen-select'),
+              'attr' => array('class' => 'default-chosen-select'),
             ))
             ->add('api_access_uv_map_size_id', ChoiceType::class, array(
               'label' => 'UV Map Size',
@@ -75,7 +75,7 @@ class ItemForm extends AbstractType
               'choices' => $data['uv_map_size_options'],
               // Selected option
               'data' => $data['api_access_uv_map_size_id'],
-              'attr' => array('class' => 'publication-chosen-select'),
+              'attr' => array('class' => 'default-chosen-select'),
             ))
             ->add('model_purpose_picker', ChoiceType::class, array(
               'label' => 'Published Content Types',
@@ -85,7 +85,7 @@ class ItemForm extends AbstractType
               'choices' => $data['model_purpose_options'],
               // Selected option
               'data' => $data['model_purpose_picker'],
-              'attr' => array('class' => 'publication-chosen-select'),
+              'attr' => array('class' => 'default-chosen-select'),
               'expanded' => true,
               'multiple' => true,
             ))
