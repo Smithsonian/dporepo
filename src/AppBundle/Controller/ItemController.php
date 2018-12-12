@@ -205,7 +205,7 @@ class ItemController extends Controller
   /**
      * Matches /admin/item/*
      *
-     * @Route("/admin/item/add/{project_id}/{subject_id}", name="item_add", methods={"GET","POST"}, defaults={"item_id" = null, "project_id" = null, "subject_id" = null})
+     * @Route("/admin/item/add/{project_id}/{subject_id}/{ajax}", name="item_add", methods={"GET","POST"}, defaults={"item_id" = null, "project_id" = null, "subject_id" = null, "ajax" = null})
      * @Route("/admin/item/manage/{item_id}", name="items_manage", methods={"GET","POST"}, defaults={"item_id" = null})
      *
      * @param   object  Connection  Database connection object
@@ -226,13 +226,11 @@ class ItemController extends Controller
         $ajax = false;
 
         if (!empty($request->attributes->get('item_id'))) {
-          if ($request->attributes->get('item_id') !== 'ajax') {
-            $id = $request->attributes->get('item_id');
-          }
-          else {
-            $ajax = true;
-          }
+          $id = $request->attributes->get('item_id');
         }
+        
+        // If being POSTed via ajax, set the ajax flag to true.
+        if (!empty($request->attributes->get('ajax'))) $ajax = true;
 
         // Retrieve data from the database.
         if (!empty($id) && empty($post)) {
@@ -309,6 +307,8 @@ class ItemController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $item = $form->getData();
+            $item->project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
+            $item->subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
 
             if(isset($item->api_publication_picker)) {
               if($item->api_publication_picker == '11') {

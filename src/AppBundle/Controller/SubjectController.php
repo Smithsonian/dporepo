@@ -163,8 +163,8 @@ class SubjectController extends Controller
     /**
      * Matches /admin/subject/*
      *
-     * @Route("/admin/subject/add/", name="subject_add", methods={"GET","POST"}, defaults={"subject_id" = null})
-     * @Route("/admin/subject/manage/{subject_id}", name="subject_manage", methods={"GET","POST"})
+     * @Route("/admin/subject/add/{ajax}", name="subject_add", methods={"GET","POST"}, defaults={"subject_id" = null, "ajax" = null})
+     * @Route("/admin/subject/manage/{subject_id}", name="subject_manage", methods={"GET","POST"}, defaults={"subject_id" = null, "ajax" = null})
      *
      * @param   object  Connection    Database connection object
      * @param   object  Request       Request object
@@ -181,13 +181,11 @@ class SubjectController extends Controller
         $ajax = false;
 
         if (!empty($request->attributes->get('subject_id'))) {
-          if ($request->attributes->get('subject_id') !== 'ajax') {
-            $id = $request->attributes->get('subject_id');
-          }
-          else {
-            $ajax = true;
-          }
+          $id = $request->attributes->get('subject_id');
         }
+        
+        // If being POSTed via ajax, set the ajax flag to true.
+        if (!empty($request->attributes->get('ajax'))) $ajax = true;
 
         $username = $this->getUser()->getUsernameCanonical();
         $user_can_edit = false;
