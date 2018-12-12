@@ -123,6 +123,8 @@ class CaptureDatasetController extends Controller
               $dataset = (object)$dataset_array;
             }
 
+            $dataset->access_model_purpose = NULL;
+            $dataset->inherit_publication_default = '';
             $dataset->api_publication_picker = NULL;
             $picker_val = (string)$dataset->api_published;
             $picker_val .= (string)$dataset->api_discoverable;
