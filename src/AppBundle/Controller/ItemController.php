@@ -180,7 +180,7 @@ class ItemController extends Controller
       }
       $subject_id = isset($item->item_data->subject_id) ? $item->item_data->subject_id : NULL;
       if(NULL !== $project_id) {
-        $subject_data = $this->repo_storage_controller->execute('getSubject', array('subject_id' => (int)$subject_id));
+        $subject_data = $this->repo_storage_controller->execute('getSubject', array('record_id' => (int)$subject_id));
       }
 
       // Truncate the item_description so the breadcrumb don't blow up.
