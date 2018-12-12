@@ -37,7 +37,8 @@ class ItemController extends Controller
       // Usage: $this->u->dumper($variable);
       $this->u = $u;
       $this->repo_storage_controller = new RepoStorageHybridController($conn);
-        $this->repo_user_access = new RepoUserAccess($conn);
+      $this->repo_user_access = new RepoUserAccess($conn);
+      $this->uploads_path = '/uploads/repository';
     }
 
     /**
