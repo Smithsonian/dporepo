@@ -307,8 +307,9 @@ class ItemController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $item = $form->getData();
-            $item->project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
-            $item->subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
+            // To support AJAX form from Simple Ingests.
+            $item->project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : $post['item_form']['project_id'];
+            $item->subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : $post['item_form']['subject_id'];
 
             if(isset($item->api_publication_picker)) {
               if($item->api_publication_picker == '11') {
