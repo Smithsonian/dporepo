@@ -56,7 +56,7 @@ class RunProcessingJobCommand extends ContainerAwareCommand
     $container = $this->getContainer();
     $flysystem = $container->get('oneup_flysystem.processing_filesystem');
     // Execute processing job.
-    $result = $this->processing_service->execute_job($flysystem);
+    $result = $this->processing_service->executeJob($flysystem);
 
     // Output validation results.
     if (!empty($result)) {

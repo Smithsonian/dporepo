@@ -208,9 +208,9 @@
           details_page;
 
       {% if project.execute_jobs_input is defined %}
-        var parent_project_id = "{{ project.execute_jobs_input.parent_project_id }}",
-            parent_record_id = "{{ project.execute_jobs_input.parent_record_id }}",
-            parent_record_type = "{{ project.execute_jobs_input.parent_record_type }}";
+        var project_id = "{{ project.execute_jobs_input.project_id }}",
+            record_id = "{{ project.execute_jobs_input.record_id }}",
+            record_type = "{{ project.execute_jobs_input.record_type }}";
       {% endif %}
 
       if(job_type === 'subjects metadata import') {
@@ -278,20 +278,20 @@
             // Send to the details page.
 
             if(job_type === 'subjects metadata import') {
-              details_page = '/admin/projects/datasets/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
+              details_page = '/admin/subject/view/' + aData.subject_id;
             }
 
             if(job_type === 'items metadata import') {
-              details_page = '/admin/projects/datasets/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
+              details_page = '/admin/item/view/' + aData.item_id;
             }
 
             if(job_type === 'capture datasets metadata import') {
-              details_page = '/admin/projects/dataset_elements/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id + '/' + aData.capture_dataset_repository_id;
+              details_page = '/admin/capture_dataset/view/' + aData.capture_dataset_id;
             }
 
             if(job_type === 'models metadata import') {         
-              // let parent_repository_id = aData.capture_dataset_repository_id ? aData.capture_dataset_repository_id : aData.item_repository_id;
-              details_page = '/admin/projects/datasets/' + aData.project_repository_id + '/' + aData.subject_repository_id + '/' + aData.item_repository_id;
+              // let parent_id = aData.capture_dataset_id ? aData.capture_dataset_id : aData.item_id;
+              details_page = '/admin/model/view/' + aData.model_id;
             }
 
             window.location.href = details_page;
@@ -422,16 +422,16 @@
         }
       }
 
-      function execute_jobs(uuid, parent_project_id, parent_record_id, parent_record_type) {
+      function execute_jobs(uuid, project_id, record_id, record_type) {
 
-        if (uuid && parent_project_id && parent_record_id && parent_record_type) {
+        if (uuid && project_id && record_id && record_type) {
 
           console.log('executing job...');
 
           $.ajax({
             'type': 'GET'
             ,'dataType': 'json'
-            ,'url': '/admin/execute_jobs/' + uuid + '/' + parent_project_id + '/' + parent_record_id + '/' + parent_record_type
+            ,'url': '/admin/execute_jobs/' + uuid + '/' + project_id + '/' + record_id + '/' + record_type
             ,success: function(result) {
               if(result) {
                 // Does anything need to be returned. Not really.
@@ -466,7 +466,7 @@
               if(result) {
 
                 if (result === 'bagit validation starting') {
-                  execute_jobs(uuid, parent_project_id, parent_record_id, parent_record_type);
+                  execute_jobs(uuid, project_id, record_id, record_type);
                 }
 
                 $('.status-target span.status').empty().text(result);

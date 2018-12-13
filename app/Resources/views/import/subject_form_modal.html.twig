@@ -12,18 +12,28 @@
               {{ form_row(subject_form.subject_name) }}
               {{ form_row(subject_form.subject_display_name) }}
               {{ form_row(subject_form.subject_guid) }}
-              {{ form_row(subject_form.save) }}
-            </div>
-            <div class="col-sm-6 col-md-6">
               {{ form_row(subject_form.local_subject_id) }}
               {{ form_row(subject_form.holding_entity_guid) }}
             </div>
+            <div class="col-sm-6 col-md-6">
+              <fieldset>
+                <legend>API Delivery Integration</legend>
+                {# {{ form_row(subject_form.api_publication_picker) }} #}
+                {{ form_row(subject_form.model_purpose_picker) }}
+                <h4>API Model Resolution Restrictions</h4>
+                {{ form_row(subject_form.api_access_model_face_count_id) }}
+                {{ form_row(subject_form.api_access_uv_map_size_id) }}
+              </fieldset>
+            </div>
           </div>
-        {{ form_end(subject_form) }}
+          <div class="field-group" style="clear:both;">
+            {{ form_row(subject_form.save) }}
+          </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
       </div>
+      {{ form_end(subject_form) }}
     </div>
   </div>
 </div>

@@ -12,7 +12,7 @@ class ProcessingAction
      * @Assert\NotBlank()
      * @var int
      */
-    public $parent_model_repository_id;
+    public $model_id;
 
     /**
      * @Assert\Type(
@@ -22,7 +22,7 @@ class ProcessingAction
      * @Assert\Length(min="1", max="10")
      * @var int
      */
-    public $preceding_processing_action_repository_id;
+    public $preceding_processing_action_id;
 
     /**
      * @var string

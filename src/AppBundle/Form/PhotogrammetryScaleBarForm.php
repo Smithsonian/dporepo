@@ -17,7 +17,7 @@ class PhotogrammetryScaleBarForm extends AbstractType
         $data = (array)$options['data'];
 
         $builder
-            ->add('parent_capture_dataset_repository_id', HiddenType::class, array(
+            ->add('capture_dataset_id', HiddenType::class, array(
                 'required' => true,
               ))
             ->add('scale_bar_id', null, array(
@@ -38,10 +38,10 @@ class PhotogrammetryScaleBarForm extends AbstractType
                 'data' => $data['scale_bar_barcode_type'],
                 'attr' => array('class' => 'default-chosen-select'),
               ))
-            ->add('scale_bar_target_pairs', null, array(
-                'label' => 'Scale Bar Target Pairs',
-                'required' => false,
-              ))
+            // ->add('scale_bar_target_pairs', null, array(
+            //     'label' => 'Scale Bar Target Pairs',
+            //     'required' => false,
+            //   ))
             ->add('save', SubmitType::class, array(
                 'label' => 'Save Edits',
                 'attr' => array('class' => 'btn btn-primary'),

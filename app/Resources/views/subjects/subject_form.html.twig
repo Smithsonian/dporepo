@@ -20,11 +20,18 @@
           {{ form_row(form.subject_name) }}
           {{ form_row(form.subject_display_name) }}
           {{ form_row(form.subject_guid) }}
+          {{ form_row(form.local_subject_id) }}
+          {{ form_row(form.holding_entity_guid) }}
           {{ form_row(form.save) }}
         </div>
         <div class="col-sm-6 col-md-6">
-          {{ form_row(form.local_subject_id) }}
-          {{ form_row(form.holding_entity_guid) }}
+            <fieldset>
+                <legend>API Delivery Integration</legend>
+                {{ form_row(form.model_purpose_picker) }}
+                <h4>API Model Resolution Restrictions</h4>
+                {{ form_row(form.api_access_model_face_count_id) }}
+                {{ form_row(form.api_access_uv_map_size_id) }}
+            </fieldset>
         </div>
       </div>
 

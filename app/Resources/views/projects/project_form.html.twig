@@ -5,8 +5,8 @@
     <div class="row">
       <div class="col-sm-12 col-md-12">
         <div class="form-group">
-        {% if project_data is defined and project_data.project_repository_id is defined %}
-          <a href="/admin/projects/subjects/{{ project_data.project_repository_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
+        {% if project_data is defined and project_data.project_id is defined %}
+          <a href="/admin/project/{{ project_data.project_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
         {% else %}
           <a href="/admin/workspace/" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
         {% endif %}
@@ -19,6 +19,7 @@
     <div class="row">
       <div class="col-sm-6 col-md-6">
         {{ form_row(form.project_name) }}
+        {{ form_row(form.api_publication_picker) }}
         {{ form_row(form.stakeholder_guid) }}
         {{ form_row(form.stakeholder_label) }}
         {{ form_row(form.stakeholder_guid_picker) }}
@@ -96,7 +97,9 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-            <button type="button" class="btn btn-primary" id="save-changes">Save changes</button>
+            {% if user_can_edit %}
+                <button type="button" class="btn btn-primary" id="save-changes">Save changes</button>
+            {% endif %}
           </div>
         </div>
       </div>

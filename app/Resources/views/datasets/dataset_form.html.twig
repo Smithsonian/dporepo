@@ -10,9 +10,17 @@
       {{ form_row(form.date_of_capture) }}
       {{ form_row(form.capture_dataset_description) }}
       {{ form_row(form.collection_notes) }}
-      {{ form_row(form.item_position_type) }}
+      <fieldset>
+        <legend>API Delivery Integration</legend>
+        {{ form_row(form.api_publication_picker) }}
+        {{ form_row(form.model_purpose_picker) }}
+        <h4>API Model Resolution Restrictions</h4>
+        {{ form_row(form.api_access_model_face_count_id) }}
+        {{ form_row(form.api_access_uv_map_size_id) }}
+      </fieldset>
     </div>
     <div class="col-sm-6 col-md-6">
+      {{ form_row(form.item_position_type) }}
       {{ form_row(form.positionally_matched_capture_datasets) }}
       {{ form_row(form.focus_type) }}
       {{ form_row(form.light_source_type) }}

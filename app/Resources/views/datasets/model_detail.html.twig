@@ -11,14 +11,13 @@
     <ol class="breadcrumb">
       <li><a href="/admin">Dashboard</a></li>
       <li><a href="/admin/workspace">Browse Projects</a></li>
-      <li>Project: <a href="/admin/projects/subjects/{{data.parent_records.project_repository_id}}">{{data.project_name}}</a></li>
-      <li>Subject: <a href="/admin/projects/items/{{data.parent_records.project_repository_id}}/{{data.parent_records.subject_repository_id}}">{{data.subject_name}}</a></li>
-      
+      <li>Project: <a href="/admin/project/{{data.parent_records.project_id}}">{{data.parent_records.project_name}}</a></li>
+
       {% if data.capture_dataset|length %}
-        <li>Item: <a href="/admin/projects/datasets/{{data.parent_records.project_repository_id}}/{{data.parent_records.subject_repository_id}}/{{data.parent_records.item_repository_id}}">{{ data.item_description|length > 50 ? data.item_description|slice(0, 50) ~ '...' : data.item_description  }}</a></li>
-        <li>Capture Dataset: <a href="/admin/projects/dataset_elements/{{data.parent_records.project_repository_id}}/{{data.parent_records.subject_repository_id}}/{{data.parent_records.item_repository_id}}/{{data.capture_dataset.capture_dataset_repository_id}}">{{data.capture_dataset.capture_dataset_name}}</a></li>
+        <li>Item: <a href="/admin/item/view/{{data.parent_records.item_id}}">{{ data.parent_records.item_description|length > 50 ? data.parent_records.item_description|slice(0, 50) ~ '...' : data.parent_records.item_description  }}</a></li>
+        <li>Capture Dataset: <a href="/admin/capture_dataset/view/{{data.parent_records.capture_dataset_id}}">{{data.parent_records.capture_dataset_name}}</a></li>
       {% else %}
-        <li>Item: <a href="/admin/projects/datasets/{{data.parent_records.project_repository_id}}/{{data.parent_records.subject_repository_id}}/{{data.parent_records.item_repository_id}}">{{ data.item_description|length > 50 ? data.item_description|slice(0, 50) ~ '...' : data.item_description  }}</a></li>
+        <li>Item: <a href="/admin/item/view/{{data.parent_records.item_id}}">{{ data.parent_records.item_description|length > 50 ? data.parent_records.item_description|slice(0, 50) ~ '...' : data.parent_records.item_description  }}</a></li>
       {% endif %}
       <li class="active">Model Detail</li>
     </ol>
@@ -26,7 +25,7 @@
     <div class="row">
         <div class="col-sm-12 col-md-12">
             <div class="form-group">
-                <a href="{% if data.capture_dataset|length %}/admin/projects/dataset_elements/{{data.parent_records.project_repository_id}}/{{data.parent_records.subject_repository_id}}/{{data.parent_records.item_repository_id}}/{{data.capture_dataset.capture_dataset_repository_id}} {% else %}/admin/projects/datasets/{{data.parent_records.project_repository_id}}/{{data.parent_records.subject_repository_id}}/{{data.parent_records.item_repository_id}} {% endif %}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
+                <a href="{% if data.capture_dataset|length %}/admin/capture_dataset/view/{{data.capture_dataset.capture_dataset_id}}{% else %}/admin/item/view/{{data.parent_records.item_id}} {% endif %}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
             </div>
         </div>
     </div>
@@ -34,12 +33,12 @@
     <div class="row">
         <div class="col-sm-12 col-md-12">
             <div class="col-md-6">
-              <input type="hidden" id="model_repository_id" value="{{data.model_repository_id}}">
+              <input type="hidden" id="model_id" value="{{data.model_id}}">
                 {% if data.parent_model_id %}
-                    <div><label><a href="/admin/projects/model/{{data.parent_model_id}}/detail">Parent Model</a></label></div>
+                    <div><label><a href="/admin/model/view/{{data.parent_model_id}}">Parent Model</a></label></div>
                 {% endif %}
               {% if data.capture_dataset|length %}
-                <div><label>Capture Dataset:</label> <a href="/admin/projects/dataset_elements/{{data.parent_records.project_repository_id}}/{{data.parent_records.subject_repository_id}}/{{data.parent_records.item_repository_id}}/{{data.capture_dataset.capture_dataset_repository_id}}">{{data.capture_dataset.capture_dataset_name}}</a></div>
+                <div><label>Capture Dataset:</label> <a href="/admin/capture_dataset/view/{{data.capture_dataset.capture_dataset_id}}">{{data.capture_dataset.capture_dataset_name}}</a></div>
               {% endif %}
               <div><label>Model GUID: </label> {{data.model_guid}}</div>
               {% if data.date_of_creation %}
@@ -85,7 +84,7 @@
         </div>
         <div class="col-md-12">
             {% if data.viewable_model != false %}
-              <a class="btn btn-primary" href="/admin/projects/model/{{data.model_repository_id}}/viewer" target="_blank">Preview 3D Model in Viewer</a>
+              <a class="btn btn-primary" href="/admin/model/viewer/{{data.model_id}}" target="_blank">Preview 3D Model in Viewer</a>
             {% endif %}
         </div>
     </div>
@@ -94,7 +93,7 @@
     <div class="panel panel-default">
         <div class="panel-body">
             <h2>Derivative Models</h2>
-            <input type="hidden" id="delete-path" value="admin/projects/model/delete" />
+            <input type="hidden" id="delete-path" value="admin/model/delete" />
             <table id="browse_models" class="table table-striped table-bordered" cellspacing="0" width="100%">
                 <thead>
                 <tr>
@@ -131,7 +130,7 @@
       <div class="panel panel-default">
           <div class="panel-body">
               <h2>Model Files</h2>
-              <input type="hidden" id="delete-model-file" value="admin/projects/model_file/delete" />
+              <input type="hidden" id="delete-path" value="admin/model_file/delete/{{ data.model_id }}" />
               <table id="browse_model_files" class="table table-striped table-bordered" cellspacing="0" width="100%">
                   <thead>
                   <tr>
@@ -166,7 +165,7 @@
     {{ parent() }}
     <script src="{{ asset('lib/javascripts/datepicker/js/bootstrap-datepicker.min.js') }}"></script>
 
-    {% if data.model_repository_id is defined %}
+    {% if data.model_id is defined %}
         <script src="{{ asset('lib/javascripts/datatables/js/jquery.dataTables.min.js') }}"></script>
         <script src="{{ asset('lib/javascripts/datatables/js/dataTables.buttons.min.js') }}"></script>
         <script src="{{ asset('lib/javascripts/datatables/js/dataTables.bootstrap.min.js') }}"></script>
@@ -182,7 +181,7 @@
 
         <script type="text/javascript">
         $(document).ready(function(){
-          var  model_repository_id = $("#model_repository_id").val();
+          var  model_id = $("#model_id").val();
           $('#browse_uv_maps').dataTable( {
             "columns": [
               { "data": "manage" },
@@ -202,9 +201,11 @@
             "serverSide": true,
             // Path to the file that is going to handle the queries.
             "ajax": {
-              "url": "/admin/projects/uv_map/datatables_browse",
+              "url": "/admin/datatables_browse",
               "data": {
-                "parent_id": model_repository_id
+                "parent_id": model_id,
+                "record_type": 'uv_map',
+                "parent_type": 'model_id'
               }
             },
             // Method type.
@@ -232,13 +233,13 @@
                 if(thisTableCell.hasClass('manage_column')) return;
                 // Send to the details page.
                 var this_id = thisTableCell.closest("tr").attr('id');
-                window.location.href = '/admin/projects/uv_map/manage/' + model_repository_id + '/' + this_id;
+                window.location.href = '/admin/uv_map/manage/' + '/' + this_id;
               });
             }
           });
           var uv_maps_add_button = $('<a />')
             .addClass('btn btn-default add-record-button')
-            .attr('href', '/admin/projects/uv_map/manage/' + model_repository_id)
+            .attr('href', '/admin/uv_map/add/' + model_id)
             .html('<span class="glyphicon glyphicon-plus"></span> Add a UV Map');
           $('#browse_uv_maps').find('.datatables_bulk_actions').append(uv_maps_add_button);
 
@@ -260,9 +261,11 @@
           "serverSide": true,
           // Path to the file that is going to handle the queries.
           "ajax": {
-            "url": "/admin/model/files/datatables_browse",
+            "url": "/admin/datatables_browse",
             "data": {
-              "parent_id": model_repository_id
+              "parent_id": model_id,
+              "record_type": 'model_file',
+              "parent_type": 'model_id'
             }
           },
           // Values in the length dropdown.
@@ -288,9 +291,9 @@
           "columns": [
             { "data": "manage" },
             { "data": "manage" },
-            { "data": "model_repository_id", "title": "Model Repository ID"  },
-            { "data": "parent_capture_dataset_repository_id", "title": "Parent Capture Dataset Repository ID"  },
-            { "data": "parent_item_repository_id", "title": "Parent Item Repository ID"  },
+            { "data": "model_id", "title": "Model Repository ID"  },
+            { "data": "capture_dataset_id", "title": "Parent Capture Dataset Repository ID"  },
+            { "data": "item_id", "title": "Parent Item Repository ID"  },
             { "data": "model_file_type", "title": "Model File Type"  },
             { "data": "model_guid", "title": "Model Guid"  },
             { "data": "date_of_creation", "title": "Date of Creation"  },
@@ -330,10 +333,10 @@
           "serverSide": true,
           // Path to the file that is going to handle the queries.
           "ajax": {
-              "url": "/admin/model/datatables_browse_derivative_models",
+              "url": "/admin/datatables_browse_derivative_models",
             "data": {
-                "parent_id": model_repository_id,
-                "parent_type": "parent_model_id"
+                "parent_id": model_id,
+                "parent_type": "model_id"
             }
           },
           // Method type.
@@ -378,7 +381,7 @@
               if(thisTableCell.hasClass('download')) return;
               // Send to the details page.
               var this_id = thisTableCell.closest("tr").attr('id');
-              window.location.href = '/admin/projects/model/' + this_id + '/detail';
+              window.location.href = '/admin/model/view/' + this_id;
             });
 
           }
@@ -386,7 +389,7 @@
 
           /*var models_add_button = $('<a />')
             .addClass('btn btn-default add-record-button')
-            .attr('href', '/admin/projects/model/manage/' + item_repository_id + '?from=model')
+            .attr('href', '/admin/model/add/' + model_id + '?from=model_id')
             .html('<span class="glyphicon glyphicon-plus"></span> Add a Model');
           $('#browse_models_wrapper').find('.datatables_bulk_actions').prepend(models_add_button);
             */

@@ -42,7 +42,12 @@
                 <li role="presentation" id="workspace"><a href="/admin/workspace/">Workspace</a></li>
                 <li role="presentation" id="import"><a href="/admin/ingest">Ingest</a></li>
                 <li role="presentation" id="resources"><a href="/admin/resources/">Equipment/Resources</a></li>
-                <li role="presentation" id="settings"><a href="/admin/settings/">Profile/Settings</a></li>
+                {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and is_granted('ROLE_ADMIN') %}
+                    <li role="presentation" id="users"><a href="/admin/users/">Users</a></li>
+                {% endif %}
+                {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and is_granted('ROLE_ADMIN') %}
+                    <li role="presentation" id="roles"><a href="/admin/roles">Roles</a></li>
+                {% endif %}
               </ul>
             </div>
           </div>
@@ -58,7 +63,7 @@
           {% block side_nav %}
             {#{ parent() }#}
           {% endblock %}
-          {% if (app.request.pathInfo == '/admin/workspace/') or (project_repository_id is defined) %}
+          {% if (app.request.pathInfo == '/admin/workspace/') or (project_id is defined) %}
             <!-- <div class="col-sm-9 col-sm-offset-3 col-md-9 col-md-offset-3 main resizable"> -->
             <div class="col-sm-12 col-md-12 main resizable">
           {% else %}
@@ -100,7 +105,7 @@
 
       <div class="row">
         <div class="clearfix"></div>
-        {% if (app.request.pathInfo == '/admin/workspace/') or (project_repository_id is defined) %}
+        {% if (app.request.pathInfo == '/admin/workspace/') or (project_id is defined) %}
           <div class="col-sm-9 col-sm-offset-3 col-md-9 col-md-offset-3 col-footer">
         {% else %}
           <div class="col-sm-12 col-md-12 col-footer">

@@ -15,7 +15,7 @@ use GUMP;
 use AppBundle\Utils\GumpParseErrors;
 use AppBundle\Utils\AppUtilities;
 
-class CaptureMethodsController extends Controller
+class CaptureMethodController extends Controller
 {
     /**
      * @var object $u
@@ -33,7 +33,7 @@ class CaptureMethodsController extends Controller
 
         // Table name and field names.
         $this->table_name = 'capture_method';
-        $this->id_field_name_raw = 'capture_method_repository_id';
+        $this->id_field_name_raw = 'capture_method_id';
         $this->id_field_name = 'capture_method.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'label';
         $this->label_field_name = 'capture_method.' . $this->label_field_name_raw;

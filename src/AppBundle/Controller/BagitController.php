@@ -110,7 +110,7 @@ class BagitController extends Controller
    * create_data_dir
    * flag_warnings_as_errors
    */
-  public function bagit_create($params = array()) {
+  public function bagitCreate($params = array()) {
 
     $data = (object)[];
     $return = array();
@@ -150,14 +150,14 @@ class BagitController extends Controller
     // Make sure file contents are inside a folder named "data" - create folder and move them if need be.
     if(!file_exists($data->localpath . '/data')) {
       if($data->create_data_dir) {
-        $this->create_datadir_move_files($data->localpath);
+        $this->createDatadirMoveFiles($data->localpath);
       }
       else {
         $return['errors'][] = 'The data directory for this package is missing.';
       }
     }
     else {
-      $package_data_files = $this->get_package_data_files($data->localpath . '/data');
+      $package_data_files = $this->getPackageDataFiles($data->localpath . '/data');
       if(count($package_data_files) == 0) {
         $return['warnings'][] = 'There are no files in the data directory for this package.';
       }
@@ -236,7 +236,7 @@ class BagitController extends Controller
    * uuid
    * flag_warnings_as_errors
    */
-  public function bagit_validate($params = array()) {
+  public function bagitValidate($params = array()) {
 
     $data = (object)[];
     $return = array();
@@ -271,7 +271,7 @@ class BagitController extends Controller
 
     // Validate that all of the BagIt files exist.
     // (bag-info.txt, bagit.txt, manifest-sha1.txt, tagmanifest-md5.txt)
-    $validate_folder = $this->validate_folder($this->project_directory . $this->uploads_directory . $job_data['uuid']);
+    $validate_folder = $this->validateFolder($this->project_directory . $this->uploads_directory . $job_data['uuid']);
 
     if (isset($validate_folder['path_to_bag'])) {
       // The directory path to the bag.
@@ -313,7 +313,7 @@ class BagitController extends Controller
         $return['errors'][] = 'The data directory for this package is missing.';
       }
       else {
-        $package_data_files = $this->get_package_data_files($return['path_to_bag'] . '/data');
+        $package_data_files = $this->getPackageDataFiles($return['path_to_bag'] . '/data');
       }
 
       // Is the manifest empty? If so, return this as a warning.
@@ -399,7 +399,7 @@ class BagitController extends Controller
    * @param array $localpath Path to bag .txt files.
    * @return array Missing files.
    */
-  public function validate_folder($localpath, $message_prefix = 'Missing file: ') {
+  public function validateFolder($localpath, $message_prefix = 'Missing file: ') {
 
     $bag_files_found = [];
     $data = [];
@@ -449,7 +449,7 @@ class BagitController extends Controller
    * @param array $package_data_dir Path to the package's data directory.
    * @return array The package's data files.
    */
-  public function get_package_data_files($package_data_dir) {
+  public function getPackageDataFiles($package_data_dir) {
 
     $package_data_files = scandir($package_data_dir);
 
@@ -478,9 +478,9 @@ class BagitController extends Controller
    * @param array $package_dir Path to the package's directory.
    * @return null
    */
-  public function create_datadir_move_files($package_dir) {
+  public function createDatadirMoveFiles($package_dir) {
 
-    $package_files = $this->get_package_data_files($package_dir);
+    $package_files = $this->getPackageDataFiles($package_dir);
 
     // Create 'data' directory.
     mkdir($package_dir . '/data', 0775);

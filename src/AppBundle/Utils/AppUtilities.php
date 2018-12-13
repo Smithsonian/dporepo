@@ -72,7 +72,7 @@ class AppUtilities
    *
    * @return string
    */
-  public function create_uuid() {
+  public function createUuid() {
 
     if (function_exists('com_create_guid')){
       return com_create_guid();

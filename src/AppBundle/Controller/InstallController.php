@@ -15,10 +15,10 @@ use PDO;
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
 
-// Subjects methods
-use AppBundle\Controller\SubjectsController;
-// Items methods
-use AppBundle\Controller\ItemsController;
+// Subject methods
+use AppBundle\Controller\SubjectController;
+// Item methods
+use AppBundle\Controller\ItemController;
 
 class InstallController extends Controller
 {
