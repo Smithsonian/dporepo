@@ -34,8 +34,8 @@
         <div class="col-sm-12 col-md-12">
             <div class="col-md-6">
               <input type="hidden" id="model_id" value="{{data.model_id}}">
-                {% if data.model_id %}
-                    <div><label><a href="/admin/model/view/{{data.model_id}}">Parent Model</a></label></div>
+                {% if data.parent_model_id %}
+                    <div><label><a href="/admin/model/view/{{data.parent_model_id}}">Parent Model</a></label></div>
                 {% endif %}
               {% if data.capture_dataset|length %}
                 <div><label>Capture Dataset:</label> <a href="/admin/capture_dataset/view/{{data.capture_dataset.capture_dataset_id}}">{{data.capture_dataset.capture_dataset_name}}</a></div>

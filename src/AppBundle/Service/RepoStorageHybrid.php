@@ -404,7 +404,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'model',
-      'field_name' => 'model_id',
+      'field_name' => 'parent_model_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'model',
