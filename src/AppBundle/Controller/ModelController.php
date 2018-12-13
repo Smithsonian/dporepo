@@ -305,7 +305,7 @@ class ModelController extends Controller
     }
 
     /**
-     * @Route("/admin/model/{id}/viewer", name="model_viewer", methods="GET", defaults={"id" = null})
+     * @Route("/admin/model/viewer/{id}", name="model_viewer", methods="GET", defaults={"id" = null})
      *
      * @param $id The model ID
      * @param Connection $conn
