@@ -150,7 +150,7 @@ class CaptureDeviceController extends Controller
         }
 
         return $this->render('datasetElements/capture_device_form.html.twig', array(
-            'page_title' => !empty($id) ? 'Capture Device: ' . $data->calibration_file : 'Create Capture Device',
+            'page_title' => !empty($id) ? 'Capture Device: ' . $data['calibration_file'] : 'Create Capture Device',
             'data' => (array)$data,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
