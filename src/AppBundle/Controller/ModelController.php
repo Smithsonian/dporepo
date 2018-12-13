@@ -204,14 +204,11 @@ class ModelController extends Controller
             $this->addFlash('message', 'Record successfully updated.');
             return $this->redirect('/admin/model/view/' . $id);
         }
-        else {
-          print("NOT VALID");
-        }
 
         return $this->render('datasets/model_form.html.twig', array(
             'page_title' => !empty($id) ? 'Model: ' . $data->model_guid : 'Create Model',
             'data' => $data,
-            'uploads_path' => $this->uploads_path,
+            'uploads_path' => $this->uploads_directory,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
             'back_link' => $back_link,
