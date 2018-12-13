@@ -100,7 +100,7 @@ class ItemController extends Controller
     }
 
     /**
-     * @Route("/admin/datatables_browse_subject_items/{subject_id}", name="subjectitems_browse_datatables", methods="POST", defaults={"subject_id" = null})
+     * @Route("/admin/datatables_browse_subject_items/{project_id}", name="subjectitems_browse_datatables", methods="POST", defaults={"project_id" = null})
      *
      * Browse items
      *
@@ -112,7 +112,7 @@ class ItemController extends Controller
     public function datatablesBrowseSubjectItems(Request $request)
     {
       $req = $request->request->all();
-      $subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
+      $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
 
       // First, perform a 3D model generation status check, and update statuses in the database accordingly.
       /*
@@ -145,7 +145,7 @@ class ItemController extends Controller
         'sort_order' => $sort_order,
         'start_record' => $start_record,
         'stop_record' => $stop_record,
-        'subject_id' => $subject_id,
+        'project_id' => $project_id,
       );
       if ($search) {
         $query_params['search_value'] = $search;
