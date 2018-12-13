@@ -179,7 +179,7 @@ class ItemController extends Controller
         $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => (int)$project_id));
       }
       $subject_id = isset($item->item_data->subject_id) ? $item->item_data->subject_id : NULL;
-      if(NULL !== $project_id) {
+      if(NULL !== $subject_id) {
         $subject_data = $this->repo_storage_controller->execute('getSubject', array('record_id' => (int)$subject_id));
       }
 
