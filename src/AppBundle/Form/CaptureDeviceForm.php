@@ -21,10 +21,6 @@ class CaptureDeviceForm extends AbstractType
                 'label' => 'Calibration File',
                 'required' => true,
               ))
-            ->add('capture_device_component_ids', null, array(
-                'label' => 'Capture Device Component IDs',
-                'required' => false,
-              ))
             ->add('save', SubmitType::class, array(
                 'label' => 'Save Edits',
                 'attr' => array('class' => 'btn btn-primary'),

@@ -81,7 +81,6 @@
                             <tr>
                                 <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
                                 <th class="text-center">Calibration File</th>
-                                <th class="text-center">Capture Device Component IDs</th>
                                 <th class="text-center">Last Modified</th>
                             </tr>
                             </thead>
@@ -168,13 +167,12 @@
               "columns": [
                 { "data": "manage" },
                 { "data": "calibration_file" },
-                { "data": "capture_device_component_ids" },
                 { "data": "last_modified" }
               ],
               "dom": 'lfip<"datatables_bulk_actions">tip',
               "pagingType": "simple_numbers",
               "stateSave": true,
-              "order": [[3,"desc"]],
+              "order": [[2,"desc"]],
               // Show processing throbber.
               "processing": true,
               "serverMethod": "POST",

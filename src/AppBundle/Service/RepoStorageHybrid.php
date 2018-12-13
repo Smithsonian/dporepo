@@ -789,7 +789,6 @@ class RepoStorageHybrid implements RepoStorage {
               capture_device.capture_device_id,
               capture_device.capture_data_element_id,
               capture_device.calibration_file,
-              capture_device.capture_device_component_ids,
               capture_data_element.capture_dataset_id,
               capture_dataset.item_id,
               item.subject_id,
@@ -1796,10 +1795,6 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => 'capture_device_component_ids',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
           'field_name' => 'active',
         );
         $query_params['fields'][] = array(
@@ -1817,7 +1812,6 @@ class RepoStorageHybrid implements RepoStorage {
           $query_params['search_params'][] = array(
             'field_names' => array(
               $record_type . '.calibration_file',
-              $record_type . '.capture_device_component_ids',
             ),
             'search_values' => array($search_value),
             'comparison' => 'LIKE',

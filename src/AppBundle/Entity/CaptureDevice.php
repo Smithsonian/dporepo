@@ -21,9 +21,4 @@ class CaptureDevice
      */
     public $calibration_file;
 
-    /**
-     * @var string
-     */
-    public $capture_device_component_ids;
-
 }
