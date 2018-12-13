@@ -17,7 +17,7 @@
         <li><a href="/admin/workspace">Browse Projects</a></li>
         <li><strong>Project:</strong> <a href="/admin/project/view/{{ project_id }}">{{ project_data.project_name|e }}</a></li>
         <li><strong>Item:</strong> <a href="/admin/item/view/{{ item_id }}">{{ item_data.item_description_truncated|e }}</a></li>
-        <li><strong>Capture Dataset:</strong> <a href="/admin/capture_dataset_view/{{ capture_dataset_id }}">{{ dataset_data.capture_dataset_name|e }}</a></li>
+        <li><strong>Capture Dataset:</strong> <a href="/admin/capture_dataset/view/{{ capture_dataset_id }}">{{ dataset_data.capture_dataset_name|e }}</a></li>
         <li class="active">{% if dataset_element_data.capture_sequence_number is defined %}<strong>Capture Data Element:</strong> {{ dataset_element_data.capture_sequence_number|e }}{% else %}Add a Capture Data Element{% endif %}</li>
     </ol>
 
