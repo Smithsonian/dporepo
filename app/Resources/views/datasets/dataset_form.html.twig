@@ -10,7 +10,6 @@
       {{ form_row(form.date_of_capture) }}
       {{ form_row(form.capture_dataset_description) }}
       {{ form_row(form.collection_notes) }}
-      {{ form_row(form.item_position_type) }}
       <fieldset>
         <legend>API Delivery Integration</legend>
         {{ form_row(form.api_publication_picker) }}
@@ -21,6 +20,7 @@
       </fieldset>
     </div>
     <div class="col-sm-6 col-md-6">
+      {{ form_row(form.item_position_type) }}
       {{ form_row(form.positionally_matched_capture_datasets) }}
       {{ form_row(form.focus_type) }}
       {{ form_row(form.light_source_type) }}
