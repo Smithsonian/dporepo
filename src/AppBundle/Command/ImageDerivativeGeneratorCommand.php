@@ -8,17 +8,12 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 
-use AppBundle\Service\RepoProcessingService;
-
 class ImageDerivativeGeneratorCommand extends ContainerAwareCommand
 {
   protected $container;
-  private $processing_service;
 
-  public function __construct(RepoProcessingService $processing_service)
+  public function __construct()
   {
-    // Repo processing service.
-    $this->processing_service = $processing_service;
     // This is required due to parent constructor, which sets up name.
     parent::__construct();
   }
