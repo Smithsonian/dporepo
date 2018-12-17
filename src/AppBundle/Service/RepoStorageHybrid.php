@@ -617,9 +617,9 @@ class RepoStorageHybrid implements RepoStorage {
         // );
 
         $data['subject_name'] = $subject['subject_name'];
-        $data['item_description'] = $item['item_description'];
-        $data['project_name'] = $item['project_id'];
       }
+      $data['item_description'] = $item['item_description'];
+      $data['project_name'] = $item['project_id'];
     }
 
     return $data;
