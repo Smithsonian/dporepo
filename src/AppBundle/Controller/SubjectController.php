@@ -321,24 +321,24 @@ class SubjectController extends Controller
      *
      * Run a query to retrieve all subjects from the database.
      *
-     * @param   int $project_id  The project ID
      * @return  array|bool  The query result
      */
-    public function getSubjects($project_id = false)
+    public function getSubjects($available_only = false)
     {
 
-      $data = $this->repo_storage_controller->execute('getRecords', array(
+      $query_params = array(
           'base_table' => 'subject',
           'fields' => array(),
           'sort_fields' => array(
             0 => array('field_name' => 'subject_name')
           ),
           'search_params' => array(
-            0 => array('field_names' => array('project_id'), 'search_values' => array($project_id), 'comparison' => '=')
+          //0 => array('field_names' => array('project_id'), 'search_values' => array($project_id), 'comparison' => '=')
           ),
           'search_type' => 'AND',
-        )
       );
+      //@todo available only
+      $data = $this->repo_storage_controller->execute('getRecords', $query_params );
 
       return $data;
     }
