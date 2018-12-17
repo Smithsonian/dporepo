@@ -2,8 +2,8 @@
 
 {% block stylesheets %}
   {{ parent() }}
-  <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
-  <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -13,7 +13,7 @@
     <li class="active">Browse Projects</li>
   </ol>
 
-  <a href="/admin/projects/manage" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Project</a>
+  <a href="/admin/project/add/" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Project</a>
 
   <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
     <thead>
@@ -21,7 +21,7 @@
         <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
         <th class="text-center">Project</th>
         <th class="text-center">Stakeholder</th>
-        <th class="text-center">Subjects Count</th>
+        <th class="text-center">Items Count</th>
         <th class="text-center">Created</th>
         <th class="text-center">Modified</th>
       </tr>
@@ -32,22 +32,22 @@
 
 {% block js_bottom %}
   {{ parent() }}
-  <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
-  <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
+  <script src="{{ asset('lib/javascripts/datatables/js/jquery.dataTables.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/datatables/js/dataTables.buttons.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/datatables/js/dataTables.bootstrap.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/buttons/js/buttons.bootstrap.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/buttons/js/buttons.colVis.min.js') }}"></script>
   <script type="text/javascript">
     $(document).ready(function() {
 
-      var details_page = "/admin/projects/subjects/";
+      var details_page = "/admin/project/view/";
 
       $('#browse').dataTable({
         "columns": [
           { "data": "manage" },
           { "data": "project_name" },
           { "data": "stakeholder_label" },
-          { "data": "subjects_count" },
+          { "data": "items_count" },
           { "data": "date_created" },
           { "data": "last_modified" }
         ],
@@ -61,7 +61,7 @@
         // All data management will be done on the server side.
         "serverSide": true,
         // Path to the file that is going to handle the queries.
-        "ajax": "/admin/projects/datatables_browse_projects",
+        "ajax": "/admin/datatables_browse_projects",
         // Method type.
         "serverMethod": "POST",
         // Values in the length dropdown.
@@ -88,8 +88,8 @@
             // Don't do anything if the table cell has the 'manage_column' CSS class.
             if(thisTableCell.hasClass('manage_column')) return;
             // Send to the details page.
-            var project_repository_id = thisTableCell.closest("tr").attr('id');
-            window.location.href = details_page + project_repository_id;
+            var project_id = thisTableCell.closest("tr").attr('id');
+            window.location.href = details_page + project_id;
           });
 
         }

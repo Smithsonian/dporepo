@@ -2,10 +2,10 @@
 
 {% block stylesheets %}
     {{ parent() }}
-    <link href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/css/bootstrap-datepicker3.css" rel="stylesheet" type="text/css">
-    {% if data.capture_device_repository_id is defined %}
-        <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
-        <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('lib/javascripts/datepicker/css/bootstrap-datepicker3.css') }}" rel="stylesheet" type="text/css">
+    {% if data.capture_device_id is defined %}
+        <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+        <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
     {% endif %}
 {% endblock %}
 
@@ -14,7 +14,7 @@
     <div class="row">
         <div class="col-sm-12 col-md-12">
             <div class="alert alert-warning" role="alert">
-                TODO: Fix the back button - hardwire to go to the parent Capture Data Element - e.g. /admin/projects/dataset_element/19/49/21/27/31
+                TODO: Fix the back button - hardwire to go to the parent Capture Data Element - e.g. /admin/dataset_element/view/31
             </div>
             <div class="form-group">
                 <a href="{{ back_link }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
@@ -26,9 +26,8 @@
 
     <div class="row">
         <div class="col-sm-6 col-md-6">
-            {{ form_row(form.parent_capture_data_element_repository_id) }}
+            {{ form_row(form.capture_data_element_id) }}
             {{ form_row(form.calibration_file) }}
-            {{ form_row(form.capture_device_component_ids) }}
         </div>
         <div class="col-sm-6 col-md-6">
             <!-- placeholder -->
@@ -41,13 +40,13 @@
 
     {{ form_end(form) }}
 
-    {% if data.capture_device_repository_id is defined %}
+    {% if data.capture_device_id is defined %}
         <div class="row">
             <div class="col-sm-12 col-md-12 child-data">
                 <div class="panel panel-default">
                     <div class="panel-body">
                         <h2>Capture Device Components</h2>
-                        <input type="hidden" id="delete-path" value="admin/projects/capture_device_component/delete" />
+                        <input type="hidden" id="delete-path" value="admin/capture_device_component/delete" />
 
                         <table id="browse_capture_device_components" class="table table-striped table-bordered" cellspacing="0" width="100%">
                             <thead>
@@ -71,15 +70,15 @@
 
 {% block javascripts %}
     {{ parent() }}
-    {% if data.capture_device_repository_id is defined %}
-        <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
-        <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
-        <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
-        <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
-        <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
+    {% if data.capture_device_id is defined %}
+        <script src="{{ asset('lib/javascripts/datatables/js/jquery.dataTables.min.js') }}"></script>
+        <script src="{{ asset('lib/javascripts/datatables/js/dataTables.buttons.min.js') }}"></script>
+        <script src="{{ asset('lib/javascripts/datatables/js/dataTables.bootstrap.min.js') }}"></script>
+        <script src="{{ asset('lib/javascripts/buttons/js/buttons.bootstrap.min.js') }}"></script>
+        <script src="{{ asset('lib/javascripts/buttons/js/buttons.colVis.min.js') }}"></script>
         <script type="text/javascript">
           $(document).ready(function() {
-            var parent_id = "{{ data.capture_device_repository_id }}";
+            var parent_id = "{{ data.capture_device_id }}";
             $('#browse_capture_device_components').dataTable( {
               "columns": [
                 { "data": "manage" },
@@ -100,7 +99,7 @@
               "serverSide": true,
               // Path to the file that is going to handle the queries.
               "ajax": {
-                "url": "/admin/projects/capture_device_component/datatables_browse",
+                "url": "/admin/datatables_browse_capture_device_component",
                 "data": {
                   "parent_id": parent_id
                 }
@@ -130,13 +129,13 @@
                   if(thisTableCell.hasClass('manage_column')) return;
                   // Send to the details page.
                   var this_id = thisTableCell.closest("tr").attr('id');
-                  window.location.href = '/admin/projects/capture_device_component/manage/' + parent_id + '/' + this_id;
+                  window.location.href = '/admin/capture_device_component/manage/' + this_id;
                 });
               }
             });
             var add_button = $('<a />')
               .addClass('btn btn-default add-record-button')
-              .attr('href', '/admin/projects/capture_device_component/manage/' + parent_id)
+              .attr('href', '/admin/capture_device_component/add/' + parent_id)
               .html('<span class="glyphicon glyphicon-plus"></span> Add a Capture Device Component');
             $('.datatables_bulk_actions').append(add_button);
           });

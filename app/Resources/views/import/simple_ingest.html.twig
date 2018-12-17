@@ -1,0 +1,677 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+{% use 'import/ingest_wizard.html.twig' %}
+{% use 'import/record_picker_modal.html.twig' %}
+{% use 'import/subject_form_modal.html.twig' %}
+{% use 'import/item_form_modal.html.twig' %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <link href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/css/bootstrap-datepicker3.css" rel="stylesheet" type="text/css">
+  <link href="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.css') }}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block content %}
+
+  <ol class="breadcrumb">
+    <li><a href="/admin">Dashboard</a></li>
+    <li class="active">Ingest</li>
+  </ol>
+
+  <div class="row">
+    <div class="col-sm-12 col-md-12">
+      <!-- nav-tabs -->
+      <ul class="nav nav-tabs" id="uploadsTabs" role="tablist">
+        <li role="presentation">
+          <a href="#browseUploads" id="browse-tab" role="tab" data-toggle="tab" aria-controls="browse" aria-expanded="true">Browse Ingests</a>
+        </li>
+        <li role="presentation" class="active">
+          <a href="#simpleIngest" role="tab" id="simple-ingest-tab" data-toggle="tab" aria-controls="simple-ingest">Simple Ingest</a>
+        </li>
+        <li role="presentation">
+          <a href="#bulkIngest" role="tab" id="bulk-ingest-tab" data-toggle="tab" aria-controls="bulk-ingest">Bulk Ingest</a>
+        </li>
+      </ul>
+      <!-- tab-content -->
+      <div class="tab-content" id="uploadsTabContent" style="padding-top: 3rem;">
+        <!-- // tab-pane -->
+        <div class="tab-pane fade in active" role="tabpanel" id="simpleIngest" aria-labelledby="simple-ingest-tab">
+          <div class="row">
+            <div class="col-lg-12">
+              <!-- Ingest Wizard -->
+              {% block ingestwizard %}{{ parent() }}{% endblock %}
+            </div>
+          </div>
+        </div>
+        <!-- // tab-pane -->
+      </div>
+      <!-- // tab-content -->
+    </div>
+  </div>
+
+  <!-- Record Picker Modal -->
+  {% block record_picker_modal %}{{ parent() }}{% endblock %}
+  <!-- Subject Form Modal -->
+  {# {% include 'import/subject_form_modal.html.twig' %} #}
+  {% block subject_form %}{{ parent() }}{% endblock %}
+  <!-- Item Form Modal -->
+  {# {% include 'import/item_form_modal.html.twig' %} #}
+  {% block item_form %}{{ parent() }}{% endblock %}
+  <!-- Uploading Modal -->
+  {% include 'import/uploading_modal.html.twig' %}
+
+{% endblock %}
+
+{% block js_bottom %}
+  <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/dropzone.js') }}"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.js') }}"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/js/bootstrap-datepicker.min.js"></script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/jquery.bootstrap.wizard.min.js') }}"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+      /**
+       * Bootstrap Wizard
+       */
+      var rootwizard = $('#rootwizard');
+      rootwizard.bootstrapWizard({'tabClass': 'nav nav-tabs nav-justified'});
+      // Initially disable all steps.
+      rootwizard.bootstrapWizard('disable', '1');
+      rootwizard.bootstrapWizard('disable', '2');
+      // Disable the "Next Step" button.
+      rootwizard.find('.next').addClass('disabled');
+
+      /**
+       * Create a New Subject / Create a New Item click handler
+       */
+      $('.create-record').on('click', function(e) {
+        var thisTrigger = $(this);
+        // Show the modal.
+        $('#' + thisTrigger.attr('data-create') + '-form-modal').modal('show');
+
+        // console.log(thisTrigger.attr('data-create'));
+      });
+
+      /**
+       * Browse Ingests tab click handler
+       * (navigate to the Browse Ingest page)
+       */
+      $('#browse-tab').on('click', function(e) {
+        window.location.href = '/admin/ingest';
+      });
+
+      /**
+       * Bulk Ingest tab click handler
+       * (navigate to the Bulk Ingest page)
+       */
+      $('#bulk-ingest-tab').on('click', function(e) {
+        window.location.href = '/admin/bulk_ingest';
+      });
+
+      // Display the record picker modal.
+      $('.select-record').on('click', function(e) {
+
+        var thisTrigger = $(this);
+        recordType = thisTrigger.attr('data-select');
+
+        switch (recordType) {
+          case 'project':
+            var dt = browseProjects();
+            break;
+          case 'subject':
+            var dt = browseSubjects();
+            break;
+          case 'item':
+            var dt = browseItems();
+            break;
+        }
+
+        // Display the target Datatable.
+        $('#' + recordType).removeClass('hidden');
+        // Add the title to the modal (Example: Select a Project).
+        $('#record-picker-modal-title').empty().append('Select a ' + convertCase(recordType));
+        // Show the modal.
+        $('#record-picker-modal').modal('show');
+
+        // When hiding the modal, hide the target Datatable and destroy the Datatable.
+        $('#record-picker-modal').on('hidden.bs.modal', function(e) {
+          $('#' + thisTrigger.attr('data-select')).addClass('hidden');
+          dt.fnDestroy();
+        });
+      });
+
+      // Datepicker
+      var dateInput = $('input[name="capture_dataset_form[date_of_capture]"]');
+      var thisContainer = $('form.dataset_form').length>0 ? $('form.dataset_form').parent() : 'body';
+      var options = {
+        format: 'yyyy-mm-dd 00:00:00',
+        container: thisContainer,
+        todayHighlight: true,
+        autoclose: true,
+      };
+      dateInput.datepicker(options);
+
+      // Subject form submit handler.
+      $(document).on('submit', 'form[name="subject_form"]', function(e){        
+        // Avoid submitting the form non-ajax.
+        e.preventDefault();
+        // Get the properties and values from the form.
+        var form = $('form[name="subject_form"]');
+        var formData = form.serializeObject();
+        // Submit via AJAX.
+        submitSubjectRecord(formData);
+      });
+
+      // Item form submit handler.
+      $(document).on('submit', 'form[name="item_form"]', function(e){
+        // Avoid submitting the form non-ajax.
+        e.preventDefault();
+        // Get the properties and values from the form.
+        var form = $('form[name="item_form"]');
+        var formData = form.serializeObject();
+        // Add the project_id and subject_id to the formData object.
+        formData['item_form[project_id]'] = $('body').data('project_id');
+        formData['item_form[subject_id]'] = $('body').data('subject_id');
+        // Submit via AJAX.
+        itemSubjectRecord(formData);
+      });
+
+      // Dataset form submit handler.
+      $(document).on('submit', 'form[name="capture_dataset_form"]', function(e){
+        // Avoid submitting the form non-ajax.
+        e.preventDefault();
+        // Convert form data to a CSV and add it to the Uploads Stage.
+        addCsvToUploadsStage();
+        // Avoid submitting the form multiple times.
+        $('#dataset_save').attr('disabled', true);
+        // Display a success message in the UI.
+        swal({
+          title: 'Dataset Saved',
+          text: 'Please proceed to Step 3',
+          icon: 'success',
+        });
+      });
+
+      $.fn.serializeObject = function() {
+          var o = {};
+          var a = this.serializeArray();
+          $.each(a, function() {
+              if (o[this.name] !== undefined) {
+                  if (!o[this.name].push) {
+                      o[this.name] = [o[this.name]];
+                  }
+                  o[this.name].push(this.value || '');
+              } else {
+                  o[this.name] = this.value || '';
+              }
+          });
+          return o;
+      };
+
+      function addCsvToUploadsStage() {
+        // Create a CSV file and make it downloadable.
+        // Example data from formData:
+        // "capture_dataset_form[background_removal_method]": "4"
+        // ​"capture_dataset_form[calibration_object_used]": "1"
+        // "capture_dataset_form[capture_dataset_description]": "Lorem Ipsum"
+        //
+        // Get the properties and values from the form.
+        var form = $('form[name="capture_dataset_form"]');
+        // Add the import_row_id and import_parent_id hidden fields to the form.
+        // Doing this here since unshift() was not working further on down the line (?)
+        var import_row_id_field = $('<input />').attr('type', 'hidden').attr('name', 'import_row_id').val('1');
+        var import_parent_id_field = $('<input />').attr('type', 'hidden').attr('name', 'import_parent_id').val( $('body').data('item_id') );
+        form.prepend(import_row_id_field, import_parent_id_field);
+        // Serialize the form object.
+        var formData = form.serializeObject();
+        // Array of CSV columns.
+        var csvColumns = Object.keys(formData);
+        // Array of CSV values.
+        var csvValues = Object.values(formData);
+        // Remove the capture_dataset_form[_token] key (in csvColumns) and the corresponding value (in csvValues).
+        // Looping through and finding the key is a bit more precise, as opposed to using csvColumns.pop() and csvValues.pop();
+        for(var i = 0; i < csvColumns.length; i++) {
+           if (csvColumns[i] === 'capture_dataset_form[_token]') {
+             csvColumns.splice(i, 1);
+             csvValues.splice(i, 1);
+           }
+        }
+        // Remove "dataset[" and "]" from the CSV columns.
+        for( var i = 0; i < csvColumns.length; i++){
+          csvColumns[i] = csvColumns[i].replace('capture_dataset_form[', '');
+          csvColumns[i] = csvColumns[i].replace(']', '');
+        }
+        // Massage the CSV data to required specs.
+        for(var i = 0; i < csvColumns.length; i++) {
+          switch(csvColumns[i]) {
+            // Strip the space and zeros from date
+            case 'date_of_capture':
+              csvValues[i] = csvValues[i].replace(' 00:00:00', '');
+              break;
+            // Swap out option value for option text.
+            case 'support_equipment':
+            case 'capture_method':
+            case 'capture_dataset_type':
+            case 'item_position_type':
+            case 'focus_type':
+            case 'light_source_type':
+            case 'background_removal_method':
+            case 'cluster_type':
+              csvValues[i] = $('select[name="capture_dataset_form[' + csvColumns[i] + ']"] option[value="' + csvValues[i] + '"]').text();
+              break;
+            default:
+              // Do nothing
+          }
+        }
+        // // Add quotes around CSV values.
+        // for( var i = 0; i < csvValues.length; i++){
+        //   csvValues[i] = '"' + csvValues[i] + '"';
+        // }
+        // Add the CSV to the Uplaods Stage (Dropzone), in Step 3.
+        // See: https://stackoverflow.com/questions/17103398/convert-javascript-variable-value-to-csv-file
+        var blob = new Blob([csvColumns.join(',') + '\r\n' + csvValues.join(',')], {type: 'text/csv'});
+        blob.name = 'capture_datasets.csv';
+        uploadsDropzone.addFile(blob);
+        // Disable all fields in the form
+        $('form[name="capture_dataset_form"]').find('input, select, textarea').attr('disabled', true);
+        $('form[name="capture_dataset_form"]').find('select').trigger("chosen:updated");
+        // Enable Step 3 tab.
+        rootwizard.bootstrapWizard('enable', '2');
+      }
+
+      function convertCase(str) {
+        var lower = String(str).toLowerCase();
+        return lower.replace(/(^| )(\w)/g, function(x) {
+          return x.toUpperCase();
+        });
+      }
+
+      // Browse Projects Datatable
+      function browseProjects() {
+
+        var projectDt = $('#project').dataTable({
+          "columns": [
+            { "data": "project_name" },
+            { "data": "stakeholder_label" },
+            { "data": "items_count" },
+            { "data": "date_created" },
+            { "data": "last_modified" }
+          ],
+          "dom": 'lfip<"datatables_bulk_actions">tip',
+          "pagingType": "simple_numbers",
+          "stateSave": true,
+          "order": [[4,"desc"]],
+          // Show processing throbber.
+          "processing": true,
+          "serverMethod": "POST",
+          // All data management will be done on the server side.
+          "serverSide": true,
+          // Path to the file that is going to handle the queries.
+          "ajax": "/admin/datatables_browse_projects",
+          // Method type.
+          "serverMethod": "POST",
+          // Values in the length dropdown.
+          "lengthMenu":[10,50,100,500],
+          // Set some widths.
+          "columnDefs":[
+            {"sWidth":"105px","aTargets":[0]},
+            {"bSortable":false,"aTargets":[0,3]}
+          ],
+          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+            // This table row.
+            var thisTableRow = $(nRow);            
+            thisTableRow.find('td').click(function() {
+
+              thisTableRow.parent().children().removeClass('warning');
+              thisTableRow.addClass('warning');
+
+              // Since the parent record selection is changing, remove data and hide child well(s).
+              if ($('div.item-well').html()) {
+                $('div.subject-well, div.item-well').empty().addClass('hidden');
+                // Disable Step 2 tab.
+                rootwizard.bootstrapWizard('disable', '1');
+                // Remove any previously-stored piece(s) of data.
+                $('body').removeData('subject_id');
+                $('body').removeData('item_id');
+              }
+
+              // Transfer record metadata to the parent window.
+              var fields = ['project_id', 'project_name', 'last_modified', 'stakeholder_label', 'items_count'];
+              var html = '<dl>';
+              // Loop through the metadata and choose fileds in the 'fields' array.
+              // console.log(aData);
+              $.each(aData, function(key, value){
+                if (fields.indexOf(key) !== -1) {
+                  html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
+                  html += '<dd class="' + key + '">' + value + '</dd>'
+                }
+              });
+              html += '</dl>';
+
+              $('div.project-well').html(html);
+              $('div.project-well').removeClass('hidden');
+
+              // Enable the Subject buttons.
+              $('[data-select="subject"], [data-create="subject"]').removeAttr('disabled');
+
+              // Add the project_id to data.
+              $('body').data('project_id', aData.DT_RowId);
+              // Add the project_id to the hidden input.
+              $('input[name="dataset[project_id]"]').val($('body').data('project_id'));
+
+              // Also, take this opportunity to set the ajax data value.
+              $('body').data('ajax', true);
+
+              // // This table cell.
+              // var thisTableCell = $(this);
+              // // Don't do anything if the table cell has the 'manage_column' CSS class.
+              // if(thisTableCell.hasClass('manage_column')) return;
+              // // Send to the details page.
+              // var project_id = thisTableCell.closest("tr").attr('id');
+              // // window.location.href = "/admin/project/view/" + project_id;
+            });
+          }
+        });
+
+        return projectDt;
+      }
+
+      // Browse Subjects
+      function browseSubjects(projectId) {
+
+        var data = $('body').data();
+        var ajaxUrl = '/admin/datatables_browse_subjects';
+
+        var subjectDt = $('#subject').dataTable( {
+          "columns": [
+              { "data": "subject_name" },
+              { "data": "holding_entity_guid" },
+              { "data": "items_count" },
+              { "data": "last_modified" }
+            ],
+          "dom": 'lfip<"datatables_bulk_actions">tip',
+          "pagingType": "simple_numbers",
+          "stateSave": true,
+          "order": [[3,"desc"]],
+          // Show processing throbber.
+          "processing": true,
+          "serverMethod": "POST",
+          // All data management will be done on the server side.
+          "serverSide": true,
+          // Path to the file that is going to handle the queries.
+          "ajax": ajaxUrl,
+          // Method type.
+          "serverMethod": "POST",
+          // Values in the length dropdown.
+          "lengthMenu":[10,50,100,500],
+          // Set some widths.
+          "aoColumnDefs":[
+              {"sWidth":"105px","aTargets":[0]},
+              {"bSortable":false,"aTargets":[0,3]}
+          ],
+          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+            // This table row.
+            var thisTableRow = $(nRow);
+            thisTableRow.find('td').click(function() {
+
+              thisTableRow.parent().children().removeClass('warning');
+              thisTableRow.addClass('warning');
+
+              // Since the parent record selection is changing, remove data and hide child well(s).
+              if ($('div.item-well').html()) {
+                $('div.item-well').empty().addClass('hidden');
+                // Disable Step 2 tab.
+                rootwizard.bootstrapWizard('disable', '1');
+                // Remove any previously-stored piece(s) of data.
+                $('body').removeData('item_id');
+              }
+
+              // Transfer record metadata to the parent window.
+              var fields = ['last_modified', 'local_subject_id', 'subject_name', 'subject_id'];
+              var html = '<dl>';
+              // Loop through the metadata and choose fileds in the 'fields' array.
+              // console.log(aData);
+              $.each(aData, function(key, value){
+                if (fields.indexOf(key) !== -1) {
+                  html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
+                  html += '<dd class="' + key + '">' + value + '</dd>'
+                }
+              });
+              html += '</dl>';
+
+              $('div.subject-well').html(html);
+              $('div.subject-well').removeClass('hidden');
+
+              // Enable the Item buttons.
+              $('[data-select="item"], [data-create="item"]').removeAttr('disabled');
+
+              // Add the subject_id to data.
+              $('body').data('subject_id', aData.DT_RowId);
+              // Add the subject_id to the hidden input.
+              $('input[name="dataset[subject_id]"]').val($('body').data('subject_id'));
+
+              // // This table cell.
+              // var thisTableCell = $(this);
+              // // Don't do anything if the table cell has the 'manage_column' CSS class.
+              // if(thisTableCell.hasClass('manage_column')) return;
+              // // Send to the details page.
+              // var subject_id = thisTableCell.closest("tr").attr('id');
+              // // window.location.href = "/admin/subject/view/" + '/' + subject_id;
+            });
+          }
+        });
+
+        return subjectDt;
+      }
+
+      // Browse Items
+      function browseItems(subjectId) {
+
+        var data = $('body').data();
+        var ajaxUrl = '/admin/datatables_browse_subject_items/' + data.project_id;
+
+        var itemDt = $('#item').dataTable( {
+          "columns": [
+              { "data": "item_description" },
+              { "data": "local_item_id" },
+              { "data": "datasets_count" },
+              { "data": "last_modified" },
+            ],
+          "dom": 'lfip<"datatables_bulk_actions">tip',
+          "pagingType": "simple_numbers",
+          "stateSave": true,
+          "order": [[3,"desc"]],
+          // Show processing throbber.
+          "processing": true,
+          "serverMethod": "POST",
+          // All data management will be done on the server side.
+          "serverSide": true,
+          // Path to the file that is going to handle the queries.
+          "ajax": ajaxUrl,
+          // Method type.
+          "serverMethod": "POST",
+          // Values in the length dropdown.
+          "lengthMenu":[10,50,100,500],
+          // Set some widths.
+          "aoColumnDefs":[
+              {"sWidth":"105px","aTargets":[0]},
+              {"sWidth":"92px","aTargets":[1]}
+          ],
+          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+            // This table row.
+            var thisTableRow = $(nRow);
+            thisTableRow.find('td').click(function() {
+
+              thisTableRow.parent().children().removeClass('warning');
+              thisTableRow.addClass('warning');
+
+              // Transfer record metadata to the parent window.
+              var fields = ['datasets_count', 'item_description', 'last_modified', 'local_item_id', 'DT_RowId'];
+              var html = '<dl>';
+              // Loop through the metadata and choose fileds in the 'fields' array.
+              // console.log(aData);
+              $.each(aData, function(key, value){
+                if (fields.indexOf(key) !== -1) {
+                  html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
+                  html += '<dd class="' + key + '">' + value + '</dd>'
+                }
+              });
+              html += '</dl>';
+
+              $('div.item-well').html(html);
+              $('div.item-well').removeClass('hidden');
+
+              // Enable Step 2 tab.
+              rootwizard.bootstrapWizard('enable', '1');
+              // Enable the "Next Step" button.
+              rootwizard.find('.next').removeClass('disabled');
+
+              // Add the item_id to data.
+              $('body').data('item_id', aData.DT_RowId);
+              // Add the item_id to the hidden input.
+              $('input[name="dataset[item_id]"]').val($('body').data('item_id'));
+
+              // // This table cell.
+              // var thisTableCell = $(this);
+              // // Don't do anything if the table cell has the 'manage_column' CSS class.
+              // if(thisTableCell.hasClass('manage_column')) return;
+              // // Send to the details page.
+              // var item_id = thisTableCell.closest("tr").attr('id');
+              // // window.location.href = details_page + project_id + '/' + subject_id + '/' + item_id;
+            });
+          }
+        });
+
+        return itemDt;
+      }
+
+      function submitSubjectRecord(formData) {
+        // Avoid submitting the form multiple times.
+        $('#subject_save').attr('disabled', true);
+
+        // AJAX: Create a new dataset record.
+        $.ajax({
+          'type': 'POST'
+          ,'dataType': 'json'
+          ,'url': '/admin/subject/add/ajax'
+          ,'data': formData
+          ,success: function(data) {
+
+            if(data) {
+              // Response data handler.
+              if(data.id) {
+
+                // Add the subject_id to data.
+                $('body').data('subject_id', data.id);
+
+                // Transfer record metadata to the parent window.
+                var fields = ['holding_entity_guid', 'local_subject_id', 'subject_display_name', 'subject_guid', 'subject_name'];
+                var html = '<dl>';
+                // Loop through the metadata and choose fileds in the 'fields' array.
+                $.each(formData, function(key, value){
+                  key = key.replace('subject_form[', '');
+                  key = key.replace(']', '');
+                  if (fields.indexOf(key) !== -1) {
+                    html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
+                    html += '<dd class="' + key + '">' + value + '</dd>'
+                  }
+                });
+                html += '</dl>';
+
+                $('div.subject-well').html(html);
+                $('div.subject-well').removeClass('hidden');
+
+                // Display a success message in the UI.
+                swal({
+                  title: 'Saved',
+                  text: 'The subject has been successfully saved.',
+                  icon: 'success',
+                });
+
+                // Disable all fields in the form
+                $('form[name="subject_form"]').find('input, select, textarea').attr('disabled', true);
+                $('form[name="subject_form"]').find('select').trigger("chosen:updated");
+
+                // Enable the Item buttons.
+                $('[data-select="item"], [data-create="item"]').removeAttr('disabled');
+
+              } else {
+                // Error handling???
+              }
+            }
+          }
+        });
+      }
+
+      function itemSubjectRecord(formData) {
+
+        // Avoid submitting the form multiple times.
+        $('#item_save').attr('disabled', true);
+
+        // AJAX: Create a new item record.
+        $.ajax({
+          'type': 'POST'
+          ,'dataType': 'json'
+          ,'url': '/admin/item/add/' + $('body').data('project_id') + '/' + $('body').data('subject_id') + '/ajax'
+          ,'data': formData
+          ,success: function(data) {
+            if(data) {
+              // Response data handler.
+              if(data.id) {
+
+                // Add the item_id to data.
+                $('body').data('item_id', data.id);
+
+                // Transfer record metadata to the parent window.
+                var fields = ['item_description', 'item_guid', 'item_type', 'local_item_id'];
+                var html = '<dl>';
+                // Loop through the metadata and choose fileds in the 'fields' array.
+                $.each(formData, function(key, value){
+                  key = key.replace('item_form[', '');
+                  key = key.replace(']', '');
+                  if (fields.indexOf(key) !== -1) {
+                    html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
+                    html += '<dd class="' + key + '">' + value + '</dd>'
+                  }
+                });
+                html += '</dl>';
+
+                $('div.item-well').html(html);
+                $('div.item-well').removeClass('hidden');
+
+                // Display a success message in the UI.
+                swal({
+                  title: 'Saved',
+                  text: 'The item has been successfully saved.',
+                  icon: 'success',
+                });
+
+                // Disable all fields in the form
+                $('form[name="item_form"]').find('input, select, textarea').attr('disabled', true);
+                $('form[name="item_form"]').find('select').trigger("chosen:updated");
+
+                // Enable Step 2 tab.
+                rootwizard.bootstrapWizard('enable', '1');
+                // Enable the "Next Step" button.
+                rootwizard.find('.next').removeClass('disabled');
+
+              } else {
+                // Error handling???
+              }
+            }
+          }
+        });
+      }
+
+    });
+
+    var dropzoneUrl = "{{ oneup_uploader_endpoint('repository') }}",
+        acceptedFiles = "{{ accepted_file_types }}";
+  </script>
+  <script type="text/javascript" src="{{ asset('lib/javascripts/ingest.js') }}"></script>
+{% endblock %}

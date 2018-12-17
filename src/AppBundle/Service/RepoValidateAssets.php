@@ -197,7 +197,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
             }
 
             // Validate the mime type.
-            $mime_type = $this->get_mime_type($file->getPathname());
+            $mime_type = $this->getMimeType($file->getPathname());
 
             // $this->u->dumper($mime_type,0);
 
@@ -217,7 +217,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
           $data[$i]['file_name'] = strtolower($file->getFilename());
           $data[$i]['file_size'] = $file->getSize();
           $data[$i]['file_extension'] = strtolower($file->getExtension());
-          $data[$i]['file_mime_type'] = $this->get_mime_type($file->getPathname());
+          $data[$i]['file_mime_type'] = $this->getMimeType($file->getPathname());
 
           $i++;
         }
@@ -236,6 +236,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
   public function validate_image_pairs($data = array(), $job_status = '') {
 
     $return = array();
+    $exclude_model_extensions = array('obj', 'ply', 'gltf', 'glb');
 
     // // If no data is passed, set a message.
     // if (empty($data)) $return['messages'][] = 'No image pairs to validate. Please provide an array of files to validate.';
@@ -246,8 +247,8 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
       // Create an array of all of the file extensions.
       $all_file_extensions = array();
       foreach($data as $key => $value) {
-        // Exclude the 'file_name_map.csv' file.
-        if ($value['file_name'] !== 'file_name_map.csv') {
+        // Exclude the 'file_name_map.csv' file, and ignore model file extensions.
+        if (($value['file_name'] !== 'file_name_map.csv') && !in_array($value['file_extension'], $exclude_model_extensions)) {
           array_push($all_file_extensions, $value['file_extension']);
         }
       }
@@ -322,7 +323,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
    * @param string  $filename  The file name
    * @return string
    */
-  public function get_mime_type($filename = null) {
+  public function getMimeType($filename = null) {
 
     if (!empty($filename)) {
       $buffer = file_get_contents($filename);

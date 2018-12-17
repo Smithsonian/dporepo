@@ -1,0 +1,39 @@
+{% use 'datasets/dataset_form.html.twig' %}
+{% use 'import/uploads_stage.html.twig' %}
+{% use 'import/record_picker_panels.html.twig' %}
+
+{% block ingestwizard %}
+<div id="rootwizard" class="tabbable tabs-left">
+  <div class="navbar">
+    <div class="navbar-inner">
+      <ul>
+        <li><a href="#simple_ingest_tab_3" data-toggle="tab"><span class="tab-header">Step 1</span><br>Select Parent Records</a></li>
+        <li><a href="#simple_ingest_tab_4" data-toggle="tab"><span class="tab-header">Step 2</span><br>Dataset Metadata</a></li>
+        <li><a href="#simple_ingest_tab_5" data-toggle="tab"><span class="tab-header">Step 3</span><br>Upload Assets</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="tab-content">
+    <ul class="pager wizard">
+      <li class="previous"><a href="#"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Previous Step</a></li>
+      <li class="next"><a href="#">Next Step <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span></a></li>
+    </ul>
+    <!-- Select Parent Records -->
+    <div class="tab-pane" id="simple_ingest_tab_3">
+      {% include 'import/record_picker_panels.html.twig' %}
+    </div>
+    <!-- Dataset Form -->
+    <div class="tab-pane" id="simple_ingest_tab_4">
+      {% block dataset_form %}{{ parent() }}{% endblock %}
+    </div>
+    <!-- Uploads Stage -->
+    <div class="tab-pane" id="simple_ingest_tab_5">
+      {% block uploads_stage %}{{ parent() }}{% endblock %}
+    </div>
+    <ul class="pager wizard">
+      <li class="previous"><a href="#"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Previous Step</a></li>
+      <li class="next"><a href="#">Next Step <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span></a></li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

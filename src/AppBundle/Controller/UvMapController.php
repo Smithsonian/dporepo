@@ -11,6 +11,7 @@ use AppBundle\Entity\UvMap;
 
 // Custom utility bundle
 use AppBundle\Utils\AppUtilities;
+use AppBundle\Service\RepoUserAccess;
 
 class UvMapController extends Controller
 {
@@ -18,6 +19,8 @@ class UvMapController extends Controller
    * @var object $u
    */
   public $u;
+  private $repo_storage_controller;
+  private $repo_user_access;
 
   /**
    * Constructor
@@ -28,48 +31,14 @@ class UvMapController extends Controller
     // Usage: $this->u->dumper($variable);
     $this->u = $u;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
-
+    $this->repo_user_access = new RepoUserAccess($conn);
   }
 
   /**
-   * @Route("/admin/projects/uv_map/datatables_browse", name="uv_map_browse_datatables", methods="POST")
+   * Matches /admin/uv_map/manage/*
    *
-   * @param Connection $conn
-   * @param Request $request
-   * @return JsonResponse The query result in JSON
-   */
-  public function datatablesBrowse(Connection $conn, Request $request)
-  {
-    $req = $request->request->all();
-    $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
-    $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
-    $sort_order = $req['order'][0]['dir'];
-    $start_record = !empty($req['start']) ? $req['start'] : 0;
-    $stop_record = !empty($req['length']) ? $req['length'] : 20;
-
-    $query_params = array(
-      'record_type' => 'uv_map',
-      'sort_field' => $sort_field,
-      'sort_order' => $sort_order,
-      'start_record' => $start_record,
-      'stop_record' => $stop_record,
-      'parent_id' => $req['parent_id']
-    );
-    if ($search) {
-      $query_params['search_value'] = $search;
-    }
-
-    
-    $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
-
-    return $this->json($data);
-
-  }
-
-  /**
-   * Matches /admin/projects/uv_map/manage/*
-   *
-   * @Route("/admin/projects/uv_map/manage/{parent_id}/{id}", name="uv_map_manage", methods={"GET","POST"}, defaults={"parent_id" = null, "id" = null})
+   * @Route("/admin/uv_map/add/{parent_id}", name="uv_map_manage", methods={"GET","POST"}, defaults={"id" = null})
+   * @Route("/admin/uv_map/manage/{id}", name="uv_map_manage", methods={"GET","POST"})
    *
    * @param Connection $conn
    * @param Request $request
@@ -77,6 +46,16 @@ class UvMapController extends Controller
    */
   function formView(Connection $conn, Request $request)
   {
+
+    $username = $this->getUser()->getUsernameCanonical();
+    $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');
+
+    if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
+      $response = new Response();
+      $response->setStatusCode(403);
+      return $response;
+    }
+
     $data = new UvMap();
     $post = $request->request->all();
     $parent_id = !empty($request->attributes->get('parent_id')) ? $request->attributes->get('parent_id') : false;
@@ -96,7 +75,7 @@ class UvMapController extends Controller
     if(!$data) throw $this->createNotFoundException('The record does not exist');
 
     // Add the parent_id to the $data object
-    $data->model_repository_id = $parent_id;
+    $data->model_id = $parent_id;
 
     // Create the form
     $form = $this->createForm(UvMapForm::class, $data);
@@ -116,7 +95,7 @@ class UvMapController extends Controller
       ));
 
       $this->addFlash('message', 'Record successfully updated.');
-      return $this->redirect('/admin/projects/uv_map/manage/' . $data['model_repository_id'] . '/' . $id);
+      return $this->redirect('/admin/projects/uv_map/manage/' . $data['model_id'] . '/' . $id);
     }
     return $this->render('datasets/uv_map_form.html.twig', array(
       'page_title' => !empty($id) ? 'UV Map: ' . $data->map_type : 'Create UV Map',
@@ -127,7 +106,7 @@ class UvMapController extends Controller
   }
 
   /**
-   * @Route("/admin/projects/uv_map/delete", name="uv_map_remove_records", methods={"GET"})
+   * @Route("/admin/uv_map/delete", name="uv_map_remove_records", methods={"GET"})
    *
    * @param Connection $conn
    * @param Request $request
@@ -135,6 +114,16 @@ class UvMapController extends Controller
    */
   public function deleteMultiple(Connection $conn, Request $request)
   {
+
+    $username = $this->getUser()->getUsernameCanonical();
+    $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');
+
+    if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
+      $response = new Response();
+      $response->setStatusCode(403);
+      return $response;
+    }
+
     if(!empty($request->query->get('ids'))) {
 
       // Create the array of ids.
@@ -162,7 +151,7 @@ class UvMapController extends Controller
   }
 
   /**
-   * /\/\/\/ Route("/admin/projects/uv_map/{id}", name="uv_map_browse", methods="GET", defaults={"id" = null})
+   * /\/\/\/ Route("/admin/uv_map/{id}", name="uv_map_browse", methods="GET", defaults={"id" = null})
    *
    * @param Connection $conn
    * @param Request $request
@@ -170,8 +159,7 @@ class UvMapController extends Controller
   // public function browse(Connection $conn, Request $request)
   // {
   //     $UvMap = new UvMap;
-  //     // Database tables are only created if not present.
-  //     $UvMap->createTable();
+
   //     return $this->render('datasetElements/uv_map_browse.html.twig', array(
   //         'page_title' => "Browse UV Maps",
   //         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),

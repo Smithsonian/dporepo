@@ -12,7 +12,7 @@ class CaptureDevice
      * @Assert\NotBlank()
      * @var int
      */
-    public $parent_capture_data_element_repository_id;
+    public $capture_data_element_id;
 
     /**
      * @Assert\NotBlank()
@@ -20,10 +20,5 @@ class CaptureDevice
      * @var string
      */
     public $calibration_file;
-
-    /**
-     * @var string
-     */
-    public $capture_device_component_ids;
 
 }

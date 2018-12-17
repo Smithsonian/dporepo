@@ -15,7 +15,6 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   /**
-   * ----------------------------------------------------------------
    * Getters for single records.
    * ----------------------------------------------------------------
    */
@@ -25,7 +24,7 @@ class RepoStorageHybrid implements RepoStorage {
    * @return mixed
    */
   public function getProject($params) {
-    //$params will be something like array('project_repository_id' => '123');
+    //$params will be something like array('project_id' => '123');
     $return_data = array();
 
     $query_params = array(
@@ -33,7 +32,7 @@ class RepoStorageHybrid implements RepoStorage {
       'base_table' => 'project',
       'search_params' => array(
         0 => array('field_names' => array('project.active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array('project.project_repository_id'), 'search_values' => $params, 'comparison' => '=')
+        1 => array('field_names' => array('project.project_id'), 'search_values' => $params, 'comparison' => '=')
       ),
       'search_type' => 'AND',
       'related_tables' => array(),
@@ -42,7 +41,7 @@ class RepoStorageHybrid implements RepoStorage {
     // Fields.
     $query_params['fields'][] = array(
       'table_name' => 'project',
-      'field_name' => 'project_repository_id',
+      'field_name' => 'project_id',
     );
     $query_params['fields'][] = array(
       'field_name' => 'project_name',
@@ -53,6 +52,12 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'field_name' => 'project_description',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'api_published',
+    );
+    $query_params['fields'][] = array(
+      'field_name' => 'api_discoverable',
     );
     $query_params['fields'][] = array(
       'table_name' => 'project',
@@ -77,7 +82,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'unit_stakeholder',
-      'field_name' => 'unit_stakeholder_repository_id',
+      'field_name' => 'unit_stakeholder_id',
       //'field_alias' => 'stakeholder_guid',
     );
 
@@ -109,30 +114,149 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   public function getSubject($params) {
-    //$params will be something like array('subject_repository_id' => '123');
-    $return_data = array();
 
-    $query_params = array(
-      'fields' => array(),
-      'base_table' => 'subject',
-      'search_params' => array(
-        0 => array('field_names' => array('subject.active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array('subject.subject_repository_id'), 'search_values' => $params, 'comparison' => '=')
-      ),
-      'search_type' => 'AND'
-    );
+    $sql = "SELECT * FROM subject WHERE subject.active=1 and subject.subject_id= :subject_id";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":subject_id", $params['record_id'], PDO::PARAM_STR);
+    $statement->execute();
+    $data = $statement->fetch(PDO::FETCH_ASSOC);
 
-    $ret = $this->getRecords($query_params);
-    //@todo do something if $ret has errors
+    $sql = "SELECT model_purpose_description, sm.model_purpose_id FROM subject_model_purpose sm
+      LEFT JOIN model_purpose on sm.model_purpose_id = model_purpose.model_purpose_id
+      WHERE sm.subject_id= :subject_id";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":subject_id", $params['record_id'], PDO::PARAM_STR);
+    $statement->execute();
+    $purpose_data = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-    if(array_key_exists(0, $ret)) {
-      $return_data = $ret[0];
+    $subject_model_purpose_data = array();
+    foreach($purpose_data as $k => $p) {
+      $desc = $p['model_purpose_description'];
+      $id = $p['model_purpose_id'];
+      $subject_model_purpose_data[$desc] = $id;
     }
-    return $return_data;
+
+    $data['access_model_purpose'] = is_array($subject_model_purpose_data) ? $subject_model_purpose_data : array();
+
+    return $data;
+  }
+
+  public function saveSubject($params) {
+
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
+    $subject_id = $this->saveRecord($params);
+
+    $model_purpose_values = $params['values']['model_purpose_picker'];
+
+    if(NULL !== $subject_id && $subject_id > 0) {
+      // Delete existing values.
+      $sql = "DELETE FROM subject_model_purpose
+      WHERE subject_id= :subject_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":subject_id", $subject_id, PDO::PARAM_STR);
+      $statement->execute();
+
+      // Re-save new values.
+      foreach($model_purpose_values as $k => $mp_id) {
+        $sql = "INSERT INTO subject_model_purpose (model_purpose_id, subject_id, api_access, created_by_user_account_id, last_modified_user_account_id) 
+        VALUES(:model_purpose_id, :subject_id, 1, :user_id, :user_id)";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":model_purpose_id", $mp_id, PDO::PARAM_STR);
+        $statement->bindValue(":subject_id", $subject_id, PDO::PARAM_STR);
+        $statement->bindValue(":user_id", $user_id, PDO::PARAM_STR);
+        $statement->execute();
+      }
+
+    }
+    return $subject_id;
+
+  }
+
+  public function saveItem($params) {
+
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
+    $item_id = $this->saveRecord($params);
+
+    $model_purpose_values = $params['values']['model_purpose_picker'];
+
+    if(NULL !== $item_id && $item_id > 0) {
+      // Delete existing values.
+      $sql = "DELETE FROM item_model_purpose
+      WHERE item_id= :item_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":item_id", $item_id, PDO::PARAM_STR);
+      $statement->execute();
+
+      // Re-save new values.
+      foreach($model_purpose_values as $k => $mp_id) {
+        $sql = "INSERT INTO item_model_purpose (model_purpose_id, item_id, api_access, created_by_user_account_id, last_modified_user_account_id) 
+        VALUES(:model_purpose_id, :item_id, 1, :user_id, :user_id)";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":model_purpose_id", $mp_id, PDO::PARAM_STR);
+        $statement->bindValue(":item_id", $item_id, PDO::PARAM_STR);
+        $statement->bindValue(":user_id", $user_id, PDO::PARAM_STR);
+        $statement->execute();
+      }
+
+    }
+    return $item_id;
+
+  }
+
+  public function saveCaptureDataset($params) {
+
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
+    $capture_dataset_id = $this->saveRecord($params);
+
+    $model_purpose_values = $params['values']['model_purpose_picker'];
+
+    if(NULL !== $capture_dataset_id && $capture_dataset_id > 0) {
+      // Delete existing values.
+      $sql = "DELETE FROM capture_dataset_model_purpose
+      WHERE capture_dataset_id= :capture_dataset_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":capture_dataset_id", $capture_dataset_id, PDO::PARAM_STR);
+      $statement->execute();
+
+      // Re-save new values.
+      foreach($model_purpose_values as $k => $mp_id) {
+        $sql = "INSERT INTO capture_dataset_model_purpose (model_purpose_id, capture_dataset_id, api_access, created_by_user_account_id, last_modified_user_account_id) 
+        VALUES(:model_purpose_id, :capture_dataset_id, 1, :user_id, :user_id)";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":model_purpose_id", $mp_id, PDO::PARAM_STR);
+        $statement->bindValue(":capture_dataset_id", $capture_dataset_id, PDO::PARAM_STR);
+        $statement->bindValue(":user_id", $user_id, PDO::PARAM_STR);
+        $statement->execute();
+
+      }
+    }
+    return $capture_dataset_id;
+
+  }
+
+  public function getDataForLookup($params) {
+
+    $table = $params['table_name'];
+    $value_field = $params['value_field'];
+    $id_field = $params['id_field'];
+
+    $sql = "SELECT " . $id_field. " as id, " . $value_field . " as val FROM " . $table . " WHERE active=1 ";
+    $statement = $this->connection->prepare($sql);
+    $statement->execute();
+    $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $data = array();
+    foreach($tmp as $k => $p) {
+      $val = $p['val'];
+      $id = $p['id'];
+      $data[$val] = $id;
+    }
+
+    return $data;
   }
 
   public function getItem($params) {
-      //$params will be something like array('item_repository_id' => '123');
+      //$params will be something like array('item_id' => '123');
     $return_data = array();
 
       $query_params = array(
@@ -140,7 +264,7 @@ class RepoStorageHybrid implements RepoStorage {
         'base_table' => 'item',
         'search_params' => array(
           0 => array('field_names' => array('item.active'), 'search_values' => array(1), 'comparison' => '='),
-          1 => array('field_names' => array('item.item_repository_id'), 'search_values' => $params, 'comparison' => '=')
+          1 => array('field_names' => array('item.item_id'), 'search_values' => $params, 'comparison' => '=')
         ),
         'search_type' => 'AND',
         'related_tables' => array(),
@@ -169,18 +293,42 @@ class RepoStorageHybrid implements RepoStorage {
       );
       $query_params['fields'][] = array(
         'table_name' => 'item',
-        'field_name' => 'item_repository_id',
+        'field_name' => 'item_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'item',
+        'field_name' => 'project_id',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'item',
+        'field_name' => 'subject_id',
       );
       $query_params['fields'][] = array(
         'table_name' => 'item_type',
         'field_name' => 'label',
         'field_alias' => 'item_type_label',
       );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'api_published',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'api_discoverable',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'api_access_model_face_count_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'item',
+      'field_name' => 'api_access_uv_map_size_id',
+    );
 
       // Joins.
       $query_params['related_tables'][] = array(
         'table_name' => 'item_type',
-        'table_join_field' => 'item_type_repository_id',
+        'table_join_field' => 'item_type_id',
         'join_type' => 'LEFT JOIN',
         'base_join_table' => 'item',
         'base_join_field' => 'item_type',
@@ -193,19 +341,57 @@ class RepoStorageHybrid implements RepoStorage {
       if(array_key_exists(0, $ret)) {
         $return_data = $ret[0];
       }
+
+    //@todo
+    $return_data['inherit_api_published'] = NULL;
+    $return_data['inherit_api_discoverable'] = NULL;
+    if(isset($return_data['project_id'])) {
+      $sql = "SELECT api_published, api_discoverable FROM project 
+      WHERE project.project_id= :project_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":project_id", $return_data['project_id'], PDO::PARAM_STR);
+      $statement->execute();
+      $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      if(count($tmp) > 0) {
+        $return_data['inherit_api_published'] = $tmp[0]['api_published'];
+        $return_data['inherit_api_discoverable'] = $tmp[0]['api_discoverable'];
+      }
+    }
+
+    $sql = "SELECT model_purpose_description, im.model_purpose_id FROM item_model_purpose im
+      LEFT JOIN model_purpose on im.model_purpose_id = model_purpose.model_purpose_id
+      WHERE im.item_id= :item_id";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":item_id", $params['item_id'], PDO::PARAM_STR);
+    $statement->execute();
+    $purpose_data = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $model_purpose_data = array();
+    foreach($purpose_data as $k => $p) {
+      $desc = $p['model_purpose_description'];
+      $id = $p['model_purpose_id'];
+      $model_purpose_data[$desc] = $id;
+    }
+
+    $return_data['api_access_model_purpose'] = is_array($model_purpose_data) ? $model_purpose_data : array();
+
       return $return_data;
   }
 
   public function getModel($params) {
-    //$params will be something like array('model_repository_id' => '123');
-    $return_data = array();
+    //$params will be something like array('model_id' => '123');
+    $id = isset($params['model_id']) ? (int)$params['model_id'] : NULL;
+    if (!isset($id)) return array();
+
+    $data = array();
 
     $query_params = array(
       'fields' => array(),
       'base_table' => 'model',
       'search_params' => array(
         0 => array('field_names' => array('model.active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array('model.model_repository_id'), 'search_values' => $params, 'comparison' => '=')
+        1 => array('field_names' => array('model.model_id'), 'search_values' => $params, 'comparison' => '=')
       ),
       'search_type' => 'AND',
       'related_tables' => array(),
@@ -213,20 +399,20 @@ class RepoStorageHybrid implements RepoStorage {
 
     // Fields.
     $query_params['fields'][] = array(
-      'table_name' => 'item',
-      'field_name' => 'subject_repository_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'subject',
-      'field_name' => 'project_repository_id',
+      'table_name' => 'model',
+      'field_name' => 'model_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'model',
-      'field_name' => 'model_repository_id',
+      'field_name' => 'parent_model_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'model',
-      'field_name' => 'parent_capture_dataset_repository_id',
+      'field_name' => 'item_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'model',
+      'field_name' => 'capture_dataset_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'model',
@@ -293,6 +479,38 @@ class RepoStorageHybrid implements RepoStorage {
       'table_name' => 'model',
       'field_name' => 'model_maps',
     );
+
+    $query_params['records_values'] = array();
+    $ret = $this->getRecords($query_params);
+    //@todo do something if $ret has errors
+
+    if(array_key_exists(0, $ret)) {
+      $data = $ret[0];
+    }
+    if (empty($data)) return $data;
+
+
+    // Get model files.
+    $query_params = array(
+      'fields' => array(),
+      'base_table' => 'model_file',
+      'search_params' => array(
+        0 => array('field_names' => array('model_file.active'), 'search_values' => array(1), 'comparison' => '='),
+        1 => array('field_names' => array('model_file.model_id'), 'search_values' => $params, 'comparison' => '=')
+      ),
+      'search_type' => 'AND',
+      'related_tables' => array(),
+    );
+
+    // Fields.
+    $query_params['fields'][] = array(
+      'table_name' => 'model_file',
+      'field_name' => 'model_file_id',
+    );
+    $query_params['fields'][] = array(
+      'table_name' => 'file_upload',
+      'field_name' => 'file_name',
+    );
     $query_params['fields'][] = array(
       'table_name' => 'file_upload',
       'field_name' => 'file_path',
@@ -301,48 +519,8 @@ class RepoStorageHybrid implements RepoStorage {
       'table_name' => 'file_upload',
       'field_name' => 'file_hash',
     );
-    $query_params['fields'][] = array(
-      'table_name' => 'capture_dataset',
-      'field_name' => 'parent_item_repository_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'item',
-      'field_name' => 'subject_repository_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'subject',
-      'field_name' => 'project_repository_id',
-    );
 
     // Joins.
-    $query_params['related_tables'][] = array(
-      'table_name' => 'capture_dataset',
-      'table_join_field' => 'capture_dataset_repository_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'model',
-      'base_join_field' => 'parent_capture_dataset_repository_id',
-    );
-    $query_params['related_tables'][] = array(
-      'table_name' => 'item',
-      'table_join_field' => 'item_repository_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'capture_dataset',
-      'base_join_field' => 'parent_item_repository_id',
-    );
-    $query_params['related_tables'][] = array(
-      'table_name' => 'subject',
-      'table_join_field' => 'subject_repository_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'item',
-      'base_join_field' => 'subject_repository_id',
-    );
-    $query_params['related_tables'][] = array(
-      'table_name' => 'model_file',
-      'table_join_field' => 'model_repository_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'model',
-      'base_join_field' => 'model_repository_id',
-    );
     $query_params['related_tables'][] = array(
       'table_name' => 'file_upload',
       'table_join_field' => 'file_upload_id',
@@ -355,10 +533,96 @@ class RepoStorageHybrid implements RepoStorage {
     $ret = $this->getRecords($query_params);
     //@todo do something if $ret has errors
 
+    $file_data = array();
     if(array_key_exists(0, $ret)) {
-      $return_data = $ret[0];
+      $file_data = $ret;
     }
-    return $return_data;
+    $data['files'] = $file_data;
+    $data['viewable_model'] = false;
+    foreach($file_data as $file) {
+      $fn = $file['file_name'];
+      $fn_exploded = explode('.', $fn);
+      if(count($fn_exploded) == 2 && strtolower($fn_exploded[1]) == 'obj') {
+        $data['viewable_model'] = $file;
+    }
+    }
+
+    // End get model files.
+
+    $data['capture_dataset'] = array();
+
+    // Get all of the parent records.
+    $record_type = !empty($data['capture_dataset_id']) ? 'model_with_capture_dataset_id' : 'model_with_item_id';
+
+    // Execute.
+    $data['parent_records'] = $this->getParentRecords(array(
+      'base_record_id' => $id,
+      'record_type' => $record_type,
+    ));
+
+    // Set the item ID.
+    $item_id = $data['parent_records']['item_id'];
+
+    // Example output of getParentRecords:
+    // array(4) {
+    //   ["project_id"]=>
+    //   string(1) "2"
+    //   ["subject_id"]=>
+    //   string(3) "795"
+    //   ["item_id"]=>
+    //   string(4) "2570"
+    //   ["model_id"]=>
+    //   string(1) "9"
+    // }
+
+    if (!empty($data['capture_dataset_id'])) {
+      // Get the capture dataset record.
+      $capture_dataset = $this->getRecord(array(
+          'base_table' => 'capture_dataset',
+          'id_field' => 'capture_dataset_id',
+          'id_value' => $data['capture_dataset_id'],
+        )
+      );
+      // Modify the item ID and set the capture dataset.
+      if (!empty($capture_dataset)) {
+        $item_id = $capture_dataset['item_id'];
+        $data['capture_dataset'] = $capture_dataset;
+      }
+    }
+
+    // Get the item record.
+    $item = $this->getRecord(array(
+        'base_table' => 'item',
+        'id_field' => 'item_id',
+        'id_value' => $item_id,
+      )
+    );
+
+    if (!empty($item)) {
+      // Get the subject record.
+      $subject = $this->getRecord(array(
+          'base_table' => 'subject',
+          'id_field' => 'subject_id',
+          'id_value' => $item['subject_id'],
+        )
+      );
+
+      if (!empty($subject)) {
+        // // Get the project record.
+        // $project = $this->getRecord(array(
+        //     'base_table' => 'project',
+        //     'id_field' => 'project_id',
+        //     'id_value' => $subject['project_id'],
+        //   )
+        // );
+
+        $data['subject_name'] = $subject['subject_name'];
+        $data['item_description'] = $item['item_description'];
+        $data['project_name'] = $item['project_id'];
+      }
+    }
+
+    return $data;
   }
   public function getFiles($params){
     $limit = '';
@@ -386,7 +650,7 @@ class RepoStorageHybrid implements RepoStorage {
     $statement->execute();
     $file = $statement->fetchAll();
     return $file;
-    
+
   }
   public function getPointofContact(){
     $statement = $this->connection->prepare("SELECT id,username FROM fos_user");
@@ -396,66 +660,66 @@ class RepoStorageHybrid implements RepoStorage {
   }
   public function getModelDetail($params){
     $model = [];
-    if (!isset($params['model_repository_id'])) {
+    if (!isset($params['model_id'])) {
       return false;
     }
-    $id = $params['model_repository_id'];
-    $statement = $this->connection->prepare("SELECT * FROM model WHERE model_repository_id = $id LIMIT 1");
+    $id = $params['model_id'];
+    $statement = $this->connection->prepare("SELECT * FROM model WHERE model_id = $id LIMIT 1");
     $statement->execute();
     $modeldetail = $statement->fetchAll();
     if (count($modeldetail) > 0) {
       $model = $modeldetail[0];
-      $modelid = $model['model_repository_id'];
+      $modelid = $model['model_id'];
       $model['uploads_path'] = '/uploads/repository';
       $model['file_path'] = null;
       $fileupload = $this->getFiles(array("parent_record_id"=>$modelid,"parent_record_type"=>"model","limit"=>1));
       if (count($fileupload)) {
         $model['file_path'] = $fileupload[0]['file_path'];
       }
-      if ($model['parent_capture_dataset_repository_id'] != null) {
-        $capturedataset = $this->connection->fetchAll("SELECT * FROM capture_dataset WHERE capture_dataset_repository_id =".$model['parent_capture_dataset_repository_id']);
-        $itemid = $model['parent_item_repository_id'];
+      if ($model['parent_capture_dataset_id'] != null) {
+        $capturedataset = $this->connection->fetchAll("SELECT * FROM capture_dataset WHERE capture_dataset_id =".$model['parent_capture_dataset_id']);
+        $itemid = $model['parent_item_id'];
         $model['capture_dataset'] = [];
         if (count($capturedataset) > 0) {
           if ($itemid == null) {
-            $itemid = $capturedataset[0]['parent_item_repository_id'];
+            $itemid = $capturedataset[0]['parent_item_id'];
           }
           $model['capture_dataset'] = $capturedataset[0];
-          
+
         }
-        $item = $this->connection->fetchAll("SELECT item_description,subject_repository_id FROM item WHERE item_repository_id =".$itemid);
-        
+        $item = $this->connection->fetchAll("SELECT item_description,subject_id FROM item WHERE item_id =".$itemid);
+
 
         if (count($item) > 0) {
-          $subject = $this->connection->fetchAll("SELECT project_repository_id,subject_name FROM subject WHERE subject_repository_id=".$item[0]['subject_repository_id']);
+          $subject = $this->connection->fetchAll("SELECT project_id,subject_name FROM subject WHERE subject_id=".$item[0]['subject_id']);
           if (count($subject) > 0) {
-            $project = $this->connection->fetchAll("SELECT project_name FROM project WHERE project_repository_id=".$subject[0]['project_repository_id']);
+            $project = $this->connection->fetchAll("SELECT project_name FROM project WHERE project_id=".$subject[0]['project_id']);
             $model['subject_name'] = $subject[0]['subject_name'];
             $model['item_description'] = $item[0]['item_description'];
             $model['project_name'] = $project[0]['project_name'];
-            $model['project_repository_id'] = $subject[0]['project_repository_id'];
-            $model['subject_repository_id'] = $item[0]['subject_repository_id'];
+            $model['project_id'] = $subject[0]['project_id'];
+            $model['subject_id'] = $item[0]['subject_id'];
           }
         }
-        
+
       }
     }
     return $model;
   }
   public function getModelFiles($params){
-    if (!isset($params['model_repository_id'])) {
+    if (!isset($params['model_id'])) {
       return false;
     }
-    $statement = $this->connection->prepare("SELECT file_upload.file_upload_id,file_upload.file_name,file_upload.file_path,file_upload.file_type FROM model_file LEFT JOIN file_upload ON file_upload.file_upload_id = model_file.file_upload_id WHERE model_file.model_repository_id=".$params['model_repository_id']);
+    $statement = $this->connection->prepare("SELECT file_upload.file_upload_id,file_upload.file_name,file_upload.file_path,file_upload.file_type FROM model_file LEFT JOIN file_upload ON file_upload.file_upload_id = model_file.file_upload_id WHERE model_file.model_id=".$params['model_id']);
     $statement->execute();
     $files = $statement->fetchAll();
     return $files;
   }
   public function getCaptureDataset($params) {
-    //$params will be something like array('capture_dataset_repository_id' => '123');
+    //$params will be something like array('capture_dataset_id' => '123');
     $return_data = array();
 
-    $capture_dataset_repository_id = array_key_exists('capture_dataset_repository_id', $params) ? $params['capture_dataset_repository_id'] : NULL;
+    $capture_dataset_id = array_key_exists('capture_dataset_id', $params) ? $params['capture_dataset_id'] : NULL;
     $sql = "SELECT
           capture_dataset.capture_dataset_guid
           ,capture_dataset.capture_dataset_field_id
@@ -467,6 +731,7 @@ class RepoStorageHybrid implements RepoStorage {
           ,capture_dataset.capture_dataset_description
           ,capture_dataset.collection_notes
           ,capture_dataset.support_equipment
+          ,capture_dataset.item_id
           ,capture_dataset.item_position_type
           ,capture_dataset.item_position_field_id
           ,capture_dataset.item_arrangement_field_id
@@ -483,6 +748,10 @@ class RepoStorageHybrid implements RepoStorage {
           ,capture_dataset.created_by_user_account_id
           ,capture_dataset.last_modified
           ,capture_dataset.last_modified_user_account_id
+          ,capture_dataset.api_published
+          ,capture_dataset.api_discoverable
+          ,capture_dataset.api_access_model_face_count_id
+          ,capture_dataset.api_access_uv_map_size_id
           ,capture_method.label AS capture_method_label
           ,dataset_type.label AS capture_dataset_type_label
           ,item_position_type.label_alias AS item_position_type_label
@@ -491,51 +760,139 @@ class RepoStorageHybrid implements RepoStorage {
           ,background_removal_method.label AS background_removal_method_label
           ,camera_cluster_type.label AS camera_cluster_type_label
         FROM capture_dataset
-        LEFT JOIN capture_method ON capture_method.capture_method_repository_id = capture_dataset.capture_method
-        LEFT JOIN dataset_type ON dataset_type.dataset_type_repository_id = capture_dataset.capture_dataset_type
-        LEFT JOIN item_position_type ON item_position_type.item_position_type_repository_id = capture_dataset.item_position_type
-        LEFT JOIN focus_type ON focus_type.focus_type_repository_id = capture_dataset.focus_type
-        LEFT JOIN light_source_type ON light_source_type.light_source_type_repository_id = capture_dataset.light_source_type
-        LEFT JOIN background_removal_method ON background_removal_method.background_removal_method_repository_id = capture_dataset.background_removal_method
-        LEFT JOIN camera_cluster_type ON camera_cluster_type.camera_cluster_type_repository_id = capture_dataset.cluster_type
+        LEFT JOIN capture_method ON capture_method.capture_method_id = capture_dataset.capture_method
+        LEFT JOIN dataset_type ON dataset_type.dataset_type_id = capture_dataset.capture_dataset_type
+        LEFT JOIN item_position_type ON item_position_type.item_position_type_id = capture_dataset.item_position_type
+        LEFT JOIN focus_type ON focus_type.focus_type_id = capture_dataset.focus_type
+        LEFT JOIN light_source_type ON light_source_type.light_source_type_id = capture_dataset.light_source_type
+        LEFT JOIN background_removal_method ON background_removal_method.background_removal_method_id = capture_dataset.background_removal_method
+        LEFT JOIN camera_cluster_type ON camera_cluster_type.camera_cluster_type_id = capture_dataset.cluster_type
         WHERE capture_dataset.active = 1
-        AND capture_dataset.capture_dataset_repository_id = :capture_dataset_repository_id";
+        AND capture_dataset.capture_dataset_id = :capture_dataset_id";
 
     $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, PDO::PARAM_INT);
+    $statement->bindValue(":capture_dataset_id", $capture_dataset_id, PDO::PARAM_INT);
     $statement->execute();
     $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
 
     if(array_key_exists(0, $ret)) {
       $return_data = $ret[0];
     }
+
+    //@todo
+    $return_data['inherit_api_published'] = NULL;
+    $return_data['inherit_api_discoverable'] = NULL;
+    if(isset($return_data['item_id'])) {
+      $sql = "SELECT item.api_published, item.api_discoverable FROM item 
+      LEFT JOIN capture_dataset on item.item_id = capture_dataset.item_id 
+      WHERE capture_dataset.capture_dataset_id= :item_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":item_id", $return_data['item_id'], PDO::PARAM_STR);
+      $statement->execute();
+      $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      if(count($tmp) > 0) {
+        $return_data['inherit_api_published'] = $tmp[0]['api_published'];
+        $return_data['inherit_api_discoverable'] = $tmp[0]['api_discoverable'];
+      }
+      else {
+        // Get from project
+        $sql = "SELECT p.api_published, p.api_discoverable FROM project p
+          LEFT JOIN item on p.project_id = item.project_id
+          WHERE item.item_id= :item_id";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":item_id", $return_data['item_id'], PDO::PARAM_STR);
+        $statement->execute();
+        $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
+        if(count($tmp) > 0) {
+          $return_data['inherit_api_published'] = $tmp[0]['api_published'];
+          $return_data['inherit_api_discoverable'] = $tmp[0]['api_discoverable'];
+        }
+      }
+    }
+
+    $sql = "SELECT model_purpose_description, cm.model_purpose_id FROM capture_dataset_model_purpose cm
+      LEFT JOIN model_purpose on cm.model_purpose_id = model_purpose.model_purpose_id
+      WHERE cm.capture_dataset_id= :capture_dataset_id";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":capture_dataset_id", $params['capture_dataset_id'], PDO::PARAM_STR);
+    $statement->execute();
+    $purpose_data = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $model_purpose_data = array();
+    foreach($purpose_data as $k => $p) {
+      $desc = $p['model_purpose_description'];
+      $id = $p['model_purpose_id'];
+      $model_purpose_data[$desc] = $id;
+    }
+
+    $return_data['api_access_model_purpose'] = is_array($model_purpose_data) ? $model_purpose_data : array();
+
+    return $return_data;
+  }
+
+  public function getCaptureDataElement($params) {
+    //$params will be something like array('capture_data_element_id' => '123');
+    $return_data = array();
+//@TODO HERE
+    $capture_data_element_id = array_key_exists('capture_data_element_id', $params) ? $params['capture_data_element_id'] : NULL;
+    $sql = "SELECT
+          capture_data_element.capture_data_element_id
+          ,capture_data_element.capture_dataset_id
+          ,capture_data_element.capture_device_configuration_id
+          ,capture_data_element.capture_device_field_id
+          ,capture_data_element.capture_sequence_number
+          ,capture_data_element.cluster_position_field_id
+          ,capture_data_element.position_in_cluster_field_id
+          ,capture_data_element.date_created
+          ,capture_data_element.created_by_user_account_id
+          ,capture_data_element.last_modified
+          ,capture_data_element.last_modified_user_account_id          
+          , ( SELECT GROUP_CONCAT(file_upload.metadata) from file_upload 
+                LEFT JOIN capture_data_file on file_upload.file_upload_id = capture_data_file.file_upload_id
+                WHERE capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id                
+                GROUP BY capture_data_file.capture_data_element_id
+            )
+              as metadata
+        FROM capture_data_element
+        WHERE capture_data_element.active = 1
+        AND capture_data_element.capture_data_element_id = :capture_data_element_id";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":capture_data_element_id", $capture_data_element_id, PDO::PARAM_INT);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    if(array_key_exists(0, $ret)) {
+      $return_data = $ret[0];
+    }
+
     return $return_data;
   }
 
   public function getCaptureDevice($params) {
-    //$params will be something like array('capture_device_repository_id' => '123');
+    //$params will be something like array('capture_device_id' => '123');
     $return_data = array();
 
-    $capture_device_repository_id = array_key_exists('capture_device_repository_id', $params) ? $params['capture_device_repository_id'] : NULL;
+    $capture_device_id = array_key_exists('capture_device_id', $params) ? $params['capture_device_id'] : NULL;
     $sql = "SELECT
-              capture_device.capture_device_repository_id,
-              capture_device.parent_capture_data_element_repository_id,
+              capture_device.capture_device_id,
+              capture_device.capture_data_element_id,
               capture_device.calibration_file,
-              capture_device.capture_device_component_ids,
-              capture_data_element.capture_dataset_repository_id,
-              capture_dataset.parent_item_repository_id,
-              item.subject_repository_id,
-              subject.project_repository_id
+              capture_data_element.capture_dataset_id,
+              capture_dataset.item_id,
+              item.subject_id,
+              item.project_id
             FROM capture_device
-            LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_repository_id = capture_device.parent_capture_data_element_repository_id
-            LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
-            LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
-            LEFT JOIN subject ON item.subject_repository_id =subject.subject_repository_id
+            LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_id = capture_device.capture_data_element_id
+            LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = capture_data_element.capture_dataset_id
+            LEFT JOIN item ON item.item_id = capture_dataset.item_id
+            LEFT JOIN subject ON item.subject_id =subject.subject_id
             WHERE capture_device.active = 1
-            AND capture_device.capture_device_repository_id = :capture_device_repository_id";
+            AND capture_device.capture_device_id = :capture_device_id";
 
     $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":capture_device_repository_id", $capture_device_repository_id, PDO::PARAM_INT);
+    $statement->bindValue(":capture_device_id", $capture_device_id, PDO::PARAM_INT);
     $statement->execute();
     $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
 
@@ -546,7 +903,7 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   public function getPhotogrammetryScaleBarTargetPair($params) {
-    //$params will be something like array('photogrammetry_scale_bar_target_pair_repository_id' => '123');
+    //$params will be something like array('photogrammetry_scale_bar_target_pair_id' => '123');
     $return_data = array();
 
     $query_params = array(
@@ -554,7 +911,7 @@ class RepoStorageHybrid implements RepoStorage {
       'base_table' => 'photogrammetry_scale_bar_target_pair',
       'search_params' => array(
         0 => array('field_names' => array('photogrammetry_scale_bar_target_pair.active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array('photogrammetry_scale_bar_target_pair.photogrammetry_scale_bar_target_pair_repository_id'), 'search_values' => $params, 'comparison' => '=')
+        1 => array('field_names' => array('photogrammetry_scale_bar_target_pair.photogrammetry_scale_bar_target_pair_id'), 'search_values' => $params, 'comparison' => '=')
       ),
       'search_type' => 'AND',
       'related_tables' => array(),
@@ -563,11 +920,11 @@ class RepoStorageHybrid implements RepoStorage {
     // Fields.
     $query_params['fields'][] = array(
       'table_name' => 'photogrammetry_scale_bar_target_pair',
-      'field_name' => 'photogrammetry_scale_bar_target_pair_repository_id',
+      'field_name' => 'photogrammetry_scale_bar_target_pair_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'photogrammetry_scale_bar_target_pair',
-      'field_name' => 'parent_photogrammetry_scale_bar_repository_id',
+      'field_name' => 'photogrammetry_scale_bar_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'photogrammetry_scale_bar_target_pair',
@@ -590,11 +947,11 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'item',
-      'field_name' => 'subject_repository_id',
+      'field_name' => 'subject_id',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'subject',
-      'field_name' => 'project_repository_id',
+      'table_name' => 'item',
+      'field_name' => 'project_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'photogrammetry_scale_bar_target_pair',
@@ -612,31 +969,31 @@ class RepoStorageHybrid implements RepoStorage {
     // Joins.
     $query_params['related_tables'][] = array(
       'table_name' => 'photogrammetry_scale_bar',
-      'table_join_field' => 'photogrammetry_scale_bar_repository_id',
+      'table_join_field' => 'photogrammetry_scale_bar_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'photogrammetry_scale_bar_target_pair',
-      'base_join_field' => 'parent_photogrammetry_scale_bar_repository_id',
+      'base_join_field' => 'photogrammetry_scale_bar_id',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'capture_dataset',
-      'table_join_field' => 'capture_dataset_repository_id',
+      'table_join_field' => 'capture_dataset_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'photogrammetry_scale_bar',
-      'base_join_field' => 'parent_capture_dataset_repository_id',
+      'base_join_field' => 'capture_dataset_id',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'item',
-      'table_join_field' => 'item_repository_id',
+      'table_join_field' => 'item_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'capture_dataset',
-      'base_join_field' => 'parent_item_repository_id',
+      'base_join_field' => 'item_id',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'subject',
-      'table_join_field' => 'subject_repository_id',
+      'table_join_field' => 'subject_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'item',
-      'base_join_field' => 'subject_repository_id',
+      'base_join_field' => 'subject_id',
     );
 
     $ret = $this->getRecords($query_params);
@@ -649,7 +1006,7 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   public function getPhotogrammetryScaleBar($params) {
-    //$params will be something like array('photogrammetry_scale_bar_repository_id' => '123');
+    //$params will be something like array('photogrammetry_scale_bar_id' => '123');
     $return_data = array();
 
     $query_params = array(
@@ -657,7 +1014,7 @@ class RepoStorageHybrid implements RepoStorage {
       'base_table' => 'photogrammetry_scale_bar',
       'search_params' => array(
         0 => array('field_names' => array('photogrammetry_scale_bar.active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array('photogrammetry_scale_bar.photogrammetry_scale_bar_repository_id'), 'search_values' => $params, 'comparison' => '=')
+        1 => array('field_names' => array('photogrammetry_scale_bar.photogrammetry_scale_bar_id'), 'search_values' => $params, 'comparison' => '=')
       ),
       'search_type' => 'AND',
       'related_tables' => array(),
@@ -667,14 +1024,15 @@ class RepoStorageHybrid implements RepoStorage {
     /*
     $query_params['fields'][] = array(
       'table_name' => 'photogrammetry_scale_bar_target_pair',
-      'field_name' => 'parent_photogrammetry_scale_bar_repository_id',
+      'field_name' => 'photogrammetry_scale_bar_id',
     );
     */
     $query_params['fields'][] = array(
-      'field_name' => 'photogrammetry_scale_bar_repository_id',
+      'field_name' => 'photogrammetry_scale_bar_id',
     );
     $query_params['fields'][] = array(
-      'field_name' => 'parent_capture_dataset_repository_id',
+      'table_name' => 'photogrammetry_scale_bar',
+      'field_name' => 'capture_dataset_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'photogrammetry_scale_bar',
@@ -687,21 +1045,21 @@ class RepoStorageHybrid implements RepoStorage {
       'table_name' => 'photogrammetry_scale_bar',
       'field_name' => 'scale_bar_barcode_type',
     );
-    $query_params['fields'][] = array(
-      'table_name' => 'photogrammetry_scale_bar',
-      'field_name' => 'scale_bar_target_pairs',
-    );
+    // $query_params['fields'][] = array(
+    //   'table_name' => 'photogrammetry_scale_bar',
+    //   'field_name' => 'scale_bar_target_pairs',
+    // );
     $query_params['fields'][] = array(
       'table_name' => 'capture_dataset',
-      'field_name' => 'parent_item_repository_id',
+      'field_name' => 'item_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'item',
-      'field_name' => 'subject_repository_id',
+      'field_name' => 'subject_id',
     );
     $query_params['fields'][] = array(
-      'table_name' => 'subject',
-      'field_name' => 'project_repository_id',
+      'table_name' => 'item',
+      'field_name' => 'project_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'photogrammetry_scale_bar',
@@ -719,24 +1077,24 @@ class RepoStorageHybrid implements RepoStorage {
     // Joins.
     $query_params['related_tables'][] = array(
       'table_name' => 'capture_dataset',
-      'table_join_field' => 'capture_dataset_repository_id',
+      'table_join_field' => 'capture_dataset_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'photogrammetry_scale_bar',
-      'base_join_field' => 'parent_capture_dataset_repository_id',
+      'base_join_field' => 'capture_dataset_id',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'item',
-      'table_join_field' => 'item_repository_id',
+      'table_join_field' => 'item_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'capture_dataset',
-      'base_join_field' => 'parent_item_repository_id',
+      'base_join_field' => 'item_id',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'subject',
-      'table_join_field' => 'subject_repository_id',
+      'table_join_field' => 'subject_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'item',
-      'base_join_field' => 'subject_repository_id',
+      'base_join_field' => 'subject_id',
     );
 
     $ret = $this->getRecords($query_params);
@@ -759,7 +1117,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     $data = $this->getRecord(array(
       'base_table' => $record_type,
-      'id_field' => $record_type . '_repository_id',
+      'id_field' => $record_type . '_id',
       'id_value' => $record_id));
     return $data;
   }
@@ -809,7 +1167,7 @@ class RepoStorageHybrid implements RepoStorage {
     // Fields.
     $query_params['fields'][] = array(
       'table_name' => 'unit_stakeholder',
-      'field_name' => 'unit_stakeholder_repository_id',
+      'field_name' => 'unit_stakeholder_id',
     );
 
     $query_params['records_values'] = array();
@@ -825,15 +1183,13 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   /**
-   * ----------------------------------------------------------------
    * Getters for multiple records.
    * ----------------------------------------------------------------
    */
-
   public function getDatasets($params) {
 
-    $item_repository_id = array_key_exists('item_repository_id', $params) ? $params['item_repository_id'] : NULL;
-    $project_repository_id = array_key_exists('project_repository_id', $params) ? $params['project_repository_id'] : NULL;
+    $item_id = array_key_exists('item_id', $params) ? $params['item_id'] : NULL;
+    $project_id = array_key_exists('project_id', $params) ? $params['project_id'] : NULL;
     $query_params = array(
       'fields' => array(),
       'base_table' => 'capture_dataset',
@@ -844,21 +1200,21 @@ class RepoStorageHybrid implements RepoStorage {
       'related_tables' => array(),
     );
 
-    if($item_repository_id && is_numeric($item_repository_id)) {
+    if($item_id && is_numeric($item_id)) {
       $query_params['search_params'][1] = array(
         'field_names' => array(
-          'capture_dataset.parent_item_repository_id',
+          'capture_dataset.item_id',
         ),
-        'search_values' => array((int)$item_repository_id),
+        'search_values' => array((int)$item_id),
         'comparison' => '=',
       );
     }
-    if($project_repository_id && is_numeric($project_repository_id)) {
+    if($project_id && is_numeric($project_id)) {
       $query_params['search_params'][1] = array(
         'field_names' => array(
-          'capture_dataset.parent_project_repository_id',
+          'capture_dataset.parent_project_id',
         ),
-        'search_values' => array((int)$project_repository_id),
+        'search_values' => array((int)$project_id),
         'comparison' => '=',
       );
     }
@@ -866,11 +1222,11 @@ class RepoStorageHybrid implements RepoStorage {
     // Fields.
     $query_params['fields'][] = array(
       'table_name' => 'project',
-      'field_name' => 'project_repository_id',
+      'field_name' => 'project_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'subject',
-      'field_name' => 'subject_repository_id',
+      'field_name' => 'subject_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'capture_dataset',
@@ -880,24 +1236,24 @@ class RepoStorageHybrid implements RepoStorage {
     // Joins.
     $query_params['related_tables'][] = array(
       'table_name' => 'item',
-      'table_join_field' => 'item_repository_id',
+      'table_join_field' => 'item_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'capture_dataset',
-      'base_join_field' => 'parent_item_repository_id',
+      'base_join_field' => 'item_id',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'subject',
-      'table_join_field' => 'subject_repository_id',
+      'table_join_field' => 'subject_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'item',
-      'base_join_field' => 'subject_repository_id',
+      'base_join_field' => 'subject_id',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'project',
-      'table_join_field' => 'project_repository_id',
+      'table_join_field' => 'project_id',
       'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'subject',
-      'base_join_field' => 'project_repository_id',
+      'base_join_table' => 'item',
+      'base_join_field' => 'project_id',
     );
 
     $query_params['records_values'] = array();
@@ -909,13 +1265,13 @@ class RepoStorageHybrid implements RepoStorage {
 
   public function getElementsForCaptureDataset($params) {
 
-      $capture_dataset_repository_id = array_key_exists('capture_dataset_repository_id', $params) ? $params['capture_dataset_repository_id'] : NULL;
+      $capture_dataset_id = array_key_exists('capture_dataset_id', $params) ? $params['capture_dataset_id'] : NULL;
       $sql = "SELECT
-                project.project_repository_id,
-                subject.subject_repository_id,
-                item.item_repository_id,
-                capture_data_element.capture_data_element_repository_id,
-                capture_data_element.capture_dataset_repository_id,
+                project.project_id,
+                subject.subject_id,
+                item.item_id,
+                capture_data_element.capture_data_element_id,
+                capture_data_element.capture_dataset_id,
                 capture_data_element.capture_device_configuration_id,
                 capture_data_element.capture_device_field_id,
                 capture_data_element.capture_sequence_number,
@@ -927,55 +1283,55 @@ class RepoStorageHybrid implements RepoStorage {
                 capture_data_element.last_modified_user_account_id,
                 capture_data_element.active
             FROM capture_data_element
-            LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
-            LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
-            LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
-            LEFT JOIN project ON project.project_repository_id = subject.project_repository_id
+            LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = capture_data_element.capture_dataset_id
+            LEFT JOIN item ON item.item_id = capture_dataset.item_id
+            LEFT JOIN subject ON subject.subject_id = item.subject_id
+            LEFT JOIN project ON project.project_id = item.project_id
             WHERE capture_data_element.active = 1
-            AND capture_data_element.capture_dataset_repository_id = :capture_dataset_repository_id";
+            AND capture_data_element.capture_dataset_id = :capture_dataset_id";
 
       $statement = $this->connection->prepare($sql);
 
-      $statement->bindValue(":capture_dataset_repository_id", $capture_dataset_repository_id, PDO::PARAM_INT);
+      $statement->bindValue(":capture_dataset_id", $capture_dataset_id, PDO::PARAM_INT);
       $statement->execute();
       return $statement->fetchAll(PDO::FETCH_ASSOC);
   }
 
   public function getItemsBySubjectId($params) {
-    //$params will be something like array('subject_repository_id' => '123');
+    //$params will be something like array('subject_id' => '123');
 
-    $subject_repository_id = array_key_exists('subject_repository_id', $params) ? $params['subject_repository_id'] : NULL;
+    $subject_id = array_key_exists('subject_id', $params) ? $params['subject_id'] : NULL;
     $query_params = array(
       'base_table' => 'item',
       'related_tables' => array(
         0 =>
           array(
             'table_name' => 'subject',
-            'table_join_field' => 'subject_repository_id',
+            'table_join_field' => 'subject_id',
             'join_type' => 'LEFT JOIN',
             'base_join_table' => 'item',
-            'base_join_field' => 'subject_repository_id',
+            'base_join_field' => 'subject_id',
           ),
         1 => array(
           'table_name' => 'project',
-          'table_join_field' => 'project_repository_id',
+          'table_join_field' => 'project_id',
           'join_type' => 'LEFT JOIN',
-          'base_join_table' => 'subject',
-          'base_join_field' => 'project_repository_id',
+          'base_join_table' => 'item',
+          'base_join_field' => 'project_id',
         )
       ),
       'fields' => array(
         0 => array(
           'table_name' => 'project',
-          'field_name' => 'project_repository_id',
+          'field_name' => 'project_id',
         ),
         1 => array(
           'table_name' => 'subject',
-          'field_name' => 'subject_repository_id',
+          'field_name' => 'subject_id',
         ),
         2 => array(
           'table_name' => 'item',
-          'field_name' => 'item_repository_id',
+          'field_name' => 'item_id',
         ),
         3 => array(
           'table_name' => 'item',
@@ -983,7 +1339,7 @@ class RepoStorageHybrid implements RepoStorage {
         ),
         4 => array(
           'table_name' => 'item',
-          'field_name' => 'subject_repository_id',
+          'field_name' => 'subject_id',
         ),
         5 => array(
           'table_name' => 'item',
@@ -1027,8 +1383,8 @@ class RepoStorageHybrid implements RepoStorage {
       'search_type' => 'AND'
     );
 
-    if($subject_repository_id) {
-      $query_params['search_params'][1] = array('field_names' => array('item.subject_repository_id'), 'search_values' => array($subject_repository_id), 'comparison' => '=');
+    if($subject_id) {
+      $query_params['search_params'][1] = array('field_names' => array('item.subject_id'), 'search_values' => array($subject_id), 'comparison' => '=');
     }
 
     $query_params['records_values'] = array();
@@ -1039,9 +1395,9 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   public function getItemGuidsBySubjectId($params) {
-    //$params will be something like array('subject_repository_id' => '123');
+    //$params will be something like array('subject_id' => '123');
 
-    $subject_repository_id = array_key_exists('subject_repository_id', $params) ? $params['subject_repository_id'] : NULL;
+    $subject_id = array_key_exists('subject_id', $params) ? $params['subject_id'] : NULL;
     $query_params = array(
       'base_table' => 'item',
       'fields' => array(
@@ -1056,8 +1412,8 @@ class RepoStorageHybrid implements RepoStorage {
       'search_type' => 'AND'
     );
 
-    if($subject_repository_id) {
-      $query_params['search_params'][1] = array('field_names' => array('item.subject_repository_id'), 'search_values' => array($subject_repository_id), 'comparison' => '=');
+    if($subject_id) {
+      $query_params['search_params'][1] = array('field_names' => array('item.subject_id'), 'search_values' => array($subject_id), 'comparison' => '=');
     }
 
     $query_params['records_values'] = array();
@@ -1251,7 +1607,7 @@ class RepoStorageHybrid implements RepoStorage {
         foreach ($table_names['data_tables'] as $data_table_name) {
           // Remove records.
           $sql_data = "DELETE FROM {$data_table_name}
-            WHERE {$data_table_name}.{$data_table_name}_repository_id IN (SELECT record_id
+            WHERE {$data_table_name}.{$data_table_name}_id IN (SELECT record_id
             FROM job_import_record
             WHERE job_import_record.job_id = :job_id
             AND job_import_record.record_table = '{$data_table_name}')";
@@ -1260,8 +1616,8 @@ class RepoStorageHybrid implements RepoStorage {
           $statement->execute();
           $data[ $data_table_name ] = $statement->rowCount();
           // Reset the auto increment value.
-          $sql_data_reset = "ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_repository_id INT(11) UNSIGNED;
-          ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_repository_id INT(11) UNSIGNED AUTO_INCREMENT";
+          $sql_data_reset = "ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_id INT(11) UNSIGNED;
+          ALTER TABLE {$data_table_name} MODIFY {$data_table_name}.{$data_table_name}_id INT(11) UNSIGNED AUTO_INCREMENT";
           $statement = $this->connection->prepare($sql_data_reset);
           $statement->execute();
         }
@@ -1307,7 +1663,7 @@ class RepoStorageHybrid implements RepoStorage {
 
   public function getStakeholderGuids() {
     $sql = "
-      SELECT project.project_repository_id
+      SELECT project.project_id
           ,project.stakeholder_guid
           ,isni_data.isni_label AS stakeholder_label
       FROM project
@@ -1324,7 +1680,6 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   /**
-   * ----------------------------------------------------------------
    * Delete for single record.
    * ----------------------------------------------------------------
    */
@@ -1344,7 +1699,7 @@ class RepoStorageHybrid implements RepoStorage {
     $data = $this->deleteRecords(array(
       'base_table' => $record_type,
       'search_params' => array(
-        'field_names' => array($record_type . '_repository_id'),
+        'field_names' => array($record_type . '_id'),
         'search_values' => array($record_id)
         ),
       )
@@ -1353,7 +1708,6 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   /**
-   * ----------------------------------------------------------------
    * Datatables queries- returns rows needed for rendering client-side tables
    * ----------------------------------------------------------------
    */
@@ -1407,7 +1761,7 @@ class RepoStorageHybrid implements RepoStorage {
         //@todo is this case used?
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'manage',
         );
         $query_params['fields'][] = array(
@@ -1432,7 +1786,7 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'DT_RowId',
         );
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
@@ -1453,7 +1807,7 @@ class RepoStorageHybrid implements RepoStorage {
           $c = count($query_params['search_params']);
           $query_params['search_params'][$c] = array(
             'field_names' => array(
-              'parent_capture_data_element_repository_id',
+              'capture_data_element_id',
             ),
             'search_values' => array($parent_id),
             'comparison' => '=',
@@ -1465,14 +1819,14 @@ class RepoStorageHybrid implements RepoStorage {
         // LEFT JOIN to get the Data Rights Restriction Type.
         $query_params['related_tables'][] = array(
           'table_name' => 'data_rights_restriction_type',
-          'table_join_field' => 'data_rights_restriction_type_repository_id',
+          'table_join_field' => 'data_rights_restriction_type_id',
           'join_type' => 'LEFT JOIN',
           'base_join_table' => $record_type,
           'base_join_field' => 'data_rights_restriction',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'manage',
         );
         // The Data Rights Restriction Type.
@@ -1499,7 +1853,7 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'DT_RowId',
         );
         $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
@@ -1520,7 +1874,7 @@ class RepoStorageHybrid implements RepoStorage {
           $c = count($query_params['search_params']);
           $query_params['search_params'][$c] = array(
             'field_names' => array(
-              'parent_capture_dataset_repository_id',
+              'capture_dataset_id',
             ),
             'search_values' => array($parent_id),
             'comparison' => '=',
@@ -1531,16 +1885,12 @@ class RepoStorageHybrid implements RepoStorage {
       case 'capture_device':
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'manage',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
           'field_name' => 'calibration_file',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'capture_device_component_ids',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
@@ -1552,7 +1902,7 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'DT_RowId',
         );
 
@@ -1561,7 +1911,6 @@ class RepoStorageHybrid implements RepoStorage {
           $query_params['search_params'][] = array(
             'field_names' => array(
               $record_type . '.calibration_file',
-              $record_type . '.capture_device_component_ids',
             ),
             'search_values' => array($search_value),
             'comparison' => 'LIKE',
@@ -1584,7 +1933,7 @@ class RepoStorageHybrid implements RepoStorage {
       case 'capture_device_component':
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'manage',
         );
         $query_params['fields'][] = array(
@@ -1613,7 +1962,7 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'DT_RowId',
         );
 
@@ -1634,7 +1983,7 @@ class RepoStorageHybrid implements RepoStorage {
           $c = count($query_params['search_params']);
           $query_params['search_params'][$c] = array(
             'field_names' => array(
-              'parent_capture_device_repository_id',
+              'capture_device_id',
             ),
             'search_values' => array($parent_id),
             'comparison' => '=',
@@ -1645,7 +1994,7 @@ class RepoStorageHybrid implements RepoStorage {
       case 'item_position_type':
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'manage',
         );
         $query_params['fields'][] = array(
@@ -1666,7 +2015,7 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'DT_RowId',
         );
 
@@ -1684,13 +2033,19 @@ class RepoStorageHybrid implements RepoStorage {
 
       case 'model':
 
+        // If we're showing all models pertaining to an Item,
+        // we need to show models that relate to the Item's Capture Datasets as well.
+        if($parent_id_field == 'item_id') {
+          return $this->getDatatableItemModels($params);
+        }
+
         /*
         $query_params['related_tables'][] = array(
           'table_name' => 'model_file',
-          'table_join_field' => 'model_repository_id',
+          'table_join_field' => 'model_id',
           'join_type' => 'LEFT JOIN',
           'base_join_table' => 'model',
-          'base_join_field' => 'model_repository_id',
+          'base_join_field' => 'model_id',
         );
         $query_params['related_tables'][] = array(
           'table_name' => 'file_upload',
@@ -1702,16 +2057,16 @@ class RepoStorageHybrid implements RepoStorage {
         */
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'manage',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => 'parent_capture_dataset_repository_id',
+          'field_name' => 'capture_dataset_id',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
@@ -1720,7 +2075,7 @@ class RepoStorageHybrid implements RepoStorage {
 
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => 'parent_item_repository_id',
+          'field_name' => 'item_id',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
@@ -1818,7 +2173,7 @@ class RepoStorageHybrid implements RepoStorage {
       );
       $query_params['fields'][] = array(
         'table_name' => $record_type,
-        'field_name' => $record_type . '_repository_id',
+        'field_name' => $record_type . '_id',
         'field_alias' => 'DT_RowId',
       );
 
@@ -1868,7 +2223,7 @@ class RepoStorageHybrid implements RepoStorage {
       break;
 
       case 'model_file':
-      $parent_id_field = "model_repository_id";
+      $parent_id_field = "model_id";
       $query_params['related_tables'][] = array(
         'table_name' => 'file_upload',
         'table_join_field' => 'file_upload_id',
@@ -1953,16 +2308,16 @@ class RepoStorageHybrid implements RepoStorage {
       case 'processing_action':
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'manage',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => 'parent_model_repository_id',
+          'field_name' => 'model_id',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => 'preceding_processing_action_repository_id',
+          'field_name' => 'preceding_processing_action_id',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
@@ -1988,7 +2343,7 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'DT_RowId',
         );
 
@@ -1996,7 +2351,7 @@ class RepoStorageHybrid implements RepoStorage {
         if (NULL !== $search_value) {
           $query_params['search_params'][1] = array(
             'field_names' => array(
-              $record_type . '.preceding_processing_action_repository_id',
+              $record_type . '.preceding_processing_action_id',
               $record_type . '.action_method',
               $record_type . '.action_description',
               $record_type . '.software_used',
@@ -2010,7 +2365,7 @@ class RepoStorageHybrid implements RepoStorage {
           $c = count($query_params['search_params']);
           $query_params['search_params'][$c] = array(
             'field_names' => array(
-              'parent_model_repository_id',
+              'model_id',
             ),
             'search_values' => array($parent_id),
             'comparison' => '=',
@@ -2021,7 +2376,7 @@ class RepoStorageHybrid implements RepoStorage {
       case 'photogrammetry_scale_bar':
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'manage',
         );
         $query_params['fields'][] = array(
@@ -2036,10 +2391,10 @@ class RepoStorageHybrid implements RepoStorage {
           'table_name' => $record_type,
           'field_name' => 'scale_bar_barcode_type',
         );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'scale_bar_target_pairs',
-        );
+        // $query_params['fields'][] = array(
+        //   'table_name' => $record_type,
+        //   'field_name' => 'scale_bar_target_pairs',
+        // );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
           'field_name' => 'active',
@@ -2050,7 +2405,7 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'DT_RowId',
         );
 
@@ -2061,7 +2416,7 @@ class RepoStorageHybrid implements RepoStorage {
               $record_type . '.scale_bar_id',
               $record_type . '.scale_bar_manufacturer',
               $record_type . '.scale_bar_barcode_type',
-              $record_type . '.scale_bar_target_pairs',
+              // $record_type . '.scale_bar_target_pairs',
             ),
             'search_values' => array($search_value),
             'comparison' => 'LIKE',
@@ -2071,7 +2426,7 @@ class RepoStorageHybrid implements RepoStorage {
           $c = count($query_params['search_params']);
           $query_params['search_params'][$c] = array(
             'field_names' => array(
-              'parent_capture_dataset_repository_id',
+              'capture_dataset_id',
             ),
             'search_values' => array($parent_id),
             'comparison' => '=',
@@ -2083,7 +2438,7 @@ class RepoStorageHybrid implements RepoStorage {
 
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'manage',
         );
         $query_params['fields'][] = array(
@@ -2114,7 +2469,7 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'DT_RowId',
         );
 
@@ -2124,7 +2479,7 @@ class RepoStorageHybrid implements RepoStorage {
           $c = count($query_params['search_params']);
           $query_params['search_params'][$c] = array(
             'field_names' => array(
-              'parent_photogrammetry_scale_bar_repository_id',
+              'photogrammetry_scale_bar_id',
             ),
             'search_values' => array($parent_id),
             'comparison' => '=',
@@ -2143,12 +2498,12 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'manage',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => 'project_repository_id',
+          'field_name' => 'project_id',
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
@@ -2172,7 +2527,7 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'DT_RowId',
         );
         $query_params['fields'][] = array(
@@ -2200,7 +2555,7 @@ class RepoStorageHybrid implements RepoStorage {
 
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'manage',
         );
         $query_params['fields'][] = array(
@@ -2221,7 +2576,7 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'DT_RowId',
         );
 
@@ -2242,7 +2597,7 @@ class RepoStorageHybrid implements RepoStorage {
       case 'uv_map':
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'manage',
         );
         $query_params['fields'][] = array(
@@ -2267,7 +2622,7 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'DT_RowId',
         );
 
@@ -2287,7 +2642,7 @@ class RepoStorageHybrid implements RepoStorage {
           $c = count($query_params['search_params']);
           $query_params['search_params'][$c] = array(
             'field_names' => array(
-            'model_repository_id',
+            'model_id',
             ),
             'search_values' => array($parent_id),
             'comparison' => '=',
@@ -2314,7 +2669,7 @@ class RepoStorageHybrid implements RepoStorage {
         */
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'manage',
         );
         $query_params['fields'][] = array(
@@ -2331,7 +2686,7 @@ class RepoStorageHybrid implements RepoStorage {
         );
         $query_params['fields'][] = array(
           'table_name' => $record_type,
-          'field_name' => $record_type . '_repository_id',
+          'field_name' => $record_type . '_id',
           'field_alias' => 'DT_RowId',
         );
 
@@ -2362,119 +2717,91 @@ class RepoStorageHybrid implements RepoStorage {
    */
   public function getDatatableProject($params) {
 
-    $record_type = 'project';
     $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
-    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
-    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
-    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : 'asc';
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : 0;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : 20;
 
     $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $project_ids = array_key_exists('project_ids', $params) ? $params['project_ids'] : NULL;
     $date_range_start = array_key_exists('date_range_start', $params) ? $params['date_range_start'] : NULL;
     $date_range_end = array_key_exists('date_range_end', $params) ? $params['date_range_end'] : NULL;
 
-    $query_params = array(
-      'distinct' => true, // @todo Do we always want this to be true?
-      'base_table' => $record_type,
-      'fields' => array(),
-    );
+    $select_sql = " DISTINCT 
+          project.project_id as manage, project.project_id, project.project_name, project.stakeholder_guid, 
+          project.date_created, project.last_modified, project.active, project.project_id as DT_RowId, 
+          isni_data.isni_label as stakeholder_label, COUNT(item.item_id) as items_count
+          FROM project 
+          LEFT JOIN isni_data ON project.stakeholder_guid = isni_data.isni_id 
+          LEFT JOIN item ON project.project_id = item.project_id
+          ";
 
-    $query_params['limit'] = array(
-      'limit_start' => $start_record,
-      'limit_stop' => $stop_record,
-    );
-
-    if (!empty($sort_field) && !empty($sort_order)) {
-      $query_params['sort_fields'][] = array(
-        'field_name' => $sort_field,
-        'sort_order' => $sort_order,
-      );
-    } else {
-      $query_params['sort_fields'][] = array(
-        'field_name' => $record_type . '.last_modified',
-        'sort_order' => 'DESC',
-      );
+    $where_sql = " WHERE (project.active = 1) AND (item.active = 1 OR item.active IS NULL) ";
+    if(NULL !== $search_value) {
+      $where_sql .= " AND (
+        project.project_name LIKE :search_value
+        OR isni_data.isni_label LIKE :search_value
+        OR project.date_created LIKE :search_value
+        OR project.last_modified LIKE :search_value
+      )";
     }
-
-    $query_params['related_tables'][] = array(
-      'table_name' => 'isni_data',
-      'table_join_field' => 'isni_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'project',
-      'base_join_field' => 'stakeholder_guid',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => $record_type . '_repository_id',
-      'field_alias' => 'manage',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => 'project_repository_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => 'project_name',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => 'stakeholder_guid',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => 'date_created',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => 'last_modified',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => 'active',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => $record_type . '_repository_id',
-      'field_alias' => 'DT_RowId',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'isni_data',
-      'field_name' => 'isni_label',
-      'field_alias' => 'stakeholder_label',
-    );
-
-    $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
-    $query_params['search_type'] = 'AND';
-    if (NULL !== $search_value) {
-      $query_params['search_params'][1] = array(
-        'field_names' => array(
-          $record_type . '.project_name',
-          'isni_data.isni_label',
-          $record_type . '.date_created',
-          $record_type . '.last_modified',
-        ),
-        'search_values' => array($search_value),
-        'comparison' => 'LIKE',
-      );
+    if (NULL !== $project_ids && is_array($project_ids)) {
+      $project_ids_placeholder = array();
+      foreach($project_ids as $k => $pid) {
+        $project_ids_placeholder[] = ':project_id_' . $k;
+      }
+      if(count($project_ids_placeholder) > 0) {
+        $where_sql .= " AND ( project.project_id IN (" . implode(',', $project_ids_placeholder) . " ) )";
+      }
     }
 
     if(NULL !== $date_range_start) {
-      $c = count($query_params['search_params']);
-      $query_params['search_params'][$c] = array(
-        'field_names' => array('project.last_modified'),
-        'search_values' => array($date_range_start),
-        'comparison' => '<',
-      );
+      $where_sql .= " AND (project.last_modified < :date_range_start) ";
     }
     if(NULL !== $date_range_end) {
-      $c = count($query_params['search_params']);
-      $query_params['search_params'][$c] = array(
-        'field_names' => array('project.last_modified'),
-        'search_values' => array($date_range_end),
-        'comparison' => '>',
-      );
+      $where_sql .= " AND (project.last_modified > :date_range_end) ";
     }
 
-    $data = $this->getRecordsDatatable($query_params);
+    $where_sql .= " GROUP BY project.project_id ";
+    $sql = "SELECT SQL_CALC_FOUND_ROWS "
+      . $select_sql. $where_sql;
+
+    if($sort_field) {
+      $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+    }
+    else {
+      $sql .= " ORDER BY project_name";
+    }
+
+    if(NULL !== $stop_record) {
+      $sql .= " LIMIT {$start_record}, {$stop_record} ";
+    }
+
+    $statement = $this->connection->prepare($sql);
+    if(strlen(trim($search_value)) > 0) {
+      //$statement->bindValue(":search_value", "%", PDO::PARAM_STR);
+      $statement->bindValue(":search_value", '%' . $search_value . '%', PDO::PARAM_STR);
+    }
+    if (NULL !== $project_ids && is_array($project_ids)) {
+      foreach($project_ids as $k => $pid) {
+        $statement->bindValue(":project_id_" . $k, $pid, PDO::PARAM_INT);
+      }
+    }
+    if(NULL !== $date_range_start) {
+      $statement->bindValue(":date_range_start", $date_range_start);
+    }
+    if(NULL !== $date_range_end) {
+      $statement->bindValue(":date_range_end", $date_range_end);
+    }
+    $statement->execute();
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
+    $statement->execute();
+    $count = $statement->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+    $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
+
     return $data;
 
   }
@@ -2485,117 +2812,87 @@ class RepoStorageHybrid implements RepoStorage {
    */
   public function getDatatableSubject($params) {
 
-      $project_repository_id = array_key_exists('project_repository_id', $params) ? $params['project_repository_id'] : NULL;
-      $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
-      $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
-      $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
-      $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
-      $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : 'asc';
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : 0;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : 20;
 
-      $query_params = array(
-        'fields' => array(),
-        'base_table' => 'subject',
-        'distinct' => true,
-        'search_params' => array(
-          0 => array('field_names' => array('subject.active'), 'search_values' => array(1), 'comparison' => '='),
-        ),
-        'search_type' => 'AND',
-      );
-      $query_params['limit'] = array(
-        'limit_start' => $start_record,
-        'limit_stop' => $stop_record,
-      );
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $project_ids = array_key_exists('project_ids', $params) ? $params['project_ids'] : NULL;
+    $date_range_start = array_key_exists('date_range_start', $params) ? $params['date_range_start'] : NULL;
+    $date_range_end = array_key_exists('date_range_end', $params) ? $params['date_range_end'] : NULL;
 
-      $query_params['related_tables'][] = array(
-        'table_name' => 'item',
-        'table_join_field' => 'subject_repository_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'subject',
-        'base_join_field' => 'subject_repository_id',
-      );
+    $select_sql = " DISTINCT 
+          subject.subject_id as manage, subject.subject_id, subject.subject_name, 
+          subject.holding_entity_guid, subject.local_subject_id, subject.subject_name, subject.subject_display_name,
+          subject.subject_guid, subject.last_modified, subject.active, subject.subject_id as DT_RowId, 
+          COUNT(item.item_id) as items_count
+          FROM subject 
+          LEFT JOIN item ON subject.subject_id = item.subject_id
+          ";
 
-      if ($search_value) {
-        $query_params['search_params'][1] = array(
-          'field_names' => array(
-            'subject.subject_name',
-            'subject.holding_entity_guid',
-            'subject.last_modified',
-          ),
-          'search_values' => array($search_value),
-          'comparison' => 'LIKE',
-        );
+    $where_sql = " WHERE (subject.active = 1) AND (item.active = 1 OR item.active IS NULL) ";
+    if(NULL !== $search_value) {
+      $where_sql .= " AND (
+        subject.subject_name LIKE :search_value
+        OR subject.subject_name LIKE :search_value
+        OR subject.subject_display_name LIKE :search_value
+        OR subject.holding_entity_guid LIKE :search_value
+        OR subject.subject_guid LIKE :search_value
+      )";
+    }
+
+    if(NULL !== $date_range_start) {
+      $where_sql .= " AND (subject.last_modified < :date_range_start) ";
+    }
+    if(NULL !== $date_range_end) {
+      $where_sql .= " AND (subject.last_modified > :date_range_end) ";
+    }
+
+    $where_sql = $where_sql . " GROUP BY subject.subject_id ";
+
+
+    $sql = "SELECT SQL_CALC_FOUND_ROWS "
+      . $select_sql. $where_sql;
+
+
+    if($sort_field) {
+      $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+    }
+    else {
+      $sql .= " ORDER BY subject.last_modified DESC";
+    }
+
+    if(NULL !== $stop_record) {
+      $sql .= " LIMIT {$start_record}, {$stop_record} ";
+    }
+
+    $statement = $this->connection->prepare($sql);
+    if(strlen(trim($search_value)) > 0) {
+      //$statement->bindValue(":search_value", "%", PDO::PARAM_STR);
+      $statement->bindValue(":search_value", '%' . $search_value . '%', PDO::PARAM_STR);
+    }
+    if (NULL !== $project_ids && is_array($project_ids)) {
+      foreach($project_ids as $k => $pid) {
+        $statement->bindValue(":project_id_" . $k, $pid, PDO::PARAM_INT);
       }
+    }
+    if(NULL !== $date_range_start) {
+      $statement->bindValue(":date_range_start", $date_range_start);
+    }
+    if(NULL !== $date_range_end) {
+      $statement->bindValue(":date_range_end", $date_range_end);
+    }
+    $statement->execute();
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-      if($project_repository_id && is_numeric($project_repository_id)) {
-        $count_params = count($query_params['search_params']);
-        $query_params['search_params'][$count_params] = array(
-          'field_names' => array(
-            'subject.project_repository_id',
-          ),
-          'search_values' => array((int)$project_repository_id),
-          'comparison' => '=',
-        );
-      }
+    $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
+    $statement->execute();
+    $count = $statement->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+    $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
 
-      // Fields.
-      $query_params['fields'][] = array(
-        'table_name' => 'subject',
-        'field_name' => 'subject_repository_id',
-        'field_alias' => 'manage',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'subject',
-        'field_name' => 'subject_repository_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'subject',
-        'field_name' => 'project_repository_id',
-      );
-      $query_params['fields'][] = array(
-        'field_name' => 'holding_entity_guid',
-      );
-      $query_params['fields'][] = array(
-        'field_name' => 'local_subject_id',
-      );
-      $query_params['fields'][] = array(
-        'field_name' => 'subject_guid',
-      );
-      $query_params['fields'][] = array(
-        'field_name' => 'subject_name',
-      );
-      $query_params['fields'][] = array(
-        'field_name' => 'subject_display_name',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'subject',
-        'field_name' => 'last_modified',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'subject',
-        'field_name' => 'active',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'subject',
-        'field_name' => 'subject_repository_id',
-        'field_alias' => 'DT_RowId',
-      );
-
-      $query_params['records_values'] = array();
-
-      if (!empty($sort_field) && !empty($sort_order)) {
-        $query_params['sort_fields'][] = array(
-          'field_name' => $sort_field,
-          'sort_order' => $sort_order,
-        );
-      } else {
-        $query_params['sort_fields'][] = array(
-          'field_name' => 'subject.last_modified',
-          'sort_order' => 'DESC',
-        );
-      }
-
-      $data = $this->getRecordsDatatable($query_params);
-      return $data;
+    return $data;
 
   }
 
@@ -2611,7 +2908,7 @@ class RepoStorageHybrid implements RepoStorage {
     $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
     $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
 
-    // GROUP BY subjects.holding_entity_guid, subjects.local_subject_id, subjects.subject_guid, subjects.subject_name, subjects.last_modified, subjects.active, subjects.subject_repository_id
+    // GROUP BY subjects.holding_entity_guid, subjects.local_subject_id, subjects.subject_guid, subjects.subject_name, subjects.last_modified, subjects.active, subjects.subject_id
     $query_params = array(
       'distinct' => true,
       'base_table' => 'subject',
@@ -2624,10 +2921,10 @@ class RepoStorageHybrid implements RepoStorage {
 
     $query_params['related_tables'][] = array(
       'table_name' => 'item',
-      'table_join_field' => 'subject_repository_id',
+      'table_join_field' => 'subject_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'subject',
-      'base_join_field' => 'subject_repository_id',
+      'base_join_field' => 'subject_id',
     );
     if ($search_value) {
       $query_params['search_params'][1] = array(
@@ -2644,17 +2941,17 @@ class RepoStorageHybrid implements RepoStorage {
     // Fields.
     $query_params['fields'][] = array(
       'table_name' => 'subject',
-      'field_name' => 'subject_repository_id',
+      'field_name' => 'subject_id',
       'field_alias' => 'manage',
     );
     $query_params['fields'][] = array(
       'table_name' => 'subject',
-      'field_name' => 'subject_repository_id',
+      'field_name' => 'subject_id',
       'field_alias' => 'DT_RowId',
     );
     $query_params['fields'][] = array(
       'table_name' => 'subject',
-      'field_name' => 'subject_repository_id',
+      'field_name' => 'subject_id',
     );
     $query_params['fields'][] = array(
       'field_name' => 'holding_entity_guid',
@@ -2704,110 +3001,9 @@ class RepoStorageHybrid implements RepoStorage {
    * @param $params
    * @return mixed
    */
-  public function getDatatableCaptureDataFile($params) {
-
-    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
-    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
-    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
-    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
-    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
-    $parent_id = array_key_exists('parent_id', $params) ? $params['parent_id'] : NULL;
-
-    $query_params = array(
-      'fields' => array(),
-      'distinct' => true,
-      'base_table' => 'capture_data_file',
-      'search_params' => array(
-        0 => array('field_names' => array('capture_data_file.active'), 'search_values' => array(1), 'comparison' => '='),
-      ),
-      'search_type' => 'AND',
-    );
-
-    if ($search_value) {
-      $query_params['search_params'][] = array(
-        'field_names' => array(
-          'capture_data_file.capture_data_file_name',
-          'capture_data_file.capture_data_file_type',
-          'capture_data_file.is_compressed_multiple_files'
-        ),
-        'search_values' => array($search_value),
-        'comparison' => 'LIKE',
-      );
-    }
-    if ($parent_id) {
-      $query_params['search_params'][] = array(
-        'field_names' => array(
-          'parent_capture_data_element_repository_id'
-        ),
-        'search_values' => array($parent_id),
-        'comparison' => '=',
-      );
-    }
-
-    // Fields.
-    $query_params['fields'][] = array(
-      'table_name' => 'capture_data_file',
-      'field_name' => 'capture_data_file_repository_id',
-      'field_alias' => 'manage',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'capture_data_file',
-      'field_name' => 'capture_data_file_repository_id',
-      'field_alias' => 'DT_RowId',
-    );
-    $query_params['fields'][] = array(
-      'field_name' => 'capture_data_file_name',
-    );
-    $query_params['fields'][] = array(
-      'field_name' => 'capture_data_file_type',
-    );
-    $query_params['fields'][] = array(
-      'field_name' => 'is_compressed_multiple_files',
-    );
-    $query_params['fields'][] = array(
-      'field_name' => 'active',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'capture_data_file',
-      'field_name' => 'last_modified',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'capture_data_file',
-      'field_name' => 'last_modified_user_account_id',
-    );
-
-    $query_params['records_values'] = array();
-
-    $query_params['limit'] = array(
-      'limit_start' => $start_record,
-      'limit_stop' => $stop_record,
-    );
-
-    if (!empty($sort_field) && !empty($sort_order)) {
-      $query_params['sort_fields'][] = array(
-        'field_name' => $sort_field,
-        'sort_order' => $sort_order,
-      );
-    } else {
-      $query_params['sort_fields'][] = array(
-        'field_name' => 'capture_data_file.last_modified',
-        'sort_order' => 'DESC',
-      );
-    }
-
-    $data = $this->getRecordsDatatable($query_params);
-
-    return $data;
-
-  }
-
-  /**
-   * @param $params
-   * @return mixed
-   */
   public function getDatatableCaptureDataset($params) {
 
-    $item_repository_id = array_key_exists('item_repository_id', $params) ? $params['item_repository_id'] : NULL;
+    $item_id = array_key_exists('item_id', $params) ? $params['item_id'] : NULL;
     $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
     $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
     $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
@@ -2825,49 +3021,49 @@ class RepoStorageHybrid implements RepoStorage {
 
     $query_params['related_tables'][] = array(
       'table_name' => 'capture_method',
-      'table_join_field' => 'capture_method_repository_id',
+      'table_join_field' => 'capture_method_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'capture_dataset',
       'base_join_field' => 'capture_method',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'dataset_type',
-      'table_join_field' => 'dataset_type_repository_id',
+      'table_join_field' => 'dataset_type_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'capture_dataset',
       'base_join_field' => 'capture_dataset_type',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'item_position_type',
-      'table_join_field' => 'item_position_type_repository_id',
+      'table_join_field' => 'item_position_type_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'capture_dataset',
       'base_join_field' => 'item_position_type',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'focus_type',
-      'table_join_field' => 'focus_type_repository_id',
+      'table_join_field' => 'focus_type_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'capture_dataset',
       'base_join_field' => 'focus_type',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'light_source_type',
-      'table_join_field' => 'light_source_type_repository_id',
+      'table_join_field' => 'light_source_type_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'capture_dataset',
       'base_join_field' => 'light_source_type',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'background_removal_method',
-      'table_join_field' => 'background_removal_method_repository_id',
+      'table_join_field' => 'background_removal_method_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'capture_dataset',
       'base_join_field' => 'background_removal_method',
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'camera_cluster_type',
-      'table_join_field' => 'camera_cluster_type_repository_id',
+      'table_join_field' => 'camera_cluster_type_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'capture_dataset',
       'base_join_field' => 'cluster_type',
@@ -2911,22 +3107,22 @@ class RepoStorageHybrid implements RepoStorage {
       );
     }
 
-    if($item_repository_id && is_numeric($item_repository_id)) {
+    if($item_id && is_numeric($item_id)) {
       $count_params = count($query_params['search_params']);
       $query_params['search_params'][$count_params] = array(
         'field_names' => array(
-          'capture_dataset.parent_item_repository_id',
+          'capture_dataset.item_id',
         ),
-        'search_values' => array((int)$item_repository_id),
+        'search_values' => array((int)$item_id),
         'comparison' => '=',
       );
-      //          AND capture_dataset.item_repository_id = " . (int)$item_repository_id . "");
+      //          AND capture_dataset.item_id = " . (int)$item_id . "");
     }
 
     // Fields.
     $query_params['fields'][] = array(
       'table_name' => 'capture_dataset',
-      'field_name' => 'capture_dataset_repository_id',
+      'field_name' => 'capture_dataset_id',
       'field_alias' => 'manage',
     );
     $query_params['fields'][] = array(
@@ -3010,7 +3206,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'capture_dataset',
-      'field_name' => 'capture_dataset_repository_id',
+      'field_name' => 'capture_dataset_id',
       'field_alias' => 'DT_RowId',
     );
     $query_params['fields'][] = array(
@@ -3076,117 +3272,168 @@ class RepoStorageHybrid implements RepoStorage {
 
   public function getDatatableCaptureDataElement($params) {
 
-      $record_type = 'capture_data_element';
-      $capture_dataset_repository_id = array_key_exists('capture_dataset_repository_id', $params) ? $params['capture_dataset_repository_id'] : NULL;
+      $capture_dataset_id = array_key_exists('capture_dataset_id', $params) ? $params['capture_dataset_id'] : NULL;
       $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
       $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
-      $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+      $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : 0;
       $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
 
       $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
       //@todo- allow match on ID- specify ID field and value $record_match = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
 
-      $query_params = array(
-        'distinct' => true, // @todo Do we always want this to be true?
-        'base_table' => $record_type,
-        'fields' => array(),
-      );
+      $sql = "
+            capture_data_element.capture_data_element_id
+            ,capture_data_element.capture_data_element_id as manage
+            ,capture_data_element.capture_data_element_id as DT_RowId
+            ,capture_data_element.capture_dataset_id
+            ,capture_data_element.capture_device_configuration_id
+            ,capture_data_element.capture_device_field_id
+            ,capture_data_element.capture_sequence_number
+            ,capture_data_element.cluster_position_field_id
+            ,capture_data_element.position_in_cluster_field_id
+            ,capture_data_element.date_created
+            ,capture_data_element.created_by_user_account_id
+            ,capture_data_element.last_modified
+            ,capture_data_element.last_modified_user_account_id          
+            , ( SELECT GROUP_CONCAT(file_upload.metadata) from file_upload 
+                  LEFT JOIN capture_data_file on file_upload.file_upload_id = capture_data_file.file_upload_id    
+                  WHERE capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
+                  AND file_upload.metadata IS NOT NULL AND file_upload.metadata NOT LIKE ''              
+                  GROUP BY capture_data_file.capture_data_element_id
+              )
+                as metadata
+          FROM capture_data_element
+          WHERE capture_data_element.active = 1 ";
 
-      $query_params['limit'] = array(
-        'limit_start' => $start_record,
-        'limit_stop' => $stop_record,
-      );
+      if(strlen(trim($search_value)) > 0) {
+        $sql .= " AND (
+          capture_device_configuration_id LIKE :search_value OR
+          capture_device_field_id LIKE :search_value OR
+          capture_sequence_number LIKE :search_value OR
+          cluster_position_field_id LIKE :search_value OR
+          position_in_cluster_field_id LIKE :search_value
+        ) ";
 
-      if (!empty($sort_field) && !empty($sort_order)) {
-        $query_params['sort_fields'][] = array(
-          'field_name' => $sort_field,
-          'sort_order' => $sort_order,
-        );
-      } else {
-        $query_params['sort_fields'][] = array(
-          'field_name' => $record_type . '.last_modified',
-          'sort_order' => 'DESC',
-        );
       }
 
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => $record_type . '_repository_id',
-        'field_alias' => 'manage',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'capture_dataset_repository_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'capture_device_configuration_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'capture_device_field_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'capture_sequence_number',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'cluster_position_field_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'position_in_cluster_field_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'date_created',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'created_by_user_account_id',
-      );
-
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'last_modified',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'last_modified_user_account_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => $record_type . '_repository_id',
-        'field_alias' => 'DT_RowId',
-      );
-      $query_params['search_params'][0] = array('field_names' => array($record_type . '.active'), 'search_values' => array(1), 'comparison' => '=');
-      $query_params['search_type'] = 'AND';
-      if (NULL !== $search_value) {
-        $query_params['search_params'][1] = array(
-          'field_names' => array(
-            $record_type . '.capture_device_configuration_id',
-            $record_type . '.capture_device_field_id',
-            $record_type . '.capture_sequence_number',
-            $record_type . '.cluster_position_field_id',
-            $record_type . '.position_in_cluster_field_id',
-          ),
-          'search_values' => array($search_value),
-          'comparison' => 'LIKE',
-        );
-      }
-      if(NULL !== $capture_dataset_repository_id) {
-        $c = count($query_params['search_params']);
-        $query_params['search_params'][$c] = array(
-          'field_names' => array(
-            $record_type . '.capture_dataset_repository_id',
-          ),
-          'search_values' => array((int)$capture_dataset_repository_id),
-          'comparison' => '=',
-        );
+      if(NULL !== $capture_dataset_id) {
+        $sql .= " AND capture_data_element.capture_dataset_id = :capture_dataset_id";
       }
 
-      $data = $this->getRecordsDatatable($query_params);
+      if($sort_field) {
+        $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+      }
+      else {
+        $sql .= " ORDER BY capture_data_element_id ";
+      }
+
+      if(NULL !== $stop_record) {
+        $sql .= " LIMIT {$start_record}, {$stop_record} ";
+      }
+      else {
+        $sql .= " LIMIT {$start_record} ";
+      }
+
+      $sql = "SELECT SQL_CALC_FOUND_ROWS " . $sql;
+
+      $statement = $this->connection->prepare($sql);
+      if(strlen(trim($search_value)) > 0) {
+        $statement->bindValue(":search_value", $search_value, PDO::PARAM_STR);
+      }
+      if(NULL !== $capture_dataset_id) {
+        $statement->bindValue(":capture_dataset_id", $capture_dataset_id, PDO::PARAM_INT);
+      }
+
+      $statement->execute();
+      $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
+      $statement->execute();
+      $count = $statement->fetch(PDO::FETCH_ASSOC);
+      $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+      $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
+
+      return $data;
+
+  }
+
+  /**
+   * @param $params
+   * @return mixed
+   */
+  public function getDatatableCaptureDataFile($params) {
+
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+    $parent_id = array_key_exists('parent_id', $params) ? $params['parent_id'] : NULL;
+
+    $sql = "
+          capture_data_file.capture_data_file_id
+          ,capture_data_file.capture_data_file_id as manage
+          ,capture_data_file.capture_data_file_id as DT_RowId
+          ,capture_data_file.capture_data_file_name
+          ,capture_data_file.capture_data_file_type
+          ,capture_data_file.is_compressed_multiple_files
+          ,capture_data_file.date_created
+          ,capture_data_file.created_by_user_account_id
+          ,capture_data_file.last_modified
+          ,capture_data_file.last_modified_user_account_id          
+          , file_upload.metadata
+        FROM capture_data_file
+        LEFT JOIN file_upload ON capture_data_file.file_upload_id = file_upload.file_upload_id
+        WHERE capture_data_file.active = 1 
+        ";
+
+    if(NULL !== $parent_id) {
+      $sql .= " AND capture_data_file.capture_data_element_id = :capture_data_element_id ";
+    }
+
+    if(strlen(trim($search_value)) > 0) {
+      $sql .= " AND (
+        capture_data_file_name LIKE :search_value OR
+        capture_data_file_type LIKE :search_value OR
+        is_compressed_multiple_files LIKE :search_value
+      )";
+    }
+
+    if($sort_field) {
+      $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+    }
+    else {
+      $sql .= " ORDER BY capture_data_file_id ";
+    }
+
+    if(NULL !== $stop_record) {
+      $sql .= " LIMIT {$start_record}, {$stop_record} ";
+    }
+    else {
+      $sql .= " LIMIT {$start_record} ";
+    }
+
+    $sql = "SELECT SQL_CALC_FOUND_ROWS " . $sql;
+
+    $statement = $this->connection->prepare($sql);
+
+    $statement = $this->connection->prepare($sql);
+    if(strlen(trim($search_value)) > 0) {
+      $statement->bindValue(":search_value", $search_value, PDO::PARAM_STR);
+    }
+    if(NULL !== $parent_id) {
+      $statement->bindValue(":capture_data_element_id", $parent_id, PDO::PARAM_INT);
+    }
+
+    $statement->execute();
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
+    $statement->execute();
+    $count = $statement->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+    $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
+
       return $data;
 
   }
@@ -3202,7 +3449,8 @@ class RepoStorageHybrid implements RepoStorage {
     $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
     $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
     $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
-    $subject_repository_id = array_key_exists('subject_repository_id', $params) ? $params['subject_repository_id'] : NULL;
+    $project_id = array_key_exists('project_id', $params) ? $params['project_id'] : NULL;
+    $subject_id = array_key_exists('subject_id', $params) ? $params['subject_id'] : NULL;
 
     $query_params = array(
       'fields' => array(),
@@ -3226,34 +3474,44 @@ class RepoStorageHybrid implements RepoStorage {
         'comparison' => 'LIKE',
       );
     }
-    if($subject_repository_id && is_numeric($subject_repository_id)) {
+    if($project_id && is_numeric($project_id)) {
       $count_params = count($query_params['search_params']);
       $query_params['search_params'][$count_params] = array(
         'field_names' => array(
-          'item.subject_repository_id',
+          'item.project_id',
         ),
-        'search_values' => array((int)$subject_repository_id),
+        'search_values' => array((int)$project_id),
+        'comparison' => '=',
+      );
+    }
+    if($subject_id && is_numeric($subject_id)) {
+      $count_params = count($query_params['search_params']);
+      $query_params['search_params'][$count_params] = array(
+        'field_names' => array(
+          'item.subject_id',
+        ),
+        'search_values' => array((int)$subject_id),
         'comparison' => '=',
       );
     }
 
     $query_params['related_tables'][] = array(
       'table_name' => 'capture_dataset',
-      'table_join_field' => 'parent_item_repository_id',
+      'table_join_field' => 'item_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'item',
-      'base_join_field' => 'item_repository_id',
+      'base_join_field' => 'item_id',
     );
 
     // Fields.
     $query_params['fields'][] = array(
       'table_name' => 'item',
-      'field_name' => 'item_repository_id',
+      'field_name' => 'item_id',
       'field_alias' => 'manage',
     );
     $query_params['fields'][] = array(
       'table_name' => 'item',
-      'field_name' => 'subject_repository_id',
+      'field_name' => 'subject_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'item',
@@ -3273,17 +3531,17 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'item',
-      'field_name' => 'item_repository_id',
+      'field_name' => 'item_id',
       'field_alias' => 'DT_RowId',
     );
     $query_params['fields'][] = array(
-      'field_name' => 'count(distinct capture_dataset.parent_item_repository_id)',
+      'field_name' => 'count(distinct capture_dataset.item_id)',
       'field_alias' => 'datasets_count',
     );
 
     // Need to group by since we're doing a count
     $query_params['group_by'] = array(
-      'item.item_repository_id'
+      'item.item_id'
     );
 
     $query_params['records_values'] = array();
@@ -3306,6 +3564,137 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     $data = $this->getRecordsDatatable($query_params);
+
+    return $data;
+
+  }
+
+  public function getDatatableItemModels($params) {
+
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+
+    $parent_id_field = array_key_exists('parent_id_field', $params) ? $params['parent_id_field'] : NULL;
+    $parent_id = array_key_exists('parent_id', $params) ? $params['parent_id'] : NULL;
+
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+
+    if($parent_id_field != 'item_id') {
+      return array();
+    }
+
+    $sql = " DISTINCT tmp.*
+            FROM 
+    
+            (SELECT model_id, model_id as manage, model.capture_dataset_id,
+            parent_model_id, item_id, model_guid, date_of_creation, model_file_type,
+            derived_from, creation_method, model_modality, units, is_watertight, model_purpose, point_count,
+            has_normals, face_count, vertices_count, has_vertex_color, has_uv_space, model_maps, active,
+            date_created, created_by_user_account_id, last_modified, last_modified_user_account_id,
+            model_id as DT_RowId,           
+            (
+              SELECT file_name
+              FROM file_upload
+              LEFT JOIN model_file on file_upload.file_upload_id = model_file.file_upload_id
+              WHERE file_upload.active = 1 AND model_file.active = 1
+              AND model_file.model_id=model.model_id              
+              AND (file_upload.file_name LIKE '%.obj' OR file_upload.file_name IS NULL)
+              LIMIT 0, 1
+            ) as file_name
+            
+            FROM model
+            
+            WHERE item_id=:item_id
+
+            UNION 
+            
+            SELECT model_id, model_id as manage, model.capture_dataset_id,
+            parent_model_id, model.item_id, model_guid, date_of_creation, model_file_type,
+            derived_from, creation_method, model_modality, units, is_watertight, model_purpose, point_count,
+            has_normals, face_count, vertices_count, has_vertex_color, has_uv_space, model_maps, model.active,
+            model.date_created, model.created_by_user_account_id, model.last_modified, model.last_modified_user_account_id,
+            model_id as DT_RowId,
+            (
+              SELECT file_name
+              FROM file_upload
+              LEFT JOIN model_file on file_upload.file_upload_id = model_file.file_upload_id
+              WHERE file_upload.active = 1 AND model_file.active = 1
+              AND model_file.model_id=model.model_id              
+              AND (file_upload.file_name LIKE '%.obj' OR file_upload.file_name IS NULL)
+              LIMIT 0, 1
+            ) as file_name
+            
+            FROM model
+            LEFT JOIN capture_dataset on model.capture_dataset_id = capture_dataset.capture_dataset_id
+            
+            WHERE 
+            capture_dataset.item_id=:item_id
+            and capture_dataset.active=1
+             
+            )
+            AS tmp
+            
+            WHERE tmp.active = 1 
+             
+            ";
+    //@todo instead of looking at the extension, check for model = web ready, and check resolution is viewable
+
+    if(strlen(trim($search_value)) > 0) {
+      $sql .= " AND (
+        model_guid LIKE :search_value OR
+        parent_model_id LIKE :search_value OR
+        date_of_creation LIKE :search_value OR
+        model_file_type LIKE :search_value OR
+        derived_from LIKE :search_value OR
+        creation_method LIKE :search_value OR
+        model_modality LIKE :search_value OR
+        units LIKE :search_value OR
+        is_watertight LIKE :search_value OR
+        model_purpose LIKE :search_value OR
+        point_count LIKE :search_value OR
+        has_normals LIKE :search_value OR
+        face_count LIKE :search_value OR
+        vertices_count LIKE :search_value OR
+        has_vertex_color LIKE :search_value OR
+        has_uv_space LIKE :search_value OR
+        model_maps LIKE :search_value
+      )";
+    }
+
+    if($sort_field) {
+      $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+    }
+    else {
+      $sql .= " ORDER BY model_id ";
+    }
+
+    if(NULL !== $stop_record) {
+      $sql .= " LIMIT {$start_record}, {$stop_record} ";
+    }
+    else {
+      $sql .= " LIMIT {$start_record} ";
+    }
+
+    $sql = "SELECT SQL_CALC_FOUND_ROWS " . $sql;
+
+    $statement = $this->connection->prepare($sql);
+
+    $statement->bindValue(":item_id", $parent_id, PDO::PARAM_INT);
+    if(strlen(trim($search_value)) > 0) {
+      $statement->bindValue(":search_value", $search_value, PDO::PARAM_STR);
+    }
+
+    $statement->execute();
+
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
+    $statement->execute();
+    $count = $statement->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+    $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
 
     return $data;
 
@@ -3353,7 +3742,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     $query_params['related_tables'][] = array(
       'table_name' => 'project',
-      'table_join_field' => 'project_repository_id',
+      'table_join_field' => 'project_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'job',
       'base_join_field' => 'project_id',
@@ -3379,7 +3768,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'project',
-      'field_name' => 'project_repository_id',
+      'field_name' => 'project_id',
     );
     $query_params['fields'][] = array(
       'field_name' => "SUM(case when job_import_record.record_table = 'subject' then 1 else 0 end)",
@@ -3530,7 +3919,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['related_tables'][] = array(
       'table_name' => 'project',
-      'table_join_field' => 'project_repository_id',
+      'table_join_field' => 'project_id',
       'join_type' => 'LEFT JOIN',
       'base_join_table' => 'job',
       'base_join_field' => 'project_id',
@@ -3538,7 +3927,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     $query_params['fields'][] = array(
       'table_name' => 'project',
-      'field_name' => 'project_repository_id',
+      'field_name' => 'project_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'project',
@@ -3546,7 +3935,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'subject',
-      'field_name' => 'subject_repository_id',
+      'field_name' => 'subject_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'subject',
@@ -3554,7 +3943,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $query_params['fields'][] = array(
       'table_name' => 'item',
-      'field_name' => 'item_repository_id',
+      'field_name' => 'item_id',
     );
     $query_params['fields'][] = array(
       'table_name' => 'item',
@@ -3568,17 +3957,17 @@ class RepoStorageHybrid implements RepoStorage {
 
       $query_params['related_tables'][] = array(
         'table_name' => 'subject',
-        'table_join_field' => 'subject_repository_id',
+        'table_join_field' => 'subject_id',
         'join_type' => 'LEFT JOIN',
         'base_join_table' => 'job_import_record',
         'base_join_field' => 'record_id',
       );
       $query_params['related_tables'][] = array(
         'table_name' => 'item',
-        'table_join_field' => 'subject_repository_id',
+        'table_join_field' => 'subject_id',
         'join_type' => 'LEFT JOIN',
         'base_join_table' => 'subject',
-        'base_join_field' => 'subject_repository_id',
+        'base_join_field' => 'subject_id',
       );
 
       if (NULL !== $search_value) {
@@ -3602,17 +3991,17 @@ class RepoStorageHybrid implements RepoStorage {
 
       $query_params['related_tables'][] = array(
         'table_name' => 'item',
-        'table_join_field' => 'item_repository_id',
+        'table_join_field' => 'item_id',
         'join_type' => 'LEFT JOIN',
         'base_join_table' => 'job_import_record',
         'base_join_field' => 'record_id',
       );
       $query_params['related_tables'][] = array(
         'table_name' => 'subject',
-        'table_join_field' => 'subject_repository_id',
+        'table_join_field' => 'subject_id',
         'join_type' => 'LEFT JOIN',
         'base_join_table' => 'item',
-        'base_join_field' => 'subject_repository_id',
+        'base_join_field' => 'subject_id',
       );
 
       if (NULL !== $search_value) {
@@ -3636,28 +4025,28 @@ class RepoStorageHybrid implements RepoStorage {
 
       $query_params['related_tables'][] = array(
         'table_name' => 'capture_dataset',
-        'table_join_field' => 'capture_dataset_repository_id',
+        'table_join_field' => 'capture_dataset_id',
         'join_type' => 'LEFT JOIN',
         'base_join_table' => 'job_import_record',
         'base_join_field' => 'record_id',
       );
       $query_params['related_tables'][] = array(
         'table_name' => 'item',
-        'table_join_field' => 'item_repository_id',
+        'table_join_field' => 'item_id',
         'join_type' => 'LEFT JOIN',
         'base_join_table' => 'capture_dataset',
-        'base_join_field' => 'parent_item_repository_id',
+        'base_join_field' => 'item_id',
       );
       $query_params['related_tables'][] = array(
         'table_name' => 'subject',
-        'table_join_field' => 'subject_repository_id',
+        'table_join_field' => 'subject_id',
         'join_type' => 'LEFT JOIN',
         'base_join_table' => 'item',
-        'base_join_field' => 'subject_repository_id',
+        'base_join_field' => 'subject_id',
       );
       $query_params['fields'][] = array(
         'table_name' => 'capture_dataset',
-        'field_name' => 'capture_dataset_repository_id',
+        'field_name' => 'capture_dataset_id',
       );
       $query_params['fields'][] = array(
         'table_name' => 'capture_dataset',
@@ -3685,35 +4074,35 @@ class RepoStorageHybrid implements RepoStorage {
 
       $query_params['related_tables'][] = array(
         'table_name' => 'model',
-        'table_join_field' => 'model_repository_id',
+        'table_join_field' => 'model_id',
         'join_type' => 'LEFT JOIN',
         'base_join_table' => 'job_import_record',
         'base_join_field' => 'record_id',
       );
       $query_params['related_tables'][] = array(
         'table_name' => 'capture_dataset',
-        'table_join_field' => 'capture_dataset_repository_id',
+        'table_join_field' => 'capture_dataset_id',
         'join_type' => 'LEFT JOIN',
         'base_join_table' => 'model',
-        'base_join_field' => 'parent_capture_dataset_repository_id',
+        'base_join_field' => 'capture_dataset_id',
       );
       $query_params['related_tables'][] = array(
         'table_name' => 'item',
-        'table_join_field' => 'item_repository_id',
+        'table_join_field' => 'item_id',
         'join_type' => 'LEFT JOIN',
         'base_join_table' => 'model',
-        'base_join_field' => 'parent_item_repository_id',
+        'base_join_field' => 'item_id',
       );
       $query_params['related_tables'][] = array(
         'table_name' => 'subject',
-        'table_join_field' => 'subject_repository_id',
+        'table_join_field' => 'subject_id',
         'join_type' => 'LEFT JOIN',
         'base_join_table' => 'item',
-        'base_join_field' => 'subject_repository_id',
+        'base_join_field' => 'subject_id',
       );
       $query_params['fields'][] = array(
         'table_name' => 'capture_dataset',
-        'field_name' => 'capture_dataset_repository_id',
+        'field_name' => 'capture_dataset_id',
       );
       $query_params['fields'][] = array(
         'table_name' => 'capture_dataset',
@@ -3721,7 +4110,7 @@ class RepoStorageHybrid implements RepoStorage {
       );
       $query_params['fields'][] = array(
         'table_name' => 'model',
-        'field_name' => 'model_repository_id',
+        'field_name' => 'model_id',
       );
       $query_params['fields'][] = array(
         'table_name' => 'model',
@@ -3752,7 +4141,7 @@ class RepoStorageHybrid implements RepoStorage {
     $query_params['search_params'][1] = array('field_names' => array('job_import_record.job_id'), 'search_values' => array((int)$job_id),'comparison' => '=');
     $query_params['search_type'] = 'AND';
 
-    // $query_params['search_params'][2] = array('field_names' => array('item.item_repository_id'), 'search_values' => array(''), 'comparison' => 'IS NOT NULL');
+    // $query_params['search_params'][2] = array('field_names' => array('item.item_id'), 'search_values' => array(''), 'comparison' => 'IS NOT NULL');
     // $query_params['search_type'] = 'AND';
 
     $query_params['fields'][] = array(
@@ -3787,27 +4176,584 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
+  public function getDatatableUsers($params) {
+    //$params will be something like array('username_canonical' => 'bartlettr');
+    $data = array();
+
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+
+    $role_slug = array_key_exists('role_slug', $params) ? $params['role_slug'] : NULL;
+    $username_canonical = array_key_exists('username_canonical', $params) ? $params['username_canonical'] : NULL;
+
+    // First select was project.project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
+    // Users with project-specific access.
+    $sql = "SELECT username_canonical, username_canonical as manage, username_canonical as DT_RowId, username, email, enabled, 
+            GROUP_CONCAT(rolename) as roles,
+            project_name, unit_stakeholder_label, unit_stakeholder_full_name
+            
+            FROM 
+            
+            (SELECT fos_user.username_canonical, username, email, enabled, rolename,
+            project.project_name, '' as unit_stakeholder_label, '' as unit_stakeholder_full_name
+            
+            FROM fos_user
+            LEFT JOIN user_role on fos_user.username_canonical = user_role.username_canonical
+            LEFT JOIN role on user_role.role_id = role.role_id
+            LEFT JOIN project on user_role.project_id = project.project_id
+            LEFT JOIN unit_stakeholder on project.stakeholder_guid = unit_stakeholder.isni_id 
+            WHERE user_role.project_id IS NOT NULL 
+            AND fos_user.enabled = 1
+            AND user_role.active = 1
+            AND role.active = 1
+            AND project.active = 1
+            AND unit_stakeholder.active = 1
+            ";
+    if(NULL !== $role_slug) {
+      $sql .= " AND role.rolename_canonical LIKE :rolename_canonical ";
+    }
+
+    // Users with stakeholder-specific access.
+    $sql .= " UNION 
+            
+            SELECT fos_user.username_canonical, username, email, enabled, rolename,
+            'ALL' as project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
+            FROM fos_user
+            LEFT JOIN user_role on fos_user.username_canonical = user_role.username_canonical
+            LEFT JOIN role on user_role.role_id = role.role_id
+            JOIN unit_stakeholder on user_role.stakeholder_id = unit_stakeholder.unit_stakeholder_id
+            WHERE user_role.stakeholder_id IS NOT NULL 
+            AND fos_user.enabled = 1
+            AND user_role.active = 1
+            AND unit_stakeholder.active = 1
+            ";
+    if(NULL !== $role_slug) {
+      $sql .= " AND role.rolename_canonical LIKE :rolename_canonical ";
+    }
+
+    // Users with system-wide access.
+    $sql .= " UNION
+
+            SELECT fos_user.username_canonical, username, email, enabled, rolename,
+            'ALL' as project_name, '' as unit_stakeholder_label, 'ALL' as unit_stakeholder_full_name
+            FROM fos_user
+            LEFT JOIN user_role on fos_user.username_canonical = user_role.username_canonical
+            LEFT JOIN role on user_role.role_id = role.role_id
+            WHERE user_role.stakeholder_id IS NULL 
+            AND user_role.project_id IS NULL 
+            AND fos_user.enabled = 1
+            AND user_role.active = 1
+            AND role.active = 1
+            ";
+    if(NULL !== $role_slug) {
+      $sql .= " AND role.rolename_canonical LIKE :rolename_canonical ";
+    }
+
+    // Users with no current role- it only makes sense to get these when no rolename was specified.
+    if(NULL == $role_slug) {
+      $sql .= " UNION
+            SELECT fos_user.username_canonical, username, email, enabled, '' as rolename,
+            '' as project_name, '' as unit_stakeholder_label, '' as unit_stakeholder_full_name
+            FROM fos_user
+            LEFT JOIN user_role on fos_user.username_canonical = user_role.username_canonical
+            WHERE user_role.user_role_id IS NULL 
+            AND fos_user.enabled = 1
+            ";
+    }
+
+    $sql .= ") as tmp ";
+
+    $where = "";
+    $where_parts = array();
+    if(NULL !== $username_canonical) {
+      $where_parts[] = " username_canonical=:username_canonical ";
+    }
+
+    if ($search_value) {
+      $where_parts[] = "(tmp.username_canonical LIKE ':search_value' OR tmp.email LIKE ':search_value' OR 
+      tmp.project_name LIKE ':search_value' OR tmp.rolename LIKE ':search_value' OR
+      tmp.unit_stakeholder_label LIKE ':search_value' OR tmp.unit_stakeholder_full_name LIKE ':search_value')";
+    }
+
+    if(count($where_parts) > 0) {
+      $where = " WHERE " . implode(' AND ', $where_parts);
+    }
+
+    $sql .= $where . " GROUP BY username_canonical, unit_stakeholder_label, unit_stakeholder_full_name, project_name ";
+
+    if($sort_field) {
+      $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+    }
+    else {
+      $sql .= " ORDER BY username, unit_stakeholder_label, unit_stakeholder_full_name, project_name";
+    }
+
+    $count_query = "SELECT COUNT(manage) as c from (" . $sql . ") as x ";
+
+    if(NULL !== $stop_record) {
+      $sql .= " LIMIT {$start_record}, {$stop_record} ";
+    }
+    else {
+      $sql .= " LIMIT {$start_record} ";
+    }
+
+    $statement = $this->connection->prepare($sql);
+    if(NULL !== $username_canonical) {
+      $statement->bindValue(":username_canonical", $username_canonical, PDO::PARAM_STR);
+    }
+    if(NULL !== $role_slug) {
+      $statement->bindValue(":rolename_canonical", $role_slug, PDO::PARAM_STR);
+    }
+    if(strlen(trim($search_value)) > 0) {
+      $statement->bindValue(":search_value", '%' . $search_value . '%', PDO::PARAM_STR);
+    }
+    $ret = $statement->execute();
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $statement2 = $this->connection->prepare($count_query);
+    if(NULL !== $username_canonical) {
+      $statement2->bindValue(":username_canonical", $username_canonical, PDO::PARAM_STR);
+    }
+    if(NULL !== $role_slug) {
+      $statement2->bindValue(":rolename_canonical", $role_slug, PDO::PARAM_STR);
+    }
+    $statement2->bindValue(":search_value", "%", PDO::PARAM_STR);
+    if(strlen(trim($search_value)) > 0) {
+      //$statement2->bindValue(":search_value", '%' . $search_value . '%', PDO::PARAM_STR);
+    }
+    $statement2->execute();
+    $count = $statement2->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["c"];
+    $data["iTotalDisplayRecords"] = $count["c"];
+
+    return $data;
+
+  }
+
+  public function getDatatableUserRoles($params) {
+    //$params will be something like array('username_canonical' => 'rb');
+    $data = array();
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+
+    $username_canonical = array_key_exists('username_canonical', $params) ? $params['username_canonical'] : NULL;
+    // First select was project.project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
+    $sql = "SELECT user_role_id, user_role_id as manage, user_role_id as DT_RowId, rolename,
+            project_name, unit_stakeholder_label, unit_stakeholder_full_name, username_canonical
+            FROM 
+            
+            (SELECT user_role_id, user_role.username_canonical, rolename,
+            project.project_name, '' as unit_stakeholder_label, '' as unit_stakeholder_full_name
+            
+            FROM user_role
+            LEFT JOIN role on user_role.role_id = role.role_id
+            LEFT JOIN project on user_role.project_id = project.project_id
+            LEFT JOIN unit_stakeholder on project.stakeholder_guid = unit_stakeholder.isni_id 
+            WHERE user_role.project_id IS NOT NULL 
+            AND user_role.active = 1
+            AND role.active = 1
+            AND project.active = 1
+            AND unit_stakeholder.active = 1
+
+            UNION 
+            
+            SELECT user_role_id, user_role.username_canonical, rolename,
+            'ALL' as project_name, unit_stakeholder.unit_stakeholder_label, unit_stakeholder.unit_stakeholder_full_name
+            FROM user_role
+            LEFT JOIN role on user_role.role_id = role.role_id
+            JOIN unit_stakeholder on user_role.stakeholder_id = unit_stakeholder.unit_stakeholder_id
+            WHERE user_role.stakeholder_id IS NOT NULL 
+            AND user_role.active = 1
+            AND role.active = 1
+            AND unit_stakeholder.active = 1
+            
+            UNION
+
+            SELECT user_role_id, user_role.username_canonical, rolename,
+            'ALL' as project_name, 'ALL' as unit_stakeholder_label, '' as unit_stakeholder_full_name
+            FROM user_role
+            LEFT JOIN role on user_role.role_id = role.role_id
+            WHERE user_role.stakeholder_id IS NULL AND user_role.project_id IS NULL 
+            AND user_role.active = 1
+            AND role.active = 1
+            )
+            as tmp ";
+
+    $where = "";
+    $where_parts = array();
+    if(NULL !== $username_canonical) {
+      $where_parts[] = " username_canonical=:username_canonical ";
+    }
+
+    if ($search_value) {
+      $where_parts[] = "(username_canonical LIKE ':search_value' OR email LIKE ':search_value' OR 
+      rolename LIKE ':search_value' OR project_name LIKE ':search_value' OR 
+      unit_stakeholder_label LIKE ':search_value' OR unit_stakeholder_full_name LIKE ':search_value')";
+    }
+
+    if(count($where_parts) > 0) {
+      $where = " WHERE " . implode(' AND ', $where_parts);
+    }
+
+    $sql .= $where . " GROUP BY user_role_id, username_canonical, unit_stakeholder_label, unit_stakeholder_full_name, project_name, rolename ";
+
+    if($sort_field) {
+      $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+    }
+    else {
+      $sql .= " ORDER BY username_canonical, unit_stakeholder_label, unit_stakeholder_full_name, project_name, rolename, user_role_id";
+    }
+
+    $count_query = "SELECT COUNT(manage) as c from (" . $sql . ") as x ";
+
+    if(NULL !== $stop_record) {
+      $sql .= " LIMIT {$start_record}, {$stop_record} ";
+    }
+    else {
+      $sql .= " LIMIT {$start_record} ";
+    }
+
+    $statement = $this->connection->prepare($sql);
+    if(NULL !== $username_canonical) {
+      $statement->bindValue(":username_canonical", $username_canonical, PDO::PARAM_STR);
+    }
+    if(strlen(trim($search_value)) > 0) {
+      $statement->bindValue(":search_value", '%' . $search_value . '%', PDO::PARAM_STR);
+    }
+
+    $statement->execute();
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $statement = $this->connection->prepare($count_query);
+    if(NULL !== $username_canonical) {
+      $statement->bindValue(":username_canonical", $username_canonical, PDO::PARAM_STR);
+    }
+    if(strlen(trim($search_value)) > 0) {
+      $statement->bindValue(":search_value", '%' . $search_value . '%', PDO::PARAM_STR);
+    }
+    $statement->execute();
+    $count = $statement->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["c"];
+    $data["iTotalDisplayRecords"] = $count["c"];
+
+    return $data;
+  }
+
+  public function getDatatableRoles($params) {
+    //$params will be something like array('rolename_canonical' => 'bartlettr');
+    $data = array();
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+
+    $rolename_canonical = array_key_exists('rolename_canonical', $params) ? $params['rolename_canonical'] : NULL;
+    $sql = "SELECT rolename_canonical, role.role_id as manage, rolename_canonical as DT_RowId, 
+              rolename, role_description, 
+              GROUP_CONCAT(permission_name) as permissions,
+              ( SELECT COUNT(id) from fos_user 
+                LEFT JOIN user_role on fos_user.username_canonical = user_role.username_canonical 
+                WHERE fos_user.enabled = 1
+                AND user_role.active = 1
+                AND user_role.role_id = role.role_id
+              ) as count_users
+            FROM role
+            LEFT JOIN role_permission on role.role_id = role_permission.role_id
+            LEFT JOIN permission on role_permission.permission_id = permission.permission_id
+            WHERE role.active = 1
+                AND (role_permission.active = 1 OR role_permission.active IS NULL)
+                AND (permission.active = 1 OR permission.active IS NULL)
+                ";
+
+
+    if(strlen(trim($rolename_canonical)) > 0) {
+      $sql .= " AND rolename_canonical=:rolename_canonical ";
+    }
+    if(strlen(trim($search_value)) > 0) {
+      $sql .= " AND (rolename_canonical LIKE ':search_value' OR rolename LIKE ':search_value' OR 
+      role_description LIKE ':search_value' OR permissions LIKE ':search_value' )";
+    }
+    $sql .= " GROUP BY rolename_canonical ";
+
+    $count_query = "SELECT COUNT(manage) as c from (" . $sql . ") as x ";
+
+    if($sort_field) {
+      $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+    }
+    else {
+      $sql .= " ORDER BY rolename";
+    }
+
+    if(NULL !== $stop_record) {
+      $sql .= " LIMIT {$start_record}, {$stop_record} ";
+    }
+    else {
+      $sql .= " LIMIT {$start_record} ";
+    }
+
+    $statement = $this->connection->prepare($sql);
+    if(strlen(trim($rolename_canonical)) > 0) {
+      $statement->bindValue(":rolename_canonical", $rolename_canonical, PDO::PARAM_STR);
+    }
+    if(strlen(trim($search_value)) > 0) {
+      $statement->bindValue(":search_value", '%' . $search_value . '%', PDO::PARAM_STR);
+    }
+    $statement->execute();
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $statement = $this->connection->prepare($count_query);
+    if(strlen(trim($rolename_canonical)) > 0) {
+      $statement->bindValue(":rolename_canonical", $rolename_canonical, PDO::PARAM_STR);
+    }
+    if(strlen(trim($search_value)) > 0) {
+      $statement->bindValue(":search_value", '%' . $search_value . '%', PDO::PARAM_STR);
+    }
+    $statement->execute();
+    $count = $statement->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["c"];
+    $data["iTotalDisplayRecords"] = $count["c"];
+
+    return $data;
+  }
+
+  /**
+   * User access control functions.
+   */
+  public function getUserAccessByProject($params = array()) {
+
+    $data = false;
+
+    $username = isset($params['username_canonical']) ? $params['username_canonical'] : NULL;
+    $permission_name = isset($params['permission_name']) ? $params['permission_name'] : NULL;
+    $project_id = isset($params['project_id']) ? $params['project_id'] : NULL;
+
+    if(NULL == $permission_name || NULL == $username || NULL == $project_id) {
+      return $data;
+    }
+
+    // See if user specifically has access to this project, has access via a stakeholder, or has access to this permission globally.
+    $sql = "SELECT username_canonical, permission_name, GROUP_CONCAT(project_id) as project_ids
+              FROM
+              (
+              SELECT user_role.username_canonical, permission.permission_name, project.project_id
+                  FROM user_role
+        
+                  JOIN role_permission ON user_role.role_id = role_permission.role_id
+                  JOIN permission ON role_permission.permission_id = permission.permission_id
+                  LEFT JOIN project on user_role.project_id = project.project_id
+                  LEFT JOIN unit_stakeholder ON project.stakeholder_guid = unit_stakeholder.isni_id
+        
+                  WHERE user_role.username_canonical= :username 
+                  AND permission.permission_name= :permission_name
+                  AND ( (user_role.project_id IS NULL AND user_role.stakeholder_id IS NULL) 
+                  OR user_role.project_id= :project_id ) 
+                  
+                  AND user_role.active = 1
+                  AND role_permission.active = 1
+                  AND permission.active = 1
+                  AND (project.active = 1 OR project.active IS NULL)
+                  AND (unit_stakeholder.active = 1 OR unit_stakeholder.active IS NULL)
+
+                        
+              UNION
+              SELECT user_role.username_canonical, permission.permission_name, project.project_id
+                  FROM user_role
+        
+                  JOIN role_permission ON user_role.role_id = role_permission.role_id
+                  JOIN permission ON role_permission.permission_id = permission.permission_id
+                  LEFT JOIN unit_stakeholder ON user_role.stakeholder_id = unit_stakeholder.unit_stakeholder_id
+                  LEFT JOIN project on unit_stakeholder.isni_id = project.stakeholder_guid
+                  WHERE user_role.username_canonical= :username 
+                  AND permission.permission_name= :permission_name
+                  AND user_role.project_id IS NULL 
+                  AND user_role.stakeholder_id IS NOT NULL 
+                  AND project.project_id= :project_id  
+                  
+                  AND user_role.active = 1
+                  AND role_permission.active = 1
+                  AND permission.active = 1
+                  AND project.active = 1
+                  AND unit_stakeholder.active = 1
+
+              )
+              as tmp
+              GROUP BY username_canonical, permission_name ";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":username", $username, PDO::PARAM_STR);
+    $statement->bindValue(":permission_name", $permission_name, PDO::PARAM_STR);
+    if(NULL !== $project_id) {
+      $statement->bindValue(":project_id", $project_id, PDO::PARAM_INT);
+    }
+    $statement->execute();
+    $data = $statement->fetch(PDO::FETCH_ASSOC);
+
+    return $data;
+  }
+
+  public function getUserAccessByStakeholder($params = array()) {
+
+    $data = false;
+
+    $username = isset($params['username_canonical']) ? $params['username_canonical'] : NULL;
+    $permission_name = isset($params['permission_name']) ? $params['permission_name'] : NULL;
+    $stakeholder_id = isset($params['stakeholder_id']) ? $params['stakeholder_id'] : NULL;
+
+    if(NULL == $permission_name || NULL == $username) {
+      return $data;
+    }
+
+    // See if user specifically has access to this stakeholder's projects, or has access to this permission globally.
+    $sql = "SELECT user_role.username_canonical, permission.permission_name, GROUP_CONCAT(project.project_id) as project_ids
+          FROM user_role
+          JOIN role_permission ON user_role.role_id = role_permission.role_id
+          JOIN permission ON role_permission.permission_id = permission.permission_id
+          LEFT JOIN unit_stakeholder ON user_role.stakeholder_id = unit_stakeholder.unit_stakeholder_id
+          LEFT JOIN project ON unit_stakeholder.isni_id = project.stakeholder_guid
+          WHERE user_role.username_canonical= :username 
+          AND permission.permission_name= :permission_name
+          AND ( (user_role.project_id IS NULL AND user_role.stakeholder_id IS NULL) 
+          
+          AND user_role.active = 1
+          AND role_permission.active = 1
+          AND permission.active = 1
+          AND project.active = 1
+          AND unit_stakeholder.active = 1";
+    if(NULL !== $stakeholder_id) {
+      $sql .= " OR user_role.stakeholder_id= :stakeholder_id ";
+    }
+    $sql .= ")";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":username", $username, PDO::PARAM_STR);
+    $statement->bindValue(":permission_name", $permission_name, PDO::PARAM_STR);
+    if(NULL !== $stakeholder_id) {
+      $statement->bindValue(":stakeholder_id", $stakeholder_id, PDO::PARAM_INT);
+    }
+    $statement->execute();
+    $data = $statement->fetch(PDO::FETCH_ASSOC);
+
+    return $data;
+
+  }
+
+  public function getUserAccessAny($params = array()) {
+
+    $data = false;
+
+    $username = isset($params['username_canonical']) ? $params['username_canonical'] : NULL;
+    $permission_name = isset($params['permission_name']) ? $params['permission_name'] : NULL;
+
+    if(NULL == $permission_name || NULL == $username) {
+      return $data;
+    }
+
+    // If the user has global access, return all project_ids.
+    $sql = "SELECT DISTINCT user_role.username_canonical, permission.permission_name
+            FROM user_role 
+            JOIN role_permission ON user_role.role_id = role_permission.role_id 
+            JOIN permission ON role_permission.permission_id = permission.permission_id 
+            WHERE user_role.username_canonical= :username 
+            AND permission.permission_name= :permission_name 
+            AND stakeholder_id IS NULL AND project_id IS NULL
+
+            AND user_role.active = 1
+            AND role_permission.active = 1
+            AND permission.active = 1
+           ";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":username", $username, PDO::PARAM_STR);
+    $statement->bindValue(":permission_name", $permission_name, PDO::PARAM_STR);
+    $statement->execute();
+    $data = $statement->fetch(PDO::FETCH_ASSOC);
+    if(is_array($data) && count($data) > 0) {
+      $data['project_ids'] = '';
+      return $data;
+    }
+
+    // Otherwise see if user specifically has access to a specific stakeholder's projects, or specific projects
+    $sql = "SELECT username_canonical, permission_name, GROUP_CONCAT(DISTINCT project_id) as project_ids
+          FROM 
+          (
+          SELECT DISTINCT user_role.username_canonical, permission.permission_name, project.project_id
+          FROM user_role
+          JOIN role_permission ON user_role.role_id = role_permission.role_id
+          JOIN permission ON role_permission.permission_id = permission.permission_id
+          JOIN unit_stakeholder ON user_role.stakeholder_id = unit_stakeholder.unit_stakeholder_id
+          LEFT JOIN project ON unit_stakeholder.isni_id = project.stakeholder_guid
+          WHERE user_role.username_canonical= :username 
+          AND permission.permission_name= :permission_name 
+          AND user_role.active = 1
+          AND role_permission.active = 1
+          AND permission.active = 1
+          AND unit_stakeholder.active = 1
+
+          UNION
+          SELECT DISTINCT user_role.username_canonical, permission.permission_name, project.project_id
+          FROM user_role
+          JOIN role_permission ON user_role.role_id = role_permission.role_id
+          JOIN permission ON role_permission.permission_id = permission.permission_id
+          JOIN project ON user_role.project_id = project.project_id
+          LEFT JOIN unit_stakeholder ON project.stakeholder_guid = unit_stakeholder.isni_id 
+          WHERE user_role.username_canonical= :username 
+          AND permission.permission_name= :permission_name
+          AND user_role.active = 1
+          AND role_permission.active = 1
+          AND permission.active = 1
+          AND project.active = 1
+          )
+          as tmp
+          GROUP BY username_canonical, permission_name 
+           ";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":username", $username, PDO::PARAM_STR);
+    $statement->bindValue(":permission_name", $permission_name, PDO::PARAM_STR);
+    $statement->execute();
+    $data = $statement->fetch(PDO::FETCH_ASSOC);
+
+    return $data;
+  }
+
+  public function getAllProjectIds($params = array()) {
+
+    $data = array('project_ids' => '');
+    $sql = "SELECT GROUP_CONCAT(project_id) as project_ids from project WHERE active = 1";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->execute();
+    $data = $statement->fetch(PDO::FETCH_ASSOC);
+
+    return $data;
+
+  }
+
+
   public function markProjectInactive($params) {
     $user_id = $params['user_id'];
     $project_id = $params['record_id'];
 
     //@todo trap for missing user_id or record_id.
     $sql = "UPDATE project
-                LEFT JOIN subject ON subject.project_repository_id = project.project_repository_id
-                LEFT JOIN item ON item.subject_repository_id = subject.subject_repository_id
-                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
-                LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
+                LEFT JOIN item ON project.project_id = item.project_id
+                LEFT JOIN capture_dataset ON capture_dataset.item_id = item.item_id
+                LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_id = capture_dataset.capture_dataset_id
                 SET project.active = 0,
                     project.last_modified_user_account_id = :last_modified_user_account_id,
-                    subject.active = 0,
-                    subject.last_modified_user_account_id = :last_modified_user_account_id,
                     item.active = 0,
                     item.last_modified_user_account_id = :last_modified_user_account_id,
                     capture_dataset.active = 0,
                     capture_dataset.last_modified_user_account_id = :last_modified_user_account_id,
                     capture_data_element.active = 0,
                     capture_data_element.last_modified_user_account_id = :last_modified_user_account_id
-                WHERE project.project_repository_id = :id
+                WHERE project.project_id = :id
             ";
 
     $statement = $this->connection->prepare($sql);
@@ -3837,43 +4783,54 @@ class RepoStorageHybrid implements RepoStorage {
       switch($params['record_type']) {
 
         case 'item':
-          $params['id_field_name'] = 'item.item_repository_id';
-          $params['select'] = 'project.project_repository_id, subject.subject_repository_id, item.item_repository_id';
-          $params['left_joins'] = 'LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
-              LEFT JOIN project ON project.project_repository_id = subject.project_repository_id';
+          $params['id_field_name'] = 'item.item_id';
+          $params['select'] = 'project.project_id, subject.subject_id, item.item_id';
+          $params['left_joins'] = 'LEFT JOIN subject ON subject.subject_id = item.subject_id
+              LEFT JOIN project ON project.project_id = item.project_id';
           break;
 
         case 'capture_dataset':
-          $params['id_field_name'] = 'capture_dataset.capture_dataset_repository_id';
-          $params['select'] = 'project.project_repository_id, subject.subject_repository_id, item.item_repository_id, capture_dataset.capture_dataset_repository_id';
-          $params['left_joins'] = 'LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
-              LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
-              LEFT JOIN project ON project.project_repository_id = subject.project_repository_id';
+          $params['id_field_name'] = 'capture_dataset.capture_dataset_id';
+          $params['select'] = 'project.project_id, subject.subject_id, item.item_id, capture_dataset.capture_dataset_id';
+          $params['left_joins'] = 'LEFT JOIN item ON item.item_id = capture_dataset.item_id
+              LEFT JOIN subject ON subject.subject_id = item.subject_id
+              LEFT JOIN project ON project.project_id = item.project_id';
           break;
 
         case 'capture_dataset_element':
-          $params['id_field_name'] = 'capture_data_element.capture_data_element_repository_id';
-          $params['select'] = 'project.project_repository_id, subject.subject_repository_id, item.item_repository_id, capture_dataset.capture_dataset_repository_id, capture_data_element.capture_data_element_repository_id';
-          $params['left_joins'] = 'LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
-              LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
-              LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
-              LEFT JOIN project ON project.project_repository_id = subject.project_repository_id';
+          $params['id_field_name'] = 'capture_data_element.capture_data_element_id';
+          $params['select'] = 'project.project_id, subject.subject_id, item.item_id, capture_dataset.capture_dataset_id, capture_data_element.capture_data_element_id';
+          $params['left_joins'] = 'LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = capture_data_element.capture_dataset_id
+              LEFT JOIN item ON item.item_id = capture_dataset.item_id
+              LEFT JOIN subject ON subject.subject_id = item.subject_id
+              LEFT JOIN project ON project.project_id = item.project_id';
           break;
 
-        case 'model':
-          $params['id_field_name'] = 'model.model_repository_id';
-          $params['select'] = 'project.project_repository_id, subject.subject_repository_id, item.item_repository_id, model.model_repository_id';
-          $params['left_joins'] = 'LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_repository_id = model.parent_capture_dataset_repository_id
-              LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_repository_id = capture_data_element.capture_dataset_repository_id
-              LEFT JOIN item ON item.item_repository_id = capture_dataset.parent_item_repository_id
-              LEFT JOIN subject ON subject.subject_repository_id = item.subject_repository_id
-              LEFT JOIN project ON project.project_repository_id = subject.project_repository_id';
+        case 'model_with_item_id':
+          $params['record_type'] = 'model';
+          $params['id_field_name'] = 'model.model_id';
+          $params['select'] = 'project.project_id, project.project_name, subject.subject_id, item.item_id, item.item_description, model.model_id';
+          $params['left_joins'] = 'LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_id = model.capture_dataset_id
+              -- LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = capture_data_element.capture_dataset_id
+              LEFT JOIN item ON item.item_id = model.item_id
+              LEFT JOIN subject ON subject.subject_id = item.subject_id
+              LEFT JOIN project ON project.project_id = item.project_id';
+          break;
+        case 'model_with_capture_dataset_id':
+          $params['record_type'] = 'model';
+          $params['id_field_name'] = 'model.model_id';
+          $params['select'] = 'project.project_id, project.project_name, subject.subject_id, item.item_id, item.item_description, model.model_id, capture_dataset.capture_dataset_id, capture_dataset.capture_dataset_name';
+          $params['left_joins'] = '
+              LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = model.capture_dataset_id
+              LEFT JOIN item ON item.item_id = capture_dataset.item_id
+              LEFT JOIN subject ON subject.subject_id = item.subject_id
+              LEFT JOIN project ON project.project_id = item.project_id';
           break;
 
         default: // subject
-          $params['id_field_name'] = 'subject.subject_repository_id';
-          $params['select'] = 'project.project_repository_id, subject.subject_repository_id';
-          $params['left_joins'] = 'LEFT JOIN project ON project.project_repository_id = subject.project_repository_id';
+          //@todo- subject does not have a parent
+          $params['id_field_name'] = 'subject.subject_id';
+          $params['select'] = 'subject.subject_id';
 
       }
 
@@ -3890,6 +4847,99 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
+  public function getValues($params) {
+
+    $tablename = array_key_exists('tablename', $params) ? $params['tablename'] : NULL;
+    $stakeholder_id = array_key_exists('stakeholder_id', $params) ? $params['stakeholder_id'] : NULL;
+    if($tablename !== "stakeholder" && $tablename !== "project" && $tablename !== "role") {
+      return array();
+    }
+
+    switch($tablename) {
+      case 'role':
+        $sql = "SELECT role_id as id, rolename as name FROM role ";
+        break;
+      case 'project':
+        $sql = "SELECT project_id as id, project_name as name FROM project";
+        break;
+      case 'stakeholder':
+        $sql = "SELECT unit_stakeholder_id as id, unit_stakeholder_full_name as name FROM unit_stakeholder";
+        break;
+    }
+    $sql .= " WHERE active=:active ";
+
+    if(NULL !== $stakeholder_id && $tablename == 'project') {
+      $sql .= " AND stakeholder_guid=:stakeholder_guid ";
+    }
+    $sql .= " ORDER BY name ";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":active", 1, PDO::PARAM_INT);
+    if(NULL !== $stakeholder_id && $tablename == 'project') {
+      $statement->bindValue(":stakeholder_guid", $stakeholder_id, PDO::PARAM_STR);
+    }
+    $statement->execute();
+    $data = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    return $data;
+  }
+
+  public function getUserRole($params = array()) {
+
+    $user_role_id = array_key_exists('user_role_id', $params) ? $params['user_role_id'] : NULL;
+    if(NULL == $user_role_id) {
+      return array();
+    }
+
+    $sql = "SELECT * FROM user_role WHERE user_role_id = :user_role_id AND active = 1";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":user_role_id", $user_role_id, PDO::PARAM_STR);
+    $statement->execute();
+    $data = $statement->fetch(PDO::FETCH_ASSOC);
+
+    return $data;
+  }
+
+  public function getRole($params = array()) {
+
+    $sql = "SELECT * FROM role WHERE rolename_canonical = :rolename_canonical AND active = 1";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":rolename_canonical", $params['rolename_canonical'], PDO::PARAM_STR);
+    $statement->execute();
+    $data = $statement->fetch(PDO::FETCH_ASSOC);
+
+    $sql = "SELECT permission_id, permission_name FROM permission ";
+    $statement = $this->connection->prepare($sql);
+    $statement->execute();
+    $all_permission_data = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $permission_data = array();
+    if(is_array($data) && array_key_exists('role_id', $data)) {
+      $sql = "SELECT role_permission_id, permission_id
+            FROM role_permission 
+            WHERE (role_id = :role_id)";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":role_id", $data['role_id'], PDO::PARAM_INT);
+      $statement->execute();
+      $permission_data = $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    foreach($all_permission_data as $k => $p) {
+      // permission_id, permission_name
+      $permission_id = $p['permission_id'];
+      $p['selected'] = false;
+      foreach($permission_data as $k2 => $p2) {
+        if($p2['permission_id'] == $permission_id) {
+          $p['selected'] = true;
+          break;
+        }
+      }
+      $all_permission_data[$k] = $p;
+    }
+
+    $data['role_permissions'] = is_array($all_permission_data) ? $all_permission_data : array();
+    return $data;
+  }
+
   public function markSubjectInactive($params) {
 
     $user_id = $params['user_id'];
@@ -3897,9 +4947,9 @@ class RepoStorageHybrid implements RepoStorage {
 
     //@todo trap for missing user_id or record_id.
     $sql = "UPDATE subject
-                LEFT JOIN item ON item.subject_repository_id = subject.subject_repository_id
-                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
-                LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
+                LEFT JOIN item ON item.subject_id = subject.subject_id
+                LEFT JOIN capture_dataset ON capture_dataset.item_id = item.item_id
+                LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_id = capture_dataset.capture_dataset_id
                 SET subject.active = 0,
                     subject.last_modified_user_account_id = :last_modified_user_account_id,
                     item.active = 0,
@@ -3908,7 +4958,7 @@ class RepoStorageHybrid implements RepoStorage {
                     capture_dataset.last_modified_user_account_id = :last_modified_user_account_id,
                     capture_data_element.active = 0,
                     capture_data_element.last_modified_user_account_id = :last_modified_user_account_id
-                WHERE subject.subject_repository_id = :id
+                WHERE subject.subject_id = :id
             ";
 
     $statement = $this->connection->prepare($sql);
@@ -3925,20 +4975,20 @@ class RepoStorageHybrid implements RepoStorage {
 
   public function markCaptureDatasetInactive($params) {
     $user_id = $params['user_id'];
-    $capture_dataset_repository_id = $params['record_id'];
+    $capture_dataset_id = $params['record_id'];
 
     //@todo trap for missing user_id or record_id.
     $sql = "UPDATE capture_dataset
-                LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_repository_id = capture_dataset.capture_dataset_repository_id
+                LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_id = capture_dataset.capture_dataset_id
                 SET capture_dataset.active = 0,
                     capture_dataset.last_modified_user_account_id = :last_modified_user_account_id,
                     capture_data_element.active = 0,
                     capture_data_element.last_modified_user_account_id = :last_modified_user_account_id
-                WHERE capture_dataset.capture_dataset_repository_id = :id
+                WHERE capture_dataset.capture_dataset_id = :id
             ";
 
     $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":id", $capture_dataset_repository_id, PDO::PARAM_INT);
+    $statement->bindValue(":id", $capture_dataset_id, PDO::PARAM_INT);
     $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
     $statement->execute();
 
@@ -3955,15 +5005,15 @@ class RepoStorageHybrid implements RepoStorage {
 
     //@todo trap for missing user_id or record_id.
     $sql = "UPDATE item
-                LEFT JOIN capture_dataset ON capture_dataset.parent_item_repository_id = item.item_repository_id
-                LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_repository_id = capture_dataset.capture_dataset_repository_id
+                LEFT JOIN capture_dataset ON capture_dataset.item_id = item.item_id
+                LEFT JOIN capture_data_element ON capture_data_element.capture_dataset_id = capture_dataset.capture_dataset_id
                 SET item.active = 0,
                     item.last_modified_user_account_id = :last_modified_user_account_id,
                     capture_dataset.active = 0,
                     capture_dataset.last_modified_user_account_id = :last_modified_user_account_id,
                     capture_data_element.active = 0,
                     capture_data_element.last_modified_user_account_id = :last_modified_user_account_id
-                WHERE item.item_repository_id = :id
+                WHERE item.item_id = :id
             ";
 
     $statement = $this->connection->prepare($sql);
@@ -3993,7 +5043,7 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     // See if record exists; return FALSE if not.
-    $sql = "Select * FROM " . $record_type . " WHERE " . $record_type . "_repository_id=:id";
+    $sql = "Select * FROM " . $record_type . " WHERE " . $record_type . "_id=:id";
     $statement = $this->connection->prepare($sql);
     $statement->bindValue(":id", $record_id, PDO::PARAM_INT);
     $statement->execute();
@@ -4040,7 +5090,7 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     // See if record exists; return FALSE if not.
-    $sql = "Select * FROM " . $record_type . " WHERE " . $record_type . "_repository_id=:id";
+    $sql = "Select * FROM " . $record_type . " WHERE " . $record_type . "_id=:id";
     $statement = $this->connection->prepare($sql);
     $statement->bindValue(":id", $record_id, PDO::PARAM_INT);
     $statement->execute();
@@ -4071,7 +5121,7 @@ class RepoStorageHybrid implements RepoStorage {
     $sql ="UPDATE " . $record_type . " set workflow_id=:workflow_id, workflow_processing_step=:processing_step,
     workflow_status=:status, workflow_status_detail=:status_detail,
     last_modified=NOW(), last_modified_user_account_id=:user_id 
-    WHERE " . $record_type . "_repository_id=:id";
+    WHERE " . $record_type . "_id=:id";
 
     $statement = $this->connection->prepare($sql);
     $statement->bindValue(":id", $record_id, PDO::PARAM_INT);
@@ -4130,9 +5180,265 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
+  public function saveRole($params) {
+
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
+    $rolename_canonical = array_key_exists('rolename_canonical', $params) ? $params['rolename_canonical'] : NULL;
+    $rolename = array_key_exists('rolename', $params) ? $params['rolename'] : NULL;
+    $role_description = array_key_exists('role_description', $params) ? $params['role_description'] : NULL;
+    $role_permissions = array_key_exists('role_permissions', $params) ? $params['role_permissions'] : NULL;
+
+    $new_rolename_canonical = $this->make_slug($rolename);
+
+    if(!isset($rolename) || strlen(trim($rolename)) < 1 ) {
+      return; //@todo with error
+    }
+
+    // See if record exists; update if so, insert otherwise.
+    $sql = "SELECT role_id FROM role WHERE rolename_canonical=:rolename_canonical";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":rolename_canonical", $rolename_canonical, PDO::PARAM_INT);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    if(count($ret) > 0) {
+      // update
+      $sql ="UPDATE role SET rolename=:rolename, rolename_canonical=:new_rolename_canonical, role_description=:role_description, 
+            last_modified=NOW(), last_modified_user_account_id=:user_id WHERE rolename_canonical=:rolename_canonical";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":rolename", $rolename, PDO::PARAM_STR);
+      $statement->bindValue(":role_description", $role_description, PDO::PARAM_STR);
+      $statement->bindValue(":new_rolename_canonical", $new_rolename_canonical, PDO::PARAM_STR);
+      $statement->bindValue(":rolename_canonical", $rolename_canonical, PDO::PARAM_STR);
+      $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
+      $statement->execute();
+    }
+    else {
+      // insert
+      // Update this record with new status info. Write to workflow_status_log also.
+      $sql ="INSERT INTO role 
+          (rolename, rolename_canonical, role_description, created_by_user_account_id, date_created, last_modified_user_account_id, last_modified) 
+          VALUES (:rolename, :rolename_canonical, :role_description, :created_by_user_account_id, NOW(), :last_modified_user_account_id, NOW())";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":rolename_canonical", $new_rolename_canonical, PDO::PARAM_STR);
+      $statement->bindValue(":rolename", $rolename, PDO::PARAM_STR);
+      $statement->bindValue(":role_description", $role_description, PDO::PARAM_STR);
+      $statement->bindValue(":created_by_user_account_id", $user_id, PDO::PARAM_INT);
+      $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
+      $statement->execute();
+    }
+
+    // Get the role id.
+    $sql = "SELECT role_id FROM role WHERE rolename_canonical=:rolename_canonical";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":rolename_canonical", $new_rolename_canonical, PDO::PARAM_STR);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+    if(count($ret) > 0) {
+      $role_id = $ret[0]['role_id'];
+
+      // Set role permissions.
+      $sql ="UPDATE role_permission SET active=0 where role_id=:role_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":role_id", $role_id, PDO::PARAM_INT);
+      $statement->execute();
+
+      foreach($role_permissions as $permission_id) {
+        $sql ="INSERT INTO role_permission (role_id, permission_id, created_by_user_account_id, date_created, last_modified_user_account_id, last_modified) 
+          VALUES (:role_id, :permission_id, :created_by_user_account_id, NOW(), :last_modified_user_account_id, NOW())";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":role_id", $role_id, PDO::PARAM_INT);
+        $statement->bindValue(":permission_id", $permission_id, PDO::PARAM_INT);
+        $statement->bindValue(":created_by_user_account_id", $user_id, PDO::PARAM_INT);
+        $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
+        $statement->execute();
+      }
+    }
+
+    return $new_rolename_canonical;
+
+  }
+
+  public function deleteRole($params) {
+
+    $role_id = array_key_exists('role_id', $params) ? $params['role_id'] : NULL;
+    $username_canonical = array_key_exists('username_canonical', $params) ? $params['username_canonical'] : NULL;
+    $user_id = $params['user_id'];
+
+    if(!isset($user_id) || !isset($role_id)) {
+      return; //@todo with error
+    }
+
+    // Set inactive any matching records, if exist.
+    if(isset($role_id)) {
+      $sql = "UPDATE role SET active=0, last_modified_user_account_id=:user_id WHERE role_id=:role_id ";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":role_id", $role_id, PDO::PARAM_INT);
+      $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
+      $statement->execute();
+
+      // Update related user_role records.
+      $sql = "UPDATE user_role SET active=0, last_modified_user_account_id=:user_id WHERE role_id=:role_id ";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":role_id", $role_id, PDO::PARAM_INT);
+      $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
+      $statement->execute();
+
+    }
+
+    return;
+
+  }
+
+  public function saveUserRole($params) {
+
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
+    $user_role_id = array_key_exists('user_role_id', $params) ? $params['user_role_id'] : NULL;
+    $username_canonical = array_key_exists('username_canonical', $params) ? $params['username_canonical'] : NULL;
+    $role_id = array_key_exists('role_id', $params) ? $params['role_id'] : NULL;
+    $project_id = array_key_exists('project_id', $params) ? $params['project_id'] : NULL;
+    $stakeholder_id = array_key_exists('stakeholder_id', $params) ? $params['stakeholder_id'] : NULL;
+
+    if(!isset($username_canonical) || !isset($role_id)) {
+      return; //@todo with error
+    }
+
+    // Delete any matching records, if exist.
+    if(isset($user_role_id)) {
+      $sql = "DELETE FROM user_role WHERE user_role_id=:user_role_id ";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":user_role_id", $user_role_id, PDO::PARAM_INT);
+      $statement->execute();
+    }
+
+    // Insert.
+    $user_role_id = NULL;
+
+    $sql ="INSERT INTO user_role 
+        (username_canonical, role_id, created_by_user_account_id, date_created, last_modified_user_account_id, last_modified ";
+    $sql_values = " VALUES (:username_canonical, :role_id, :created_by_user_account_id, NOW(), :last_modified_user_account_id, NOW() ";
+    if(NULL !== $project_id) {
+      $sql .= ", project_id";
+      $sql_values .= ", :project_id";
+    }
+    if(NULL !== $stakeholder_id) {
+      $sql .= ", stakeholder_id";
+      $sql_values .= ", :stakeholder_id";
+    }
+    $sql .= ") " . $sql_values . ")";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":username_canonical", $username_canonical, PDO::PARAM_STR);
+    $statement->bindValue(":role_id", $role_id, PDO::PARAM_INT);
+    if(NULL !== $project_id) {
+      $statement->bindValue(":project_id", $project_id, PDO::PARAM_INT);
+    }
+    if(NULL !== $stakeholder_id) {
+      $statement->bindValue(":stakeholder_id", $stakeholder_id, PDO::PARAM_INT);
+    }
+    $statement->bindValue(":created_by_user_account_id", $user_id, PDO::PARAM_INT);
+    $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
+
+    $statement->execute();
+
+
+    // Get the user role id.
+    $sql = "SELECT user_role_id FROM user_role 
+        WHERE username_canonical=:username_canonical AND role_id=:role_id AND created_by_user_account_id= :created_by_user_account_id ";
+    if(NULL !== $project_id) {
+      $sql .= "AND project_id=:project_id ";
+    }
+    else {
+      $sql .= "AND project_id IS NULL ";
+    }
+    if(NULL !== $stakeholder_id) {
+      $sql .= "AND stakeholder_id= :stakeholder_id ";
+    }
+    else {
+      $sql .= "AND stakeholder_id IS NULL ";
+    }
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":username_canonical", $username_canonical, PDO::PARAM_STR);
+    $statement->bindValue(":role_id", $role_id, PDO::PARAM_INT);
+    if(NULL !== $project_id) {
+      $statement->bindValue(":project_id", $project_id, PDO::PARAM_INT);
+    }
+    if(NULL !== $stakeholder_id) {
+      $statement->bindValue(":stakeholder_id", $stakeholder_id, PDO::PARAM_INT);
+    }
+    $statement->bindValue(":created_by_user_account_id", $user_id, PDO::PARAM_INT);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+    if(count($ret) > 0) {
+      $user_role_id = $ret[0]['user_role_id'];
+    }
+
+    return $user_role_id;
+
+  }
+
+  public function deleteUserRole($params) {
+
+    $user_role_id = array_key_exists('user_role_id', $params) ? $params['user_role_id'] : NULL;
+    $username_canonical = array_key_exists('username_canonical', $params) ? $params['username_canonical'] : NULL;
+    $user_id = $params['user_id'];
+
+    if(!isset($username_canonical) || !isset($user_role_id)) {
+      return; //@todo with error
+    }
+
+    // Set inactive any matching records, if exist.
+    if(isset($user_role_id)) {
+      $sql = "UPDATE user_role SET active=0, last_modified_user_account_id=:user_id WHERE user_role_id=:user_role_id ";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":user_role_id", $user_role_id, PDO::PARAM_INT);
+      $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
+      $statement->execute();
+    }
+
+    return;
+
+  }
+
+  private function make_slug($str) {
+    // Turns a string into a string of only lowercase characters and underscores.
+
+    $newstr = strtolower(str_replace(' ', '_', trim($str)));
+    $newstr = str_replace('!', '', $newstr);
+    $newstr = str_replace('@', '', $newstr);
+    $newstr = str_replace('#', '', $newstr);
+    $newstr = str_replace('$', '', $newstr);
+    $newstr = str_replace('%', '', $newstr);
+    $newstr = str_replace('^', '', $newstr);
+    $newstr = str_replace('&', '', $newstr);
+    $newstr = str_replace('*', '', $newstr);
+    $newstr = str_replace('(', '', $newstr);
+    $newstr = str_replace(')', '', $newstr);
+    $newstr = str_replace('{', '', $newstr);
+    $newstr = str_replace('}', '', $newstr);
+    $newstr = str_replace('[', '', $newstr);
+    $newstr = str_replace(']', '', $newstr);
+    $newstr = str_replace('-', '_', $newstr);
+    $newstr = str_replace('+', '', $newstr);
+    $newstr = str_replace('=', '', $newstr);
+    $newstr = str_replace('|', '', $newstr);
+    $newstr = str_replace("\\", '', $newstr);
+    $newstr = str_replace("/", '', $newstr);
+    $newstr = str_replace('"', '', $newstr);
+    $newstr = str_replace(':', '', $newstr);
+    $newstr = str_replace(';', '', $newstr);
+    $newstr = str_replace('<', '', $newstr);
+    $newstr = str_replace('>', '', $newstr);
+    $newstr = str_replace('.', '', $newstr);
+    $newstr = str_replace(',', '', $newstr);
+    $newstr = str_replace('?', '', $newstr);
+    $newstr = str_replace('~', '', $newstr);
+    $newstr = str_replace("`", '', $newstr);
+
+    return $newstr;
+  }
 
   /**
-   * ----------------------------------------------------------------
    * Generic functions for getting, setting, deleting and marking inactive.
    * ----------------------------------------------------------------
    */
@@ -4318,7 +5624,7 @@ class RepoStorageHybrid implements RepoStorage {
           'field_name' => 'label',
         ),
         1 => array(
-          'field_name' => $base_table . '_repository_id',
+          'field_name' => $base_table . '_id',
         ),
       );
     }
@@ -4654,13 +5960,41 @@ class RepoStorageHybrid implements RepoStorage {
 
         $this_search_param = array();
         foreach($field_names as $fn) {
+          $comparison_type = 'STR';
+          if(array_key_exists('comparison_type', $p)) {
+            $comparison_type = 'INT';
+          }
+          $comparison = 'LIKE';
+          if(array_key_exists('comparison', $p)) {
+            $comparison = $p['comparison'];
+          }
+
           if(count($search_values) == 1) {
             $k = array_keys($search_values)[0];
-            if(array_key_exists('comparison', $p) && (($p['comparison'] !== 'LIKE') && ($p['comparison'] !== 'IS NOT NULL'))) {
+
+            if($comparison == 'IN' && $comparison_type == 'INT') {
+              $in_placeholders = array();
+              $t = is_array($search_values[$k]) ? $search_values[$k] : explode(',',$search_values[$k]);
+              foreach($t as $m) {
+                $in_placeholders[] = '?';
+                $search_params[] = $m;
+              }
+              $this_search_param[] = $fn . ' IN (' . implode(',', $in_placeholders) . ')';
+            }
+            elseif($comparison == 'IN' && $comparison_type == 'STR') {
+              $in_placeholders = array();
+              $t = is_array($search_values[$k]) ? $search_values[$k] : explode(',',$search_values[$k]);
+              foreach($t as $m) {
+                $in_placeholders[] = '?';
+                $search_params[] = $m;
+              }
+              $this_search_param[] = $fn . ' IN (%' . implode('%,%', $in_placeholders) . '%)';
+            }
+            elseif($comparison !== 'IN' && $comparison !== 'LIKE' && $comparison !== 'IS NOT NULL') {
               $this_search_param[] = $fn . ' ' . $p['comparison'] . ' ?';
               $search_params[] = $search_values[$k];
             }
-            else if(array_key_exists('comparison', $p) && (($p['comparison'] !== 'LIKE') && ($p['comparison'] === 'IS NOT NULL'))) {
+            else if($comparison !== 'LIKE' && $comparison === 'IS NOT NULL') {
               $this_search_param[] = $fn . ' IS NOT NULL';
             }
             else {
@@ -4668,9 +6002,25 @@ class RepoStorageHybrid implements RepoStorage {
               $search_params[] = '%' . $search_values[$k] . '%';
             }
           }
-          else {
-            $this_search_param[] = $fn['field_name'] . ' IN (?)';
-            $search_params[] = '%' . implode('%, %', $search_values) . '%';
+          elseif(count($search_values) > 1) {
+            if($comparison == 'IN' && $comparison_type == 'INT') {
+              $in_placeholders = array();
+              $t = is_array($search_values) ? $search_values : explode(',',$search_values);
+              foreach($t as $m) {
+                $in_placeholders[] = '?';
+                $search_params[] = $m;
+              }
+              $this_search_param[] = $fn . ' IN (' . implode(',', $in_placeholders) . ')';
+            }
+            elseif($comparison == 'IN' && $comparison_type == 'STR') {
+              $in_placeholders = array();
+              $t = is_array($search_values) ? $search_values : explode(',',$search_values);
+              foreach($t as $m) {
+                $in_placeholders[] = '?';
+                $search_params[] = $m;
+              }
+              $this_search_param[] = $fn . ' IN (%' . implode('%,%', $in_placeholders) . '%)';
+            }
           }
         }
 
@@ -5015,7 +6365,7 @@ class RepoStorageHybrid implements RepoStorage {
     $user_id = $query_parameters['user_id'];
     $record_id = array_key_exists('record_id', $query_parameters) ? $query_parameters['record_id'] : NULL;
 
-    $sql = "UPDATE " . $record_type . " SET active = 0, last_modified_user_account_id=:user_id WHERE " . $record_type . "_repository_id=:id ";
+    $sql = "UPDATE " . $record_type . " SET active = 0, last_modified_user_account_id=:user_id WHERE " . $record_type . "_id=:id ";
 
     $statement = $this->connection->prepare($sql);
     $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
@@ -5025,7 +6375,6 @@ class RepoStorageHybrid implements RepoStorage {
 
     return array('return' => 'success'); //, 'data' => $return);
   }
-
 
   /**
    * @param $base_table

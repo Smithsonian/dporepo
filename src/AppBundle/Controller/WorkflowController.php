@@ -71,7 +71,7 @@ class WorkflowController extends Controller
    * Given a record_type and record_id, set the status details as indicated.
    *
    */
-  public function set_workflow_status(Request $request)
+  public function setWorkflowStatus(Request $request)
   {
 
     $req = $request->request->all();
@@ -112,7 +112,7 @@ class WorkflowController extends Controller
    * @param Request $request
    * @return JsonResponse The query result in JSON
    */
-  public function get_workflow_status(Request $request)
+  public function getWorkflowStatus(Request $request)
   {
 
     $req = $request->query->all();
@@ -206,7 +206,7 @@ class WorkflowController extends Controller
    */
   public function batchDetailProcessing(Request $request) {
     $recipeID = $request->request->get('recipeID');
-    $recipe = $this->processing->get_recipe_details($recipeID);
+    $recipe = $this->processing->getRecipeDetails($recipeID);
     /*
     recipes when vpn is not accesible
     if ($recipe['result'] == false) {
@@ -254,13 +254,14 @@ class WorkflowController extends Controller
         $local_path = $this->project_directory . $files[$i]['file_path'];
         // Windows path fix.
         $local_path = str_replace("/", DIRECTORY_SEPARATOR, $local_path);
-        $parent_record_data = array('parent_record_id' => $modelID, 'parent_record_type' => 'model');
+        $parent_record_data = array('record_id' => $modelID, 'record_type' => 'model');
+
         // Initialize the processing job.
         // TODO: Since this is being called from a loop, this will need to return as a multi-dimentional array ( example: $data[] ).
-        $data = $this->processing->initialize_job($workflow_name, $params, $local_path, $this->getUser()->getId(), $parent_record_data, $filesystem);
+        $data = $this->processing->initializeJob($workflow_name, $params, $local_path, $this->getUser()->getId(), $parent_record_data, $filesystem);
       }
 
-      // On success, this is what's returned by initialize_job()
+      // On success, this is what's returned by initializeJob()
       // array(12) {
       //   ["id"]=>
       //   string(36) "A63B2CCE-969B-F065-0691-85000961D601"
@@ -303,25 +304,29 @@ class WorkflowController extends Controller
    * @Route("/admin/batch/{model_id}/", name="batch_processing", methods="GET")
    * @param Request $request
    */
-  public function batchProcessing(Request $request,$model_id) {
+  public function batchProcessing(Request $request, $model_id) {
     $results = array();
     // Get available recipes.
-    $results = $this->processing->get_recipes();
+    $results = $this->processing->getRecipes();
     // Decode the JSON.
 
     $query_params = array(
-        'model_repository_id' => $model_id,
+        'model_id' => $model_id,
     );
+
     // getting datasets
     /*$datasets = $this->repo_storage_controller->execute('getModelDetail', $query_params);
     if (count($datasets['capture_dataset']) > 0) {
       $datasets = $datasets['capture_dataset'];
     }
-    $batch['batch_processing_assests_guid_options'][$datasets['capture_dataset_name']] = $datasets['capture_dataset_repository_id'].",".$datasets['capture_dataset_name'];
+    $batch['batch_processing_assests_guid_options'][$datasets['capture_dataset_name']] = $datasets['capture_dataset_id'].",".$datasets['capture_dataset_name'];
     */
     $files = $this->repo_storage_controller->execute('getModelFiles', $query_params);
-    $contacts = $this->repo_storage_controller->execute('getPointofContact');
 
+    // If no model files are found, throw a createNotFoundException (404).
+    if(!$files) throw $this->createNotFoundException('Not found');
+
+    $contacts = $this->repo_storage_controller->execute('getPointofContact');
     
     /*
     recipes when vpn is not accesible
@@ -344,6 +349,7 @@ class WorkflowController extends Controller
     foreach ($json_decoded as $wk) {
       $batch['batch_processing_workflow_guid_options'][$wk['name']] = $wk['id'];
     }
+
     for ($i=0; $i < count($files); $i++) { 
       $batch['batch_processing_assests_guid_options'][$files[$i]['file_name']] = $files[$i]['file_upload_id'].",".$files[$i]['file_name'];
     }

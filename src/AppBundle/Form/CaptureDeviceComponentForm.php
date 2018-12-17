@@ -14,7 +14,7 @@ class CaptureDeviceComponentForm extends AbstractType
     {
 
         $builder
-            ->add('parent_capture_device_repository_id', HiddenType::class, array(
+            ->add('capture_device_id', HiddenType::class, array(
                 'required' => true,
               ))
             ->add('serial_number', null, array(

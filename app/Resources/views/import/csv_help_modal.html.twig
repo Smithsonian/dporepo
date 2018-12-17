@@ -1,0 +1,47 @@
+<div class="modal fade" id="csv-modal" tabindex="-1" role="dialog" aria-labelledby="csvLabel">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="csvLabel"><i class="glyphicon glyphicon-info-sign"></i> CSV Guide</h2>
+      </div>
+      <div class="modal-body" style="min-height: 24rem;">
+        <h4>The import_row_id and import_parent_id fields</h4>
+
+        <p>There are 2 integral fields which every CSV contains:</p>
+
+        <ol>
+          <li>import_row_id</li>
+          <li>import_parent_id</li>
+        </ol>
+
+        <p><span class="text-warning"><strong>subjects.csv</strong></span> is the exception. In the case of Subjects, the parent Project is always known so there is no need to specify an import_parent_id. Only import_row_id is used.</p>
+
+        <hr>
+
+        <h4>import_row_id</h4>
+
+        <p>The 'import_row_id' field should simply be a sequential number. During the Pre-validation process, if it is detected that the 'import_row_id' is not sequential, or contains gaps (no values), the Pre-validation will fail.<p>
+
+        <h4>import_parent_id</h4>
+
+        <p>The 'import_parent_id' field is leveraged to map to the parent record's ID. For instance, if a row in subjects.csv contains an 'import_row_id' of 22 for a Subject, the 'import_parent_id' for the corresponding Item(s) will be 22.</p>
+
+        <hr>
+
+        <h4>Single Record Imports vs Multiple Record Imports</h4>
+
+        <p>In order to acheive certain results when importing data, CSV files can be structured in 3 ways.</p>
+
+        <ol>
+          <li>For <strong>single record imports</strong>, the 'import_parent_id' field should have no value assigned to it - should be left blank. The parent is specified by selecting the parent record in the UI.</li>
+          <li>For <strong>multiple record imports</strong> where multiple types of records are imported (e.g. subjects, items, capture datasets), the 'import_parent_id' field is required to be mapped to the parent record's ID. Again, the only CSV file which this does not apply to is the <span class="text-warning"><strong>subjects.csv</strong></span> file.</li>
+          <li>For multiple record imports where the parent record is chosen via "Choose a Parent Record" AND the parent record is intended to remain the same for the first level of CSV data, the 'import_parent_id' field is NOT required. Should a value be found within the 'import_parent_id' field, it will be ignored.</li>
+        </ol>
+
+        <p>For detailed examples, please see the provided example CSV files.</p>
+      </div>
+      <div class="modal-footer">
+      </div>
+    </div>
+  </div>
+</div>

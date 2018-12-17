@@ -2,7 +2,7 @@
 
 {% block stylesheets %}
   {{ parent() }}
-  <link href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/css/bootstrap-datepicker3.css" rel="stylesheet" type="text/css">
+  <link href="{{ asset('lib/javascripts/datepicker/css/bootstrap-datepicker3.css') }}" rel="stylesheet" type="text/css">
 {% endblock %}
 
 {% block content %}
@@ -10,7 +10,7 @@
   <div class="row">
     <div class="col-sm-12 col-md-12">
       <div class="alert alert-warning" role="alert">
-        TODO: Fix the back button - hardwire to go to the parent Capture Dataset - e.g. /admin/projects/dataset_elements/19/49/21/27
+        TODO: Fix the back button - hardwire to go to the parent Capture Dataset - e.g. /admin/capture_dataset/view/27
       </div>
       <div class="form-group">
         <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
@@ -41,7 +41,7 @@
 
 {% block javascripts %}
   {{ parent() }}
-  <script src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/js/bootstrap-datepicker.min.js"></script>
+  <script src="{{ asset('lib/javascripts/datepicker/js/bootstrap-datepicker.min.js') }}"></script>
   <script type="text/javascript">
     // Datepicker
     $(document).ready(function(){

@@ -2,8 +2,8 @@
 
 {% block stylesheets %}
   {{ parent() }}
-  <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
-  <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
@@ -35,7 +35,7 @@
           <tr>
             <th class="text-center">Project</th>
             <th class="text-center">Stakeholder</th>
-            <th class="text-center">Subjects Count</th>
+            <th class="text-center">Items Count</th>
             <th class="text-center">Created</th>
             <th class="text-center">Modified</th>
           </tr>
@@ -84,11 +84,11 @@
 
 {% block js_bottom %}
   {{ parent() }}
-  <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
-  <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
+  <script src="{{ asset('lib/javascripts/datatables/js/jquery.dataTables.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/datatables/js/dataTables.buttons.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/datatables/js/dataTables.bootstrap.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/buttons/js/buttons.bootstrap.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/buttons/js/buttons.colVis.min.js') }}"></script>
   <script type="text/javascript">
     $(document).ready(function() {
 
@@ -141,7 +141,7 @@
         "columns": [
           { "data": "project_name" },
           { "data": "stakeholder_label" },
-          { "data": "subjects_count" },
+          { "data": "items_count" },
           { "data": "date_created" },
           { "data": "last_modified" }
         ],
@@ -171,11 +171,11 @@
        });
 
       // Send to details page when clicked.
-      var projects_details_page = "/admin/projects/subjects/";
+      var projects_details_page = "/admin/project/view/";
       $('#browse_recent_projects tbody').on('click','td',function(event){
         if(!$(this).hasClass("manage_column")){
-          var project_repository_id = $(this).closest("tr").attr('id');
-          window.location.href = projects_details_page + project_repository_id;
+          var project_id = $(this).closest("tr").attr('id');
+          window.location.href = projects_details_page + project_id;
         }
       });
 
@@ -216,11 +216,11 @@
             // .addClass("manage_column");
 
             // Send to details page when clicked.
-            var subjects_details_page = "/admin/projects/items/";
+            var subjects_details_page = "/admin/subject/view/";
             $('#browse_recent_subjects tbody').on('click','td',function(event){
               if(!$(this).hasClass("manage_column")){
-                var subject_repository_id = $(this).closest("tr").attr('id');
-                window.location.href = subjects_details_page + aData['project_repository_id'] + '/' + subject_repository_id;
+                var subject_id = $(this).closest("tr").attr('id');
+                window.location.href = subjects_details_page + subject_id;
               }
             });
 

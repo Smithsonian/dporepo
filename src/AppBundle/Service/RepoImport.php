@@ -10,9 +10,11 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Utils\AppUtilities;
 
-use AppBundle\Controller\ItemsController;
-use AppBundle\Controller\DatasetsController;
+use AppBundle\Controller\ItemController;
+use AppBundle\Controller\CaptureDatasetController;
 use AppBundle\Controller\ModelController;
+
+use Psr\Log\LoggerInterface;
 
 class RepoImport implements RepoImportInterface {
 
@@ -87,6 +89,11 @@ class RepoImport implements RepoImportInterface {
   private $model_extensions;
 
   /**
+   * @var object $texture_map_file_name_parts
+   */
+  private $texture_map_file_name_parts;
+
+  /**
    * @var object $default_image_file_name_map
    */
   private $default_image_file_name_map;
@@ -97,6 +104,11 @@ class RepoImport implements RepoImportInterface {
   private $default_model_file_name_map;
 
   /**
+   * @var object $logger
+   */
+  private $logger;
+
+  /**
    * Constructor
    * @param object  $kernel  Symfony's kernel object
    * @param string  $uploads_directory  Uploads directory path
@@ -104,7 +116,7 @@ class RepoImport implements RepoImportInterface {
    * @param string  $conn  The database connection
    * @param string  $uploads_directory  Uploads directory path
    */
-  public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn)
+  public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemController $itemsController, CaptureDatasetController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn, LoggerInterface $logger)
   {
     $this->u = new AppUtilities();
     $this->tokenStorage = $tokenStorage;
@@ -118,6 +130,10 @@ class RepoImport implements RepoImportInterface {
     $this->conn = $conn;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->repoValidate = new RepoValidateData($conn);
+
+    $this->logger = $logger;
+    // Usage:
+    // $this->logger->info('Import started. Job ID: ' . $job_id);
 
     // Image extensions.
     $this->image_extensions = array(
@@ -135,6 +151,13 @@ class RepoImport implements RepoImportInterface {
       'ply',
       'gltf',
       'glb',
+    );
+
+    // Texture map file name parts.
+    $this->texture_map_file_name_parts = array(
+      '-diffuse-',
+      '-normal-',
+      '-occlusion-',
     );
 
     // Default image file name mapping.
@@ -156,13 +179,14 @@ class RepoImport implements RepoImportInterface {
   /**
    * Import CSV
    *
-   * @param array $params Parameters: job_id, project_id, parent_record_id, parent_record_type
+   * @param array $params Parameters: job_id, project_id, record_id, record_type
    * @return array
    */
-  public function import_csv($params = array())
+  public function importCsv($params = array())
   {
 
     $return = $csv_types = array();
+    $skip_ingest = false;
 
     // If $params are empty, return an error.
     if(empty($params)) {
@@ -184,7 +208,7 @@ class RepoImport implements RepoImportInterface {
 
     // Throw a 404 if the job record doesn't exist.
     if (!$job_data) {
-      $return['errors'][] = 'The Job record doesn\'t exist - import_csv()';
+      $return['errors'][] = 'The Job record doesn\'t exist - importCsv()';
       return $return;
     }
 
@@ -212,13 +236,13 @@ class RepoImport implements RepoImportInterface {
     // Set the job type (e.g. subjects metadata import, items metadata import, capture datasets metadata import, models metadata import).
     // $job_data = $this->repo_storage_controller->execute('getJobData', array($params['uuid']));
 
-    if (!empty($params['uuid']) && !empty($params['parent_project_id']) && !empty($params['parent_record_id']) && !empty($params['parent_record_type'])) {
+    if (!empty($params['uuid']) && !empty($params['project_id']) && !empty($params['record_id']) && !empty($params['record_type'])) {
 
       $job_info = (object)array(
         'job_id' => $job_data['job_id'],
         'uuid' => $params['uuid'],
-        'parent_project_id' => $params['parent_project_id'],
-        'parent_record_id' => $params['parent_record_id'],
+        'project_id' => $params['project_id'],
+        'record_id' => $params['record_id'],
       );
 
       // Remove 'metadata import' from the $job_data['job_type'].
@@ -226,7 +250,7 @@ class RepoImport implements RepoImportInterface {
 
       if (!empty($job_type)) {
         // Prepare the data.
-        $data = $this->prepare_data($job_type, $this->project_directory . $this->uploads_directory . $job_info->uuid);
+        $data = $this->prepareData($job_type, $this->project_directory . $this->uploads_directory . $job_info->uuid);
 
         // Ingest data.
         if (!empty($data)) {
@@ -255,7 +279,7 @@ class RepoImport implements RepoImportInterface {
           foreach ($data as $csv_key => $csv_value) {
             // Don't perform an ingest without CSV data (an empty CSV).
             if(isset($csv_value['csv'])) {
-              $return['job_log_ids'] = $this->ingest_csv_data($csv_value, $job_info, $params['parent_record_type'], $i);
+              $return['job_log_ids'] = $this->ingestCsvData($csv_value, $job_info, $params['record_type'], $i);
             }
 
             $i++;
@@ -306,10 +330,11 @@ class RepoImport implements RepoImportInterface {
    * @param string $job_upload_directory The upload directory
    * @return array Import result and/or any messages
    */
-  public function prepare_data($job_type = null, $job_upload_directory = null)
+  public function prepareData($job_type = null, $job_upload_directory = null)
   {
 
     $data = array();
+    $csv = array();
 
     if (!empty($job_upload_directory)) {
 
@@ -337,138 +362,141 @@ class RepoImport implements RepoImportInterface {
         }
       }
 
-      // Sort the CSV array by key.
+      if (!empty($csv)) {
 
-      ksort($csv);
-      // Re-index the CSV array.
-      $csv = array_values($csv);
+        // Sort the CSV array by key.
+        ksort($csv);
+        // Re-index the CSV array.
+        $csv = array_values($csv);
 
-      foreach ($csv as $csv_key => $csv_value) {
+        foreach ($csv as $csv_key => $csv_value) {
 
-        // Convert the CSV to JSON.
-        $array = array_map('str_getcsv', explode("\n", $csv_value['data']));
-        $json = json_encode($array);
+          // Convert the CSV to JSON.
+          $array = array_map('str_getcsv', explode("\n", $csv_value['data']));
+          $json = json_encode($array);
 
-        // Convert the JSON to a PHP array.
-        $json_array = json_decode($json, false);
-        // Add the type to the array.
-        $json_array['type'] = $csv_value['type'];
+          // Convert the JSON to a PHP array.
+          $json_array = json_decode($json, false);
+          // Add the type to the array.
+          $json_array['type'] = $csv_value['type'];
 
-        // Read the first key from the array, which is the column headers.
-        $target_fields = $json_array[0];
+          // Read the first key from the array, which is the column headers.
+          $target_fields = $json_array[0];
 
-        // Remove the column headers from the array.
-        array_shift($json_array);
+          // Remove the column headers from the array.
+          array_shift($json_array);
 
-        foreach ($json_array as $key => $value) {
-          // Replace numeric keys with field names.
-          if (is_numeric($key)) {
-            foreach ($value as $k => $v) {
+          foreach ($json_array as $key => $value) {
+            // Replace numeric keys with field names.
+            if (is_numeric($key)) {
+              foreach ($value as $k => $v) {
 
-              $field_name = $target_fields[$k];
+                $field_name = $target_fields[$k];
 
-              unset($json_array[$key][$k]);
+                unset($json_array[$key][$k]);
 
-              // If present, bring the project_repository_id into the array.
-              // $json_array[$key][$field_name] = ($field_name === 'project_repository_id') ? (int)$id : null;
+                // If present, bring the project_id into the array.
+                // $json_array[$key][$field_name] = ($field_name === 'project_id') ? (int)$id : null;
 
-              // Set the value of the field name.
-              $json_array[$key][$field_name] = $v;
+                // Set the value of the field name.
+                $json_array[$key][$field_name] = $v;
 
-              // ITEM LOOKUPS
-              // Look-up the ID for the 'item_type'.
-              if ($field_name === 'item_type') {
-                $item_type_lookup_options = $this->itemsController->get_item_types();
-                $json_array[$key][$field_name] = (int)$item_type_lookup_options[$v];
+                // ITEM LOOKUPS
+                // Look-up the ID for the 'item_type'.
+                if ($field_name === 'item_type') {
+                  $item_type_lookup_options = $this->itemsController->getItemTypes();
+                  $json_array[$key][$field_name] = (int)$item_type_lookup_options[$v];
+                }
+
+                // CAPTURE DATASET LOOKUPS
+                // Look-up the ID for the 'capture_method'.
+                if ($field_name === 'capture_method') {
+                  $capture_method_lookup_options = $this->datasetsController->getCaptureMethods();
+                  $json_array[$key][$field_name] = (int)$capture_method_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'capture_dataset_type'.
+                if ($field_name === 'capture_dataset_type') {
+                  $capture_dataset_type_lookup_options = $this->datasetsController->getDatasetTypes();
+                  $json_array[$key][$field_name] = (int)$capture_dataset_type_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'item_position_type'.
+                if ($field_name === 'item_position_type') {
+                  $item_position_type_lookup_options = $this->datasetsController->getItemPositionTypes();
+                  $json_array[$key][$field_name] = (int)$item_position_type_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'focus_type'.
+                if ($field_name === 'focus_type') {
+                  $focus_type_lookup_options = $this->datasetsController->getFocusTypes();
+                  $json_array[$key][$field_name] = (int)$focus_type_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'light_source_type'.
+                if ($field_name === 'light_source_type') {
+                  $light_source_type_lookup_options = $this->datasetsController->getLightSourceTypes();
+                  $json_array[$key][$field_name] = (int)$light_source_type_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'background_removal_method'.
+                if ($field_name === 'background_removal_method') {
+                  $background_removal_method_lookup_options = $this->datasetsController->getBackgroundRemovalMethods();
+                  $json_array[$key][$field_name] = (int)$background_removal_method_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'cluster_type'.
+                if ($field_name === 'cluster_type') {
+                  $camera_cluster_types_lookup_options = $this->datasetsController->getCameraClusterTypes();
+                  $json_array[$key][$field_name] = (int)$camera_cluster_types_lookup_options[$v];
+                }
+
+                // MODEL LOOKUPS
+                // TODO:
+                // Model lookup options not in database! Need to either
+                // 1) place into database and create a way to manage
+                // 2) convert all lookups to draw from the JSON schema (preferred!)
+
+                // Look-up the ID for the 'creation_method'.
+                if ($field_name === 'creation_method') {
+                  $creation_method_lookup_options = array('scan-to-mesh' => 1, 'CAD' => 2);
+                  $json_array[$key][$field_name] = (int)$creation_method_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'model_modality'.
+                if ($field_name === 'model_modality') {
+                  $model_modality_lookup_options = array('point_cloud' => 1, 'mesh' => 2);
+                  $json_array[$key][$field_name] = (int)$model_modality_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'units'.
+                if ($field_name === 'units') {
+                  $units_lookup_options = $this->modelsController->getUnit();
+                  $json_array[$key][$field_name] = (int)$units_lookup_options[$v];
+                }
+
+                // Look-up the ID for the 'model_purpose'.
+                // if ($field_name === 'model_purpose') {
+                //   $model_purpose_lookup_options = array('master' => 1, 'delivery_web' => 2, 'delivery_print' => 3, 'intermediate_processing_step' => 4);
+                //   $json_array[$key][$field_name] = (int)$model_purpose_lookup_options[$v];
+                // }
+
               }
 
-              // CAPTURE DATASET LOOKUPS
-              // Look-up the ID for the 'capture_method'.
-              if ($field_name === 'capture_method') {
-                $capture_method_lookup_options = $this->datasetsController->get_capture_methods();
-                $json_array[$key][$field_name] = (int)$capture_method_lookup_options[$v];
+              // If an array of data contains 1 or fewer keys, then it means the row is empty.
+              // Unset the empty row, so it doesn't get inserted into the database.
+              if (count(array_keys((array)$json_array[$key])) > 1) {
+                // Convert the array to an object.
+                $data[$csv_key]['csv'][] = (object)$json_array[$key];
               }
-
-              // Look-up the ID for the 'capture_dataset_type'.
-              if ($field_name === 'capture_dataset_type') {
-                $capture_dataset_type_lookup_options = $this->datasetsController->get_dataset_types();
-                $json_array[$key][$field_name] = (int)$capture_dataset_type_lookup_options[$v];
-              }
-
-              // Look-up the ID for the 'item_position_type'.
-              if ($field_name === 'item_position_type') {
-                $item_position_type_lookup_options = $this->datasetsController->get_item_position_types();
-                $json_array[$key][$field_name] = (int)$item_position_type_lookup_options[$v];
-              }
-
-              // Look-up the ID for the 'focus_type'.
-              if ($field_name === 'focus_type') {
-                $focus_type_lookup_options = $this->datasetsController->get_focus_types();
-                $json_array[$key][$field_name] = (int)$focus_type_lookup_options[$v];
-              }
-
-              // Look-up the ID for the 'light_source_type'.
-              if ($field_name === 'light_source_type') {
-                $light_source_type_lookup_options = $this->datasetsController->get_light_source_types();
-                $json_array[$key][$field_name] = (int)$light_source_type_lookup_options[$v];
-              }
-
-              // Look-up the ID for the 'background_removal_method'.
-              if ($field_name === 'background_removal_method') {
-                $background_removal_method_lookup_options = $this->datasetsController->get_background_removal_methods();
-                $json_array[$key][$field_name] = (int)$background_removal_method_lookup_options[$v];
-              }
-
-              // Look-up the ID for the 'cluster_type'.
-              if ($field_name === 'cluster_type') {
-                $camera_cluster_types_lookup_options = $this->datasetsController->get_camera_cluster_types();
-                $json_array[$key][$field_name] = (int)$camera_cluster_types_lookup_options[$v];
-              }
-
-              // MODEL LOOKUPS
-              // TODO:
-              // Model lookup options not in database! Need to either
-              // 1) place into database and create a way to manage
-              // 2) convert all lookups to draw from the JSON schema (preferred!)
-
-              // Look-up the ID for the 'creation_method'.
-              if ($field_name === 'creation_method') {
-                $creation_method_lookup_options = array('scan-to-mesh' => 1, 'CAD' => 2);
-                $json_array[$key][$field_name] = (int)$creation_method_lookup_options[$v];
-              }
-
-              // Look-up the ID for the 'model_modality'.
-              if ($field_name === 'model_modality') {
-                $model_modality_lookup_options = array('point_cloud' => 1, 'mesh' => 2);
-                $json_array[$key][$field_name] = (int)$model_modality_lookup_options[$v];
-              }
-
-              // Look-up the ID for the 'units'.
-              if ($field_name === 'units') {
-                $units_lookup_options = $this->modelsController->get_unit();
-                $json_array[$key][$field_name] = (int)$units_lookup_options[$v];
-              }
-
-              // Look-up the ID for the 'model_purpose'.
-              if ($field_name === 'model_purpose') {
-                $model_purpose_lookup_options = array('master' => 1, 'delivery_web' => 2, 'delivery_print' => 3, 'intermediate_processing_step' => 4);
-                $json_array[$key][$field_name] = (int)$model_purpose_lookup_options[$v];
-              }
-
+              
             }
 
-            // If an array of data contains 1 or fewer keys, then it means the row is empty.
-            // Unset the empty row, so it doesn't get inserted into the database.
-            if (count(array_keys((array)$json_array[$key])) > 1) {
-              // Convert the array to an object.
-              $data[$csv_key]['csv'][] = (object)$json_array[$key];
+            if (!is_numeric($key)) {
+              $data[$csv_key]['type'] = $value;
             }
-            
           }
 
-          if (!is_numeric($key)) {
-            $data[$csv_key]['type'] = $value;
-          }
         }
 
       }
@@ -483,11 +511,11 @@ class RepoImport implements RepoImportInterface {
    *
    * @param obj $data  Data object
    * @param array $job_data  Job data
-   * @param string $parent_record_type  Parent record type
+   * @param string $record_type  Parent record type
    * @param int $i  Iterator
    * @return array  An array of job log IDs
    */
-  public function ingest_csv_data($data = null, $job_data = array(), $parent_record_type = null, $i = 1)
+  public function ingestCsvData($data = null, $job_data = array(), $record_type = null, $i = 1)
   {
 
     $session = new Session();
@@ -506,19 +534,19 @@ class RepoImport implements RepoImportInterface {
     // Job ID and parent record ID
     $data->job_id = isset($job_data->job_id) ? $job_data->job_id : false;
     $data->uuid = isset($job_data->uuid) ? $job_data->uuid : false;
-    $data->parent_project_id = isset($job_data->parent_project_id) ? $job_data->parent_project_id : false;
-    $data->parent_record_id = isset($job_data->parent_record_id) ? $job_data->parent_record_id : false;
-    $data->parent_record_type = isset($parent_record_type) ? $parent_record_type : false;
+    $data->project_id = isset($job_data->project_id) ? $job_data->project_id : false;
+    $data->record_id = isset($job_data->record_id) ? $job_data->record_id : false;
+    $data->record_type = isset($record_type) ? $record_type : false;
 
     // Just in case: throw a 404 if either job ID or parent record ID aren't passed.
     if (!$data->job_id) throw $this->createNotFoundException('Job ID not provided.');
     if (!$data->uuid) throw $this->createNotFoundException('UUID not provided.');
-    if (!$data->parent_project_id) throw $this->createNotFoundException('Parent Project record ID not provided.');
-    if (!$data->parent_record_id) throw $this->createNotFoundException('Parent record ID not provided.');
+    if (!$data->project_id) throw $this->createNotFoundException('Parent Project record ID not provided.');
+    if (!$data->record_id) throw $this->createNotFoundException('Parent record ID not provided.');
 
     // Check to see if the parent project record exists/active, and if it doesn't, throw a createNotFoundException (404).
-    if (!empty($data->parent_project_id)) {
-      $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $data->parent_project_id));
+    if (!empty($data->project_id)) {
+      $project = $this->repo_storage_controller->execute('getProject', array('project_id' => $data->project_id));
       // If no project is returned, throw a createNotFoundException (404).
       if (!$project) throw $this->createNotFoundException('The Project record doesn\'t exist');
     }
@@ -545,11 +573,11 @@ class RepoImport implements RepoImportInterface {
 
     // Extract subject, item, and model database column data from the processing server's 'inspect-mesh' results.
     if ($data->type === 'model') {
-      $data = $this->extract_data_from_external('get_model_data_from_processing_service_results', $data);
+      $data = $this->extractDataFromExternal('getModelDataFromProcessingServiceResults', $data);
     }
 
     // Extract subject and capture_dataset database column data from file names.
-    $data = $this->extract_data_from_external('get_data_from_file_names', $data);
+    $data = $this->extractDataFromExternal('getDataFromFileNames', $data);
 
     // foreach() begins
     foreach ($data->csv as $csv_key => $csv_val) {
@@ -591,32 +619,33 @@ class RepoImport implements RepoImportInterface {
         // Set the parent record's repository ID.
         switch ($data->type) {
           case 'subject':
-            // Set the project_repository_id
-            $csv_val->project_repository_id = (int)$data->parent_project_id;
+            // Set the project_id
+            $csv_val->project_id = (int)$data->project_id;
             break;
           case 'item':
-            // Set the subject_repository_id.
+            // Set the project_id
+            $csv_val->project_id = (int)$data->project_id;
+            // Set the subject_id.
             if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
-              $csv_val->subject_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+              $csv_val->subject_id = $new_repository_ids[$i][$csv_val->import_parent_id];
             } else {
-              $csv_val->subject_repository_id = $data->parent_record_id;
+              $csv_val->subject_id = $data->record_id;
             }
             break;
           case 'capture_dataset':
-            // Set the parent_item_repository_id.
+            // Set the item_id.
             if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
-              $csv_val->parent_item_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+              $csv_val->item_id = $new_repository_ids[$i][$csv_val->import_parent_id];
             } else {
-              $csv_val->parent_item_repository_id = $data->parent_record_id;
+              $csv_val->item_id = $data->record_id;
             }
-
             // Get the parent project ID.
             $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
-              'base_record_id' => $csv_val->parent_item_repository_id,
+              'base_record_id' => $csv_val->item_id,
               'record_type' => 'item',
             ));
             if (!empty($parent_records)) {
-              $csv_val->parent_project_repository_id = $parent_records['project_repository_id'];
+              $csv_val->project_id = $parent_records['project_id'];
             }
             break;
           case 'model':
@@ -646,29 +675,29 @@ class RepoImport implements RepoImportInterface {
 
             // /////////////////////////////////////////////////////////////////////////////////////////
             // // Extract database column data from the processing server's 'inspect-mesh' results.
-            // $csv_val = $this->extract_data_from_external('get_model_data_from_processing_service', $csv_val, $data);
+            // $csv_val = $this->extractDataFromExternal('get_model_data_from_processing_service', $csv_val, $data);
             // /////////////////////////////////////////////////////////////////////////////////////////
 
-            // Set the parent_capture_dataset_repository_id or parent_item_repository_id (when a model is associated to an item).
-            // TODO: add previous_parent_record_type to the mix, 
+            // Set the capture_dataset_id or item_id (when a model is associated to an item).
+            // TODO: add previous_record_type to the mix,
             // so the system will automatically detect what to associate a model to (to make it a bit more bullet-proof).
             if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
               // If a model maps to an item, set the value for the 'parent_item_repository_id' field.
-              if ($data->parent_record_type === 'item') {
-                $csv_val->parent_item_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+              if ($data->record_type === 'item') {
+                $csv_val->item_id = $new_repository_ids[$i][$csv_val->import_parent_id];
               }
-              // Otherwise, set the value for the 'parent_capture_dataset_repository_id' field.
+              // Otherwise, set the value for the 'capture_dataset_id' field.
               else {
-                $csv_val->parent_capture_dataset_repository_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+                $csv_val->capture_dataset_id = $new_repository_ids[$i][$csv_val->import_parent_id];
               }
             } else {
-              // If a model maps to an item, set the value for the 'parent_item_repository_id' field.
-              if ($data->parent_record_type === 'item') {
-                $csv_val->parent_item_repository_id = $data->parent_record_id;
+              // If a model maps to an item, set the value for the 'item_id' field.
+              if ($data->record_type === 'item') {
+                $csv_val->item_id = $data->record_id;
               }
-              // Otherwise, set the value for the 'parent_capture_dataset_repository_id' field.
+              // Otherwise, set the value for the 'capture_dataset_id' field.
               else {
-                $csv_val->parent_capture_dataset_repository_id = $data->parent_record_id;
+                $csv_val->capture_dataset_id = $data->record_id;
               }
             }
             break;
@@ -681,9 +710,51 @@ class RepoImport implements RepoImportInterface {
           'values' => (array)$csv_val
         ));
 
+        // Log the model file to the 'model_file' table.
+        if(!empty($csv_val->file_path)) {
+
+          $uploads_directory = str_replace('web', '', $this->uploads_directory);
+          // Windows fix for the model's file path.
+          $uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_directory) : $uploads_directory;
+          $uploads_directory = substr($uploads_directory, 0, -1);
+          // Windows fix for the model's file path.
+          $file_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $csv_val->file_path) : $csv_val->file_path;
+
+          // Query the metadata storage for the file's ID using the file_path.
+          $file_info = $this->repo_storage_controller->execute('getRecords', array(
+            'base_table' => 'file_upload',
+            'fields' => array(
+              array(
+                'table_name' => 'file_upload',
+                'field_name' => 'file_upload_id',
+              ),
+            ),
+            'limit' => 1,
+            'search_params' => array(
+              0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($uploads_directory . $file_path), 'comparison' => '='),
+            ),
+            'search_type' => 'AND',
+            'omit_active_field' => true,
+            )
+          );
+
+          // Log the model file to 'model_file' metadata storage.
+          if (!empty($file_info)) {
+            $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'model_file',
+              'user_id' => $data->user_id,
+              'values' => array(
+                'model_id' => $this_id,
+                'file_upload_id' => $file_info[0]['file_upload_id'],
+              )
+            ));
+          }
+
+        }
+
         // Insert capture data elements and capture data files into the metadata storage.
         if (($data->type === 'capture_dataset') && isset($csv_val->capture_data_elements) && !empty($csv_val->capture_data_elements)) {
-          $this->insert_capture_data_elements_and_files($csv_val->capture_data_elements, $this_id, $data);
+          $this->insertCaptureDataElementsAndFiles($csv_val->capture_data_elements, $this_id, $data);
         }
 
         // Create an array of all of the newly created repository IDs.
@@ -712,7 +783,7 @@ class RepoImport implements RepoImportInterface {
           'values' => array(
             'job_id' => $data->job_id,
             'record_id' => $this_id,
-            'project_id' => (int)$data->parent_project_id,
+            'project_id' => (int)$data->project_id,
             'record_table' => $data->type,
             'description' => $data->description,
           )
@@ -755,13 +826,13 @@ class RepoImport implements RepoImportInterface {
    * Insert Capture Data Elements
    *
    * @param array $capture_data_elements An array of capture data elements.
-   * @param int $capture_dataset_repository_id The capture dataset repository ID
+   * @param int $capture_dataset_id The capture dataset repository ID
    * @param array $data Job data
    * @return null
    */
-  public function insert_capture_data_elements_and_files($capture_data_elements = array(), $capture_dataset_repository_id = null, $data = array()) {
+  public function insertCaptureDataElementsAndFiles($capture_data_elements = array(), $capture_dataset_id = null, $data = array()) {
 
-    if (!empty($capture_data_elements) && !empty($capture_dataset_repository_id) && !empty($data)) {
+    if (!empty($capture_data_elements) && !empty($capture_dataset_id) && !empty($data)) {
       // Loop through capture data elements and add to storage.
       foreach ($capture_data_elements as $ekey => $evalue) {
 
@@ -772,7 +843,7 @@ class RepoImport implements RepoImportInterface {
         }
 
         // Set the parent capture dataset ID.
-        $evalue['capture_dataset_repository_id'] = $capture_dataset_repository_id;
+        $evalue['capture_dataset_id'] = $capture_dataset_id;
         // Add to metadata storage.
         $capture_data_element_id = $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'capture_data_element',
@@ -787,7 +858,7 @@ class RepoImport implements RepoImportInterface {
           'values' => array(
             'job_id' => $data->job_id,
             'record_id' => $capture_data_element_id,
-            'project_id' => (int)$data->parent_project_id,
+            'project_id' => (int)$data->project_id,
             'record_table' => 'capture_data_element',
             'description' => 'imported capture data element',
           )
@@ -796,7 +867,7 @@ class RepoImport implements RepoImportInterface {
         // Loop through capture data files and add to storage.
         foreach ($capture_data_files as $fkey => $fvalue) {
           // Set the parent capture data element ID.
-          $fvalue['parent_capture_data_element_repository_id'] = $capture_data_element_id;
+          $fvalue['capture_data_element_id'] = $capture_data_element_id;
           // Add to metadata storage.
           $capture_data_file_id = $this->repo_storage_controller->execute('saveRecord', array(
             'base_table' => 'capture_data_file',
@@ -811,7 +882,7 @@ class RepoImport implements RepoImportInterface {
             'values' => array(
               'job_id' => $data->job_id,
               'record_id' => $capture_data_file_id,
-              'project_id' => (int)$data->parent_project_id,
+              'project_id' => (int)$data->project_id,
               'record_table' => 'capture_data_file',
               'description' => 'imported capture data file',
             )
@@ -830,7 +901,7 @@ class RepoImport implements RepoImportInterface {
    * @param string $data Job data
    * @return array
    */
-  public function extract_data_from_external($function_name = null, $data = array())
+  public function extractDataFromExternal($function_name = null, $data = array())
   {
 
     if (!empty($function_name) && !empty($data) && method_exists($this, $function_name)) {
@@ -846,7 +917,7 @@ class RepoImport implements RepoImportInterface {
    * @param array $data Job data
    * @return array
    */
-  public function get_model_data_from_processing_service_results($data = array())
+  public function getModelDataFromProcessingServiceResults($data = array())
   {
     // Extract database column data from the processing server's 'inspect-mesh' results.
     // Query the database for 'inspect-mesh' jobs.
@@ -922,7 +993,7 @@ class RepoImport implements RepoImportInterface {
    * @param array $data Job data
    * @return array
    */
-  public function get_data_from_file_names($data = array())
+  public function getDataFromFileNames($data = array())
   {
 
     $image_file_names = $model_file_names = array();
@@ -962,14 +1033,14 @@ class RepoImport implements RepoImportInterface {
 
       if (!empty($image_file_names)) {
         ksort($image_file_names);
-        $data = $this->get_dataset_data_from_filenames($image_file_names, $data);
+        $data = $this->getDatasetDataFromFilenames($image_file_names, $data);
       }
 
       // Remove duplicate model file names and sort.
       $model_file_names = array_unique($model_file_names);
       sort($model_file_names);
       if (!empty($model_file_names)) {
-        $data = $this->get_model_data_from_filenames($model_file_names, $data);
+        $data = $this->getModelDataFromFilenames($model_file_names, $data);
       }
 
     }
@@ -984,7 +1055,7 @@ class RepoImport implements RepoImportInterface {
    * @param array $data Job data
    * @return array
    */
-  public function get_dataset_data_from_filenames($image_file_names = array(), $data = array())
+  public function getDatasetDataFromFilenames($image_file_names = array(), $data = array())
   {
     // Insert into subject (local_subject_id)
     // Insert into capture_dataset (capture_dataset_field_id)
@@ -997,7 +1068,7 @@ class RepoImport implements RepoImportInterface {
     if (!empty($image_file_names) && !empty($data)) {
 
       // If there's a file_name_map.csv file at the root of the 'data' directory, use it.
-      $file_name_map_main = $this->get_filename_map($data);
+      $file_name_map_main = $this->getFilenameMap($data);
 
       // Add data to uploaded CSVs.
       switch ($data->type) {
@@ -1006,10 +1077,10 @@ class RepoImport implements RepoImportInterface {
           foreach ($image_file_names as $dir_name => $files) {
             if (!empty($files)) {
               // Get the file's info from the metadata storage.
-              $file_info = $this->get_file_info($data->uuid, $files[0]);
+              $file_info = $this->getFileInfo($data->uuid, $files[0]);
               // Get the file name map, if one exists in this directory.
               if (!empty($file_info)) {
-                $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                $file_name_map = $this->getFilenameMap($data, $file_info[0]['file_path']);
                 // If no file name map exists, use the main one in the root of the 'data' directory.
                 $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
               }
@@ -1026,6 +1097,7 @@ class RepoImport implements RepoImportInterface {
           break;
         case 'capture_dataset':
 
+          $process = true;
           $i = 0;
           foreach ($image_file_names as $dir_name => $files) {
 
@@ -1037,63 +1109,75 @@ class RepoImport implements RepoImportInterface {
               foreach ($files as $file) {
 
                 // Get the file's info from the metadata storage.
-                $file_info = $this->get_file_info($data->uuid, $file);
+                $file_info = $this->getFileInfo($data->uuid, $file);
 
-                // Get the file name map, if one exists in this directory.
-                $file_name_map = array();
-                // if (!empty($file_info)) $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
-                if (!empty($file_info)) {
-                  $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
-                  // If no file name map exists, use the main one in the root of the 'data' directory.
-                  $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
-                }
-
-                // $this->u->dumper($file_name_map,0);
-
-                // Establish the file name map keys so we know which slot in the file name to obtain the data from.
-                // Default position_in_cluster_field_id key.
-                $key1 = array_search('position_in_cluster_field_id', $this->default_image_file_name_map);
-                // Default cluster_position_field_id key.
-                $key2 = array_search('cluster_position_field_id', $this->default_image_file_name_map);
-                // If the $file_name_map exists, then set the key using that.
-                if (!empty($file_name_map)) {
-                  // User-supplied position_in_cluster_field_id key.
-                  $key1 = array_search('position_in_cluster_field_id', $file_name_map)
-                      ? array_search('position_in_cluster_field_id', $file_name_map)
-                      : null;
-                  // User-supplied cluster_position_field_id key.
-                  $key2 = array_search('cluster_position_field_id', $file_name_map)
-                      ? array_search('cluster_position_field_id', $file_name_map)
-                      : null;
-                }
-
-                // $this->u->dumper($file_name_map,0);
-                // $this->u->dumper($key1,0);
-                // $this->u->dumper($key2);
-
-                // Transform the file name to an array.
-                $file_name_parts = explode('-', $file);
-
-                // Build-out the $capture_data_files array.
-                if (!empty($file_info)) {
-                  $capture_data_files = array();
-                  foreach ($file_info as $file_info_key => $file_info_value) {
-                    // File info for the capture_data_file columns
-                    $capture_data_files[] = array(
-                      'file_upload_id' => $file_info_value['file_upload_id'],
-                      'capture_data_file_name' => $file_info_value['file_name'],
-                      'capture_data_file_type' => $file_info_value['file_type'],
-                      'is_compressed_multiple_files' => 0,
-                    );
+                // Don't process model texture maps.
+                foreach ($this->texture_map_file_name_parts as $tkey => $tvalue) {
+                  if (strstr($file_info[0]['file_name'], $tvalue)) {
+                    $process = false;
                   }
                 }
 
-                // Build-out the $capture_data_elements array, adding in this capture data element's $capture_data_files array.
-                $data->csv[$i]->capture_data_elements[] = array(
-                  'position_in_cluster_field_id' => (!empty($key1) && stristr($file_name_parts[ $key1 ], 'p')) ? (int)str_replace('p', '', $file_name_parts[ $key1 ]) : null,
-                  'cluster_position_field_id' => (!empty($key2) && isset($file_name_parts[ $key2 ])) ? (int)$file_name_parts[ $key2 ] : null,
-                  'capture_data_files' => $capture_data_files,
-                );
+                // Process anything except model texture maps.
+                if ($process) {
+
+                  // Get the file name map, if one exists in this directory.
+                  $file_name_map = array();
+                  // if (!empty($file_info)) $file_name_map = $this->vgetFilenameMap($data, $file_info[0]['file_path']);
+                  if (!empty($file_info)) {
+                    $file_name_map = $this->getFilenameMap($data, $file_info[0]['file_path']);
+                    // If no file name map exists, use the main one in the root of the 'data' directory.
+                    $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
+                  }
+
+                  // $this->u->dumper($file_name_map,0);
+
+                  // Establish the file name map keys so we know which slot in the file name to obtain the data from.
+                  // Default position_in_cluster_field_id key.
+                  $key1 = array_search('position_in_cluster_field_id', $this->default_image_file_name_map);
+                  // Default cluster_position_field_id key.
+                  $key2 = array_search('cluster_position_field_id', $this->default_image_file_name_map);
+                  // If the $file_name_map exists, then set the key using that.
+                  if (!empty($file_name_map)) {
+                    // User-supplied position_in_cluster_field_id key.
+                    $key1 = array_search('position_in_cluster_field_id', $file_name_map)
+                        ? array_search('position_in_cluster_field_id', $file_name_map)
+                        : null;
+                    // User-supplied cluster_position_field_id key.
+                    $key2 = array_search('cluster_position_field_id', $file_name_map)
+                        ? array_search('cluster_position_field_id', $file_name_map)
+                        : null;
+                  }
+
+                  // $this->u->dumper($file_name_map,0);
+                  // $this->u->dumper($key1,0);
+                  // $this->u->dumper($key2);
+
+                  // Transform the file name to an array.
+                  $file_name_parts = explode('-', $file);
+
+                  // Build-out the $capture_data_files array.
+                  if (!empty($file_info)) {
+                    $capture_data_files = array();
+                    foreach ($file_info as $file_info_key => $file_info_value) {
+                      // File info for the capture_data_file columns
+                      $capture_data_files[] = array(
+                        'file_upload_id' => $file_info_value['file_upload_id'],
+                        'capture_data_file_name' => $file_info_value['file_name'],
+                        'capture_data_file_type' => $file_info_value['file_type'],
+                        'is_compressed_multiple_files' => 0,
+                      );
+                    }
+                  }
+
+                  // Build-out the $capture_data_elements array, adding in this capture data element's $capture_data_files array.
+                  $data->csv[$i]->capture_data_elements[] = array(
+                    'position_in_cluster_field_id' => (!empty($key1) && stristr($file_name_parts[ $key1 ], 'p')) ? (int)str_replace('p', '', $file_name_parts[ $key1 ]) : null,
+                    'cluster_position_field_id' => (!empty($key2) && isset($file_name_parts[ $key2 ])) ? (int)$file_name_parts[ $key2 ] : null,
+                    'capture_data_files' => $capture_data_files,
+                  );
+
+                }
 
               }
             }
@@ -1115,7 +1199,7 @@ class RepoImport implements RepoImportInterface {
    * @param array $data Job data
    * @return array
    */
-  public function get_model_data_from_filenames($model_file_names = array(), $data = array())
+  public function getModelDataFromFilenames($model_file_names = array(), $data = array())
   {
     // Insert into subject (local_subject_id)
     // Insert into item (item_description)
@@ -1128,7 +1212,7 @@ class RepoImport implements RepoImportInterface {
     if (!empty($model_file_names)) {
 
       // If there's a file_name_map.csv file at the root of the 'data' directory, use it.
-      $file_name_map_main = $this->get_filename_map($data);
+      $file_name_map_main = $this->getFilenameMap($data);
 
       // Add data to uploaded CSVs.
       switch ($data->type) {
@@ -1137,10 +1221,10 @@ class RepoImport implements RepoImportInterface {
           foreach ($model_file_names as $key => $file) {
             if (!empty($file)) {
               // Get the file's info from the metadata storage.
-              $file_info = $this->get_file_info($data->uuid, $file);
+              $file_info = $this->getFileInfo($data->uuid, $file);
               // Get the file name map, if one exists in this directory.
               if (!empty($file_info)) {
-                $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                $file_name_map = $this->getFilenameMap($data, $file_info[0]['file_path']);
                 // If no file name map exists, use the main one in the root of the 'data' directory.
                 $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
               }
@@ -1163,10 +1247,10 @@ class RepoImport implements RepoImportInterface {
           foreach ($model_file_names as $key => $file) {
             if (!empty($file)) {
               // Get the file's info from the metadata storage.
-              $file_info = $this->get_file_info($data->uuid, $file);
+              $file_info = $this->getFileInfo($data->uuid, $file);
               // Get the file name map, if one exists in this directory.
               if (!empty($file_info)) {
-                $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                $file_name_map = $this->getFilenameMap($data, $file_info[0]['file_path']);
                 // If no file name map exists, use the main one in the root of the 'data' directory.
                 $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
               }
@@ -1189,10 +1273,10 @@ class RepoImport implements RepoImportInterface {
           foreach ($model_file_names as $key => $file) {
             if (!empty($file)) {
               // Get the file's info from the metadata storage.
-              $file_info = $this->get_file_info($data->uuid, $file);
+              $file_info = $this->getFileInfo($data->uuid, $file);
               // Get the file name map, if one exists in this directory.
               if (!empty($file_info)) {
-                $file_name_map = $this->get_filename_map($data, $file_info[0]['file_path']);
+                $file_name_map = $this->getFilenameMap($data, $file_info[0]['file_path']);
                 // If no file name map exists, use the main one in the root of the 'data' directory.
                 $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
               }
@@ -1204,7 +1288,9 @@ class RepoImport implements RepoImportInterface {
               // Transform the file name to an array.
               $file_name_parts = explode('-', $file);
               // Remove '_model' from the model_purpose chunk from the file name ('master_model' becomes 'model').
-              $data->csv[$key]->model_purpose = str_replace('_model', '', $file_name_parts[$key1]);
+              if (isset($file_name_parts[$key1])) {
+                $data->csv[$key]->model_purpose = str_replace('_model', '', $file_name_parts[$key1]);
+              }
             }
           }
           break;
@@ -1221,7 +1307,7 @@ class RepoImport implements RepoImportInterface {
    * @param string $uuid The job UUID
    * @param string $file_name The file name
    */
-  public function get_file_info($uuid = null, $file_name = null)
+  public function getFileInfo($uuid = null, $file_name = null)
   {
     $data = array();
 
@@ -1251,7 +1337,7 @@ class RepoImport implements RepoImportInterface {
    * @param string $directory The target directory
    * @return array
    */
-  public function get_filename_map($job_data = array(), $directory = '')
+  public function getFilenameMap($job_data = array(), $directory = '')
   {
 
     $data = array();

@@ -105,7 +105,7 @@ class ExtractImageMetadataController extends Controller
    * @param array  $params  Parameters. For now, only 'localpath' is being sent.
    * @return array
    */
-  public function extract_metadata($params = array())
+  public function extractMetadata($params = array())
   {
 
     $data = array();
@@ -140,7 +140,7 @@ class ExtractImageMetadataController extends Controller
         }
 
         // Validate the mime type.
-        $mime_type = $this->get_mime_type($file->getPathname());
+        $mime_type = $this->getMimeType($file->getPathname());
 
         // Check if this is a valid image according to our hard-coded arrays above.
         if(array_key_exists($mime_type, $this->valid_image_mimetypes)) {
@@ -148,7 +148,7 @@ class ExtractImageMetadataController extends Controller
           // $this->u->dumper('array_key_exists($mime_type, $this->valid_image_mimetypes)');
 
           // Set metadata, warnings or errors.
-          $data[$i] = $this->get_metadata_from_image($file->getPathname());
+          $data[$i] = $this->getMetadataFromImage($file->getPathname());
 
           // Write the metadata for this file.
           if(array_key_exists('metadata', $data[$i])) {
@@ -168,7 +168,7 @@ class ExtractImageMetadataController extends Controller
             // Windows file path fix.
             // Turns this: /uploads/repository/3df_5bd21fc4ccd253.95102447/testupload06_usnm_160/data/-s03-
             // Into this: \uploads\repository\3df_5bd21fc4ccd253.95102447\testupload06_usnm_160\data\-s03-
-            $file_path = str_replace(DIRECTORY_SEPARATOR, '/', $file_path);
+            $file_path = str_replace('/', DIRECTORY_SEPARATOR, $file_path);
 
             // Get the file's id in the database.
             $file_data = $this->repo_storage_controller->execute('getRecords', array(
@@ -176,7 +176,7 @@ class ExtractImageMetadataController extends Controller
               'fields' => array(),
               'limit' => 1,
               'search_params' => array(
-                array('field_names' => array('file_path'), 'search_values' => array($file_path . '/' . $file->getBasename()), 'comparison' => '='),
+                array('field_names' => array('file_path'), 'search_values' => array($file_path . DIRECTORY_SEPARATOR . $file->getBasename()), 'comparison' => '='),
               ),
               'search_type' => 'AND',
               'omit_active_field' => true,
@@ -184,7 +184,7 @@ class ExtractImageMetadataController extends Controller
             );
 
             // Log an error if the file is not found within the database.
-            if (empty($file_data)) $data[$i]['errors'][] = 'Extract Image Metadata - file not found in the database: ' . $file_path . '/' . $file->getBasename();
+            if (empty($file_data)) $data[$i]['errors'][] = 'Extract Image Metadata - file not found in the database: ' . $file_path . DIRECTORY_SEPARATOR . $file->getBasename();
 
             // If the record is found, save the metadata to the record.
             if (!empty($file_data) && (count($file_data)) === 1) {
@@ -240,7 +240,7 @@ class ExtractImageMetadataController extends Controller
    * @param string  $filename  The file name
    * @return string
    */
-  private function get_mime_type($filename = null) {
+  private function getMimeType($filename = null) {
 
     if (!empty($filename)) {
       $buffer = file_get_contents($filename);
@@ -250,7 +250,7 @@ class ExtractImageMetadataController extends Controller
 
   }
 
-  private function get_metadata_from_image($filename = null) {
+  private function getMetadataFromImage($filename = null) {
 
     $image_type = exif_imagetype($filename);
     if(false === $image_type) {

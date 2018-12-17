@@ -55,7 +55,7 @@ if($slug) {
     // Template files array.
     $template_files = array(
         'src/AppBundle/Controller' => array(
-            'CaptureMethodsController.php',
+            'CaptureMethodController.php',
         ),
         'app/Resources/views/resources' => array(
             'browse_capture_methods.html.twig',
@@ -68,7 +68,7 @@ if($slug) {
         foreach ($value as $filename) {
 
             // Class name uses camelcase for the file name.
-            if($filename === 'CaptureMethodsController.php') {
+            if($filename === 'CaptureMethodController.php') {
                 $new_filename = str_replace('CaptureMethods', $slug_camel_case, $filename);
             } else {
                 $new_filename = str_replace('capture_methods', $slug, $filename);

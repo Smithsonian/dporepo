@@ -54,14 +54,14 @@ class BagitValidationCommand extends Command
 
     if (!empty($input->getArgument('uuid'))) {
 
-      // Parameters to pass to the bagit_validate method.
+      // Parameters to pass to the bagitValidate method.
       $params = array(
         'uuid' => $input->getArgument('uuid'),
         'flag_warnings_as_errors' => false,
       );
 
       // Run the validation.
-      $result = $this->bagit->bagit_validate($params);
+      $result = $this->bagit->bagitValidate($params);
 
       // Output validation results.
       if (isset($result['result']) && ($result['result'] === 'success')) {

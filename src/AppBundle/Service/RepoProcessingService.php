@@ -61,7 +61,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    *
    * @return array
    */
-  public function get_recipes() {
+  public function getRecipes() {
 
     $data = array();
 
@@ -81,7 +81,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    * @param string $id
    * @return array
    */
-  public function get_recipe_details($id = null) {
+  public function getRecipeDetails($id = null) {
 
     $data = array();
 
@@ -102,7 +102,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    * @param string $recipe_name
    * @return array
    */
-  public function get_recipe_by_name($recipe_name = null) {
+  public function getRecipeByName($recipe_name = null) {
 
     $data = array();
 
@@ -113,7 +113,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
     // If there are no errors, execute the API call.
     if (empty($data['error'])) {
 
-      $recipes = $this->get_recipes();
+      $recipes = $this->getRecipes();
 
       if ($recipes['httpcode'] === 200) {
         // Get all recipes.
@@ -146,7 +146,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    * @param array $params
    * @return array
    */
-  public function post_job($recipe_id = null, $job_name = null, $params = array()) {
+  public function postJob($recipe_id = null, $job_name = null, $params = array()) {
 
     $data = array();
 
@@ -162,7 +162,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
       );
 
       $post_params = array(
-        'id' => $this->create_guid(),
+        'id' => $this->u->createUuid(),
         'name' => $job_name,
         'clientId' => $this->processing_service_client_id,
         'recipeId' => $recipe_id,
@@ -185,7 +185,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    * @param $job_id
    * @return array
    */
-  public function run_job($job_id = null) {
+  public function runJob($job_id = null) {
 
     $data = array();
 
@@ -215,7 +215,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    * @param $job_id
    * @return array
    */
-  public function cancel_job($job_id = null) {
+  public function cancelJob($job_id = null) {
 
     $data = array();
 
@@ -245,7 +245,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    * @param $job_id
    * @return array
    */
-  public function delete_job($job_id = null) {
+  public function deleteJob($job_id = null) {
 
     $data = array();
 
@@ -275,7 +275,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    * @param $job_id
    * @return array
    */
-  public function get_job($job_id = null) {
+  public function getJob($job_id = null) {
 
     $data = array();
 
@@ -305,7 +305,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    *
    * @return array
    */
-  public function get_jobs() {
+  public function getJobs() {
 
     $data = array();
 
@@ -329,7 +329,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    * @param string $job_name
    * @return array
    */
-  public function get_job_by_name($job_name = null) {
+  public function getJobByName($job_name = null) {
 
     $data = array();
 
@@ -340,7 +340,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
     // If there are no errors, execute the API call.
     if (empty($data['error'])) {
 
-      $recipes = $this->get_jobs();
+      $recipes = $this->getJobs();
 
       if ($recipes['httpcode'] === 200) {
         // Get all recipes.
@@ -550,7 +550,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
     if (!empty($job_data)) {
       // Get the processing job from the processing service.
-      $processing_job = $this->get_job($job_data[0]['processing_service_job_id']);
+      $processing_job = $this->getJob($job_data[0]['processing_service_job_id']);
       // Error handling
       if ($processing_job['httpcode'] !== 200) $data[]['errors'][] = 'The processing service returned HTTP code ' . $processing_job['httpcode'];
       // No error...
@@ -695,7 +695,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function initialize_job($recipe = null, $params = array(), $path = null, $user_id = null, $parent_record_data = array(), $filesystem)
+  public function initializeJob($recipe = null, $params = array(), $path = null, $user_id = null, $parent_record_data = array(), $filesystem)
   {
 
     $data = array();
@@ -709,7 +709,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
       // If the path or file does exist, send job to the processing service.
       if (is_dir($path) || is_file($path)) {
         // Create a new job and run.
-        $data = $this->send_job($path, $recipe, $user_id, $params, $parent_record_data, $filesystem);
+        $data = $this->sendJob($path, $recipe, $user_id, $params, $parent_record_data, $filesystem);
       }
     }
 
@@ -726,7 +726,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function send_job($path = null, $recipe = array(), $user_id = null, $params = array(), $parent_record_data = array(), $filesystem)
+  public function sendJob($path = null, $recipe = array(), $user_id = null, $params = array(), $parent_record_data = array(), $filesystem)
   {
 
     $data = array();
@@ -734,7 +734,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
     if (!empty($path) && !empty($recipe) && !empty($user_id) && !empty($params) && !empty($parent_record_data)) {
 
       // Get the ID of the recipe, so it can be passed to processing service's job creation endpoint (post_job).
-      $recipe = $this->get_recipe_by_name($recipe);
+      $recipe = $this->getRecipeByName($recipe);
 
       // Error handling
       if (isset($recipe['error']) && !empty($recipe['error'])) {
@@ -747,7 +747,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
         // Create a timestamp for the procesing job name.
         $job_name = str_replace('+00:00', 'Z', gmdate('c', strtotime('now')));
         // Post a new job.
-        $result = $this->post_job($recipe['id'], $job_name, $params);
+        $result = $this->postJob($recipe['id'], $job_name, $params);
 
         // Error handling
         if ($result['httpcode'] !== 201) {
@@ -758,7 +758,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
         if ($result['httpcode'] === 201) {
 
           // Get the job data.
-          $data = $this->get_job_by_name($job_name);
+          $data = $this->getJobByName($job_name);
           // Error handling
           if (isset($data['error']) && !empty($data['error'])) {
             $data[]['errors'][] = $data['error'];
@@ -772,7 +772,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
           //   'user_id' => $user_id,
           //   'values' => array(
           //     'uuid' => $uuid,
-          //     'project_id' => (int)$project_data['project_repository_id'],
+          //     'project_id' => (int)$project_data['project_id'],
           //     'job_label' => 'Processing Job (' . $data['recipe']['name'] . '): "' . $project_data['project_name'] . '"',
           //     'job_type' => 'processing job',
           //     'job_status' => 'created',
@@ -787,8 +787,8 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
             'base_table' => 'processing_job',
             'user_id' => $user_id,
             'values' => array(
-              'parent_record_id' => $parent_record_data['parent_record_id'],
-              'parent_record_type' => $parent_record_data['parent_record_type'],
+              'record_id' => $parent_record_data['record_id'],
+              'record_type' => $parent_record_data['record_type'],
               'processing_service_job_id' => $data['id'],
               'recipe' =>  $data['recipe']['name'],
               'job_json' => json_encode($data),
@@ -811,7 +811,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function execute_job($filesystem)
+  public function executeJob($filesystem)
   {
 
     $data = array();
@@ -853,7 +853,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
           // Before calling fclose on the resource, check if it’s still valid using is_resource.
           if (is_resource($stream)) fclose($stream);
           // Now that the file has been transferred, go ahead and run the job.
-          $result = $this->run_job($job_id);
+          $result = $this->runJob($job_id);
           // Error handling
           if ($result['httpcode'] !== 202) $data[]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
         }
@@ -882,7 +882,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
               // Before calling fclose on the resource, check if it’s still valid using is_resource.
               if (is_resource($stream)) fclose($stream);
               // Now that the file has been transferred, go ahead and run the job.
-              $result = $this->run_job($job_id);
+              $result = $this->runJob($job_id);
               // Error handling
               if ($result['httpcode'] !== 202) $data[$i]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
             }
@@ -912,7 +912,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return
    */
-  public function get_processing_results($job_id = null, $user_id = null, $path = null, $filesystem)
+  public function getProcessingResults($job_id = null, $user_id = null, $path = null, $filesystem)
   {
 
     $data = array();
@@ -948,29 +948,6 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
     return $data;
   }
 
-  /**
-   * Create GUID
-   *
-   * @return string
-   */
-  public function create_guid() {
-
-    if (function_exists('com_create_guid')){
-      return com_create_guid();
-    } else {
-      mt_srand((double)microtime()*10000);//optional for php 4.2.0 and up.
-      $charid = strtoupper(md5(uniqid(rand(), true)));
-      $hyphen = chr(45);// "-"
-      $uuid = substr($charid, 0, 8).$hyphen
-          .substr($charid, 8, 4).$hyphen
-          .substr($charid,12, 4).$hyphen
-          .substr($charid,16, 4).$hyphen
-          .substr($charid,20,12);
-      return $uuid;
-    }
-
-  }
-
 }
 
 
@@ -995,7 +972,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 //     'user_id' => $user_id,
 //     'values' => array(
 //       'uuid' => $uuid,
-//       'project_id' => (int)$project['project_repository_id'],
+//       'project_id' => (int)$project['project_id'],
 //       'job_label' => 'Processing Job: "' . $project['project_name'] . '"',
 //       'job_type' => 'processing job',
 //       'job_status' => 'initialized',

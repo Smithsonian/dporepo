@@ -123,6 +123,8 @@ jQuery(document).ready(function($) {
   $('select.stakeholder-chosen-select').on('change', function(evt, params) {
     $('#stakeholder_guid').val(params.selected);
   });
+
+  console.log(currentPath);
   
   /**
    * Set the Active Navigation Tab
@@ -134,8 +136,11 @@ jQuery(document).ready(function($) {
       thisItem.addClass('active');
     } else if(currentPath[1].length === 0) {
       $('.nav-tabs.main-nav li#admin').addClass('active');
-    } else if (currentPath[1] === 'projects') {
+    } else if (currentPath[1] === 'project') {
       $('.nav-tabs.main-nav li#workspace').addClass('active');
+    }
+    else if ((currentPath[1] === 'ingest') || (currentPath[1] === 'simple_ingest') || (currentPath[1] === 'bulk_ingest')) {
+      $('.nav-tabs.main-nav li#ingest').addClass('active');
     }
   });
 

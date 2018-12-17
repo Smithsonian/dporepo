@@ -110,14 +110,14 @@ class RepoValidateData implements RepoValidate {
   /**
    * @param null $data The data to validate.
    * @param string $schema The schema to validate against (optional).
-   * @param string $parent_record_type The parent record type - can be one of: project, subject, item, capture dataset.
+   * @param string $record_type The parent record type - can be one of: project, subject, item, capture dataset.
    * @param array $blacklisted_fields An array of fields to ignore (optional).
    * Validates incoming data against JSON Schema Draft 7. See:
    * http://json-schema.org/specification.html
    * JSON Schema for PHP Documentation: https://github.com/justinrainbow/json-schema
    * @return mixed array containing success/fail value, and any messages.
    */
-  public function validateData($data = NULL, $schema = 'project', $parent_record_type = NULL, $blacklisted_fields = array()) {
+  public function validateData($data = NULL, $schema = 'project', $record_type = NULL, $blacklisted_fields = array()) {
 
     $return = array('is_valid' => false);
 
@@ -190,7 +190,8 @@ class RepoValidateData implements RepoValidate {
           // if(!strstr($error['property'], $blacklisted_fields)) {
             $row = preg_replace("/[^0-9]+/", '', $error['property']);
             $property_parts = explode('.', $error['property']);
-            $return['messages'][] = array('row' => 'Row ' . ($row+1) . ' - ' . $property_parts[1], 'error' => $error['message']);
+            $property = isset($property_parts[1]) ? $property_parts[1] : $property_parts[0];
+            $return['messages'][] = array('row' => 'Row ' . ($row+1) . ' - ' . $property, 'error' => $error['message']);
           // }
         }
 
@@ -232,7 +233,7 @@ class RepoValidateData implements RepoValidate {
   /**
    * Validate capture_dataset_field_id
    * @param array $data The data to validate.
-   * @param array $parent_record_id The parent record ID.
+   * @param array $record_id The parent record ID.
    * @return mixed array containing success/fail value, and any messages.
    */
   public function validateCaptureDatasetFieldId($data = array(), $parent_records = array()) {
@@ -244,7 +245,6 @@ class RepoValidateData implements RepoValidate {
 
     // If data is passed, go ahead and perform the validation.
     if(!empty($data) && !empty($parent_records)) {
-
 
       foreach($data as $key => $value) {
         if(!empty($value->capture_dataset_field_id)) {
@@ -269,19 +269,10 @@ class RepoValidateData implements RepoValidate {
                 ),
                 array(
                   'field_names' => array(
-                    'parent_project_repository_id'
+                    'item_id'
                   ),
                   'search_values' => array(
-                    $parent_records['project_repository_id']
-                  ),
-                  'comparison' => '='
-                ),
-                array(
-                  'field_names' => array(
-                    'parent_item_repository_id'
-                  ),
-                  'search_values' => array(
-                    $parent_records['item_repository_id']
+                    $parent_records['item_id']
                   ),
                   'comparison' => '='
                 )

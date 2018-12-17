@@ -130,7 +130,7 @@ class EdanController extends Controller
                 // Process EDAN's freetext and images.
                 foreach ($data['rows'] as $key => $value) {
                     // Process freetext
-                    $data['rows'][$key]['processed_freetext'] = $this->freetext_processor($value, $this->metadata_fields);
+                    $data['rows'][$key]['processed_freetext'] = $this->freetextProcessor($value, $this->metadata_fields);
                     // Process images
                     $images = $this->edanmdm_images_processor($value);
                     if(!empty($images) && !empty($images['record_images'])) {
@@ -159,7 +159,7 @@ class EdanController extends Controller
      * @param   array  $desired_labels  An array of labels to apply.
      * @return  array  The processed freetext data.
      */
-    private function freetext_processor($record, $desired_labels = array()) {
+    private function freetextProcessor($record, $desired_labels = array()) {
 
       $new_freetext = array();
 

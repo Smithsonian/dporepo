@@ -15,10 +15,13 @@ use PDO;
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
 
-// Subjects methods
-use AppBundle\Controller\SubjectsController;
-// Items methods
-use AppBundle\Controller\ItemsController;
+// Subject methods
+use AppBundle\Controller\SubjectController;
+// Item methods
+use AppBundle\Controller\ItemController;
+
+// Access control methods
+use AppBundle\Service\RepoUserAccess;
 
 class AdminController extends Controller
 {
@@ -27,6 +30,7 @@ class AdminController extends Controller
      */
     public $u;
     private $repo_storage_controller;
+    private $repo_user_access_controller;
 
     /**
     * Constructor
@@ -37,15 +41,25 @@ class AdminController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
+        $this->repo_user_access_controller = new RepoUserAccess($conn);
     }
 
     /**
      * @Route("/admin/", name="admin_home", methods="GET")
      */
-    public function show_admin(Connection $conn, Request $request)
+    public function showAdmin(Connection $conn, Request $request)
     {
+        $username = $this->getUser()->getUsernameCanonical();
+        $access = $this->repo_user_access_controller->get_user_access_any($username, 'view_projects');
+
+        if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
+          $response = new Response();
+          $response->setStatusCode(403);
+          return $response;
+        }
+
         // Database tables are only created if not present.
-        $create_favorites_table = $this->create_favorites_table($conn);
+        $create_favorites_table = $this->createFavoritesTable($conn);
         $roles = $this->getUser()->getRoles();
 
         // Check to see if the firstLogin session variable is set.
@@ -65,8 +79,45 @@ class AdminController extends Controller
         }
     }
 
+  /**
+   * @Route("/admin/datatables_browse", name="browse_datatables", methods="POST")
+   *
+   * @param Request $request
+   * @return JsonResponse The query result in JSON
+   */
+  public function datatablesBrowse(Request $request)
+  {
+    $req = $request->request->all();
+    $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+    $sort_field = isset($req['columns']) && isset($req['order'][0]['column']['data']) ? $req['columns'][ $req['order'][0]['column'] ]['data'] : '';
+    $sort_order = isset($req['order'][0]['dir']) ? $req['order'][0]['dir'] : 'asc';
+    $start_record = !empty($req['start']) ? $req['start'] : 0;
+    $stop_record = !empty($req['length']) ? $req['length'] : 20;
+    $parent_id = !empty($req['parent_id']) ? $req['parent_id'] : 0;
+    $record_type = isset($req['record_type']) ? $req['record_type'] : NULL;
+    $parent_id_field = isset($req['parent_type']) ? $req['parent_type'] : NULL;
+
+    $query_params = array(
+      'record_type' => $record_type,
+      'sort_field' => $sort_field,
+      'sort_order' => $sort_order,
+      'start_record' => $start_record,
+      'stop_record' => $stop_record,
+      'parent_id' => $parent_id,
+      'parent_id_field' => $parent_id_field,
+    );
+
+    if ($search) {
+      $query_params['search_value'] = $search;
+    }
+
+    $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
+
+    return $this->json($data);
+  }
+
     /**
-     * @Route("/admin/datatables_browse_recent_projects/", name="browse_recent_projects", methods="POST")
+     * @Route("/admin/datatables_browse_recent_projects/", name="browse_recent_projects", methods={"GET","POST"})
      *
      * Browse recent projects
      *
@@ -75,7 +126,7 @@ class AdminController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_recent_projects(Request $request, SubjectsController $subjects)
+    public function datatablesBrowseRecentProjects(Request $request)
     {
         $data = array();
         $req = $request->request->all();
@@ -105,14 +156,6 @@ class AdminController extends Controller
 
         $data = $this->repo_storage_controller->execute('getDatatableProject', $query_params);
 
-        // Get the subjects count
-        if(!empty($data['aaData'])) {
-          foreach ($data['aaData'] as $key => $value) {
-            $project_subjects = $subjects->get_subjects($value['project_repository_id']);
-            $data['aaData'][$key]['subjects_count'] = count($project_subjects);
-          }
-        }
-
       return $this->json($data);
     }
 
@@ -126,7 +169,7 @@ class AdminController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_recent_subjects(Request $request, ItemsController $items)
+    public function datatablesBrowseRecentSubjects(Request $request, ItemController $items)
     {
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -147,14 +190,6 @@ class AdminController extends Controller
 
         $data = $this->repo_storage_controller->execute('getDatatableSubject', $query_params); //@todo or getDatatableSubjectItem ?
 
-        // Get the items count
-        if(!empty($data['aaData'])) {
-            foreach ($data['aaData'] as $key => $value) {
-                $subject_items = $items->get_items($value['subject_repository_id']);
-                $data['aaData'][$key]['items_count'] = count($subject_items);
-            }
-        }
-
         return $this->json($data);
     }
 
@@ -168,7 +203,7 @@ class AdminController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_get_favorites(Connection $conn, Request $request)
+    public function datatablesGetFavorites(Connection $conn, Request $request)
     {
         $sort = '';
         $search_sql = '';
@@ -245,7 +280,7 @@ class AdminController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function add_favorite(Connection $conn, Request $request)
+    public function addFavorite(Connection $conn, Request $request)
     {
         $req = $request->request->all();
         $last_inserted_id = false;
@@ -277,7 +312,7 @@ class AdminController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function remove_favorite(Connection $conn, Request $request)
+    public function removeFavorite(Connection $conn, Request $request)
     {
         $req = $request->request->all();
 
@@ -302,7 +337,7 @@ class AdminController extends Controller
      * @param   object $conn  Database connection object
      * @return  void
      */
-    public function create_favorites_table($conn)
+    public function createFavoritesTable($conn)
     {
         $statement = $conn->prepare("CREATE TABLE IF NOT EXISTS `favorite` (
           `id` int(11) unsigned NOT NULL AUTO_INCREMENT,

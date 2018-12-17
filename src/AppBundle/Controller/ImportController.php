@@ -23,10 +23,6 @@ use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\PhpExecutableFinder;
 
-use AppBundle\Controller\ItemsController;
-use AppBundle\Controller\DatasetsController;
-use AppBundle\Controller\ModelController;
-
 // use Psr\Log\LoggerInterface;
 
 use AppBundle\Form\UploadsParentPickerForm;
@@ -37,6 +33,17 @@ use AppBundle\Utils\AppUtilities;
 
 use AppBundle\Service\RepoFileTransfer;
 use AppBundle\Service\RepoProcessingService;
+
+use AppBundle\Form\SubjectForm;
+use AppBundle\Entity\Subject;
+
+use AppBundle\Form\ItemForm;
+use AppBundle\Entity\Item;
+use AppBundle\Controller\ItemController;
+
+use AppBundle\Form\CaptureDatasetForm;
+use AppBundle\Entity\CaptureDataset;
+use AppBundle\Controller\CaptureDatasetController;
 
 class ImportController extends Controller
 {
@@ -57,9 +64,8 @@ class ImportController extends Controller
 
     private $repo_storage_controller;
     private $tokenStorage;
-    private $itemsController;
     private $datasetsController;
-    private $modelsController;
+    private $itemsController;
     private $fileTransfer;
 
     /**
@@ -76,16 +82,15 @@ class ImportController extends Controller
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, ItemsController $itemsController, DatasetsController $datasetsController, ModelController $modelsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, CaptureDatasetController $datasetsController, ItemController $itemsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
         $this->tokenStorage = $tokenStorage;
 
-        $this->itemsController = $itemsController;
         $this->datasetsController = $datasetsController;
-        $this->modelsController = $modelsController;
+        $this->itemsController = $itemsController;
         $this->fileTransfer = $fileTransfer;
         $this->processing = $processing;
         $this->external_file_storage_on = $external_file_storage_on;
@@ -100,65 +105,32 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/import", name="import_summary_dashboard", methods="GET")
+     * @Route("/admin/ingest", name="import_summary_dashboard", methods="GET")
+     *
+     * Browse Ingests
      *
      * @param object $conn Database connection object
      * @param object $request Symfony's request object
      */
-    public function import_summary_dashboard(Connection $conn, Request $request)
+    public function importSummaryDashboard(Connection $conn, Request $request)
     {
-        // Patch vendor overrides.
-        $this->u->patchVendorOverrides();
-
-        $service_error = false;
-        $obj = new UploadsParentPicker();
-
-        // If the external file storage service is turned on in parameters.yml,
-        // check to see if the external storage service is accessible.
-        if($this->external_file_storage_on) {
-          // TODO: Send email alerts to admins?
-          // Set up flysystem.
-          $flysystem = $this->container->get('oneup_flysystem.assets_filesystem');
-          // Transfer files.
-          $result = $this->fileTransfer->checkExternalStorage('checker', $flysystem);
-          // If errors exist, serve out flash notifications.
-          if (!empty($result)) {
-            foreach ($result as $key => $value) {
-              if (isset($value['errors'])) {
-                $this->addFlash('error', '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).');
-                $service_error = true;
-                foreach ($value['errors'] as $ekey => $evalue) {
-                  $this->addFlash('error', $evalue);
-                }
-              }
-            }
-          }
-        }
-
-        // Create the parent record picker typeahead form.
-        $form = $this->createForm(UploadsParentPickerForm::class, $obj);
-        $accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
-
-        return $this->render('import/import_summary_dashboard.html.twig', array(
-            'page_title' => 'Uploads',
-            'form' => $form->createView(),
-            'accepted_file_types' => $accepted_file_types,
-            'service_error' => $service_error,
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-        ));
+      return $this->render('import/import_summary_dashboard.html.twig', array(
+          'page_title' => 'Browse Ingests',
+          'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
+      ));
     }
 
     /**
-     * @Route("/admin/import/datatables_browse_imports", name="imports_browse_datatables", methods="POST")
+     * @Route("/admin/ingest/datatables_browse_imports", name="imports_browse_datatables", methods="POST")
      *
-     * Browse Imports
+     * Browse Ingests Datatable
      *
      * Run a query to retrieve all imports in the database.
      *
      * @param Request $request Symfony's request object
      * @return \Symfony\Component\HttpFoundation\JsonResponse The query result
      */
-    public function datatables_browse_imports(Request $request)
+    public function datatablesBrowseImports(Request $request)
     {
       $req = $request->request->all();
       $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -197,21 +169,234 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/execute_jobs/{uuid}/{parent_project_id}/{parent_record_id}/{parent_record_type}", name="execute_jobs", defaults={"uuid" = null, "parent_project_id" = null, "parent_record_id" = null, "parent_record_type" = null}, methods="GET")
+     * @Route("/admin/simple_ingest", name="simple_ingest", methods="GET")
+     *
+     * Simple Ingest
+     *
+     * @param object $conn Database connection object
+     * @param object $request Symfony's request object
+     */
+    public function simpleIngest(Connection $conn, Request $request)
+    {
+        // Patch vendor overrides.
+        $this->u->patchVendorOverrides();
+
+        $service_error = false;
+        $obj = new UploadsParentPicker();
+
+        // If the external file storage service is turned on in parameters.yml,
+        // check to see if the external storage service is accessible.
+        if($this->external_file_storage_on) {
+          // TODO: Send email alerts to admins?
+          // Set up flysystem.
+          $flysystem = $this->container->get('oneup_flysystem.assets_filesystem');
+          // Transfer files.
+          $result = $this->fileTransfer->checkExternalStorage('checker', $flysystem);
+          // If errors exist, serve out flash notifications.
+          if (!empty($result)) {
+            foreach ($result as $key => $value) {
+              if (isset($value['errors'])) {
+                $this->addFlash('error', '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).');
+                $service_error = true;
+                foreach ($value['errors'] as $ekey => $evalue) {
+                  $this->addFlash('error', $evalue);
+                }
+              }
+            }
+          }
+        }
+
+        // Create the subject form
+        $subject = new Subject();
+        $subject->access_model_purpose = NULL;
+        $subject->inherit_publication_default = '';
+        $subject->api_publication_options = array(
+          'Published, Discoverable' => '11',
+          'Published, Not Discoverable' => '10',
+          'Not Published' => '00',
+        );
+        // Get values for options.
+        $model_purpose_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_purpose',
+          'value_field' => 'model_purpose_description',
+          'id_field' => 'model_purpose_id',
+          ));
+        $model_face_count_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_face_count',
+          'value_field' => 'model_face_count',
+          'id_field' => 'model_face_count_id',
+        ));
+        $uv_map_size_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'uv_map_size',
+          'value_field' => 'uv_map_size',
+          'id_field' => 'uv_map_size_id',
+        ));
+        $subject->model_face_count_options = $model_face_count_options;
+        $subject->uv_map_size_options = $uv_map_size_options;
+        $subject->model_purpose_options = $model_purpose_options;
+
+        $subject = (array)$subject;
+        
+        $subject_form = $this->createForm(SubjectForm::class, $subject);
+
+        // Create the item form
+        $item = new Item();
+        $item->access_model_purpose = NULL;
+        $item->inherit_publication_default = '';
+
+        // Get data from lookup tables.
+        $item->item_type_lookup_options = $this->itemsController->getItemTypes();
+        $item->api_publication_options = array(
+          'Published, Discoverable' => '11',
+          'Published, Not Discoverable' => '10',
+          'Not Published' => '00',
+        );
+        $model_purpose_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_purpose',
+          'value_field' => 'model_purpose_description',
+          'id_field' => 'model_purpose_id',
+        ));
+        $model_face_count_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_face_count',
+          'value_field' => 'model_face_count',
+          'id_field' => 'model_face_count_id',
+        ));
+        $uv_map_size_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'uv_map_size',
+          'value_field' => 'uv_map_size',
+          'id_field' => 'uv_map_size_id',
+        ));
+
+        $item->model_face_count_options = $model_face_count_options;
+        $item->uv_map_size_options = $uv_map_size_options;
+        $item->model_purpose_options = $model_purpose_options;
+
+        $item_form = $this->createForm(ItemForm::class, $item);
+
+        // Create the dataset form.
+        $dataset = new CaptureDataset();
+        $dataset->access_model_purpose = NULL;
+        $dataset->inherit_publication_default = '';
+
+        // Get data from lookup tables.
+        $dataset->capture_methods_lookup_options = $this->datasetsController->getCaptureMethods();
+        $dataset->dataset_types_lookup_options = $this->datasetsController->getDatasetTypes();
+        $dataset->item_position_types_lookup_options = $this->datasetsController->getItemPositionTypes();
+        $dataset->focus_types_lookup_options = $this->datasetsController->getFocusTypes();
+        $dataset->light_source_types_lookup_options = $this->datasetsController->getLightSourceTypes();
+        $dataset->background_removal_methods_lookup_options = $this->datasetsController->getBackgroundRemovalMethods();
+        $dataset->camera_cluster_types_lookup_options = $this->datasetsController->getCameraClusterTypes();
+        $dataset->calibration_object_type_options = $this->datasetsController->getCalibrationObjectTypes();
+
+        $dataset->api_publication_options = array(
+          'Published, Discoverable' => '11',
+          'Published, Not Discoverable' => '10',
+          'Not Published' => '00',
+        );
+        $model_purpose_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_purpose',
+          'value_field' => 'model_purpose_description',
+          'id_field' => 'model_purpose_id',
+        ));
+        $model_face_count_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'model_face_count',
+          'value_field' => 'model_face_count',
+          'id_field' => 'model_face_count_id',
+        ));
+        $uv_map_size_options = $this->repo_storage_controller->execute('getDataForLookup', array(
+          'table_name' => 'uv_map_size',
+          'value_field' => 'uv_map_size',
+          'id_field' => 'uv_map_size_id',
+        ));
+
+        $dataset->model_face_count_options = $model_face_count_options;
+        $dataset->uv_map_size_options = $uv_map_size_options;
+        $dataset->model_purpose_options = $model_purpose_options;
+
+        // Create the form
+        $form = $this->createForm(CaptureDatasetForm::class, $dataset);
+
+        $accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
+
+        return $this->render('import/simple_ingest.html.twig', array(
+            'page_title' => 'Simple Ingest',
+            'form' => $form->createView(),
+            'subject_form' => $subject_form->createView(),
+            'item_form' => $item_form->createView(),
+            'accepted_file_types' => $accepted_file_types,
+            'service_error' => $service_error,
+            'dataset_data' => $dataset,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
+        ));
+    }
+
+    /**
+     * @Route("/admin/bulk_ingest", name="bulk_ingest", methods="GET")
+     *
+     * Bulk Ingest
+     *
+     * @param object $conn Database connection object
+     * @param object $request Symfony's request object
+     */
+    public function bulkIngest(Connection $conn, Request $request)
+    {
+        // Patch vendor overrides.
+        $this->u->patchVendorOverrides();
+
+        $service_error = false;
+        $obj = new UploadsParentPicker();
+
+        // If the external file storage service is turned on in parameters.yml,
+        // check to see if the external storage service is accessible.
+        if($this->external_file_storage_on) {
+          // TODO: Send email alerts to admins?
+          // Set up flysystem.
+          $flysystem = $this->container->get('oneup_flysystem.assets_filesystem');
+          // Transfer files.
+          $result = $this->fileTransfer->checkExternalStorage('checker', $flysystem);
+          // If errors exist, serve out flash notifications.
+          if (!empty($result)) {
+            foreach ($result as $key => $value) {
+              if (isset($value['errors'])) {
+                $this->addFlash('error', '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).');
+                $service_error = true;
+                foreach ($value['errors'] as $ekey => $evalue) {
+                  $this->addFlash('error', $evalue);
+                }
+              }
+            }
+          }
+        }
+
+        // Create the parent record picker typeahead form.
+        $form = $this->createForm(UploadsParentPickerForm::class, $obj);
+        $accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
+
+        return $this->render('import/bulk_ingest.html.twig', array(
+            'page_title' => 'Bulk Ingest',
+            'form' => $form->createView(),
+            'accepted_file_types' => $accepted_file_types,
+            'service_error' => $service_error,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
+        ));
+    }
+
+    /**
+     * @Route("/admin/execute_jobs/{uuid}/{project_id}/{record_id}/{record_type}", name="execute_jobs", defaults={"uuid" = null, "project_id" = null, "record_id" = null, "record_type" = null}, methods="GET")
      *
      * @param int $uuid Job ID
-     * @param int $parent_project_id Parent Project ID
-     * @param int $parent_record_id Parent Record ID
-     * @param int $parent_record_type Parent Record Type
+     * @param int $project_id Parent Project ID
+     * @param int $record_id Parent Record ID
+     * @param int $record_type Parent Record Type
      * @param object $kernel KernelInterface class
      */
-    public function execute_jobs($uuid, $parent_project_id, $parent_record_id, $parent_record_type, KernelInterface $kernel) {
+    public function executeJobs($uuid, $project_id, $record_id, $record_type, KernelInterface $kernel) {
 
       $input = array(
         'uuid' => $uuid,
-        'parent_project_id' => $parent_project_id,
-        'parent_record_id' => $parent_record_id,
-        'parent_record_type' => $parent_record_type,
+        'project_id' => $project_id,
+        'record_id' => $record_id,
+        'record_type' => $record_type,
       );
 
       // Hack for XAMPP on Windows.
@@ -292,23 +477,23 @@ class ImportController extends Controller
     }
     
     /**
-     * @Route("/admin/import/{uuid}/{parent_project_id}/{parent_record_id}/{parent_record_type}", name="import_summary_details", defaults={"uuid" = null, "parent_project_id" = null, "parent_record_id" = null, "parent_record_type" = null}, methods="GET")
+     * @Route("/admin/ingest/{uuid}/{project_id}/{record_id}/{record_type}", name="import_summary_details", defaults={"uuid" = null, "project_id" = null, "record_id" = null, "record_type" = null}, methods="GET")
      *
      * @param int $uuid Job ID
-     * @param int $parent_project_id Parent Project ID
-     * @param int $parent_record_id Parent Record ID
-     * @param int $parent_record_type Parent Record Type
+     * @param int $project_id Parent Project ID
+     * @param int $record_id Parent Record ID
+     * @param int $record_type Parent Record Type
      * @param object $conn Database connection object
      * @param object $project ProjectsController class
      * @param object $request Symfony's request object
      */
-    public function import_summary_details($uuid, $parent_project_id, $parent_record_id, $parent_record_type, Connection $conn, Request $request)
+    public function importSummaryDetails($uuid, $project_id, $record_id, $record_type, Connection $conn, Request $request)
     {
 
       // $this->u->dumper($uuid,0);
-      // $this->u->dumper($parent_project_id,0);
-      // $this->u->dumper($parent_record_id,0);
-      // $this->u->dumper($parent_record_type);
+      // $this->u->dumper($project_id,0);
+      // $this->u->dumper($record_id,0);
+      // $this->u->dumper($record_type);
 
       $project = [];
 
@@ -318,9 +503,9 @@ class ImportController extends Controller
         if (empty($job_data)) throw $this->createNotFoundException('The Job record does not exist');
       }
 
-      if (!empty($parent_project_id)) {
+      if (!empty($project_id)) {
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $parent_project_id));
+        $project = $this->repo_storage_controller->execute('getProject', array('project_id' => $project_id));
         if (!$project) throw $this->createNotFoundException('The Project record does not exist');
       }
 
@@ -340,9 +525,9 @@ class ImportController extends Controller
           // Set the parameters for the app:validate-assets command (passed to client side, then executed asynchronously via the /admin/execute_jobs route)
           $project['execute_jobs_input'] = array(
             'uuid' => $job_data['uuid'],
-            'parent_project_id' => $parent_project_id,
-            'parent_record_id' => $parent_record_id,
-            'parent_record_type' => $parent_record_type,
+            'project_id' => $project_id,
+            'record_id' => $record_id,
+            'record_type' => $record_type,
           );
           
         }
@@ -377,7 +562,7 @@ class ImportController extends Controller
           $finder = new Finder();
           $finder->files()->name('*.csv');
           foreach ($finder->in($dir) as $file) {
-            $project['csv'][$file->getBasename()] = $this->construct_import_data($dir, $file->getBasename());
+            $project['csv'][$file->getBasename()] = $this->constructImportData($dir, $file->getBasename());
             $project['csv_row_count'][$file->getBasename()] = count($project['csv'][$file->getBasename()]);
           }
           // If there's csv data, encode to JSON so it can be passed on to Handsontables (JavaScript).
@@ -563,7 +748,7 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/import/{uuid}/datatables_browse_import_details", name="import_details_browse_datatables", methods="POST")
+     * @Route("/admin/ingest/{uuid}/datatables_browse_import_details", name="import_details_browse_datatables", methods="POST")
      *
      * Browse Import Details
      *
@@ -573,7 +758,7 @@ class ImportController extends Controller
      * @param Request $request Symfony's request object
      * @return \Symfony\Component\HttpFoundation\JsonResponse The query result
      */
-    public function datatables_browse_import_details($uuid, Request $request)
+    public function datatablesBrowseImportDetails($uuid, Request $request)
     {
       $req = $request->request->all();
       $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -609,12 +794,12 @@ class ImportController extends Controller
     }
 
     /**
-     * @Route("/admin/import/get_parent_records", name="get_parent_records", methods="POST")
+     * @Route("/admin/ingest/get_parent_records", name="get_parent_records", methods="POST")
      *
      * @param Request $request Symfony's request object
      * @return \Symfony\Component\HttpFoundation\JsonResponse The query result
      */
-    public function get_parent_records(Request $request)
+    public function getParentRecords(Request $request)
     {
       $data = $params = array();
 
@@ -638,19 +823,19 @@ class ImportController extends Controller
         switch($value) {
           case 'subject':
             $params['field_name'] = 'subject_name';
-            $params['id_field_name'] = 'subject_repository_id';
+            $params['id_field_name'] = 'subject_id';
             break;
           case 'item':
             $params['field_name'] = 'item_description';
-            $params['id_field_name'] = 'item_repository_id';
+            $params['id_field_name'] = 'item_id';
             break;
           case 'capture_dataset':
             $params['field_name'] = 'capture_dataset_name';
-            $params['id_field_name'] = 'capture_dataset_repository_id';
+            $params['id_field_name'] = 'capture_dataset_id';
             break;
           default: // project
             $params['field_name'] = 'project_name';
-            $params['id_field_name'] = 'project_repository_id';
+            $params['id_field_name'] = 'project_id';
         }
 
         // Query the database.
@@ -690,13 +875,13 @@ class ImportController extends Controller
 
     
     /**
-     * @param string $parent_record_type The record type (e.g. subject)
+     * @param string $record_type The record type (e.g. subject)
      * @return string
      */
-    public function get_job_type($parent_record_type = null)
+    public function getJobType($record_type = null)
     {
 
-      switch ($parent_record_type) {
+      switch ($record_type) {
         case 'project':
           $data = 'subjects';
           break;
@@ -728,7 +913,7 @@ class ImportController extends Controller
      * @param string $record_type The record type (e.g. subject)
      * @return JSON
      */
-    public function create_job($base_record_id, $record_type, Request $request)
+    public function createJob($base_record_id, $record_type, Request $request)
     {
       $job_id = null;
       $parent_records = [];
@@ -741,22 +926,22 @@ class ImportController extends Controller
         ));
       } else {
         // If the $record_type is a 'project', just use the $base_record_id, since that's the project ID.
-        $parent_records['project_repository_id'] = $base_record_id;
+        $parent_records['project_id'] = $base_record_id;
       }
 
       // If there are no results for a parent Project record ID, throw a createNotFoundException (404).
       if (empty($parent_records)) throw $this->createNotFoundException('Could not establish the parent project ID');
 
-      if (!empty($parent_records) && isset($parent_records['project_repository_id'])) {
+      if (!empty($parent_records) && isset($parent_records['project_id'])) {
         // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-        $project = $this->repo_storage_controller->execute('getProject', array('project_repository_id' => $parent_records['project_repository_id']));
+        $project = $this->repo_storage_controller->execute('getProject', array('project_id' => $parent_records['project_id']));
         if (!$project) throw $this->createNotFoundException('The Project record does not exist');
       }
 
       if (!empty($project)) {
         // Get the job type (what's being ingested?).
-        $job_type = $this->get_job_type($record_type);
-        $uuid = uniqid('3df_', true);
+        $job_type = $this->getJobType($record_type);
+        $uuid = $this->u->createUuid();
         // Insert a record into the job table.
         // TODO: Feed the 'job_label' and 'job_type' to the log leveraging fields from a form submission in the UI?
         $job_id = $this->repo_storage_controller->execute('saveRecord', array(
@@ -764,7 +949,7 @@ class ImportController extends Controller
           'user_id' => $this->getUser()->getId(),
           'values' => array(
             'uuid' => $uuid,
-            'project_id' => (int)$project['project_repository_id'],
+            'project_id' => (int)$project['project_id'],
             'job_label' => 'Metadata Import: "' . $project['project_name'] . '"',
             'job_type' => $job_type . ' metadata import',
             'job_status' => 'uploading',
@@ -775,7 +960,7 @@ class ImportController extends Controller
         ));
       }
 
-      return $this->json(array('jobId' => (int)$job_id, 'uuid' => $uuid, 'projectId' => (int)$project['project_repository_id']));
+      return $this->json(array('jobId' => (int)$job_id, 'uuid' => $uuid, 'projectId' => (int)$project['project_id']));
     }
 
     /**
@@ -787,7 +972,7 @@ class ImportController extends Controller
      * @param object $request Symfony's request object
      * @return bool
      */
-    public function set_job_status($job_id, $status, Request $request)
+    public function setJobStatus($job_id, $status, Request $request)
     {
 
       // If $job_id is empty, throw a createNotFoundException (404).
@@ -810,7 +995,7 @@ class ImportController extends Controller
      * @param object $request Symfony's request object
      * @return string
      */
-    public function get_job_status($uuid = null, Request $request)
+    public function getJobStatus($uuid = null, Request $request)
     {
       $result = array();
 
@@ -831,7 +1016,7 @@ class ImportController extends Controller
      * @param string $filename  The file name
      * @return array  Import result and/or any messages
      */
-    public function construct_import_data($job_id_directory = null, $filename = null)
+    public function constructImportData($job_id_directory = null, $filename = null)
     {
 
       $json_object = array();
@@ -880,7 +1065,7 @@ class ImportController extends Controller
      * @param object $request Symfony's request object
      * @return array
      */
-    public function purge_imported_data_and_files($uuid, Connection $conn, Request $request)
+    public function purgeImportedDataAndFiles($uuid, Connection $conn, Request $request)
     {
       if (empty($uuid)) throw $this->createNotFoundException('UUID not provided');
 
@@ -921,7 +1106,7 @@ class ImportController extends Controller
         // The message
         $this->addFlash('message', 'Job data and files have been successfully removed' . $data);
         // Redirect to the main Uploads page.
-        return $this->redirect('/admin/import');
+        return $this->redirect('/admin/ingest');
       }
     }
 
@@ -930,7 +1115,7 @@ class ImportController extends Controller
      *
      * @param object $request Symfony's request object
      */
-    public function remove_jobs_from_processing_server(Request $request)
+    public function removeJobsFromProcessingServer(Request $request)
     {
 
       $jobs = array();
@@ -938,7 +1123,7 @@ class ImportController extends Controller
       $message = 'No processing jobs found to remove.';
 
       // Get the machine state.
-      $jobs = $this->processing->get_jobs();
+      $jobs = $this->processing->getJobs();
 
       // Decode the JSON.
       $json_decoded = json_decode($jobs['result'], true);
@@ -946,7 +1131,7 @@ class ImportController extends Controller
       if (!empty($json_decoded)) {
         // Loop through jobs and delete each one by ID.
         foreach ($json_decoded as $key => $value) {
-          $this->processing->delete_job($value['id']);
+          $this->processing->deleteJob($value['id']);
         }
         $message_type = 'message';
         $message = 'All processing jobs have been removed from the processing server.';
@@ -965,7 +1150,7 @@ class ImportController extends Controller
      *
      * @param object $request Symfony's request object
      */
-    public function initialize_processing_job(Request $request)
+    public function initializeProcessingJob(Request $request)
     {
 
       $data = $processing_results = array();
@@ -979,12 +1164,12 @@ class ImportController extends Controller
       $local_path = str_replace('/', DIRECTORY_SEPARATOR, $local_path);
       // Need to pass the parent record type and ID so we can associate a processing job with something.
       $parent_record_data = array(
-        'parent_record_id' => 7,
-        'parent_record_type' => 'model',
+        'record_id' => 7,
+        'record_type' => 'model',
       );
 
       // Initialize the processing job.
-      $data = $this->processing->initialize_job('inspect-mesh', $params, $local_path, $this->getUser()->getId(), $parent_record_data, $filesystem);
+      $data = $this->processing->initializeJob('inspect-mesh', $params, $local_path, $this->getUser()->getId(), $parent_record_data, $filesystem);
 
       // Send a message to the UI.
       $this->addFlash('message', 'Initialized processing job');
@@ -1004,7 +1189,7 @@ class ImportController extends Controller
      *
      * @param object $request Symfony's request object
      */
-    public function get_processing_job($job_id, Request $request)
+    public function getProcessingJob($job_id, Request $request)
     {
       $data = $processing_results = array();
 
@@ -1018,14 +1203,14 @@ class ImportController extends Controller
         $local_path = $this->uploads_directory . '3df_5bd4c0846fd3f0.72669883/testupload04-1model/data/1/nmnh-usnm_v_512384522-skull-master_model-2018_10_22.ply';
 
         // Get processing job status from the processing service.
-        $result = $this->processing->get_job( $job_id );
+        $result = $this->processing->getJob( $job_id );
 
         // Decode the returned JSON to a PHP array.
         $data = json_decode($result['result'], true);
 
         // Get processing results
         if (in_array($data['state'], array('error', 'done'))) {
-          $processing_results = $this->processing->get_processing_results($data['id'], $this->getUser()->getId(), $local_path, $filesystem);
+          $processing_results = $this->processing->getProcessingResults($data['id'], $this->getUser()->getId(), $local_path, $filesystem);
         }
 
       }
@@ -1036,5 +1221,41 @@ class ImportController extends Controller
         'data' => $data,
         'processing_results' => $processing_results,
       ));
+    }
+
+    /**
+     * Get Processing Job
+     *
+     * @Route("/admin/post_job_import_record", name="post_job_import_record", methods="POST")
+     *
+     * @param object $request Symfony's request object
+     */
+    public function postJobImportRecord(Request $request)
+    {
+      $response = $this->json(array());
+      $req = $request->request->all();
+      
+      if (!empty($req['record_table']) && !empty($req['job_uuid']) && !empty($req['project_id']) && !empty($req['capture_dataset_id'])) {
+
+        // Get the job data (for the job_id).
+        $job_data = $this->repo_storage_controller->execute('getJobData', array($req['job_uuid']));
+
+        // Insert into the job_import_record table
+        $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_import_record',
+          'user_id' => $this->getUser()->getId(),
+          'values' => array(
+            'job_id' => $job_data['job_id'],
+            'record_id' => $req['capture_dataset_id'],
+            'project_id' => (int)$req['project_id'],
+            'record_table' => $req['record_table'],
+            'description' => null,
+          )
+        ));
+        // Return the $job_import_record_id
+        if ($job_import_record_id) $response = $this->json(array('id' => $job_import_record_id));
+      }
+
+      return $response;
     }
 }
