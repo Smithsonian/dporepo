@@ -65,7 +65,6 @@ class WorkflowController extends Controller
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR  . 'web';
   }
 
-
   /**
    * @Route("/workflow/status/set", name="workflow_status_set", methods="POST")
    * Given a record_type and record_id, set the status details as indicated.
@@ -99,11 +98,9 @@ class WorkflowController extends Controller
       'user_id' => $user_id,
     );
 
-    
     $data = $this->repo_storage_controller->execute('setWorkflowProcessingStatus', $query_params);
 
     return $this->json($data);
-
   }
 
   /**
@@ -114,7 +111,6 @@ class WorkflowController extends Controller
    */
   public function getWorkflowStatus(Request $request)
   {
-
     $req = $request->query->all();
 
     $record_type = !empty($req['record_type']) ? $req['record_type'] : '';
@@ -125,11 +121,9 @@ class WorkflowController extends Controller
       'record_id' => $record_id,
     );
 
-    
     $data = $this->repo_storage_controller->execute('getWorkflowProcessingStatus', $query_params);
 
     return $this->json($data);
-
   }
 
 
@@ -149,8 +143,6 @@ class WorkflowController extends Controller
     $record_values = !empty($req['record_values']) ? $req['record_values'] : array();
 
     $uid = is_object($this->getUser()) ? $this->getUser()->getId() : 0;
-
-    
 
     $id = $this->repo_storage_controller->execute('saveRecord', array(
       'base_table' => $record_type,
@@ -198,23 +190,16 @@ class WorkflowController extends Controller
     }
 
     return $this->json($data);
-
   }
-    /**
+
+  /**
    * @Route("/admin/batch/detail", name="batch_detail_processing", methods="POST")
    * @param Request $request
    */
   public function batchDetailProcessing(Request $request) {
     $recipeID = $request->request->get('recipeID');
     $recipe = $this->processing->getRecipeDetails($recipeID);
-    /*
-    recipes when vpn is not accesible
-    if ($recipe['result'] == false) {
-      $recipe['result']['7ce5c5b1-00d2-4d7f-bebc-ea99ae5f6640'] = '{"id":"7ce5c5b1-00d2-4d7f-bebc-ea99ae5f6640","name":"decimate","description":"Decimate high poly mesh","version":"4","start":"pickup","parameterSchema":{"type":"object","properties":{"highPolyMeshFile":{"type":"string","minLength":1,"format":"file"},"pickupPath":{"type":"string","minLength":1},"deliveryPath":{"type":"string","minLength":1},"transportMethod":{"type":"string","enum":["none","local"],"default":"none"},"inspectMesh":{"type":"boolean","default":false},"numFaces":{"type":"integer","minimum":100,"default":125000},"tool":{"type":"string","enum":["Meshlab","Mops"],"default":"Meshlab"}},"required":["highPolyMeshFile","numFaces"],"additionalProperties":false},"steps":{"pickup":{"task":"Pickup","description":"Fetch input files from client","pre":{"baseName":"$baseName(highPolyMeshFile)","baseMeshName":"$baseMeshName(highPolyMeshFile, numFaces)"},"parameters":{"method":"transportMethod","path":"$firstTrue(pickupPath, $currentDir)","files":{"highPolyMeshFile":"highPolyMeshFile"}},"success":"inspectMesh ? inspect-highpoly : decimate","failure":"$failure"},"inspect-highpoly":{"task":"InspectMesh","description":"Inspect high poly mesh using Meshlab","pre":{"deliverables":{"highPolyReportFile":"baseName & -highpoly-inspection.json"}},"parameters":{"meshFile":"highPolyMeshFile","reportFile":"deliverables.highPolyReportFile"},"success":"decimate","failure":"$failure"},"decimate":{"task":"DecimateMesh","description":"Decimate high poly mesh","pre":{"deliverables":{"decimatedMeshFile":"baseMeshName & -decimated- & $lowercase(tool) & .obj"}},"parameters":{"inputMeshFile":"highPolyMeshFile","outputMeshFile":"deliverables.decimatedMeshFile","numFaces":"numFaces","cleanup":true,"preserveTexCoords":false,"preserveBoundaries":true,"tool":"tool"},"success":"inspectMesh ? inspect-decimated : delivery","failure":"$failure"},"inspect-decimated":{"task":"InspectMesh","pre":{"deliverables":{"decimatedReportFile":"baseMeshName & -decimated-inspection.json"}},"parameters":{"meshFile":"deliverables.decimatedMeshFile","reportFile":"deliverables.decimatedReportFile"},"success":"delivery","failure":"$failure"},"delivery":{"task":"Delivery","description":"Send result files back to client","parameters":{"method":"transportMethod","path":"$firstTrue(deliveryPath, pickupPath, $currentDir)","files":"deliverables"},"success":"$success","failure":"$failure"}}}';
-      $recipe['result']['e06ade8e-b36a-4aa2-9145-6616ede1e5fa'] = '{"id":"e06ade8e-b36a-4aa2-9145-6616ede1e5fa","name":"rc-to-hd","description":"[DRAFT!] Converts RC output files to HD web assets","version":"1","start":"log","parameterSchema":{"type":"object","properties":{"someFile":{"type":"string","minLength":1,"format":"file"},"pickupPath":{"type":"string","minLength":1},"deliveryPath":{"type":"string","minLength":1},"transportMethod":{"type":"string","enum":["none","local"],"default":"none"}},"required":["someFile"],"additionalProperties":false},"steps":{"log":{"task":"Log","description":"Enable logging services","parameters":{"logToConsole":true,"reportFile":"$baseName(someFile) & -report.json"},"success":"pickup","failure":"$failure"},"pickup":{"task":"Pickup","description":"Fetch input files from client","parameters":{"method":"transportMethod","path":"$firstTrue(pickupPath, $currentDir)","files":{"someFile":"someFile"}},"success":"process","failure":"$failure"},"process":{"task":"Dummy","description":"Dummy Task","pre":{},"parameters":{"outcome":"success","duration":1},"post":{},"success":"delivery","failure":"$failure"},"delivery":{"task":"Delivery","description":"Send result files back to client","pre":{"deliverables":{"someFile":"someFile"}},"parameters":{"method":"transportMethod","path":"$firstTrue(deliveryPath, pickupPath, $currentDir)","files":"deliverables"},"success":"$success","failure":"$failure"}}}';
-      $recipe['result']['ee77ee05-d832-4729-9914-18a96939f205'] =  '{"id":"ee77ee05-d832-4729-9914-18a96939f205","name":"inspect-mesh","description":"Inspects a mesh and returns a report with results","version":"1","start":"log","parameterSchema":{"type":"object","properties":{"meshFile":{"type":"string","minLength":1,"format":"file"},"inspectionTool":{"type":"string","enum":["Meshlab","MeshSmith"],"default":"Meshlab"},"pickupPath":{"type":"string","minLength":1},"deliveryPath":{"type":"string","minLength":1},"transportMethod":{"type":"string","enum":["none","local"],"default":"none"}},"required":["meshFile"],"additionalProperties":false},"steps":{"log":{"task":"Log","pre":{"baseName":"$baseName(meshFile)","delivery":{"inspectionReport":"baseName & -inspection.json"}},"parameters":{"logToConsole":true,"logFile":"baseName & -log.txt","reportFile":"baseName & -report.json"},"success":"pickup","failure":"$failure"},"pickup":{"task":"Pickup","description":"Get input files from client","parameters":{"method":"transportMethod","path":"$firstTrue(pickupPath, $currentDir)","files":{"meshFile":"meshFile"}},"success":"inspect","failure":"$failure"},"inspect":{"task":"InspectMesh","description":"Validate mesh and inspect topology","parameters":{"meshFile":"meshFile","reportFile":"delivery.inspectionReport","tool":"inspectionTool"},"post":{"maxRayDistance":"$max($result.inspection.scene.geometry.size) * 0.01"},"success":"delivery","failure":"$failure"},"delivery":{"task":"Delivery","description":"Send result files back to client","parameters":{"method":"transportMethod","path":"$firstTrue(deliveryPath, pickupPath, $currentDir)","files":"delivery"},"success":"$success","failure":"$failure"}}}';
-    }
-    */
+    
     $recipeArray = [];
     if (!empty($recipe['result'])) {
       $recipeArray = json_decode($recipe['result'], true);
@@ -314,13 +299,6 @@ class WorkflowController extends Controller
         'model_id' => $model_id,
     );
 
-    // getting datasets
-    /*$datasets = $this->repo_storage_controller->execute('getModelDetail', $query_params);
-    if (count($datasets['capture_dataset']) > 0) {
-      $datasets = $datasets['capture_dataset'];
-    }
-    $batch['batch_processing_assests_guid_options'][$datasets['capture_dataset_name']] = $datasets['capture_dataset_id'].",".$datasets['capture_dataset_name'];
-    */
     $files = $this->repo_storage_controller->execute('getModelFiles', $query_params);
 
     // If no model files are found, throw a createNotFoundException (404).
@@ -328,12 +306,6 @@ class WorkflowController extends Controller
 
     $contacts = $this->repo_storage_controller->execute('getPointofContact');
     
-    /*
-    recipes when vpn is not accesible
-    if ($results['result'] == false) {
-      $results['result'] = '[{"id":"7ce5c5b1-00d2-4d7f-bebc-ea99ae5f6640","name":"decimate","description":"Decimate high poly mesh","version":"4"},{"id":"ee77ee05-d832-4729-9914-18a96939f205","name":"inspect-mesh","description":"Inspects a mesh and returns a report with results","version":"1"},{"id":"e06ade8e-b36a-4aa2-9145-6616ede1e5fa","name":"rc-to-hd","description":"[DRAFT!] Converts RC output files to HD web assets","version":"1"},{"id":"19f06147-d460-4e47-a55d-2b58dc84a4ab","name":"rc-to-play","description":"[DRAFT!] Converts RC output to PLAY assets, including mesh, textures and descriptor file","version":"1"},{"id":"967ed977-055e-41c8-a836-b1372be3b3ca","name":"unwrap","description":"Unwrap decimated mesh using Unfold","version":"2"},{"id":"1c795703-8ef9-4392-8a68-bb8680209516","name":"vz-to-play","description":"VZ Collection CT mesh to Web, decimate (preserve bounds, topo), fix, unwrap, and bake, generate PLAY-ready assets","version":"9"},{"id":"c3825c38-27ab-4909-8d9e-928182199c03","name":"web-hd","description":"Generates high definition (1M, 8k) web asset","version":"2"},{"id":"721d459c-af09-4525-a28b-e71a89439282","name":"web-multi","description":"Generates multi-level web assets","version":"3"},{"id":"05debd35-efab-40d4-9145-cb6d819d1859","name":"web-thumb","description":"Generates thumbnail web asset","version":"3"}]';
-    }
-    */
     $json_decoded = json_decode($results['result'], true);
     for ($i=0; $i < count($json_decoded); $i++) { 
       $json_decoded[$i]['name'] = str_replace("-", " ",$json_decoded[$i]['name']);
@@ -363,13 +335,13 @@ class WorkflowController extends Controller
     $form->handleRequest($request);
 
     return $this->render('workflow/batch_processing_form.html.twig', array(
-            'page_title' => 'Batch Processing',
-            'workflows'=>$json_decoded,
-            'modelID'=>$model_id,
-            'contacts'=>$contacts,
-            //'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-            'form' => $form->createView(),
-        ));
+      'page_title' => 'Batch Processing',
+      'workflows'=>$json_decoded,
+      'modelID'=>$model_id,
+      'contacts'=>$contacts,
+      //'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+      'form' => $form->createView(),
+    ));
 
   }
     /**
@@ -389,10 +361,10 @@ class WorkflowController extends Controller
     // Handle the request
     $form->handleRequest($request);
     return $this->render('workflow/workflow_parameters.html.twig', array(
-            'page_title' => 'Workflow Parameters',
-            //'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-            'form' => $form->createView(),
-        ));
+      'page_title' => 'Workflow Parameters',
+      //'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+      'form' => $form->createView(),
+    ));
 
   }
 
