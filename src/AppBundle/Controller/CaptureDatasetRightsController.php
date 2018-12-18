@@ -111,6 +111,9 @@ class CaptureDatasetRightsController extends Controller
 
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
+        // Add the parent_id to the $data object
+        $data->capture_dataset_id = $parent_id;
+
         // Get data from lookup tables.
         $data->data_rights_restriction_type_options = $this->getDataRightsRestrictionType();
         
@@ -133,7 +136,7 @@ class CaptureDatasetRightsController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/capture_dataset/view/' . $data->capture_dataset_id);
+            return $this->redirect('/admin/capture_dataset/view/' . $parent_id);
         }
 
         return $this->render('datasets/capture_dataset_rights_form.html.twig', array(
