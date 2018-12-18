@@ -198,12 +198,12 @@
       });
 
       // Save the stakeholder data (populate the display area and hidden fields in the parent form).
-      $('#project_stakeholder_guid_picker').on('change', function(){
+      $('#project_form_stakeholder_guid_picker').on('change', function(){
         var stakeholderId = this.value;
         var stakeholderName = $( "#stakeholder_guid_picker" ).val();
 
-        $('#project_stakeholder_guid').val('');
-        $('#project_stakeholder_label').val(stakeholderName);
+        $('#project_form_stakeholder_guid').val('');
+        $('#project_form_stakeholder_label').val(stakeholderName);
 
         $('#stakeholder-display').empty().append(stakeholderName);
       });
@@ -232,8 +232,8 @@
 
         // Populate the display area and hidden fields in the parent form.
         if(isniValuePresent) {
-          $('#project_stakeholder_label').val(chosenIsniLabel);
-          $('#project_stakeholder_guid').val(chosenIsniGuid);
+          $('#project_form_stakeholder_label').val(chosenIsniLabel);
+          $('#project_form_stakeholder_guid').val(chosenIsniGuid);
           $('#stakeholder_guid_picker').val(chosenIsniGuid);
           $('#stakeholder-display').empty().append(displayText);
           $('#isniSearchModal').modal('hide');
