@@ -624,7 +624,97 @@ class RepoStorageHybrid implements RepoStorage {
 
     return $data;
   }
+  public function getFiles($params){
+    $limit = '';
+    if (!isset($params['parent_record_id'])) {
+      return null;
+    }
+    if (isset($params['limit'])) {
+      $limit = "LIMIT ".$params['limit'];
+    }
+    $parent_record_id = $params['parent_record_id'];
+    $parent_record_type= $params['parent_record_type'];
+    $sql = "SELECT file_upload_id,file_name,file_path,file_size,file_type,file_hash,metadata FROM file_upload WHERE parent_record_id=$parent_record_id and parent_record_type='$parent_record_type' $limit";
+    $statement = $this->connection->prepare($sql);
+    $statement->execute();
+    $files = $statement->fetchAll();
+    return $files;
+  }
+  public function getFile($params){
+    if (!isset($params['file_id'])) {
+      return null;
+    }
+    $fileid = $params['file_id'];
+    $sql = "SELECT file_upload_id,file_name,file_path,file_size,file_type,file_hash,metadata FROM file_upload WHERE file_upload_id=$fileid LIMIT 1";
+    $statement = $this->connection->prepare($sql);
+    $statement->execute();
+    $file = $statement->fetchAll();
+    return $file;
 
+  }
+  public function getPointofContact(){
+    $statement = $this->connection->prepare("SELECT id,username FROM fos_user");
+    $statement->execute();
+    $contacts = $statement->fetchAll();
+    return $contacts;
+  }
+  public function getModelDetail($params){
+    $model = [];
+    if (!isset($params['model_id'])) {
+      return false;
+    }
+    $id = $params['model_id'];
+    $statement = $this->connection->prepare("SELECT * FROM model WHERE model_id = $id LIMIT 1");
+    $statement->execute();
+    $modeldetail = $statement->fetchAll();
+    if (count($modeldetail) > 0) {
+      $model = $modeldetail[0];
+      $modelid = $model['model_id'];
+      $model['uploads_path'] = '/uploads/repository';
+      $model['file_path'] = null;
+      $fileupload = $this->getFiles(array("parent_record_id"=>$modelid,"parent_record_type"=>"model","limit"=>1));
+      if (count($fileupload)) {
+        $model['file_path'] = $fileupload[0]['file_path'];
+      }
+      if ($model['parent_capture_dataset_id'] != null) {
+        $capturedataset = $this->connection->fetchAll("SELECT * FROM capture_dataset WHERE capture_dataset_id =".$model['parent_capture_dataset_id']);
+        $itemid = $model['parent_item_id'];
+        $model['capture_dataset'] = [];
+        if (count($capturedataset) > 0) {
+          if ($itemid == null) {
+            $itemid = $capturedataset[0]['parent_item_id'];
+          }
+          $model['capture_dataset'] = $capturedataset[0];
+
+        }
+        $item = $this->connection->fetchAll("SELECT item_description,subject_id FROM item WHERE item_id =".$itemid);
+
+
+        if (count($item) > 0) {
+          $subject = $this->connection->fetchAll("SELECT project_id,subject_name FROM subject WHERE subject_id=".$item[0]['subject_id']);
+          if (count($subject) > 0) {
+            $project = $this->connection->fetchAll("SELECT project_name FROM project WHERE project_id=".$subject[0]['project_id']);
+            $model['subject_name'] = $subject[0]['subject_name'];
+            $model['item_description'] = $item[0]['item_description'];
+            $model['project_name'] = $project[0]['project_name'];
+            $model['project_id'] = $subject[0]['project_id'];
+            $model['subject_id'] = $item[0]['subject_id'];
+          }
+        }
+
+      }
+    }
+    return $model;
+  }
+  public function getModelFiles($params){
+    if (!isset($params['model_id'])) {
+      return false;
+    }
+    $statement = $this->connection->prepare("SELECT file_upload.file_upload_id,file_upload.file_name,file_upload.file_path,file_upload.file_type FROM model_file LEFT JOIN file_upload ON file_upload.file_upload_id = model_file.file_upload_id WHERE model_file.model_id=".$params['model_id']);
+    $statement->execute();
+    $files = $statement->fetchAll();
+    return $files;
+  }
   public function getCaptureDataset($params) {
     //$params will be something like array('capture_dataset_id' => '123');
     $return_data = array();
@@ -1099,7 +1189,7 @@ class RepoStorageHybrid implements RepoStorage {
   public function getDatasets($params) {
 
     $item_id = array_key_exists('item_id', $params) ? $params['item_id'] : NULL;
-
+    $project_id = array_key_exists('project_id', $params) ? $params['project_id'] : NULL;
     $query_params = array(
       'fields' => array(),
       'base_table' => 'capture_dataset',
@@ -1116,6 +1206,15 @@ class RepoStorageHybrid implements RepoStorage {
           'capture_dataset.item_id',
         ),
         'search_values' => array((int)$item_id),
+        'comparison' => '=',
+      );
+    }
+    if($project_id && is_numeric($project_id)) {
+      $query_params['search_params'][1] = array(
+        'field_names' => array(
+          'capture_dataset.parent_project_id',
+        ),
+        'search_values' => array((int)$project_id),
         'comparison' => '=',
       );
     }

@@ -81,15 +81,18 @@
                 <div><label>Model Maps:</label> {{data.model_maps}}</div>
               {% endif %}
             </div>
+
         </div>
         <div class="col-md-12">
             {% if data.viewable_model != false %}
               <a class="btn btn-primary" href="/admin/model/viewer/{{data.model_id}}" target="_blank">Preview 3D Model in Viewer</a>
             {% endif %}
+            {% if data.model_id %}
+              <a href='/admin/batch/{{data.model_id}}' class="btn btn-default" role="button">Select Workflow</a>
+            {% endif %}
         </div>
     </div>
-
-<div class="col-sm-12 col-md-12 child-data">
+  <div class="col-sm-12 col-md-12 child-data">
     <div class="panel panel-default">
         <div class="panel-body">
             <h2>Derivative Models</h2>
@@ -157,7 +160,6 @@
               </table>
           </div>
       </div>
-
     </div>
 {% endblock %}
 

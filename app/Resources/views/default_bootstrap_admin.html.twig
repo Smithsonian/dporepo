@@ -40,7 +40,8 @@
               <ul class="nav nav-tabs main-nav">
                 <li role="presentation" id="admin"><a href="/admin/">Dashboard</a></li>
                 <li role="presentation" id="workspace"><a href="/admin/workspace/">Workspace</a></li>
-                <li role="presentation" id="import"><a href="/admin/ingest">Ingest</a></li>
+                <li role="presentation" id="ingest"><a href="/admin/ingest">Ingest</a></li>
+                {# <li role="presentation" id="batchprocessing"><a href="/admin/batch-processing/">Batch Processing</a></li> #}
                 <li role="presentation" id="resources"><a href="/admin/resources/">Equipment/Resources</a></li>
                 {% if is_granted('IS_AUTHENTICATED_REMEMBERED') and is_granted('ROLE_ADMIN') %}
                     <li role="presentation" id="users"><a href="/admin/users/">Users</a></li>
