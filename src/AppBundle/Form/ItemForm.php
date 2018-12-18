@@ -8,6 +8,7 @@ use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+use Lifo\TypeaheadBundle\Form\Type\TypeaheadType;
 
 class ItemForm extends AbstractType
 {
@@ -23,6 +24,16 @@ class ItemForm extends AbstractType
             ))
             ->add('subject_id', HiddenType::class, array(
               'required' => true,
+            ))
+            ->add('subject_picker', ChoiceType::class, array(
+              'label' => 'Subject',
+              'required' => false,
+              'placeholder' => 'Select',
+              // All options
+              'choices' => $data['subject_lookup_options'],
+              // Selected option
+              'data' => isset($data['subject_id']) ? $data['subject_id'] : null,
+              'attr' => array('class' => 'default-chosen-select'),
             ))
             ->add('item_guid', null, array(
                 'label' => 'Item GUID',
