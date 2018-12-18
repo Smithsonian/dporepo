@@ -632,8 +632,15 @@ function preValidateCsvBagged() {
     }
   }, 2000);
 
-  // Hide the progress modal.
+  // Remove the temporary directory + hide the progress modal.
   setTimeout(function() {
+    // Remove the temporary directory.
+    $.ajax({
+      'type': 'GET'
+      ,'dataType': 'html'
+      ,'url': '/admin/remove_temporary_directory/' + $('.prevalidate-trigger').attr('data-jobid')
+    });
+    // Hide the progress modal.
     $('#uploading-modal').modal('hide');
   }, 3000);
 }
