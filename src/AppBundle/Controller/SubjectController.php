@@ -41,7 +41,7 @@ class SubjectController extends Controller
         $this->repo_user_access = new RepoUserAccess($conn);
     }
 
-    //@todo this is deprecated, go ahead and delete it
+    //@todo this is deprecated, make sure it is un-used and then delete it
     /**
      * @Route("/admin/projects/subjects/{project_id}", name="subjects_browse", methods="GET", requirements={"project_id"="\d+"})
      */
@@ -89,7 +89,6 @@ class SubjectController extends Controller
         ));
     }
 
-    //@todo this is deprecated, go ahead and delete it
     /**
      * @Route("/admin/datatables_browse_subjects/{project_id}", name="subjects_browse_datatables", methods="POST", defaults={"project_id" = null})
      *
@@ -183,7 +182,7 @@ class SubjectController extends Controller
         if (!empty($request->attributes->get('subject_id'))) {
           $id = $request->attributes->get('subject_id');
         }
-        
+
         // If being POSTed via ajax, set the ajax flag to true.
         if (!empty($request->attributes->get('ajax'))) $ajax = true;
 
@@ -387,7 +386,7 @@ class SubjectController extends Controller
     /**
      * Delete Multiple Subjects
      *
-     * @Route("/admin/subjects/delete", name="subjects_remove_records", methods={"GET"})
+     * @Route("/admin/subject/delete", name="subjects_remove_records", methods={"GET"})
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
@@ -397,20 +396,15 @@ class SubjectController extends Controller
     public function deleteMultipleSubjects(Request $request)
     {
         $ids = $request->query->get('ids');
-        $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
 
         $username = $this->getUser()->getUsernameCanonical();
-        if(false !== $project_id) {
-          $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $project_id);
-          if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
-            $this->addFlash('message', 'No access. You are not allowed to delete subjects.');
-            return;
-          }
+        $access = $this->repo_user_access->get_user_access_any($username, 'edit_project_details');
+        if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+          $this->addFlash('message', 'No access. You are not allowed to delete subjects.');
+          return;
         }
 
-
-        if(!empty($ids) && $project_id) {
-
+        if(!empty($ids)) {
           $ids_array = explode(',', $ids);
 
           foreach ($ids_array as $key => $id) {
@@ -426,7 +420,8 @@ class SubjectController extends Controller
           $this->addFlash('message', 'Missing data. No records removed.');
         }
 
-        return $this->redirectToRoute('subjects_browse', array('project_id' => $project_id));
+        $referer = $request->headers->get('referer');
+        return $this->redirect($referer);
     }
 
 }
