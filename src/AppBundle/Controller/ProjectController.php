@@ -125,16 +125,22 @@ class ProjectController extends Controller
 
         $username = $this->getUser()->getUsernameCanonical();
         $user_can_edit = false;
-        if(false !== $id) {
+        if(false == $id) {
+          $access = $this->repo_user_access->get_user_access_any($username, 'edit_projects');
+          if(array_key_exists('project_ids', $access) && isset($access['project_ids'])) {
+            $user_can_edit = true;
+          }
+        }
+        else {
           $access = $this->repo_user_access->get_user_access($username, 'view_projects', $id);
           if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
-            //$response = new Response();
-            //$response->setStatusCode(403);
-            //return $response;
+            $response = new Response();
+            $response->setStatusCode(403);
+            return $response;
           }
 
           $access = $this->repo_user_access->get_user_access($username, 'edit_projects', $id);
-          if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+          if(array_key_exists('project_ids', $access) && isset($access['project_ids'])) {
             $user_can_edit = true;
           }
         }
