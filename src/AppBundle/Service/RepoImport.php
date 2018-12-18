@@ -1001,7 +1001,6 @@ class RepoImport implements RepoImportInterface {
 
     if (!empty($data)) {
 
-      // Get the file's checksum from the BagIt manifest.
       $finder = new Finder();
       $finder->files()->in($this->project_directory . $this->uploads_directory . $data->uuid . '/');
       // Loop through uploaded files.
@@ -1010,12 +1009,16 @@ class RepoImport implements RepoImportInterface {
         // Get the parent directory.
         $dir = dirname($file->getPathname(), 1);
         $dir_parts = explode(DIRECTORY_SEPARATOR, $dir);
-        $dir_parent = array_pop($dir_parts);
+        // $dir_parent = array_pop($dir_parts);
+
+        $dir_parent = array_slice($dir_parts, -2, 2);
+
+        // $this->u->dumper($dir_parent,0);
 
         // Get image files.
         // If this file's extension exists in the $this->image_extensions array, add to the $images array.
         if (in_array($file->getExtension(), $this->image_extensions)) {
-          $image_file_names[$dir_parent][] = str_replace('.' . $file->getExtension(), '', $file->getFilename());
+          $image_file_names[$dir_parent[1]][] = str_replace('.' . $file->getExtension(), '', $file->getFilename());
         }
 
         // Get model files.
@@ -1023,7 +1026,10 @@ class RepoImport implements RepoImportInterface {
         if (in_array($file->getExtension(), $this->model_extensions)) {
           $model_file_names[] = str_replace('.' . $file->getExtension(), '', $file->getFilename());
         }
+
       }
+
+      // $this->u->dumper($image_file_names);
 
       // Remove duplicate image file names and sort.
       foreach ($image_file_names as $ikey => $ivalue) {
@@ -1065,6 +1071,8 @@ class RepoImport implements RepoImportInterface {
     // usnm_160-s01-p01-01.jpg
     // [local_subject_id]-s[capture_dataset_field_id]-p[position_in_cluster_field_id]-[cluster_position_field_id].jpg
 
+    // $this->u->dumper($image_file_names);
+
     if (!empty($image_file_names) && !empty($data)) {
 
       // If there's a file_name_map.csv file at the root of the 'data' directory, use it.
@@ -1099,10 +1107,73 @@ class RepoImport implements RepoImportInterface {
 
           $process = true;
           $i = 0;
-          foreach ($image_file_names as $dir_name => $files) {
 
-            // Get the capture_dataset_field_id from the directory name.
-            $data->csv[$i]->capture_dataset_field_id = preg_replace('/[^0-9]/', '', $dir_name);
+
+
+          foreach ($data->csv as $dk => $dv) {
+            $directory_paths[] = $dv->directory_path;
+          }
+
+          foreach ($directory_paths as $dpk => $dpv) {
+            $finder = new Finder();
+            $finder->path('/data' . $dpv);
+            $finder->files()->in($this->project_directory . $this->uploads_directory . $data->uuid);
+            // Loop through uploaded files.
+            foreach ($finder as $file) {
+
+              $this_file = $this->getFileInfo($data->uuid, $file->getFilename());
+
+              
+              // $this->u->dumper($file->getPathname());
+
+
+              switch (true) {
+                case strstr($file->getPathname(), DIRECTORY_SEPARATOR . 'raw' . DIRECTORY_SEPARATOR):
+                  $variant_type = 'raw';
+                  break;
+                case strstr($file->getPathname(), DIRECTORY_SEPARATOR . 'zeroed' . DIRECTORY_SEPARATOR):
+                  $variant_type = 'zeroed';
+                  break;
+                case strstr($file->getPathname(), DIRECTORY_SEPARATOR . 'camera' . DIRECTORY_SEPARATOR):
+                  $variant_type = 'from camera';
+                  break;
+              }
+
+              // File info for the capture_data_file columns
+              $capture_data_files[$dpk][] = array(
+                'file_upload_id' => $this_file[0]['file_upload_id'],
+                'capture_data_file_name' => $this_file[0]['file_name'],
+                'capture_data_file_type' => $this_file[0]['file_type'],
+                'is_compressed_multiple_files' => 0,
+                'variant_type' => $variant_type,
+              );
+            }
+          }
+
+
+          // $this->u->dumper($capture_data_files);
+          // $this->u->dumper($image_file_names);
+
+          // // Build-out the $capture_data_files array.
+          // if (!empty($file_info)) {
+          //   $capture_data_files = array();
+          //   foreach ($file_info as $file_info_key => $file_info_value) {
+          //     // File info for the capture_data_file columns
+          //     $capture_data_files[] = array(
+          //       'file_upload_id' => $file_info_value['file_upload_id'],
+          //       'capture_data_file_name' => $file_info_value['file_name'],
+          //       'capture_data_file_type' => $file_info_value['file_type'],
+          //       'is_compressed_multiple_files' => 0,
+          //     );
+          //   }
+          // }
+
+
+
+
+
+
+          foreach ($image_file_names as $dir_name => $files) {
 
             // Add 'capture_data_elements' and 'capture_data_files' to the 'capture_dataset' CSV.
             if (!empty($files)) {
@@ -1137,6 +1208,8 @@ class RepoImport implements RepoImportInterface {
                   $key1 = array_search('position_in_cluster_field_id', $this->default_image_file_name_map);
                   // Default cluster_position_field_id key.
                   $key2 = array_search('cluster_position_field_id', $this->default_image_file_name_map);
+                  // Default capture_dataset_field_id key.
+                  $key3 = array_search('capture_dataset_field_id', $this->default_image_file_name_map);
                   // If the $file_name_map exists, then set the key using that.
                   if (!empty($file_name_map)) {
                     // User-supplied position_in_cluster_field_id key.
@@ -1147,34 +1220,26 @@ class RepoImport implements RepoImportInterface {
                     $key2 = array_search('cluster_position_field_id', $file_name_map)
                         ? array_search('cluster_position_field_id', $file_name_map)
                         : null;
+                    // User-supplied capture_dataset_field_id key.
+                    $key3 = array_search('capture_dataset_field_id', $file_name_map)
+                        ? array_search('capture_dataset_field_id', $file_name_map)
+                        : null;
                   }
 
                   // $this->u->dumper($file_name_map,0);
                   // $this->u->dumper($key1,0);
-                  // $this->u->dumper($key2);
+                  // $this->u->dumper($key2,0);
+                  // $this->u->dumper($key3);
 
                   // Transform the file name to an array.
                   $file_name_parts = explode('-', $file);
-
-                  // Build-out the $capture_data_files array.
-                  if (!empty($file_info)) {
-                    $capture_data_files = array();
-                    foreach ($file_info as $file_info_key => $file_info_value) {
-                      // File info for the capture_data_file columns
-                      $capture_data_files[] = array(
-                        'file_upload_id' => $file_info_value['file_upload_id'],
-                        'capture_data_file_name' => $file_info_value['file_name'],
-                        'capture_data_file_type' => $file_info_value['file_type'],
-                        'is_compressed_multiple_files' => 0,
-                      );
-                    }
-                  }
 
                   // Build-out the $capture_data_elements array, adding in this capture data element's $capture_data_files array.
                   $data->csv[$i]->capture_data_elements[] = array(
                     'position_in_cluster_field_id' => (!empty($key1) && stristr($file_name_parts[ $key1 ], 'p')) ? (int)str_replace('p', '', $file_name_parts[ $key1 ]) : null,
                     'cluster_position_field_id' => (!empty($key2) && isset($file_name_parts[ $key2 ])) ? (int)$file_name_parts[ $key2 ] : null,
-                    'capture_data_files' => $capture_data_files,
+                    'capture_dataset_field_id' => (!empty($key3) && isset($file_name_parts[ $key3 ])) ? (int)$file_name_parts[ $key3 ] : null,
+                    'capture_data_files' => $capture_data_files[$i],
                   );
 
                 }
