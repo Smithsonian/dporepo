@@ -246,6 +246,7 @@ class ImportController extends Controller
 
         // Get data from lookup tables.
         $item->item_type_lookup_options = $this->itemsController->getItemTypes();
+        $item->subject_lookup_options = $this->itemsController->getSubjects();
         $item->api_publication_options = array(
           'Published, Discoverable' => '11',
           'Published, Not Discoverable' => '10',
