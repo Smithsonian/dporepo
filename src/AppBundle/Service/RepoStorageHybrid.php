@@ -617,9 +617,9 @@ class RepoStorageHybrid implements RepoStorage {
         // );
 
         $data['subject_name'] = $subject['subject_name'];
-        $data['item_description'] = $item['item_description'];
-        $data['project_name'] = $item['project_id'];
       }
+      $data['item_description'] = $item['item_description'];
+      $data['project_name'] = $item['project_id'];
     }
 
     return $data;
@@ -2730,13 +2730,13 @@ class RepoStorageHybrid implements RepoStorage {
     $select_sql = " DISTINCT 
           project.project_id as manage, project.project_id, project.project_name, project.stakeholder_guid, 
           project.date_created, project.last_modified, project.active, project.project_id as DT_RowId, 
-          isni_data.isni_label as stakeholder_label, COUNT(item.item_id) as items_count
+          isni_data.isni_label as stakeholder_label, 
+          (SELECT COUNT(item.item_id) FROM item WHERE item.project_id = project.project_id AND item.active = 1) as items_count
           FROM project 
           LEFT JOIN isni_data ON project.stakeholder_guid = isni_data.isni_id 
-          LEFT JOIN item ON project.project_id = item.project_id
           ";
 
-    $where_sql = " WHERE (project.active = 1) AND (item.active = 1 OR item.active IS NULL) ";
+    $where_sql = " WHERE (project.active = 1) ";
     if(NULL !== $search_value) {
       $where_sql .= " AND (
         project.project_name LIKE :search_value
@@ -2826,12 +2826,12 @@ class RepoStorageHybrid implements RepoStorage {
           subject.subject_id as manage, subject.subject_id, subject.subject_name, 
           subject.holding_entity_guid, subject.local_subject_id, subject.subject_name, subject.subject_display_name,
           subject.subject_guid, subject.last_modified, subject.active, subject.subject_id as DT_RowId, 
-          COUNT(item.item_id) as items_count
+          (SELECT COUNT(item.item_id) FROM item WHERE item.subject_id = subject.subject_id AND item.active = 1) as items_count
           FROM subject 
           LEFT JOIN item ON subject.subject_id = item.subject_id
           ";
 
-    $where_sql = " WHERE (subject.active = 1) AND (item.active = 1 OR item.active IS NULL) ";
+    $where_sql = " WHERE (subject.active = 1) ";
     if(NULL !== $search_value) {
       $where_sql .= " AND (
         subject.subject_name LIKE :search_value
@@ -3446,124 +3446,71 @@ class RepoStorageHybrid implements RepoStorage {
 
     $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
     $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
-    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
-    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : 'asc';
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : 0;
     $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
     $project_id = array_key_exists('project_id', $params) ? $params['project_id'] : NULL;
     $subject_id = array_key_exists('subject_id', $params) ? $params['subject_id'] : NULL;
 
-    $query_params = array(
-      'fields' => array(),
-      'distinct' => true,
-      'base_table' => 'item',
-      'search_params' => array(
-        0 => array('field_names' => array('item.active'), 'search_values' => array(1), 'comparison' => '='),
-      ),
-      'search_type' => 'AND',
-    );
+    $select_sql = " DISTINCT 
+          item.item_id as manage, item.item_id, item.project_id, item.subject_id, 
+          item.local_item_id, CONCAT(SUBSTRING(item.item_description,1, 50), '...') as item_description,          
+          item.date_created, item.last_modified, item.active, item.item_id as DT_RowId,
+          (SELECT COUNT(capture_dataset_id) FROM capture_dataset WHERE capture_dataset.item_id = item.item_id AND capture_dataset.active = 1) as datasets_count
+          FROM item 
+          ";
 
-    if ($search_value) {
-      $query_params['search_params'][1] = array(
-        'field_names' => array(
-          'item.item_description',
-          'item.local_item_id',
-          'item.date_created',
-          'item.last_modified',
-        ),
-        'search_values' => array($search_value),
-        'comparison' => 'LIKE',
-      );
+    $where_sql = " WHERE (item.active = 1) ";
+    if(NULL !== $search_value) {
+      $where_sql .= " AND (
+        item.item_description LIKE :search_value
+        OR item.local_item_id LIKE :search_value
+        OR item.date_created LIKE :search_value
+        OR item.last_modified LIKE :search_value
+      )";
     }
-    if($project_id && is_numeric($project_id)) {
-      $count_params = count($query_params['search_params']);
-      $query_params['search_params'][$count_params] = array(
-        'field_names' => array(
-          'item.project_id',
-        ),
-        'search_values' => array((int)$project_id),
-        'comparison' => '=',
-      );
+    if (NULL !== $project_id) {
+      $where_sql .= " AND item.project_id =:project_id";
     }
-    if($subject_id && is_numeric($subject_id)) {
-      $count_params = count($query_params['search_params']);
-      $query_params['search_params'][$count_params] = array(
-        'field_names' => array(
-          'item.subject_id',
-        ),
-        'search_values' => array((int)$subject_id),
-        'comparison' => '=',
-      );
+    if (NULL !== $subject_id) {
+      $where_sql .= " AND item.subject_id =:subject_id";
     }
 
-    $query_params['related_tables'][] = array(
-      'table_name' => 'capture_dataset',
-      'table_join_field' => 'item_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'item',
-      'base_join_field' => 'item_id',
-    );
+    $where_sql .= " GROUP BY item.item_id ";
+    $sql = "SELECT SQL_CALC_FOUND_ROWS "
+      . $select_sql. $where_sql;
 
-    // Fields.
-    $query_params['fields'][] = array(
-      'table_name' => 'item',
-      'field_name' => 'item_id',
-      'field_alias' => 'manage',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'item',
-      'field_name' => 'subject_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'item',
-      'field_name' => 'local_item_id',
-    );
-    $query_params['fields'][] = array(
-      'field_name' => "CONCAT(SUBSTRING(item.item_description,1, 50), '...')",
-      'field_alias' => 'item_description',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'item',
-      'field_name' => 'date_created',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'item',
-      'field_name' => 'last_modified',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'item',
-      'field_name' => 'item_id',
-      'field_alias' => 'DT_RowId',
-    );
-    $query_params['fields'][] = array(
-      'field_name' => 'count(distinct capture_dataset.item_id)',
-      'field_alias' => 'datasets_count',
-    );
-
-    // Need to group by since we're doing a count
-    $query_params['group_by'] = array(
-      'item.item_id'
-    );
-
-    $query_params['records_values'] = array();
-
-    $query_params['limit'] = array(
-      'limit_start' => $start_record,
-      'limit_stop' => $stop_record,
-    );
-
-    if (!empty($sort_field) && !empty($sort_order)) {
-      $query_params['sort_fields'][] = array(
-        'field_name' => $sort_field,
-        'sort_order' => $sort_order,
-      );
-    } else {
-      $query_params['sort_fields'][] = array(
-        'field_name' => 'item.last_modified',
-        'sort_order' => 'DESC',
-      );
+    if($sort_field) {
+      $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+    }
+    else {
+      $sql .= " ORDER BY item.last_modified DESC ";
     }
 
-    $data = $this->getRecordsDatatable($query_params);
+    if(NULL !== $stop_record) {
+      $sql .= " LIMIT {$start_record}, {$stop_record} ";
+    }
+
+    $statement = $this->connection->prepare($sql);
+    if(strlen(trim($search_value)) > 0) {
+      //$statement->bindValue(":search_value", "%", PDO::PARAM_STR);
+      $statement->bindValue(":search_value", '%' . $search_value . '%', PDO::PARAM_STR);
+    }
+    if (NULL !== $project_id) {
+      $statement->bindValue(":project_id", (int)$project_id, PDO::PARAM_INT);
+    }
+    if (NULL !== $subject_id) {
+      $statement->bindValue(":subject_id", (int)$subject_id, PDO::PARAM_INT);
+    }
+
+    $statement->execute();
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
+    $statement->execute();
+    $count = $statement->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+    $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
 
     return $data;
 

@@ -113,11 +113,13 @@ class PhotogrammetryScaleBarController extends Controller
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
+        if(false !== $parent_id) {
         $data->capture_dataset_id = $parent_id;
+        }
 
         $back_link = $request->headers->get('referer');
-        if(isset($data->project_id)) {
-            $back_link = "/admin/capture_dataset_elements/{$data->capture_dataset_id}";
+        if(isset($data->capture_dataset_id)) {
+            $back_link = "/admin/capture_dataset/view/{$data->capture_dataset_id}";
         }
 
         // Get data from lookup tables.
@@ -132,16 +134,16 @@ class PhotogrammetryScaleBarController extends Controller
         // If form is submitted and passes validation, insert/update the database record.
         if ($form->isSubmitted() && $form->isValid()) {
 
-            $data = $form->getData();
+            $data = (array)($form->getData());
             $id = $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => 'photogrammetry_scale_bar',
               'record_id' => $id,
               'user_id' => $this->getUser()->getId(),
-              'values' => (array)$data
+              'values' => $data
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/photogrammetry_scale_bar/manage/' . $id);
+            return $this->redirect('/admin/capture_dataset/view/' . $data['capture_dataset_id']);
         }
 
         return $this->render('datasets/photogrammetry_scale_bar_form.html.twig', array(

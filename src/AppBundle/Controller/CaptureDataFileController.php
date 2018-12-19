@@ -76,7 +76,7 @@ class CaptureDataFileController extends Controller
      * Matches /admin/capture_data_file/manage/*
      *
      * @Route("/admin/capture_data_file/add/{parent_id}", name="capture_data_files_add", methods={"GET","POST"}, defaults={"id" = null})
-     * @Route("/admin/capture_data_file/manage/{id}", name="capture_data_files_manage", methods={"GET","POST"})
+     * @Route("/admin/capture_data_file/manage/{id}", name="capture_data_files_manage", methods={"GET","POST"}, defaults={"parent_id" = null})
      *
      * @param Connection $conn
      * @param Request $request
@@ -113,8 +113,10 @@ class CaptureDataFileController extends Controller
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
+        if(false !== $parent_id) {
         $data->capture_data_element_id = $parent_id;
-        
+        }
+
         // Create the form
         $form = $this->createForm(CaptureDataFileForm::class, $data);
         
@@ -133,8 +135,7 @@ class CaptureDataFileController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            $referer = $request->headers->get('referer');
-            return $this->redirect($referer);
+            return $this->redirect('/admin/dataset_element/manage/' . $data->capture_data_element_id);
 
         }
 

@@ -473,7 +473,9 @@
       function browseItems(subjectId) {
 
         var data = $('body').data();
-        var ajaxUrl = '/admin/datatables_browse_subject_items/' + data.project_id;
+        var ajaxUrl = (data.project_id)
+            ? '/admin/datatables_browse_project_items/' + data.project_id
+            : '/admin/datatables_browse_subject_items/'  + data.subject_id;
 
         var itemDt = $('#item').dataTable( {
           "columns": [
