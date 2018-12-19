@@ -134,7 +134,6 @@ class CaptureDeviceController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $data = $form->getData();
-            print_r($data);
             $id = $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => 'capture_device',
               'record_id' => $id,

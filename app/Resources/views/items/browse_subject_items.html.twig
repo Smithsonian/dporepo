@@ -42,7 +42,8 @@
         <div class="panel-body">
 
           <h2>Items</h2>
-          <a href="/admin/item/add//{{ subject_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add an Item</a>
+          <input type="hidden" id="delete-path" value="admin/item/delete/{{ subject_id }}" />
+          <!--a href="/admin/item/add/0/ subject_id " class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add an Item</a -->
 
           <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
             <thead>

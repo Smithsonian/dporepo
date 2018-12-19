@@ -100,7 +100,7 @@ class ItemController extends Controller
     }
 
     /**
-     * @Route("/admin/datatables_browse_subject_items/{project_id}", name="subjectitems_browse_datatables", methods="POST", defaults={"project_id" = null})
+     * @Route("/admin/datatables_browse_subject_items/{subject_id}", name="subjectitems_browse_datatables", methods="POST", defaults={"subject_id" = null})
      *
      * Browse items
      *
@@ -112,7 +112,7 @@ class ItemController extends Controller
     public function datatablesBrowseSubjectItems(Request $request)
     {
       $req = $request->request->all();
-      $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
+      $subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
 
       // First, perform a 3D model generation status check, and update statuses in the database accordingly.
       /*
@@ -145,7 +145,7 @@ class ItemController extends Controller
         'sort_order' => $sort_order,
         'start_record' => $start_record,
         'stop_record' => $stop_record,
-        'project_id' => $project_id,
+        'subject_id' => $subject_id,
       );
       if ($search) {
         $query_params['search_value'] = $search;
@@ -272,6 +272,17 @@ class ItemController extends Controller
 
         // Get data from lookup tables.
         $item->item_type_lookup_options = $this->getItemTypes();
+        $item->subject_lookup_options = $this->getSubjects();
+
+        if(isset($subject_picker)) {
+          print($subject_picker);
+          $item->subject_id = $item->subject_picker;
+        }
+        else {
+          $item->subject_picker = $item->subject_id;
+        }
+
+
         $item->api_publication_options = array(
           'Published, Discoverable' => '11',
           'Published, Not Discoverable' => '10',
@@ -307,6 +318,10 @@ class ItemController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $item = $form->getData();
+
+            $item->project_id = !empty($item->project_id) ? $item->project_id : false;
+            $item->subject_id = !empty($item->subject_picker) ? $item->subject_picker : false;
+            //$item->subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
 
             if(isset($item->api_publication_picker)) {
               if($item->api_publication_picker == '11') {
@@ -360,6 +375,29 @@ class ItemController extends Controller
             ));
         }
 
+    }
+
+    function getSubjects() {
+
+      $query_params = array(
+        'base_table' => 'subject',
+        'fields' => array(
+            array('field_name' => 'subject_id'),
+            array('field_name' => 'subject_name')
+        ),
+        'sort_fields' => array(
+          0 => array('field_name' => 'subject_name')
+        ),
+      );
+      //@todo available only
+      $data = $this->repo_storage_controller->execute('getRecords', $query_params );
+
+      $subjects = array();
+      foreach($data as $s) {
+        $subjects[$s['subject_name']] = $s['subject_id'];
+      }
+
+      return $subjects;
     }
 
     /**
@@ -456,7 +494,7 @@ class ItemController extends Controller
     /**
      * Delete Multiple Items
      *
-     * @Route("/admin/item/delete/{project_id}", name="items_remove_records", methods={"GET"})
+     * @Route("/admin/item/delete/{parent_id}", name="items_remove_records", methods={"GET"})
      * Run a query to delete multiple records.
      *
      * @param   int     $ids      The record ids
@@ -466,9 +504,9 @@ class ItemController extends Controller
     public function deleteMultipleItems(Request $request)
     {
         $ids = $request->query->get('ids');
-        $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
+      $parent_id = !empty($request->attributes->get('parent_id')) ? $request->attributes->get('parent_id') : false;
 
-        if(!empty($ids) && $project_id) { // && $subject_id) {
+      if(!empty($ids) && $parent_id) {
           $ids_array = explode(',', $ids);
 
           foreach ($ids_array as $key => $id) {
@@ -483,7 +521,10 @@ class ItemController extends Controller
         } else {
           $this->addFlash('message', 'Missing data. No records removed.');
         }
-        return $this->redirectToRoute('project_view', array('project_id' => $project_id));
+
+      $referer = $request->headers->get('referer');
+      return $this->redirect($referer);
+      //return $this->redirectToRoute('project_view', array('project_id' => $project_id));
     }
 
     /**
