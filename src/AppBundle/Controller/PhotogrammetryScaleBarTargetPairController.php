@@ -114,7 +114,9 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
+        if(false !== $parent_id) {
         $data->photogrammetry_scale_bar_id = $parent_id;
+        }
 
         // Get data from lookup tables.
         $data->unit_options = $this->getUnit();
@@ -138,7 +140,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/photogrammetry_scale_bar_target_pair/manage/' . $id);
+            return $this->redirect('/admin/photogrammetry_scale_bar/manage/' . $data->photogrammetry_scale_bar_id);
         }
 
         return $this->render('datasets/photogrammetry_scale_bar_target_pair_form.html.twig', array(
