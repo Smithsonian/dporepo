@@ -257,6 +257,27 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
+  public function getDatasetFiles($params){
+    $capture_dataset_id = $params['capture_dataset_id'];
+    $limit = $params['limit'];
+
+    $sql = "SELECT file_upload.file_path, file_upload.date_created, file_upload.file_type,
+      file_upload.file_name, capture_dataset.capture_dataset_id 
+      FROM file_upload 
+      JOIN capture_data_file ON file_upload.file_upload_id = capture_data_file.file_upload_id      
+      JOIN capture_data_element ON capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id 
+      JOIN capture_dataset ON capture_data_element.capture_dataset_id = capture_dataset.capture_dataset_id      
+      WHERE capture_dataset.capture_dataset_id = :capture_dataset_id 
+      AND (file_upload.file_type = 'jpg' or file_upload.file_type = 'tif') 
+      LIMIT $limit";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(':capture_dataset_id', $capture_dataset_id, PDO::PARAM_INT);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+    return $ret;
+  }
+
   public function getItem($params) {
       //$params will be something like array('item_id' => '123');
     $return_data = array();
