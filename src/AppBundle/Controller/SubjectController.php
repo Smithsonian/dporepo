@@ -268,7 +268,7 @@ class SubjectController extends Controller
           return $response;
         } else {
           return $this->render('subjects/subject_form.html.twig', array(
-              'page_title' => !empty($id) ? 'Subject: ' . $subject->subject_name : 'Create Subject',
+              'page_title' => !empty($id) ? 'Subject: ' . $subject['subject_name'] : 'Create Subject',
               'subject_data' => $subject,
               'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
               'user_can_edit' => $user_can_edit,
