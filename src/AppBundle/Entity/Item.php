@@ -14,6 +14,11 @@ class Item
     public $project_id;
 
     /**
+     * @var string
+     */
+    public $subject_picker;
+
+    /**
      * @var int
      */
     public $subject_id;

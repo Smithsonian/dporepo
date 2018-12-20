@@ -246,6 +246,7 @@ class ImportController extends Controller
 
         // Get data from lookup tables.
         $item->item_type_lookup_options = $this->itemsController->getItemTypes();
+        $item->subject_lookup_options = $this->itemsController->getSubjects();
         $item->api_publication_options = array(
           'Published, Discoverable' => '11',
           'Published, Not Discoverable' => '10',
@@ -1055,6 +1056,29 @@ class ImportController extends Controller
       }
 
       return $json_object;
+    }
+
+    /**
+     * Remove Temporary Directory
+     * @Route("/admin/remove_temporary_directory/{dirname}", name="remove_temporary_directory", defaults={"dirname" = null}, methods="GET")
+     *
+     * @param string $dirname  The directory name
+     * @param object $request Symfony's request object
+     * @return string
+     */
+    public function remove_temporary_directory($dirname = null, Request $request)
+    {
+      // If $dirname is empty, throw a createNotFoundException (404).
+      if (empty($dirname)) throw $this->createNotFoundException('The directory name is empty');
+      // If the directory doesn't exist, throw a createNotFoundException (404).
+      if (!is_dir($this->uploads_directory . $dirname)) throw $this->createNotFoundException('The ' . $dirname . ' directory doesn\'t exist');
+      // If the directory isn't a temporary directory, don't remove it, and throw a createNotFoundException (404).
+      if (!strstr($dirname, 'temp-')) throw $this->createNotFoundException('The ' . $dirname . ' directory isn\'t a temporary directory');
+      // Remove the temporary directory, and all of it's contents.
+      $fileSystem = new Filesystem();
+      $fileSystem->remove($this->uploads_directory . $dirname);
+      // Return the response (200).
+      return new Response('The ' . $dirname . ' directory has been removed', Response::HTTP_OK);
     }
 
     /**

@@ -1,0 +1,218 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block content %}
+
+  <div id="batch_form">
+    <div class="row">
+      <div class="col-sm-4 col-md-4">
+        <div>
+          <input type="hidden" name="modelID" id="modelID" value="{{modelID}}">
+          <h3>Choose Workflow</h3>
+          {% for wk in workflows %}
+            <div><label><input type="radio" name="workflow" class="workflow" value="{{wk.id}},{{wk.name}}"> {{wk.name}}</label></div>
+          {% endfor %}
+          <input type="hidden" name="workflow_description">
+        </div>
+      </div>
+      <div class="col-sm-4 col-md-4">
+        <div id="workflow_info"></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-sm-4 col-md-4">
+        {{ form_row(form.batch_processing_assets) }}
+      </div>
+      <div class="col-sm-8 col-md-8">
+        <h3>Point of Contact</h3>
+        {% for contact in contacts %}
+          <div><label><input type="radio" name="contact" class="contact" value="{{contact.id}},{{contact.username}}"> {{contact.username}}</label></div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-sm-4 col-md-4">
+        <h3>Parameters</h3>
+        <div id="default-parameter-message">No workflow selected...</div>
+        <div id="parameters-container"></div>
+        <br>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-sm-6 col-md-6">
+        <div class="field-group" style="clear:both;">
+          {#{ form_row(form.save) }#}
+          <button class="btn btn-default" id="btn_saveandreview">Save and Review</button>
+          <br>
+          <div id="message"></div>
+        </div>
+      </div>
+    </div>
+  {#{ form_end(form) }#}
+  </div>
+
+  <div id="saveandreview" style="display:none;">
+    <div class="row">
+      <div class="col-sm-4 col-md-4">
+        <div>
+          <label>Workflow:</label><span id='recipename_description'></span><br>
+          <label>Assets:</label>
+          <div id="assets"></div>
+          <label>Point of contact: </label> <span id='pointofcontact'></span>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn btn-default" id="btn-edit">Edit Processing Job</button>
+      <button class="btn btn-primary" id="btn-launch">Launch Processing</button>
+    </div>
+  </div>
+{% endblock %}
+{% block javascripts %}
+    {{ parent() }}
+    <script type="text/javascript">
+      $(document).ready(function(){
+        $(".workflow").removeAttr("checked");
+        $("input[name='batch_processing_form[batch_processing_assets][]']").prop('checked', true);
+        getRecipeDetail();
+        saveandreview();
+        editprocessing();
+      });
+      function getRecipeDetail(){
+        $("input[name='workflow']").on('change',function(){
+          var workflow = $(this).val();
+          workflow = workflow.split(",");
+          recipeID = workflow[0];
+          var url = '/admin/batch/detail';
+          $.post(url,{recipeID : recipeID},function(response){
+            
+            $("#default-parameter-message").hide();
+            $("#parameters-container").html("");
+            $("#workflow_info").empty();
+            var workflowInfoContainer = $('<div />').addClass('well');
+            workflowInfoContainer.append('<h4>'+response.name+'</h4>');
+            workflowInfoContainer.append("<p>"+response.description+"</p>");
+            $("#workflow_info").append(workflowInfoContainer);
+            $("input[name='workflow_description']").val(response.description);
+            for (var i = 0; i < response.parameterSchema.required.length; i++) {
+              var filename = '';
+              if ((response.parameterSchema.required[i].toLowerCase()).indexOf('meshfile') !== -1) {
+                var files = $("input[name='batch_processing_form[batch_processing_assets][]']").val();
+                file = files.split(",");
+                filename = file[1];
+              }
+              $("#parameters-container").append("<div id='"+response.parameterSchema.required[i]+"_wkflow'><label>"+response.parameterSchema.required[i]+"</label><br /></div>");
+              if (i == 0) {
+                $("#"+response.parameterSchema.required[i]+"_wkflow").append("<input type='hidden' class='form-control' name='required_params' id='required_params' value='"+response.parameterSchema.required+"' />");
+              }
+              $("#"+response.parameterSchema.required[i]+"_wkflow").append("<input type='text' class='form-control' name='"+response.parameterSchema.required[i]+"' value='"+filename+"' />");
+            }
+          },'json');
+        });
+      }
+      function saveandreview(){
+        
+        $("#saveandreview").hide();
+        $("#btn_saveandreview").on("click",function(){
+          $("#message").html("");
+          validate = validateForm();
+            if (validate) {
+              $(".page-header").html("Batch Processing<span>: Review</span>");
+              $("#batch_form").hide();
+              $("#saveandreview").show();
+              var files = $("input[name='batch_processing_form[batch_processing_assets][]']").val();
+              file = files.split(",");
+              assets = file[1];
+              var workflow = $("input[name='workflow']:checked").val();
+              workflow = workflow.split(",");
+              workflowname = workflow[1];
+              var contact = $("input[name='contact']").val();
+              contact = contact.split(",");
+              contact = contact[1];
+              var params = $("input[name='recipes[]']").val();
+              var workflowdescription = $("input[name='workflow_description']").val();
+
+              $("#recipename_description").html(" "+workflowname+" ("+workflowdescription+")");
+              $("#assets").html(assets);
+              $("#pointofcontact").html(" "+contact);
+              $('#btn-launch').attr('onclick','launch()');
+            }else{
+              $("#message").html("<div class='alert alert-warning'>Please complete form</div>");
+            }
+          });
+      }
+      function editprocessing(){
+        $("#btn-edit").on("click",function(){
+          $("#batch_form").show();
+          $("#saveandreview").hide();
+          $(".page-header span").remove();
+        });
+      }
+      function validateForm() {
+          var formValid = false;
+          var workflow = $("input[name='workflow']:checked").val();
+          var contact = $("input[name='contact']:checked").val();
+         if(!formValid && workflow != undefined && contact != undefined) {
+               formValid = true;    
+          }
+          return formValid;
+      }
+      function launch(){
+        var url = "/admin/batch/launch";
+        var modelID = $("#modelID").val();
+        var files = $("input[name='batch_processing_form[batch_processing_assets][]']:checked").val();
+        var workflow = $("input[name='workflow']:checked").val();
+        var required_params = $("#required_params").val();
+        var required = $("input[name='required_params']").val();
+        required = required.split(",");
+        var params = {};
+        for (var i = 0; i < required.length; i++) {
+          params[required[i]] = $("input[name='"+required[i]+"']").val();
+        }
+
+        var parameters = {workflow:workflow,assets:files,modelID:modelID,params:params};
+
+        $.post(url, parameters, function(response) {
+
+          // Return errors, or an alert on success.
+          if (response.length && (typeof response[0]['errors'] !== 'undefined')) {
+
+            // Return errors via an alert.
+            swal({
+              title: 'Error',
+              text: response[0]['errors'][0],
+              icon: 'error',
+            });
+
+          } else {
+
+            var span = document.createElement('span');
+            span.innerHTML = 'Processing ID: ' + response.id + '<br>';
+            span.innerHTML += 'Recipe: ' + response.recipe.name + '<br>';
+            span.innerHTML += 'Timestamp: ' + response.submission;
+
+            // Return a success message via an alert.
+            swal({
+              title: 'Processing Initialized Successfully',
+              icon: 'success',
+              content: span,
+              buttons: {
+                catch: {
+                  text: 'Close',
+                  value: 'close',
+                }
+              },
+            })
+            .then((value) => {
+              switch (value) {
+                case 'close':
+                  // Send to the details page.
+                  window.location.href = '/admin/model/view/' + modelID;
+                  break;
+              }
+            });
+
+          }
+        });
+      }
+    </script>
+{% endblock %}

@@ -78,7 +78,7 @@ class CaptureDeviceComponentController extends Controller
      * Matches /admin/capture_device_component/manage/*
      *
      * @Route("/admin/capture_device_component/add/{parent_id}", name="capture_device_component_add", methods={"GET","POST"}, defaults={"id" = null})
-     * @Route("/admin/capture_device_component/manage/{id}", name="capture_device_component_manage", methods={"GET","POST"})
+     * @Route("/admin/capture_device_component/manage/{id}", name="capture_device_component_manage", methods={"GET","POST"}, defaults={"parent_id" = null})
      *
      * @param Connection $conn
      * @param Request $request
@@ -101,7 +101,7 @@ class CaptureDeviceComponentController extends Controller
         $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
         // If no parent_id is passed, throw a createNotFoundException (404).
-        if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
+        if(!$parent_id && !$id) throw $this->createNotFoundException('The record does not exist');
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
         if(!empty($id) && empty($post)) {
@@ -115,8 +115,10 @@ class CaptureDeviceComponentController extends Controller
         if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Add the parent_id to the $data object
+        if(false !== $parent_id) {
         $data->capture_device_id = $parent_id;
-        
+        }
+
         // Create the form
         $form = $this->createForm(CaptureDeviceComponentForm::class, $data);
 
@@ -135,7 +137,8 @@ class CaptureDeviceComponentController extends Controller
             ));
 
             $this->addFlash('message', 'Record successfully updated.');
-            return $this->redirect('/admin/dataset_element/manage/' . $data['capture_data_element_id']);
+            return $this->redirect('/admin/capture_device/manage/' . $data['capture_device_id']);
+
         }
 
         return $this->render('datasetElements/capture_device_component_form.html.twig', array(

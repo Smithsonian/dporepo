@@ -31,9 +31,5 @@ class PhotogrammetryScaleBar
      */
     public $scale_bar_barcode_type;
 
-    /**
-     * @var string
-     */
-    public $scale_bar_target_pairs;
 
 }
