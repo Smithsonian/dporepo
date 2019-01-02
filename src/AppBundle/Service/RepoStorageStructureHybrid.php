@@ -80,7 +80,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
     else {
       return array('installed' => false, 'error' => 'The database is in an awkward state. Checked for ' . count($tables) . ' tables and ' . $count_tables . ' of these exist.');
     }
-        }
+  }
         
   public function installDatabase() {
 

@@ -3434,7 +3434,7 @@ class RepoStorageHybrid implements RepoStorage {
     $data["iTotalRecords"] = $count["FOUND_ROWS()"];
     $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
 
-      return $data;
+    return $data;
 
   }
 
