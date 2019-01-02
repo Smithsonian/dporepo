@@ -2067,197 +2067,6 @@ class RepoStorageHybrid implements RepoStorage {
         }
         break;
 
-      case 'model':
-
-        // If we're showing all models pertaining to an Item,
-        // we need to show models that relate to the Item's Capture Datasets as well.
-        if($parent_id_field == 'item_id') {
-          return $this->getDatatableItemModels($params);
-        }
-
-        /*
-        $query_params['related_tables'][] = array(
-          'table_name' => 'model_file',
-          'table_join_field' => 'model_id',
-          'join_type' => 'LEFT JOIN',
-          'base_join_table' => 'model',
-          'base_join_field' => 'model_id',
-        );
-        $query_params['related_tables'][] = array(
-          'table_name' => 'file_upload',
-          'table_join_field' => 'file_upload_id',
-          'join_type' => 'LEFT JOIN',
-          'base_join_table' => 'model_file',
-          'base_join_field' => 'file_upload_id',
-        );
-        */
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => $record_type . '_id',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => $record_type . '_id',
-          'field_alias' => 'manage',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'capture_dataset_id',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'parent_model_id',
-        );
-
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'item_id',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'model_guid',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'date_of_creation',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'model_file_type',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'derived_from',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'creation_method',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'model_modality',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'units',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'is_watertight',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'model_purpose',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'point_count',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'has_normals',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'face_count',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'vertices_count',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'has_vertex_color',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'has_uv_space',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => $record_type,
-          'field_name' => 'model_maps',
-        );
-        /*
-        $query_params['fields'][] = array(
-          'table_name' => 'file_upload',
-          'field_name' => 'file_path',
-        );
-        $query_params['fields'][] = array(
-          'table_name' => 'file_upload',
-          'field_name' => 'file_hash',
-        );
-        */
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'active',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'date_created',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'created_by_user_account_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'last_modified',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => 'last_modified_user_account_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => $record_type,
-        'field_name' => $record_type . '_id',
-        'field_alias' => 'DT_RowId',
-      );
-
-      $query_params['search_params'][0] = array(
-        'field_names' => array($record_type . '.active'),
-        'search_values' => array(1),
-        'comparison' => '='
-      );
-      if (NULL !== $search_value) {
-        $query_params['search_params'][] = array(
-          'field_names' => array(
-            $record_type . '.model_guid',
-            $record_type . '.parent_model_id',
-            $record_type . '.date_of_creation',
-            $record_type . '.model_file_type',
-            $record_type . '.derived_from',
-            $record_type . '.creation_method',
-            $record_type . '.model_modality',
-            $record_type . '.units',
-            $record_type . '.is_watertight',
-            $record_type . '.model_purpose',
-            $record_type . '.point_count',
-            $record_type . '.has_normals',
-            $record_type . '.face_count',
-            $record_type . '.vertices_count',
-            $record_type . '.has_vertex_color',
-            $record_type . '.has_uv_space',
-            $record_type . '.model_maps',
-            //$record_type . '.file_path',
-          ),
-          'search_values' => array($search_value),
-          'comparison' => 'LIKE',
-        );
-      }
-      if (isset($parent_id_field) && NULL !== $parent_id) {
-        //$c = count($query_params['search_params']);
-        $query_params['search_params'][] = array(
-          'field_names' => array(
-            $parent_id_field,
-          ),
-          'search_values' => array(
-            $parent_id
-          ),
-          'comparison' => '=',
-        );
-      }
-      break;
-
       case 'model_file':
       $parent_id_field = "model_id";
       $query_params['related_tables'][] = array(
@@ -3039,6 +2848,7 @@ class RepoStorageHybrid implements RepoStorage {
    */
   public function getDatatableCaptureDataset($params) {
 
+    $model_id = array_key_exists('model_id', $params) ? $params['model_id'] : NULL;
     $item_id = array_key_exists('item_id', $params) ? $params['item_id'] : NULL;
     $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
     $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
@@ -3105,6 +2915,16 @@ class RepoStorageHybrid implements RepoStorage {
       'base_join_field' => 'cluster_type',
     );
 
+    if($model_id && is_numeric($model_id)) {
+      $query_params['related_tables'][] = array(
+        'table_name' => 'capture_dataset_model',
+        'table_join_field' => 'capture_dataset_id',
+        'join_type' => 'JOIN',
+        'base_join_table' => 'capture_dataset',
+        'base_join_field' => 'capture_dataset_id',
+      );
+    }
+
     if ($search_value) {
       $query_params['search_params'][1] = array(
         'field_names' => array(
@@ -3153,6 +2973,16 @@ class RepoStorageHybrid implements RepoStorage {
         'comparison' => '=',
       );
       //          AND capture_dataset.item_id = " . (int)$item_id . "");
+    }
+    elseif($model_id && is_numeric($model_id)) {
+      $count_params = count($query_params['search_params']);
+      $query_params['search_params'][$count_params] = array(
+        'field_names' => array(
+          'capture_dataset_model.model_id',
+        ),
+        'search_values' => array((int)$model_id),
+        'comparison' => '=',
+      );
     }
 
     // Fields.
@@ -3585,7 +3415,13 @@ class RepoStorageHybrid implements RepoStorage {
               AND model_file.model_id=model.model_id              
               AND (file_upload.file_name LIKE '%.obj' OR file_upload.file_name IS NULL)
               LIMIT 0, 1
-            ) as file_name
+            ) as file_name,
+            (
+              SELECT count(capture_dataset_model.capture_dataset_id)               
+              FROM capture_dataset_model
+              WHERE capture_dataset_model.active = 1
+              AND capture_dataset_model.model_id=model.model_id              
+            ) as count_capture_datasets
             
             FROM model
             
@@ -3607,7 +3443,13 @@ class RepoStorageHybrid implements RepoStorage {
               AND model_file.model_id=model.model_id              
               AND (file_upload.file_name LIKE '%.obj' OR file_upload.file_name IS NULL)
               LIMIT 0, 1
-            ) as file_name
+            ) as file_name,
+            (
+              SELECT count(capture_dataset_model.capture_dataset_id)               
+              FROM capture_dataset_model
+              WHERE capture_dataset_model.active = 1
+              AND capture_dataset_model.model_id=model.model_id              
+            ) as count_capture_datasets
             
             FROM model
             LEFT JOIN capture_dataset on model.capture_dataset_id = capture_dataset.capture_dataset_id
@@ -3666,7 +3508,159 @@ class RepoStorageHybrid implements RepoStorage {
 
     $statement->bindValue(":item_id", $parent_id, PDO::PARAM_INT);
     if(strlen(trim($search_value)) > 0) {
-      $statement->bindValue(":search_value", $search_value, PDO::PARAM_STR);
+      $statement->bindValue(":search_value", '%' . $search_value . '%', PDO::PARAM_STR);
+    }
+
+    $statement->execute();
+
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
+    $statement->execute();
+    $count = $statement->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+    $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
+
+    return $data;
+
+  }
+
+  public function getDatatableModels($params) {
+
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
+
+    $parent_id_field = array_key_exists('parent_id_field', $params) ? $params['parent_id_field'] : NULL;
+    $parent_id = array_key_exists('parent_id', $params) ? $params['parent_id'] : NULL;
+
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+
+    // If we're showing all models pertaining to an Item,
+    // we need to show models that relate to the Item's Capture Datasets as well.
+    if($parent_id_field == 'item_id') {
+      return $this->getDatatableItemModels($params);
+    }
+
+    if($parent_id_field != 'capture_dataset_id' && $parent_id_field != 'parent_model_id') {
+      return array();
+    }
+
+    if($parent_id_field == 'capture_dataset_id') {
+      $sql = " DISTINCT model.model_id, model.model_id as manage, capture_dataset_model.capture_dataset_id,
+            parent_model_id, model.item_id, model_guid, date_of_creation, model_file_type,
+            derived_from, creation_method, model_modality, units, is_watertight, model_purpose, point_count,
+            has_normals, face_count, vertices_count, has_vertex_color, has_uv_space, model_maps, model.active,
+            model.date_created, model.created_by_user_account_id, model.last_modified, model.last_modified_user_account_id,
+            model.model_id as DT_RowId,
+            (
+              SELECT file_name
+              FROM file_upload
+              LEFT JOIN model_file on file_upload.file_upload_id = model_file.file_upload_id
+              WHERE file_upload.active = 1 AND model_file.active = 1
+              AND model_file.model_id=model.model_id              
+              AND (file_upload.file_name LIKE '%.obj' OR file_upload.file_name IS NULL)
+              LIMIT 0, 1
+            ) as file_name,
+            (
+              SELECT count(capture_dataset_model.capture_dataset_id)               
+              FROM capture_dataset_model
+              WHERE capture_dataset_model.active = 1
+              AND capture_dataset_model.model_id=model.model_id              
+            ) as count_capture_datasets
+            
+            FROM model
+            LEFT JOIN capture_dataset_model on model.model_id = capture_dataset_model.model_id
+            LEFT JOIN capture_dataset on capture_dataset_model.capture_dataset_id = capture_dataset.capture_dataset_id
+            
+            WHERE 
+            capture_dataset_model.capture_dataset_id=:capture_dataset_id
+            and capture_dataset.active=1
+            and model.active = 1 
+             
+            ";    }
+    else {
+      //parent_model_id
+      $sql = " DISTINCT model_id, model_id as manage, 
+            parent_model_id, model.item_id, model_guid, date_of_creation, model_file_type,
+            derived_from, creation_method, model_modality, units, is_watertight, model_purpose, point_count,
+            has_normals, face_count, vertices_count, has_vertex_color, has_uv_space, model_maps, model.active,
+            model.date_created, model.created_by_user_account_id, model.last_modified, model.last_modified_user_account_id,
+            model_id as DT_RowId,
+            (
+              SELECT file_name
+              FROM file_upload
+              LEFT JOIN model_file on file_upload.file_upload_id = model_file.file_upload_id
+              WHERE file_upload.active = 1 AND model_file.active = 1
+              AND model_file.model_id=model.model_id              
+              AND (file_upload.file_name LIKE '%.obj' OR file_upload.file_name IS NULL)
+              LIMIT 0, 1
+            ) as file_name,
+            (
+              SELECT count(capture_dataset_model.capture_dataset_id)               
+              FROM capture_dataset_model
+              WHERE capture_dataset_model.active = 1
+              AND capture_dataset_model.model_id=model.model_id              
+            ) as count_capture_datasets
+            
+            FROM model
+            
+            WHERE 
+            model.parent_model_id=:parent_model_id
+            and model.active = 1 
+             
+            ";
+    }
+
+    if(strlen(trim($search_value)) > 0) {
+      $sql .= " AND (
+        model_guid LIKE :search_value OR
+        parent_model_id LIKE :search_value OR
+        date_of_creation LIKE :search_value OR
+        model_file_type LIKE :search_value OR
+        derived_from LIKE :search_value OR
+        creation_method LIKE :search_value OR
+        model_modality LIKE :search_value OR
+        units LIKE :search_value OR
+        is_watertight LIKE :search_value OR
+        model_purpose LIKE :search_value OR
+        point_count LIKE :search_value OR
+        has_normals LIKE :search_value OR
+        face_count LIKE :search_value OR
+        vertices_count LIKE :search_value OR
+        has_vertex_color LIKE :search_value OR
+        has_uv_space LIKE :search_value OR
+        model_maps LIKE :search_value
+      )";
+    }
+
+    if($sort_field) {
+      $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+    }
+    else {
+      $sql .= " ORDER BY model_id ";
+    }
+
+    if(NULL !== $stop_record) {
+      $sql .= " LIMIT {$start_record}, {$stop_record} ";
+    }
+    else {
+      $sql .= " LIMIT {$start_record} ";
+    }
+
+    $sql = "SELECT SQL_CALC_FOUND_ROWS " . $sql;
+
+    $statement = $this->connection->prepare($sql);
+
+    if($parent_id_field == 'capture_dataset_id') {
+      $statement->bindValue(":capture_dataset_id", $parent_id, PDO::PARAM_INT);
+    }
+    else {
+      $statement->bindValue(":parent_model_id", $parent_id, PDO::PARAM_INT);
+    }
+    if(strlen(trim($search_value)) > 0) {
+      $statement->bindValue(":search_value", '%' . $search_value . '%', PDO::PARAM_STR);
     }
 
     $statement->execute();

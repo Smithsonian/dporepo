@@ -116,6 +116,75 @@ class CaptureDatasetController extends Controller
     }
 
     /**
+     * @Route("/admin/datatables_browse_model_datasets/{model_id}", name="datasets_browse_model_datatables", methods={"POST","GET"})
+     *
+     * Browse datasets that were used to construct a specific model.
+     *
+     * Run a query to retrieve all datasets in the database, for the specified model_id.
+     *
+     * @param   object  Request     Request object
+     * @return  array|bool          The query result
+     */
+    public function datatablesBrowseModelDatasets(Request $request)
+    {
+      $req = $request->request->all();
+      $model_id = !empty($request->attributes->get('model_id')) ? $request->attributes->get('model_id') : false;
+
+      $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+      $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
+      $sort_order = $req['order'][0]['dir'];
+      $start_record = !empty($req['start']) ? $req['start'] : 0;
+      $stop_record = !empty($req['length']) ? $req['length'] : 20;
+
+      $query_params = array(
+        'sort_field' => $sort_field,
+        'sort_order' => $sort_order,
+        'start_record' => $start_record,
+        'stop_record' => $stop_record,
+        'model_id' => $model_id,
+      );
+      if ($search) {
+        $query_params['search_value'] = $search;
+      }
+
+      $data = $this->repo_storage_controller->execute('getDatatableCaptureDataset', $query_params);
+
+      if (is_array($data) && isset($data['aaData'])) {
+        //@todo bad practice- instead get the dataset files in the above function, getDatatableCaptureDataset.
+        foreach($data['aaData'] as $k => $row) {
+          $id = $row['manage'];
+
+          $dataset_file = $this->repo_storage_controller->execute('getDatasetFiles',
+            array(
+              'capture_dataset_id' => $id,
+              'limit' => 1)
+          );
+          $data['aaData'][$k]['file_path'] = '';
+          if (count($dataset_file)) {
+            $uploads_path = str_replace('web', '', $this->uploads_directory);
+            // Windows fix for the file path.
+            $uploads_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_path) : $uploads_path;
+            // Model URL.
+            $model_url = str_replace($uploads_path, $this->external_file_storage_path, $data['viewable_model']['file_path']);
+            // Windows fix for the file path.
+            $model_url = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $model_url) : $model_url;
+
+
+
+            $uploads_path = str_replace('web', '', $this->uploads_path);
+            $path = $uploads_path . $dataset_file[0]['file_path'];
+            // Windows fix for the file path.
+            $path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $path) : $path;
+            //$path = str_replace($uploads_path, $this->external_file_storage_path, $path);
+            $data['aaData'][$k]['file_path'] = $path;
+          }
+        }
+      }
+
+      return $this->json($data);
+    }
+
+  /**
      * Matches /admin/capture_dataset/*
      *
      * @Route("/admin/capture_dataset/add/{item_id}", name="dataset_add", methods={"GET","POST"}, defaults={"capture_dataset_id" = null})
