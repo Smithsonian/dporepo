@@ -2,14 +2,36 @@
 
 namespace AppBundle\Service;
 
+use \Symfony\Component\DependencyInjection\ContainerAware;
+use AppBundle\Controller\RepoStorageStructureHybridController;
 use Doctrine\DBAL\Driver\Connection;
+use Symfony\Component\Filesystem;
+use PDO;
+
+use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\Finder\Finder;
+use AppBundle\Utils\AppUtilities;
+
 
 class RepoStorageStructureHybrid implements RepoStorageStructure {
 
   private $connection;
+  protected $flysystem;
 
-  public function __construct(Connection $connection) {
+  /**
+   * @var string $uploads_directory
+   */
+  private $uploads_directory;
+
+  /**
+   * @var string $external_file_storage_path
+   */
+  private $external_file_storage_path;
+
+  public function __construct(Connection $connection, $uploads_directory, $external_file_storage_path) {
     $this->connection = $connection;
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+    $this->external_file_storage_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $external_file_storage_path) : $external_file_storage_path;;
   }
 
   /***
@@ -126,4 +148,197 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
     }
     
   }
+
+  public function backup($include_schema = true, $include_data = true) {
+
+    $db_exists = $this->checkDatabaseExists();
+
+    if($db_exists['installed'] == false) {
+      return array('return' => 'fail', 'errors' => array($db_exists['error']));
+    }
+
+    // Write backup to local file.
+    $backup_results = $this->writeBackupToFile($include_schema = true, $include_data = true);
+    if(isset($backup_results['errors']) && count($backup_results['errors']) > 0) {
+      return $backup_results;
+    }
+
+    try {
+      $backup_filename = $backup_results['backup_filename'];
+      $backup_filepath = $backup_results['backup_filepath'];
+
+      // Push file to Drastic.
+      $remote_filename = $this->external_file_storage_path . 'mysql_backups/' . $backup_filename;
+      $push_result = $this->pushFileToDrastic($backup_filepath, $remote_filename);
+      if($push_result['result'] !== 'success') {
+        return $backup_results;
+      }
+
+      $backup_results = $push_result;
+
+      // Record the backup in the database table.
+      // backup_filename, result, error, date_created, created_by_user_account_id, last_modified_user_account_id
+      $backup_results['backup_filename'] = $backup_filepath;
+      if(isset($push_result['errors'])) {
+        $backup_results['error'] = implode(', ', $push_result['errors']);
+        unset($backup_results['errors']);
+      }
+
+      $rs = new RepoStorageHybrid(
+        $this->connection
+      );
+      $id = $rs->execute('saveRecord', array(
+        'base_table' => 'backup',
+        'user_id' => $this->getUser()->getId(),
+        'values' => $backup_results
+      ));
+      //@todo error checking
+
+      $backup_results['id'] = $id;
+
+      return $backup_results;
+    }
+    catch(\Throwable $ex) {
+      return array('return' => 'fail', 'errors' => array('Unable to dump database. ' . $ex->getMessage()));
+    }
+
+  }
+
+  private function writeBackupToFile($include_schema = true, $include_data = true) {
+
+    $backup_dir = $this->uploads_directory . '/mysqlbackups/';
+
+    if(!file_exists($backup_dir)) {
+      $filesystem = new Filesystem\Filesystem();
+      try {
+        $filesystem->mkdir($backup_dir);
+        $mode = 0664;
+        $umask = umask();
+        $filesystem->chmod($backup_dir, $mode, $umask);
+      } catch (IOException $e) {
+        // discard chmod failure (some filesystem may not support it)
+        return array('return' => 'fail', 'errors' => array('Could not create backup directory. ' . $e->getMessage()));
+      }
+    }
+
+    $backup_filename = 'repository_backup_' . (string)time() . '.sql';
+    $backup_file_path = $backup_dir . $backup_filename;
+
+    try {
+      $params = $this->connection->getParams();
+      //$username = $params['user'];
+      //$password = $params['password'];
+      $dbname = $params['dbname'];
+
+      //@todo dump schema if $include_schema
+
+      $sql = "SELECT `TABLE_NAME` FROM information_schema.`TABLES` where table_schema like '" . $dbname . "' ORDER BY `TABLE_NAME` ASC";
+      $statement = $this->connection->prepare($sql);
+      $statement->execute();
+      $tables = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      if(true === $include_data) {
+
+        $handle = fopen($backup_file_path, "c");
+        foreach($tables as $t) {
+          $table_name = $t['TABLE_NAME'];
+
+          // Get the column info.
+          $sql_schema = "SELECT COLUMN_NAME FROM information_schema.`COLUMNS` WHERE table_schema LIKE '" . $dbname
+            . "' AND TABLE_NAME LIKE '" . $table_name . "' ORDER BY ORDINAL_POSITION";
+          $statement = $this->connection->prepare($sql_schema);
+          $statement->execute();
+          $columns = $statement->fetchAll(PDO::FETCH_COLUMN);
+          $column_names = "INSERT INTO `" . $table_name . "` (" . implode(', ', $columns) . ") VALUES \r\n";
+
+          // Dump the table data.
+          $sql_data = "SELECT * FROM " . $table_name;
+          $statement = $this->connection->prepare($sql_data);
+          $statement->execute();
+          $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+          if(count($rows) > 0) {
+            $row_count = count($rows);
+            $counter = 0;
+            fwrite($handle, $column_names);
+            foreach($rows as $row) {
+              $counter++;
+              $row_values_array = array();
+              foreach($row as $row_value) {
+                $row_values_array[] = $this->connection->quote($row_value);
+              }
+              //$row_values = '(' . $this->connection->quote(implode(',', array_values($row))) . ");\r\n";
+              $row_values = '(' . implode(',', array_values($row_values_array)) . ")";
+              if($counter == $row_count) {
+                $row_values .= ';';
+              }
+              else {
+                $row_values .= ",\r\n";
+              }
+              fwrite($handle, $row_values);
+            }
+            fwrite($handle, "\r\n");
+          }
+        }
+        fclose($handle);
+      }
+
+      //$mysqldump_output = shell_exec("mysqldump -u " . $username . " -p" . $password . " " . $dbname . " > " . $backup_file_path);
+      //echo $mysqldump_output; /* Your output of the restore command */
+
+      return array('result' => 'success', 'backup_filename' => $backup_filename, 'backup_filepath' => $backup_file_path);
+    }
+    catch(\Throwable $ex) {
+      if($handle) {
+        fclose($handle);
+      }
+      return array('return' => 'fail', 'errors' => array('Unable to dump database. ' . $ex->getMessage()));
+    }
+
+  }
+
+
+  /**
+   * @param $local_file_path The directory which contains files to be transferred.
+   * @param $source_filename The remote path.
+   * @return mixed array containing success/fail value, and any messages.
+   */
+  private function pushFileToDrastic($source_file_fullpath = null, $destination_filename = null) {
+    $data = array();
+
+    if (!file_exists($source_file_fullpath)) {
+      return (array('errors' => array('Backup not copied to Drastic. Source backup file not found: ' . $source_file_fullpath)));
+    }
+    else {
+
+      // Write the file to Drastic.
+      try {
+
+        $container = $this->getContainer();
+        $flysystem = $container->get('oneup_flysystem.assets_filesystem');
+
+        $stream = fopen($source_file_fullpath, 'r+');
+        $flysystem->writeStream($destination_filename, $stream);
+        // Before calling fclose on the resource, check if it’s still valid using is_resource.
+        if (is_resource($stream)) {
+          fclose($stream);
+        }
+      } // Catch the error.
+      catch (Exception $e) {
+        return(
+          array(
+            'result' => 'fail',
+            'errors' => array($e->getMessage()
+            )
+          )
+        );
+      }
+
+      $data['result'] = 'success';
+      return $data;
+    }
+
+  }
+
+
 }

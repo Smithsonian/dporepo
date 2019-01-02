@@ -3247,7 +3247,7 @@ class RepoStorageHybrid implements RepoStorage {
           ,capture_data_file.created_by_user_account_id
           ,capture_data_file.last_modified
           ,capture_data_file.last_modified_user_account_id          
-          , file_upload.metadata
+          ,file_upload.metadata
         FROM capture_data_file
         LEFT JOIN file_upload ON capture_data_file.file_upload_id = file_upload.file_upload_id
         WHERE capture_data_file.active = 1 
@@ -3300,6 +3300,132 @@ class RepoStorageHybrid implements RepoStorage {
     $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
 
     return $data;
+
+  }
+
+  /**
+   * @param $params
+   * @return mixed
+   */
+  public function getDatatableBackup($params) {
+
+    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : 'asc';
+    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : 0;
+    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : 20;
+
+    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $project_ids = array_key_exists('project_ids', $params) ? $params['project_ids'] : NULL;
+    $date_range_start = array_key_exists('date_range_start', $params) ? $params['date_range_start'] : NULL;
+    $date_range_end = array_key_exists('date_range_end', $params) ? $params['date_range_end'] : NULL;
+
+    $select_sql = " DISTINCT 
+          backup_id as manage, backup_id, backup_filename,
+          result, error, date_created, created_by_user_account_id, last_modified, last_modified_user_account_id 
+          FROM backup 
+          ";
+
+    $where_sql = '';
+    if(NULL !== $search_value) {
+      $where_sql .= " AND (
+        backup_filename LIKE :search_value
+        OR result LIKE :search_value
+      )";
+    }
+
+    if(NULL !== $date_range_start) {
+      $where_sql .= " AND (last_modified < :date_range_start) ";
+    }
+    if(NULL !== $date_range_end) {
+      $where_sql .= " AND (last_modified > :date_range_end) ";
+    }
+
+    if(strlen(trim($where_sql)) > 0) {
+      $where_sql = " WHERE " . $where_sql;
+    }
+
+    $sql = "SELECT SQL_CALC_FOUND_ROWS "
+      . $select_sql. $where_sql;
+
+    if($sort_field) {
+      $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+    }
+    else {
+      $sql .= " ORDER BY last_modified DESC";
+    }
+
+    if(NULL !== $stop_record) {
+      $sql .= " LIMIT {$start_record}, {$stop_record} ";
+    }
+
+    $statement = $this->connection->prepare($sql);
+    if(strlen(trim($search_value)) > 0) {
+      //$statement->bindValue(":search_value", "%", PDO::PARAM_STR);
+      $statement->bindValue(":search_value", '%' . $search_value . '%', PDO::PARAM_STR);
+    }
+    if(NULL !== $date_range_start) {
+      $statement->bindValue(":date_range_start", $date_range_start);
+    }
+    if(NULL !== $date_range_end) {
+      $statement->bindValue(":date_range_end", $date_range_end);
+    }
+    $statement->execute();
+    $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
+    $statement->execute();
+    $count = $statement->fetch(PDO::FETCH_ASSOC);
+    $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+    $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
+
+    return $data;
+
+  }
+
+
+  private function unpack_metadata(&$data) {
+    // Incoming array contains rows,
+    // where each row has a metadata column that may or may not have JSON-encoded metadata.
+    // Return the array, augmented with metadata columns for each of the fields listed below.
+
+    $metadata_field_names = array(
+      'exif_filename' => 'filename',
+      'exif_file_size' => 'file size',
+      'exif_file_timestamp' => 'file timestamp',
+      'exif_height' => 'height',
+      'exif_width' => 'width',
+      'exif_aperture' => 'aperture',
+      'exif_camera_make' => 'camera make',
+      'exif_camera_model' => 'camera model',
+      'exif_timestamp' => 'timestamp',
+      'exif_original_timestamp' => 'original timestamp',
+      'exif_digitized_timestamp' => 'digitized timestamp',
+      'exif_exposure' => 'exposure',
+      'exif_focal_length' => 'focal length',
+      'exif_iso_speed' => 'ISO speed',
+      'exif_camera_serial' => 'camera serial',
+      'exif_lens_model' => 'lens model',
+      'exif_lens_serial' => 'lens serial'
+    );
+
+    foreach($data as $k => $d) {
+      if(isset($d['metadata']) && strlen(trim($d['metadata'])) > 0) {
+        $d_metadata_array = json_decode($d['metadata'], true);
+        foreach($metadata_field_names as $k2 => $v2) {
+          if(array_key_exists($v2, $d_metadata_array)) {
+            $data[$k][$k2] = $d_metadata_array[$v2];
+          }
+          else {
+            $data[$k][$k2] = '';
+          }
+        }
+      }
+      else {
+        foreach($metadata_field_names as $k2 => $v2) {
+          $data[$k][$k2] = '';
+        }
+      }
+    }
 
   }
 
