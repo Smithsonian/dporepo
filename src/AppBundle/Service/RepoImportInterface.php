@@ -101,9 +101,8 @@ interface RepoImportInterface {
    * Get File Name Map
    *
    * @param array $job_data Job data
-   * @param string $directory The target directory
    * @return array
    */
-  public function getFilenameMap(array $job_data, string $directory);
+  public function getFilenameMap(array $job_data);
 
 }
