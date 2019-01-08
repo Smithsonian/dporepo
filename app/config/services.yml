@@ -19,6 +19,7 @@ services:
             $edan_auth_token: '%edan_auth_token%'
             $edan_version: '%edan_version%'
             $edan_search_endpoint: '%edan_search_endpoint%'
+            $edan_content_endpoint: '%edan_content_endpoint%'
             $uploads_directory: '%uploads_directory%'
             $external_file_storage_path: '%external_file_storage_path%'
             $external_file_storage_on: '%external_file_storage_on%'
