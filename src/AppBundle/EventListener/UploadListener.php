@@ -23,6 +23,7 @@ class UploadListener
   private $repo_storage_controller;
   private $tokenStorage;
   private $import_controller;
+  private $edan;
 
   public function __construct(
     Connection $conn,
