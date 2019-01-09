@@ -106,14 +106,10 @@ class RepoEdan implements RepoEdanInterface
 
         if($params['q']) {
 
-            $data['previous_page'] = ((int)$params['page'] > 1) ? ((int)$params['page'] - 1) : '';
-            $data['next_page'] = ((int)$params['page'] + 1);
-            $data['start'] = !empty($data['previous_page']) ? ((int)$params['rows'] * (int)$params['page'] - (int)$params['rows']) : 0;
-
             // Setup the parameters.
             $parameters = array(
                 'q' => $params['q'],
-                'start' => $data['start'],
+                'start' => $params['start'],
                 'rows' => (int)$params['rows'],
             );
 
@@ -122,23 +118,6 @@ class RepoEdan implements RepoEdanInterface
 
             // Get the protected property 'data' from the $results object.
             $data = array_merge($data, $results->getData());
-
-            if($data['numFound'] > 0) {
-
-                // If we're at the end of the results, set the next page to an empty value.
-                $data['next_page'] = (($data['start'] + (int)$params['rows']) <= $data['numFound']) ? $data['next_page'] : '';
-
-                // Process EDAN's freetext and images.
-                foreach ($data['rows'] as $key => $value) {
-                    // Process freetext
-                    $data['rows'][$key]['processed_freetext'] = $this->freetextProcessor($value, $this->metadata_fields);
-                    // Process images
-                    $images = $this->edanmdmImagesProcessor($value);
-                    if(!empty($images) && !empty($images['record_images'])) {
-                        $data['rows'][$key]['primary_image'] = $images['record_images'][0];
-                    }
-                }
-            }
         }
         
         return $data;

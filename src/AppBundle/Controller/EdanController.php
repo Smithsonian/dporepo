@@ -63,7 +63,7 @@ class EdanController extends Controller
             $results = $this->edan->queryEdan($parameters);
 
             // Get the protected property 'data' from the $results object.
-            $data = array_merge($data, $results->getData());
+            $data = array_merge($data, $results);
 
             if($data['numFound'] > 0) {
 
@@ -73,9 +73,9 @@ class EdanController extends Controller
                 // Process EDAN's freetext and images.
                 foreach ($data['rows'] as $key => $value) {
                     // Process freetext
-                    $data['rows'][$key]['processed_freetext'] = $this->freetextProcessor($value, $this->metadata_fields);
+                    $data['rows'][$key]['processed_freetext'] = $this->edan->freetextProcessor($value, $this->edan->metadata_fields);
                     // Process images
-                    $images = $this->edanmdm_images_processor($value);
+                    $images = $this->edan->edanmdmImagesProcessor($value);
                     if(!empty($images) && !empty($images['record_images'])) {
                         $data['rows'][$key]['primary_image'] = $images['record_images'][0];
                     }
