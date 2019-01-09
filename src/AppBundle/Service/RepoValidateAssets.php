@@ -256,9 +256,9 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
       $unique_file_extensions = array_unique($all_file_extensions);
 
       // If there are more than 2 unique file types present, set an error.
-      if (count($unique_file_extensions) > 2) {
-        $return[]['errors'] = 'More than 2 file types detected';
-      }
+      // if (count($unique_file_extensions) > 2) {
+      //   $return[]['errors'] = 'More than 2 file types detected';
+      // }
 
       $image_pair_type = null;
       if (in_array('jpg', $all_file_extensions)) $image_pair_type = 'jpg';
