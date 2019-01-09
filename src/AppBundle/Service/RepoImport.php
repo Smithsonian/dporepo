@@ -13,6 +13,7 @@ use AppBundle\Utils\AppUtilities;
 use AppBundle\Controller\ItemController;
 use AppBundle\Controller\CaptureDatasetController;
 use AppBundle\Controller\ModelController;
+use AppBundle\Service\RepoEdan;
 
 use Psr\Log\LoggerInterface;
 
@@ -109,6 +110,11 @@ class RepoImport implements RepoImportInterface {
   private $logger;
 
   /**
+   * @var object $edan
+   */
+  private $edan;
+
+  /**
    * Constructor
    * @param object  $kernel  Symfony's kernel object
    * @param string  $uploads_directory  Uploads directory path
@@ -116,7 +122,7 @@ class RepoImport implements RepoImportInterface {
    * @param string  $conn  The database connection
    * @param string  $uploads_directory  Uploads directory path
    */
-  public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemController $itemsController, CaptureDatasetController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn, LoggerInterface $logger)
+  public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemController $itemsController, CaptureDatasetController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn, LoggerInterface $logger, RepoEdan $edan)
   {
     $this->u = new AppUtilities();
     $this->tokenStorage = $tokenStorage;
@@ -134,6 +140,7 @@ class RepoImport implements RepoImportInterface {
     $this->logger = $logger;
     // Usage:
     // $this->logger->info('Import started. Job ID: ' . $job_id);
+    $this->edan = $edan;
 
     // Image extensions.
     $this->image_extensions = array(
@@ -622,6 +629,14 @@ class RepoImport implements RepoImportInterface {
           case 'subject':
             // Set the project_id
             $csv_val->project_id = (int)$data->project_id;
+            // Query EDAN to populate the CSV with EDAN record info (subject_name, and subject_display_name)
+            $result = $this->edan->getRecord($csv_val->subject_guid);
+            // The EDAN record assignment has already been validated during pre-validation,
+            // so no error handling - for now.
+            if (!isset($result['error'])) {
+              $csv_val->subject_name = $result['title'];
+              $csv_val->subject_display_name = $result['title'];
+            }
             break;
           case 'item':
             // Set the project_id
