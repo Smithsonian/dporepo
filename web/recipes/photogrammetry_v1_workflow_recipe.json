@@ -1,0 +1,68 @@
+{
+  "id": "photogrammetry_v1",
+  "name": "Photogrammetry scan to web v1",
+  "description": "Process photogrammetry capture dataset assets to generate master model and web-ready assets",
+  "version": 1,
+  "steps": [
+    {
+      "name": "Generate master model from photogrammetry scan datasets",
+      "stepId": "web-master",
+      "recipeId": "web-master",
+      "stepVersion": 1,
+      "stepType": "auto",
+      "stepProvider": "cook",
+      "success": "done",
+      "failure": "failure"
+    },
+    {
+      "name": "Quality Control for generated master model",
+      "stepId": "qc-master",
+      "recipeId": "qc",
+      "stepVersion": 1,
+      "stepType": "manual",
+      "stepProvider": "user",
+      "success": "done",
+      "failure": "failure"
+    },
+    {
+      "name": "Generate HD model from master model",
+      "stepId": "web-hd",
+      "recipeId": "web-hd",
+      "stepVersion": 1,
+      "stepType": "auto",
+      "stepProvider": "cook",
+      "success": "done",
+      "failure": "failure"
+    },
+    {
+      "name": "Quality Control for generated HD model",
+      "stepId": "qc-hd",
+      "recipeId": "qc",
+      "stepVersion": 1,
+      "stepType": "manual",
+      "stepProvider": "user",
+      "success": "done",
+      "failure": "failure"
+    },
+    {
+      "name": "Generate web assets from HD model",
+      "stepId": "web-multi",
+      "recipeId": "web-multi",
+      "stepVersion": 1,
+      "stepType": "auto",
+      "stepProvider": "cook",
+      "success": "done",
+      "failure": "failure"
+    },
+    {
+      "name": "Quality Control for generated web assets",
+      "stepId": "qc-web",
+      "recipeId": "qc",
+      "stepVersion": 1,
+      "stepType": "manual",
+      "stepProvider": "user",
+      "success": "done",
+      "failure": "failure"
+    }
+  ]
+}
