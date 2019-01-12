@@ -10,23 +10,32 @@
     </div>
   </div>
 
-  {{ form_start(form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
+    <div class="row">
+        <div class="col-sm-6 col-md-6">
+            <div>
+                <b>Workflow Recipe:</b> {{ data.recipe_id }}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-sm-6 col-md-6">
+            <div>
+                <b>UUID:</b> {{ data.uuid }}
+            </div>
+        </div>
+    </div>
+
+    {{ form_start(form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
 
     <div class="row">
       <div class="col-sm-6 col-md-6">
-        <div>
-          <b>Workflow:</b>
-        </div>
-        <div>
-          <b>Assets:</b>
-        </div>
-      </div>
-    </div>
-    <div class="row">
-      <div class="col-sm-6 col-md-6">
+        {{ form_row(form.uuid) }}
+        {{ form_row(form.recipe_id) }}
         {{ form_row(form.point_of_contact) }}
       </div>
     </div>
+
     <div class="row">
       <div class="col-sm-6 col-md-6">
         <div class="field-group" style="clear:both;">
