@@ -61,12 +61,12 @@ class WorkflowCommand extends ContainerAwareCommand
     // For each of these, kick off the job,
     // and write back to the workflow table the job ID, and step state = created
     foreach($workflows_data as $workflow_data) {
-      $this->launch_job($workflow_data);
+      $this->launchJob($workflow_data);
     }
 
   }
 
-  private function launch_job($workflow) {
+  private function launchJob($workflow) {
 
     // $workflow contains an array of the row from the workflow table.
     // $workflow['workflow_definition'] contains the JSON definition of the workflow in use
@@ -126,11 +126,11 @@ class WorkflowCommand extends ContainerAwareCommand
 
     // For each workflow, check the job status.
     foreach($workflows_data as $workflow_data) {
-      $this->complete_job($workflow_data);
+      $this->completeJob($workflow_data);
     }
   }
 
-  private function complete_job($workflow) {
+  private function completeJob($workflow) {
     $recipe_id = NULL;
 
     //  If cook says the job is processing, set step state=processing (this is just for jobs that formerly had a state of "created").
