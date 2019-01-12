@@ -8,7 +8,7 @@ namespace AppBundle\Service;
 
 interface RepoStorage {
 
-  public function __construct($connection);
+  public function __construct($connection, $project_dir);
 
   /***
    * @param $query_parameters parameters used to query records for return.
