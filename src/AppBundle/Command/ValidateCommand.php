@@ -139,6 +139,17 @@ class ValidateCommand extends Command
 
       sleep(5);
 
+      // Run the model generation processes.
+      $command_model_generate = $this->getApplication()->find('app:model-generate');
+      $arguments_model_generate = array(
+          'command' => 'app:model-generate',
+          'uuid' => $input->getArgument('uuid')
+      );
+      $input_model_generate = new ArrayInput($arguments_model_generate);
+      $return_model_generate = $command_model_generate->run($input_model_generate, $output);
+
+      sleep(5);
+
       // Outputs multiple lines to the console (adding "\n" at the end of each line).
       $output->writeln([
         '',
