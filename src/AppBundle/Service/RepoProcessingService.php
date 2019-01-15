@@ -691,19 +691,35 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
               $uuid = array_shift($uuid_path_parts);
               // Get the job's data.
               $repo_job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
-              // Log the file to file_upload metadata storage.
-              $this->repo_storage_controller->execute('saveRecord', array(
+
+              // Check to see if the file already exists.
+              $file_exists = $this->repo_storage_controller->execute('getRecords', array(
                 'base_table' => 'file_upload',
-                'user_id' => $repo_job_data['created_by_user_account_id'],
-                'values' => array(
-                  'job_id' => $repo_job_data['job_id'],
-                  'file_name' => $asset['file_name'],
-                  'file_path' => $path,
-                  'file_size' => filesize($asset['file_path']),
-                  'file_type' => pathinfo($asset['file_path'], PATHINFO_EXTENSION),
-                  'file_hash' => md5($asset['file_name']),
+                'fields' => array(),
+                'limit' => 1,
+                'search_params' => array(
+                  0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($path), 'comparison' => '='),
+                ),
+                'search_type' => 'AND',
+                'omit_active_field' => true,
                 )
-              ));
+              );
+
+              if (empty($file_exists)) {
+                // Log the file to file_upload metadata storage.
+                $this->repo_storage_controller->execute('saveRecord', array(
+                  'base_table' => 'file_upload',
+                  'user_id' => $repo_job_data['created_by_user_account_id'],
+                  'values' => array(
+                    'job_id' => $repo_job_data['job_id'],
+                    'file_name' => $asset['file_name'],
+                    'file_path' => $path,
+                    'file_size' => filesize($asset['file_path']),
+                    'file_type' => pathinfo($asset['file_path'], PATHINFO_EXTENSION),
+                    'file_hash' => md5($asset['file_name']),
+                  )
+                ));
+              }
 
             }
           }

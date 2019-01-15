@@ -143,6 +143,7 @@ class RepoImport implements RepoImportInterface {
       'jpeg',
       'cr2',
       'dng',
+      'png',
     );
 
     // Model extensions.
@@ -205,6 +206,7 @@ class RepoImport implements RepoImportInterface {
     if (!empty($return['errors'])) return $return;
     
     $job_data = $this->repo_storage_controller->execute('getJobData', array($params['uuid']));
+    $user_id = $job_data['created_by_user_account_id'];
 
     // Throw a 404 if the job record doesn't exist.
     if (!$job_data) {
@@ -216,14 +218,6 @@ class RepoImport implements RepoImportInterface {
     if ($job_data['job_status'] === 'failed') {
       $return['errors'][] = 'The job has failed. Exiting metadata ingest process.';
       return $return;
-    }
-
-    // Get user data.
-    if( method_exists($this->tokenStorage, 'getUser') ) {
-      $user = $this->tokenStorage->getToken()->getUser();
-      $user_id = $user->getId();
-    } else {
-      $user_id = 0;
     }
 
     // Clear session data.
@@ -243,6 +237,7 @@ class RepoImport implements RepoImportInterface {
         'uuid' => $params['uuid'],
         'project_id' => $params['project_id'],
         'record_id' => $params['record_id'],
+        'created_by_user_account_id' => $job_data['created_by_user_account_id'],
       );
 
       // Remove 'metadata import' from the $job_data['job_type'].
@@ -523,20 +518,13 @@ class RepoImport implements RepoImportInterface {
     $job_log_ids = array();
     $job_status = 'finished';
 
-    // Get user data.
-    if( method_exists($this->tokenStorage, 'getUser') ) {
-      $user = $this->tokenStorage->getToken()->getUser();
-      $data->user_id = $user->getId();
-    } else {
-      $data->user_id = 0;
-    }
-
     // Job ID and parent record ID
     $data->job_id = isset($job_data->job_id) ? $job_data->job_id : false;
     $data->uuid = isset($job_data->uuid) ? $job_data->uuid : false;
     $data->project_id = isset($job_data->project_id) ? $job_data->project_id : false;
     $data->record_id = isset($job_data->record_id) ? $job_data->record_id : false;
     $data->record_type = isset($record_type) ? $record_type : false;
+    $data->user_id = $job_data->created_by_user_account_id;
 
     // Just in case: throw a 404 if either job ID or parent record ID aren't passed.
     if (!$data->job_id) throw $this->createNotFoundException('Job ID not provided.');
@@ -788,46 +776,114 @@ class RepoImport implements RepoImportInterface {
             // Model files.
             if (in_array(strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)), $this->model_extensions)) {
 
-              // Log the HD model to metadata storage.
-              $this->repo_storage_controller->execute('saveRecord', array(
+              // Check to see if the model record already exists, to prevent double entries.
+              $model_record_exists = $this->repo_storage_controller->execute('getRecords', array(
                 'base_table' => 'model',
-                'user_id' => $data->user_id,
-                'values' => array(
-                  'item_id' => $csv_val->item_id,
-                  'parent_model_id' => $this_id,
-                  'model_file_type' => strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)),
-                  'model_purpose' => 'delivery_web',
-                  'has_normals' => 0,
-                  'file_path' => $file_info[0]['file_path'],
-                  'file_checksum' => md5($filename_value),
+                'fields' => array(),
+                'limit' => 1,
+                'search_params' => array(
+                  0 => array('field_names' => array('model.file_path'), 'search_values' => array($file_info[0]['file_path']), 'comparison' => '='),
+                ),
+                'search_type' => 'AND',
+                'omit_active_field' => true,
                 )
-              ));
+              );
 
-              // Log the HD model file to metadata storage.
-              $this->repo_storage_controller->execute('saveRecord', array(
-                'base_table' => 'model_file',
-                'user_id' => $data->user_id,
-                'values' => array(
-                  'model_id' => $this_id,
-                  'file_upload_id' => $file_info[0]['file_upload_id'],
-                )
-              ));
+              if (empty($model_record_exists)) {
+
+                // Log the HD model to metadata storage.
+                $model_id = $this->repo_storage_controller->execute('saveRecord', array(
+                  'base_table' => 'model',
+                  'user_id' => $data->user_id,
+                  'values' => array(
+                    'item_id' => $csv_val->item_id,
+                    'parent_model_id' => $this_id,
+                    'model_file_type' => '.' . strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)),
+                    'model_purpose' => 'delivery_web',
+                    'has_normals' => 0,
+                    'file_path' => $file_info[0]['file_path'],
+                    'file_checksum' => md5($filename_value),
+                    'date_of_creation' => date('Y-m-d H:i:s')
+                  )
+                ));
+
+                if (strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)) === 'obj') {
+                  $model_id_for_uv_maps = $model_id;
+                }
+
+                // Insert into the job_import_record table
+                $this->repo_storage_controller->execute('saveRecord', array(
+                  'base_table' => 'job_import_record',
+                  'user_id' => $data->user_id,
+                  'values' => array(
+                    'job_id' => $data->job_id,
+                    'record_id' => $model_id,
+                    'project_id' => (int)$data->project_id,
+                    'record_table' => 'model',
+                    'description' => 'Model: ' . $filename_value,
+                  )
+                ));
+
+                // Log the HD model file to metadata storage.
+                $model_file_id = $this->repo_storage_controller->execute('saveRecord', array(
+                  'base_table' => 'model_file',
+                  'user_id' => $data->user_id,
+                  'values' => array(
+                    'model_id' => $model_id,
+                    'file_upload_id' => $file_info[0]['file_upload_id'],
+                  )
+                ));
+
+                // Insert into the job_import_record table
+                $this->repo_storage_controller->execute('saveRecord', array(
+                  'base_table' => 'job_import_record',
+                  'user_id' => $data->user_id,
+                  'values' => array(
+                    'job_id' => $data->job_id,
+                    'record_id' => $model_file_id,
+                    'project_id' => (int)$data->project_id,
+                    'record_table' => 'model_file',
+                    'description' => 'Model file: ' . $filename_value,
+                  )
+                ));
+
+              }
 
             }
 
             // UV Maps
             if (in_array(strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)), $this->image_extensions)) {
 
+              // Get the map_type and map_size from the file name.
+              // Example file name: f1978_40-master-1000k-8192-normals.jpg.
+              $file_name_no_extension = pathinfo($filename_value, PATHINFO_FILENAME);
+              $file_name_parts = explode('-', $file_name_no_extension);
+
               // Log the UV map to metadata storage.
-              $this->repo_storage_controller->execute('saveRecord', array(
+              $uv_map_id = $this->repo_storage_controller->execute('saveRecord', array(
                 'base_table' => 'uv_map',
                 'user_id' => $data->user_id,
                 'values' => array(
-                  'model_id' => $this_id,
+                  'model_id' => $model_id_for_uv_maps,
                   'file_upload_id' => $file_info[0]['file_upload_id'],
                   'map_file_type' => strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)),
                   'file_path' => $file_info[0]['file_path'],
                   'file_checksum' => md5($filename_value),
+                  'map_type' => $file_name_parts[4],
+                  'map_size' => $file_name_parts[2],
+                )
+              ));
+
+              // Insert into the job_import_record table
+              $this->repo_storage_controller->execute('saveRecord', array(
+                'base_table' => 'job_import_record',
+                'user_id' => $data->user_id,
+                'values' => array(
+                  'job_id' => $data->job_id,
+                  'record_id' => $uv_map_id,
+                  'project_id' => (int)$data->project_id,
+                  'record_table' => 'uv_map',
+                  'description' => 'UV Map: ' . $filename_value,
                 )
               ));
 
