@@ -1,5 +1,5 @@
 <?php
-// src/AppBundle/Form/WorkflowParamatersForm.php
+// src/AppBundle/Form/WorkflowParametersForm.php
 namespace AppBundle\Form;
 
 use Symfony\Component\Form\AbstractType;
