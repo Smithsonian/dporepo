@@ -4994,7 +4994,13 @@ class RepoStorageHybrid implements RepoStorage {
       $where_parts[] = "step_type=:step_type ";
     }
     if(NULL !== $step_state) {
-      $where_parts[] = "step_state=:step_state ";
+      if($step_state == 'null') {
+        $step_state = NULL;
+        $where_parts[] = "step_state IS NULL ";
+      }
+      else {
+        $where_parts[] = "step_state=:step_state ";
+      }
     }
     if(count($where_parts) > 0) {
       $sql .= " WHERE " . implode(" AND ", $where_parts);
@@ -5005,10 +5011,10 @@ class RepoStorageHybrid implements RepoStorage {
       $statement->bindValue(":workflow_id", $workflow_id, PDO::PARAM_INT);
     }
     if(NULL !== $step_type) {
-      $statement->bindValue(":step_type", $step_type, PDO::PARAM_INT);
+      $statement->bindValue(":step_type", $step_type, PDO::PARAM_STR);
     }
     if(NULL !== $step_state) {
-      $statement->bindValue(":step_state", $step_state, PDO::PARAM_INT);
+      $statement->bindValue(":step_state", $step_state, PDO::PARAM_STR);
     }
     $statement->execute();
 
@@ -5122,33 +5128,43 @@ class RepoStorageHybrid implements RepoStorage {
   public function getWorkflowNextStep($params) {
 
     $workflow_json_array = isset($params['workflow_json_array']) ? $params['workflow_json_array'] : NULL;
-    $step_id = isset($params['step_id']) ? $params['step_id'] : NULL;
+    $current_step_id = isset($params['step_id']) ? $params['step_id'] : NULL;
 
     $step_details = array();
-    $current_step = false;
+    $next_step_id = NULL;
 
     if(!isset($workflow_json_array['steps'])) {
+      //@todo Log an error? The workflow doesn't have any defined steps.
       return $step_details;
     }
 
-    // If $step_id is specified, return the first step following the specified step.
+    if((NULL == $current_step_id)) {
+      // If $current_step_id is null, return the first step.
+      $step_details = $workflow_json_array['steps'][0];
+      return $step_details;
+    }
+
+    // If $current_step_id is specified, return the first step following the specified step.
     foreach($workflow_json_array['steps'] as $step) {
-      if($current_step == true) {
+      if(NULL !== $next_step_id && $step['stepId'] == $next_step_id) {
         $step_details = $step;
         break;
       }
-      if($step['stepId'] == $step_id) {
-        $current_step = true;
+      if($step['stepId'] == $current_step_id) {
+        $next_step_id = isset($step['onSuccessStepId']) ? $step['onSuccessStepId'] : "";
       }
     }
 
-    // If we've completed all steps, set a simple status.
-    if($current_step == true && empty($step_details)) {
-      $step_details['status'] = "done";
-    }
-    elseif((NULL == $step_id || empty($step_details))) {
-      // If $step_id is null or not found, return the first step.
-      $step_details = $workflow_json_array['steps'][0];
+    if(NULL !== $next_step_id) {
+      // If we've completed all steps, set a simple workflow done status.
+      if($next_step_id == "") {
+        $step_details['status'] = "done";
+      }
+      elseif(empty($step_details)) {
+        // Weird case-
+        // we have a named next step but were unable to find the step definition with that stepId, within the workflow definition.
+        //@todo Should probably log an error.
+      }
     }
 
     return $step_details;
