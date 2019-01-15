@@ -45,7 +45,8 @@
                             <a href="/admin/workflows/test/{{ data.workflow_id }}/go/aborted">Abort it.</a>
                         </p>
                     {% elseif data.step_state == 'error' %}
-                        Step failed- {{ data.step_state }}. Here we could give the user options to start over on the last step.
+                        Step failed- {{ data.step_state }}. Here we could give the user options- if onFailureStepId is defined for a manual step that failed,
+                        we can offer the user to step forward to that state.
                     {% else %}
                         Step state is {{ data.step_state }}
                     {% endif %}
