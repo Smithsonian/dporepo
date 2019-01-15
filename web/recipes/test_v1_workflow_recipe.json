@@ -5,34 +5,16 @@
   "version": 1,
   "steps": [
     {
-      "name": "Generate master model from photogrammetry scan datasets",
-      "stepId": "web-master",
-      "recipeId": "test-success",
-      "stepVersion": 1,
-      "stepType": "auto",
-      "stepProvider": "cook",
-      "success": "done",
-      "failure": "failure"
-    },
-    {
-      "name": "Quality Control for generated master model",
-      "stepId": "qc-master",
-      "recipeId": "qc",
-      "stepVersion": 1,
-      "stepType": "manual",
-      "stepProvider": "user",
-      "success": "done",
-      "failure": "failure"
-    },
-    {
       "name": "Generate HD model from master model",
       "stepId": "web-hd",
-      "recipeId": "test-success",
+      "recipeId": "web-hd",
       "stepVersion": 1,
       "stepType": "auto",
       "stepProvider": "cook",
       "success": "done",
-      "failure": "failure"
+      "failure": "failure",
+      "onSuccessStepId": "qc-hd",
+      "onFailureStepId": "upload-hd"
     },
     {
       "name": "Quality Control for generated HD model",
@@ -42,17 +24,33 @@
       "stepType": "manual",
       "stepProvider": "user",
       "success": "done",
-      "failure": "failure"
+      "failure": "failure",
+      "onSuccessStepId": "web-multi",
+      "onFailureStepId": "upload-hd"
+    },
+    {
+      "name": "Upload HD model",
+      "stepId": "upload-hd",
+      "recipeId": "upload-hd",
+      "stepVersion": 1,
+      "stepType": "manual",
+      "stepProvider": "user",
+      "success": "done",
+      "failure": "failure",
+      "onSuccessStepId": "qc-hd",
+      "onFailureStepId": "upload-hd"
     },
     {
       "name": "Generate web assets from HD model",
       "stepId": "web-multi",
+      "recipeId": "web-multi",
       "stepVersion": 1,
-      "recipeId": "test-success",
       "stepType": "auto",
       "stepProvider": "cook",
       "success": "done",
-      "failure": "failure"
+      "failure": "failure",
+      "onSuccessStepId": "qc-web",
+      "onFailureStepId": "upload-web"
     },
     {
       "name": "Quality Control for generated web assets",
@@ -62,7 +60,20 @@
       "stepType": "manual",
       "stepProvider": "user",
       "success": "done",
-      "failure": "failure"
+      "failure": "failure",
+      "onFailureStepId": "upload-web"
+    },
+    {
+      "name": "Upload web assets",
+      "stepId": "upload-web",
+      "recipeId": "upload-web",
+      "stepVersion": 1,
+      "stepType": "manual",
+      "stepProvider": "user",
+      "success": "done",
+      "failure": "failure",
+      "onSuccessStepId": "qc-web",
+      "onFailureStepId": "upload-web"
     }
   ]
 }
