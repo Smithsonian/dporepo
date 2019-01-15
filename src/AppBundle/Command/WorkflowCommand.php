@@ -55,7 +55,7 @@ class WorkflowCommand extends ContainerAwareCommand
   protected function update(InputInterface $input, OutputInterface $output) {
 
     // Look in workflow table for steps where step type=auto and step state is null.
-    $query_params = array('step_type' => 'auto', 'step_state' => NULL);
+    $query_params = array('step_type' => 'auto', 'step_state' => 'null');
     $workflows_data = $this->repo_storage_controller->execute('getWorkflows', $query_params);
 
     // For each of these, kick off the job,
@@ -70,7 +70,7 @@ class WorkflowCommand extends ContainerAwareCommand
 
     // $workflow contains an array of the row from the workflow table.
     // $workflow['workflow_definition'] contains the JSON definition of the workflow in use
-    // $workflow['steps'] contains the steps, and each step has a stepId and optionally a recipeId.
+    // $workflow['workflow_definition']['steps'] contains the steps, and each step has a stepId and optionally a recipeId.
 
     $recipe_id = NULL;
 
@@ -84,31 +84,38 @@ class WorkflowCommand extends ContainerAwareCommand
       }
     }
     if(NULL == $recipe_id) {
+      // If the step doesn't have a recipeId, we don't have anything to launch.
       return;
     }
 
-    switch($recipe_id) {
-      case "web-master":
-        //@todo kick off recipe
-        break;
-      case "web-hd":
-        //@todo kick off recipe
-        break;
-      case "web-multi":
-        //@todo kick off recipe
-        break;
-      case "test-success":
-        // Pretend like we just kicked off this test processing recipe.
-        break;
-      case "test-fail":
-        // Pretend like we just kicked off this test processing recipe.
-        break;
-    }
-
+    // By default we set the step_state to created.
     $query_params = array(
       'workflow_id' => $workflow['workflow_id'],
       'step_state' => 'created'
     );
+
+    switch($recipe_id) {
+      case "web-master":
+        //@todo kick off recipe
+        //@todo get the job_id, and put it in $query_params
+        break;
+      case "web-hd":
+        //@todo kick off recipe
+        //@todo get the job_id, and put it in $query_params
+        break;
+      case "web-multi":
+        //@todo kick off recipe
+        //@todo get the job_id, and put it in $query_params
+        break;
+      case "test-success":
+        // Pretend like we just kicked off a test processing recipe.
+        break;
+      case "test-fail":
+        // Pretend like we just kicked off a test processing recipe.
+        break;
+    }
+
+    // Update the workflow record. Set the step state to created.
     $this->repo_storage_controller->execute('updateWorkflow', $query_params);
 
   }
@@ -133,6 +140,8 @@ class WorkflowCommand extends ContainerAwareCommand
   private function completeJob($workflow) {
     $recipe_id = NULL;
 
+    // This is where we poll for the job.
+
     //  If cook says the job is processing, set step state=processing (this is just for jobs that formerly had a state of "created").
     //  If cook says the job is done, handle completion (whatever else has to be done in the repo for this step) and update the workflow table:
     //      If all workflow steps are done, mark step status=done (should we make any other changes to the workflow table here? should we use a different status, like "workflow_done"?).
@@ -156,12 +165,24 @@ class WorkflowCommand extends ContainerAwareCommand
     switch($recipe_id) {
       case "web-master":
         //@todo complete job
+        // poll for job completion
+        // If completed
+        //    handle completion- metadata storage or whatever
+        //    set $step_state to success if done, or fail if error/fail
         break;
       case "web-hd":
         //@todo complete job
+        // poll for job completion
+        // If completed
+        //    handle completion- metadata storage or whatever
+        //    set $step_state to success if done, or fail if error/fail
         break;
       case "web-multi":
         //@todo complete job
+        // poll for job completion
+        // If completed
+        //    handle completion- metadata storage or whatever
+        //    set $step_state to success if done, or fail if error/fail
         break;
       case "test-success":
         // Pretend like this step succeeded.
