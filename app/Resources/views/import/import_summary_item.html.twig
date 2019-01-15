@@ -89,8 +89,8 @@
           <th class="text-center">Item</th>
           <th class="text-center">Capture Dataset</th>
         {% elseif job_data.job_type == 'models metadata import' %}
-          <th class="text-center">Capture Dataset</th>
           <th class="text-center">Item</th>
+          <th class="text-center">Model Purpose</th>
           <th class="text-center">Model Type</th>
           <th class="text-center">Model Date of Creation</th>
         {% endif %}
@@ -236,8 +236,8 @@
 
       if(job_type === 'models metadata import') {
         columns = [
-          { "data": "capture_dataset_name" },
           { "data": "item_description" },
+          { "data": "model_purpose" },
           { "data": "model_file_type" },
           { "data": "date_of_creation" }
         ];

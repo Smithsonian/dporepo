@@ -4065,6 +4065,10 @@ class RepoStorageHybrid implements RepoStorage {
       );
       $query_params['fields'][] = array(
         'table_name' => 'model',
+        'field_name' => 'model_purpose',
+      );
+      $query_params['fields'][] = array(
+        'table_name' => 'model',
         'field_name' => 'date_of_creation',
       );
 
