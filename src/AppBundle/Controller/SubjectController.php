@@ -326,15 +326,15 @@ class SubjectController extends Controller
     {
 
       $query_params = array(
-          'base_table' => 'subject',
-          'fields' => array(),
-          'sort_fields' => array(
-            0 => array('field_name' => 'subject_name')
-          ),
-          'search_params' => array(
+        'base_table' => 'subject',
+        'fields' => array(),
+        'sort_fields' => array(
+          0 => array('field_name' => 'subject_name')
+        ),
+        'search_params' => array(
           //0 => array('field_names' => array('project_id'), 'search_values' => array($project_id), 'comparison' => '=')
-          ),
-          'search_type' => 'AND',
+        ),
+        'search_type' => 'AND',
       );
       //@todo available only
       $data = $this->repo_storage_controller->execute('getRecords', $query_params );

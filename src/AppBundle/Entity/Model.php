@@ -14,11 +14,6 @@ class Model
     public $item_id;
 
     /**
-     * @var int
-     */
-    public $capture_dataset_id;
-
-    /**
      * @Assert\NotBlank()
      * @Assert\Length(min="1", max="255")
      * @var string

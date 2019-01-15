@@ -114,7 +114,7 @@ class CaptureDataFileController extends Controller
 
         // Add the parent_id to the $data object
         if(false !== $parent_id) {
-        $data->capture_data_element_id = $parent_id;
+          $data->capture_data_element_id = $parent_id;
         }
 
         // Create the form

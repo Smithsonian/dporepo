@@ -86,14 +86,15 @@ class CaptureDeviceComponentController extends Controller
      */
     function formView(Connection $conn, Request $request)
     {
-      $username = $this->getUser()->getUsernameCanonical();
-      $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');
 
-      if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
-        $response = new Response();
-        $response->setStatusCode(403);
-        return $response;
-      }
+        $username = $this->getUser()->getUsernameCanonical();
+        $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');
+
+        if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
+          $response = new Response();
+          $response->setStatusCode(403);
+          return $response;
+        }
 
         $data = new CaptureDeviceComponent();
         $post = $request->request->all();
@@ -116,7 +117,7 @@ class CaptureDeviceComponentController extends Controller
 
         // Add the parent_id to the $data object
         if(false !== $parent_id) {
-        $data->capture_device_id = $parent_id;
+          $data->capture_device_id = $parent_id;
         }
 
         // Create the form

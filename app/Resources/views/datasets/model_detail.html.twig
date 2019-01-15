@@ -13,19 +13,14 @@
       <li><a href="/admin/workspace">Browse Projects</a></li>
       <li>Project: <a href="/admin/project/{{data.parent_records.project_id}}">{{data.parent_records.project_name}}</a></li>
 
-      {% if data.capture_dataset|length %}
         <li>Item: <a href="/admin/item/view/{{data.parent_records.item_id}}">{{ data.parent_records.item_description|length > 50 ? data.parent_records.item_description|slice(0, 50) ~ '...' : data.parent_records.item_description  }}</a></li>
-        <li>Capture Dataset: <a href="/admin/capture_dataset/view/{{data.parent_records.capture_dataset_id}}">{{data.parent_records.capture_dataset_name}}</a></li>
-      {% else %}
-        <li>Item: <a href="/admin/item/view/{{data.parent_records.item_id}}">{{ data.parent_records.item_description|length > 50 ? data.parent_records.item_description|slice(0, 50) ~ '...' : data.parent_records.item_description  }}</a></li>
-      {% endif %}
       <li class="active">Model Detail</li>
     </ol>
 
     <div class="row">
         <div class="col-sm-12 col-md-12">
             <div class="form-group">
-                <a href="{% if data.capture_dataset|length %}/admin/capture_dataset/view/{{data.capture_dataset.capture_dataset_id}}{% else %}/admin/item/view/{{data.parent_records.item_id}} {% endif %}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
+                <a href="/admin/item/view/{{data.parent_records.item_id}}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
             </div>
         </div>
     </div>
@@ -33,13 +28,18 @@
     <div class="row">
         <div class="col-sm-12 col-md-12">
             <div class="col-md-6">
+              {% if data.capture_datasets %}
+                <div><label>Capture Datasets:</label>
+                {% for cd in data.capture_datasets %}
+                    <a href="/admin/capture_dataset/view/{{cd.capture_dataset_id}}">{{cd.capture_dataset_name}}</a><br />
+                {% endfor %}
+                </div>
+              {% endif %}
+
               <input type="hidden" id="model_id" value="{{data.model_id}}">
                 {% if data.parent_model_id %}
                     <div><label><a href="/admin/model/view/{{data.parent_model_id}}">Parent Model</a></label></div>
                 {% endif %}
-              {% if data.capture_dataset|length %}
-                <div><label>Capture Dataset:</label> <a href="/admin/capture_dataset/view/{{data.capture_dataset.capture_dataset_id}}">{{data.capture_dataset.capture_dataset_name}}</a></div>
-              {% endif %}
               <div><label>Model GUID: </label> {{data.model_guid}}</div>
               {% if data.date_of_creation %}
                <div><label>Date Of Creation: </label> {{data.date_of_creation|date("m/d/Y")}}</div>

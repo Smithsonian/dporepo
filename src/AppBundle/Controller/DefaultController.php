@@ -30,7 +30,7 @@ class DefaultController extends Controller
         }
 
         return $this->render('default/index.html.twig', [
-            'base_dir' => realpath($this->getParameter('kernel.project_dir')).DIRECTORY_SEPARATOR,
+          'base_dir' => realpath($this->getParameter('kernel.project_dir')).DIRECTORY_SEPARATOR,
           'database_exists' => $database_exists,
           'database_error' => $database_error]);
     }

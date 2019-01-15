@@ -34,11 +34,11 @@ class ItemController extends Controller
      */
     public function __construct(AppUtilities $u, Connection $conn)
     {
-      // Usage: $this->u->dumper($variable);
-      $this->u = $u;
-      $this->repo_storage_controller = new RepoStorageHybridController($conn);
-      $this->repo_user_access = new RepoUserAccess($conn);
-      $this->uploads_path = '/uploads/repository';
+        // Usage: $this->u->dumper($variable);
+        $this->u = $u;
+        $this->repo_storage_controller = new RepoStorageHybridController($conn);
+        $this->repo_user_access = new RepoUserAccess($conn);
+        $this->uploads_path = '/uploads/repository';
     }
 
     /**
@@ -156,7 +156,7 @@ class ItemController extends Controller
       return $this->json($data);
     }
 
-  /**
+    /**
      * @Route("/admin/item/view/{item_id}", name="item_view", methods="GET")
      */
     public function viewItem(Connection $conn, Request $request, ProjectController $projects, SubjectController $subjects)
@@ -212,7 +212,7 @@ class ItemController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    function showItemsForm( Connection $conn, Request $request )
+    function showItemForm( Connection $conn, Request $request )
     {
         $item = new Item();
         $item->access_model_purpose = NULL;
@@ -503,24 +503,24 @@ class ItemController extends Controller
      */
     public function deleteMultipleItems(Request $request)
     {
-        $ids = $request->query->get('ids');
+      $ids = $request->query->get('ids');
       $parent_id = !empty($request->attributes->get('parent_id')) ? $request->attributes->get('parent_id') : false;
 
       if(!empty($ids) && $parent_id) {
-          $ids_array = explode(',', $ids);
+        $ids_array = explode(',', $ids);
 
-          foreach ($ids_array as $key => $id) {
-            $ret = $this->repo_storage_controller->execute('markItemInactive', array(
-              'record_id' => $id,
-              'user_id' => $this->getUser()->getId(),
-            ));
-          }
-
-          $this->addFlash('message', 'Records successfully removed.');
-
-        } else {
-          $this->addFlash('message', 'Missing data. No records removed.');
+        foreach ($ids_array as $key => $id) {
+          $ret = $this->repo_storage_controller->execute('markItemInactive', array(
+            'record_id' => $id,
+            'user_id' => $this->getUser()->getId(),
+          ));
         }
+
+        $this->addFlash('message', 'Records successfully removed.');
+
+      } else {
+        $this->addFlash('message', 'Missing data. No records removed.');
+      }
 
       $referer = $request->headers->get('referer');
       return $this->redirect($referer);
