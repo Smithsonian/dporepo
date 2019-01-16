@@ -232,9 +232,10 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
               // Log job data to the metadata storage
               if (isset($job['error']) && empty($job['error'])) {
+
                 $processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
                   'base_table' => 'processing_job',
-                  'user_id' => $this->user_id,
+                  'user_id' => $job_data['created_by_user_account_id'],
                   'values' => array(
                     'processing_service_job_id' => $job['id'],
                     'recipe' =>  $job['recipe']['name'],
@@ -243,13 +244,17 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
                     'asset_path' => $file->getPathname(),
                   )
                 ));
+
+                // Create the workflow.
+                $query_params = array(
+                  'uuid' => $job_data['uuid'],
+                  'workflow_recipe_id' => 'web-hd',
+                  'step_state' => 'processing',
+                  'user_id' => $job_data['created_by_user_account_id'],
+                );
+                $workflow_data = $this->repo_storage_controller->execute('createWorkflow', $query_params);
+
               }
-
-              // Collect the job IDs so we can query against the processing service for job statuses.
-              $data['job_ids'][] = $job['id'];
-
-              // echo 'done inserting processing job... id = ' . $processing_job_id . "\n";
-              // die();
 
               // The external path.
               $path_external = $job['id'] . '/' . $file->getFilename();
@@ -283,7 +288,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
             $this->repoValidate->logErrors(
               array(
                 'job_id' => $job_data['job_id'],
-                'user_id' => $this->user_id,
+                'user_id' => $job_data['created_by_user_account_id'],
                 'job_log_label' => 'Validate Model',
                 'errors' => $data[$i]['errors'],
               )

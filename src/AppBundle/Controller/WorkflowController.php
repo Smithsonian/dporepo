@@ -278,11 +278,11 @@ class WorkflowController extends Controller
 
     $recipe_step_state = NULL;
     switch($recipe_id) {
-      case "test-success":
-        $recipe_step_state = "success";
+      case 'test-success':
+        $recipe_step_state = 'success';
         break;
-      case "test-fail":
-        $recipe_step_state = "error";
+      case 'test-fail':
+        $recipe_step_state = 'error';
         break;
     }
 
@@ -302,10 +302,10 @@ class WorkflowController extends Controller
       );
       $next_step_details = $this->repo_storage_controller->execute('getWorkflowNextStep', $query_params);
 
-      if($next_step_details['status'] == "done") {
+      if(isset($next_step_details['status']) && ($next_step_details['status'] == 'done')) {
         $query_params = array(
           'workflow_id' => $workflow_id,
-          'step_state' => "done",
+          'step_state' => 'done',
           'job_id' => NULL,
         );
       }
