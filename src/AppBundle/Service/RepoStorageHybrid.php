@@ -9,9 +9,11 @@ use PDO;
 class RepoStorageHybrid implements RepoStorage {
 
   private $connection;
+  private $project_dir;
 
-  public function __construct($connection) {
+  public function __construct($connection, $project_dir) {
     $this->connection = $connection;
+    $this->project_dir = $project_dir;
   }
 
   /**
@@ -4978,109 +4980,251 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
-  /***
-   * @param $params has record_type (capture_dataset, model, or uv_map)
-   * and record_id (repository id of the record)
-   * @return current status info, or false
-   */
-  public function getWorkflowProcessingStatus($params) {
 
-    $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
-    $record_id = array_key_exists('record_id', $params) ? $params['record_id'] : NULL;
+  public function getWorkflows($params = array()) {
 
-    if($record_type !== 'capture_dataset' && $record_type !== 'model') {
-      return NULL;
+    //@todo project_id and other params; for now just get all.
+    $workflow_id = array_key_exists('workflow_id', $params) ? $params['workflow_id'] : NULL;
+    $step_type = array_key_exists('step_type', $params) ? $params['step_type'] : NULL;
+    $step_state = array_key_exists('step_state', $params) ? $params['step_state'] : NULL;
+
+    $sql = "SELECT * FROM workflow ";
+    $where_parts = array();
+    if(NULL !== $workflow_id) {
+      $where_parts[] = "workflow_id=:workflow_id ";
     }
-
-    // See if record exists; return FALSE if not.
-    $sql = "Select * FROM " . $record_type . " WHERE " . $record_type . "_id=:id";
+    if(NULL !== $step_type) {
+      $where_parts[] = "step_type=:step_type ";
+    }
+    if(NULL !== $step_state) {
+      if($step_state == 'null') {
+        $step_state = NULL;
+        $where_parts[] = "step_state IS NULL ";
+      }
+      else {
+        $where_parts[] = "step_state=:step_state ";
+      }
+    }
+    if(count($where_parts) > 0) {
+      $sql .= " WHERE " . implode(" AND ", $where_parts);
+    }
     $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":id", $record_id, PDO::PARAM_INT);
+
+    if(NULL !== $workflow_id) {
+      $statement->bindValue(":workflow_id", $workflow_id, PDO::PARAM_INT);
+    }
+    if(NULL !== $step_type) {
+      $statement->bindValue(":step_type", $step_type, PDO::PARAM_STR);
+    }
+    if(NULL !== $step_state) {
+      $statement->bindValue(":step_state", $step_state, PDO::PARAM_STR);
+    }
     $statement->execute();
 
     $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-    if(!is_array($ret) || empty($ret)) {
+    if(NULL !== $workflow_id) {
+      if(isset($ret[0])) {
+        $ret = $ret[0];
+      }
+    }
+
+    return $ret;
+  }
+
+  public function createWorkflow($params) {
+
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : 0;
+    $uuid = array_key_exists('uuid', $params) ? $params['uuid'] : NULL;
+    $workflow_recipe_id = array_key_exists('workflow_recipe_id', $params) ? $params['workflow_recipe_id'] : NULL;
+
+    $return = array(
+      'return' => 'error',
+    );
+
+    if(NULL == $uuid || NULL == $workflow_recipe_id) {
+      $return['errors'][] = "UUID and workflow_recipe_id must be specified to create a workflow.";
+      return $return;
+    }
+
+    // Check for problems.
+    //@todo should we see if uuid exists first?
+
+    $workflow_json_array = $this->getWorkflowDefinition($workflow_recipe_id);
+    if(NULL === $workflow_json_array) {
+      $return['errors'][] = "File not found or empty for workflow recipe '" . $workflow_recipe_id . "'.";
+      return $return;
+    }
+    elseif(false === $workflow_json_array) {
+      $return['errors'][] = "Workflow recipe does not contain valid JSON, for recipe '" . $workflow_recipe_id . "'.";
+      return $return;
+    }
+
+    $first_step_details = $this->getWorkflowNextStep(array('workflow_json_array' => $workflow_json_array));
+    if(empty($first_step_details)) {
+      $return['errors'][] = "Workflow recipe has no steps, for recipe '" . $workflow_recipe_id . "'.";
+      return $return;
+    }
+    $step_id = isset($first_step_details['stepId']) ? $first_step_details['stepId'] : NULL;
+    $step_type = isset($first_step_details['stepType']) ? $first_step_details['stepType'] : "auto";
+
+    if(NULL == $step_id) {
+      $return['errors'][] = "Step ID does not exist for first step, for recipe '" . $workflow_recipe_id . "'.";;
+      return $return;
+    }
+
+    $workflow_json = json_encode($workflow_json_array);
+    $sql ="INSERT INTO workflow 
+          (workflow_recipe_name, workflow_definition, uuid, step_id, step_state, step_type, job_id, date_created, last_modified_user_account_id, created_by_user_account_id) 
+          VALUES (:workflow_recipe_name, :workflow_definition, :uuid, :step_id, NULL, :step_type, NULL, NOW(), :last_user_id, :created_user_id)";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":workflow_recipe_name", $workflow_recipe_id, PDO::PARAM_STR);
+    $statement->bindValue(":workflow_definition", $workflow_json, PDO::PARAM_STR);
+    $statement->bindValue(":uuid", $uuid, PDO::PARAM_STR);
+    $statement->bindValue(":step_id", $step_id, PDO::PARAM_STR);
+    $statement->bindValue(":step_type", $step_type, PDO::PARAM_STR);
+    $statement->bindValue(":last_user_id", (int)$user_id, PDO::PARAM_INT);
+    $statement->bindValue(":created_user_id", (int)$user_id, PDO::PARAM_INT);
+
+    $statement->execute();
+    $last_workflow_id = $this->connection->lastInsertId();
+
+    // Get workflow record
+    $sql = "SELECT * FROM workflow WHERE workflow_id=:id";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":id", $last_workflow_id, PDO::PARAM_INT);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $workflow_record = array();
+    if(!empty($ret) && is_array($ret)) {
+      $workflow_record = $ret[0];
+    }
+
+    $return['return'] = 'success';
+    $return['workflow'] = $workflow_record;
+    return $return;
+
+  }
+
+  public function getWorkFlowDefinition($workflow_recipe_id) {
+
+    // Look for a file in the web root at "web/" . $workflow_recipe_id . "_workflow_recipe.json"
+    $recipe_file = $this->project_dir . '/web/recipes/' . $workflow_recipe_id . '_workflow_recipe.json';
+
+    // Return NULL if file does not exist.
+    if(!file_exists($recipe_file)) {
+      return NULL;
+    }
+
+    $recipe_json = file_get_contents($recipe_file);
+    $recipe_array = json_decode($recipe_json, true);
+
+    // Return false if the file doesn't contain valid JSON
+    if(NULL == $recipe_array) {
       return false;
     }
 
-    $record = $ret[0];
-    return array(
-      'record_type' => $record_type,
-      'record_id' => $record_id,
-      'workflow_id' => $record['workflow_id'],
-      'processing_step' => $record['workflow_processing_step'],
-      'status' => $record['workflow_status'],
-      'status_detail' => $record['workflow_status_detail'],
-      'created_by_user_account_id' => $record['created_by_user_account_id'],
-      'date_created' => $record['date_created'],
-      'last_modified_user_account_id' => $record['last_modified_user_account_id'],
-      'last_modified' => $record['last_modified'],
-    );
+    return $recipe_array;
+  }
+
+  public function getWorkflowNextStep($params) {
+
+    $workflow_json_array = isset($params['workflow_json_array']) ? $params['workflow_json_array'] : NULL;
+    $current_step_id = isset($params['step_id']) ? $params['step_id'] : NULL;
+
+    $step_details = array();
+    $next_step_id = NULL;
+
+    if(!isset($workflow_json_array['steps'])) {
+      //@todo Log an error? The workflow doesn't have any defined steps.
+      return $step_details;
+    }
+
+    if((NULL == $current_step_id)) {
+      // If $current_step_id is null, return the first step.
+      $step_details = $workflow_json_array['steps'][0];
+      return $step_details;
+    }
+
+    // If $current_step_id is specified, return the first step following the specified step.
+    foreach($workflow_json_array['steps'] as $step) {
+      if(NULL !== $next_step_id && $step['stepId'] == $next_step_id) {
+        $step_details = $step;
+        break;
+      }
+      if($step['stepId'] == $current_step_id) {
+        $next_step_id = isset($step['onSuccessStepId']) ? $step['onSuccessStepId'] : "";
+      }
+    }
+
+    if(NULL !== $next_step_id) {
+      // If we've completed all steps, set a simple workflow done status.
+      if($next_step_id == "") {
+        $step_details['status'] = "done";
+      }
+      elseif(empty($step_details)) {
+        // Weird case-
+        // we have a named next step but were unable to find the step definition with that stepId, within the workflow definition.
+        //@todo Should probably log an error.
+      }
+    }
+
+    return $step_details;
   }
 
   /***
-   * @param $params has record_type (capture_dataset, model, or uv_map)
-   * and record_id (repository id of the record)
-   * @return mixed true or false
+   * @param $params workflow details
+   * @return workflow array
    */
-  public function setWorkflowProcessingStatus($params) {
+  public function updateWorkflow($params) {
 
-    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
-    $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
-    $record_id = array_key_exists('record_id', $params) ? $params['record_id'] : NULL;
-    $project_id = array_key_exists('project_id', $params) ? $params['project_id'] : NULL;
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : 0;
     $workflow_id = array_key_exists('workflow_id', $params) ? $params['workflow_id'] : NULL;
-    $processing_step = array_key_exists('processing_step', $params) ? $params['processing_step'] : NULL;
-    $status = array_key_exists('status', $params) ? $params['status'] : NULL;
-    $status_detail = array_key_exists('status_detail', $params) ? $params['status_detail'] : NULL;
+    $step_id = array_key_exists('step_id', $params) ? $params['step_id'] : NULL;
+    $step_type = array_key_exists('step_type', $params) ? $params['step_type'] : NULL;
+    $step_state = array_key_exists('step_state', $params) ? $params['step_state'] : false;
+    $job_id = array_key_exists('job_id', $params) ? $params['job_id'] : false;
 
-    if($record_type !== 'capture_dataset' && $record_type !== 'model') {
-      return NULL;
-    }
-
-    // See if record exists; return FALSE if not.
-    $sql = "Select * FROM " . $record_type . " WHERE " . $record_type . "_id=:id";
-    $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":id", $record_id, PDO::PARAM_INT);
-    $statement->execute();
-
-    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
-
-    if(!is_array($ret) || empty($ret)) {
+    if(NULL == $workflow_id) {
       return false;
     }
 
-    // Update this record with new status info. Write to workflow_status_log also.
-    $sql ="INSERT INTO workflow_status_log 
-          (workflow_id, project_id, record_id, record_table, processing_step, status, status_detail, created_by_user_account_id, date_created) 
-          VALUES (:workflow_id, :project_id, :record_id, :record_table, :processing_step, :status, :status_detail, :created_by_user_account_id, NOW())";
-    $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":workflow_id", $workflow_id, PDO::PARAM_INT);
-    $statement->bindValue(":project_id", $project_id, PDO::PARAM_INT);
-    $statement->bindValue(":record_id", $record_id, PDO::PARAM_INT);
+    // Update this record with new status info.
+    //@todo Write to workflow_status_log also?
+    $sql ="UPDATE workflow SET ";
+    $sql .= " last_modified=NOW(), last_modified_user_account_id=:user_id";
 
-    $statement->bindValue(":record_table", $user_id, PDO::PARAM_STR);
-    $statement->bindValue(":processing_step", $processing_step, PDO::PARAM_STR);
-    $statement->bindValue(":status", $status, PDO::PARAM_STR);
-    $statement->bindValue(":status_detail", $status_detail, PDO::PARAM_STR);
-    $statement->bindValue(":created_by_user_account_id", $user_id, PDO::PARAM_INT);
-
-    $statement->execute();
-
-    $sql ="UPDATE " . $record_type . " set workflow_id=:workflow_id, workflow_processing_step=:processing_step,
-    workflow_status=:status, workflow_status_detail=:status_detail,
-    last_modified=NOW(), last_modified_user_account_id=:user_id 
-    WHERE " . $record_type . "_id=:id";
+    if(NULL !== $step_id) {
+      $sql .= ", step_id=:step_id";
+    }
+    if(NULL !== $step_type) {
+      $sql .= ", step_type=:step_type";
+    }
+    if(false !== $step_state) {
+      $sql .= ", step_state=:step_state";
+    }
+    if(false !== $job_id) {
+      $sql .= ", job_id=:job_id";
+    }
+    $sql .= " WHERE workflow_id=:workflow_id";
 
     $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":id", $record_id, PDO::PARAM_INT);
-    $statement->bindValue(":workflow_id", $workflow_id, PDO::PARAM_INT);
-    $statement->bindValue(":processing_step", $processing_step, PDO::PARAM_STR);
-    $statement->bindValue(":status", $status, PDO::PARAM_STR);
-    $statement->bindValue(":status_detail", $status_detail, PDO::PARAM_STR);
-    $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
 
+    $statement->bindValue(":workflow_id", $workflow_id, PDO::PARAM_INT);
+    if(NULL !== $step_id) {
+      $statement->bindValue(":step_id", $step_id, PDO::PARAM_STR);
+    }
+    if(NULL !== $step_type) {
+      $statement->bindValue(":step_type", $step_type, PDO::PARAM_STR);
+    }
+    if(false !== $step_state) {
+      $statement->bindValue(":step_state", $step_state, PDO::PARAM_STR);
+    }
+    if(false !== $job_id) {
+      $statement->bindValue(":job_id", $job_id, PDO::PARAM_STR);
+    }
+    $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
     $statement->execute();
 
     return true;

@@ -1,0 +1,79 @@
+{
+  "id": "test_v1",
+  "name": "Test recipe v1",
+  "description": "A test recipe to simulate success",
+  "version": 1,
+  "steps": [
+    {
+      "name": "Generate HD model from master model",
+      "stepId": "web-hd",
+      "recipeId": "web-hd",
+      "stepVersion": 1,
+      "stepType": "auto",
+      "stepProvider": "cook",
+      "success": "done",
+      "failure": "failure",
+      "onSuccessStepId": "qc-hd",
+      "onFailureStepId": "upload-hd"
+    },
+    {
+      "name": "Quality Control for generated HD model",
+      "stepId": "qc-hd",
+      "recipeId": "qc",
+      "stepVersion": 1,
+      "stepType": "manual",
+      "stepProvider": "user",
+      "success": "done",
+      "failure": "failure",
+      "onSuccessStepId": "web-multi",
+      "onFailureStepId": "upload-hd"
+    },
+    {
+      "name": "Upload HD model",
+      "stepId": "upload-hd",
+      "recipeId": "upload-hd",
+      "stepVersion": 1,
+      "stepType": "manual",
+      "stepProvider": "user",
+      "success": "done",
+      "failure": "failure",
+      "onSuccessStepId": "qc-hd",
+      "onFailureStepId": "upload-hd"
+    },
+    {
+      "name": "Generate web assets from HD model",
+      "stepId": "web-multi",
+      "recipeId": "web-multi",
+      "stepVersion": 1,
+      "stepType": "auto",
+      "stepProvider": "cook",
+      "success": "done",
+      "failure": "failure",
+      "onSuccessStepId": "qc-web",
+      "onFailureStepId": "upload-web"
+    },
+    {
+      "name": "Quality Control for generated web assets",
+      "stepId": "qc-web",
+      "recipeId": "qc",
+      "stepVersion": 1,
+      "stepType": "manual",
+      "stepProvider": "user",
+      "success": "done",
+      "failure": "failure",
+      "onFailureStepId": "upload-web"
+    },
+    {
+      "name": "Upload web assets",
+      "stepId": "upload-web",
+      "recipeId": "upload-web",
+      "stepVersion": 1,
+      "stepType": "manual",
+      "stepProvider": "user",
+      "success": "done",
+      "failure": "failure",
+      "onSuccessStepId": "qc-web",
+      "onFailureStepId": "upload-web"
+    }
+  ]
+}
