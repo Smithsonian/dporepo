@@ -9,9 +9,11 @@ use PDO;
 class RepoStorageHybrid implements RepoStorage {
 
   private $connection;
+  private $project_dir;
 
-  public function __construct($connection) {
+  public function __construct($connection, $project_dir) {
     $this->connection = $connection;
+    $this->project_dir = $project_dir;
   }
 
   /**
@@ -259,6 +261,10 @@ class RepoStorageHybrid implements RepoStorage {
       //$params will be something like array('item_id' => '123');
     $return_data = array();
 
+    if(!isset($params['item_id'])) {
+      return array();
+    }
+
       $query_params = array(
         'fields' => array(),
         'base_table' => 'item',
@@ -342,39 +348,22 @@ class RepoStorageHybrid implements RepoStorage {
         $return_data = $ret[0];
       }
 
-    //@todo
-    $return_data['inherit_api_published'] = NULL;
-    $return_data['inherit_api_discoverable'] = NULL;
-    if(isset($return_data['project_id'])) {
-      $sql = "SELECT api_published, api_discoverable FROM project 
-      WHERE project.project_id= :project_id";
-      $statement = $this->connection->prepare($sql);
-      $statement->bindValue(":project_id", $return_data['project_id'], PDO::PARAM_STR);
-      $statement->execute();
-      $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
-
-      if(count($tmp) > 0) {
-        $return_data['inherit_api_published'] = $tmp[0]['api_published'];
-        $return_data['inherit_api_discoverable'] = $tmp[0]['api_discoverable'];
-      }
+    if(empty($return_data)) {
+      return $return_data;
     }
 
-    $sql = "SELECT model_purpose_description, im.model_purpose_id FROM item_model_purpose im
-      LEFT JOIN model_purpose on im.model_purpose_id = model_purpose.model_purpose_id
-      WHERE im.item_id= :item_id";
-    $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":item_id", $params['item_id'], PDO::PARAM_STR);
-    $statement->execute();
-    $purpose_data = $statement->fetchAll(PDO::FETCH_ASSOC);
-
-    $model_purpose_data = array();
-    foreach($purpose_data as $k => $p) {
-      $desc = $p['model_purpose_description'];
-      $id = $p['model_purpose_id'];
-      $model_purpose_data[$desc] = $id;
-    }
-
-    $return_data['api_access_model_purpose'] = is_array($model_purpose_data) ? $model_purpose_data : array();
+    $id_params = array(
+      'record_type' => 'item',
+      'project_id' => $return_data['project_id'],
+      'subject_id' => $return_data['subject_id'],
+      'item_id' => $params['item_id'],
+    );
+    $download_permissions = $this->getApiPermissions($id_params);
+    $return_data['inherit_api_published'] = isset($download_permissions['inherit_api_published']) ? $download_permissions['inherit_api_published'] : NULL;
+    $return_data['inherit_api_discoverable'] = isset($download_permissions['inherit_api_discoverable']) ? $download_permissions['inherit_api_discoverable'] : NULL;
+    $return_data['api_access_model_purpose'] = isset($download_permissions['api_access_model_purpose']) ? $download_permissions['api_access_model_purpose'] : array();
+    $return_data['inherit_api_access_model_face_count_id'] = isset($download_permissions['inherit_api_access_model_face_count_id']) ? $download_permissions['inherit_api_access_model_face_count_id'] : NULL;
+    $return_data['inherit_api_access_uv_map_size_id'] = isset($download_permissions['inherit_api_access_uv_map_size_id']) ? $download_permissions['inherit_api_access_uv_map_size_id'] : NULL;
 
       return $return_data;
   }
@@ -384,184 +373,78 @@ class RepoStorageHybrid implements RepoStorage {
     $id = isset($params['model_id']) ? (int)$params['model_id'] : NULL;
     if (!isset($id)) return array();
 
-    $data = array();
+    $return_data = array();
 
-    $query_params = array(
-      'fields' => array(),
-      'base_table' => 'model',
-      'search_params' => array(
-        0 => array('field_names' => array('model.active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array('model.model_id'), 'search_values' => $params, 'comparison' => '=')
-      ),
-      'search_type' => 'AND',
-      'related_tables' => array(),
-    );
+    $sql = "SELECT model.model_id, model.parent_model_id, model.item_id, model.model_guid, model.date_of_creation,
+        model.model_file_type, model.derived_from, model.creation_method, model.model_modality, model.units, model.is_watertight,
+        model_purpose.model_purpose, model_purpose.model_purpose_description, model.point_count, model.has_normals, model.face_count, model.vertices_count, model.has_vertex_color,
+        model.has_uv_space, model.model_maps          
+        FROM model LEFT JOIN model_purpose ON model.model_purpose_id = model_purpose.model_purpose_id
+        WHERE model.active = 1
+        AND model.model_id = :model_id";
 
-    // Fields.
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'model_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'parent_model_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'item_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'capture_dataset_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'model_guid',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'date_of_creation',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'model_file_type',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'derived_from',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'creation_method',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'model_modality',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'units',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'is_watertight',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'model_purpose',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'point_count',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'has_normals',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'face_count',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'vertices_count',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'has_vertex_color',
-    );
-
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'has_uv_space',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'model',
-      'field_name' => 'model_maps',
-    );
-
-    $query_params['records_values'] = array();
-    $ret = $this->getRecords($query_params);
-    //@todo do something if $ret has errors
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":model_id", $id, PDO::PARAM_INT);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
 
     if(array_key_exists(0, $ret)) {
-      $data = $ret[0];
+      $return_data = $ret[0];
     }
-    if (empty($data)) return $data;
-
+    if (empty($return_data)) return $return_data;
 
     // Get model files.
-    $query_params = array(
-      'fields' => array(),
-      'base_table' => 'model_file',
-      'search_params' => array(
-        0 => array('field_names' => array('model_file.active'), 'search_values' => array(1), 'comparison' => '='),
-        1 => array('field_names' => array('model_file.model_id'), 'search_values' => $params, 'comparison' => '=')
-      ),
-      'search_type' => 'AND',
-      'related_tables' => array(),
-    );
+    $sql = "SELECT model_file.model_file_id, file_upload.file_name, file_upload.file_path, file_upload.file_hash          
+        FROM model_file        
+        LEFT JOIN file_upload ON model_file.file_upload_id = file_upload.file_upload_id
+        WHERE model_file.active = 1
+        AND model_file.model_id = :model_id";
 
-    // Fields.
-    $query_params['fields'][] = array(
-      'table_name' => 'model_file',
-      'field_name' => 'model_file_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'file_upload',
-      'field_name' => 'file_name',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'file_upload',
-      'field_name' => 'file_path',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'file_upload',
-      'field_name' => 'file_hash',
-    );
-
-    // Joins.
-    $query_params['related_tables'][] = array(
-      'table_name' => 'file_upload',
-      'table_join_field' => 'file_upload_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'model_file',
-      'base_join_field' => 'file_upload_id',
-    );
-
-    $query_params['records_values'] = array();
-    $ret = $this->getRecords($query_params);
-    //@todo do something if $ret has errors
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":model_id", $id, PDO::PARAM_INT);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
 
     $file_data = array();
     if(array_key_exists(0, $ret)) {
-      $file_data = $ret;
+      $file_data = $ret[0];
     }
-    $data['files'] = $file_data;
-    $data['viewable_model'] = false;
+    $return_data['files'] = $file_data;
+
+    $return_data['viewable_model'] = false;
     foreach($file_data as $file) {
       $fn = $file['file_name'];
       $fn_exploded = explode('.', $fn);
       if(count($fn_exploded) == 2 && strtolower($fn_exploded[1]) == 'obj') {
-        $data['viewable_model'] = $file;
+        $return_data['viewable_model'] = $file;
     }
     }
 
     // End get model files.
 
-    $data['capture_dataset'] = array();
+    // Get the source capture datasets for this model.
+    $return_data['capture_datasets'] = array();
+    $sql = "SELECT capture_dataset_model.capture_dataset_id, capture_dataset.capture_dataset_name          
+        FROM capture_dataset_model   
+        LEFT JOIN capture_dataset on capture_dataset_model.capture_dataset_id = capture_dataset.capture_dataset_id
+        WHERE capture_dataset.active = 1
+        AND capture_dataset_model.model_id = :model_id";
 
-    // Get all of the parent records.
-    $record_type = !empty($data['capture_dataset_id']) ? 'model_with_capture_dataset_id' : 'model_with_item_id';
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":model_id", $id, PDO::PARAM_INT);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-    // Execute.
-    $data['parent_records'] = $this->getParentRecords(array(
+    $capture_dataset_data = $ret;
+    $return_data['capture_datasets'] = $capture_dataset_data;
+
+
+    // Get all of the parent records- project, subject, item.
+    $record_type = 'model_with_item_id';
+    $return_data['parent_records'] = $this->getParentRecords(array(
       'base_record_id' => $id,
       'record_type' => $record_type,
     ));
-
-    // Set the item ID.
-    $item_id = $data['parent_records']['item_id'];
 
     // Example output of getParentRecords:
     // array(4) {
@@ -575,54 +458,29 @@ class RepoStorageHybrid implements RepoStorage {
     //   string(1) "9"
     // }
 
-    if (!empty($data['capture_dataset_id'])) {
-      // Get the capture dataset record.
-      $capture_dataset = $this->getRecord(array(
-          'base_table' => 'capture_dataset',
-          'id_field' => 'capture_dataset_id',
-          'id_value' => $data['capture_dataset_id'],
-        )
-      );
-      // Modify the item ID and set the capture dataset.
-      if (!empty($capture_dataset)) {
-        $item_id = $capture_dataset['item_id'];
-        $data['capture_dataset'] = $capture_dataset;
+    // Get file permissions.
+    $project_id = isset($return_data['parent_records']['project_id']) ? $return_data['parent_records']['project_id'] : NULL;
+    $item_id = isset($return_data['parent_records']['item_id']) ? $return_data['parent_records']['item_id'] : NULL;
+    $capture_dataset_ids = array();
+    if (count($return_data['capture_datasets']) > 0) {
+      foreach($return_data['capture_datasets'] as $cd) {
+        $capture_dataset_ids[] = $cd;
       }
     }
 
-    // Get the item record.
-    $item = $this->getRecord(array(
-        'base_table' => 'item',
-        'id_field' => 'item_id',
-        'id_value' => $item_id,
-      )
-    );
-
-    if (!empty($item)) {
-      // Get the subject record.
-      $subject = $this->getRecord(array(
-          'base_table' => 'subject',
-          'id_field' => 'subject_id',
-          'id_value' => $item['subject_id'],
-        )
+    $id_params = array(
+      'record_type' => 'model',
+      'project_id' => $project_id,
+      'item_id' => $item_id,
+      'capture_dataset_ids' => $capture_dataset_ids,
       );
+    $download_permissions = $this->getApiPermissions($id_params);
+    $return_data['inherit_api_published'] = isset($download_permissions['inherit_api_published']) ? $download_permissions['inherit_api_published'] : NULL;
+    $return_data['inherit_api_discoverable'] = isset($download_permissions['inherit_api_discoverable']) ? $download_permissions['inherit_api_discoverable'] : NULL;
+    //$return_data['api_access_model_purpose'] = isset($download_permissions['api_access_model_purpose']) ? $download_permissions['api_access_model_purpose'] : NULL;
 
-      if (!empty($subject)) {
-        // // Get the project record.
-        // $project = $this->getRecord(array(
-        //     'base_table' => 'project',
-        //     'id_field' => 'project_id',
-        //     'id_value' => $subject['project_id'],
-        //   )
-        // );
+    return $return_data;
 
-        $data['subject_name'] = $subject['subject_name'];
-      }
-      $data['item_description'] = $item['item_description'];
-      $data['project_name'] = $item['project_id'];
-    }
-
-    return $data;
   }
   public function getFiles($params){
     $limit = '';
@@ -759,6 +617,8 @@ class RepoStorageHybrid implements RepoStorage {
           ,light_source_type.label AS light_source_type_label
           ,background_removal_method.label AS background_removal_method_label
           ,camera_cluster_type.label AS camera_cluster_type_label
+          ,item.subject_id
+          ,item.project_id
         FROM capture_dataset
         LEFT JOIN capture_method ON capture_method.capture_method_id = capture_dataset.capture_method
         LEFT JOIN dataset_type ON dataset_type.dataset_type_id = capture_dataset.capture_dataset_type
@@ -767,6 +627,7 @@ class RepoStorageHybrid implements RepoStorage {
         LEFT JOIN light_source_type ON light_source_type.light_source_type_id = capture_dataset.light_source_type
         LEFT JOIN background_removal_method ON background_removal_method.background_removal_method_id = capture_dataset.background_removal_method
         LEFT JOIN camera_cluster_type ON camera_cluster_type.camera_cluster_type_id = capture_dataset.cluster_type
+        LEFT JOIN item on capture_dataset.item_id = item.item_id
         WHERE capture_dataset.active = 1
         AND capture_dataset.capture_dataset_id = :capture_dataset_id";
 
@@ -779,54 +640,19 @@ class RepoStorageHybrid implements RepoStorage {
       $return_data = $ret[0];
     }
 
-    //@todo
-    $return_data['inherit_api_published'] = NULL;
-    $return_data['inherit_api_discoverable'] = NULL;
-    if(isset($return_data['item_id'])) {
-      $sql = "SELECT item.api_published, item.api_discoverable FROM item 
-      LEFT JOIN capture_dataset on item.item_id = capture_dataset.item_id 
-      WHERE capture_dataset.capture_dataset_id= :item_id";
-      $statement = $this->connection->prepare($sql);
-      $statement->bindValue(":item_id", $return_data['item_id'], PDO::PARAM_STR);
-      $statement->execute();
-      $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
-
-      if(count($tmp) > 0) {
-        $return_data['inherit_api_published'] = $tmp[0]['api_published'];
-        $return_data['inherit_api_discoverable'] = $tmp[0]['api_discoverable'];
-      }
-      else {
-        // Get from project
-        $sql = "SELECT p.api_published, p.api_discoverable FROM project p
-          LEFT JOIN item on p.project_id = item.project_id
-          WHERE item.item_id= :item_id";
-        $statement = $this->connection->prepare($sql);
-        $statement->bindValue(":item_id", $return_data['item_id'], PDO::PARAM_STR);
-        $statement->execute();
-        $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
-        if(count($tmp) > 0) {
-          $return_data['inherit_api_published'] = $tmp[0]['api_published'];
-          $return_data['inherit_api_discoverable'] = $tmp[0]['api_discoverable'];
-        }
-      }
-    }
-
-    $sql = "SELECT model_purpose_description, cm.model_purpose_id FROM capture_dataset_model_purpose cm
-      LEFT JOIN model_purpose on cm.model_purpose_id = model_purpose.model_purpose_id
-      WHERE cm.capture_dataset_id= :capture_dataset_id";
-    $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":capture_dataset_id", $params['capture_dataset_id'], PDO::PARAM_STR);
-    $statement->execute();
-    $purpose_data = $statement->fetchAll(PDO::FETCH_ASSOC);
-
-    $model_purpose_data = array();
-    foreach($purpose_data as $k => $p) {
-      $desc = $p['model_purpose_description'];
-      $id = $p['model_purpose_id'];
-      $model_purpose_data[$desc] = $id;
-    }
-
-    $return_data['api_access_model_purpose'] = is_array($model_purpose_data) ? $model_purpose_data : array();
+    $id_params = array(
+      'record_type' => 'capture_dataset',
+      'project_id' => $return_data['project_id'],
+      'subject_id' => $return_data['subject_id'],
+      'item_id' => $return_data['item_id'],
+      'capture_dataset_id' => $capture_dataset_id,
+    );
+    $download_permissions = $this->getApiPermissions($id_params);
+    $return_data['inherit_api_published'] = isset($download_permissions['inherit_api_published']) ? $download_permissions['inherit_api_published'] : NULL;
+    $return_data['inherit_api_discoverable'] = isset($download_permissions['inherit_api_discoverable']) ? $download_permissions['inherit_api_discoverable'] : NULL;
+    $return_data['inherit_api_access_model_face_count_id'] = isset($download_permissions['inherit_api_access_model_face_count_id']) ? $download_permissions['inherit_api_access_model_face_count_id'] : NULL;
+    $return_data['inherit_api_access_uv_map_size_id'] = isset($download_permissions['inherit_api_access_uv_map_size_id']) ? $download_permissions['inherit_api_access_uv_map_size_id'] : NULL;
+    $return_data['api_access_model_purpose'] = isset($download_permissions['api_access_model_purpose']) ? $download_permissions['api_access_model_purpose'] : NULL;
 
     return $return_data;
   }
@@ -1180,6 +1006,185 @@ class RepoStorageHybrid implements RepoStorage {
     }
     return $return_data;
 
+  }
+
+  public function getApiPermissions($params) {
+
+    $return_data = array(
+      'inherit_api_published' => NULL,
+      'inherit_api_discoverable' => NULL,
+      'inherit_api_access_model_face_count_id' => NULL,
+      'inherit_api_access_uv_map_size_id' => NULL,
+      'api_access_model_purpose' => array(),
+    );
+
+    if(!isset($params['record_type'])) {
+      return $return_data;
+    }
+    $record_type = $params['record_type'];
+    //$model_id = isset($params['model_id']) ? $params['model_id'] : NULL;
+    //$capture_dataset_ids = isset($params['capture_dataset_ids']) ? $params['capture_dataset_ids'] : array();
+    $capture_dataset_id = isset($params['capture_dataset_id']) ? $params['capture_dataset_id'] : NULL;
+    $item_id = isset($params['item_id']) ? $params['item_id'] : NULL;
+    $subject_id = isset($params['subject_id']) ? $params['subject_id'] : NULL;
+    $project_id = isset($params['project_id']) ? $params['project_id'] : NULL;
+
+    // Item
+    if($record_type == 'item') {
+      if(isset($project_id)) {
+        $sql = "SELECT api_published, api_discoverable FROM project WHERE project.project_id= :project_id";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":project_id", $project_id, PDO::PARAM_STR);
+        $statement->execute();
+        $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
+        if(count($tmp) > 0) {
+          $return_data['inherit_api_published'] = $tmp[0]['api_published'];
+          $return_data['inherit_api_discoverable'] = $tmp[0]['api_discoverable'];
+        }
+      }
+      if(isset($subject_id)) {
+        $sql = "SELECT api_access_model_face_count_id, api_access_uv_map_size_id FROM subject WHERE subject_id= :subject_id";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":subject_id", $subject_id, PDO::PARAM_STR);
+        $statement->execute();
+        $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
+        if(count($tmp) > 0) {
+          $return_data['inherit_api_access_model_face_count_id'] = $tmp[0]['api_access_model_face_count_id'];
+          $return_data['inherit_api_access_uv_map_size_id'] = $tmp[0]['api_access_uv_map_size_id'];
+        }
+      }
+
+      $sql = "SELECT model_purpose_description, im.model_purpose_id FROM item_model_purpose im
+      LEFT JOIN model_purpose on im.model_purpose_id = model_purpose.model_purpose_id
+      WHERE im.item_id= :item_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":item_id", $item_id, PDO::PARAM_STR);
+      $statement->execute();
+      $purpose_data = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      $model_purpose_data = array();
+      foreach($purpose_data as $k => $p) {
+        $desc = $p['model_purpose_description'];
+        $id = $p['model_purpose_id'];
+        $model_purpose_data[$desc] = $id;
+      }
+      $return_data['api_access_model_purpose'] = is_array($model_purpose_data) ? $model_purpose_data : array();
+    }
+    // Capture dataset
+    elseif($record_type == 'capture_dataset') {
+      if(isset($item_id)) {
+        $sql = "SELECT api_published, api_discoverable FROM item WHERE item_id = :item_id";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":item_id", $item_id, PDO::PARAM_STR);
+        $statement->execute();
+        $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        if(count($tmp) > 0) {
+          $return_data['inherit_api_published'] = $tmp[0]['api_published'];
+          $return_data['inherit_api_discoverable'] = $tmp[0]['api_discoverable'];
+        }
+        // If we don't have a default for either inherits, check project.
+        if(NULL == $return_data['inherit_api_published'] || NULL == $return_data['inherit_api_discoverable']) {
+          // Get from project
+          if(isset($project_id)) {
+            $sql = "SELECT api_published, api_discoverable FROM project WHERE project_id=:project_id";
+            $statement = $this->connection->prepare($sql);
+            $statement->bindValue(":project_id", $project_id, PDO::PARAM_STR);
+            $statement->execute();
+            $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
+            if(count($tmp) > 0) {
+              if(NULL == $return_data['inherit_api_published']) {
+                $return_data['inherit_api_published'] = $tmp[0]['api_published'];
+              }
+              if(NULL == $return_data['inherit_api_discoverable']) {
+                $return_data['inherit_api_discoverable'] = $tmp[0]['api_discoverable'];
+              }
+            }
+          }
+        }
+
+        $sql = "SELECT api_access_model_face_count_id, api_access_uv_map_size_id FROM item WHERE item_id= :item_id";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":item_id", $item_id, PDO::PARAM_STR);
+        $statement->execute();
+        $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
+        if(count($tmp) > 0) {
+          $return_data['inherit_api_access_model_face_count_id'] = $tmp[0]['api_access_model_face_count_id'];
+          $return_data['inherit_api_access_uv_map_size_id'] = $tmp[0]['api_access_uv_map_size_id'];
+        }
+      }
+      // If we don't have a default for either inherits, check subject.
+      if(NULL == $return_data['inherit_api_access_model_face_count_id'] || NULL == $return_data['inherit_api_access_uv_map_size_id']) {
+        if(isset($subject_id)) {
+          $sql = "SELECT api_access_model_face_count_id, api_access_uv_map_size_id FROM subject WHERE subject_id= :subject_id";
+          $statement = $this->connection->prepare($sql);
+          $statement->bindValue(":subject_id", $subject_id, PDO::PARAM_STR);
+          $statement->execute();
+          $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
+          if(count($tmp) > 0) {
+            if(NULL == $return_data['inherit_api_access_model_face_count_id']) {
+              $return_data['inherit_api_access_model_face_count_id'] = $tmp[0]['api_access_model_face_count_id'];
+            }
+            if(NULL == $return_data['inherit_api_access_uv_map_size_id']) {
+              $return_data['inherit_api_access_uv_map_size_id'] = $tmp[0]['api_access_uv_map_size_id'];
+            }
+          }
+        }
+      }
+
+      // Model purpose.
+      $sql = "SELECT model_purpose_description, cm.model_purpose_id FROM capture_dataset_model_purpose cm
+      LEFT JOIN model_purpose on cm.model_purpose_id = model_purpose.model_purpose_id
+      WHERE cm.capture_dataset_id= :capture_dataset_id";
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":capture_dataset_id", $capture_dataset_id, PDO::PARAM_STR);
+      $statement->execute();
+      $purpose_data = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      $model_purpose_data = array();
+      foreach($purpose_data as $k => $p) {
+        $desc = $p['model_purpose_description'];
+        $id = $p['model_purpose_id'];
+        $model_purpose_data[$desc] = $id;
+      }
+      $return_data['api_access_model_purpose'] = is_array($model_purpose_data) ? $model_purpose_data : array();
+    }
+    // Model
+    elseif($record_type == 'model') {
+      if(NULL !== $item_id) {
+        $sql = "SELECT api_published, api_discoverable FROM item WHERE item_id = :item_id";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":item_id", $item_id, PDO::PARAM_STR);
+        $statement->execute();
+        $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
+        if(count($tmp) > 0) {
+          if(NULL !== $tmp[0]['api_published']) {
+            $return_data['inherit_api_published'] = $tmp[0]['api_published'];
+          }
+          if(NULL !== $tmp[0]['api_discoverable']) {
+            $return_data['inherit_api_discoverable'] = $tmp[0]['api_discoverable'];
+          }
+        }
+        if(NULL == $return_data['inherit_api_discoverable'] || NULL !== $tmp[0]['api_published']) {
+          // Get from project
+          $sql = "SELECT api_published, api_discoverable FROM project WHERE project_id= :project_id";
+          $statement = $this->connection->prepare($sql);
+          $statement->bindValue(":project_id", $project_id, PDO::PARAM_STR);
+          $statement->execute();
+          $tmp = $statement->fetchAll(PDO::FETCH_ASSOC);
+          if(count($tmp) > 0) {
+            if(NULL == $return_data['inherit_api_published']) {
+              $return_data['inherit_api_published'] = $tmp[0]['api_published'];
+            }
+            if(NULL == $return_data['inherit_api_discoverable']) {
+              $return_data['inherit_api_discoverable'] = $tmp[0]['api_discoverable'];
+            }
+          }
+        }
+      }
+    }
+
+    return $return_data;
   }
 
   /**
@@ -3434,7 +3439,7 @@ class RepoStorageHybrid implements RepoStorage {
     $data["iTotalRecords"] = $count["FOUND_ROWS()"];
     $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
 
-      return $data;
+    return $data;
 
   }
 
@@ -4979,109 +4984,251 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
-  /***
-   * @param $params has record_type (capture_dataset, model, or uv_map)
-   * and record_id (repository id of the record)
-   * @return current status info, or false
-   */
-  public function getWorkflowProcessingStatus($params) {
 
-    $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
-    $record_id = array_key_exists('record_id', $params) ? $params['record_id'] : NULL;
+  public function getWorkflows($params = array()) {
 
-    if($record_type !== 'capture_dataset' && $record_type !== 'model') {
-      return NULL;
+    //@todo project_id and other params; for now just get all.
+    $workflow_id = array_key_exists('workflow_id', $params) ? $params['workflow_id'] : NULL;
+    $step_type = array_key_exists('step_type', $params) ? $params['step_type'] : NULL;
+    $step_state = array_key_exists('step_state', $params) ? $params['step_state'] : NULL;
+
+    $sql = "SELECT * FROM workflow ";
+    $where_parts = array();
+    if(NULL !== $workflow_id) {
+      $where_parts[] = "workflow_id=:workflow_id ";
     }
-
-    // See if record exists; return FALSE if not.
-    $sql = "Select * FROM " . $record_type . " WHERE " . $record_type . "_id=:id";
+    if(NULL !== $step_type) {
+      $where_parts[] = "step_type=:step_type ";
+    }
+    if(NULL !== $step_state) {
+      if($step_state == 'null') {
+        $step_state = NULL;
+        $where_parts[] = "step_state IS NULL ";
+      }
+      else {
+        $where_parts[] = "step_state=:step_state ";
+      }
+    }
+    if(count($where_parts) > 0) {
+      $sql .= " WHERE " . implode(" AND ", $where_parts);
+    }
     $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":id", $record_id, PDO::PARAM_INT);
+
+    if(NULL !== $workflow_id) {
+      $statement->bindValue(":workflow_id", $workflow_id, PDO::PARAM_INT);
+    }
+    if(NULL !== $step_type) {
+      $statement->bindValue(":step_type", $step_type, PDO::PARAM_STR);
+    }
+    if(NULL !== $step_state) {
+      $statement->bindValue(":step_state", $step_state, PDO::PARAM_STR);
+    }
     $statement->execute();
 
     $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-    if(!is_array($ret) || empty($ret)) {
+    if(NULL !== $workflow_id) {
+      if(isset($ret[0])) {
+        $ret = $ret[0];
+      }
+    }
+
+    return $ret;
+  }
+
+  public function createWorkflow($params) {
+
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : 0;
+    $uuid = array_key_exists('uuid', $params) ? $params['uuid'] : NULL;
+    $workflow_recipe_id = array_key_exists('workflow_recipe_id', $params) ? $params['workflow_recipe_id'] : NULL;
+
+    $return = array(
+      'return' => 'error',
+    );
+
+    if(NULL == $uuid || NULL == $workflow_recipe_id) {
+      $return['errors'][] = "UUID and workflow_recipe_id must be specified to create a workflow.";
+      return $return;
+    }
+
+    // Check for problems.
+    //@todo should we see if uuid exists first?
+
+    $workflow_json_array = $this->getWorkflowDefinition($workflow_recipe_id);
+    if(NULL === $workflow_json_array) {
+      $return['errors'][] = "File not found or empty for workflow recipe '" . $workflow_recipe_id . "'.";
+      return $return;
+    }
+    elseif(false === $workflow_json_array) {
+      $return['errors'][] = "Workflow recipe does not contain valid JSON, for recipe '" . $workflow_recipe_id . "'.";
+      return $return;
+    }
+
+    $first_step_details = $this->getWorkflowNextStep(array('workflow_json_array' => $workflow_json_array));
+    if(empty($first_step_details)) {
+      $return['errors'][] = "Workflow recipe has no steps, for recipe '" . $workflow_recipe_id . "'.";
+      return $return;
+    }
+    $step_id = isset($first_step_details['stepId']) ? $first_step_details['stepId'] : NULL;
+    $step_type = isset($first_step_details['stepType']) ? $first_step_details['stepType'] : "auto";
+
+    if(NULL == $step_id) {
+      $return['errors'][] = "Step ID does not exist for first step, for recipe '" . $workflow_recipe_id . "'.";;
+      return $return;
+    }
+
+    $workflow_json = json_encode($workflow_json_array);
+    $sql ="INSERT INTO workflow 
+          (workflow_recipe_name, workflow_definition, uuid, step_id, step_state, step_type, job_id, date_created, last_modified_user_account_id, created_by_user_account_id) 
+          VALUES (:workflow_recipe_name, :workflow_definition, :uuid, :step_id, NULL, :step_type, NULL, NOW(), :last_user_id, :created_user_id)";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":workflow_recipe_name", $workflow_recipe_id, PDO::PARAM_STR);
+    $statement->bindValue(":workflow_definition", $workflow_json, PDO::PARAM_STR);
+    $statement->bindValue(":uuid", $uuid, PDO::PARAM_STR);
+    $statement->bindValue(":step_id", $step_id, PDO::PARAM_STR);
+    $statement->bindValue(":step_type", $step_type, PDO::PARAM_STR);
+    $statement->bindValue(":last_user_id", (int)$user_id, PDO::PARAM_INT);
+    $statement->bindValue(":created_user_id", (int)$user_id, PDO::PARAM_INT);
+
+    $statement->execute();
+    $last_workflow_id = $this->connection->lastInsertId();
+
+    // Get workflow record
+    $sql = "SELECT * FROM workflow WHERE workflow_id=:id";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":id", $last_workflow_id, PDO::PARAM_INT);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $workflow_record = array();
+    if(!empty($ret) && is_array($ret)) {
+      $workflow_record = $ret[0];
+    }
+
+    $return['return'] = 'success';
+    $return['workflow'] = $workflow_record;
+    return $return;
+
+  }
+
+  public function getWorkFlowDefinition($workflow_recipe_id) {
+
+    // Look for a file in the web root at "web/" . $workflow_recipe_id . "_workflow_recipe.json"
+    $recipe_file = $this->project_dir . '/web/recipes/' . $workflow_recipe_id . '_workflow_recipe.json';
+
+    // Return NULL if file does not exist.
+    if(!file_exists($recipe_file)) {
+      return NULL;
+    }
+
+    $recipe_json = file_get_contents($recipe_file);
+    $recipe_array = json_decode($recipe_json, true);
+
+    // Return false if the file doesn't contain valid JSON
+    if(NULL == $recipe_array) {
       return false;
     }
 
-    $record = $ret[0];
-    return array(
-      'record_type' => $record_type,
-      'record_id' => $record_id,
-      'workflow_id' => $record['workflow_id'],
-      'processing_step' => $record['workflow_processing_step'],
-      'status' => $record['workflow_status'],
-      'status_detail' => $record['workflow_status_detail'],
-      'created_by_user_account_id' => $record['created_by_user_account_id'],
-      'date_created' => $record['date_created'],
-      'last_modified_user_account_id' => $record['last_modified_user_account_id'],
-      'last_modified' => $record['last_modified'],
-    );
+    return $recipe_array;
+  }
+
+  public function getWorkflowNextStep($params) {
+
+    $workflow_json_array = isset($params['workflow_json_array']) ? $params['workflow_json_array'] : NULL;
+    $current_step_id = isset($params['step_id']) ? $params['step_id'] : NULL;
+
+    $step_details = array();
+    $next_step_id = NULL;
+
+    if(!isset($workflow_json_array['steps'])) {
+      //@todo Log an error? The workflow doesn't have any defined steps.
+      return $step_details;
+    }
+
+    if((NULL == $current_step_id)) {
+      // If $current_step_id is null, return the first step.
+      $step_details = $workflow_json_array['steps'][0];
+      return $step_details;
+    }
+
+    // If $current_step_id is specified, return the first step following the specified step.
+    foreach($workflow_json_array['steps'] as $step) {
+      if(NULL !== $next_step_id && $step['stepId'] == $next_step_id) {
+        $step_details = $step;
+        break;
+      }
+      if($step['stepId'] == $current_step_id) {
+        $next_step_id = isset($step['onSuccessStepId']) ? $step['onSuccessStepId'] : "";
+      }
+    }
+
+    if(NULL !== $next_step_id) {
+      // If we've completed all steps, set a simple workflow done status.
+      if($next_step_id == "") {
+        $step_details['status'] = "done";
+      }
+      elseif(empty($step_details)) {
+        // Weird case-
+        // we have a named next step but were unable to find the step definition with that stepId, within the workflow definition.
+        //@todo Should probably log an error.
+      }
+    }
+
+    return $step_details;
   }
 
   /***
-   * @param $params has record_type (capture_dataset, model, or uv_map)
-   * and record_id (repository id of the record)
-   * @return mixed true or false
+   * @param $params workflow details
+   * @return workflow array
    */
-  public function setWorkflowProcessingStatus($params) {
+  public function updateWorkflow($params) {
 
-    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : NULL;
-    $record_type = array_key_exists('record_type', $params) ? $params['record_type'] : NULL;
-    $record_id = array_key_exists('record_id', $params) ? $params['record_id'] : NULL;
-    $project_id = array_key_exists('project_id', $params) ? $params['project_id'] : NULL;
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : 0;
     $workflow_id = array_key_exists('workflow_id', $params) ? $params['workflow_id'] : NULL;
-    $processing_step = array_key_exists('processing_step', $params) ? $params['processing_step'] : NULL;
-    $status = array_key_exists('status', $params) ? $params['status'] : NULL;
-    $status_detail = array_key_exists('status_detail', $params) ? $params['status_detail'] : NULL;
+    $step_id = array_key_exists('step_id', $params) ? $params['step_id'] : NULL;
+    $step_type = array_key_exists('step_type', $params) ? $params['step_type'] : NULL;
+    $step_state = array_key_exists('step_state', $params) ? $params['step_state'] : false;
+    $job_id = array_key_exists('job_id', $params) ? $params['job_id'] : false;
 
-    if($record_type !== 'capture_dataset' && $record_type !== 'model') {
-      return NULL;
-    }
-
-    // See if record exists; return FALSE if not.
-    $sql = "Select * FROM " . $record_type . " WHERE " . $record_type . "_id=:id";
-    $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":id", $record_id, PDO::PARAM_INT);
-    $statement->execute();
-
-    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
-
-    if(!is_array($ret) || empty($ret)) {
+    if(NULL == $workflow_id) {
       return false;
     }
 
-    // Update this record with new status info. Write to workflow_status_log also.
-    $sql ="INSERT INTO workflow_status_log 
-          (workflow_id, project_id, record_id, record_table, processing_step, status, status_detail, created_by_user_account_id, date_created) 
-          VALUES (:workflow_id, :project_id, :record_id, :record_table, :processing_step, :status, :status_detail, :created_by_user_account_id, NOW())";
-    $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":workflow_id", $workflow_id, PDO::PARAM_INT);
-    $statement->bindValue(":project_id", $project_id, PDO::PARAM_INT);
-    $statement->bindValue(":record_id", $record_id, PDO::PARAM_INT);
+    // Update this record with new status info.
+    //@todo Write to workflow_status_log also?
+    $sql ="UPDATE workflow SET ";
+    $sql .= " last_modified=NOW(), last_modified_user_account_id=:user_id";
 
-    $statement->bindValue(":record_table", $user_id, PDO::PARAM_STR);
-    $statement->bindValue(":processing_step", $processing_step, PDO::PARAM_STR);
-    $statement->bindValue(":status", $status, PDO::PARAM_STR);
-    $statement->bindValue(":status_detail", $status_detail, PDO::PARAM_STR);
-    $statement->bindValue(":created_by_user_account_id", $user_id, PDO::PARAM_INT);
-
-    $statement->execute();
-
-    $sql ="UPDATE " . $record_type . " set workflow_id=:workflow_id, workflow_processing_step=:processing_step,
-    workflow_status=:status, workflow_status_detail=:status_detail,
-    last_modified=NOW(), last_modified_user_account_id=:user_id 
-    WHERE " . $record_type . "_id=:id";
+    if(NULL !== $step_id) {
+      $sql .= ", step_id=:step_id";
+    }
+    if(NULL !== $step_type) {
+      $sql .= ", step_type=:step_type";
+    }
+    if(false !== $step_state) {
+      $sql .= ", step_state=:step_state";
+    }
+    if(false !== $job_id) {
+      $sql .= ", job_id=:job_id";
+    }
+    $sql .= " WHERE workflow_id=:workflow_id";
 
     $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":id", $record_id, PDO::PARAM_INT);
-    $statement->bindValue(":workflow_id", $workflow_id, PDO::PARAM_INT);
-    $statement->bindValue(":processing_step", $processing_step, PDO::PARAM_STR);
-    $statement->bindValue(":status", $status, PDO::PARAM_STR);
-    $statement->bindValue(":status_detail", $status_detail, PDO::PARAM_STR);
-    $statement->bindValue(":last_modified_user_account_id", $user_id, PDO::PARAM_INT);
 
+    $statement->bindValue(":workflow_id", $workflow_id, PDO::PARAM_INT);
+    if(NULL !== $step_id) {
+      $statement->bindValue(":step_id", $step_id, PDO::PARAM_STR);
+    }
+    if(NULL !== $step_type) {
+      $statement->bindValue(":step_type", $step_type, PDO::PARAM_STR);
+    }
+    if(false !== $step_state) {
+      $statement->bindValue(":step_state", $step_state, PDO::PARAM_STR);
+    }
+    if(false !== $job_id) {
+      $statement->bindValue(":job_id", $job_id, PDO::PARAM_STR);
+    }
+    $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
     $statement->execute();
 
     return true;

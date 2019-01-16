@@ -115,7 +115,7 @@ class PhotogrammetryScaleBarTargetPairController extends Controller
 
         // Add the parent_id to the $data object
         if(false !== $parent_id) {
-        $data->photogrammetry_scale_bar_id = $parent_id;
+          $data->photogrammetry_scale_bar_id = $parent_id;
         }
 
         // Get data from lookup tables.

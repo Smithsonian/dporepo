@@ -21,9 +21,6 @@ class ModelForm extends AbstractType
             ->add('item_id', HiddenType::class, array(
                 'required' => true,
               ))
-            ->add('capture_dataset_id', HiddenType::class, array(
-              'required' => false,
-            ))
             ->add('model_guid', null, array(
                 'label' => 'Model GUID',
                 'required' => true,

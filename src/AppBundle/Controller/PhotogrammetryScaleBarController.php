@@ -114,7 +114,7 @@ class PhotogrammetryScaleBarController extends Controller
 
         // Add the parent_id to the $data object
         if(false !== $parent_id) {
-        $data->capture_dataset_id = $parent_id;
+          $data->capture_dataset_id = $parent_id;
         }
 
         $back_link = $request->headers->get('referer');
