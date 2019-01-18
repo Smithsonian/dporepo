@@ -412,12 +412,11 @@ class RepoStorageHybrid implements RepoStorage {
     $return_data['files'] = $file_data;
 
     $return_data['viewable_model'] = false;
-    foreach($file_data as $file) {
-      $fn = $file['file_name'];
-      $fn_exploded = explode('.', $fn);
-      if(count($fn_exploded) == 2 && strtolower($fn_exploded[1]) == 'obj') {
-        $return_data['viewable_model'] = $file;
-    }
+
+    $fn = $file_data['file_name'];
+    $fn_exploded = explode('.', $fn);
+    if(count($fn_exploded) == 2 && strtolower($fn_exploded[1]) == 'obj') {
+      $return_data['viewable_model'] = $file_data['file_name'];
     }
 
     // End get model files.
