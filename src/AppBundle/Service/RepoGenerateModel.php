@@ -138,6 +138,8 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
       // Create a new processing job and run.
       $processing_job = $this->runProcessingJob($path, $job_data, $recipe_name, $filesystem);
 
+      // $this->u->dumper($processing_job[0]['workflow']['job_id']);
+
       // Check the job's status to insure that the job_status hasn't been set to 'failed'.
       $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid, 'generateModelAssets'));
       // If the job status has been set to 'failed', return with the error message.
@@ -147,20 +149,23 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
       }
 
       // Continue only if job_ids are returned.
-      if (!empty($processing_job) && !empty($processing_job['job_ids'])) {
+      if (!empty($processing_job) && ($processing_job[0]['return'] === 'success')) {
 
         // Check to see if jobs are running. Don't pass "Go" until all jobs are finished.
-        while ($this->processing->are_jobs_running($processing_job['job_ids'])) {
-          $this->processing->are_jobs_running($processing_job['job_ids']);
+        while ($this->processing->are_jobs_running( array($processing_job[0]['workflow']['job_id']) )) {
+          $this->processing->are_jobs_running( array($processing_job[0]['workflow']['job_id']) );
           sleep(5);
         }
 
         // Retrieve all of the logs produced by the processing service.
-        foreach ($processing_job['job_ids'] as $job_id_value) {
-          $data[] = $this->processing->get_processing_assets($filesystem, $job_id_value);
-          $data[]['job_id'] = $job_id_value;
-        }
+        $data = $this->processing->get_processing_assets($filesystem, $processing_job[0]['workflow']['job_id']);
 
+        // Update the workflow record. Set the step state to done.
+        $query_params = array(
+          'workflow_id' => $processing_job[0]['workflow']['workflow_id'],
+          'step_state' => 'done'
+        );
+        $this->repo_storage_controller->execute('updateWorkflow', $query_params);
       }
 
     }
@@ -224,23 +229,23 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
             if ($result['httpcode'] === 201) {
 
-              // Get the job data.
-              $job = $this->processing->getJobByName($job_name);
+              // Get the processing_job data.
+              $processing_job = $this->processing->getJobByName($job_name);
 
               // Error handling
-              if (isset($job['error']) && !empty($job['error'])) $data[$i]['errors'][] = $job['error'];
+              if (isset($processing_job['error']) && !empty($processing_job['error'])) $data[$i]['errors'][] = $processing_job['error'];
 
-              // Log job data to the metadata storage
-              if (isset($job['error']) && empty($job['error'])) {
+              // Log processing_job data to the metadata storage
+              if (isset($processing_job['error']) && empty($processing_job['error'])) {
 
                 $processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
                   'base_table' => 'processing_job',
                   'user_id' => $job_data['created_by_user_account_id'],
                   'values' => array(
-                    'processing_service_job_id' => $job['id'],
-                    'recipe' =>  $job['recipe']['name'],
-                    'job_json' => json_encode($job),
-                    'state' => $job['state'],
+                    'processing_service_job_id' => $processing_job['id'],
+                    'recipe' =>  $processing_job['recipe']['name'],
+                    'job_json' => json_encode($processing_job),
+                    'state' => $processing_job['state'],
                     'asset_path' => $file->getPathname(),
                   )
                 ));
@@ -248,16 +253,18 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
                 // Create the workflow.
                 $query_params = array(
                   'uuid' => $job_data['uuid'],
-                  'workflow_recipe_id' => 'web-hd',
+                  'job_id' => $processing_job['id'],
+                  'workflow_recipe_id' => 'test_v1',
                   'step_state' => 'processing',
                   'user_id' => $job_data['created_by_user_account_id'],
                 );
-                $workflow_data = $this->repo_storage_controller->execute('createWorkflow', $query_params);
 
+                // TODO: error handling
+                $data[$i] = $this->repo_storage_controller->execute('createWorkflow', $query_params);
               }
 
               // The external path.
-              $path_external = $job['id'] . '/' . $file->getFilename();
+              $path_external = $processing_job['id'] . '/' . $file->getFilename();
 
               // Transfer the file to the processing service via WebDAV.
               try {
@@ -267,8 +274,8 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
                 // Before calling fclose on the resource, check if it’s still valid using is_resource.
                 if (is_resource($stream)) fclose($stream);
 
-                // Now that the file has been transferred, go ahead and run the job.
-                $result = $this->processing->runJob($job['id']);
+                // Now that the file has been transferred, go ahead and run the processing job.
+                $result = $this->processing->runJob($processing_job['id']);
 
                 // Error handling
                 if ($result['httpcode'] !== 202) $data[$i]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];

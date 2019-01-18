@@ -5040,7 +5040,9 @@ class RepoStorageHybrid implements RepoStorage {
 
     $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : 0;
     $uuid = array_key_exists('uuid', $params) ? $params['uuid'] : NULL;
+    $job_id = array_key_exists('job_id', $params) ? $params['job_id'] : NULL;
     $workflow_recipe_id = array_key_exists('workflow_recipe_id', $params) ? $params['workflow_recipe_id'] : NULL;
+    $step_state = array_key_exists('step_state', $params) ? $params['step_state'] : NULL;
 
     $return = array(
       'return' => 'error',
@@ -5080,13 +5082,15 @@ class RepoStorageHybrid implements RepoStorage {
     $workflow_json = json_encode($workflow_json_array);
     $sql ="INSERT INTO workflow 
           (workflow_recipe_name, workflow_definition, uuid, step_id, step_state, step_type, job_id, date_created, last_modified_user_account_id, created_by_user_account_id) 
-          VALUES (:workflow_recipe_name, :workflow_definition, :uuid, :step_id, NULL, :step_type, NULL, NOW(), :last_user_id, :created_user_id)";
+          VALUES (:workflow_recipe_name, :workflow_definition, :uuid, :step_id, :step_state, :step_type, :job_id, NOW(), :last_user_id, :created_user_id)";
     $statement = $this->connection->prepare($sql);
     $statement->bindValue(":workflow_recipe_name", $workflow_recipe_id, PDO::PARAM_STR);
     $statement->bindValue(":workflow_definition", $workflow_json, PDO::PARAM_STR);
     $statement->bindValue(":uuid", $uuid, PDO::PARAM_STR);
     $statement->bindValue(":step_id", $step_id, PDO::PARAM_STR);
+    $statement->bindValue(":step_state", $step_state, PDO::PARAM_STR);
     $statement->bindValue(":step_type", $step_type, PDO::PARAM_STR);
+    $statement->bindValue(":job_id", $job_id, PDO::PARAM_STR);
     $statement->bindValue(":last_user_id", (int)$user_id, PDO::PARAM_INT);
     $statement->bindValue(":created_user_id", (int)$user_id, PDO::PARAM_INT);
 

@@ -7,6 +7,7 @@ use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
+use AppBundle\Utils\AppUtilities;
 
 use AppBundle\Service\RepoGenerateModel;
 
@@ -14,11 +15,13 @@ class ModelsGenerateCommand extends ContainerAwareCommand
 {
   protected $container;
   private $model_generate;
+  public $u;
 
   public function __construct(RepoGenerateModel $model_generate)
   {
     // Model generate service.
     $this->model_generate = $model_generate;
+    $this->u = new AppUtilities();
     // This is required due to parent constructor, which sets up name.
     parent::__construct();
   }
@@ -68,30 +71,11 @@ class ModelsGenerateCommand extends ContainerAwareCommand
       $result = $this->model_generate->generateModelAssets($input->getArgument('uuid'), $recipe_name, $flysystem);
     }
 
-    // echo '<pre>';
-    // var_dump($result);
-    // echo '</pre>';
-    // die();
+    // $this->u->dumper($result);
 
     // Output results.
-    if (!empty($result)) {
-      $output->writeln('<comment>Generated Model(s):</comment>' . "\n");
-      foreach ($result as $key => $value) {
-        $output->writeln('---------------------------' . "\n");
-        foreach ($value as $k => $v) {
-          if ($k !== 'errors') {
-            $output->writeln($k . ': ' . $v . "\n");
-          } else {
-            if (!empty($v)) {
-              $errors = TRUE;
-              foreach ($v as $ek => $ev) {
-                $output->writeln('<error>' . $ev . '</error>' . "\n");
-              }
-            }
-          }
-        }
-      }
-      if (!$errors) $output->writeln('<comment>Model generation complete.</comment>');
+    if (!empty($result) && ($result['state'] === 'done')) {
+      $output->writeln('<comment>Model(s) Generated</comment>' . "\n");
     }
 
     return $result;
