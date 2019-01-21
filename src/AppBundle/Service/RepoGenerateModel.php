@@ -160,10 +160,12 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
         // Retrieve all of the logs produced by the processing service.
         $data = $this->processing->get_processing_assets($filesystem, $processing_job[0]['workflow']['job_id']);
 
-        // Update the workflow record. Set the step state to done.
+        // Update the workflow record. Set the step state to NULL and step-id to 'qc-hd.
         $query_params = array(
           'workflow_id' => $processing_job[0]['workflow']['workflow_id'],
-          'step_state' => 'done'
+          'step_state' => NULL,
+          'step_id' => 'qc-hd',
+          'step_type' => 'manual',
         );
         $this->repo_storage_controller->execute('updateWorkflow', $query_params);
       }
