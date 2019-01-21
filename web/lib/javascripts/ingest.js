@@ -787,9 +787,9 @@ function queuedFilesChecker(files) {
 
   if((filenames.indexOf('manifest-sha1.txt') === -1) && (filenames.indexOf('manifest-md5.txt') === -1)) {
     var span = document.createElement('span');
-    span.innerHTML = 'Please add bagged (via BagIt) capture datasets and/or model files to the upload queue.';
+    span.innerHTML = 'Could not find the bagit file containing a hash of the manifest. This file is needed to validate the bag. Looked for manifest-md5.txt and manifest-sha1.txt. Please ensure that the bag includes one of these files.';
     swal({
-      title: 'File bag not found',
+      title: 'Bag manifest validation file not found',
       content: span,
       icon: "warning",
     });
