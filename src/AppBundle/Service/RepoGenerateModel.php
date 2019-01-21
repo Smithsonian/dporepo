@@ -254,8 +254,8 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
                 // Create the workflow.
                 $query_params = array(
-                  'uuid' => $job_data['uuid'],
-                  'job_id' => $processing_job['id'],
+                  'ingest_job_uuid' => $job_data['uuid'],
+                  'processing_job_id' => $processing_job['id'],
                   'workflow_recipe_id' => 'test_v1',
                   'step_state' => 'processing',
                   'user_id' => $job_data['created_by_user_account_id'],
