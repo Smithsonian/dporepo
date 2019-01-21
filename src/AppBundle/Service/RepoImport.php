@@ -681,7 +681,17 @@ class RepoImport implements RepoImportInterface {
             } else {
               // If a model maps to an item, set the value for the 'item_id' field.
               if ($data->record_type === 'item') {
+
                 $csv_val->item_id = $data->record_id;
+
+                // Update the workflow record inserting the Item ID.
+                $query_params = array(
+                  'item_id' => $data->record_id,
+                  'ingest_job_uuid' => $data->uuid,
+                  'user_id' => $data->user_id
+                );
+                $this->repo_storage_controller->execute('updateWorkflowItemId', $query_params);
+
               }
               // Otherwise, set the value for the 'capture_dataset_id' field.
               else {

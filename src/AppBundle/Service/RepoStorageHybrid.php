@@ -5239,6 +5239,35 @@ class RepoStorageHybrid implements RepoStorage {
     return true;
   }
 
+  /**
+   * $params user_id, item_id, ingest_job_uuid
+   * @return bool
+   */
+  public function updateWorkflowItemId($params) {
+
+    $item_id = array_key_exists('item_id', $params) ? $params['item_id'] : NULL;
+    $user_id = array_key_exists('user_id', $params) ? $params['user_id'] : 0;
+    $ingest_job_uuid = array_key_exists('ingest_job_uuid', $params) ? $params['ingest_job_uuid'] : NULL;
+
+    if ((NULL == $ingest_job_uuid) && (NULL == $item_id)) {
+      return false;
+    }
+
+    // Add the Item ID to a workflow record.
+    $sql = "UPDATE workflow SET 
+              item_id = :item_id,
+              last_modified = NOW(),
+              last_modified_user_account_id = :user_id
+            WHERE ingest_job_uuid = :ingest_job_uuid";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":item_id", $item_id, PDO::PARAM_INT);
+    $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
+    $statement->bindValue(":ingest_job_uuid", $ingest_job_uuid, PDO::PARAM_STR);
+    $statement->execute();
+
+    return true;
+  }
+
   public function saveIsniRecord($params) {
 
     $label = array_key_exists('record_label', $params) ? $params['record_label'] : NULL;
