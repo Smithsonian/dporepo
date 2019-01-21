@@ -819,7 +819,8 @@ class RepoImport implements RepoImportInterface {
                     'has_normals' => 0,
                     'file_path' => $file_info[0]['file_path'],
                     'file_checksum' => md5($filename_value),
-                    'date_of_creation' => date('Y-m-d H:i:s')
+                    'date_of_creation' => date('Y-m-d H:i:s'),
+                    'model_guid' => $this->u->createUuid(),
                   )
                 ));
 
