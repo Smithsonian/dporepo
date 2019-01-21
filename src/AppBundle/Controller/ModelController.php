@@ -326,7 +326,6 @@ class ModelController extends Controller
           'model_id' => $id));
 
         // If there are no results, throw a createNotFoundException (404).
-        //if (empty($data) || empty($data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');
         if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
 
         // $this->u->dumper($data);
@@ -337,7 +336,7 @@ class ModelController extends Controller
         // Windows fix for the file path.
         $uploads_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_path) : $uploads_path;
         // Model URL.
-        $model_url = str_replace($uploads_path, $this->external_file_storage_path, $data['viewable_model']['file_path']);
+        $model_url = str_replace($uploads_path, $this->external_file_storage_path, $data['files']['file_path']);
         // Windows fix for the file path.
         $model_url = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $model_url) : $model_url;
       }
