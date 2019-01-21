@@ -716,6 +716,10 @@ class RepoImport implements RepoImportInterface {
                 'table_name' => 'file_upload',
                 'field_name' => 'file_upload_id',
               ),
+              array(
+                'table_name' => 'file_upload',
+                'field_name' => 'file_name',
+              ),
             ),
             'limit' => 1,
             'search_params' => array(
@@ -726,7 +730,7 @@ class RepoImport implements RepoImportInterface {
             )
           );
 
-          // Log the model file to 'model_file' metadata storage.
+          // Log the model file to 'model_file' and 'job_import_record' metadata storage.
           if (!empty($file_info)) {
             $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => 'model_file',
@@ -734,6 +738,18 @@ class RepoImport implements RepoImportInterface {
               'values' => array(
                 'model_id' => $this_id,
                 'file_upload_id' => $file_info[0]['file_upload_id'],
+              )
+            ));
+
+            $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'job_import_record',
+              'user_id' => $data->user_id,
+              'values' => array(
+                'job_id' => $data->job_id,
+                'record_id' => $this_id,
+                'project_id' => (int)$data->project_id,
+                'record_table' => 'model_file',
+                'description' => 'Model file: ' . $file_info[0]['file_name'],
               )
             ));
           }
