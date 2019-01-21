@@ -879,7 +879,7 @@ class RepoImport implements RepoImportInterface {
             }
 
             // UV Maps
-            if (in_array(strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)), $this->image_extensions)) {
+            if (isset($model_id_for_uv_maps) && in_array(strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)), $this->image_extensions)) {
 
               // Get the map_type and map_size from the file name.
               // Example file name: f1978_40-master-1000k-8192-normals.jpg.
