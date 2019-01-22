@@ -42,6 +42,10 @@
             {% endif %}
             <dt>UUID:</dt>
               <dd>{{ job_data.uuid }}</dd>
+            {% if job_data.workflow.workflow_id is defined %}
+              <dt>Workflow Details:</dt>
+                <dd><a href="/admin/workflows/{{ job_data.workflow.workflow_id }}">{{ job_data.workflow.step_id }} {{ job_data.workflow.step_state }}</a></dd>
+            {% endif %}
           </dl>
         </div>
         <div class="col-sm-6 col-md-6">

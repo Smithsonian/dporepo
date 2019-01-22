@@ -737,6 +737,10 @@ class ImportController extends Controller
           )
         );
 
+        $query_params = array('uuid' => $uuid);
+        $workflow_data = $this->repo_storage_controller->execute('getWorkflows', $query_params);
+        $job_data['workflow'] = $workflow_data;
+
       }
 
       return $this->render('import/import_summary_item.html.twig', array(
