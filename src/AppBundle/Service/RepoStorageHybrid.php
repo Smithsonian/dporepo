@@ -438,10 +438,43 @@ class RepoStorageHybrid implements RepoStorage {
       $fn_exploded = explode('.', $fn);
       if(count($fn_exploded) == 2 && strtolower($fn_exploded[1]) == 'obj') {
         $return_data['viewable_model'] = $file;
+      }
     }
+    // End get model files.
+
+    // Get model IDs for 3D thumb and low res, if available.
+    // model_id_3d_thumb, model_id_low_res
+    $sql = "SELECT model_id, model_purpose       
+        FROM model  
+        WHERE parent_model_id=:model_id
+        AND model_purpose IN ('delivery_web','thumb_3d')
+        AND active=1";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":model_id", $id, PDO::PARAM_INT);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach($ret as $rm) {
+      $mp = $rm['model_purpose'];
+      if($mp == "delivery_web") {
+        $return_data['model_id_low_res'] = $rm['model_id'];
+      }
+      else {
+        $return_data['model_id_3d_thumb'] = $rm['model_id'];
+      }
+>>>>>>> db49b62... Return web-ready and 3D thumb model IDs if available.
     }
 
-    // End get model files.
+    $return_data['viewable_model'] = false;
+    foreach($file_data as $file) {
+      $fn = $file['file_name'];
+      $fn_exploded = explode('.', $fn);
+      if (count($fn_exploded) == 2 && strtolower($fn_exploded[1]) == 'obj') {
+        $return_data['viewable_model'] = $file;
+      }
+    }
+    // End get model IDs for derivatives
 
     // Get the source capture datasets for this model.
     $return_data['capture_datasets'] = array();
@@ -494,7 +527,7 @@ class RepoStorageHybrid implements RepoStorage {
       'project_id' => $project_id,
       'item_id' => $item_id,
       'capture_dataset_ids' => $capture_dataset_ids,
-      );
+    );
     $download_permissions = $this->getApiPermissions($id_params);
     $return_data['inherit_api_published'] = isset($download_permissions['inherit_api_published']) ? $download_permissions['inherit_api_published'] : NULL;
     $return_data['inherit_api_discoverable'] = isset($download_permissions['inherit_api_discoverable']) ? $download_permissions['inherit_api_discoverable'] : NULL;
