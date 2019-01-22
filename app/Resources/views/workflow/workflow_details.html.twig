@@ -1,0 +1,61 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block content %}
+
+    <ol class="breadcrumb">
+        <li><a href="/admin">Dashboard</a></li>
+        <li>Workflow {{ data.workflow_id }}</li>
+    </ol>
+
+    <div class="row">
+        <div class="col-sm-12 col-md-12 child-data">
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <h2>Workflow Details</h2>
+                    <p>Workflow Recipe: {{ data.workflow_recipe_name }}</p>
+                    <p>Current step ID: {{ data.step_id }}</p>
+                    <p>Step State: {{ data.step_state }}</p>
+                    <p>Step Type: {{ data.step_type }}</p>
+                    <p>Job ID: {{ data.job_id }}</p>
+                    <p>Date Created: {{ data.date_created }}</p>
+
+                    <h2>{% if data.step_state == "done" %}Workflow is complete{% else %}Move to Next Step{% endif %}</h2>
+                    {% if not data.step_state %}
+                        {% if data.step_type == "auto" %}
+                            <p><a href="/admin/workflows/test/jobcreate/{{ data.workflow_id }}">Step is initialized but not launched yet. Launch step.</a></p>
+                        {% else %}
+                            <p>This is a manual step.<br />
+                                <a href="/admin/workflows/test/{{ data.workflow_id }}/go/success">Make it succeed.</a><br />
+                                <a href="/admin/workflows/test/{{ data.workflow_id }}/go/error">Make it fail.</a><br />
+                                <a href="/admin/workflows/test/{{ data.workflow_id }}/go/aborted">Abort it.</a>
+                            </p>
+                        {% endif %}
+                    {% elseif data.step_state == 'created' or data.step_state == 'processing' %}
+                        <p>Step has been kicked off.<br />
+                            <a href="/admin/workflows/test/{{ data.workflow_id }}/go">Complete it with the default status.</a><br />
+                            <a href="/admin/workflows/test/{{ data.workflow_id }}/go/success">Make it succeed.</a><br />
+                            <a href="/admin/workflows/test/{{ data.workflow_id }}/go/error">Make it fail.</a><br />
+                            <a href="/admin/workflows/test/{{ data.workflow_id }}/go/aborted">Abort it.</a>
+                        </p>
+                    {% elseif data.step_state == 'error' %}
+                        Step failed- {{ data.step_state }}. Here we could give the user options- if onFailureStepId is defined for a manual step that failed,
+                        we can offer the user to step forward to that state.
+                    {% else %}
+                        Step state is {{ data.step_state }}
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- /row -->
+{% endblock %}
+{% block js_bottom %}
+    {{ parent() }}
+{% endblock %}

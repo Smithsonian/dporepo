@@ -149,6 +149,28 @@ class WorkflowController extends Controller
   }
 
   /**
+   * @Route("/admin/workflows/{workflow_id}", name="workflow_detail", methods={"GET","POST"})
+   * Same code as used in workflow command
+   *
+   * @param Request $request
+   * @return JsonResponse The query result in JSON
+   */
+  public function viewWorkflowDetails(Request $request) {
+
+    $workflow_id = $request->attributes->get('workflow_id');
+
+    $query_params = array('workflow_id' => $workflow_id);
+    $workflow_data = $this->repo_storage_controller->execute('getWorkflows', $query_params);
+    $workflow = $workflow_data['workflow_definition'];
+
+    return $this->render('workflow/workflow_details.html.twig', array(
+      'page_title' => 'Workflow Details',
+      'data' => $workflow_data,
+    ));
+
+  }
+
+  /**
    * @Route("/admin/workflows/test", name="workflows_test", methods={"GET","POST"})
    * @Route("/admin/workflows/test/{workflow_id}", name="workflow_test", methods={"GET","POST"})
    * Test workflows.
