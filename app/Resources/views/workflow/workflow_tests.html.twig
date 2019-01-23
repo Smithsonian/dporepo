@@ -37,13 +37,13 @@
 
                         {% for w in workflows %}
                             <tr>
-                                <td><a href="/admin/workflows/test/{{ w.workflow_id }}">Test workflow</a></td>
+                                <td><a href="/admin/workflow_test/{{ w.workflow_id }}">Test workflow</a></td>
                                 <td>{{ w.workflow_recipe_name }}</td>
                                 <td>{{ w.uuid }}</td>
                                 <td>{{ w.step_id }}</td>
                                 <td>{{ w.step_type }}</td>
                                 <td>{{ w.step_state }}</td>
-                                <td>{{ w.job_id }}</td>
+                                <td>{{ w.processing_job_id }}</td>
                                 <td>{{ w.date_created }}</td>
                             </tr>
                         {% endfor %}
