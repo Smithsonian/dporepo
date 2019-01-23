@@ -1,0 +1,48 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block content %}
+
+    <ol class="breadcrumb">
+        <li><a href="/admin">Dashboard</a></li>
+        <li>Workflow {{ data.workflow_id }}</li>
+    </ol>
+
+    <div class="row">
+        <div class="col-sm-12 col-md-12 child-data">
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <p>Workflow Recipe: {{ data.workflow_recipe_name }}</p>
+                    <p>Current step ID: {{ data.step_id }}</p>
+                    <p>Step State: {{ data.step_state }}</p>
+                    <p>Step Type: {{ data.step_type }}</p>
+                    <p>Job ID: {{ data.processing_job_id }}</p>
+                    <p>Date Created: {{ data.date_created }}</p>
+
+                    {% if history %}
+                        <h2>Workflow History</h2>
+                        <table>
+                        {% for h in history %}
+                            <tr>
+                                <td>{{ h.date_created }}</td>
+                                <td>{{ h.step_id }} ({{ h.step_type }})</td>
+                                <td>{{ h.step_state }}</td>
+                                <td>{{ h.processing_job_id }}</td>
+                            </tr>
+                        {% endfor %}
+                        </table>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- /row -->
+{% endblock %}
+{% block js_bottom %}
+    {{ parent() }}
+{% endblock %}
