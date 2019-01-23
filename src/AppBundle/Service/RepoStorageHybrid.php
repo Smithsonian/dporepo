@@ -5136,6 +5136,7 @@ class RepoStorageHybrid implements RepoStorage {
   public function getWorkflows($params = array()) {
 
     //@todo project_id and other params; for now just get all.
+    $ingest_job_uuid = array_key_exists('ingest_job_uuid', $params) ? $params['ingest_job_uuid'] : NULL;
     $workflow_id = array_key_exists('workflow_id', $params) ? $params['workflow_id'] : NULL;
     $step_type = array_key_exists('step_type', $params) ? $params['step_type'] : NULL;
     $step_state = array_key_exists('step_state', $params) ? $params['step_state'] : NULL;
@@ -5143,6 +5144,9 @@ class RepoStorageHybrid implements RepoStorage {
 
     $sql = "SELECT * FROM workflow ";
     $where_parts = array();
+    if(NULL !== $ingest_job_uuid) {
+      $where_parts[] = "ingest_job_uuid=:ingest_job_uuid ";
+    }
     if(NULL !== $workflow_id) {
       $where_parts[] = "workflow_id=:workflow_id ";
     }
@@ -5166,6 +5170,9 @@ class RepoStorageHybrid implements RepoStorage {
     }
     $statement = $this->connection->prepare($sql);
 
+    if(NULL !== $ingest_job_uuid) {
+      $statement->bindValue(":ingest_job_uuid", $ingest_job_uuid, PDO::PARAM_STR);
+    }
     if(NULL !== $workflow_id) {
       $statement->bindValue(":workflow_id", $workflow_id, PDO::PARAM_INT);
     }
@@ -5187,6 +5194,31 @@ class RepoStorageHybrid implements RepoStorage {
         $ret = $ret[0];
       }
     }
+
+    return $ret;
+  }
+
+  public function getWorkflowHistory($params = array()) {
+
+    $workflow_id = array_key_exists('workflow_id', $params) ? $params['workflow_id'] : NULL;
+    if(NULL == $workflow_id) {
+      return array();
+    }
+
+    $sql = "SELECT * FROM workflow_log ";
+
+    $where_parts = array();
+    $where_parts[] = "workflow_id=:workflow_id ";
+    if(count($where_parts) > 0) {
+      $sql .= " WHERE " . implode(" AND ", $where_parts);
+    }
+    $sql .= " ORDER BY date_created DESC";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":workflow_id", $workflow_id, PDO::PARAM_INT);
+    $statement->execute();
+
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
 
     return $ret;
   }
@@ -5236,7 +5268,7 @@ class RepoStorageHybrid implements RepoStorage {
     $workflow_json = json_encode($workflow_json_array);
     $sql ="INSERT INTO workflow 
           (workflow_recipe_name, workflow_definition, ingest_job_uuid, step_id, step_state, step_type, processing_job_id, date_created, last_modified_user_account_id, created_by_user_account_id) 
-          VALUES (:workflow_recipe_name, :workflow_definition, :ingest_job_uuid, :step_id, :step_state, :step_type, :processing_job_id, NOW(), :last_user_id, :created_user_id)";
+          VALUES (:workflow_recipe_name, :workflow_definition, :ingest_job_uuid, :step_id, NULL, :step_type, :processing_job_id, NOW(), :last_user_id, :created_user_id)";
     $statement = $this->connection->prepare($sql);
     $statement->bindValue(":workflow_recipe_name", $workflow_recipe_id, PDO::PARAM_STR);
     $statement->bindValue(":workflow_definition", $workflow_json, PDO::PARAM_STR);
