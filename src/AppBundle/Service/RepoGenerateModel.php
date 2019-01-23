@@ -138,7 +138,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
       // Create a new processing job and run.
       $processing_job = $this->runProcessingJob($path, $job_data, $recipe_name, $filesystem);
 
-      // $this->u->dumper($processing_job[0]['workflow']['job_id']);
+      // $this->u->dumper($processing_job[0]['workflow']['processing_job_id']);
 
       // Check the job's status to insure that the job_status hasn't been set to 'failed'.
       $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid, 'generateModelAssets'));
@@ -152,13 +152,13 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
       if (!empty($processing_job) && ($processing_job[0]['return'] === 'success')) {
 
         // Check to see if jobs are running. Don't pass "Go" until all jobs are finished.
-        while ($this->processing->are_jobs_running( array($processing_job[0]['workflow']['job_id']) )) {
-          $this->processing->are_jobs_running( array($processing_job[0]['workflow']['job_id']) );
+        while ($this->processing->are_jobs_running( array($processing_job[0]['workflow']['processing_job_id']) )) {
+          $this->processing->are_jobs_running( array($processing_job[0]['workflow']['processing_job_id']) );
           sleep(5);
         }
 
         // Retrieve all of the logs produced by the processing service.
-        $data = $this->processing->get_processing_assets($filesystem, $processing_job[0]['workflow']['job_id']);
+        $data = $this->processing->get_processing_assets($filesystem, $processing_job[0]['workflow']['processing_job_id']);
 
         // Update the workflow record. Set the step state to NULL and step-id to 'qc-hd.
         $query_params = array(

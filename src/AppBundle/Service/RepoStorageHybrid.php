@@ -4992,6 +4992,7 @@ class RepoStorageHybrid implements RepoStorage {
     $workflow_id = array_key_exists('workflow_id', $params) ? $params['workflow_id'] : NULL;
     $step_type = array_key_exists('step_type', $params) ? $params['step_type'] : NULL;
     $step_state = array_key_exists('step_state', $params) ? $params['step_state'] : NULL;
+    $item_id = array_key_exists('item_id', $params) ? (int)$params['item_id'] : NULL;
 
     $sql = "SELECT * FROM workflow ";
     $where_parts = array();
@@ -5010,6 +5011,9 @@ class RepoStorageHybrid implements RepoStorage {
         $where_parts[] = "step_state=:step_state ";
       }
     }
+    if(NULL !== $item_id) {
+      $where_parts[] = "item_id=:item_id ";
+    }
     if(count($where_parts) > 0) {
       $sql .= " WHERE " . implode(" AND ", $where_parts);
     }
@@ -5023,6 +5027,9 @@ class RepoStorageHybrid implements RepoStorage {
     }
     if(NULL !== $step_state) {
       $statement->bindValue(":step_state", $step_state, PDO::PARAM_STR);
+    }
+    if(NULL !== $item_id) {
+      $statement->bindValue(":item_id", $item_id, PDO::PARAM_INT);
     }
     $statement->execute();
 
@@ -5193,7 +5200,7 @@ class RepoStorageHybrid implements RepoStorage {
     $step_id = array_key_exists('step_id', $params) ? $params['step_id'] : NULL;
     $step_type = array_key_exists('step_type', $params) ? $params['step_type'] : NULL;
     $step_state = array_key_exists('step_state', $params) ? $params['step_state'] : false;
-    $job_id = array_key_exists('job_id', $params) ? $params['job_id'] : false;
+    $processing_job_id = array_key_exists('processing_job_id', $params) ? $params['processing_job_id'] : false;
 
     if(NULL == $workflow_id) {
       return false;
@@ -5213,8 +5220,8 @@ class RepoStorageHybrid implements RepoStorage {
     if(false !== $step_state) {
       $sql .= ", step_state=:step_state";
     }
-    if(false !== $job_id) {
-      $sql .= ", job_id=:job_id";
+    if(false !== $processing_job_id) {
+      $sql .= ", processing_job_id=:processing_job_id";
     }
     $sql .= " WHERE workflow_id=:workflow_id";
 
@@ -5230,8 +5237,8 @@ class RepoStorageHybrid implements RepoStorage {
     if(false !== $step_state) {
       $statement->bindValue(":step_state", $step_state, PDO::PARAM_STR);
     }
-    if(false !== $job_id) {
-      $statement->bindValue(":job_id", $job_id, PDO::PARAM_STR);
+    if(false !== $processing_job_id) {
+      $statement->bindValue(":processing_job_id", $processing_job_id, PDO::PARAM_STR);
     }
     $statement->bindValue(":user_id", $user_id, PDO::PARAM_INT);
     $statement->execute();
