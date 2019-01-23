@@ -214,7 +214,7 @@ class WorkflowCommand extends ContainerAwareCommand
         'step_id' => $next_step_details['stepId'],
         'step_type' => $next_step_details['stepType'],
         'step_state' => NULL,
-        'job_id' => NULL,
+        'processing_job_id' => NULL,
       );
       $this->repo_storage_controller->execute('updateWorkflow', $query_params);
     }
