@@ -149,8 +149,33 @@ class WorkflowController extends Controller
   }
 
   /**
-   * @Route("/admin/workflows/test", name="workflows_test", methods={"GET","POST"})
-   * @Route("/admin/workflows/test/{workflow_id}", name="workflow_test", methods={"GET","POST"})
+   * @Route("/admin/workflows/{workflow_id}", name="workflow_detail", methods={"GET","POST"})
+   * Same code as used in workflow command
+   *
+   * @param Request $request
+   * @return JsonResponse The query result in JSON
+   */
+  public function viewWorkflowDetails(Request $request) {
+
+    $workflow_id = $request->attributes->get('workflow_id');
+
+    $query_params = array('workflow_id' => $workflow_id);
+    $workflow_data = $this->repo_storage_controller->execute('getWorkflows', $query_params);
+    $workflow = $workflow_data['workflow_definition'];
+
+    $workflow_history = $this->repo_storage_controller->execute('getWorkflowHistory', $query_params);
+
+    return $this->render('workflow/workflow_details.html.twig', array(
+      'page_title' => 'Workflow Details',
+      'data' => $workflow_data,
+      'history' => $workflow_history,
+    ));
+
+  }
+
+  /**
+   * @Route("/admin/workflow_test", name="workflows_test", methods={"GET","POST"})
+   * @Route("/admin/workflow_test/{workflow_id}", name="workflow_test", methods={"GET","POST"})
    * Test workflows.
    *
    * @param Request $request
@@ -183,7 +208,7 @@ class WorkflowController extends Controller
   }
 
   /**
-   * @Route("/admin/workflows/test/jobcreate/{workflow_id}", name="workflow_test_jobcreate", methods={"GET","POST"})
+   * @Route("/admin/workflow_test/jobcreate/{workflow_id}", name="workflow_test_jobcreate", methods={"GET","POST"})
    * Same code as used in workflow command
    *
    * @param Request $request
@@ -239,13 +264,13 @@ class WorkflowController extends Controller
     );
     $this->repo_storage_controller->execute('updateWorkflow', $query_params);
 
-    return $this->redirect('/admin/workflows/test/' . $workflow_id);
+    return $this->redirect('/admin/workflow_test/' . $workflow_id);
 
   }
 
   /**
-   * @Route("/admin/workflows/test/{workflow_id}/go", name="workflow_test_step", methods={"GET","POST"}, defaults={"step_state"= NULL})
-   * @Route("/admin/workflows/test/{workflow_id}/go/{step_state}", name="workflow_test_step_state", methods={"GET","POST"})
+   * @Route("/admin/workflow_test/{workflow_id}/go", name="workflow_test_step", methods={"GET","POST"}, defaults={"step_state"= NULL})
+   * @Route("/admin/workflow_test/{workflow_id}/go/{step_state}", name="workflow_test_step_state", methods={"GET","POST"})
    * Set the status of a workflow
    *
    * @param Request $request
@@ -273,16 +298,16 @@ class WorkflowController extends Controller
     }
 
     if(NULL == $recipe_id) {
-      return $this->redirect('/admin/workflows/test/' . $workflow_id);
+      return $this->redirect('/admin/workflow_test/' . $workflow_id);
     }
 
     $recipe_step_state = NULL;
     switch($recipe_id) {
-      case 'test-success':
-        $recipe_step_state = 'success';
+      case "test-success":
+        $recipe_step_state = "success";
         break;
-      case 'test-fail':
-        $recipe_step_state = 'error';
+      case "test-fail":
+        $recipe_step_state = "error";
         break;
     }
 
@@ -305,8 +330,8 @@ class WorkflowController extends Controller
       if(isset($next_step_details['status']) && ($next_step_details['status'] == 'done')) {
         $query_params = array(
           'workflow_id' => $workflow_id,
-          'step_state' => 'done',
-          'job_id' => NULL,
+          'step_state' => "done",
+          'processing_job_id' => NULL,
         );
       }
       else {
@@ -315,7 +340,7 @@ class WorkflowController extends Controller
           'step_id' => $next_step_details['stepId'],
           'step_type' => $next_step_details['stepType'],
           'step_state' => NULL,
-          'job_id' => NULL,
+          'processing_job_id' => NULL,
         );
       }
       // Update the workflow with the next step.
@@ -323,7 +348,7 @@ class WorkflowController extends Controller
 
     }
 
-    return $this->redirect('/admin/workflows/test/' . $workflow_id);
+    return $this->redirect('/admin/workflow_test/' . $workflow_id);
 
   }
 
@@ -338,7 +363,7 @@ class WorkflowController extends Controller
 
     // write [uuid] => 123 [recipe_id] => photogrammetry_v1 [point_of_contact] => 2
     $query_params = array(
-      'uuid' => $uuid,
+      'ingest_job_uuid' => $uuid,
       'workflow_recipe_id' => $workflow_recipe_id,
       'user_id' => $user_id,
     );
@@ -358,7 +383,7 @@ class WorkflowController extends Controller
    */
   public function datatables_browse_workflows(Request $request)
   {
-    
+
     $req = $request->request->all();
     $item_id = !empty($req['item_id']) ? $req['item_id'] : false;
 
