@@ -737,7 +737,7 @@ class ImportController extends Controller
           )
         );
 
-        $query_params = array('uuid' => $uuid);
+        $query_params = array('ingest_job_uuid' => $uuid);
         $workflow_data = $this->repo_storage_controller->execute('getWorkflows', $query_params);
         $job_data['workflow'] = $workflow_data;
 
