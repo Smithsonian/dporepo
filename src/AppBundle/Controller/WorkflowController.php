@@ -381,7 +381,7 @@ class WorkflowController extends Controller
    * @param Request $request
    * @return JsonResponse The query result in JSON
    */
-  public function datatables_browse_workflows(Request $request)
+  public function datatablesBrowseWorkflows(Request $request)
   {
 
     $req = $request->request->all();
