@@ -347,6 +347,50 @@ class WorkflowController extends Controller
   }
 
 
+
+  /**
+   * @Route("/admin/datatables_browse_workflows", name="datatables_browse_workflows", methods="POST")
+   * /// Route("/admin/workflows/{item_id}/{workflow_id}", name="workflows", methods={"GET","POST"})
+   *
+   * Browse Workflows
+   * @param Request $request
+   * @return JsonResponse The query result in JSON
+   */
+  public function datatables_browse_workflows(Request $request)
+  {
+    
+    $req = $request->request->all();
+    $item_id = !empty($req['item_id']) ? $req['item_id'] : false;
+
+    // Proceed only if the item_id is present.
+    if($item_id) {
+
+      $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+      $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
+      $sort_order = $req['order'][0]['dir'];
+      $start_record = !empty($req['start']) ? $req['start'] : 0;
+      $stop_record = !empty($req['length']) ? $req['length'] : 20;
+
+      $query_params = array(
+        'sort_field' => $sort_field,
+        'sort_order' => $sort_order,
+        'start_record' => $start_record,
+        'stop_record' => $stop_record,
+        'item_id' => $item_id,
+      );
+      if ($search) {
+        $query_params['search_value'] = $search;
+      }
+
+      // Look in workflow table for workflows belonging to an item_id.
+      $data = $this->repo_storage_controller->execute('getWorkflowsDatatable', $query_params);
+    }
+
+    return $this->json($data);
+  }
+
+
+
   /**
    * @Route("/admin/batch/detail", name="batch_detail_processing", methods="POST")
    * @param Request $request

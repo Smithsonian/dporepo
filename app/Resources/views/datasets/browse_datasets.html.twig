@@ -135,6 +135,31 @@
       </div>
     </div>
 
+    <div class="col-sm-12 col-md-12 child-data">
+      <div class="panel panel-default">
+        <div class="panel-body">
+          <h2>Workflows</h2>
+          <table id="browse_workflows" class="table table-striped table-bordered" cellspacing="0" width="100%">
+            <thead>
+              <tr>
+                <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+                <th class="text-center"></th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div> <!-- /row -->
 {% endblock %}
 {% block js_bottom %}
@@ -447,6 +472,65 @@
         });
 
       $("#browse_models_wrapper").find(".datatables_bulk_actions").prepend(request_model_download_button);
+
+      // Browse Workflows
+      $('#browse_workflows').dataTable( {
+        "columns": [
+          { "data": "workflow_id"},
+          { "data": "workflow_recipe_name", "title": "Recipe Name"  },
+          { "data": "step_id", "title": "Step ID"  },
+          { "data": "step_type", "title": "Step Type"  },
+          { "data": "step_state", "title": "Step State"  },
+          { "data": "processing_job_id", "title": "Processing Job ID"  },
+          { "data": "date_created", "title": "Date Created"  },
+          { "data": "created_by_user_account_id", "title": "Created by User Account ID"  },
+          { "data": "last_modified", "title": "Last Modified"  },
+          { "data": "last_modified_user_account_id", "title": "Last Modified User Account ID"  }
+        ],
+        "dom": 'lfip<"datatables_bulk_actions">tip',
+        "pagingType": "simple_numbers",
+        "stateSave": true,
+        "order": [[6,"desc"]],
+        // Show processing throbber.
+        "processing": true,
+        "serverMethod": "POST",
+        // All data management will be done on the server side.
+        "serverSide": true,
+        // Path to the file that is going to handle the queries.
+        "ajax": {
+          "url": "/admin/datatables_browse_workflows",
+          "data": {
+            "item_id": item_id
+          }
+        },
+        // Method type.
+        "serverMethod": "POST",
+        // Values in the length dropdown.
+        "lengthMenu":[10,50,100,500],
+        // Set some widths.
+        "aoColumnDefs":[
+          // {
+          //     "targets": [ 0 ],
+          //     "sWidth": '106px',
+          //     "bSortable": false
+          // }
+        ],
+        "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+          
+          // This table row.
+          var thisTableRow = $(nRow);
+
+          // Send to details page when clicked.
+          thisTableRow.find('td').click(function() {
+            // This table cell.
+            var thisTableCell = $(this);
+            // Send to the details page.
+            var this_id = thisTableCell.closest("tr").attr('id');
+            window.location.href = '/admin/model/view/' + this_id;
+          });
+
+        }
+      });
 
     });
   </script>

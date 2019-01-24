@@ -4985,6 +4985,77 @@ class RepoStorageHybrid implements RepoStorage {
 
   }
 
+  /**
+   * Get Workflows Datatable
+   *
+   * @param array $params Parameters
+   * @return array
+   */
+  public function getWorkflowsDatatable($params = NULL)
+  {
+    $data = array();
+
+    if(!empty($params)) {
+
+      // Proceed only if the item_id is present.
+      $item_id = array_key_exists('item_id', $params) ? $params['item_id'] : false;
+
+      if ($item_id) {
+        $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+        $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : 'asc';
+        $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : 0;
+        $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : 20;
+        $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+
+        $sql = " workflow.workflow_id,
+          workflow.workflow_recipe_name,
+          workflow.step_id,
+          workflow.step_type,
+          workflow.step_state,
+          workflow.processing_job_id,
+          workflow.date_created,
+          workflow.created_by_user_account_id,
+          workflow.last_modified,
+          workflow.last_modified_user_account_id,
+          workflow.workflow_id AS DT_RowId 
+          FROM workflow 
+          WHERE workflow.item_id = :item_id ";
+
+        if ($sort_field) {
+          $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+        } else {
+          $sql .= " ORDER BY model_id ";
+        }
+
+        if (NULL !== $stop_record) {
+          $sql .= " LIMIT {$start_record}, {$stop_record} ";
+        } else {
+          $sql .= " LIMIT {$start_record} ";
+        }
+
+        $sql = "SELECT SQL_CALC_FOUND_ROWS " . $sql;
+
+        $statement = $this->connection->prepare($sql);
+
+        $statement->bindValue(":item_id", $item_id, PDO::PARAM_INT);
+        if(strlen(trim($search_value)) > 0) {
+          $statement->bindValue(":search_value", $search_value, PDO::PARAM_STR);
+        }
+
+        $statement->execute();
+
+        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
+        $statement->execute();
+        $count = $statement->fetch(PDO::FETCH_ASSOC);
+        $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+        $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
+      }
+    }
+
+    return $data;
+  }
 
   public function getWorkflows($params = array()) {
 
