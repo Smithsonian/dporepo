@@ -5193,7 +5193,7 @@ class RepoStorageHybrid implements RepoStorage {
     $workflow_json = json_encode($workflow_json_array);
     $sql ="INSERT INTO workflow 
           (workflow_recipe_name, workflow_definition, ingest_job_uuid, step_id, step_state, step_type, processing_job_id, date_created, last_modified_user_account_id, created_by_user_account_id) 
-          VALUES (:workflow_recipe_name, :workflow_definition, :ingest_job_uuid, :step_id, NULL, :step_type, :processing_job_id, NOW(), :last_user_id, :created_user_id)";
+          VALUES (:workflow_recipe_name, :workflow_definition, :ingest_job_uuid, :step_id, :step_type, :step_type, :processing_job_id, NOW(), :last_user_id, :created_user_id)";
     $statement = $this->connection->prepare($sql);
     $statement->bindValue(":workflow_recipe_name", $workflow_recipe_id, PDO::PARAM_STR);
     $statement->bindValue(":workflow_definition", $workflow_json, PDO::PARAM_STR);
