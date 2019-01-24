@@ -10,12 +10,14 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\ArrayInput;
 use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Service\RepoProcessingService;
+use AppBundle\Utils\AppUtilities;
 
 class WorkflowCommand extends ContainerAwareCommand
 {
   protected $container;
   private $repo_storage_controller;
   private $processing;
+  public $u;
 
   public function __construct(object $conn, RepoProcessingService $processing)
   {
@@ -23,6 +25,8 @@ class WorkflowCommand extends ContainerAwareCommand
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     // Processing service.
     $this->processing = $processing;
+    // App Utilities
+    $this->u = new AppUtilities();
     // This is required due to parent constructor, which sets up name.
     parent::__construct();
   }
