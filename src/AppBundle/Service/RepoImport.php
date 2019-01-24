@@ -637,6 +637,8 @@ class RepoImport implements RepoImportInterface {
             }
             break;
           case 'model':
+            // Generate a UUID for the model
+            $csv_val->model_guid = $this->u->createUuid();
             // 1) Append the job ID to the file path
             // 2) Add the file's checksum to the $csv_val object.
             if(!empty($csv_val->file_path)) {
