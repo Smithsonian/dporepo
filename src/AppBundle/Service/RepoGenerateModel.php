@@ -244,6 +244,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
                   'base_table' => 'processing_job',
                   'user_id' => $job_data['created_by_user_account_id'],
                   'values' => array(
+                    'ingest_job_uuid' => $job_data['uuid'],
                     'processing_service_job_id' => $processing_job['id'],
                     'recipe' =>  $processing_job['recipe']['name'],
                     'job_json' => json_encode($processing_job),
