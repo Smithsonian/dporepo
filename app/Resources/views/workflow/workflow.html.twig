@@ -1,0 +1,223 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+  <style>
+    .dz-preview {
+      display: block;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+
+  {# {{ dump(data) }} #}
+
+  <ol class="breadcrumb">
+    <li><a href="/admin">Dashboard</a></li>
+    <li><a href="/admin/item/view/{{ data.item_id }}">Item</a></li>
+    <li>Workflow: {{ data.step_id }} - {{ data.step_type }}</li>
+  </ol>
+
+  <div class="row">
+    <div class="col-sm-6 col-md-6">
+      <div class="panel panel-default">
+        <div class="panel-heading"><h3>Workflow Details</h3></div>
+        <div class="panel-body" style="min-height: 28rem;">
+          <p><strong>Workflow Recipe:</strong> {{ data.workflow_recipe_name }}</p>
+          <p><strong>Current step ID:</strong> {{ data.step_id }}</p>
+          {% if (data.step_state) %}
+            <p><strong>Step State:</strong> {{ data.step_state }}</p>
+          {% endif %}
+          <p><strong>Step Type:</strong> {{ data.step_type }}</p>
+          {% if (data.processing_job_id) %}
+            <p><strong>Processing Job ID:</strong> {{ data.processing_job_id }}</p>
+          {% endif %}
+          <p><strong>Date Created:</strong> {{ data.date_created }}</p>
+          <p><span class="glyphicon glyphicon-link" aria-hidden="true"></span> <a href="/admin/model/view/{{ data.model_id }}"><strong>View Master Model Record</strong></a></p>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-6">
+      <div class="panel panel-default">
+        <div class="panel-heading"><h3>{{ data.interface.header }}</h3></div>
+        <div class="panel-body" style="min-height: 28rem;">
+          <p>{{ data.interface.message }}</p>
+
+          {% if data.step_state == 'error' %}
+            <!-- Fil Upload Template Begins -->
+            {# <div class="files" id="previews" style="border: 2px dashed #337ab7; border-radius: 4px; min-height: 14rem; padding: 2rem;"></div> #}
+            <div class="dropzone-container" style="border: 2px dashed gray; border-radius: 4px; min-height: 14rem; padding: 2rem; background-color: #efefef;">            
+              <div class="table table-striped files" id="previews">
+                <div id="template" class="row file-row dz-image-preview" style="border-bottom: 2px solid #fff; background-color: #efefef;">
+                  <!-- This is used as the file preview template -->
+                  <div class="col-sm-9 col-md-9">
+                    <span class="preview"><h1><i class="glyphicon glyphicon-file"></i></h1><img data-dz-thumbnail></span>
+                  {#
+                  </div>
+                  <div>
+                  #}
+                    <p class="name" data-dz-name></p>
+                    <strong class="error text-danger" data-dz-errormessage></strong>
+                  </div>
+                  {#
+                  <div>
+                    <p class="size" data-dz-size></p>
+                    <div class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                      <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress></div>
+                    </div>
+                  </div>
+                  #}
+                  <div class="col-sm-3 col-md-3">
+                    {#
+                    <button class="btn btn-primary start">
+                      <i class="glyphicon glyphicon-upload"></i>
+                      <span>Start</span>
+                    </button>
+                    <button data-dz-remove class="btn btn-default cancel">
+                      <i class="glyphicon glyphicon-ban-circle"></i>
+                      <span>Cancel</span>
+                    </button>
+                    #}
+                    <button data-dz-remove class="btn btn-default delete pull-right" style="margin: 5.5rem 0 0 0.5rem;">
+                      <i class="glyphicon glyphicon-trash"></i>
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="actions" class="row" style="margin-top: 2rem;">
+              <div class="col-lg-12">
+                <!-- The fileinput-button span is used to style the file input field as button -->
+                <span class="btn btn-default fileinput-button dz-clickable">
+                  <i class="glyphicon glyphicon-plus"></i>
+                  <span>Add Files</span>
+                </span>
+                <button type="submit" class="btn btn-default start">
+                  <i class="glyphicon glyphicon-upload"></i>
+                  <span>Start Upload</span>
+                </button>
+                <button type="reset" class="btn btn-default cancel">
+                  <i class="glyphicon glyphicon-ban-circle"></i>
+                  <span>Cancel Upload</span>
+                </button>
+              </div>
+            </div>
+            <!-- Fil Upload Template Ends -->
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+  </div> <!-- /row -->
+
+{% endblock %}
+{% block js_bottom %}
+    {{ parent() }}
+
+    {% if data.step_state == 'error' %}
+      <script type="text/javascript" src="{{ asset('lib/javascripts/dropzone.js') }}"></script>
+      <script type="text/javascript">
+
+        // Get the template HTML and remove it from the doumenthe template HTML and remove it from the doument
+        var previewNode = document.querySelector("#template");
+        previewNode.id = "";
+        var previewTemplate = previewNode.parentNode.innerHTML;
+        previewNode.parentNode.removeChild(previewNode);
+
+        // var uploadsDropzone = new Dropzone("div#previews", {
+        var myDropzone = new Dropzone(".dropzone-container", {
+          url: "{{ oneup_uploader_endpoint('repository') }}",
+          autoQueue: false, // Make sure the files aren't queued until manually added
+          previewsContainer: "#previews", // Define the container to display the previews
+          previewTemplate: previewTemplate,
+          clickable: ".fileinput-button", // Define the element that should be used as click trigger to select files.
+          createImageThumbnails: false,
+          maxFilesize: 20000, // how many files this Dropzone handles
+          ignoreHiddenFiles: true,
+          timeout: 300000, // The timeout for the XHR requests in milliseconds (default is 30000 - 30 seconds)
+          chunking: true,
+          // forceChunking: true,
+          // parallelChunkUploads: true,
+          chunkSize: 5000000,
+          retryChunks: true,
+          retryChunksLimit: 2000,
+          acceptedFiles: "{{ data.accepted_file_types }}",
+          dictInvalidFileType: "File type not allowed"
+        });
+
+        myDropzone.on("addedfile", function(file) {
+          // // Hookup the start button
+          // file.previewElement.querySelector(".start").onclick = function() { myDropzone.enqueueFile(file); };
+        });
+
+        // Update the total progress bar
+        myDropzone.on("totaluploadprogress", function(progress) {
+          // document.querySelector("#total-progress .progress-bar").style.width = progress + "%";
+        });
+
+        myDropzone.on("sending", function(file, xhr, formData) {
+          xhr.timeout = 99999999;
+          // Add the simpleUpload flag to the formData
+          formData.append("simpleUpload", true);
+          // Add the fullPath to the formData
+          formData.append("uploadPath", "{{ data.interface.upload_path }}");
+          // Add the erroredFileName to the formData
+          formData.append("erroredFileName", "{{ data.interface.errored_file_name }}");
+          // Add the jobId to the formData
+          formData.append('jobId', "{{ data.interface.job_id }}");
+          // Add the parentRecordId value to the formData
+          formData.append('parentRecordId', "{{ data.interface.parent_record_id }}");
+          // Add the parentRecordType value to the formData
+          formData.append('parentRecordType', "{{ data.interface.parent_record_type }}");
+          // Disable the file input, start, and delete buttons
+          document.querySelector(".fileinput-button").setAttribute("disabled", "disabled");
+          document.querySelector(".start").setAttribute("disabled", "disabled");
+          file.previewElement.querySelector(".delete").setAttribute("disabled", "disabled");
+        });
+
+        // Hide the total progress bar when nothing's uploading anymore
+        myDropzone.on("queuecomplete", function(progress) {
+          // Disable the cancel button
+          document.querySelector(".cancel").setAttribute("disabled", "disabled");
+          // Display a success message in the UI, advance to next step (QC).
+          swal({
+            title: 'File(s) Successfully Uploaded',
+            text: 'Next step: QC',
+            icon: 'success',
+            buttons: {
+              catch: {
+                text: "OK",
+                value: "ok",
+              }
+            },
+          })
+          .then((value) => {
+            switch (value) {
+              case "ok":
+                window.location.href = '/admin/workflow/{{ data.workflow_id }}/go/success';
+                break;
+            }
+          });
+
+        });
+
+        // Setup the buttons for all transfers
+        // The "add files" button doesn't need to be setup because the config
+        // `clickable` has already been specified.
+        document.querySelector("#actions .start").onclick = function() {
+          myDropzone.enqueueFiles(myDropzone.getFilesWithStatus(Dropzone.ADDED));
+        };
+        document.querySelector("#actions .cancel").onclick = function() {
+          myDropzone.removeAllFiles(true);
+        };
+
+        // $(document).ready(function() {
+
+        // });
+      </script>
+    {% endif %}
+{% endblock %}

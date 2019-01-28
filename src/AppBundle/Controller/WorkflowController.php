@@ -53,6 +53,11 @@ class WorkflowController extends Controller
   private $uploads_directory;
 
   /**
+   * @var string $accepted_file_types
+   */
+  private $accepted_file_types;
+
+  /**
    * Constructor
    * @param object  $u  Utility functions object
    */
@@ -62,7 +67,9 @@ class WorkflowController extends Controller
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->processing = $processing;
     $this->kernel = $kernel;
-    $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR  . 'web';
+    $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+    $this->accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
   }
 
   /**
@@ -260,7 +267,8 @@ class WorkflowController extends Controller
     // Pretend like we just kicked off this test processing recipe.
     $query_params = array(
       'workflow_id' => $workflow_id,
-      'step_state' => 'created'
+      'step_state' => 'created',
+      'user_id' => $this->getUser()->getId(),
     );
     $this->repo_storage_controller->execute('updateWorkflow', $query_params);
 
@@ -315,7 +323,8 @@ class WorkflowController extends Controller
     $new_step_state = isset($simulate_step_state) ? $simulate_step_state : (isset($recipe_step_state) ? $recipe_step_state : "success");
     $query_params = array(
       'workflow_id' => $workflow_id,
-      'step_state' => $new_step_state
+      'step_state' => $new_step_state,
+      'user_id' => $this->getUser()->getId(),
     );
     $this->repo_storage_controller->execute('updateWorkflow', $query_params);
 
@@ -341,6 +350,7 @@ class WorkflowController extends Controller
           'step_type' => $next_step_details['stepType'],
           'step_state' => NULL,
           'processing_job_id' => NULL,
+          'user_id' => $this->getUser()->getId(),
         );
       }
       // Update the workflow with the next step.
@@ -414,6 +424,279 @@ class WorkflowController extends Controller
     return $this->json($data);
   }
 
+  /**
+   * @Route("/admin/workflow/{workflow_id}", name="workflow", methods={"GET","POST"})
+   *
+   * @param Request $request
+   * @return JsonResponse The query result in JSON
+   */
+  public function workflow(Request $request)
+  {
+
+    $workflow_id = $request->attributes->get('workflow_id');
+
+    $query_params = array('workflow_id' => $workflow_id);
+    $workflow_data = $this->repo_storage_controller->execute('getWorkflows', $query_params);
+
+    // If the workflow isn't found, throw a createNotFoundException (404).
+    if (empty($workflow_data)) throw $this->createNotFoundException('Workflow not found');
+
+    // Get the master model's ID, so it can linked to.
+    $model = $this->repo_storage_controller->execute('getRecords', array(
+        'base_table' => 'model',
+        'fields' => array(
+          array(
+            'table_name' => 'model',
+            'field_name' => 'model_id',
+          ),
+        ),
+        'limit' => 1,
+        'search_params' => array(
+          0 => array('field_names' => array('model.item_id'), 'search_values' => array($workflow_data['item_id']), 'comparison' => '='),
+          1 => array('field_names' => array('model.model_purpose'), 'search_values' => array('master'), 'comparison' => '='),
+        ),
+        'search_type' => 'AND',
+      )
+    );
+
+    if (!empty($model)) {
+      $workflow_data['model_id'] = $model[0]['model_id'];
+    }
+
+    // Set a flag for the template for handling the next step (e.g. upload, advance, etc.).
+    $workflow_data['interface'] = $this->setInterface($workflow_data);
+    $workflow_data['accepted_file_types'] = $this->accepted_file_types;
+
+    // $this->u->dumper($workflow_data);
+
+    return $this->render('workflow/workflow.html.twig', array(
+      'page_title' => 'Workflow',
+      'data' => $workflow_data,
+    ));
+
+  }
+
+  /**
+   * Set Interface
+   *
+   * @param array $w Workflow data
+   * @return array
+   */
+  public function setInterface($w = array())
+  {
+    $data = array(
+      'action' => 'advance',
+      'header' => 'Continue to the Next Step',
+      'message' => 'Continue to the next step.',
+    );
+
+    // If the step_state has been set to an error, send a flag to the template for handling.
+    if (!empty($w) && ($w['step_type'] === 'manual')) {
+
+      switch ($w['step_id']) {
+        case 'qc-hd':
+
+          // Error: Manually upload replacement
+          if ($w['step_state'] === 'error') {
+            $data = $this->qcHdError($w);
+          }
+
+          // Success: Manual QC
+          if (empty($w['step_state'])) {
+            $data = array(
+              'action' => 'qc',
+              'header' => 'Inspect HD Model',
+              'message' => 'Review the HD model (opens in a new window).',
+            );
+          }
+
+          // $this->u->dumper($data);
+
+          break;
+      }
+      
+    }
+    
+    return $data;
+  }
+
+  /**
+   * Get File Info
+   *
+   * @param array $path The absolute path to the file
+   * @return array
+   */
+  public function getFileInfo($path = null)
+  {
+    $data = array();
+
+    if (!empty($path)) {
+
+      // Remove path info from the absolute path to match how the path is stored in the metadata storage.
+      // e.g. /var/www/html/web/uploads/repository/5E4ED85E-EB10-374A-7366-6F8BDF49F46C/...
+      // becomes: /uploads/repository/5E4ED85E-EB10-374A-7366-6F8BDF49F46C/...
+      $search = $this->project_directory . $this->uploads_directory;
+      $replace = '/uploads/repository/';
+      $file_path_for_query = str_replace($search, $replace, $path);
+
+      $data = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'file_upload',
+          'fields' => array(),
+          'limit' => 1,
+          'search_params' => array(
+            0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($file_path_for_query), 'comparison' => '='),
+          ),
+          'search_type' => 'AND',
+          'omit_active_field' => true,
+        )
+      );
+
+    }
+
+    return $data;
+  }
+
+  /**
+   * QC HD Error
+   *
+   * @param array $w Workflow data
+   * @return array
+   */
+  public function qcHdError($w = array())
+  {
+    $data = array();
+
+    if (!empty($w)) {
+
+      // Get the file path from the processing_job metadata storage.
+      $path = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'processing_job',
+          'fields' => array(
+            array(
+              'table_name' => 'processing_job',
+              'field_name' => 'asset_path',
+            ),
+          ),
+          'limit' => 1,
+          'search_params' => array(
+            0 => array('field_names' => array('processing_job.ingest_job_uuid'), 'search_values' => array($w['ingest_job_uuid']), 'comparison' => '='),
+            1 => array('field_names' => array('processing_job.processing_service_job_id'), 'search_values' => array($w['processing_job_id']), 'comparison' => '='),
+          ),
+          'search_type' => 'AND',
+          'omit_active_field' => true,
+        )
+      );
+
+      // If the model path can't be found, throw a createNotFoundException (404).
+      if (empty($path)) throw $this->createNotFoundException('Model path not found');
+
+      // Get metadata for the errored file so pertinent information can be logged to the new file_upload record.
+      $original_file_info = $this->getFileInfo($path[0]['asset_path']);
+      // If the original model metadata can't be found, throw a createNotFoundException (404).
+      if (empty($original_file_info)) throw $this->createNotFoundException('Original HD model metadata not found');
+
+      $data = array(
+        'action' => 'upload',
+        'header' => 'Upload a Replacement HD Model and UV Map',
+        'message' => 'Drop a replacement HD model file and diffuse UV map file here or click "Add Files" to upload.',
+        'upload_path' => pathinfo($path[0]['asset_path'], PATHINFO_DIRNAME),
+        'errored_file_name' => pathinfo($path[0]['asset_path'], PATHINFO_FILENAME),
+        'job_id' => $w['ingest_job_uuid'],
+        'parent_record_id' => $original_file_info[0]['parent_record_id'],
+        'parent_record_type' => $original_file_info[0]['parent_record_type'],
+      );
+
+    }
+
+    return $data;
+  }
+
+  /**
+   * @Route("/admin/workflow/{workflow_id}/go", name="workflow_step", methods={"GET","POST"}, defaults={"step_state"= NULL})
+   * @Route("/admin/workflow/{workflow_id}/go/{step_state}", name="workflow_step_state", methods={"GET","POST"})
+   * Set the status of a workflow
+   *
+   * @param Request $request
+   * @return JsonResponse The query result in JSON
+   */
+  public function advanceWorkflow(Request $request) {
+
+    $workflow_id = $request->attributes->get('workflow_id');
+    $simulate_step_state = $request->attributes->get('step_state');
+
+    $recipe_id = NULL;
+    $query_params = array(
+      'workflow_id' => $workflow_id
+    );
+    $workflow_data = $this->repo_storage_controller->execute('getWorkflows', $query_params);
+    $workflow_definition = $workflow_data['workflow_definition'];
+
+    // Get the recipeId for the current, un-executed step.
+    $workflow_definition_json_array = json_decode($workflow_definition, true);
+    foreach($workflow_definition_json_array['steps'] as $step) {
+      if($step['stepId'] == $workflow_data['step_id']) {
+        $workflow_data['recipe_id'] = $recipe_id = $step['recipeId'];
+        break;
+      }
+    }
+
+    if(NULL == $recipe_id) {
+      return $this->redirect('/admin/workflow/' . $workflow_id);
+    }
+
+    $recipe_step_state = NULL;
+    switch($recipe_id) {
+      case "test-success":
+        $recipe_step_state = "success";
+        break;
+      case "test-fail":
+        $recipe_step_state = "error";
+        break;
+    }
+
+    // Favor the user's provided state.
+    $new_step_state = isset($simulate_step_state) ? $simulate_step_state : (isset($recipe_step_state) ? $recipe_step_state : "success");
+    $query_params = array(
+      'workflow_id' => $workflow_id,
+      'step_state' => $new_step_state,
+      'user_id' => $this->getUser()->getId(),
+    );
+    $this->repo_storage_controller->execute('updateWorkflow', $query_params);
+
+    if($new_step_state == "success") {
+      // Get the next step.
+      $query_params = array(
+        'workflow_json_array' => $workflow_definition_json_array,
+        'step_id' => $workflow_data['step_id']
+      );
+      $next_step_details = $this->repo_storage_controller->execute('getWorkflowNextStep', $query_params);
+
+      if(isset($next_step_details['status']) && ($next_step_details['status'] == 'done')) {
+        $query_params = array(
+          'workflow_id' => $workflow_id,
+          'step_state' => "done",
+          'processing_job_id' => NULL,
+        );
+      }
+      else {
+        $query_params = array(
+          'workflow_id' => $workflow_id,
+          'step_id' => $next_step_details['stepId'],
+          'step_type' => $next_step_details['stepType'],
+          'step_state' => NULL,
+          'processing_job_id' => NULL,
+          'user_id' => $this->getUser()->getId(),
+        );
+      }
+      // Update the workflow with the next step.
+      $this->repo_storage_controller->execute('updateWorkflow', $query_params);
+
+    }
+
+    return $this->redirect('/admin/workflow/' . $workflow_id);
+
+  }
+
 
 
   /**
@@ -461,7 +744,7 @@ class WorkflowController extends Controller
 
     for ($i=0; $i < count($files); $i++) {
       // The path to the file.
-      $local_path = $this->project_directory . $files[$i]['file_path'];
+      $local_path = $this->project_directory . DIRECTORY_SEPARATOR  . 'web' . $files[$i]['file_path'];
       // Windows path fix.
       $local_path = str_replace("/", DIRECTORY_SEPARATOR, $local_path);
       $parent_record_data = array('record_id' => $modelID, 'record_type' => 'model');
