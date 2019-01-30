@@ -4,6 +4,10 @@
   {{ parent() }}
   <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
   <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+
+    <link href="css/voyager-story.dev.css" rel="stylesheet"></head>
+
+
   <style>
     .dz-preview {
       display: block;
@@ -36,15 +40,15 @@
             <p><strong>Processing Job ID:</strong> {{ data.processing_job_id }}</p>
           {% endif %}
           <p><strong>Date Created:</strong> {{ data.date_created }}</p>
-          <p><span class="glyphicon glyphicon-link" aria-hidden="true"></span> <a href="/admin/model/view/{{ data.model_id }}"><strong>View Master Model Record</strong></a></p>
+          <p><span class="glyphicon glyphicon-new-window" aria-hidden="true"></span> <a href="/admin/model/view/{{ data.model_id }}"><strong>View Master Model Record</strong></a></p>
         </div>
       </div>
     </div>
     <div class="col-sm-6 col-md-6">
       <div class="panel panel-default">
-        <div class="panel-heading"><h3>{{ data.interface.header }}</h3></div>
+        <div class="panel-heading"><h3>{{ data.interface.header|raw }}</h3></div>
         <div class="panel-body" style="min-height: 28rem;">
-          <p>{{ data.interface.message }}</p>
+          <p>{{ data.interface.message|raw }}</p>
 
           {% if data.step_state == 'error' %}
             <!-- Fil Upload Template Begins -->
@@ -117,7 +121,6 @@
 {% endblock %}
 {% block js_bottom %}
     {{ parent() }}
-
     {% if data.step_state == 'error' %}
       <script type="text/javascript" src="{{ asset('lib/javascripts/dropzone.js') }}"></script>
       <script type="text/javascript">

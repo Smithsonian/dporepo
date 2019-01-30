@@ -428,7 +428,7 @@ class WorkflowController extends Controller
    * @Route("/admin/workflow/{workflow_id}", name="workflow", methods={"GET","POST"})
    *
    * @param Request $request
-   * @return JsonResponse The query result in JSON
+   * @param object $request Symfony's request object
    */
   public function workflow(Request $request)
   {
@@ -441,33 +441,20 @@ class WorkflowController extends Controller
     // If the workflow isn't found, throw a createNotFoundException (404).
     if (empty($workflow_data)) throw $this->createNotFoundException('Workflow not found');
 
-    // Get the master model's ID, so it can linked to.
-    $model = $this->repo_storage_controller->execute('getRecords', array(
-        'base_table' => 'model',
-        'fields' => array(
-          array(
-            'table_name' => 'model',
-            'field_name' => 'model_id',
-          ),
-        ),
-        'limit' => 1,
-        'search_params' => array(
-          0 => array('field_names' => array('model.item_id'), 'search_values' => array($workflow_data['item_id']), 'comparison' => '='),
-          1 => array('field_names' => array('model.model_purpose'), 'search_values' => array('master'), 'comparison' => '='),
-        ),
-        'search_type' => 'AND',
-      )
-    );
+    $model = $this->getModelInfo($workflow_data['item_id'], 'master');
 
     if (!empty($model)) {
       $workflow_data['model_id'] = $model[0]['model_id'];
     }
 
+    // If the HD QC is done (url GET param qc_hd_done), pass it to $this->setInterface().
+    if (null !== $request->query->get('qc_hd_done')) {
+      $workflow_data['qc_hd_done'] = true;
+    }
+
     // Set a flag for the template for handling the next step (e.g. upload, advance, etc.).
     $workflow_data['interface'] = $this->setInterface($workflow_data);
     $workflow_data['accepted_file_types'] = $this->accepted_file_types;
-
-    // $this->u->dumper($workflow_data);
 
     return $this->render('workflow/workflow.html.twig', array(
       'page_title' => 'Workflow',
@@ -495,28 +482,132 @@ class WorkflowController extends Controller
 
       switch ($w['step_id']) {
         case 'qc-hd':
-
           // Error: Manually upload replacement
           if ($w['step_state'] === 'error') {
             $data = $this->qcHdError($w);
           }
-
           // Success: Manual QC
           if (empty($w['step_state'])) {
-            $data = array(
-              'action' => 'qc',
-              'header' => 'Inspect HD Model',
-              'message' => 'Review the HD model (opens in a new window).',
-            );
+            $data = $this->qcHd($w);
           }
-
-          // $this->u->dumper($data);
-
           break;
       }
       
     }
+
+    if (!empty($w) && ($w['step_type'] === 'auto')) {
+
+      switch ($w['step_id']) {
+        case 'web-multi':
+          // Error: Manually upload replacement
+          if ($w['step_state'] === 'error') {
+            // 
+          }
+          // Success: Manual QC
+          if (empty($w['step_state'])) {
+            $data = $this->generateWebAssets($w);
+          }
+          break;
+      }
+
+      $this->u->dumper($w['step_id']);
+
+    }
     
+    return $data;
+  }
+
+  /**
+   * Get Model Info
+   *
+   * @param int $item_id The item ID
+   * @param string $type The model type (e.g. master, )
+   * @return array
+   */
+  public function getModelInfo($item_id = null, $type = 'master')
+  {
+
+    $data = array();
+
+    if(!empty($item_id)) {
+      // Get the master model's ID, so it can linked to.
+      $data = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'model',
+          'fields' => array(
+            array(
+              'table_name' => 'model',
+              'field_name' => 'model_id',
+            ),
+            array(
+              'table_name' => 'file_upload',
+              'field_name' => 'file_name',
+            ),
+            array(
+              'table_name' => 'file_upload',
+              'field_name' => 'file_path',
+            ),
+          ),
+          // Joins
+          'related_tables' => array(
+            array(
+              'table_name' => 'model_file',
+              'table_join_field' => 'model_id',
+              'join_type' => 'LEFT JOIN',
+              'base_join_table' => 'model',
+              'base_join_field' => 'model_id',
+            ),
+            array(
+              'table_name' => 'file_upload',
+              'table_join_field' => 'file_upload_id',
+              'join_type' => 'LEFT JOIN',
+              'base_join_table' => 'model_file',
+              'base_join_field' => 'file_upload_id',
+            )
+          ),
+          'limit' => 1,
+          'search_params' => array(
+            0 => array('field_names' => array('model.item_id'), 'search_values' => array((int)$item_id), 'comparison' => '='),
+            1 => array('field_names' => array('model.model_purpose'), 'search_values' => array($type), 'comparison' => '='),
+          ),
+          'search_type' => 'AND',
+        )
+      );
+    }
+
+    return $data;
+  }
+
+  /**
+   * Get Path Info
+   *
+   * @param object $ingest_job_uuid Ingest job UUID
+   */
+  public function getPathInfo($ingest_job_uuid = null)
+  {
+
+    $data = array();
+
+    if (!empty($ingest_job_uuid)) {
+      // Get the file path from the processing_job metadata storage.
+      $data = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'processing_job',
+          'fields' => array(
+            array(
+              'table_name' => 'processing_job',
+              'field_name' => 'asset_path',
+            ),
+          ),
+          'limit' => 1,
+          'search_params' => array(
+            0 => array('field_names' => array('processing_job.ingest_job_uuid'), 'search_values' => array($ingest_job_uuid), 'comparison' => '='),
+            1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('web-hd'), 'comparison' => '='),
+          ),
+          'search_type' => 'AND',
+          'omit_active_field' => true,
+        )
+      );
+    }
+
     return $data;
   }
 
@@ -557,6 +648,72 @@ class WorkflowController extends Controller
   }
 
   /**
+   * QC HD
+   *
+   * @param array $w Workflow data
+   * @return array
+   */
+  public function qcHd($w = array())
+  {
+    $data = array();
+
+    if (!empty($w)) {
+
+      // Get the model path.
+      $path = $this->getPathInfo($w['ingest_job_uuid']);
+      // If the model path can't be found, throw a createNotFoundException (404).
+      if (empty($path)) throw $this->createNotFoundException('Model path not found');
+
+      $directory = pathinfo($path[0]['asset_path'], PATHINFO_DIRNAME);
+      $base_file_name = pathinfo($path[0]['asset_path'], PATHINFO_FILENAME);
+
+      // Load item.json if present.
+      if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . '-item.json')) {
+        $url_params = array(
+          'item' => str_replace($this->project_directory . 'web/uploads/repository', '/webdav', $directory) . '/' . $base_file_name . '-item.json'
+        );
+      } else {
+
+        // Load the raw model, using the .glb file.
+        $glb_file_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . '-1000k-8192-web-hd.glb';
+        $glb_file_info = $this->getFileInfo($glb_file_path);
+
+        // If the .glb file can't be found, throw a createNotFoundException (404).
+        if (empty($glb_file_info)) throw $this->createNotFoundException('Model not found - ' . $base_file_name . '-1000k-8192-web-hd.glb');
+
+        // The webDav-based path to the model.
+        $model_path = str_replace($this->project_directory . 'web/uploads/repository', '/webdav', $directory) . '/' . $base_file_name . '-1000k-8192-web-hd.glb';
+
+        $url_params = array(
+          'model' => $model_path,
+          'quality' => 'Highest',
+          'base' => $base_file_name,
+        );
+
+      }
+
+      // Pass the referrer so the QC tool can redirect back to the workflow page after performing QC.
+      $url_params['referrer'] = '/admin/workflow/' . $w['workflow_id'] . '?qc_hd_done';
+
+      $data = array(
+        'action' => 'qc',
+        'header' => 'QC: HD Model',
+        'message' => '<p><span class="glyphicon glyphicon-new-window" aria-hidden="true"></span> <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?' . http_build_query($url_params) . '"><strong>View the HD model</strong></a></p>',
+      );
+
+      // If QC is done, add a link to generate web derivatives.
+      if (isset($w['qc_hd_done'])) {
+        $data['message'] .= '<p><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> <a href="/admin/workflow/' . $w['workflow_id'] . '/go/success"><strong>QC done? Generate web derivatives.</strong></a></p>';
+      }
+
+      // $this->u->dumper($data);
+
+    }
+
+    return $data;
+  }
+
+  /**
    * QC HD Error
    *
    * @param array $w Workflow data
@@ -568,24 +725,8 @@ class WorkflowController extends Controller
 
     if (!empty($w)) {
 
-      // Get the file path from the processing_job metadata storage.
-      $path = $this->repo_storage_controller->execute('getRecords', array(
-          'base_table' => 'processing_job',
-          'fields' => array(
-            array(
-              'table_name' => 'processing_job',
-              'field_name' => 'asset_path',
-            ),
-          ),
-          'limit' => 1,
-          'search_params' => array(
-            0 => array('field_names' => array('processing_job.ingest_job_uuid'), 'search_values' => array($w['ingest_job_uuid']), 'comparison' => '='),
-            1 => array('field_names' => array('processing_job.processing_service_job_id'), 'search_values' => array($w['processing_job_id']), 'comparison' => '='),
-          ),
-          'search_type' => 'AND',
-          'omit_active_field' => true,
-        )
-      );
+      // Get the model path.
+      $path = $this->getPathInfo($w['ingest_job_uuid']);
 
       // If the model path can't be found, throw a createNotFoundException (404).
       if (empty($path)) throw $this->createNotFoundException('Model path not found');
@@ -696,6 +837,8 @@ class WorkflowController extends Controller
     return $this->redirect('/admin/workflow/' . $workflow_id);
 
   }
+
+
 
 
 
