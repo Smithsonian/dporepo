@@ -3281,7 +3281,6 @@ class RepoStorageHybrid implements RepoStorage {
 
     $sql = "SELECT SQL_CALC_FOUND_ROWS " . $sql;
 
-    $statement = $this->connection->prepare($sql);
 
     $statement = $this->connection->prepare($sql);
     if(strlen(trim($search_value)) > 0) {
@@ -3548,7 +3547,7 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     if($parent_id_field == 'capture_dataset_id') {
-      $sql = " DISTINCT model.model_id, model.model_id as manage, capture_dataset_model.capture_dataset_id,
+      $sql = " DISTINCT model.model_id, model.model_id as manage,
             parent_model_id, model.item_id, model_guid, date_of_creation, model_file_type,
             derived_from, creation_method, model_modality, units, is_watertight, model_purpose, point_count,
             has_normals, face_count, vertices_count, has_vertex_color, has_uv_space, model_maps, model.active,
@@ -3582,12 +3581,12 @@ class RepoStorageHybrid implements RepoStorage {
             ";    }
     else {
       //parent_model_id
-      $sql = " DISTINCT model_id, model_id as manage, 
+      $sql = " DISTINCT model.model_id, model.model_id as manage, 
             parent_model_id, model.item_id, model_guid, date_of_creation, model_file_type,
             derived_from, creation_method, model_modality, units, is_watertight, model_purpose, point_count,
             has_normals, face_count, vertices_count, has_vertex_color, has_uv_space, model_maps, model.active,
             model.date_created, model.created_by_user_account_id, model.last_modified, model.last_modified_user_account_id,
-            model_id as DT_RowId,
+            model.model_id as DT_RowId,
             (
               SELECT file_name
               FROM file_upload
@@ -3639,7 +3638,7 @@ class RepoStorageHybrid implements RepoStorage {
       $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
     }
     else {
-      $sql .= " ORDER BY model_id ";
+      $sql .= " ORDER BY model.model_id ";
     }
 
     if(NULL !== $stop_record) {
