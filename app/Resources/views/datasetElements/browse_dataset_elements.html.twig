@@ -110,7 +110,7 @@
                             <th class="text-center">Capture Sequence Number</th>
                             <th class="text-center">Cluster Position Field ID</th>
                             <th class="text-center">Position In Cluster Field ID</th>
-                            <th class="text-center">EXIF Metadata</th>
+                            <!--th class="text-center">EXIF Metadata</th -->
                             <th class="text-center">Last Modified</th>
                         </tr>
                         </thead>
@@ -180,7 +180,6 @@
                         <tr>
                             <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
                             <th class="text-center">Download</th>
-                            <th class="text-center"></th>
                             <th class="text-center"></th>
                             <th class="text-center"></th>
                             <th class="text-center"></th>
@@ -297,6 +296,7 @@
             "bLengthChange": false,
         });
 
+        // was also - "data": "metadata"
         $('#browse').dataTable( {
           "columns": [
             { "data": "manage" },
@@ -306,13 +306,12 @@
             { "data": "capture_sequence_number" },
             { "data": "cluster_position_field_id" },
             { "data": "position_in_cluster_field_id" },
-            { "data": "metadata" },
             { "data": "last_modified" }
           ],
           "dom": 'lfip<"datatables_bulk_actions">tip',
           "pagingType": "simple_numbers",
           "stateSave": true,
-          "order": [[8,"desc"]],
+          "order": [[7,"desc"]],
           // Show processing throbber.
           "processing": true,
           "serverMethod": "POST",
