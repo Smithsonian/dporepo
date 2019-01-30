@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
+use Symfony\Component\HttpKernel\KernelInterface;
 
 use AppBundle\Controller\RepoStorageHybridController;
 use PDO;
@@ -30,21 +31,30 @@ class CaptureDatasetController extends Controller
     private $repo_user_access;
 
     /**
-     * @var string
+     * @var string $uploads_directory
      */
-    private $uploads_path;
+    private $uploads_directory;
+    // private $uploads_path;
+
+    /**
+     * @var string $external_file_storage_path
+     */
+    private $external_file_storage_path;
 
     /**
     * Constructor
     * @param object  $u  Utility functions object
     */
-    public function __construct(AppUtilities $u, string $uploads_directory, Connection $conn)
+    public function __construct(AppUtilities $u, string $uploads_directory, string $external_file_storage_path, Connection $conn, KernelInterface $kernel)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
         $this->repo_user_access = new RepoUserAccess($conn);
-        $this->uploads_path = str_replace('web', '', $uploads_directory);
+        $this->kernel = $kernel;
+        $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+        $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+        $this->external_file_storage_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $external_file_storage_path) : $external_file_storage_path;;
     }
 
     /**
@@ -381,6 +391,13 @@ class CaptureDatasetController extends Controller
       $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
       $item_data['item_description_truncated'] = substr($item_data['item_description'], 0, 50) . $more_indicator;
 
+      $dataset_files = $this->repo_storage_controller->execute('getDatasetFiles',
+        array(
+          'limit' => 10,
+          'capture_dataset_repository_id' => $id
+        )
+      );
+
       return $this->render('datasetElements/browse_dataset_elements.html.twig', array(
         'page_title' => 'Capture Dataset: ' .  $dataset_data['capture_dataset_name'],
         'project_id' => $project_id,
@@ -389,6 +406,7 @@ class CaptureDatasetController extends Controller
         'project_data' => $project_data,
         'item_data' => $item_data,
         'dataset_data' => $dataset_data,
+        'dataset_files' => $dataset_files,
         'uploads_path' => $this->uploads_path,
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
       ));
