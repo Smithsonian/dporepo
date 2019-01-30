@@ -639,6 +639,10 @@ class RepoImport implements RepoImportInterface {
             } else {
               $csv_val->item_id = $data->record_id;
             }
+
+            // Generate an RFC 4122 version 4 UUID
+            $csv_val->capture_dataset_guid = $this->u->createUuid();
+
             // Get the parent project ID.
             $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
               'base_record_id' => $csv_val->item_id,
@@ -649,6 +653,12 @@ class RepoImport implements RepoImportInterface {
             }
             break;
           case 'model':
+
+            // If this is a master model, generate an RFC 4122 version 4 UUID.
+            if ($csv_val->model_purpose === 'master') {
+              $csv_val->model_guid = $this->u->createUuid();
+            }
+
             // 1) Append the job ID to the file path
             // 2) Add the file's checksum to the $csv_val object.
             if(!empty($csv_val->file_path)) {
