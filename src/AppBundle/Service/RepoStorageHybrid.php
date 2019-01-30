@@ -3400,12 +3400,12 @@ class RepoStorageHybrid implements RepoStorage {
     $sql = " DISTINCT tmp.*
             FROM 
     
-            (SELECT model_id, model_id as manage, model.capture_dataset_id,
+            (SELECT model.model_id, model.model_id as manage,
             parent_model_id, item_id, model_guid, date_of_creation, model_file_type,
             derived_from, creation_method, model_modality, units, is_watertight, model_purpose, point_count,
             has_normals, face_count, vertices_count, has_vertex_color, has_uv_space, model_maps, active,
             date_created, created_by_user_account_id, last_modified, last_modified_user_account_id,
-            model_id as DT_RowId,           
+            model.model_id as DT_RowId,           
             (
               SELECT file_name
               FROM file_upload
@@ -3428,12 +3428,12 @@ class RepoStorageHybrid implements RepoStorage {
 
             UNION 
             
-            SELECT model_id, model_id as manage, model.capture_dataset_id,
+            SELECT model.model_id, model.model_id as manage,
             parent_model_id, model.item_id, model_guid, date_of_creation, model_file_type,
             derived_from, creation_method, model_modality, units, is_watertight, model_purpose, point_count,
             has_normals, face_count, vertices_count, has_vertex_color, has_uv_space, model_maps, model.active,
             model.date_created, model.created_by_user_account_id, model.last_modified, model.last_modified_user_account_id,
-            model_id as DT_RowId,
+            model.model_id as DT_RowId,
             (
               SELECT file_name
               FROM file_upload
@@ -3451,7 +3451,8 @@ class RepoStorageHybrid implements RepoStorage {
             ) as count_capture_datasets
             
             FROM model
-            LEFT JOIN capture_dataset on model.capture_dataset_id = capture_dataset.capture_dataset_id
+            LEFT JOIN capture_dataset_model on model.model_id = capture_dataset_model.model_id
+            LEFT JOIN capture_dataset on capture_dataset_model.capture_dataset_id = capture_dataset.capture_dataset_id
             
             WHERE 
             capture_dataset.item_id=:item_id
@@ -4785,24 +4786,25 @@ class RepoStorageHybrid implements RepoStorage {
         case 'model_with_item_id':
           $params['record_type'] = 'model';
           $params['id_field_name'] = 'model.model_id';
-          $params['select'] = 'project.project_id, project.project_name, subject.subject_id, item.item_id, item.item_description, model.model_id';
+          $params['select'] = 'project.project_id, project.project_name, subject.subject_id, subject.subject_name, item.item_id, item.item_description ';
           $params['left_joins'] = 'LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_id = model.capture_dataset_id
               -- LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = capture_data_element.capture_dataset_id
               LEFT JOIN item ON item.item_id = model.item_id
               LEFT JOIN subject ON subject.subject_id = item.subject_id
               LEFT JOIN project ON project.project_id = item.project_id';
           break;
-        case 'model_with_capture_dataset_id':
+        /*case 'model_with_capture_dataset_id':
           $params['record_type'] = 'model';
           $params['id_field_name'] = 'model.model_id';
           $params['select'] = 'project.project_id, project.project_name, subject.subject_id, item.item_id, item.item_description, model.model_id, capture_dataset.capture_dataset_id, capture_dataset.capture_dataset_name';
           $params['left_joins'] = '
-              LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = model.capture_dataset_id
+              LEFT JOIN capture_dataset_model ON model.model_id = capture_dataset_model.model_id
+              LEFT JOIN capture_dataset ON capture_dataset_model.capture_dataset_id = capture_dataset.capture_dataset_id
               LEFT JOIN item ON item.item_id = capture_dataset.item_id
               LEFT JOIN subject ON subject.subject_id = item.subject_id
               LEFT JOIN project ON project.project_id = item.project_id';
           break;
-
+        */
         default: // subject
           //@todo- subject does not have a parent
           $params['id_field_name'] = 'subject.subject_id';
