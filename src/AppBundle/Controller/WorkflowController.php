@@ -456,6 +456,11 @@ class WorkflowController extends Controller
     $workflow_data['interface'] = $this->setInterface($workflow_data);
     $workflow_data['accepted_file_types'] = $this->accepted_file_types;
 
+    // Update the processing_job_id if it's passed by the $workflow_data['interface'] result.
+    if (isset($workflow_data['interface']['processing_job_id'])) {
+      $workflow_data['processing_job_id'] = $workflow_data['interface']['processing_job_id'];
+    }
+
     return $this->render('workflow/workflow.html.twig', array(
       'page_title' => 'Workflow',
       'data' => $workflow_data,
@@ -471,6 +476,8 @@ class WorkflowController extends Controller
    */
   public function setInterface($w = array())
   {
+
+    // Default interface data.
     $data = array(
       'action' => 'advance',
       'header' => 'Continue to the Next Step',
@@ -510,7 +517,7 @@ class WorkflowController extends Controller
           break;
       }
 
-      $this->u->dumper($w['step_id']);
+      // $this->u->dumper($w['step_id']);
 
     }
     
@@ -695,6 +702,7 @@ class WorkflowController extends Controller
       // Pass the referrer so the QC tool can redirect back to the workflow page after performing QC.
       $url_params['referrer'] = '/admin/workflow/' . $w['workflow_id'] . '?qc_hd_done';
 
+      // Interface data.
       $data = array(
         'action' => 'qc',
         'header' => 'QC: HD Model',
@@ -705,8 +713,6 @@ class WorkflowController extends Controller
       if (isset($w['qc_hd_done'])) {
         $data['message'] .= '<p><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> <a href="/admin/workflow/' . $w['workflow_id'] . '/go/success"><strong>QC done? Generate web derivatives.</strong></a></p>';
       }
-
-      // $this->u->dumper($data);
 
     }
 
@@ -736,6 +742,7 @@ class WorkflowController extends Controller
       // If the original model metadata can't be found, throw a createNotFoundException (404).
       if (empty($original_file_info)) throw $this->createNotFoundException('Original HD model metadata not found');
 
+      // Interface data.
       $data = array(
         'action' => 'upload',
         'header' => 'Upload a Replacement HD Model and UV Map',
@@ -745,6 +752,115 @@ class WorkflowController extends Controller
         'job_id' => $w['ingest_job_uuid'],
         'parent_record_id' => $original_file_info[0]['parent_record_id'],
         'parent_record_type' => $original_file_info[0]['parent_record_type'],
+      );
+
+    }
+
+    return $data;
+  }
+
+  /**
+   * Generate Web Assets
+   *
+   * @param array $w Workflow data
+   * @return array
+   */
+  public function generateWebAssets($w = array())
+  {
+    $data = array();
+
+    // $this->u->dumper($w);
+
+    if (!empty($w)) {
+
+      // Check to see if the processing job already exists.
+      if (isset($w['processing_job_id']) && !empty($w['processing_job_id'])) {
+
+        // Interface data.
+        $data = array(
+          'action' => 'process',
+          'header' => 'Generating Multi-level Web Assets',
+          'message' => 'The processing job has been initialized.',
+          'processing_job_id' => $w['processing_job_id'],
+        );
+
+        return $data;
+      }
+
+      // Get the model path.
+      $path = $this->getPathInfo($w['ingest_job_uuid']);
+
+      // If the model path can't be found, throw a createNotFoundException (404).
+      if (empty($path)) throw $this->createNotFoundException('Model path not found');
+
+      // Get metadata for the errored file so pertinent information can be logged to the new file_upload record.
+      $original_file_info = $this->getFileInfo($path[0]['asset_path']);
+      // If the original model metadata can't be found, throw a createNotFoundException (404).
+      if (empty($original_file_info)) throw $this->createNotFoundException('Model metadata not found');
+
+      $directory = pathinfo($path[0]['asset_path'], PATHINFO_DIRNAME);
+      $base_file_name = pathinfo($path[0]['asset_path'], PATHINFO_FILENAME);
+      $high_poly_mesh_file = $directory . DIRECTORY_SEPARATOR . $base_file_name . '-1000k-decimated-meshlab.obj';
+
+      // If the $high_poly_mesh_file can't be found, throw a createNotFoundException (404).
+      if (!is_file($high_poly_mesh_file)) throw $this->createNotFoundException('High poly mesh file not found');
+
+      // Get the ID of the recipe, so it can be passed to processing service's job creation endpoint (post_job).
+      $recipe = $this->processing->getRecipeByName('web-multi');
+
+      // If the web-multi recipe can't be found, throw a createNotFoundException (404).
+      if (isset($recipe['error']) && !empty($recipe['error'])) throw $this->createNotFoundException($recipe['error']);
+
+      // Initialize the processing job.
+      // Create a timestamp for the procesing job name.
+      $job_name = str_replace('+00:00', 'Z', gmdate('c', strtotime('now')));
+      // Processing job parameters.
+      $params = array(
+        'highPolyMeshFile' => pathinfo($high_poly_mesh_file, PATHINFO_BASENAME)
+      );
+      // Post the job to the processing service.
+      $result = $this->processing->postJob($recipe['id'], $job_name, $params);
+
+      // If the response http code isn't a 201, throw a createNotFoundException (404).
+      if ($result['httpcode'] !== 201) throw $this->createNotFoundException('Error: The processing service returned HTTP code ' . $result['httpcode']);
+
+      // Get the job data.
+      $job = $this->processing->getJobByName($job_name);
+
+      // If an error is returned, throw a createNotFoundException (404).
+      if (isset($job['error']) && !empty($job['error'])) throw $this->createNotFoundException($job['error']);
+
+      // TODO: Break-out to a function?
+      // Log job data to the metadata storage
+      $processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
+        'base_table' => 'processing_job',
+        'user_id' => $this->getUser()->getId(),
+        'values' => array(
+          'ingest_job_uuid' => $w['ingest_job_uuid'],
+          'processing_service_job_id' => $job['id'],
+          'recipe' =>  $job['recipe']['name'],
+          'job_json' => json_encode($job),
+          'state' => $job['state'],
+          'asset_path' => $high_poly_mesh_file,
+        )
+      ));
+
+      // Log the processing job's ID to the workflow record.
+      $workflow_update = $this->repo_storage_controller->execute('saveRecord', array(
+        'base_table' => 'workflow',
+        'record_id' => $w['workflow_id'],
+        'user_id' => $this->getUser()->getId(),
+        'values' => array(
+          'processing_job_id' => $job['id'],
+        )
+      ));
+
+      // Interface data.
+      $data = array(
+        'action' => 'process',
+        'header' => 'Generating Multi-level Web Assets',
+        'message' => 'The processing job has been initialized.',
+        'processing_job_id' => $job['id'],
       );
 
     }
