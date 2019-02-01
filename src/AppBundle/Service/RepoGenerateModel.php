@@ -115,6 +115,8 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
     $path = $this->project_directory . $this->uploads_directory . $uuid;
     // Job data.
     $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid, 'generateModelAssets'));
+    // Set the workflow step, qc-hd or qc-web.
+    $workflow_step = ($recipe_name === 'web-hd') ? 'qc-hd' : 'qc-web';
 
     // Throw an error if the job record doesn't exist.
     if (empty($job_data)) {
@@ -135,10 +137,12 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
     if (is_dir($path)) {
 
-      // Create a new processing job and run.
-      $processing_job = $this->runProcessingJob($path, $job_data, $recipe_name, $filesystem);
-
-      // $this->u->dumper($processing_job[0]['workflow']['processing_job_id']);
+      // Run the processing job.
+      if ($recipe_name === 'web-hd') {
+        $processing_job = $this->runWebHd($path, $job_data, $recipe_name, $filesystem);
+      } else {
+        $processing_job = $this->runWebMulti($path, $job_data, $recipe_name, $filesystem);
+      }
 
       // Check the job's status to insure that the job_status hasn't been set to 'failed'.
       $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid, 'generateModelAssets'));
@@ -160,11 +164,11 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
         // Retrieve all of the logs produced by the processing service.
         $data = $this->processing->get_processing_assets($filesystem, $processing_job[0]['workflow']['processing_job_id']);
 
-        // Update the workflow record. Set the step state to NULL and step-id to 'qc-hd.
+        // Update the workflow record. Set the step state to NULL and step-id to qc-hd or qc-web.
         $query_params = array(
           'workflow_id' => $processing_job[0]['workflow']['workflow_id'],
           'step_state' => NULL,
-          'step_id' => 'qc-hd',
+          'step_id' => $workflow_step,
           'step_type' => 'manual',
         );
         $this->repo_storage_controller->execute('updateWorkflow', $query_params);
@@ -172,8 +176,8 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
     }
 
-    // Update the 'job_status' in the 'job' table accordingly.
-    if (!empty($job_status)) {
+    // Update the 'job_status' in the 'job' table accordingly (only for the web-hd recipe).
+    if (!empty($job_status) && ($recipe_name === 'web-hd')) {
       $this->repo_storage_controller->execute('setJobStatus', 
         array(
           'job_id' => $job_data['uuid'], 
@@ -194,7 +198,8 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function runProcessingJob($path = null, $job_data = array(), $recipe_name = null, $filesystem) {
+  public function runWebHd($path = null, $job_data = array(), $recipe_name = null, $filesystem)
+  {
 
     $data = array();
 
@@ -266,7 +271,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
                 $data[$i] = $this->repo_storage_controller->execute('createWorkflow', $query_params);
               }
 
-              // The external path.
+              // The external path - on the processing service side.
               $path_external = $processing_job['id'] . '/' . $file->getFilename();
 
               // Transfer the file to the processing service via WebDAV.
@@ -308,6 +313,112 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           $i++;
         }
 
+      }
+
+    }
+
+    return $data;
+  }
+
+  /**
+   * @param string $path The directory which contains model(s) to be processed.
+   * @param array $job_data The repository job's data.
+   * @param string $recipe_name The processing recipe name.
+   * @param object $filesystem Filesystem object (via Flysystem).
+   * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
+   * @return array
+   */
+  public function runWebMulti($path = null, $job_data = array(), $recipe_name = null, $filesystem)
+  {
+
+    $data = array();
+
+    // $this->u->dumper($path,0);
+    // $this->u->dumper($job_data,0);
+    // $this->u->dumper($recipe_name);
+
+    if (!empty($path) && !empty($job_data)) {
+
+      // Query the workflow table for workflow data.
+      $workflow = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'workflow',
+          'fields' => array(),
+          'limit' => 1,
+          'search_params' => array(
+            0 => array('field_names' => array('workflow.ingest_job_uuid'), 'search_values' => array($job_data['uuid']), 'comparison' => '='),
+          ),
+          'search_type' => 'AND',
+          'omit_active_field' => true,
+        )
+      );
+
+      if (!empty($workflow)) {
+
+        // Structure the workflow array to match the output of $this->repo_storage_controller->execute('createWorkflow'
+        $data[0]['workflow'] = $workflow[0];
+
+        // Get the processing_service_job_id and model file path (asset_path) from the processing_job metadata storage.
+        $processing_job = $this->repo_storage_controller->execute('getRecords', array(
+            'base_table' => 'processing_job',
+            'fields' => array(
+              array(
+                'table_name' => 'processing_job',
+                'field_name' => 'processing_service_job_id',
+              ),
+              array(
+                'table_name' => 'processing_job',
+                'field_name' => 'asset_path',
+              ),
+            ),
+            'limit' => 1,
+            'search_params' => array(
+              0 => array('field_names' => array('processing_job.ingest_job_uuid'), 'search_values' => array($workflow[0]['ingest_job_uuid']), 'comparison' => '='),
+              1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('web-multi'), 'comparison' => '='),
+              2 => array('field_names' => array('processing_job.state'), 'search_values' => array('created'), 'comparison' => '='),
+            ),
+            'search_type' => 'AND',
+            'omit_active_field' => true,
+          )
+        );
+
+        // If the model file path is found, continue.
+        if (!empty($processing_job)) {
+
+          // $directory = pathinfo($path[0]['asset_path'], PATHINFO_DIRNAME);
+          $full_file_name = pathinfo($processing_job[0]['asset_path'], PATHINFO_BASENAME);
+
+          // The external path - on the processing service side - on the processing service side.
+          $path_external = $processing_job[0]['processing_service_job_id'] . '/' . $full_file_name;
+
+          // Transfer the file to the processing service via WebDAV.
+          try {
+
+            $stream = fopen($processing_job[0]['asset_path'], 'r+');
+            $filesystem->writeStream($path_external, $stream);
+            // Before calling fclose on the resource, check if it’s still valid using is_resource.
+            if (is_resource($stream)) fclose($stream);
+
+            // Now that the file has been transferred, go ahead and run the processing job.
+            $result = $this->processing->runJob($processing_job[0]['processing_service_job_id']);
+
+            // Error handling
+            if ($result['httpcode'] !== 202) {
+              $data[0]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
+              // Matching the output of $this->repo_storage_controller->execute('createWorkflow'
+              $data[0]['return'] = 'error';
+            } else {
+              // Matching the output of $this->repo_storage_controller->execute('createWorkflow'
+              $data[0]['return'] = 'success';
+            }
+
+          }
+          // Catch the error.
+          catch(\League\Flysystem\FileExistsException | \League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
+            $data[0]['errors'][] = $e->getMessage();
+          }
+
+        }
+ 
       }
 
     }

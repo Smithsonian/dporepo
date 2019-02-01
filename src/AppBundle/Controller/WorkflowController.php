@@ -498,6 +498,24 @@ class WorkflowController extends Controller
             $data = $this->qcHd($w);
           }
           break;
+        case 'qc-web':
+          // Error: Manually upload replacement
+          if ($w['step_state'] === 'error') {
+            // TODO
+            // $data = $this->qcWebError($w);
+          }
+          // Success: Manual QC
+          if (empty($w['step_state'])) {
+            $data = array(
+              'action' => 'qc',
+              'header' => 'QC: Web Models',
+              // 'message' => '<p><span class="glyphicon glyphicon-new-window" aria-hidden="true"></span> <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?' . http_build_query($url_params) . '"><strong>View the HD model</strong></a></p>',
+              'message' => '<p><span class="glyphicon glyphicon-new-window" aria-hidden="true"></span> <a href=""><strong>View the Web model (1024)</strong></a></p><p><span class="glyphicon glyphicon-new-window" aria-hidden="true"></span> <a href=""><strong>View the Web model (2048)</strong></a></p><p><span class="glyphicon glyphicon-new-window" aria-hidden="true"></span> <a href=""><strong>View the Web model (4096)</strong></a></p>',
+            );
+            // TODO
+            // $data = $this->qcWeb($w);
+          }
+          break;
       }
       
     }
@@ -506,13 +524,9 @@ class WorkflowController extends Controller
 
       switch ($w['step_id']) {
         case 'web-multi':
-          // Error: Manually upload replacement
-          if ($w['step_state'] === 'error') {
-            // 
-          }
-          // Success: Manual QC
+          // Initialize the 'web-multi' procesing job.
           if (empty($w['step_state'])) {
-            $data = $this->generateWebAssets($w);
+            $data = $this->initializeProcessingJob($w);
           }
           break;
       }
@@ -760,12 +774,12 @@ class WorkflowController extends Controller
   }
 
   /**
-   * Generate Web Assets
+   * Initialize Processing Job
    *
    * @param array $w Workflow data
    * @return array
    */
-  public function generateWebAssets($w = array())
+  public function initializeProcessingJob($w = array())
   {
     $data = array();
 
@@ -792,22 +806,15 @@ class WorkflowController extends Controller
 
       // If the model path can't be found, throw a createNotFoundException (404).
       if (empty($path)) throw $this->createNotFoundException('Model path not found');
-
       // Get metadata for the errored file so pertinent information can be logged to the new file_upload record.
       $original_file_info = $this->getFileInfo($path[0]['asset_path']);
       // If the original model metadata can't be found, throw a createNotFoundException (404).
       if (empty($original_file_info)) throw $this->createNotFoundException('Model metadata not found');
-
-      $directory = pathinfo($path[0]['asset_path'], PATHINFO_DIRNAME);
-      $base_file_name = pathinfo($path[0]['asset_path'], PATHINFO_FILENAME);
-      $high_poly_mesh_file = $directory . DIRECTORY_SEPARATOR . $base_file_name . '-1000k-decimated-meshlab.obj';
-
-      // If the $high_poly_mesh_file can't be found, throw a createNotFoundException (404).
-      if (!is_file($high_poly_mesh_file)) throw $this->createNotFoundException('High poly mesh file not found');
+      // If the model can't be found, throw a createNotFoundException (404).
+      if (!is_file($path[0]['asset_path'])) throw $this->createNotFoundException('Model file not found');
 
       // Get the ID of the recipe, so it can be passed to processing service's job creation endpoint (post_job).
       $recipe = $this->processing->getRecipeByName('web-multi');
-
       // If the web-multi recipe can't be found, throw a createNotFoundException (404).
       if (isset($recipe['error']) && !empty($recipe['error'])) throw $this->createNotFoundException($recipe['error']);
 
@@ -816,7 +823,7 @@ class WorkflowController extends Controller
       $job_name = str_replace('+00:00', 'Z', gmdate('c', strtotime('now')));
       // Processing job parameters.
       $params = array(
-        'highPolyMeshFile' => pathinfo($high_poly_mesh_file, PATHINFO_BASENAME)
+        'highPolyMeshFile' => pathinfo($path[0]['asset_path'], PATHINFO_BASENAME)
       );
       // Post the job to the processing service.
       $result = $this->processing->postJob($recipe['id'], $job_name, $params);
@@ -841,7 +848,7 @@ class WorkflowController extends Controller
           'recipe' =>  $job['recipe']['name'],
           'job_json' => json_encode($job),
           'state' => $job['state'],
-          'asset_path' => $high_poly_mesh_file,
+          'asset_path' => $path[0]['asset_path'],
         )
       ));
 
