@@ -563,9 +563,26 @@ ff-popup-button .ff-content {
 
 .ff-line-edit {
   display: block;
-  background-color: #272727; }
+  background-color: #1b1b1b; }
   .ff-line-edit input {
     padding: 2px; }
+
+.ff-text-edit {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  display: block;
+  background-color: #1b1b1b;
+  min-height: 100px; }
+  .ff-text-edit textarea {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    padding: 2px;
+    resize: none;
+    background: transparent;
+    color: inherit;
+    border: none; }
 
 .ff-color-edit {
   font-size: 0.8rem; }
@@ -683,7 +700,7 @@ ff-quad-splitter .ff-top {
     .ff-list .ff-list-item[selected] {
       background-color: #0089bf; }
   .ff-list .ff-list-item + .ff-list-item {
-    border-bottom: 1px solid #343434; }
+    border-top: 1px solid #343434; }
 
 .ff-tree .ff-tree-node-container {
   margin-left: -501px;
@@ -794,32 +811,42 @@ ff-tab-header, ff-dock-panel-header {
   display: flex;
   flex-direction: column; }
   .ff-hierarchy-tree-view > .ff-header {
-    height: 24px;
-    padding: 4px; }
+    flex: 0 0 auto;
+    height: 22px;
+    padding: 4px;
+    background-color: #343434; }
     .ff-hierarchy-tree-view > .ff-header .ff-text {
       flex: 1 1 auto;
       align-self: center;
       color: #a0a0a0; }
     .ff-hierarchy-tree-view > .ff-header .ff-button {
-      flex: 0 1 auto;
-      color: #c8c8c8; }
+      flex: 0 1 32px;
+      color: #c8c8c8;
+      padding: 0; }
+    .ff-hierarchy-tree-view > .ff-header .ff-button + .ff-text {
+      padding-left: 8px; }
 
-.ff-hierarchy-tree .ff-tree-node.ff-node.ff-even {
-  background-color: #202020; }
-
-.ff-hierarchy-tree .ff-tree-node.ff-node.ff-odd {
-  background-color: #272727; }
-
-.ff-hierarchy-tree .ff-tree-node.ff-node > .ff-content {
-  margin-left: 9px; }
-
-.ff-hierarchy-tree .ff-tree-node.ff-component {
-  background-color: #3c3c3c; }
-  .ff-hierarchy-tree .ff-tree-node.ff-component > .ff-content {
-    margin-left: 11px; }
-
-.ff-hierarchy-tree .ff-tree-node[selected] {
-  background-color: #0089bf !important; }
+.ff-hierarchy-tree {
+  font-size: 0.9rem; }
+  .ff-hierarchy-tree .ff-tree-node-container {
+    border-top: 1px solid #40464d;
+    border-bottom: 1px solid #40464d; }
+  .ff-hierarchy-tree .ff-tree-node .ff-header {
+    height: 17px; }
+  .ff-hierarchy-tree .ff-tree-node.ff-node.ff-odd {
+    background-color: #0e1421; }
+  .ff-hierarchy-tree .ff-tree-node.ff-node.ff-even {
+    background-color: #131c2e; }
+  .ff-hierarchy-tree .ff-tree-node.ff-node > .ff-header .ff-text {
+    color: #b8c8d9; }
+  .ff-hierarchy-tree .ff-tree-node.ff-node > .ff-content {
+    margin-left: 9px; }
+  .ff-hierarchy-tree .ff-tree-node.ff-component {
+    background-color: #24272b; }
+    .ff-hierarchy-tree .ff-tree-node.ff-component > .ff-content {
+      margin-left: 11px; }
+  .ff-hierarchy-tree .ff-tree-node[selected] {
+    background-color: #0089bf !important; }
 
 .ff-property-tree {
   font-size: 0.9rem; }
@@ -831,16 +858,26 @@ ff-tab-header, ff-dock-panel-header {
     background-color: #1d1d1d; }
   .ff-property-tree .ff-tree-node.ff-inputs {
     background-color: #2e231e; }
+    .ff-property-tree .ff-tree-node.ff-inputs > .ff-header .ff-text {
+      color: #d9ccc7; }
     .ff-property-tree .ff-tree-node.ff-inputs .ff-inner {
       background-color: #382c24; }
+      .ff-property-tree .ff-tree-node.ff-inputs .ff-inner > .ff-header .ff-text {
+        color: #d9ccc7; }
   .ff-property-tree .ff-tree-node.ff-outputs {
     background-color: #1e292e; }
+    .ff-property-tree .ff-tree-node.ff-outputs > .ff-header .ff-text {
+      color: #c7d4d9; }
     .ff-property-tree .ff-tree-node.ff-outputs .ff-inner {
       background-color: #243338; }
-  .ff-property-tree .ff-tree-node .ff-header > .ff-label {
-    width: 27%; }
-  .ff-property-tree .ff-tree-node .ff-header ff-property-view {
-    flex: 1 1 auto; }
+      .ff-property-tree .ff-tree-node.ff-outputs .ff-inner > .ff-header .ff-text {
+        color: #c7d4d9; }
+  .ff-property-tree .ff-tree-node .ff-header {
+    height: 17px; }
+    .ff-property-tree .ff-tree-node .ff-header > .ff-label {
+      width: 27%; }
+    .ff-property-tree .ff-tree-node .ff-header ff-property-view {
+      flex: 1 1 auto; }
 
 .ff-property-view .ff-label {
   padding: 0 2px;
@@ -1597,9 +1634,26 @@ ff-popup-button .ff-content {
 
 .ff-line-edit {
   display: block;
-  background-color: #272727; }
+  background-color: #1b1b1b; }
   .ff-line-edit input {
     padding: 2px; }
+
+.ff-text-edit {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  display: block;
+  background-color: #1b1b1b;
+  min-height: 100px; }
+  .ff-text-edit textarea {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    padding: 2px;
+    resize: none;
+    background: transparent;
+    color: inherit;
+    border: none; }
 
 .ff-color-edit {
   font-size: 0.8rem; }
@@ -1717,7 +1771,7 @@ ff-quad-splitter .ff-top {
     .ff-list .ff-list-item[selected] {
       background-color: #0089bf; }
   .ff-list .ff-list-item + .ff-list-item {
-    border-bottom: 1px solid #343434; }
+    border-top: 1px solid #343434; }
 
 .ff-tree .ff-tree-node-container {
   margin-left: -501px;
@@ -1828,32 +1882,42 @@ ff-tab-header, ff-dock-panel-header {
   display: flex;
   flex-direction: column; }
   .ff-hierarchy-tree-view > .ff-header {
-    height: 24px;
-    padding: 4px; }
+    flex: 0 0 auto;
+    height: 22px;
+    padding: 4px;
+    background-color: #343434; }
     .ff-hierarchy-tree-view > .ff-header .ff-text {
       flex: 1 1 auto;
       align-self: center;
       color: #a0a0a0; }
     .ff-hierarchy-tree-view > .ff-header .ff-button {
-      flex: 0 1 auto;
-      color: #c8c8c8; }
+      flex: 0 1 32px;
+      color: #c8c8c8;
+      padding: 0; }
+    .ff-hierarchy-tree-view > .ff-header .ff-button + .ff-text {
+      padding-left: 8px; }
 
-.ff-hierarchy-tree .ff-tree-node.ff-node.ff-even {
-  background-color: #202020; }
-
-.ff-hierarchy-tree .ff-tree-node.ff-node.ff-odd {
-  background-color: #272727; }
-
-.ff-hierarchy-tree .ff-tree-node.ff-node > .ff-content {
-  margin-left: 9px; }
-
-.ff-hierarchy-tree .ff-tree-node.ff-component {
-  background-color: #3c3c3c; }
-  .ff-hierarchy-tree .ff-tree-node.ff-component > .ff-content {
-    margin-left: 11px; }
-
-.ff-hierarchy-tree .ff-tree-node[selected] {
-  background-color: #0089bf !important; }
+.ff-hierarchy-tree {
+  font-size: 0.9rem; }
+  .ff-hierarchy-tree .ff-tree-node-container {
+    border-top: 1px solid #40464d;
+    border-bottom: 1px solid #40464d; }
+  .ff-hierarchy-tree .ff-tree-node .ff-header {
+    height: 17px; }
+  .ff-hierarchy-tree .ff-tree-node.ff-node.ff-odd {
+    background-color: #0e1421; }
+  .ff-hierarchy-tree .ff-tree-node.ff-node.ff-even {
+    background-color: #131c2e; }
+  .ff-hierarchy-tree .ff-tree-node.ff-node > .ff-header .ff-text {
+    color: #b8c8d9; }
+  .ff-hierarchy-tree .ff-tree-node.ff-node > .ff-content {
+    margin-left: 9px; }
+  .ff-hierarchy-tree .ff-tree-node.ff-component {
+    background-color: #24272b; }
+    .ff-hierarchy-tree .ff-tree-node.ff-component > .ff-content {
+      margin-left: 11px; }
+  .ff-hierarchy-tree .ff-tree-node[selected] {
+    background-color: #0089bf !important; }
 
 .ff-property-tree {
   font-size: 0.9rem; }
@@ -1865,16 +1929,26 @@ ff-tab-header, ff-dock-panel-header {
     background-color: #1d1d1d; }
   .ff-property-tree .ff-tree-node.ff-inputs {
     background-color: #2e231e; }
+    .ff-property-tree .ff-tree-node.ff-inputs > .ff-header .ff-text {
+      color: #d9ccc7; }
     .ff-property-tree .ff-tree-node.ff-inputs .ff-inner {
       background-color: #382c24; }
+      .ff-property-tree .ff-tree-node.ff-inputs .ff-inner > .ff-header .ff-text {
+        color: #d9ccc7; }
   .ff-property-tree .ff-tree-node.ff-outputs {
     background-color: #1e292e; }
+    .ff-property-tree .ff-tree-node.ff-outputs > .ff-header .ff-text {
+      color: #c7d4d9; }
     .ff-property-tree .ff-tree-node.ff-outputs .ff-inner {
       background-color: #243338; }
-  .ff-property-tree .ff-tree-node .ff-header > .ff-label {
-    width: 27%; }
-  .ff-property-tree .ff-tree-node .ff-header ff-property-view {
-    flex: 1 1 auto; }
+      .ff-property-tree .ff-tree-node.ff-outputs .ff-inner > .ff-header .ff-text {
+        color: #c7d4d9; }
+  .ff-property-tree .ff-tree-node .ff-header {
+    height: 17px; }
+    .ff-property-tree .ff-tree-node .ff-header > .ff-label {
+      width: 27%; }
+    .ff-property-tree .ff-tree-node .ff-header ff-property-view {
+      flex: 1 1 auto; }
 
 .ff-property-view .ff-label {
   padding: 0 2px;
@@ -2082,7 +2156,7 @@ ff-dock-view {
     font-weight: bold;
     align-self: center;
     padding: 1px 3px 3px 3px;
-    background-color: #b39000;
+    background-color: #e6b900;
     color: #272727; }
   .sv-task-bar .sv-spacer {
     flex: 1 1 auto; }
@@ -2149,7 +2223,8 @@ ff-dock-view {
   .sv-task-view .ff-button {
     margin: 2px; }
   .sv-task-view .sv-label {
-    margin: 2px; }
+    color: #a0a0a0;
+    margin: 4px 2px; }
   .sv-task-view .sv-image {
     margin: 8px 0; }
     .sv-task-view .sv-image img {

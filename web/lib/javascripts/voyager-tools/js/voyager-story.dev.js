@@ -544,6 +544,81 @@ exports.default = default_1;
 
 /***/ }),
 
+/***/ "../../libs/ff-core/source/ClassRegistry.ts":
+/*!*************************************************!*\
+  !*** /app/libs/ff-core/source/ClassRegistry.ts ***!
+  \*************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Publisher_1 = __webpack_require__(/*! ./Publisher */ "../../libs/ff-core/source/Publisher.ts");
+class ClassRegistry extends Publisher_1.default {
+    constructor() {
+        super();
+        this._dict = {};
+        this.addEvent("class");
+    }
+    add(classType) {
+        if (Array.isArray(classType)) {
+            classType.forEach(type => this.add(type));
+            return;
+        }
+        const name = classType.name;
+        if (!name) {
+            throw new Error("missing class name");
+        }
+        if (this._dict[name]) {
+            throw new Error(`class '${name}' already registered`);
+        }
+        this._dict[name] = classType;
+        this.emit({ type: "class", add: true, remove: false, classType });
+    }
+    remove(classType) {
+        if (Array.isArray(classType)) {
+            classType.forEach(type => this.remove(type));
+            return;
+        }
+        const name = classType.name;
+        if (!name) {
+            throw new Error("missing class name");
+        }
+        if (!this._dict[name]) {
+            throw new Error(`class '${name}' not registered`);
+        }
+        delete this._dict[name];
+        this.emit({ type: "class", add: false, remove: true, classType });
+    }
+    getClass(className) {
+        if (typeof className === "function") {
+            className = className.name;
+        }
+        else if (typeof className === "object") {
+            className = className.constructor.name;
+        }
+        return this._dict[className];
+    }
+    createInstance(className, ...args) {
+        const clazz = this.getClass(className);
+        if (!clazz) {
+            throw new Error(`class '${className}' not registered`);
+        }
+        return new clazz(...args);
+    }
+}
+exports.default = ClassRegistry;
+
+
+/***/ }),
+
 /***/ "../../libs/ff-core/source/Command.ts":
 /*!*******************************************!*\
   !*** /app/libs/ff-core/source/Command.ts ***!
@@ -707,6 +782,240 @@ class Commander extends Publisher_1.default {
 }
 Commander.defaultCapacity = 30;
 exports.default = Commander;
+
+
+/***/ }),
+
+/***/ "../../libs/ff-core/source/ObjectRegistry.ts":
+/*!**************************************************!*\
+  !*** /app/libs/ff-core/source/ObjectRegistry.ts ***!
+  \**************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Publisher_1 = __webpack_require__(/*! ./Publisher */ "../../libs/ff-core/source/Publisher.ts");
+////////////////////////////////////////////////////////////////////////////////
+const _EMPTY_ARRAY = [];
+exports.getClassName = function (scope) {
+    return typeof scope === "function" ? scope.name : (typeof scope === "object"
+        ? scope.constructor.name : scope);
+};
+/**
+ * Registry of object instances, grouped by their classes and base classes.
+ */
+class ObjectRegistry extends Publisher_1.default {
+    constructor(rootClass) {
+        super({ knownEvents: false });
+        if (rootClass && !rootClass.name) {
+            throw new Error("root class must be a named constructor function");
+        }
+        this._rootClassName = rootClass ? rootClass.name : Object.name;
+        this._objLists = { [this._rootClassName]: [] };
+        this._objDict = {};
+    }
+    /**
+     * Adds an object to the registry. The object is registered under its actual class
+     * and all base classes in its prototype chain. An [[IObjectEvent]] is emitted
+     * for each class in the object's prototype chain.
+     * @param object
+     */
+    add(object) {
+        const id = object.id;
+        if (typeof id === "string") {
+            if (this._objDict[id] !== undefined) {
+                throw new Error("object already registered");
+            }
+            // add component to id dictionary
+            this._objDict[id] = object;
+        }
+        let prototype = object;
+        let className;
+        const rootClassName = this._rootClassName;
+        const event = { type: "", add: true, remove: false, object };
+        // add all types in prototype chain
+        do {
+            prototype = Object.getPrototypeOf(prototype);
+            className = prototype.constructor.name;
+            if (className) {
+                (this._objLists[className] || (this._objLists[className] = [])).push(object);
+                event.type = className;
+                this.emit(event);
+            }
+        } while (className !== rootClassName);
+    }
+    /**
+     * Removes an object from the registry.
+     * @param object
+     */
+    remove(object) {
+        const id = object.id;
+        if (typeof id === "string") {
+            if (this._objDict[id] !== object) {
+                throw new Error("object not registered");
+            }
+            // remove component
+            delete this._objDict[id];
+        }
+        let prototype = object;
+        let className;
+        const rootClassName = this._rootClassName;
+        const event = { type: "", add: false, remove: true, object };
+        // remove all types in prototype chain
+        do {
+            prototype = Object.getPrototypeOf(prototype);
+            className = prototype.constructor.name;
+            if (className) {
+                const objects = this._objLists[className];
+                objects.splice(objects.indexOf(object), 1);
+                event.type = className;
+                this.emit(event);
+            }
+        } while (className !== rootClassName);
+    }
+    /**
+     * Removes all objects from the registry.
+     */
+    clear() {
+        const objects = this.cloneArray();
+        objects.forEach(object => this.remove(object));
+    }
+    /**
+     * Returns the total number of objects in the registry.
+     */
+    get length() {
+        return this._objLists[this._rootClassName].length;
+    }
+    /**
+     * Returns the number of objects (of a certain class or class name if given) in the registry.
+     * @param scope Optional class or class name whose instances should be counted.
+     */
+    count(scope) {
+        const objects = this._objLists[this.getClassName(scope)];
+        return objects ? objects.length : 0;
+    }
+    /**
+     * Returns true if the registry contains objects (of a given class or class name) or the given instance.
+     * @param scope A class, class name, or an instance of a class.
+     */
+    has(scope) {
+        if (typeof scope === "function") {
+            const objects = this._objLists[scope.name];
+            return !!objects && objects.length > 0;
+        }
+        if (typeof scope === "string") {
+            const objects = this._objLists[scope];
+            return !!objects && objects.length > 0;
+        }
+        const id = scope.id;
+        if (typeof id === "string") {
+            return !!this._objDict[id];
+        }
+        const objects = this._objLists[scope.constructor.name];
+        return objects && objects.indexOf(scope) >= 0;
+    }
+    /**
+     * Returns true if the registry contains the given object.
+     * @param object
+     */
+    contains(object) {
+        const id = object.id;
+        if (typeof id === "string") {
+            return !!this._objDict[id];
+        }
+        const objects = this._objLists[object.constructor.name];
+        return objects && objects.indexOf(object) >= 0;
+    }
+    /**
+     * Returns the first found instance of the given class or class name.
+     * @param scope Class or class name of the instance to return.
+     * @param nothrow If true, the method returns undefined if no instance was found.
+     * By default, an error is thrown uf no instance is registered with the given class/class name.
+     */
+    get(scope, nothrow = false) {
+        const className = this.getClassName(scope);
+        const objects = this._objLists[className];
+        const object = objects ? objects[0] : undefined;
+        if (!nothrow && !object) {
+            throw new Error(`no instances of class '${className}' in registry`);
+        }
+        return object;
+    }
+    /**
+     * Returns an array with all instances of the given class or class name.
+     * This is a live array, it should not be kept or modified. If you need
+     * a storable/editable array, use [[ObjectRegistry.cloneArray]] instead.
+     * @param scope Class or class name of the instances to return.
+     */
+    getArray(scope) {
+        return this._objLists[this.getClassName(scope)] || _EMPTY_ARRAY;
+    }
+    /**
+     * Returns a cloned array with all instances of the given class or class name.
+     * @param scope Class or class name of the instances to return.
+     */
+    cloneArray(scope) {
+        return this.getArray(scope).slice();
+    }
+    /**
+     * Returns an object by its id.
+     * @param id An object's id.
+     */
+    getById(id) {
+        return this._objDict[id];
+    }
+    /**
+     * Returns a dictionary with all objects in the registry accessible by their ids.
+     * The dictionary only contains objects with an 'id' property.
+     */
+    getDictionary() {
+        return this._objDict;
+    }
+    /**
+     * Adds a listener for an object add/remove event.
+     * @param scope Class, class instance, or class name to subscribe to.
+     * @param callback Callback function, invoked when the event is emitted.
+     * @param context Optional: this context for the callback invocation.
+     */
+    on(scope, callback, context) {
+        super.on(this.getClassName(scope), callback, context);
+    }
+    /**
+     * Adds a one-time listener for an object add/remove event.
+     * @param scope Class, class instance, or class name to subscribe to.
+     * @param callback Callback function, invoked when the event is emitted.
+     * @param context Optional: this context for the callback invocation.
+     */
+    once(scope, callback, context) {
+        super.once(this.getClassName(scope), callback, context);
+    }
+    /**
+     * Removes a listener for an object add/remove event.
+     * @param scope Class, class instance, or class name to subscribe to.
+     * @param callback Callback function, invoked when the event is emitted.
+     * @param context Optional: this context for the callback invocation.
+     */
+    off(scope, callback, context) {
+        super.off(this.getClassName(scope), callback, context);
+    }
+    /**
+     * Returns the class name for the given instance, class or class name.
+     * @param scope
+     */
+    getClassName(scope) {
+        return typeof scope === "function" ? scope.name : (typeof scope === "object"
+            ? scope.constructor.name : (scope || this._rootClassName));
+    }
+}
+exports.default = ObjectRegistry;
 
 
 /***/ }),
@@ -1266,11 +1575,6 @@ exports.types = Property_1.types;
 const PropertyGroup_1 = __webpack_require__(/*! ./PropertyGroup */ "../../libs/ff-graph/source/PropertyGroup.ts");
 const ComponentTracker_1 = __webpack_require__(/*! ./ComponentTracker */ "../../libs/ff-graph/source/ComponentTracker.ts");
 const ComponentReference_1 = __webpack_require__(/*! ./ComponentReference */ "../../libs/ff-graph/source/ComponentReference.ts");
-/** Returns the type string of the given [[ComponentOrType]]. */
-function componentTypeName(componentOrType) {
-    return componentOrType ? (typeof componentOrType === "string" ? componentOrType : componentOrType.type) : Component.type;
-}
-exports.componentTypeName = componentTypeName;
 ////////////////////////////////////////////////////////////////////////////////
 /**
  * Base class for components in a node-component system.
@@ -1310,49 +1614,9 @@ class Component extends Publisher_1.default {
         this._firstAttached = false;
         this.id = id;
     }
-    /**
-     * Returns the type identifier of this component.
-     * @returns {string}
-     */
-    get type() {
-        return this.constructor.type;
-    }
-    get text() {
-        return this.constructor.text;
-    }
-    get icon() {
-        return this.constructor.icon;
-    }
-    /**
-     * Returns the system this component and its node belong to.
-     */
-    get system() {
-        return this._node.system;
-    }
-    /**
-     * Returns the graph this component and its node belong to.
-     */
-    get graph() {
-        return this._node.graph;
-    }
-    /**
-     * Returns the node this component belongs to.
-     */
-    get node() {
-        return this._node;
-    }
-    /**
-     * Returns the set of sibling components of this component.
-     * Sibling components are components belonging to the same node.
-     */
-    get components() {
-        return this._node.components;
-    }
-    /**
-     * Returns the sibling hierarchy component if available.
-     */
-    get hierarchy() {
-        return this._node.components.get("CHierarchy");
+    static getClassName(scope) {
+        return typeof scope === "function" ? scope.name : (typeof scope === "object"
+            ? scope.constructor.name : (scope || Component.name));
     }
     /**
      * True if the component is a node singleton, i.e. can only be added once per node.
@@ -1373,23 +1637,139 @@ class Component extends Publisher_1.default {
         return this.constructor.isSystemSingleton;
     }
     /**
-     * Returns the name of this component.
+     * Returns the class name of this component.
      * @returns {string}
+     */
+    get className() {
+        return this.constructor.name;
+    }
+    get displayClassName() {
+        const name = this.constructor.name;
+        return name === "Component" ? name : name.substr(1);
+    }
+    get text() {
+        return this.constructor.text;
+    }
+    get icon() {
+        return this.constructor.icon;
+    }
+    /**
+     * Returns the name of this component.
      */
     get name() {
         return this._name;
     }
     get displayName() {
-        return this._name || this.text || this.type;
+        return this._name || this.text || this.displayClassName;
     }
     /**
      * Sets the name of this component.
      * This emits an [[IComponentChangeEvent]].
-     * @param {string} value
+     * @param value
      */
     set name(value) {
         this._name = value;
         this.emit({ type: "change", component: this, what: "name" });
+    }
+    /**
+     * Returns the node this component belongs to.
+     */
+    get node() {
+        return this._node;
+    }
+    /**
+     * Returns the graph this component and its node belong to.
+     */
+    get graph() {
+        return this._node.graph;
+    }
+    /**
+     * Returns the system this component and its node belong to.
+     */
+    get system() {
+        return this._node.system;
+    }
+    /**
+     * Returns the set of sibling components of this component.
+     * Sibling components are components belonging to the same node.
+     */
+    get components() {
+        return this._node.components;
+    }
+    /**
+     * Returns the sibling hierarchy component if available.
+     */
+    get hierarchy() {
+        return this._node.components.get("CHierarchy");
+    }
+    getComponent(componentOrClass, nothrow = false) {
+        return this._node.components.get(componentOrClass, nothrow);
+    }
+    getComponents(componentOrClass) {
+        return this._node.components.getArray(componentOrClass);
+    }
+    hasComponent(componentOrClass) {
+        return this._node.components.has(componentOrClass);
+    }
+    getGraphComponent(componentOrClass, nothrow = false) {
+        return this._node.graph.components.get(componentOrClass, nothrow);
+    }
+    getGraphComponents(componentOrClass) {
+        return this._node.graph.components.getArray(componentOrClass);
+    }
+    hasGraphComponent(componentOrClass) {
+        return this._node.graph.components.has(componentOrClass);
+    }
+    getMainComponent(componentOrClass, nothrow = false) {
+        return this._node.system.graph.components.get(componentOrClass, nothrow);
+    }
+    getMainComponents(componentOrClass) {
+        return this._node.system.graph.components.getArray(componentOrClass);
+    }
+    hasMainComponent(componentOrClass) {
+        return this._node.system.graph.components.has(componentOrClass);
+    }
+    getSystemComponent(componentOrClass, nothrow = false) {
+        return this._node.system.components.get(componentOrClass, nothrow);
+    }
+    getSystemComponents(componentOrClass) {
+        return this._node.system.components.getArray(componentOrClass);
+    }
+    hasSystemComponent(componentOrClass) {
+        return this._node.system.components.has(componentOrClass);
+    }
+    getComponentById(id) {
+        return this._node.system.components.getById(id);
+    }
+    getNode(nodeOrClass, nothrow = false) {
+        return this._node.graph.nodes.get(nodeOrClass, nothrow);
+    }
+    getNodes(nodeOrClass) {
+        return this._node.graph.nodes.getArray(nodeOrClass);
+    }
+    hasNode(nodeOrClass) {
+        return this._node.graph.nodes.has(nodeOrClass);
+    }
+    getMainNode(nodeOrClass, nothrow = false) {
+        return this._node.system.graph.nodes.get(nodeOrClass, nothrow);
+    }
+    getMainNodes(nodeOrClass) {
+        return this._node.system.graph.nodes.getArray(nodeOrClass);
+    }
+    hasMainNode(nodeOrClass) {
+        return this._node.system.graph.nodes.has(nodeOrClass);
+    }
+    getSystemNode(nodeOrClass, nothrow = false) {
+        return this._node.system.nodes.get(nodeOrClass, nothrow);
+    }
+    getSystemNodes(nodeOrClass) {
+        return this._node.system.nodes.getArray(nodeOrClass);
+    }
+    hasSystemNode(nodeOrClass) {
+        return this._node.system.nodes.has(nodeOrClass);
+    }
+    getNodeById(id) {
+        return this._node.system.nodes.getById(id);
     }
     /**
      * Adds the component to the given node.
@@ -1468,17 +1848,17 @@ class Component extends Publisher_1.default {
     }
     /**
      * Returns true if this component has or inherits from the given type.
-     * @param componentOrType
+     * @param scope
      */
-    is(componentOrType) {
-        const type = componentTypeName(componentOrType);
+    is(scope) {
+        const className = Component.getClassName(scope);
         let prototype = this;
         do {
             prototype = Object.getPrototypeOf(prototype);
-            if (prototype.type === type) {
+            if (prototype.constructor.name === className) {
                 return true;
             }
-        } while (prototype.type !== Component.type);
+        } while (prototype.constructor.name !== Component.name);
         return false;
     }
     /**
@@ -1501,22 +1881,22 @@ class Component extends Publisher_1.default {
     /**
      * Tracks the given component type. If a component of this type is added
      * to or removed from the node, it will be added or removed from the tracker.
-     * @param {ComponentOrType} componentOrType
+     * @param {ComponentOrClass} componentOrClass
      * @param {(component: T) => void} didAdd
      * @param {(component: T) => void} willRemove
      */
-    trackComponent(componentOrType, didAdd, willRemove) {
-        const tracker = new ComponentTracker_1.default(this._node.components, componentOrType, didAdd, willRemove);
+    trackComponent(componentOrClass, didAdd, willRemove) {
+        const tracker = new ComponentTracker_1.default(this._node.components, componentOrClass, didAdd, willRemove);
         this._trackers.push(tracker);
         return tracker;
     }
     /**
      * Returns a weak reference to a component.
      * The reference is set to null after the linked component is removed.
-     * @param componentOrType The type of component this reference accepts, or the component to link.
+     * @param componentOrClass The type of component this reference accepts, or the component to link.
      */
-    referenceComponent(componentOrType) {
-        return new ComponentReference_1.default(this.system, componentOrType);
+    referenceComponent(componentOrClass) {
+        return new ComponentReference_1.default(this.system, componentOrClass);
     }
     /**
      * Propagates and emits an event as follows, until event.stopPropagation is set to true.
@@ -1586,7 +1966,7 @@ class Component extends Publisher_1.default {
      * @returns {string}
      */
     toString() {
-        return `${this.type}${this.name ? " (" + this.name + ")" : ""}`;
+        return `${this.className}${this.name ? " (" + this.name + ")" : ""}`;
     }
     deflate() {
         let json = {};
@@ -1618,10 +1998,10 @@ class Component extends Publisher_1.default {
         }
     }
     /**
-     * Adds input properties to the component, specified by the provided property templates.
-     * @param templates A plain object with property templates.
-     * @param index Optional index at which to insert the new properties.
-     */
+    * Adds input properties to the component, specified by the provided property templates.
+    * @param templates A plain object with property templates.
+    * @param index Optional index at which to insert the new properties.
+    */
     addInputs(templates, index) {
         return this.ins.createPropertiesFromTemplates(templates, index);
     }
@@ -1671,223 +2051,22 @@ const Component_1 = __webpack_require__(/*! ./Component */ "../../libs/ff-graph/
  * The reference is set to null after the linked component is removed.
  */
 class ComponentReference {
-    constructor(system, componentOrType) {
-        this._type = componentOrType ? Component_1.componentTypeName(componentOrType) : null;
-        this._id = componentOrType instanceof Component_1.default ? componentOrType.id : undefined;
+    constructor(system, scope) {
+        this._className = scope ? Component_1.default.getClassName(scope) : null;
+        this._id = scope instanceof Component_1.default ? scope.id : undefined;
         this._system = system;
     }
     get component() {
         return this._id ? this._system.components.getById(this._id) || null : null;
     }
     set component(component) {
-        if (component && this._type && !(component instanceof this._system.registry.getComponentType(this._type))) {
-            throw new Error(`can't assign component of type '${component.type || "unknown"}' to link of type '${this._type}'`);
+        if (component && this._className && !(component instanceof this._system.registry.getClass(this._className))) {
+            throw new Error(`can't assign component of class '${component.constructor.name || "unknown"}' to link of class '${this._className}'`);
         }
         this._id = component ? component.id : undefined;
     }
 }
 exports.default = ComponentReference;
-
-
-/***/ }),
-
-/***/ "../../libs/ff-graph/source/ComponentSet.ts":
-/*!*************************************************!*\
-  !*** /app/libs/ff-graph/source/ComponentSet.ts ***!
-  \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * FF Typescript Foundation Library
- * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
- *
- * License: MIT
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const Publisher_1 = __webpack_require__(/*! @ff/core/Publisher */ "../../libs/ff-core/source/Publisher.ts");
-const Component_1 = __webpack_require__(/*! ./Component */ "../../libs/ff-graph/source/Component.ts");
-////////////////////////////////////////////////////////////////////////////////
-const _EMPTY_ARRAY = [];
-class ComponentSet extends Publisher_1.default {
-    constructor() {
-        super({ knownEvents: false });
-        this._typeLists = { [Component_1.default.type]: [] };
-        this._idDict = {};
-    }
-    /**
-     * Adds a new component to the set.
-     * @param component
-     * @private
-     */
-    _add(component) {
-        if (this._idDict[component.id] !== undefined) {
-            throw new Error("component already in set");
-        }
-        // add component to id dictionary
-        this._idDict[component.id] = component;
-        let prototype = component;
-        const event = { type: "", add: true, remove: false, component };
-        // add all types in prototype chain
-        do {
-            prototype = Object.getPrototypeOf(prototype);
-            const type = prototype.type;
-            (this._typeLists[type] || (this._typeLists[type] = [])).push(component);
-            event.type = type;
-            this.emit(event);
-        } while (prototype.type !== Component_1.default.type);
-    }
-    /**
-     * Removes a component from the set.
-     * @param component
-     * @private
-     */
-    _remove(component) {
-        if (this._idDict[component.id] !== component) {
-            throw new Error("component not in set");
-        }
-        // remove component
-        delete this._idDict[component.id];
-        let prototype = component;
-        const event = { type: "", add: false, remove: true, component };
-        // remove all types in prototype chain
-        do {
-            prototype = Object.getPrototypeOf(prototype);
-            const type = prototype.type;
-            const components = this._typeLists[type];
-            components.splice(components.indexOf(component), 1);
-            event.type = type;
-            this.emit(event);
-        } while (prototype.type !== Component_1.default.type);
-    }
-    /**
-     * Removes all components from the set.
-     * @private
-     */
-    _clear() {
-        const components = this.cloneArray();
-        components.forEach(component => this._remove(component));
-    }
-    get length() {
-        return this._typeLists[Component_1.default.type].length;
-    }
-    /**
-     * Returns true if there are components (of a certain type if given) in this set.
-     * @param componentOrType
-     */
-    has(componentOrType) {
-        const components = this._typeLists[Component_1.componentTypeName(componentOrType)];
-        return components && components.length > 0;
-    }
-    /**
-     * Returns true if the given component is part of this set.
-     * @param component
-     */
-    contains(component) {
-        return !!this._idDict[component.id];
-    }
-    /**
-     * Returns the number of components (of a certain type if given) in this set.
-     * @param componentOrType
-     */
-    count(componentOrType) {
-        const components = this._typeLists[Component_1.componentTypeName(componentOrType)];
-        return components ? components.length : 0;
-    }
-    getDictionary() {
-        return this._idDict;
-    }
-    /**
-     * Returns an array of components in this set of a specific type if given.
-     * @param componentOrType If given only returns components of the given type.
-     */
-    getArray(componentOrType) {
-        return (this._typeLists[Component_1.componentTypeName(componentOrType)] || _EMPTY_ARRAY);
-    }
-    cloneArray(componentOrType) {
-        return this.getArray(componentOrType).slice();
-    }
-    /**
-     * Returns the first found component in this set of the given type.
-     * @param componentOrType Type of component to return.
-     */
-    get(componentOrType) {
-        const components = this._typeLists[Component_1.componentTypeName(componentOrType)];
-        return components ? components[0] : undefined;
-    }
-    /**
-     * Returns the first found component in this set of the given type.
-     * Throws an exception if there is no component of the specified type.
-     * @param componentOrType Type of component to return.
-     */
-    safeGet(componentOrType) {
-        const type = Component_1.componentTypeName(componentOrType);
-        const components = this._typeLists[type];
-        const component = components ? components[0] : undefined;
-        if (!component) {
-            throw new Error(`no components of type '${type}' in set`);
-        }
-        return component;
-    }
-    /**
-     * Returns a component by its identifier.
-     * @param id A component's identifier.
-     */
-    getById(id) {
-        return this._idDict[id] || null;
-    }
-    /**
-     * Returns the first component of the given type with the given name, or null if no component
-     * with the given name exists. Performs a linear search, returns the first matching component found.
-     * @param name Name of the component to find.
-     * @param componentOrType Optional type restriction.
-     */
-    findByName(name, componentOrType) {
-        const components = this.getArray(componentOrType);
-        for (let i = 0, n = components.length; i < n; ++i) {
-            if (components[i].name === name) {
-                return components[i];
-            }
-        }
-        return null;
-    }
-    /**
-     * Adds a listener for a component add/remove event.
-     * @param componentOrType Type name of the component, or component constructor.
-     * @param callback Callback function, invoked when the event is emitted.
-     * @param context Optional: this context for the callback invocation.
-     */
-    on(componentOrType, callback, context) {
-        super.on(Component_1.componentTypeName(componentOrType), callback, context);
-    }
-    /**
-     * Adds a one-time listener for a component add/remove event.
-     * @param componentOrType Type name of the component, or component constructor.
-     * @param callback Callback function, invoked when the event is emitted.
-     * @param context Optional: this context for the callback invocation.
-     */
-    once(componentOrType, callback, context) {
-        super.once(Component_1.componentTypeName(componentOrType), callback, context);
-    }
-    /**
-     * Removes a listener for a component add/remove event.
-     * @param componentOrType Type name of the component, or component constructor.
-     * @param callback Callback function, invoked when the event is emitted.
-     * @param context Optional: this context for the callback invocation.
-     */
-    off(componentOrType, callback, context) {
-        super.off(Component_1.componentTypeName(componentOrType), callback, context);
-    }
-    toString(verbose = false) {
-        if (verbose) {
-            return this.getArray().map(component => component.displayName).join("\n");
-        }
-        return `components: ${this.length}, types: ${Object.keys(this._typeLists).length}`;
-    }
-}
-exports.default = ComponentSet;
 
 
 /***/ }),
@@ -1908,7 +2087,7 @@ exports.default = ComponentSet;
  * License: MIT
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-const Component_1 = __webpack_require__(/*! ./Component */ "../../libs/ff-graph/source/Component.ts");
+const ObjectRegistry_1 = __webpack_require__(/*! @ff/core/ObjectRegistry */ "../../libs/ff-core/source/ObjectRegistry.ts");
 ////////////////////////////////////////////////////////////////////////////////
 /**
  * Tracks components of a specific type in the same node.
@@ -1916,30 +2095,30 @@ const Component_1 = __webpack_require__(/*! ./Component */ "../../libs/ff-graph/
  * callbacks if the component of the tracked type is added or removed.
  */
 class ComponentTracker {
-    constructor(set, componentOrType, didAdd, willRemove) {
-        this.type = Component_1.componentTypeName(componentOrType);
+    constructor(registry, scope, didAdd, willRemove) {
+        this.className = ObjectRegistry_1.getClassName(scope);
         this.didAdd = didAdd;
         this.willRemove = willRemove;
-        this._set = set;
-        set.on(this.type, this.onComponent, this);
-        this.component = set.get(componentOrType);
+        this._registry = registry;
+        registry.on(this.className, this.onComponent, this);
+        this.component = registry.get(scope, true);
         if (this.component && didAdd) {
             didAdd(this.component);
         }
     }
     dispose() {
-        this._set.off(this.type, this.onComponent, this);
+        this._registry.off(this.className, this.onComponent, this);
         this.component = null;
         this.didAdd = null;
         this.willRemove = null;
     }
     onComponent(event) {
         if (event.add) {
-            this.component = event.component;
-            this.didAdd && this.didAdd(event.component);
+            this.component = event.object;
+            this.didAdd && this.didAdd(event.object);
         }
         else if (event.remove) {
-            this.willRemove && this.willRemove(event.component);
+            this.willRemove && this.willRemove(event.object);
             this.component = null;
         }
     }
@@ -1968,9 +2147,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const uniqueId_1 = __webpack_require__(/*! @ff/core/uniqueId */ "../../libs/ff-core/source/uniqueId.ts");
 const Publisher_1 = __webpack_require__(/*! @ff/core/Publisher */ "../../libs/ff-core/source/Publisher.ts");
 const LinkableSorter_1 = __webpack_require__(/*! ./LinkableSorter */ "../../libs/ff-graph/source/LinkableSorter.ts");
-const ComponentSet_1 = __webpack_require__(/*! ./ComponentSet */ "../../libs/ff-graph/source/ComponentSet.ts");
+const Component_1 = __webpack_require__(/*! ./Component */ "../../libs/ff-graph/source/Component.ts");
 const Node_1 = __webpack_require__(/*! ./Node */ "../../libs/ff-graph/source/Node.ts");
-const NodeSet_1 = __webpack_require__(/*! ./NodeSet */ "../../libs/ff-graph/source/NodeSet.ts");
+const ObjectRegistry_1 = __webpack_require__(/*! @ff/core/ObjectRegistry */ "../../libs/ff-core/source/ObjectRegistry.ts");
+////////////////////////////////////////////////////////////////////////////////
 /**
  * Graph in a graph/node/component system. A graph contains a collection of nodes.
  * Graphs can be nested, i.e. a graph can be a subgraph of another graph, the parent graph.
@@ -1989,9 +2169,9 @@ class Graph extends Publisher_1.default {
     constructor(system, parent) {
         super({ knownEvents: false });
         /** Collection of all nodes in this graph. */
-        this.nodes = new NodeSet_1.default();
+        this.nodes = new ObjectRegistry_1.default(Node_1.default);
         /** Collection of all components in this graph. */
-        this.components = new ComponentSet_1.default();
+        this.components = new ObjectRegistry_1.default(Component_1.default);
         this._sorter = new LinkableSorter_1.default();
         this._sortRequested = true;
         this._sortedList = null;
@@ -2010,6 +2190,66 @@ class Graph extends Publisher_1.default {
     /** Returns the root hierarchy component of this graph. */
     get root() {
         return this._root;
+    }
+    getComponent(componentOrClass, nothrow = false) {
+        return this.components.get(componentOrClass, nothrow);
+    }
+    getComponents(componentOrClass) {
+        return this.components.getArray(componentOrClass);
+    }
+    hasComponent(componentOrClass) {
+        return this.components.has(componentOrClass);
+    }
+    getMainComponent(componentOrClass, nothrow = false) {
+        return this.system.graph.components.get(componentOrClass, nothrow);
+    }
+    getMainComponents(componentOrClass) {
+        return this.system.graph.components.getArray(componentOrClass);
+    }
+    hasMainComponent(componentOrClass) {
+        return this.system.graph.components.has(componentOrClass);
+    }
+    getSystemComponent(componentOrClass, nothrow = false) {
+        return this.system.components.get(componentOrClass, nothrow);
+    }
+    getSystemComponents(componentOrClass) {
+        return this.system.components.getArray(componentOrClass);
+    }
+    hasSystemComponent(componentOrClass) {
+        return this.system.components.has(componentOrClass);
+    }
+    getComponentById(id) {
+        return this.system.components.getById(id);
+    }
+    getNode(nodeOrClass, nothrow = false) {
+        return this.nodes.get(nodeOrClass, nothrow);
+    }
+    getNodes(nodeOrClass) {
+        return this.nodes.getArray(nodeOrClass);
+    }
+    hasNode(nodeOrClass) {
+        return this.nodes.has(nodeOrClass);
+    }
+    getMainNode(nodeOrClass, nothrow = false) {
+        return this.system.graph.nodes.get(nodeOrClass, nothrow);
+    }
+    getMainNodes(nodeOrClass) {
+        return this.system.graph.nodes.getArray(nodeOrClass);
+    }
+    hasMainNode(nodeOrClass) {
+        return this.system.graph.nodes.has(nodeOrClass);
+    }
+    getSystemNode(nodeOrClass, nothrow = false) {
+        return this.system.nodes.get(nodeOrClass, nothrow);
+    }
+    getSystemNodes(nodeOrClass) {
+        return this.system.nodes.getArray(nodeOrClass);
+    }
+    hasSystemNode(nodeOrClass) {
+        return this.system.nodes.has(nodeOrClass);
+    }
+    getNodeById(id) {
+        return this.system.nodes.getById(id);
     }
     /**
      * Called at the begin of each frame cycle. Calls update() on all components
@@ -2067,18 +2307,18 @@ class Graph extends Publisher_1.default {
     }
     sort() {
         this._sortedList = this._sorter.sort(this.components.getArray());
-        const name = this.parent ? this.parent.name || this.parent.type : "System";
+        const name = this.parent ? this.parent.name || this.parent.className : "System";
         console.log("Graph.sort - %s: sorted %s components", name, this._sortedList.length);
     }
     /**
      * Creates a new node of the given type. Adds it to the graph.
-     * @param nodeOrType Type of the node to create.
+     * @param nodeOrClass Type of the node to create.
      * @param name Optional name for the node.
      * @param id Optional unique identifier for the node (must omit unless serializing).
      */
-    createCustomNode(nodeOrType, name, id) {
-        const type = this.system.registry.getNodeType(Node_1.nodeTypeName(nodeOrType));
-        const node = new type(id || uniqueId_1.default(12, this.system.nodes.getDictionary()));
+    createCustomNode(nodeOrClass, name, id) {
+        const classType = this.system.registry.getClass(nodeOrClass);
+        const node = new classType(id || uniqueId_1.default(12, this.system.nodes.getDictionary()));
         node.attach(this);
         if (name) {
             node.name = name;
@@ -2100,6 +2340,26 @@ class Graph extends Publisher_1.default {
             node.name = name;
         }
         return node;
+    }
+    findNodeByName(name, nodeOrClass) {
+        const nodes = this.nodes.getArray(nodeOrClass);
+        for (let i = 0, n = nodes.length; i < n; ++i) {
+            if (nodes[i].name === name) {
+                return nodes[i];
+            }
+        }
+        return undefined;
+    }
+    findRootNodes(nodeOrType) {
+        const nodes = this.nodes.getArray(nodeOrType);
+        const result = [];
+        for (let i = 0, n = nodes.length; i < n; ++i) {
+            const hierarchy = nodes[i].components.get("CHierarchy", true);
+            if (!hierarchy || !hierarchy.parent) {
+                result.push(nodes[i]);
+            }
+        }
+        return result;
     }
     /**
      * Returns a text representation of the graph.
@@ -2125,7 +2385,7 @@ class Graph extends Publisher_1.default {
         for (let i = 0, n = nodes.length; i < n; ++i) {
             const node = nodes[i];
             const jsonNode = this.deflateNode(node);
-            jsonNode.type = node.type;
+            jsonNode.type = node.className;
             jsonNode.id = node.id;
             if (node.name) {
                 jsonNode.name = node.name;
@@ -2176,7 +2436,7 @@ class Graph extends Publisher_1.default {
      */
     _addNode(node) {
         this.system._addNode(node);
-        this.nodes._add(node);
+        this.nodes.add(node);
     }
     /**
      * Removes a node from the graph and the system. Called by [[Node.detach]], do not call directly.
@@ -2184,7 +2444,7 @@ class Graph extends Publisher_1.default {
      * @private
      */
     _removeNode(node) {
-        this.nodes._remove(node);
+        this.nodes.remove(node);
         this.system._removeNode(node);
     }
     /**
@@ -2194,10 +2454,10 @@ class Graph extends Publisher_1.default {
      */
     _addComponent(component) {
         if (component.isGraphSingleton && this.components.has(component)) {
-            throw new Error(`only one component of type '${component.type}' allowed per graph`);
+            throw new Error(`only one component of class '${component.className}' allowed per graph`);
         }
         this.system._addComponent(component);
-        this.components._add(component);
+        this.components.add(component);
         if (component.finalize) {
             this._finalizeList.push(component);
         }
@@ -2209,7 +2469,7 @@ class Graph extends Publisher_1.default {
      * @private
      */
     _removeComponent(component) {
-        this.components._remove(component);
+        this.components.remove(component);
         this.system._removeComponent(component);
         if (component.finalize) {
             this._finalizeList.splice(this._finalizeList.indexOf(component), 1);
@@ -2311,13 +2571,8 @@ exports.default = LinkableSorter;
 Object.defineProperty(exports, "__esModule", { value: true });
 const uniqueId_1 = __webpack_require__(/*! @ff/core/uniqueId */ "../../libs/ff-core/source/uniqueId.ts");
 const Publisher_1 = __webpack_require__(/*! @ff/core/Publisher */ "../../libs/ff-core/source/Publisher.ts");
+const ObjectRegistry_1 = __webpack_require__(/*! @ff/core/ObjectRegistry */ "../../libs/ff-core/source/ObjectRegistry.ts");
 const Component_1 = __webpack_require__(/*! ./Component */ "../../libs/ff-graph/source/Component.ts");
-const ComponentSet_1 = __webpack_require__(/*! ./ComponentSet */ "../../libs/ff-graph/source/ComponentSet.ts");
-/** Returns the type string of the given [[NodeOrType]]. */
-function nodeTypeName(nodeOrType) {
-    return nodeOrType ? (typeof nodeOrType === "string" ? nodeOrType : nodeOrType.type) : Node.type;
-}
-exports.nodeTypeName = nodeTypeName;
 /**
  * Node in an graph/node/component system.
  *
@@ -2342,17 +2597,24 @@ class Node extends Publisher_1.default {
     constructor(id) {
         super({ knownEvents: false });
         /** Collection of all components in this node. */
-        this.components = new ComponentSet_1.default();
+        this.components = new ObjectRegistry_1.default(Component_1.default);
         this._graph = null;
         this._name = "";
         this.id = id;
     }
+    static getClassName(scope) {
+        return typeof scope === "function" ? scope.name : (typeof scope === "object"
+            ? scope.constructor.name : (scope || Node.name));
+    }
     /**
-     * Returns the type identifier of this component.
-     * @returns {string}
+     * Returns the class name of this node.
      */
-    get type() {
-        return this.constructor.type;
+    get className() {
+        return this.constructor.name;
+    }
+    get displayClassName() {
+        const name = this.constructor.name;
+        return name === "Node" ? name : name.substr(1);
     }
     get text() {
         return this.constructor.text;
@@ -2361,10 +2623,22 @@ class Node extends Publisher_1.default {
         return this.constructor.icon;
     }
     /**
-     * Returns the system this node and its graph belong to.
+     * Returns the name of this node.
      */
-    get system() {
-        return this._graph.system;
+    get name() {
+        return this._name;
+    }
+    get displayName() {
+        return this._name || this.text || this.displayClassName;
+    }
+    /**
+     * Sets the name of this node.
+     * This emits an [[INodeChangeEvent]]
+     * @param value
+     */
+    set name(value) {
+        this._name = value;
+        this.emit({ type: "change", what: "name", node: this });
     }
     /**
      * Returns the graph this node is part of.
@@ -2373,23 +2647,79 @@ class Node extends Publisher_1.default {
         return this._graph;
     }
     /**
-     * Returns the name of this node.
-     * @returns {string}
+     * Returns the system this node and its graph belong to.
      */
-    get name() {
-        return this._name;
+    get system() {
+        return this._graph.system;
     }
-    get displayName() {
-        return this._name || this.text || this.type;
+    getComponent(componentOrClass, nothrow = false) {
+        return this.components.get(componentOrClass, nothrow);
     }
-    /**
-     * Sets the name of this node.
-     * This emits an [[INodeChangeEvent]]
-     * @param {string} value
-     */
-    set name(value) {
-        this._name = value;
-        this.emit({ type: "change", what: "name", node: this });
+    getComponents(componentOrClass) {
+        return this.components.getArray(componentOrClass);
+    }
+    hasComponent(componentOrClass) {
+        return this.components.has(componentOrClass);
+    }
+    getGraphComponent(componentOrClass, nothrow = false) {
+        return this.graph.components.get(componentOrClass, nothrow);
+    }
+    getGraphComponents(componentOrClass) {
+        return this.graph.components.getArray(componentOrClass);
+    }
+    hasGraphComponent(componentOrClass) {
+        return this.graph.components.has(componentOrClass);
+    }
+    getMainComponent(componentOrClass, nothrow = false) {
+        return this._graph.system.graph.components.get(componentOrClass, nothrow);
+    }
+    getMainComponents(componentOrClass) {
+        return this._graph.system.graph.components.getArray(componentOrClass);
+    }
+    hasMainComponent(componentOrClass) {
+        return this._graph.system.graph.components.has(componentOrClass);
+    }
+    getSystemComponent(componentOrClass, nothrow = false) {
+        return this._graph.system.components.get(componentOrClass, nothrow);
+    }
+    getSystemComponents(componentOrClass) {
+        return this._graph.system.components.getArray(componentOrClass);
+    }
+    hasSystemComponent(componentOrClass) {
+        return this._graph.system.components.has(componentOrClass);
+    }
+    getComponentById(id) {
+        return this._graph.system.components.getById(id);
+    }
+    getNode(nodeOrClass, nothrow = false) {
+        return this._graph.nodes.get(nodeOrClass, nothrow);
+    }
+    getNodes(nodeOrClass) {
+        return this._graph.nodes.getArray(nodeOrClass);
+    }
+    hasNode(nodeOrClass) {
+        return this._graph.nodes.has(nodeOrClass);
+    }
+    getMainNode(nodeOrClass, nothrow = false) {
+        return this._graph.system.graph.nodes.get(nodeOrClass, nothrow);
+    }
+    getMainNodes(nodeOrClass) {
+        return this._graph.system.graph.nodes.getArray(nodeOrClass);
+    }
+    hasMainNode(nodeOrClass) {
+        return this._graph.system.graph.nodes.has(nodeOrClass);
+    }
+    getSystemNode(nodeOrClass, nothrow = false) {
+        return this._graph.system.nodes.get(nodeOrClass, nothrow);
+    }
+    getSystemNodes(nodeOrClass) {
+        return this._graph.system.nodes.getArray(nodeOrClass);
+    }
+    hasSystemNode(nodeOrClass) {
+        return this._graph.system.nodes.has(nodeOrClass);
+    }
+    getNodeById(id) {
+        return this._graph.system.nodes.getById(id);
     }
     /**
      * Adds this node to the given graph and the system.
@@ -2442,8 +2772,8 @@ class Node extends Publisher_1.default {
      * @param id Optional unique identifier for the component (must omit unless serializing).
      */
     createComponent(componentOrType, name, id) {
-        const type = this.system.registry.getComponentType(Component_1.componentTypeName(componentOrType));
-        const component = new type(id || uniqueId_1.default(12, this.system.components.getDictionary()));
+        const classType = this.system.registry.getClass(componentOrType);
+        const component = new classType(id || uniqueId_1.default(12, this.system.components.getDictionary()));
         component.attach(this);
         if (name) {
             component.name = name;
@@ -2452,17 +2782,17 @@ class Node extends Publisher_1.default {
     }
     /**
      * Tests whether the node is of or descends from the given type.
-     * @param nodeOrType Node constructor, type name, or instance.
+     * @param scope Node constructor, type name, or instance.
      */
-    is(nodeOrType) {
-        const type = nodeTypeName(nodeOrType);
+    is(scope) {
+        const className = Node.getClassName(scope);
         let prototype = this;
         do {
             prototype = Object.getPrototypeOf(prototype);
-            if (prototype.type === type) {
+            if (prototype.constructor.name === className) {
                 return true;
             }
-        } while (prototype.type !== Node.type);
+        } while (prototype.constructor.name !== Node.type);
         return false;
     }
     /**
@@ -2488,7 +2818,7 @@ class Node extends Publisher_1.default {
         for (let i = 0, n = components.length; i < n; ++i) {
             const component = components[i];
             const jsonComp = this.deflateComponent(component);
-            jsonComp.type = component.type;
+            jsonComp.type = component.className;
             jsonComp.id = component.id;
             if (component.name) {
                 jsonComp.name = component.name;
@@ -2541,10 +2871,10 @@ class Node extends Publisher_1.default {
      */
     _addComponent(component) {
         if (component.isNodeSingleton && this.components.has(component)) {
-            throw new Error(`only one component of type '${component.type}' allowed per node`);
+            throw new Error(`only one component of class '${component.className}' allowed per node`);
         }
         this.graph._addComponent(component);
-        this.components._add(component);
+        this.components.add(component);
     }
     /**
      * Removes a component from the node, the node's graph and the system. Called by [[Component.detach]],
@@ -2553,7 +2883,7 @@ class Node extends Publisher_1.default {
      * @private
      */
     _removeComponent(component) {
-        this.components._remove(component);
+        this.components.remove(component);
         this.graph._removeComponent(component);
     }
 }
@@ -2561,222 +2891,6 @@ Node.type = "Node";
 Node.text = "";
 Node.icon = "";
 exports.default = Node;
-
-
-/***/ }),
-
-/***/ "../../libs/ff-graph/source/NodeSet.ts":
-/*!********************************************!*\
-  !*** /app/libs/ff-graph/source/NodeSet.ts ***!
-  \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * FF Typescript Foundation Library
- * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
- *
- * License: MIT
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const Publisher_1 = __webpack_require__(/*! @ff/core/Publisher */ "../../libs/ff-core/source/Publisher.ts");
-const Node_1 = __webpack_require__(/*! ./Node */ "../../libs/ff-graph/source/Node.ts");
-////////////////////////////////////////////////////////////////////////////////
-const _EMPTY_ARRAY = [];
-class NodeSet extends Publisher_1.default {
-    constructor() {
-        super({ knownEvents: false });
-        this._typeLists = { [Node_1.default.type]: [] };
-        this._idDict = {};
-    }
-    /**
-     * Adds a node to the set. Automatically called by the node constructor.
-     * @param node
-     * @private
-     */
-    _add(node) {
-        if (this._idDict[node.id] !== undefined) {
-            throw new Error("node already in set");
-        }
-        // add node to id dictionary
-        this._idDict[node.id] = node;
-        let prototype = node;
-        const event = { type: "", add: true, remove: false, node };
-        // add all types in prototype chain
-        do {
-            prototype = Object.getPrototypeOf(prototype);
-            const type = prototype.type;
-            (this._typeLists[type] || (this._typeLists[type] = [])).push(node);
-            event.type = type;
-            this.emit(event);
-        } while (prototype.type !== Node_1.default.type);
-    }
-    /**
-     * Removes a node from the set. Automatically called by the node's dispose method.
-     * @param node
-     * @private
-     */
-    _remove(node) {
-        if (this._idDict[node.id] !== node) {
-            throw new Error("node not in set");
-        }
-        // remove node from id dictionary
-        delete this._idDict[node.id];
-        let prototype = node;
-        const event = { type: "", add: false, remove: true, node };
-        // remove all types in prototype chain
-        do {
-            prototype = Object.getPrototypeOf(prototype);
-            const type = prototype.type;
-            const nodes = this._typeLists[type];
-            nodes.splice(nodes.indexOf(node), 1);
-            event.type = type;
-            this.emit(event);
-        } while (prototype.type !== Node_1.default.type);
-    }
-    /**
-     * Removes all nodes from the set.
-     * @private
-     */
-    _clear() {
-        const nodes = this.cloneArray();
-        nodes.forEach(node => this._remove(node));
-    }
-    get length() {
-        return this._typeLists[Node_1.default.type].length;
-    }
-    /**
-     * Returns true if there are nodes (of a certain type if given) in this set.
-     * @param nodeOrType
-     */
-    has(nodeOrType) {
-        const nodes = this._typeLists[Node_1.nodeTypeName(nodeOrType)];
-        return nodes && nodes.length > 0;
-    }
-    /**
-     * Returns true if the given node is part of this set.
-     * @param node
-     */
-    contains(node) {
-        return !!this._idDict[node.id];
-    }
-    /**
-     * Returns the number of nodes (of a certain type if given) in this set.
-     * @param nodeOrType
-     */
-    count(nodeOrType) {
-        const nodes = this._typeLists[Node_1.nodeTypeName(nodeOrType)];
-        return nodes ? nodes.length : 0;
-    }
-    getDictionary() {
-        return this._idDict;
-    }
-    /**
-     * Returns an array of nodes in this set of a specific type if given.
-     * @param nodeOrType If given only returns nodes of the given type.
-     */
-    getArray(nodeOrType) {
-        return (this._typeLists[Node_1.nodeTypeName(nodeOrType)] || _EMPTY_ARRAY);
-    }
-    cloneArray(nodeOrType) {
-        return this.getArray(nodeOrType).slice();
-    }
-    /**
-     * Returns the first found node in this set of the given type.
-     * @param nodeOrType Type of node to return.
-     */
-    get(nodeOrType) {
-        const nodes = this._typeLists[Node_1.nodeTypeName(nodeOrType)];
-        return nodes ? nodes[0] : undefined;
-    }
-    /**
-     * Returns the first found node in this set of the given type.
-     * Throws an exception if there is no node of the specified type.
-     * @param nodeOrType Type of node to return.
-     */
-    safeGet(nodeOrType) {
-        const type = Node_1.nodeTypeName(nodeOrType);
-        const nodes = this._typeLists[type];
-        const node = nodes ? nodes[0] : undefined;
-        if (!node) {
-            throw new Error(`no nodes of type '${type}' in set`);
-        }
-        return node;
-    }
-    /**
-     * Returns a node by its identifier.
-     * @param {string} id An node's identifier.
-     */
-    getById(id) {
-        return this._idDict[id] || null;
-    }
-    /**
-     * Returns the first node with the given name, or null if no node with
-     * the given name exists. Performs a linear search, returns the first matching component found.
-     * @param name Name of the node to find.
-     * @param nodeOrType Optional type restriction.
-     */
-    findByName(name, nodeOrType) {
-        const nodes = this.getArray(nodeOrType);
-        for (let i = 0, n = nodes.length; i < n; ++i) {
-            if (nodes[i].name === name) {
-                return nodes[i];
-            }
-        }
-        return null;
-    }
-    /**
-     * Returns all nodes not containing a hierarchy component with a parent.
-     * Performs a linear search; don't use in time-critical code.
-     */
-    findRoots(nodeOrType) {
-        const nodes = this._typeLists[Node_1.nodeTypeName(nodeOrType)];
-        const result = [];
-        for (let i = 0, n = nodes.length; i < n; ++i) {
-            const hierarchy = nodes[i].components.get("CHierarchy");
-            if (!hierarchy || !hierarchy.parent) {
-                result.push(nodes[i]);
-            }
-        }
-        return result;
-    }
-    /**
-     * Adds a listener for a node add/remove event.
-     * @param nodeOrType Type name of the node, or node constructor.
-     * @param callback Callback function, invoked when the event is emitted.
-     * @param context Optional: this context for the callback invocation.
-     */
-    on(nodeOrType, callback, context) {
-        super.on(Node_1.nodeTypeName(nodeOrType), callback, context);
-    }
-    /**
-     * Adds a one-time listener for a node add/remove event.
-     * @param nodeOrType Type name of the node, or node constructor.
-     * @param callback Callback function, invoked when the event is emitted.
-     * @param context Optional: this context for the callback invocation.
-     */
-    once(nodeOrType, callback, context) {
-        super.once(Node_1.nodeTypeName(nodeOrType), callback, context);
-    }
-    /**
-     * Removes a listener for a node add/remove event.
-     * @param nodeOrType Type name of the node, or node constructor.
-     * @param callback Callback function, invoked when the event is emitted.
-     * @param context Optional: this context for the callback invocation.
-     */
-    off(nodeOrType, callback, context) {
-        super.off(Node_1.nodeTypeName(nodeOrType), callback, context);
-    }
-    toString(verbose = false) {
-        if (verbose) {
-            return this.getArray().map(node => node.displayName).join("\n");
-        }
-        return `nodes: ${this.length}, types: ${Object.keys(this._typeLists).length}`;
-    }
-}
-exports.default = NodeSet;
 
 
 /***/ }),
@@ -3576,77 +3690,6 @@ exports.default = PropertyTracker;
 
 /***/ }),
 
-/***/ "../../libs/ff-graph/source/Registry.ts":
-/*!*********************************************!*\
-  !*** /app/libs/ff-graph/source/Registry.ts ***!
-  \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * FF Typescript Foundation Library
- * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
- *
- * License: MIT
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-////////////////////////////////////////////////////////////////////////////////
-/**
- * Registry for component types. Each component type should register itself
- * with the registry. The registry is used to construct subtypes of components
- * during inflation (de-serialization) of a node-component systems.
- */
-class Registry {
-    constructor() {
-        this.nodeTypes = {};
-        this.componentTypes = {};
-    }
-    getNodeType(type) {
-        const nodeType = this.nodeTypes[type];
-        if (!nodeType) {
-            throw new Error(`node type not found for type id: '${type}'`);
-        }
-        return nodeType;
-    }
-    getComponentType(type) {
-        const componentType = this.componentTypes[type];
-        if (!componentType) {
-            throw new Error(`component type not found for type id: '${type}'`);
-        }
-        return componentType;
-    }
-    registerNodeType(nodeType) {
-        if (Array.isArray(nodeType)) {
-            nodeType.forEach(nodeType => this.registerNodeType(nodeType));
-        }
-        else {
-            if (this.nodeTypes[nodeType.type]) {
-                console.warn(nodeType);
-                throw new Error(`node type already registered: '${nodeType.type}'`);
-            }
-            this.nodeTypes[nodeType.type] = nodeType;
-        }
-    }
-    registerComponentType(componentType) {
-        if (Array.isArray(componentType)) {
-            componentType.forEach(componentType => this.registerComponentType(componentType));
-        }
-        else {
-            if (this.componentTypes[componentType.type]) {
-                console.warn(componentType);
-                throw new Error(`component type already registered: '${componentType.type}'`);
-            }
-            this.componentTypes[componentType.type] = componentType;
-        }
-    }
-}
-exports.default = Registry;
-
-
-/***/ }),
-
 /***/ "../../libs/ff-graph/source/System.ts":
 /*!*******************************************!*\
   !*** /app/libs/ff-graph/source/System.ts ***!
@@ -3664,17 +3707,63 @@ exports.default = Registry;
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 const Publisher_1 = __webpack_require__(/*! @ff/core/Publisher */ "../../libs/ff-core/source/Publisher.ts");
-const ComponentSet_1 = __webpack_require__(/*! ./ComponentSet */ "../../libs/ff-graph/source/ComponentSet.ts");
-const NodeSet_1 = __webpack_require__(/*! ./NodeSet */ "../../libs/ff-graph/source/NodeSet.ts");
+const ObjectRegistry_1 = __webpack_require__(/*! @ff/core/ObjectRegistry */ "../../libs/ff-core/source/ObjectRegistry.ts");
+const ClassRegistry_1 = __webpack_require__(/*! @ff/core/ClassRegistry */ "../../libs/ff-core/source/ClassRegistry.ts");
+const Component_1 = __webpack_require__(/*! ./Component */ "../../libs/ff-graph/source/Component.ts");
+const Node_1 = __webpack_require__(/*! ./Node */ "../../libs/ff-graph/source/Node.ts");
 const Graph_1 = __webpack_require__(/*! ./Graph */ "../../libs/ff-graph/source/Graph.ts");
-const Registry_1 = __webpack_require__(/*! ./Registry */ "../../libs/ff-graph/source/Registry.ts");
 class System extends Publisher_1.default {
     constructor(registry) {
         super({ knownEvents: false });
-        this.registry = registry || new Registry_1.default();
-        this.nodes = new NodeSet_1.default();
-        this.components = new ComponentSet_1.default();
+        this.nodes = new ObjectRegistry_1.default(Node_1.default);
+        this.components = new ObjectRegistry_1.default(Component_1.default);
+        this.registry = registry || new ClassRegistry_1.default();
         this.graph = new Graph_1.default(this, null);
+    }
+    getComponent(componentOrClass, nothrow = false) {
+        return this.components.get(componentOrClass, nothrow);
+    }
+    getComponents(componentOrClass) {
+        return this.components.getArray(componentOrClass);
+    }
+    hasComponents(componentOrClass) {
+        return this.components.has(componentOrClass);
+    }
+    getMainComponent(componentOrClass, nothrow = false) {
+        return this.graph.components.get(componentOrClass, nothrow);
+    }
+    getMainComponents(componentOrClass) {
+        return this.graph.components.getArray(componentOrClass);
+    }
+    hasMainComponents(componentOrClass) {
+        return this.graph.components.has(componentOrClass);
+    }
+    getNode(nodeOrClass, nothrow = false) {
+        return this.nodes.get(nodeOrClass, nothrow);
+    }
+    getNodes(nodeOrClass) {
+        return this.nodes.getArray(nodeOrClass);
+    }
+    hasNodes(nodeOrClass) {
+        return this.nodes.has(nodeOrClass);
+    }
+    getMainNode(nodeOrClass, nothrow = false) {
+        return this.graph.nodes.get(nodeOrClass, nothrow);
+    }
+    getMainNodes(nodeOrClass) {
+        return this.graph.nodes.getArray(nodeOrClass);
+    }
+    hasMainNodes(nodeOrClass) {
+        return this.graph.nodes.has(nodeOrClass);
+    }
+    findNodeByName(name, nodeOrClass) {
+        const nodes = this.nodes.getArray(nodeOrClass);
+        for (let i = 0, n = nodes.length; i < n; ++i) {
+            if (nodes[i].name === name) {
+                return nodes[i];
+            }
+        }
+        return undefined;
     }
     /**
      * Serializes the content of the system, ready to be stringified.
@@ -3699,19 +3788,19 @@ class System extends Publisher_1.default {
         return text;
     }
     _addNode(node) {
-        this.nodes._add(node);
+        this.nodes.add(node);
     }
     _removeNode(node) {
-        this.nodes._remove(node);
+        this.nodes.remove(node);
     }
     _addComponent(component) {
         if (component.isSystemSingleton && this.components.has(component)) {
-            throw new Error(`only one component of type '${component.type}' allowed per system`);
+            throw new Error(`only one component of class '${component.className}' allowed per system`);
         }
-        this.components._add(component);
+        this.components.add(component);
     }
     _removeComponent(component) {
-        this.components._remove(component);
+        this.components.remove(component);
     }
 }
 exports.default = System;
@@ -3784,6 +3873,24 @@ class CGraph extends Component_1.default {
     }
     set innerRoot(root) {
         this._innerRoot = root;
+    }
+    getInnerComponent(componentOrClass, nothrow = false) {
+        return this._innerGraph.components.get(componentOrClass, nothrow);
+    }
+    getInnerComponents(componentOrClass) {
+        return this._innerGraph.components.getArray(componentOrClass);
+    }
+    hasInnerComponent(componentOrClass) {
+        return this._innerGraph.components.has(componentOrClass);
+    }
+    getInnerNode(nodeOrClass, nothrow = false) {
+        return this._innerGraph.nodes.get(nodeOrClass, nothrow);
+    }
+    getInnerNodes(nodeOrClass) {
+        return this._innerGraph.nodes.getArray(nodeOrClass);
+    }
+    hasInnerNode(nodeOrClass) {
+        return this._innerGraph.nodes.has(nodeOrClass);
     }
     create() {
         this._innerGraph = new Graph_1.default(this.system, this);
@@ -3871,6 +3978,9 @@ const _getChildComponents = (hierarchy, componentOrType, recursive) => {
     }
     return components;
 };
+const _inputs = {
+    blocked: Component_1.types.Boolean("Hierarchy.Blocked"),
+};
 /**
  * Allows arranging components in a hierarchical structure.
  *
@@ -3880,6 +3990,7 @@ const _getChildComponents = (hierarchy, componentOrType, recursive) => {
 class CHierarchy extends Component_1.default {
     constructor() {
         super(...arguments);
+        this.ins = this.addInputs(_inputs);
         this._parent = null;
         this._children = [];
     }
@@ -4045,7 +4156,6 @@ class CHierarchy extends Component_1.default {
         return super.toString() + ` - children: ${this.children.length}`;
     }
 }
-CHierarchy.type = "CHierarchy";
 exports.default = CHierarchy;
 
 
@@ -4300,11 +4410,10 @@ exports.default = CPulse;
  * License: MIT
  */
 Object.defineProperty(exports, "__esModule", { value: true });
+const ObjectRegistry_1 = __webpack_require__(/*! @ff/core/ObjectRegistry */ "../../libs/ff-core/source/ObjectRegistry.ts");
 const propertyTypes_1 = __webpack_require__(/*! ../propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
 const Component_1 = __webpack_require__(/*! ../Component */ "../../libs/ff-graph/source/Component.ts");
-const ComponentSet_1 = __webpack_require__(/*! ../ComponentSet */ "../../libs/ff-graph/source/ComponentSet.ts");
 const Node_1 = __webpack_require__(/*! ../Node */ "../../libs/ff-graph/source/Node.ts");
-const NodeSet_1 = __webpack_require__(/*! ../NodeSet */ "../../libs/ff-graph/source/NodeSet.ts");
 const CGraph_1 = __webpack_require__(/*! ./CGraph */ "../../libs/ff-graph/source/components/CGraph.ts");
 const CController_1 = __webpack_require__(/*! ./CController */ "../../libs/ff-graph/source/components/CController.ts");
 const outs = {
@@ -4317,12 +4426,24 @@ class CSelection extends CController_1.default {
         this.outs = this.addOutputs(outs);
         this.multiSelect = false;
         this.exclusiveSelect = true;
-        this.selectedNodes = new NodeSet_1.default();
-        this.selectedComponents = new ComponentSet_1.default();
+        this.selectedNodes = new ObjectRegistry_1.default(Node_1.default);
+        this.selectedComponents = new ObjectRegistry_1.default(Component_1.default);
         this._activeGraph = null;
         this.addEvents("select-node", "select-component", "active-graph", "update");
-        this.selectedNodes.on(Node_1.default, e => this.onSelectNode(e.node, e.add));
-        this.selectedComponents.on(Component_1.default, e => this.onSelectComponent(e.component, e.add));
+        this.selectedNodes.on(Node_1.default, e => this.onSelectNode(e.object, e.add));
+        this.selectedComponents.on(Component_1.default, e => this.onSelectComponent(e.object, e.add));
+    }
+    getSelectedNode(nodeOrClass) {
+        return this.selectedNodes.get(nodeOrClass, true);
+    }
+    getSelectedNodes(nodeOrClass) {
+        return this.selectedNodes.getArray(nodeOrClass);
+    }
+    getSelectedComponent(componentOrClass) {
+        return this.selectedComponents.get(componentOrClass, true);
+    }
+    getSelectedComponents(componentOrClass) {
+        return this.selectedComponents.getArray(componentOrClass);
     }
     get activeGraph() {
         return this._activeGraph;
@@ -4348,7 +4469,7 @@ class CSelection extends CController_1.default {
         return this.selectedComponents.has(CGraph_1.default);
     }
     activateChildGraph() {
-        const graphComponent = this.selectedComponents.get(CGraph_1.default);
+        const graphComponent = this.selectedComponents.get(CGraph_1.default, true);
         if (graphComponent) {
             this.activeGraph = graphComponent.innerGraph;
         }
@@ -4392,18 +4513,18 @@ class CSelection extends CController_1.default {
         const multiSelect = this.multiSelect && toggle;
         if (node && selectedNodes.contains(node)) {
             if (multiSelect) {
-                selectedNodes._remove(node);
+                selectedNodes.remove(node);
             }
         }
         else {
             if (this.exclusiveSelect) {
-                this.selectedComponents._clear();
+                this.selectedComponents.clear();
             }
             if (!multiSelect) {
-                selectedNodes._clear();
+                selectedNodes.clear();
             }
             if (node) {
-                selectedNodes._add(node);
+                selectedNodes.add(node);
             }
         }
         this.updateStats();
@@ -4414,25 +4535,25 @@ class CSelection extends CController_1.default {
         const multiSelect = this.multiSelect && toggle;
         if (component && selectedComponents.contains(component)) {
             if (multiSelect) {
-                selectedComponents._remove(component);
+                selectedComponents.remove(component);
             }
         }
         else {
             if (this.exclusiveSelect) {
-                this.selectedNodes._clear();
+                this.selectedNodes.clear();
             }
             if (!multiSelect) {
-                selectedComponents._clear();
+                selectedComponents.clear();
             }
             if (component) {
-                selectedComponents._add(component);
+                selectedComponents.add(component);
             }
         }
         this.updateStats();
     }
     clearSelection() {
-        this.selectedNodes._clear();
-        this.selectedComponents._clear();
+        this.selectedNodes.clear();
+        this.selectedComponents.clear();
         this.updateStats();
     }
     onSelectNode(node, selected) {
@@ -4442,13 +4563,13 @@ class CSelection extends CController_1.default {
     onActiveGraph(graph) {
     }
     onSystemNode(event) {
-        if (event.remove && this.selectedNodes.contains(event.node)) {
-            this.selectedNodes._remove(event.node);
+        if (event.remove && this.selectedNodes.contains(event.object)) {
+            this.selectedNodes.remove(event.object);
         }
     }
     onSystemComponent(event) {
-        if (event.remove && this.selectedComponents.contains(event.component)) {
-            this.selectedComponents._remove(event.component);
+        if (event.remove && this.selectedComponents.contains(event.object)) {
+            this.selectedComponents.remove(event.object);
         }
     }
     updateStats() {
@@ -5105,25 +5226,44 @@ var EQuadViewLayout;
 class RenderQuadView extends RenderView_1.default {
     constructor(system, canvas, overlay) {
         super(system, canvas, overlay);
+        this._layout = EQuadViewLayout.Quad;
         this._horizontalSplit = 0.5;
         this._verticalSplit = 0.5;
-        this._layout = EQuadViewLayout.Quad;
         this.addEvent("layout");
-        this.addViewports(4);
-        this.viewports[1].setBuiltInCamera(UniversalCamera_1.EProjection.Orthographic, UniversalCamera_1.EViewPreset.Top);
-        this.viewports[1].enableCameraManip(true).orientationEnabled = false;
-        this.viewports[2].setBuiltInCamera(UniversalCamera_1.EProjection.Orthographic, UniversalCamera_1.EViewPreset.Left);
-        this.viewports[2].enableCameraManip(true).orientationEnabled = false;
-        this.viewports[3].setBuiltInCamera(UniversalCamera_1.EProjection.Orthographic, UniversalCamera_1.EViewPreset.Front);
-        this.viewports[3].enableCameraManip(true).orientationEnabled = false;
         this.layout = EQuadViewLayout.Single;
     }
     set layout(layout) {
-        if (this._layout !== layout) {
-            this._layout = layout;
-            this.updateConfiguration();
-            this.emit({ type: "layout", layout });
+        if (layout === this._layout) {
+            return;
         }
+        this._layout = layout;
+        const viewports = this.viewports;
+        switch (this._layout) {
+            case EQuadViewLayout.Single:
+                this.setViewportCount(1);
+                break;
+            case EQuadViewLayout.HorizontalSplit:
+            case EQuadViewLayout.VerticalSplit:
+                this.setViewportCount(2);
+                break;
+            case EQuadViewLayout.Quad:
+                this.setViewportCount(4);
+                break;
+        }
+        this.updateSplitPositions();
+        if (viewports[1]) {
+            viewports[1].setBuiltInCamera(UniversalCamera_1.EProjection.Orthographic, UniversalCamera_1.EViewPreset.Top);
+            viewports[1].enableCameraManip(true).orientationEnabled = false;
+        }
+        if (viewports[2]) {
+            viewports[2].setBuiltInCamera(UniversalCamera_1.EProjection.Orthographic, UniversalCamera_1.EViewPreset.Left);
+            viewports[2].enableCameraManip(true).orientationEnabled = false;
+        }
+        if (viewports[3]) {
+            viewports[3].setBuiltInCamera(UniversalCamera_1.EProjection.Orthographic, UniversalCamera_1.EViewPreset.Front);
+            viewports[3].enableCameraManip(true).orientationEnabled = false;
+        }
+        this.emit({ type: "layout", layout });
     }
     get layout() {
         return this._layout;
@@ -5141,28 +5281,6 @@ class RenderQuadView extends RenderView_1.default {
     }
     get verticalSplit() {
         return this._verticalSplit;
-    }
-    updateConfiguration() {
-        this.updateSplitPositions();
-        this.viewports[0].enabled = true;
-        switch (this._layout) {
-            case EQuadViewLayout.Single:
-                this.viewports[1].enabled = false;
-                this.viewports[2].enabled = false;
-                this.viewports[3].enabled = false;
-                break;
-            case EQuadViewLayout.HorizontalSplit:
-            case EQuadViewLayout.VerticalSplit:
-                this.viewports[1].enabled = true;
-                this.viewports[2].enabled = false;
-                this.viewports[3].enabled = false;
-                break;
-            case EQuadViewLayout.Quad:
-                this.viewports[1].enabled = true;
-                this.viewports[2].enabled = true;
-                this.viewports[3].enabled = true;
-                break;
-        }
     }
     updateSplitPositions() {
         const h = this._horizontalSplit;
@@ -5237,6 +5355,7 @@ class RenderView extends Publisher_1.default {
     }
     dispose() {
         this.renderer.dispose();
+        this.viewports.forEach(viewport => viewport.dispose());
     }
     get canvasWidth() {
         return this.canvas.width;
@@ -5249,11 +5368,11 @@ class RenderView extends Publisher_1.default {
         const height = this.canvasHeight;
         this.viewports.forEach(viewport => viewport.setCanvasSize(width, height));
         this.renderer.setSize(width, height, false);
-        this.rendererComponent = this.system.components.safeGet(CRenderer_1.default);
+        this.rendererComponent = this.system.getComponent(CRenderer_1.default, true);
         this.rendererComponent.attachView(this);
     }
     detach() {
-        this.rendererComponent = this.system.components.safeGet(CRenderer_1.default);
+        this.rendererComponent = this.system.getComponent(CRenderer_1.default, true);
         this.rendererComponent.detachView(this);
         this.rendererComponent = null;
     }
@@ -5287,12 +5406,10 @@ class RenderView extends Publisher_1.default {
         const viewports = this.viewports;
         for (let i = 0, n = viewports.length; i < n; ++i) {
             const viewport = viewports[i];
-            if (viewport.enabled) {
-                renderer["__viewport"] = viewport;
-                const currentCamera = viewport.updateCamera(camera);
-                viewport.applyViewport(this.renderer);
-                renderer.render(scene, currentCamera);
-            }
+            renderer["__viewport"] = viewport;
+            const currentCamera = viewport.updateCamera(camera);
+            viewport.applyViewport(this.renderer);
+            renderer.render(scene, currentCamera);
         }
     }
     setRenderSize(width, height) {
@@ -5304,25 +5421,16 @@ class RenderView extends Publisher_1.default {
     resize() {
         this.shouldResize = true;
     }
-    addViewport() {
-        const viewport = new Viewport_1.default();
-        this.viewports.push(viewport);
-        return viewport;
-    }
-    addViewports(count) {
-        for (let i = 0; i < count; ++i) {
-            this.viewports.push(new Viewport_1.default());
+    setViewportCount(count) {
+        const viewports = this.viewports;
+        for (let i = count; i < viewports.length; ++i) {
+            viewports[i].dispose();
         }
-    }
-    removeViewport(viewport) {
-        const index = this.viewports.indexOf(viewport);
-        if (index < 0) {
-            throw new Error("viewport not found");
+        for (let i = viewports.length; i < count; ++i) {
+            viewports[i] = new Viewport_1.default();
+            viewports[i].setCanvasSize(this.canvasWidth, this.canvasHeight);
         }
-        this.viewports.slice(index, 1);
-    }
-    enableViewport(index, enabled) {
-        this.viewports[index].enabled = enabled;
+        viewports.length = count;
     }
     getViewportCount() {
         return this.viewports.length;
@@ -5386,7 +5494,7 @@ class RenderView extends Publisher_1.default {
             const viewports = this.viewports;
             for (let i = 0, n = viewports.length; i < n; ++i) {
                 const vp = viewports[i];
-                if (vp.enabled && vp.isPointInside(event.localX, event.localY)) {
+                if (vp.isPointInside(event.localX, event.localY)) {
                     viewport = vp;
                     break;
                 }
@@ -5423,7 +5531,7 @@ class RenderView extends Publisher_1.default {
                         }
                     }
                     if (component) {
-                        console.log("Pick Index - Component: %s", component.type);
+                        console.log("Pick Index - Component: %s", component.className);
                     }
                     else {
                         console.warn("Pick Index - Object without component");
@@ -5464,13 +5572,13 @@ const THREE = __webpack_require__(/*! three */ "three");
 const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
 const CMaterial_1 = __webpack_require__(/*! ./CMaterial */ "../../libs/ff-scene/source/components/CMaterial.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const ins = {
+const _inputs = {
     color: propertyTypes_1.types.ColorRGB("Color")
 };
 class CBasicMaterial extends CMaterial_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
     }
     create() {
         this.material = new THREE.MeshBasicMaterial();
@@ -5482,7 +5590,6 @@ class CBasicMaterial extends CMaterial_1.default {
         return true;
     }
 }
-CBasicMaterial.type = "CBasicMaterial";
 exports.default = CBasicMaterial;
 
 
@@ -5508,14 +5615,14 @@ const THREE = __webpack_require__(/*! three */ "three");
 const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
 const CGeometry_1 = __webpack_require__(/*! ./CGeometry */ "../../libs/ff-scene/source/components/CGeometry.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const ins = {
+const _inputs = {
     size: propertyTypes_1.types.Vector3("Size", [10, 10, 10]),
     segments: propertyTypes_1.types.Vector3("Segments", [1, 1, 1])
 };
 class CBox extends CGeometry_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
     }
     create() {
         super.create();
@@ -5531,7 +5638,6 @@ class CBox extends CGeometry_1.default {
     onPointer(event) {
     }
 }
-CBox.type = "CBox";
 exports.default = CBox;
 
 
@@ -5558,8 +5664,8 @@ const UniversalCamera_1 = __webpack_require__(/*! @ff/three/UniversalCamera */ "
 exports.EProjection = UniversalCamera_1.EProjection;
 const CObject3D_1 = __webpack_require__(/*! ./CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
 const CScene_1 = __webpack_require__(/*! ./CScene */ "../../libs/ff-scene/source/components/CScene.ts");
-const ins = {
-    activate: propertyTypes_1.types.Event("Activate"),
+const _inputs = {
+    activate: propertyTypes_1.types.Event("Camera.Activate"),
     position: propertyTypes_1.types.Vector3("Transform.Position"),
     rotation: propertyTypes_1.types.Vector3("Transform.Rotation"),
     projection: propertyTypes_1.types.Enum("Projection.Type", UniversalCamera_1.EProjection, UniversalCamera_1.EProjection.Perspective),
@@ -5572,7 +5678,7 @@ const ins = {
 class CCamera extends CObject3D_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
     }
     get camera() {
         return this.object3D;
@@ -5621,7 +5727,6 @@ class CCamera extends CObject3D_1.default {
         super.dispose();
     }
 }
-CCamera.type = "CCamera";
 exports.default = CCamera;
 
 
@@ -5647,14 +5752,14 @@ const THREE = __webpack_require__(/*! three */ "three");
 const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
 const CLight_1 = __webpack_require__(/*! ./CLight */ "../../libs/ff-scene/source/components/CLight.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const ins = {
-    position: propertyTypes_1.types.Vector3("Position", [0, 1, 0]),
-    target: propertyTypes_1.types.Vector3("Target")
+const _inputs = {
+    position: propertyTypes_1.types.Vector3("Light.Position", [0, 1, 0]),
+    target: propertyTypes_1.types.Vector3("Light.Target")
 };
 class CDirectionalLight extends CLight_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
     }
     get light() {
         return this.object3D;
@@ -5674,7 +5779,6 @@ class CDirectionalLight extends CLight_1.default {
         return true;
     }
 }
-CDirectionalLight.type = "CDirectionalLight";
 exports.default = CDirectionalLight;
 
 
@@ -5712,7 +5816,6 @@ class CGeometry extends Component_1.default {
         this.emit("geometry", value);
     }
 }
-CGeometry.type = "CGeometry";
 exports.default = CGeometry;
 
 
@@ -5742,7 +5845,7 @@ const Grid_1 = __webpack_require__(/*! @ff/three/Grid */ "../../libs/ff-three/so
 ////////////////////////////////////////////////////////////////////////////////
 const _vec3a = new THREE.Vector3();
 const _vec3b = new THREE.Vector3();
-const ins = {
+const _inputs = {
     position: propertyTypes_1.types.Vector3("Transform.Position"),
     rotation: propertyTypes_1.types.Vector3("Transform.Rotation"),
     scale: propertyTypes_1.types.Scale3("Transform.Scale"),
@@ -5755,7 +5858,7 @@ const ins = {
 class CGrid extends CObject3D_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
     }
     update() {
         let grid = this.object3D;
@@ -5786,7 +5889,6 @@ class CGrid extends CObject3D_1.default {
         return true;
     }
 }
-CGrid.type = "CGrid";
 exports.default = CGrid;
 
 
@@ -5811,20 +5913,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
 const CObject3D_1 = __webpack_require__(/*! ./CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const ins = {
-    color: propertyTypes_1.types.ColorRGB("Color"),
-    intensity: propertyTypes_1.types.Number("Intensity", 1)
+const _inputs = {
+    color: propertyTypes_1.types.ColorRGB("Light.Color"),
+    intensity: propertyTypes_1.types.Number("Light.Intensity", 1)
 };
 class CLight extends CObject3D_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
     }
     get light() {
         return this.object3D;
     }
 }
-CLight.type = "CLight";
 exports.default = CLight;
 
 
@@ -5901,11 +6002,11 @@ class CMain extends Component_1.default {
     onSceneComponent(event) {
         const inScene = this.ins.scene;
         if (event.add) {
-            this.scenes.push(event.component);
+            this.scenes.push(event.object);
             this.updateOptions();
         }
         else {
-            const index = this.scenes.indexOf(event.component);
+            const index = this.scenes.indexOf(event.object);
             this.scenes.splice(index, 1);
             this.updateOptions();
             if (!inScene.hasInLinks() && index <= inScene.value) {
@@ -5917,11 +6018,11 @@ class CMain extends Component_1.default {
     onCameraComponent(event) {
         const inCamera = this.ins.camera;
         if (event.add) {
-            this.cameras.push(event.component);
+            this.cameras.push(event.object);
             this.updateOptions();
         }
         else {
-            const index = this.cameras.indexOf(event.component);
+            const index = this.cameras.indexOf(event.object);
             this.cameras.splice(index, 1);
             this.updateOptions();
             if (!inCamera.hasInLinks() && index <= inCamera.value) {
@@ -5933,20 +6034,19 @@ class CMain extends Component_1.default {
     updateOptions() {
         const { scene, camera } = this.ins;
         if (this.scenes.length > 0) {
-            scene.setOptions(this.scenes.map(scene => scene.name || scene.type));
+            scene.setOptions(this.scenes.map(scene => scene.name || scene.className));
         }
         else {
             scene.setOptions(["N/A"]);
         }
         if (this.cameras.length > 0) {
-            camera.setOptions(this.cameras.map(camera => camera.name || camera.type));
+            camera.setOptions(this.cameras.map(camera => camera.name || camera.className));
         }
         else {
             camera.setOptions(["N/A"]);
         }
     }
 }
-CMain.type = "CMain";
 exports.default = CMain;
 
 
@@ -5984,7 +6084,6 @@ class CMaterial extends Component_1.default {
         this.emit("material", value);
     }
 }
-CMaterial.type = "CMaterial";
 exports.default = CMaterial;
 
 
@@ -6037,7 +6136,7 @@ class CMesh extends CObject3D_1.default {
     toString() {
         const geo = this.mesh.geometry;
         const mat = this.mesh.material;
-        return `${this.type} - Geometry: '${geo ? geo.type : "N/A"}', Material: '${mat ? mat.type : "N/A"}'`;
+        return `${this.className} - Geometry: '${geo ? geo.type : "N/A"}', Material: '${mat ? mat.type : "N/A"}'`;
     }
     updateGeometry(geometry) {
         this.mesh.geometry = geometry;
@@ -6048,7 +6147,6 @@ class CMesh extends CObject3D_1.default {
         this.mesh.visible = !!(this.mesh.geometry && material);
     }
 }
-CMesh.type = "CMesh";
 exports.default = CMesh;
 
 
@@ -6098,6 +6196,15 @@ const _unhookObject3D = function (object) {
         object.onBeforeRender = null;
     }
 };
+const _inputs = {
+    visible: Component_1.types.Boolean("Object.Visible", true),
+    pickable: Component_1.types.Boolean("Object.Pickable", true),
+};
+const _outputs = {
+    pointerDown: Component_1.types.Event("Picking.PointerDown"),
+    pointerUp: Component_1.types.Event("Picking.PointerUp"),
+    pointerActive: Component_1.types.Event("Picking.PointerActive")
+};
 /**
  * Base component for Three.js renderable objects.
  * If component is added to a node together with a [[Transform]] component,
@@ -6106,25 +6213,38 @@ const _unhookObject3D = function (object) {
 class CObject3D extends Component_1.default {
     constructor(id) {
         super(id);
+        this.ins = this.addInputs(_inputs);
+        this.outs = this.addOutputs(_outputs);
         this._object3D = null;
         this.addEvent("object");
     }
-    get transform() {
-        return this.node.components.get(CTransform_1.default);
+    /** The class of a component in the same node this component uses as parent transform. */
+    get parentComponentClass() {
+        return this.constructor.parentComponentClass;
     }
+    /** The transform parent of this object. */
+    get parentComponent() {
+        return this.node.components.get(this.parentComponentClass);
+    }
+    /** The underlying [[THREE.Object3D]] of this component. */
     get object3D() {
         return this._object3D;
     }
+    /**
+     * Assigns a [[THREE.Object3D]] to this component. The object automatically becomes a child
+     * of the parent component's object.
+     * @param object
+     */
     set object3D(object) {
-        const transform = this.transform;
         const currentObject = this._object3D;
+        const parentComponent = this.parentComponent;
         if (currentObject) {
             object.userData["component"] = null;
             currentObject.onBeforeRender = null;
             currentObject.onAfterRender = null;
             this.unregisterPickableObject3D(currentObject, true);
-            if (transform) {
-                transform.removeObject3D(currentObject);
+            if (parentComponent) {
+                parentComponent.object3D.remove(currentObject);
             }
         }
         this.emit({ type: "object", current: currentObject, next: object });
@@ -6132,54 +6252,72 @@ class CObject3D extends Component_1.default {
         if (object) {
             object.userData["component"] = this;
             object.matrixAutoUpdate = false;
+            object.visible = this.ins.visible.value;
             object.onBeforeRender = this._onBeforeRender.bind(this);
             if (this.afterRender) {
                 object.onAfterRender = this._onAfterRender.bind(this);
             }
             this.registerPickableObject3D(object, true);
-            if (transform) {
-                transform.addObject3D(object);
+            if (parentComponent) {
+                parentComponent.object3D.add(object);
             }
         }
     }
     create() {
-        this.trackComponent(CTransform_1.default, transform => {
+        this.trackComponent(this.parentComponentClass, component => {
             if (this._object3D) {
-                transform.addObject3D(this._object3D);
+                component.object3D.add(this._object3D);
             }
-        }, transform => {
+        }, component => {
             if (this._object3D) {
-                transform.removeObject3D(this._object3D);
+                component.object3D.remove(this._object3D);
             }
         });
     }
+    update(context) {
+        const ins = this.ins;
+        if (ins.visible.changed && this._object3D) {
+            this._object3D.visible = ins.visible.value;
+        }
+        return true;
+    }
     dispose() {
         if (this._object3D) {
-            const transform = this.transform;
-            if (transform) {
-                transform.removeObject3D(this._object3D);
+            const component = this.parentComponent;
+            if (component) {
+                component.object3D.remove(this._object3D);
             }
         }
         super.dispose();
     }
     /**
-     * For renderable components, this is called right before the component is rendered.
+     * This is called right before the component's 3D object is rendered.
      * Override to make adjustments specific to the renderer, view or viewport.
      * @param context
      */
     beforeRender(context) {
     }
     /**
-     * For renderable components, this is called right after the component is rendered.
+     * This is called right after the component's 3D object has been rendered.
      * Override to make adjustments specific to the renderer, view or viewport.
      * @param context
      */
     afterRender(context) {
     }
+    /**
+     * Adds a [[THREE.Object3D]] as a child to this component's object.
+     * Registers the object with the picking service to make it pickable.
+     * @param object
+     */
     addObject3D(object) {
         this._object3D.add(object);
         this.registerPickableObject3D(object, true);
     }
+    /**
+     * Removes a [[THREE.Object3D]] child from this component's object.
+     * Also unregisters the object from the picking service.
+     * @param object
+     */
     removeObject3D(object) {
         this._object3D.remove(object);
         this.unregisterPickableObject3D(object, true);
@@ -6224,9 +6362,13 @@ class CObject3D extends Component_1.default {
     toString() {
         return super.toString() + (this._object3D ? ` - type: ${this._object3D.type}` : " - (null)");
     }
+    /**
+     * Three.js event handler called before the object is rendered.
+     * @private
+     */
     _onBeforeRender(renderer, scene, camera, geometry, material, group) {
-        // index rendering for picking: set shader index uniform to object index
-        if (material.isIndexShader) {
+        // index rendering for picking: set shader index uniform to the object's id
+        if (material.isIndexShader && this.ins.pickable.value) {
             material.setIndex(this.object3D.id);
         }
         if (this.beforeRender) {
@@ -6241,6 +6383,10 @@ class CObject3D extends Component_1.default {
             this.beforeRender(_context);
         }
     }
+    /**
+     * Three.js event handler called after the object has been rendered.
+     * @private
+     */
     _onAfterRender(renderer, scene, camera, geometry, material, group) {
         _context.view = renderer["__view"];
         _context.viewport = renderer["__viewport"];
@@ -6253,7 +6399,8 @@ class CObject3D extends Component_1.default {
         this.afterRender(_context);
     }
 }
-CObject3D.type = "CObject3D";
+/** The component type whose object3D is the parent of this component's object3D. */
+CObject3D.parentComponentClass = CTransform_1.default;
 exports.default = CObject3D;
 CObject3D.prototype.beforeRender = null;
 CObject3D.prototype.afterRender = null;
@@ -6282,7 +6429,7 @@ const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/f
 const OrbitManipulator_1 = __webpack_require__(/*! @ff/three/OrbitManipulator */ "../../libs/ff-three/source/OrbitManipulator.ts");
 const CScene_1 = __webpack_require__(/*! ./CScene */ "../../libs/ff-scene/source/components/CScene.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const ins = {
+const _inputs = {
     enabled: propertyTypes_1.types.Boolean("Enabled", true),
     orbit: propertyTypes_1.types.Vector3("Orbit", [0, 0, 0]),
     offset: propertyTypes_1.types.Vector3("Offset", [0, 0, 50]),
@@ -6291,7 +6438,7 @@ const ins = {
     maxOrbit: propertyTypes_1.types.Vector3("Max.Orbit", [90, NaN, NaN]),
     maxOffset: propertyTypes_1.types.Vector3("Max.Offset", [NaN, NaN, 100])
 };
-const outs = {
+const _outputs = {
     orbit: propertyTypes_1.types.Vector3("Orbit"),
     offset: propertyTypes_1.types.Vector3("Offset"),
     size: propertyTypes_1.types.Number("Size")
@@ -6299,8 +6446,8 @@ const outs = {
 class COrbitManipulator extends Component_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
-        this.outs = this.addOutputs(outs);
+        this.ins = this.addInputs(_inputs);
+        this.outs = this.addOutputs(_outputs);
         this._manip = new OrbitManipulator_1.default();
     }
     create() {
@@ -6350,9 +6497,9 @@ class COrbitManipulator extends Component_1.default {
             size.setValue(manip.size);
             const cameraComponent = this._activeCameraComponent;
             if (cameraComponent) {
-                const transformComponent = cameraComponent.transform;
-                if (transformComponent) {
-                    this._manip.toObject(transformComponent.object3D);
+                const parent = cameraComponent.parentComponent;
+                if (parent) {
+                    this._manip.toObject(parent.object3D);
                 }
                 else {
                     this._manip.toObject(cameraComponent.object3D);
@@ -6385,7 +6532,6 @@ class COrbitManipulator extends Component_1.default {
         this._activeCameraComponent = event.next;
     }
 }
-COrbitManipulator.type = "COrbitManipulator";
 exports.default = COrbitManipulator;
 
 
@@ -6411,13 +6557,13 @@ const THREE = __webpack_require__(/*! three */ "three");
 const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
 const CMaterial_1 = __webpack_require__(/*! ./CMaterial */ "../../libs/ff-scene/source/components/CMaterial.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const ins = {
+const _inputs = {
     color: propertyTypes_1.types.ColorRGB("Color")
 };
 class CPhongMaterial extends CMaterial_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
     }
     create() {
         this.material = new THREE.MeshPhongMaterial();
@@ -6429,7 +6575,6 @@ class CPhongMaterial extends CMaterial_1.default {
         return true;
     }
 }
-CPhongMaterial.type = "CPhongMaterial";
 exports.default = CPhongMaterial;
 
 
@@ -6459,13 +6604,13 @@ const CObject3D_1 = __webpack_require__(/*! ./CObject3D */ "../../libs/ff-scene/
 const CTransform_1 = __webpack_require__(/*! ./CTransform */ "../../libs/ff-scene/source/components/CTransform.ts");
 const CScene_1 = __webpack_require__(/*! ./CScene */ "../../libs/ff-scene/source/components/CScene.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const inputs = {
+const _inputs = {
     bracketsVisible: Component_1.types.Boolean("Brackets.Visible", true)
 };
 class CPickSelection extends CSelection_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(inputs);
+        this.ins = this.addInputs(_inputs);
         this.startX = 0;
         this.startY = 0;
         this._brackets = new Map();
@@ -6558,7 +6703,6 @@ class CPickSelection extends CSelection_1.default {
         }
     }
 }
-CPickSelection.type = "CPickSelection";
 exports.default = CPickSelection;
 
 
@@ -6584,14 +6728,14 @@ const THREE = __webpack_require__(/*! three */ "three");
 const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
 const CLight_1 = __webpack_require__(/*! ./CLight */ "../../libs/ff-scene/source/components/CLight.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const ins = {
-    distance: propertyTypes_1.types.Number("Distance"),
-    decay: propertyTypes_1.types.Number("Decay", 1)
+const _inputs = {
+    distance: propertyTypes_1.types.Number("Light.Distance"),
+    decay: propertyTypes_1.types.Number("Light.Decay", 1)
 };
 class CPointLight extends CLight_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
     }
     get light() {
         return this.object3D;
@@ -6611,7 +6755,6 @@ class CPointLight extends CLight_1.default {
         return true;
     }
 }
-CPointLight.type = "CPointLight";
 exports.default = CPointLight;
 
 
@@ -6643,16 +6786,15 @@ class CRenderGraph extends CGraph_1.default {
             const previous = this.innerRoot;
             const next = root;
             if (parent && previous) {
-                parent.removeObject3D(previous.object3D);
+                parent.object3D.remove(previous.object3D);
             }
             super.innerRoot = next;
             if (parent && next) {
-                parent.addObject3D(next.object3D);
+                parent.object3D.add(next.object3D);
             }
         }
     }
 }
-CRenderGraph.type = "CRenderGraph";
 exports.default = CRenderGraph;
 
 
@@ -6745,7 +6887,6 @@ class CRenderer extends Component_1.default {
         this.emit(event);
     }
 }
-CRenderer.type = "CRenderer";
 CRenderer.isSystemSingleton = true;
 exports.default = CRenderer;
 
@@ -6789,14 +6930,14 @@ const _afterRenderEvent = {
     component: null,
     context: _context
 };
-const ins = {
-    activate: propertyTypes_1.types.Event("Activate")
+const _inputs = {
+    activate: propertyTypes_1.types.Event("Scene.Activate")
 };
 class CScene extends CTransform_1.default {
     constructor(id) {
         super(id);
         this._activeCameraComponent = null;
-        this.ins = this.addInputs(ins, 0);
+        this.ins = this.addInputs(_inputs, 0);
         this.addEvents("before-render", "after-render", "active-camera");
     }
     get scene() {
@@ -6878,7 +7019,6 @@ class CScene extends CTransform_1.default {
         this.emit(_afterRenderEvent);
     }
 }
-CScene.type = "CScene";
 CScene.isGraphSingleton = true;
 exports.default = CScene;
 CScene.prototype.beforeRender = null;
@@ -6907,16 +7047,16 @@ const THREE = __webpack_require__(/*! three */ "three");
 const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
 const CLight_1 = __webpack_require__(/*! ./CLight */ "../../libs/ff-scene/source/components/CLight.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const ins = {
-    distance: propertyTypes_1.types.Number("Distance"),
-    decay: propertyTypes_1.types.Number("Decay", 1),
-    angle: propertyTypes_1.types.Number("Angle", 45),
-    penumbra: propertyTypes_1.types.Number("Penumbra", 0.5)
+const _inputs = {
+    distance: propertyTypes_1.types.Number("Light.Distance"),
+    decay: propertyTypes_1.types.Number("Light.Decay", 1),
+    angle: propertyTypes_1.types.Number("Light.Angle", 45),
+    penumbra: propertyTypes_1.types.Number("Light.Penumbra", 0.5)
 };
 class CSpotLight extends CLight_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
     }
     get light() {
         return this.object3D;
@@ -6938,7 +7078,6 @@ class CSpotLight extends CLight_1.default {
         return true;
     }
 }
-CSpotLight.type = "CSpotLight";
 exports.default = CSpotLight;
 
 
@@ -6964,7 +7103,7 @@ const THREE = __webpack_require__(/*! three */ "three");
 const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
 const CGeometry_1 = __webpack_require__(/*! ./CGeometry */ "../../libs/ff-scene/source/components/CGeometry.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const ins = {
+const _inputs = {
     radius: propertyTypes_1.types.Number("Radius", 10),
     tube: propertyTypes_1.types.Number("Tube", 3),
     angle: propertyTypes_1.types.Number("Angle", 360),
@@ -6973,7 +7112,7 @@ const ins = {
 class CTorus extends CGeometry_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
     }
     update() {
         const { radius, tube, angle, segments } = this.ins;
@@ -6981,7 +7120,6 @@ class CTorus extends CGeometry_1.default {
         return true;
     }
 }
-CTorus.type = "CTorus";
 exports.default = CTorus;
 
 
@@ -7021,14 +7159,14 @@ var ERotationOrder;
     ERotationOrder[ERotationOrder["YXZ"] = 4] = "YXZ";
     ERotationOrder[ERotationOrder["ZYX"] = 5] = "ZYX";
 })(ERotationOrder = exports.ERotationOrder || (exports.ERotationOrder = {}));
-const ins = {
-    position: propertyTypes_1.types.Vector3("Position"),
-    rotation: propertyTypes_1.types.Vector3("Rotation"),
-    order: propertyTypes_1.types.Enum("Order", ERotationOrder),
-    scale: propertyTypes_1.types.Vector3("Scale", [1, 1, 1])
+const _inputs = {
+    position: propertyTypes_1.types.Vector3("Transform.Position"),
+    rotation: propertyTypes_1.types.Vector3("Transform.Rotation"),
+    order: propertyTypes_1.types.Enum("Transform.Order", ERotationOrder),
+    scale: propertyTypes_1.types.Vector3("Transform.Scale", [1, 1, 1])
 };
-const outs = {
-    matrix: propertyTypes_1.types.Matrix4("Matrix")
+const _outputs = {
+    matrix: propertyTypes_1.types.Matrix4("Transform.Matrix")
 };
 /**
  * Allows arranging components in a hierarchical structure. Each [[TransformComponent]]
@@ -7038,8 +7176,8 @@ const outs = {
 class CTransform extends CHierarchy_1.default {
     constructor(id) {
         super(id);
-        this.ins = this.addInputs(ins);
-        this.outs = this.addOutputs(outs);
+        this.ins = this.addInputs(_inputs);
+        this.outs = this.addOutputs(_outputs);
         this._object3D = this.createObject3D();
         this._object3D.matrixAutoUpdate = false;
     }
@@ -7118,27 +7256,29 @@ class CTransform extends CHierarchy_1.default {
         this._object3D.remove(component._object3D);
         super.removeChild(component);
     }
-    /**
-     * Called by [[CObject3D]] to attach its three.js renderable object to the transform component.
-     * Do not call this directly.
-     * @param object
-     */
-    addObject3D(object) {
-        this._object3D.add(object);
-    }
-    /**
-     * Called by [[CObject3D]] to detach its three.js renderable object from the transform component.
-     * Do not call this directly.
-     * @param object
-     */
-    removeObject3D(object) {
-        this._object3D.remove(object);
-    }
+    // /**
+    //  * Called by [[CObject3D]] to attach its three.js renderable object to the transform component.
+    //  * Do not call this directly.
+    //  * @param object
+    //  */
+    // addObject3D(object: THREE.Object3D)
+    // {
+    //     this._object3D.add(object);
+    // }
+    //
+    // /**
+    //  * Called by [[CObject3D]] to detach its three.js renderable object from the transform component.
+    //  * Do not call this directly.
+    //  * @param object
+    //  */
+    // removeObject3D(object: THREE.Object3D)
+    // {
+    //     this._object3D.remove(object);
+    // }
     createObject3D() {
         return new THREE.Object3D();
     }
 }
-CTransform.type = "CTransform";
 exports.default = CTransform;
 
 
@@ -7253,7 +7393,6 @@ class NCamera extends NTransform_1.default {
         this.createComponent(CCamera_1.default);
     }
 }
-NCamera.type = "NCamera";
 exports.default = NCamera;
 
 
@@ -7287,7 +7426,6 @@ class NDirectionalLight extends NLight_1.default {
         this.createComponent(CDirectionalLight_1.default);
     }
 }
-NDirectionalLight.type = "NDirectionalLight";
 exports.default = NDirectionalLight;
 
 
@@ -7317,7 +7455,6 @@ class NLight extends NTransform_1.default {
         return this.components.get(CLight_1.default);
     }
 }
-NLight.type = "NLight";
 exports.default = NLight;
 
 
@@ -7351,7 +7488,6 @@ class NPointLight extends NLight_1.default {
         this.createComponent(CPointLight_1.default);
     }
 }
-NPointLight.type = "NPointLight";
 exports.default = NPointLight;
 
 
@@ -7384,7 +7520,6 @@ class NScene extends NTransform_1.default {
         this.createComponent(CScene_1.default);
     }
 }
-NScene.type = "NScene";
 exports.default = NScene;
 
 
@@ -7418,7 +7553,6 @@ class NSpotLight extends NLight_1.default {
         this.createComponent(CSpotLight_1.default);
     }
 }
-NSpotLight.type = "NSpotLight";
 exports.default = NSpotLight;
 
 
@@ -7451,7 +7585,6 @@ class NTransform extends NHierarchy_1.default {
         this.createComponent(CTransform_1.default);
     }
 }
-NTransform.type = "NTransform";
 exports.default = NTransform;
 
 
@@ -7800,6 +7933,173 @@ class Grid extends THREE.LineSegments {
     }
 }
 exports.default = Grid;
+
+
+/***/ }),
+
+/***/ "../../libs/ff-three/source/HTMLSprite.ts":
+/*!***********************************************!*\
+  !*** /app/libs/ff-three/source/HTMLSprite.ts ***!
+  \***********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const THREE = __webpack_require__(/*! three */ "three");
+////////////////////////////////////////////////////////////////////////////////
+const _vec3a = new THREE.Vector3();
+const _vec3b = new THREE.Vector3();
+const _vec3c = new THREE.Vector3();
+const _vec3d = new THREE.Vector3();
+const _vec2a = new THREE.Vector2();
+const _vec2b = new THREE.Vector2();
+var EQuadrant;
+(function (EQuadrant) {
+    EQuadrant[EQuadrant["TopRight"] = 0] = "TopRight";
+    EQuadrant[EQuadrant["TopLeft"] = 1] = "TopLeft";
+    EQuadrant[EQuadrant["BottomLeft"] = 2] = "BottomLeft";
+    EQuadrant[EQuadrant["BottomRight"] = 3] = "BottomRight";
+})(EQuadrant = exports.EQuadrant || (exports.EQuadrant = {}));
+class HTMLSprite extends THREE.Object3D {
+    constructor() {
+        super(...arguments);
+        this.isHTMLSprite = true;
+        this.viewAngle = 0;
+        this.orientationAngle = 0;
+        this.orientationQuadrant = EQuadrant.TopLeft;
+    }
+    createHTML() {
+        const element = document.createElement("div");
+        element.innerText = "HTML Sprite";
+        element.classList.add("ff-html-sprite");
+        return element;
+    }
+    updateHTML(element, viewport) {
+        _vec3a.set(0, 0, 0);
+        _vec3a.applyMatrix4(this.modelViewMatrix);
+        _vec3b.set(0, 1, 0);
+        _vec3b.applyMatrix4(this.modelViewMatrix);
+        _vec3c.copy(_vec3b).sub(_vec3a).normalize();
+        _vec3d.set(0, 0, 1);
+        this.viewAngle = _vec3c.angleTo(_vec3d);
+        const camera = viewport.camera;
+        _vec3a.applyMatrix4(camera.projectionMatrix);
+        _vec3b.applyMatrix4(camera.projectionMatrix);
+        _vec2b.set(_vec3b.x, _vec3b.y);
+        _vec2a.set(_vec3a.x, _vec3a.y);
+        _vec2b.sub(_vec2a);
+        const x = viewport.left + (_vec3b.x + 1) * 0.5 * viewport.width;
+        const y = viewport.top + (1 - _vec3b.y) * 0.5 * viewport.height;
+        element.style.left = x.toString() + "px";
+        element.style.top = y.toString() + "px";
+        const angle = this.orientationAngle = _vec2b.angle();
+        this.orientationQuadrant = Math.floor(2 * angle / Math.PI);
+    }
+}
+exports.default = HTMLSprite;
+
+
+/***/ }),
+
+/***/ "../../libs/ff-three/source/HTMLSpriteGroup.ts":
+/*!****************************************************!*\
+  !*** /app/libs/ff-three/source/HTMLSpriteGroup.ts ***!
+  \****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const THREE = __webpack_require__(/*! three */ "three");
+class HTMLSpriteGroup extends THREE.Object3D {
+    constructor() {
+        super(...arguments);
+        this.isHTMLSpriteGroup = true;
+        this.viewports = new Map();
+    }
+    dispose() {
+        const children = this.children;
+        this.viewports.forEach((entry, viewport) => {
+            const { container, elements } = entry;
+            for (let i = 0, n = children.length; i < n; ++i) {
+                const sprite = children[i];
+                container.removeChild(elements[sprite.uuid]);
+            }
+        });
+    }
+    renderHTML(viewport, container) {
+        const entry = this.viewports.get(viewport);
+        const elements = entry ? entry.elements : this.registerViewport(viewport, container);
+        const children = this.children;
+        for (let i = 0, n = children.length; i < n; ++i) {
+            const sprite = children[i];
+            const element = elements[sprite.uuid];
+            if (element) {
+                sprite.updateHTML(elements[sprite.uuid], viewport);
+            }
+        }
+    }
+    add(sprite) {
+        this.viewports.forEach((entry, viewport) => {
+            const { container, elements } = entry;
+            const element = sprite.createHTML();
+            if (element) {
+                elements[sprite.uuid] = element;
+                container.appendChild(element);
+            }
+        });
+        return super.add(sprite);
+    }
+    remove(sprite) {
+        this.viewports.forEach((entry, viewport) => {
+            const { container, elements } = entry;
+            const element = elements[sprite.uuid];
+            container.removeChild(element);
+            elements[sprite.uuid] = undefined;
+        });
+        return super.remove(sprite);
+    }
+    registerViewport(viewport, container) {
+        const elements = {};
+        this.viewports.set(viewport, { container, elements });
+        this.children.forEach((sprite) => {
+            if (sprite.isHTMLSprite) {
+                const element = sprite.createHTML();
+                if (element) {
+                    elements[sprite.uuid] = element;
+                    container.appendChild(element);
+                }
+            }
+        });
+        viewport.on("dispose", this.onViewportDispose, this);
+        return elements;
+    }
+    onViewportDispose(event) {
+        const { container, elements } = this.viewports.get(event.viewport);
+        const children = this.children;
+        for (let i = 0, n = children.length; i < n; ++i) {
+            const sprite = children[i];
+            container.removeChild(elements[sprite.uuid]);
+        }
+        this.viewports.delete(event.viewport);
+    }
+}
+exports.default = HTMLSpriteGroup;
 
 
 /***/ }),
@@ -8378,12 +8678,14 @@ exports.default = UniversalCamera;
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 const THREE = __webpack_require__(/*! three */ "three");
+const Publisher_1 = __webpack_require__(/*! @ff/core/Publisher */ "../../libs/ff-core/source/Publisher.ts");
 const UniversalCamera_1 = __webpack_require__(/*! ./UniversalCamera */ "../../libs/ff-three/source/UniversalCamera.ts");
 const OrbitManipulator_1 = __webpack_require__(/*! ./OrbitManipulator */ "../../libs/ff-three/source/OrbitManipulator.ts");
-class Viewport {
+class Viewport extends Publisher_1.default {
     constructor(left, top, width, height) {
+        super();
         this.next = null;
-        this.enabled = true;
+        this.addEvent("dispose");
         this.next = null;
         this._relRect = {
             left: left || 0,
@@ -8432,6 +8734,10 @@ class Viewport {
     }
     get manip() {
         return this._manip;
+    }
+    dispose() {
+        console.log("Viewport.dispose - " + this.toString());
+        this.emit({ type: "dispose", viewport: this });
     }
     setSize(left, top, width, height) {
         const relRect = this._relRect;
@@ -8555,19 +8861,22 @@ class Viewport {
         return vpEvent;
     }
     isInside(event) {
-        return this.enabled && this.isPointInside(event.localX, event.localY);
+        return this.isPointInside(event.localX, event.localY);
     }
     onPointer(event) {
-        if (this.enabled && this._manip) {
+        if (this._manip) {
             return this._manip.onPointer(event);
         }
         return false;
     }
     onTrigger(event) {
-        if (this.enabled && this._manip) {
+        if (this._manip) {
             return this._manip.onTrigger(event);
         }
         return false;
+    }
+    toString() {
+        return `Viewport (left: ${this.left}, top: ${this.top}, width: ${this.width}, height: ${this.height})`;
     }
     updateViewport() {
         const relRect = this._relRect;
@@ -10543,9 +10852,142 @@ Icon.add("empty", CustomElement_1.html ``);
 Icon.add("check", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M173.898 439.404l-166.4-166.4c-9.997-9.997-9.997-26.206 0-36.204l36.203-36.204c9.997-9.998 26.207-9.998 36.204 0L192 312.69 432.095 72.596c9.997-9.997 26.207-9.997 36.204 0l36.203 36.204c9.997 9.997 9.997 26.206 0 36.204l-294.4 294.401c-9.998 9.997-26.207 9.997-36.204-.001z"/></svg>`);
 Icon.add("close", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 352 512"><path d="M242.72 256l100.07-100.07c12.28-12.28 12.28-32.19 0-44.48l-22.24-22.24c-12.28-12.28-32.19-12.28-44.48 0L176 189.28 75.93 89.21c-12.28-12.28-32.19-12.28-44.48 0L9.21 111.45c-12.28 12.28-12.28 32.19 0 44.48L109.28 256 9.21 356.07c-12.28 12.28-12.28 32.19 0 44.48l22.24 22.24c12.28 12.28 32.2 12.28 44.48 0L176 322.72l100.07 100.07c12.28 12.28 32.2 12.28 44.48 0l22.24-22.24c12.28-12.28 12.28-32.19 0-44.48L242.72 256z"/></svg>`);
 Icon.add("grip", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M149.333 56v80c0 13.255-10.745 24-24 24H24c-13.255 0-24-10.745-24-24V56c0-13.255 10.745-24 24-24h101.333c13.255 0 24 10.745 24 24zm181.334 240v-80c0-13.255-10.745-24-24-24H205.333c-13.255 0-24 10.745-24 24v80c0 13.255 10.745 24 24 24h101.333c13.256 0 24.001-10.745 24.001-24zm32-240v80c0 13.255 10.745 24 24 24H488c13.255 0 24-10.745 24-24V56c0-13.255-10.745-24-24-24H386.667c-13.255 0-24 10.745-24 24zm-32 80V56c0-13.255-10.745-24-24-24H205.333c-13.255 0-24 10.745-24 24v80c0 13.255 10.745 24 24 24h101.333c13.256 0 24.001-10.745 24.001-24zm-205.334 56H24c-13.255 0-24 10.745-24 24v80c0 13.255 10.745 24 24 24h101.333c13.255 0 24-10.745 24-24v-80c0-13.255-10.745-24-24-24zM0 376v80c0 13.255 10.745 24 24 24h101.333c13.255 0 24-10.745 24-24v-80c0-13.255-10.745-24-24-24H24c-13.255 0-24 10.745-24 24zm386.667-56H488c13.255 0 24-10.745 24-24v-80c0-13.255-10.745-24-24-24H386.667c-13.255 0-24 10.745-24 24v80c0 13.255 10.745 24 24 24zm0 160H488c13.255 0 24-10.745 24-24v-80c0-13.255-10.745-24-24-24H386.667c-13.255 0-24 10.745-24 24v80c0 13.255 10.745 24 24 24zM181.333 376v80c0 13.255 10.745 24 24 24h101.333c13.255 0 24-10.745 24-24v-80c0-13.255-10.745-24-24-24H205.333c-13.255 0-24 10.745-24 24z"/></svg>`);
+Icon.add("up", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M34.9 289.5l-22.2-22.2c-9.4-9.4-9.4-24.6 0-33.9L207 39c9.4-9.4 24.6-9.4 33.9 0l194.3 194.3c9.4 9.4 9.4 24.6 0 33.9L413 289.4c-9.5 9.5-25 9.3-34.3-.4L264 168.6V456c0 13.3-10.7 24-24 24h-32c-13.3 0-24-10.7-24-24V168.6L69.2 289.1c-9.3 9.8-24.8 10-34.3.4z"/></svg>`);
+Icon.add("down", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M413.1 222.5l22.2 22.2c9.4 9.4 9.4 24.6 0 33.9L241 473c-9.4 9.4-24.6 9.4-33.9 0L12.7 278.6c-9.4-9.4-9.4-24.6 0-33.9l22.2-22.2c9.5-9.5 25-9.3 34.3.4L184 343.4V56c0-13.3 10.7-24 24-24h32c13.3 0 24 10.7 24 24v287.4l114.8-120.5c9.3-9.8 24.8-10 34.3-.4z"/></svg>`);
 Icon.add("info", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 8C119.043 8 8 119.083 8 256c0 136.997 111.043 248 248 248s248-111.003 248-248C504 119.083 392.957 8 256 8zm0 110c23.196 0 42 18.804 42 42s-18.804 42-42 42-42-18.804-42-42 18.804-42 42-42zm56 254c0 6.627-5.373 12-12 12h-88c-6.627 0-12-5.373-12-12v-24c0-6.627 5.373-12 12-12h12v-64h-12c-6.627 0-12-5.373-12-12v-24c0-6.627 5.373-12 12-12h64c6.627 0 12 5.373 12 12v100h12c6.627 0 12 5.373 12 12v24z"/></svg>`);
 Icon.add("warning", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M569.517 440.013C587.975 472.007 564.806 512 527.94 512H48.054c-36.937 0-59.999-40.055-41.577-71.987L246.423 23.985c18.467-32.009 64.72-31.951 83.154 0l239.94 416.028zM288 354c-25.405 0-46 20.595-46 46s20.595 46 46 46 46-20.595 46-46-20.595-46-46-46zm-43.673-165.346l7.418 136c.347 6.364 5.609 11.346 11.982 11.346h48.546c6.373 0 11.635-4.982 11.982-11.346l7.418-136c.375-6.874-5.098-12.654-11.982-12.654h-63.383c-6.884 0-12.356 5.78-11.981 12.654z"/></svg>`);
 Icon.add("error", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm121.6 313.1c4.7 4.7 4.7 12.3 0 17L338 377.6c-4.7 4.7-12.3 4.7-17 0L256 312l-65.1 65.6c-4.7 4.7-12.3 4.7-17 0L134.4 338c-4.7-4.7-4.7-12.3 0-17l65.6-65-65.6-65.1c-4.7-4.7-4.7-12.3 0-17l39.6-39.6c4.7-4.7 12.3-4.7 17 0l65 65.7 65.1-65.6c4.7-4.7 12.3-4.7 17 0l39.6 39.6c4.7 4.7 4.7 12.3 0 17L312 256l65.6 65.1z"/></svg>`);
+
+
+/***/ }),
+
+/***/ "../../libs/ff-ui/source/LineEdit.ts":
+/*!******************************************!*\
+  !*** /app/libs/ff-ui/source/LineEdit.ts ***!
+  \******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const CustomElement_1 = __webpack_require__(/*! ./CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
+/**
+ * Custom element displaying a single line text edit.
+ */
+let LineEdit = class LineEdit extends CustomElement_1.default {
+    /**
+     * Custom element displaying a single line text edit.
+     */
+    constructor() {
+        super(...arguments);
+        /** Optional name to identify the button. */
+        this.name = "";
+        /** Optional index to identify the button. */
+        this.index = 0;
+        /** Text to be edited in the control. */
+        this.text = "";
+        /** Placeholder text to display if no other text is present. */
+        this.placeholder = "";
+        this.align = "left";
+        this.initialValue = "";
+    }
+    hasFocus() {
+        return this.getElementsByTagName("input")[0] === document.activeElement;
+    }
+    firstConnected() {
+        this.classList.add("ff-control", "ff-line-edit");
+    }
+    shouldUpdate(changedProperties) {
+        if (this.hasFocus()) {
+            return false;
+        }
+        return super.shouldUpdate(changedProperties);
+    }
+    render() {
+        return CustomElement_1.html `
+            <input
+                type="text" .value=${this.text} placeholder=${this.placeholder}
+                @keydown=${this.onKeyDown} @change=${this.onChange} @input=${this.onInput}
+                @focus=${this.onFocus} @blur=${this.onBlur}
+                style="box-sizing: border-box; width:100%; text-align: ${this.align};">
+        `;
+    }
+    onKeyDown(event) {
+        const target = event.target;
+        if (event.key === "Enter") {
+            this.commit(target);
+            target.blur();
+        }
+        else if (event.key === "Escape") {
+            this.revert(target);
+            target.blur();
+        }
+    }
+    onChange(event) {
+        event.stopPropagation();
+        event.preventDefault();
+        this.dispatchChangeEvent(event.target.value, false);
+    }
+    onInput(event) {
+        event.stopPropagation();
+        event.preventDefault();
+        this.dispatchChangeEvent(event.target.value, true);
+    }
+    onFocus(event) {
+        this.initialValue = event.target.value;
+        event.target.select();
+    }
+    onBlur(event) {
+    }
+    revert(element) {
+        element.value = this.initialValue;
+        this.dispatchChangeEvent(element.value, false);
+    }
+    commit(element) {
+        this.initialValue = element.value;
+        this.dispatchChangeEvent(element.value, false);
+    }
+    dispatchChangeEvent(text, isEditing) {
+        this.dispatchEvent(new CustomEvent("change", {
+            detail: {
+                text,
+                isEditing
+            }
+        }));
+    }
+};
+__decorate([
+    CustomElement_1.property({ type: String })
+], LineEdit.prototype, "name", void 0);
+__decorate([
+    CustomElement_1.property({ type: Number })
+], LineEdit.prototype, "index", void 0);
+__decorate([
+    CustomElement_1.property({ type: String })
+], LineEdit.prototype, "text", void 0);
+__decorate([
+    CustomElement_1.property({ type: String })
+], LineEdit.prototype, "placeholder", void 0);
+__decorate([
+    CustomElement_1.property({ type: String })
+], LineEdit.prototype, "align", void 0);
+LineEdit = __decorate([
+    CustomElement_1.customElement("ff-line-edit")
+], LineEdit);
+exports.default = LineEdit;
 
 
 /***/ }),
@@ -11458,6 +11900,119 @@ exports.default = Splitter;
 
 /***/ }),
 
+/***/ "../../libs/ff-ui/source/TextEdit.ts":
+/*!******************************************!*\
+  !*** /app/libs/ff-ui/source/TextEdit.ts ***!
+  \******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const CustomElement_1 = __webpack_require__(/*! ./CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
+let TextEdit = class TextEdit extends CustomElement_1.default {
+    constructor() {
+        super(...arguments);
+        /** Optional name to identify the button. */
+        this.name = "";
+        /** Optional index to identify the button. */
+        this.index = 0;
+        /** Text to be edited in the control. */
+        this.text = "";
+        /** Placeholder text to display if no other text is present. */
+        this.placeholder = "";
+        this.align = "left";
+        this.initialValue = "";
+    }
+    hasFocus() {
+        return this.getElementsByTagName("input")[0] === document.activeElement;
+    }
+    firstConnected() {
+        this.classList.add("ff-control", "ff-text-edit");
+    }
+    shouldUpdate(changedProperties) {
+        if (this.hasFocus()) {
+            return false;
+        }
+        return super.shouldUpdate(changedProperties);
+    }
+    render() {
+        return CustomElement_1.html `<textarea
+            placeholder=${this.placeholder}
+            @keydown=${this.onKeyDown} @change=${this.onChange} @input=${this.onInput}
+            @focus=${this.onFocus} @blur=${this.onBlur}
+            style="text-align: ${this.align};">${this.text}</textarea>`;
+    }
+    onKeyDown(event) {
+    }
+    onChange(event) {
+        event.stopPropagation();
+        event.preventDefault();
+        this.dispatchChangeEvent(event.target.value, false);
+    }
+    onInput(event) {
+        event.stopPropagation();
+        event.preventDefault();
+        this.dispatchChangeEvent(event.target.value, true);
+    }
+    onFocus(event) {
+        this.initialValue = event.target.value;
+    }
+    onBlur(event) {
+    }
+    revert(element) {
+        element.value = this.initialValue;
+        this.dispatchChangeEvent(element.value, false);
+    }
+    commit(element) {
+        this.initialValue = element.value;
+        this.dispatchChangeEvent(element.value, false);
+    }
+    dispatchChangeEvent(text, isEditing) {
+        this.dispatchEvent(new CustomEvent("change", {
+            detail: {
+                text,
+                isEditing
+            }
+        }));
+    }
+};
+__decorate([
+    CustomElement_1.property({ type: String })
+], TextEdit.prototype, "name", void 0);
+__decorate([
+    CustomElement_1.property({ type: Number })
+], TextEdit.prototype, "index", void 0);
+__decorate([
+    CustomElement_1.property({ type: String })
+], TextEdit.prototype, "text", void 0);
+__decorate([
+    CustomElement_1.property({ type: String })
+], TextEdit.prototype, "placeholder", void 0);
+__decorate([
+    CustomElement_1.property({ type: String })
+], TextEdit.prototype, "align", void 0);
+TextEdit = __decorate([
+    CustomElement_1.customElement("ff-text-edit")
+], TextEdit);
+exports.default = TextEdit;
+
+
+/***/ }),
+
 /***/ "../../libs/ff-ui/source/Tree.ts":
 /*!**************************************!*\
   !*** /app/libs/ff-ui/source/Tree.ts ***!
@@ -11713,10 +12268,10 @@ let HierarchyTreeView = class HierarchyTreeView extends SelectionView_1.default 
     render() {
         const selection = this.selection;
         const activeGraphComponent = selection.activeGraph && selection.activeGraph.parent;
-        const text = activeGraphComponent ? activeGraphComponent.name || activeGraphComponent.type : "System";
-        const down = selection.hasChildGraph() ? SelectionView_1.html `<ff-button text="down" @click=${this.onClickDown}></ff-button>` : null;
-        const up = selection.hasParentGraph() ? SelectionView_1.html `<ff-button text="up" @click=${this.onClickUp}></ff-button>` : null;
-        return SelectionView_1.html `<div class="ff-flex-row ff-header"><div class="ff-text">${text}</div>${down}${up}</div>
+        const text = activeGraphComponent ? activeGraphComponent.displayName : "Main";
+        const down = selection.hasChildGraph() ? SelectionView_1.html `<ff-button icon="down" @click=${this.onClickDown}></ff-button>` : null;
+        const up = selection.hasParentGraph() ? SelectionView_1.html `<ff-button icon="up" @click=${this.onClickUp}></ff-button>` : null;
+        return SelectionView_1.html `<div class="ff-flex-row ff-header">${up}<div class="ff-text">${text}</div>${down}</div>
             <div class="ff-scroll-y">${this.tree}</div>`;
     }
     onClick() {
@@ -11753,7 +12308,7 @@ let HierarchyTree = class HierarchyTree extends Tree_1.default {
     firstConnected() {
         super.firstConnected();
         this.classList.add("ff-hierarchy-tree");
-        this.selection = this.system.components.safeGet(CSelection_1.default);
+        this.selection = this.system.getComponent(CSelection_1.default, true);
         this.root = this.selection.activeGraph;
     }
     connected() {
@@ -11776,30 +12331,15 @@ let HierarchyTree = class HierarchyTree extends Tree_1.default {
         selection.system.components.off(Component_1.default, this.onUpdate, this);
         selection.system.off("hierarchy", this.onUpdate, this);
     }
-    renderNodeHeader(treeNode) {
-        let text;
-        if (treeNode instanceof Component_1.default) {
-            const name = treeNode.name;
-            const type = treeNode.type.substr(1);
-            const text = name ? `${name} [${type}]` : type;
-            if (treeNode instanceof CGraph_1.default) {
-                return SelectionView_1.html `<div class="ff-text ff-ellipsis"><b>${text}</b></div>`;
+    renderNodeHeader(item) {
+        if (item instanceof Component_1.default || item instanceof Node_1.default) {
+            if (item instanceof CGraph_1.default) {
+                return SelectionView_1.html `<div class="ff-text ff-ellipsis"><b>${item.displayName}</b></div>`;
             }
-            return SelectionView_1.html `<div class="ff-text ff-ellipsis">${text}</div>`;
-        }
-        else if (treeNode instanceof Node_1.default) {
-            const name = treeNode.name;
-            const type = treeNode.type;
-            if (type === "Node") {
-                text = name ? name : type;
-            }
-            else {
-                text = name ? `${name} [${type.substr(1)}]` : type.substr(1);
-            }
-            return SelectionView_1.html `<div class="ff-text">${text}</div>`;
+            return SelectionView_1.html `<div class="ff-text ff-ellipsis">${item.displayName}</div>`;
         }
         else {
-            const text = treeNode.parent ? treeNode.parent.type : "System";
+            const text = item.parent ? item.parent.displayName : "Main";
             return SelectionView_1.html `<div class="ff-text">${text}</div>`;
         }
     }
@@ -11828,14 +12368,14 @@ let HierarchyTree = class HierarchyTree extends Tree_1.default {
     getChildren(node) {
         if (node instanceof Node_1.default) {
             let children = node.components.getArray();
-            const hierarchy = node.components.get(CHierarchy_1.default);
+            const hierarchy = node.components.get(CHierarchy_1.default, true);
             if (hierarchy) {
                 children = children.concat(hierarchy.children.map(child => child.node));
             }
             return children;
         }
         if (node instanceof Graph_1.default) {
-            return node.nodes.findRoots();
+            return node.findRootNodes();
         }
         return null;
     }
@@ -11857,10 +12397,10 @@ let HierarchyTree = class HierarchyTree extends Tree_1.default {
         }
     }
     onSelectNode(event) {
-        this.setSelected(event.node, event.add);
+        this.setSelected(event.object, event.add);
     }
     onSelectComponent(event) {
-        this.setSelected(event.component, event.add);
+        this.setSelected(event.object, event.add);
     }
     onActiveGraph(event) {
         this.root = this.selection.activeGraph;
@@ -12296,7 +12836,7 @@ let PropertyTree = class PropertyTree extends Tree_1.default {
         this.selection = null;
         this.includeRoot = true;
         this.system = system;
-        this.selection = system.components.safeGet(CSelection_1.default);
+        this.selection = system.getComponent(CSelection_1.default, true);
     }
     firstConnected() {
         super.firstConnected();
@@ -12307,12 +12847,12 @@ let PropertyTree = class PropertyTree extends Tree_1.default {
         const selection = this.selection;
         selection.selectedNodes.on(Node_1.default, this.onSelectNode, this);
         selection.selectedComponents.on(Component_1.default, this.onSelectComponent, this);
-        const node = selection.selectedNodes.get();
+        const node = selection.getSelectedNode();
         if (node) {
             this.root = this.createNodeTreeNode(node);
         }
         else {
-            const component = selection.selectedComponents.get();
+            const component = selection.getSelectedComponent();
             this.root = component ? this.createComponentTreeNode(component) : null;
         }
     }
@@ -12333,7 +12873,7 @@ let PropertyTree = class PropertyTree extends Tree_1.default {
     }
     onSelectNode(event) {
         if (event.add) {
-            this.root = this.createNodeTreeNode(event.node);
+            this.root = this.createNodeTreeNode(event.object);
         }
         else {
             this.root = null;
@@ -12341,7 +12881,7 @@ let PropertyTree = class PropertyTree extends Tree_1.default {
     }
     onSelectComponent(event) {
         if (event.add) {
-            this.root = this.createComponentTreeNode(event.component);
+            this.root = this.createComponentTreeNode(event.object);
         }
         else {
             this.root = null;
@@ -12350,7 +12890,7 @@ let PropertyTree = class PropertyTree extends Tree_1.default {
     createNodeTreeNode(node) {
         return {
             id: node.id,
-            text: node.name || node.type,
+            text: node.displayName,
             classes: "ff-node",
             children: node.components.getArray().map(component => this.createComponentTreeNode(component))
         };
@@ -12361,7 +12901,7 @@ let PropertyTree = class PropertyTree extends Tree_1.default {
         const outputsId = id + "o";
         return {
             id,
-            text: component.name || component.type,
+            text: component.displayName,
             classes: "ff-component",
             property: null,
             children: [
@@ -12510,7 +13050,7 @@ class SelectionView extends SystemView_1.default {
         this.selection = null;
     }
     firstConnected() {
-        this.selection = this.system.components.safeGet(CSelection_1.default);
+        this.selection = this.system.getComponent(CSelection_1.default, true);
     }
 }
 exports.default = SelectionView;
@@ -28823,7 +29363,6 @@ class CVLoaders extends Component_1.default {
         });
     }
 }
-CVLoaders.type = "CVLoaders";
 exports.default = CVLoaders;
 ////////////////////////////////////////////////////////////////////////////////
 class PrivateLoadingManager extends THREE.LoadingManager {
@@ -28901,17 +29440,16 @@ const _unitConversionFactor = {
     "ft": { "mm": 304.8, "cm": 30.48, "m": 0.3048, "in": 12, "ft": 1, "yd": 0.333334 },
     "yd": { "mm": 914.4, "cm": 91.44, "m": 0.9144, "in": 36, "ft": 3, "yd": 1 },
 };
-const ins = {
-    visible: propertyTypes_1.types.Boolean("Visible", true),
-    units: propertyTypes_1.types.Enum("Units", item_1.EUnitType, item_1.EUnitType.cm),
-    quality: propertyTypes_1.types.Enum("Quality", Derivative_1.EDerivativeQuality, Derivative_1.EDerivativeQuality.High),
-    autoLoad: propertyTypes_1.types.Boolean("Auto.Load", true),
-    position: propertyTypes_1.types.Vector3("Pose.Position"),
-    rotation: propertyTypes_1.types.Vector3("Pose.Rotation"),
-    center: propertyTypes_1.types.Event("Pose.Center"),
+const _inputs = {
+    units: propertyTypes_1.types.Enum("Model.Units", item_1.EUnitType, item_1.EUnitType.cm),
+    quality: propertyTypes_1.types.Enum("Model.Quality", Derivative_1.EDerivativeQuality, Derivative_1.EDerivativeQuality.High),
+    autoLoad: propertyTypes_1.types.Boolean("Model.AutoLoad", true),
+    position: propertyTypes_1.types.Vector3("Model.Position"),
+    rotation: propertyTypes_1.types.Vector3("Model.Rotation"),
+    center: propertyTypes_1.types.Event("Model.Center"),
     dumpDerivatives: propertyTypes_1.types.Event("Derivatives.Dump"),
 };
-const outs = {
+const _outputs = {
     globalUnits: propertyTypes_1.types.Enum("GlobalUnits", item_1.EUnitType, item_1.EUnitType.cm),
     unitScale: propertyTypes_1.types.Number("UnitScale", { preset: 1, precision: 5 }),
 };
@@ -28921,8 +29459,8 @@ const outs = {
 class CVModel extends CObject3D_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
-        this.outs = this.addOutputs(outs);
+        this.ins = this.addInputs(_inputs);
+        this.outs = this.addOutputs(_outputs);
         this.assetPath = "";
         this.assetBaseName = "";
         this._derivatives = new DerivativeList_1.default();
@@ -29123,7 +29661,7 @@ class CVModel extends CObject3D_1.default {
      * @param derivative
      */
     loadDerivative(derivative) {
-        const loaders = this.system.components.safeGet(CVLoaders_1.default);
+        const loaders = this.system.getMainComponent(CVLoaders_1.default);
         return derivative.load(loaders, this.assetPath)
             .then(() => {
             if (!derivative.model) {
@@ -29148,9 +29686,58 @@ class CVModel extends CObject3D_1.default {
         });
     }
 }
-CVModel.type = "CVModel";
 CVModel.rotationOrder = "ZYX";
 exports.default = CVModel;
+
+
+/***/ }),
+
+/***/ "./core/components/CVNavigation.ts":
+/*!*****************************************!*\
+  !*** ./core/components/CVNavigation.ts ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+exports.types = Component_1.types;
+const _inputs = {
+    enabled: Component_1.types.Boolean("Manip.Enabled", true),
+};
+class CVNavigation extends Component_1.default {
+    constructor() {
+        super(...arguments);
+        this.ins = this.addInputs(_inputs);
+    }
+    fromData(data) {
+        this.ins.enabled.setValue(data.enabled);
+    }
+    toData() {
+        return {
+            enabled: this.ins.enabled.value,
+        };
+    }
+}
+exports.default = CVNavigation;
 
 
 /***/ }),
@@ -29183,8 +29770,7 @@ exports.default = CVModel;
 Object.defineProperty(exports, "__esModule", { value: true });
 const THREE = __webpack_require__(/*! three */ "three");
 const math_1 = __webpack_require__(/*! @ff/core/math */ "../../libs/ff-core/source/math.ts");
-const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
-const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const CVNavigation_1 = __webpack_require__(/*! ./CVNavigation */ "./core/components/CVNavigation.ts");
 const OrbitManipulator_1 = __webpack_require__(/*! @ff/three/OrbitManipulator */ "../../libs/ff-three/source/OrbitManipulator.ts");
 const CRenderer_1 = __webpack_require__(/*! @ff/scene/components/CRenderer */ "../../libs/ff-scene/source/components/CRenderer.ts");
 const CCamera_1 = __webpack_require__(/*! @ff/scene/components/CCamera */ "../../libs/ff-scene/source/components/CCamera.ts");
@@ -29219,31 +29805,30 @@ var EViewPreset;
     EViewPreset[EViewPreset["Back"] = 5] = "Back";
     EViewPreset[EViewPreset["None"] = 6] = "None";
 })(EViewPreset = exports.EViewPreset || (exports.EViewPreset = {}));
-const ins = {
-    preset: propertyTypes_1.types.Enum("View.Preset", EViewPreset, EViewPreset.None),
-    projection: propertyTypes_1.types.Enum("View.Projection", CCamera_1.EProjection, CCamera_1.EProjection.Perspective),
-    enabled: propertyTypes_1.types.Boolean("Manip.Enabled", true),
-    zoomExtents: propertyTypes_1.types.Event("Manip.ZoomExtents"),
-    orbit: propertyTypes_1.types.Vector3("Manip.Orbit", [-25, -25, 0]),
-    offset: propertyTypes_1.types.Vector3("Manip.Offset", [0, 0, 100]),
-    minOrbit: propertyTypes_1.types.Vector3("Manip.Min.Orbit", [-90, -Infinity, -Infinity]),
-    minOffset: propertyTypes_1.types.Vector3("Manip.Min.Offset", [-Infinity, -Infinity, 0.1]),
-    maxOrbit: propertyTypes_1.types.Vector3("Manip.Max.Orbit", [90, Infinity, Infinity]),
-    maxOffset: propertyTypes_1.types.Vector3("Manip.Max.Offset", [Infinity, Infinity, Infinity])
+const _inputs = {
+    preset: CVNavigation_1.types.Enum("View.Preset", EViewPreset, EViewPreset.None),
+    projection: CVNavigation_1.types.Enum("View.Projection", CCamera_1.EProjection, CCamera_1.EProjection.Perspective),
+    zoomExtents: CVNavigation_1.types.Event("Manip.ZoomExtents"),
+    orbit: CVNavigation_1.types.Vector3("Manip.Orbit", [-25, -25, 0]),
+    offset: CVNavigation_1.types.Vector3("Manip.Offset", [0, 0, 100]),
+    minOrbit: CVNavigation_1.types.Vector3("Manip.Min.Orbit", [-90, -Infinity, -Infinity]),
+    minOffset: CVNavigation_1.types.Vector3("Manip.Min.Offset", [-Infinity, -Infinity, 0.1]),
+    maxOrbit: CVNavigation_1.types.Vector3("Manip.Max.Orbit", [90, Infinity, Infinity]),
+    maxOffset: CVNavigation_1.types.Vector3("Manip.Max.Offset", [Infinity, Infinity, Infinity])
 };
 /**
  * Voyager explorer orbit navigation.
  * Controls manipulation and parameters of the camera.
  */
-class CVOrbitNavigation extends Component_1.default {
+class CVOrbitNavigation extends CVNavigation_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
         this._manip = new OrbitManipulator_1.default();
         this._activeScene = null;
     }
     get renderer() {
-        return this.system.graph.components.safeGet(CRenderer_1.default);
+        return this.system.getMainComponent(CRenderer_1.default);
     }
     create() {
         super.create();
@@ -29314,9 +29899,9 @@ class CVOrbitNavigation extends Component_1.default {
             }
             if (component && (manipUpdated || this.updated)) {
                 const camera = component.camera;
-                const transformComponent = component.transform;
-                if (transformComponent) {
-                    this._manip.toObject(transformComponent.object3D);
+                const parentComponent = component.parentComponent;
+                if (parentComponent) {
+                    this._manip.toObject(parentComponent.object3D);
                 }
                 else {
                     this._manip.toObject(camera);
@@ -29331,9 +29916,9 @@ class CVOrbitNavigation extends Component_1.default {
         return false;
     }
     fromData(data) {
+        super.fromData(data);
         const orbit = data.orbit;
         this.ins.copyValues({
-            enabled: data.enabled,
             orbit: orbit.orbit.slice(),
             offset: orbit.offset.slice(),
             minOrbit: _replaceNull(orbit.minOrbit.slice(), -Infinity),
@@ -29344,18 +29929,17 @@ class CVOrbitNavigation extends Component_1.default {
     }
     toData() {
         const ins = this.ins;
-        return {
-            type: "Orbit",
-            enabled: ins.enabled.value,
-            orbit: {
-                orbit: ins.orbit.cloneValue(),
-                offset: ins.offset.cloneValue(),
-                minOrbit: ins.minOrbit.cloneValue(),
-                maxOrbit: ins.maxOrbit.cloneValue(),
-                minOffset: ins.minOffset.cloneValue(),
-                maxOffset: ins.maxOffset.cloneValue(),
-            }
+        const data = super.toData();
+        data.type = "Orbit";
+        data.orbit = {
+            orbit: ins.orbit.cloneValue(),
+            offset: ins.offset.cloneValue(),
+            minOrbit: ins.minOrbit.cloneValue(),
+            maxOrbit: ins.maxOrbit.cloneValue(),
+            minOffset: ins.minOffset.cloneValue(),
+            maxOffset: ins.maxOffset.cloneValue(),
         };
+        return data;
     }
     onPointer(event) {
         const viewport = event.viewport;
@@ -29386,7 +29970,6 @@ class CVOrbitNavigation extends Component_1.default {
         }
     }
 }
-CVOrbitNavigation.type = "CVOrbitNavigation";
 exports.default = CVOrbitNavigation;
 
 
@@ -29493,11 +30076,11 @@ class CVScene extends CScene_1.default {
     }
     onModelComponent(event) {
         if (event.add) {
-            event.component.setGlobalUnits(this.ins.units.value);
-            event.component.on("change", this.updateModels, this);
+            event.object.setGlobalUnits(this.ins.units.value);
+            event.object.on("change", this.updateModels, this);
         }
         else if (event.remove) {
-            event.component.off("change", this.updateModels, this);
+            event.object.off("change", this.updateModels, this);
         }
     }
     updateModels() {
@@ -30650,7 +31233,7 @@ exports.default = UberPBRMaterial;
 Object.defineProperty(exports, "__esModule", { value: true });
 const parseUrlParameter_1 = __webpack_require__(/*! @ff/browser/parseUrlParameter */ "../../libs/ff-browser/source/parseUrlParameter.ts");
 const Commander_1 = __webpack_require__(/*! @ff/core/Commander */ "../../libs/ff-core/source/Commander.ts");
-const Registry_1 = __webpack_require__(/*! @ff/graph/Registry */ "../../libs/ff-graph/source/Registry.ts");
+const ClassRegistry_1 = __webpack_require__(/*! @ff/core/ClassRegistry */ "../../libs/ff-core/source/ClassRegistry.ts");
 const System_1 = __webpack_require__(/*! @ff/graph/System */ "../../libs/ff-graph/source/System.ts");
 const CPulse_1 = __webpack_require__(/*! @ff/graph/components/CPulse */ "../../libs/ff-graph/source/components/CPulse.ts");
 const CRenderer_1 = __webpack_require__(/*! @ff/scene/components/CRenderer */ "../../libs/ff-scene/source/components/CRenderer.ts");
@@ -30676,14 +31259,14 @@ class ExplorerApplication {
         this.props = props;
         console.log(ExplorerApplication.splashMessage);
         // register components
-        const registry = new Registry_1.default();
-        registry.registerComponentType(components_1.componentTypes);
-        registry.registerComponentType(components_2.componentTypes);
-        registry.registerComponentType(components_3.componentTypes);
-        registry.registerComponentType(components_4.componentTypes);
-        registry.registerNodeType(nodes_1.nodeTypes);
-        registry.registerNodeType(nodes_2.nodeTypes);
-        registry.registerNodeType(nodes_3.nodeTypes);
+        const registry = new ClassRegistry_1.default();
+        registry.add(components_1.componentTypes);
+        registry.add(components_2.componentTypes);
+        registry.add(components_3.componentTypes);
+        registry.add(components_4.componentTypes);
+        registry.add(nodes_1.nodeTypes);
+        registry.add(nodes_2.nodeTypes);
+        registry.add(nodes_3.nodeTypes);
         this.commander = new Commander_1.default();
         const system = this.system = new System_1.default(registry);
         const explorer = system.graph.createNode("Explorer");
@@ -30704,12 +31287,12 @@ class ExplorerApplication {
         explorer.components.get(CPulse_1.default).start();
         // start loading from properties
         this.startup().catch((error) => {
-            console.warn("application startup failed: " + error.message);
+            console.warn("application startup failed", error);
         });
     }
     startup() {
         const props = this.props;
-        const controller = this.system.components.safeGet(CVPresentationController_1.default);
+        const controller = this.system.getMainComponent(CVPresentationController_1.default);
         props.presentation = props.presentation || parseUrlParameter_1.default("presentation") || parseUrlParameter_1.default("p");
         props.item = props.item || parseUrlParameter_1.default("item") || parseUrlParameter_1.default("i");
         props.template = props.template || parseUrlParameter_1.default("template") || parseUrlParameter_1.default("t");
@@ -30745,6 +31328,45 @@ window["VoyagerExplorer"] = ExplorerApplication;
 
 /***/ }),
 
+/***/ "./explorer/annotations/AnnotationSprite.ts":
+/*!**************************************************!*\
+  !*** ./explorer/annotations/AnnotationSprite.ts ***!
+  \**************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const HTMLSprite_1 = __webpack_require__(/*! @ff/three/HTMLSprite */ "../../libs/ff-three/source/HTMLSprite.ts");
+////////////////////////////////////////////////////////////////////////////////
+class AnnotationSprite extends HTMLSprite_1.default {
+    constructor(annotation) {
+        super();
+        this.annotation = annotation;
+    }
+}
+exports.default = AnnotationSprite;
+
+
+/***/ }),
+
 /***/ "./explorer/components/CVAnnotations.ts":
 /*!**********************************************!*\
   !*** ./explorer/components/CVAnnotations.ts ***!
@@ -30772,21 +31394,34 @@ window["VoyagerExplorer"] = ExplorerApplication;
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 const uniqueId_1 = __webpack_require__(/*! @ff/core/uniqueId */ "../../libs/ff-core/source/uniqueId.ts");
-const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const HTMLSpriteGroup_1 = __webpack_require__(/*! @ff/three/HTMLSpriteGroup */ "../../libs/ff-three/source/HTMLSpriteGroup.ts");
+const CObject3D_1 = __webpack_require__(/*! @ff/scene/components/CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
 const CVModel_1 = __webpack_require__(/*! ../../core/components/CVModel */ "./core/components/CVModel.ts");
 const Annotation_1 = __webpack_require__(/*! ../models/Annotation */ "./explorer/models/Annotation.ts");
+exports.Annotation = Annotation_1.default;
 const Group_1 = __webpack_require__(/*! ../models/Group */ "./explorer/models/Group.ts");
-class CVAnnotations extends Component_1.default {
+exports.Group = Group_1.default;
+class CVAnnotations extends CObject3D_1.default {
     constructor() {
         super(...arguments);
-        this.annotations = {};
-        this.groups = {};
+        this._annotations = {};
+        this._groups = {};
+    }
+    get sprites() {
+        return this.object3D;
     }
     get model() {
-        return this.node.components.get(CVModel_1.default);
+        return this.getComponent(CVModel_1.default);
+    }
+    create() {
+        this.object3D = new HTMLSpriteGroup_1.default();
+    }
+    afterRender(context) {
+        const spriteGroup = this.object3D;
+        spriteGroup.renderHTML(context.viewport, context.view.overlay);
     }
     createAnnotation(position, direction, zoneIndex = -1) {
-        const annotation = new Annotation_1.default(uniqueId_1.default(6, this.annotations));
+        const annotation = new Annotation_1.default(uniqueId_1.default(6, this._annotations), this);
         annotation.position = position;
         annotation.direction = direction;
         annotation.zoneIndex = zoneIndex;
@@ -30794,36 +31429,36 @@ class CVAnnotations extends Component_1.default {
         return annotation;
     }
     getAnnotations() {
-        return Object.keys(this.annotations).map(key => this.annotations[key]);
+        return Object.keys(this._annotations).map(key => this._annotations[key]);
     }
     getAnnotationById(id) {
-        return this.annotations[id];
+        return this._annotations[id];
     }
     addAnnotation(annotation) {
-        this.annotations[annotation.id] = annotation;
+        this._annotations[annotation.id] = annotation;
         this.emit({ type: "annotation", add: true, remove: false, annotation });
     }
     removeAnnotation(annotation) {
-        delete this.annotations[annotation.id];
+        delete this._annotations[annotation.id];
         this.emit({ type: "annotation", add: false, remove: true, annotation });
     }
     createGroup() {
-        const group = new Group_1.default(uniqueId_1.default(6, this.groups));
+        const group = new Group_1.default(uniqueId_1.default(6, this._groups));
         this.addGroup(group);
         return group;
     }
     getGroups() {
-        return Object.keys(this.groups).map(key => this.groups[key]);
+        return Object.keys(this._groups).map(key => this._groups[key]);
     }
     getGroupById(id) {
-        return this.groups[id];
+        return this._groups[id];
     }
     addGroup(group) {
-        this.groups[group.id] = group;
+        this._groups[group.id] = group;
         this.emit({ type: "group", add: true, remove: false, group });
     }
     removeGroup(group) {
-        delete this.groups[group.id];
+        delete this._groups[group.id];
         this.emit({ type: "group", add: false, remove: true, group });
     }
     deflate() {
@@ -30837,28 +31472,27 @@ class CVAnnotations extends Component_1.default {
     }
     toData() {
         let data = null;
-        const annotationIds = Object.keys(this.annotations);
+        const annotationIds = Object.keys(this._annotations);
         if (annotationIds.length > 0) {
             data = data || {};
-            data.annotations = annotationIds.map(id => this.annotations[id].deflate());
+            data.annotations = annotationIds.map(id => this._annotations[id].deflate());
         }
-        const groupIds = Object.keys(this.groups);
+        const groupIds = Object.keys(this._groups);
         if (groupIds.length > 0) {
             data = data || {};
-            data.groups = groupIds.map(id => this.groups[id].deflate());
+            data.groups = groupIds.map(id => this._groups[id].deflate());
         }
         return data;
     }
     fromData(data) {
         if (data.annotations) {
-            data.annotations.forEach(data => this.addAnnotation(new Annotation_1.default(data.id).inflate(data)));
+            data.annotations.forEach(data => this.addAnnotation(new Annotation_1.default(data.id, this).inflate(data)));
         }
         if (data.groups) {
             data.groups.forEach(data => this.addGroup(new Group_1.default(data.id).inflate(data)));
         }
     }
 }
-CVAnnotations.type = "CVAnnotations";
 exports.default = CVAnnotations;
 
 
@@ -30894,7 +31528,7 @@ const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../.
 const CObject3D_1 = __webpack_require__(/*! @ff/scene/components/CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
 const config_1 = __webpack_require__(/*! common/types/config */ "../common/types/config.ts");
 exports.EBackgroundType = config_1.EBackgroundType;
-const ins = {
+const _inputs = {
     type: propertyTypes_1.types.Enum("Background.Type", config_1.EBackgroundType),
     color0: propertyTypes_1.types.ColorRGB("Background.Color0", [1, 0, 0]),
     color1: propertyTypes_1.types.ColorRGB("Background.Color1", [0, 1, 0])
@@ -30902,7 +31536,7 @@ const ins = {
 class CVBackground extends CObject3D_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
     }
     fromData(data) {
         this.ins.copyValues({
@@ -30920,7 +31554,6 @@ class CVBackground extends CObject3D_1.default {
         };
     }
 }
-CVBackground.type = "CVBackground";
 exports.default = CVBackground;
 
 
@@ -31059,7 +31692,6 @@ class CVCollection extends Component_1.default {
         return super.toString() + ` - items: ${this.count()}`;
     }
 }
-CVCollection.type = "CVCollection";
 exports.default = CVCollection;
 
 
@@ -31154,7 +31786,6 @@ class CVDocuments extends Component_1.default {
         }
     }
 }
-CVDocuments.type = "CVDocuments";
 exports.default = CVDocuments;
 
 
@@ -31189,17 +31820,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
 const CObject3D_1 = __webpack_require__(/*! @ff/scene/components/CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const ins = {
-    visible: propertyTypes_1.types.Boolean("Visible", true),
-    offset: propertyTypes_1.types.Number("Offset"),
-    color: propertyTypes_1.types.ColorRGB("Color", [0, 0, 1]),
+const _inputs = {
+    offset: propertyTypes_1.types.Number("Plane.Offset"),
+    color: propertyTypes_1.types.ColorRGB("Plane.Color", [0, 0, 1]),
     shadowVisible: propertyTypes_1.types.Boolean("Shadow.Visible"),
     shadowColor: propertyTypes_1.types.ColorRGBA("Shadow.Color")
 };
 class CVGroundPlane extends CObject3D_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
     }
     update() {
         return true;
@@ -31224,7 +31854,6 @@ class CVGroundPlane extends CObject3D_1.default {
         };
     }
 }
-CVGroundPlane.type = "CVGroundPlane";
 exports.default = CVGroundPlane;
 
 
@@ -31266,20 +31895,19 @@ const CVScene_1 = __webpack_require__(/*! ../../core/components/CVScene */ "./co
 const _vec3a = new THREE.Vector3();
 const _matRotationOffset = new THREE.Matrix4().makeRotationX(Math.PI * 0.5);
 const _matIdentity = new THREE.Matrix4();
-const ins = {
-    visible: propertyTypes_1.types.Boolean("Visible", true),
-    color: propertyTypes_1.types.ColorRGB("Color", [0.5, 0.7, 0.8]),
-    update: propertyTypes_1.types.Event("Update")
+const _inputs = {
+    color: propertyTypes_1.types.ColorRGB("Grid.Color", [0.5, 0.7, 0.8]),
+    update: propertyTypes_1.types.Event("Grid.Update")
 };
-const outs = {
+const _outputs = {
     size: propertyTypes_1.types.Number("Size"),
     units: propertyTypes_1.types.Enum("Units", config_1.EUnitType)
 };
 class CVHomeGrid extends CObject3D_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
-        this.outs = this.addOutputs(outs);
+        this.ins = this.addInputs(_inputs);
+        this.outs = this.addOutputs(_outputs);
         this._lastViewport = null;
         this._gridProps = {
             size: 20,
@@ -31293,10 +31921,11 @@ class CVHomeGrid extends CObject3D_1.default {
         return this.object3D;
     }
     get scene() {
-        return this.graph.components.safeGet(CVScene_1.default);
+        return this.getGraphComponent(CVScene_1.default);
     }
     create() {
         this.scene.on("change", this.onSceneChange, this);
+        this.ins.pickable.setValue(false);
     }
     dispose() {
         this.scene.off("change", this.onSceneChange, this);
@@ -31411,14 +32040,51 @@ exports.default = CVHomeGrid;
 Object.defineProperty(exports, "__esModule", { value: true });
 const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const ins = {
+const _inputs = {
     visible: Component_1.types.Boolean("Interface.Visible", true),
     logo: Component_1.types.Boolean("Interface.Logo", true),
 };
+const _outputs = {
+    fullscreenAvailable: Component_1.types.Boolean("Fullscreen.Available", false),
+    fullscreenEnabled: Component_1.types.Boolean("Fullscreen.Enabled", false),
+};
 class CVInterface extends Component_1.default {
-    constructor() {
-        super(...arguments);
-        this.ins = this.addInputs(ins);
+    constructor(id) {
+        super(id);
+        this.ins = this.addInputs(_inputs);
+        this.outs = this.addOutputs(_outputs);
+        this._fullscreenElement = null;
+        this.onFullscreenChange = this.onFullscreenChange.bind(this);
+    }
+    get fullscreenElement() {
+        return this._fullscreenElement;
+    }
+    set fullscreenElement(element) {
+        if (element !== this._fullscreenElement) {
+            if (this._fullscreenElement) {
+                this._fullscreenElement.removeEventListener("fullscreenchange", this.onFullscreenChange);
+            }
+            this._fullscreenElement = element;
+            if (element) {
+                element.addEventListener("fullscreenchange", this.onFullscreenChange);
+            }
+        }
+    }
+    toggleFullscreen() {
+        const outs = this.outs;
+        const fullscreenElement = this._fullscreenElement;
+        if (fullscreenElement) {
+            const state = outs.fullscreenEnabled.value;
+            if (!state && outs.fullscreenAvailable.value) {
+                fullscreenElement.requestFullscreen();
+            }
+            else if (state) {
+                document.exitFullscreen();
+            }
+        }
+    }
+    create() {
+        this.outs.fullscreenAvailable.setValue(!!document.body.requestFullscreen);
     }
     fromData(data) {
         this.ins.setValues({
@@ -31433,8 +32099,11 @@ class CVInterface extends Component_1.default {
             logo: ins.logo.value
         };
     }
+    onFullscreenChange(event) {
+        const fullscreenEnabled = !!document["fullscreenElement"];
+        this.outs.fullscreenEnabled.setValue(fullscreenEnabled);
+    }
 }
-CVInterface.type = "CVInterface";
 exports.default = CVInterface;
 
 
@@ -31573,7 +32242,6 @@ class CVItemData extends Component_1.default {
         return data;
     }
 }
-CVItemData.type = "CVItemData";
 CVItemData.mimeType = "application/si-dpo-3d.item+json";
 exports.default = CVItemData;
 
@@ -31644,7 +32312,6 @@ class CVMeta extends Component_1.default {
         this.data = Object.assign({}, data);
     }
 }
-CVMeta.type = "CVMeta";
 exports.default = CVMeta;
 
 
@@ -31744,7 +32411,6 @@ class CVPresentation extends CRenderGraph_1.default {
         return this.presentation.toData(writeReferences);
     }
 }
-CVPresentation.type = "CVPresentation";
 CVPresentation.mimeType = "application/si-dpo-3d.presentation+json";
 exports.default = CVPresentation;
 
@@ -31852,13 +32518,13 @@ class CVPresentationController extends CController_1.default {
         return this._activePresentation.innerGraph.nodes.getArray(NVItem_1.default);
     }
     get selection() {
-        return this.system.components.safeGet(CSelection_1.default);
+        return this.system.getMainComponent(CSelection_1.default);
     }
     get renderer() {
-        return this.system.components.safeGet(CRenderer_1.default);
+        return this.system.getMainComponent(CRenderer_1.default);
     }
     get loaders() {
-        return this.system.components.safeGet(CVLoaders_1.default);
+        return this.system.getMainComponent(CVLoaders_1.default);
     }
     createActions(commander) {
         return {};
@@ -31893,7 +32559,7 @@ class CVPresentationController extends CController_1.default {
                 }
                 return null;
             };
-            const templateUri = itemData.meta.presentationTemplateUri;
+            const templateUri = itemData.meta && itemData.meta.presentationTemplateUri;
             if (templateUri) {
                 templateUrl = resolve_pathname_1.default(templateFileName, templateUri, templateUrl || assetPath);
                 console.log(`Loading presentation template: ${templateUrl}`);
@@ -31965,27 +32631,26 @@ class CVPresentationController extends CController_1.default {
     }
     onPresentation(event) {
         this.emit({
-            type: "presentation", add: event.add, remove: event.remove, presentation: event.component
+            type: "presentation", add: event.add, remove: event.remove, presentation: event.object
         });
         if (event.add) {
-            this.activePresentation = event.component;
+            this.activePresentation = event.object;
         }
     }
     onSelectPresentation(event) {
         if (event.add) {
-            this.activePresentation = event.component;
+            this.activePresentation = event.object;
         }
     }
     onItem(event) {
         this.emit({
-            type: "item", add: event.add, remove: event.remove, item: event.node
+            type: "item", add: event.add, remove: event.remove, item: event.object
         });
         if (event.add) {
-            this.activeItem = event.node;
+            this.activeItem = event.object;
         }
     }
 }
-CVPresentationController.type = "CVPresentationController";
 CVPresentationController.isSystemSingleton = true;
 exports.default = CVPresentationController;
 
@@ -32087,7 +32752,6 @@ class CVPresentationData extends Component_1.default {
         return data;
     }
 }
-CVPresentationData.type = "CVPresentationData";
 CVPresentationData.mimeType = "application/si-dpo-3d.presentation+json";
 exports.default = CVPresentationData;
 
@@ -32158,7 +32822,6 @@ class CVProcess extends Component_1.default {
         this.data = Object.assign({}, data);
     }
 }
-CVProcess.type = "CVProcess";
 exports.default = CVProcess;
 
 
@@ -32194,7 +32857,7 @@ const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../.
 const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
 const config_1 = __webpack_require__(/*! common/types/config */ "../common/types/config.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const ins = {
+const _inputs = {
     visible: propertyTypes_1.types.Boolean("Visible", false),
     position: propertyTypes_1.types.Enum("Position", config_1.EReaderPosition),
     url: propertyTypes_1.types.String("DocumentURL", "")
@@ -32202,7 +32865,7 @@ const ins = {
 class CVReader extends Component_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
     }
     setDocument(document) {
         this.ins.url.setValue(document.uri);
@@ -32223,7 +32886,6 @@ class CVReader extends Component_1.default {
         };
     }
 }
-CVReader.type = "CVReader";
 exports.default = CVReader;
 
 
@@ -32257,14 +32919,14 @@ exports.default = CVReader;
 Object.defineProperty(exports, "__esModule", { value: true });
 const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const ins = {
+const _inputs = {
     uri: Component_1.types.String("URI"),
     mimeType: Component_1.types.String("MIMEType")
 };
 class CVReference extends Component_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
     }
     update(context) {
         return false;
@@ -32292,7 +32954,6 @@ class CVReference extends Component_1.default {
         });
     }
 }
-CVReference.type = "CVReference";
 exports.default = CVReference;
 
 
@@ -32327,14 +32988,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
 const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const ins = {
+const _inputs = {
     active: propertyTypes_1.types.Boolean("Active"),
     plane: propertyTypes_1.types.Vector4("Plane")
 };
 class CVSectionTool extends Component_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
     }
     fromData(data) {
         this.ins.copyValues({
@@ -32350,7 +33011,6 @@ class CVSectionTool extends Component_1.default {
         };
     }
 }
-CVSectionTool.type = "CVSectionTool";
 exports.default = CVSectionTool;
 
 
@@ -32421,7 +33081,6 @@ class CVSnapshots extends CVCollection_1.default {
         return result;
     }
 }
-CVSnapshots.type = "CVSnapshots";
 exports.default = CVSnapshots;
 
 
@@ -32456,7 +33115,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
 const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const ins = {
+const _inputs = {
     active: propertyTypes_1.types.Boolean("Active"),
     startPosition: propertyTypes_1.types.Vector3("Start.Position"),
     startDirection: propertyTypes_1.types.Vector3("Start.Direction"),
@@ -32466,7 +33125,7 @@ const ins = {
 class CVTapeTool extends Component_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
     }
     fromData(data) {
         this.ins.copyValues({
@@ -32488,7 +33147,6 @@ class CVTapeTool extends Component_1.default {
         };
     }
 }
-CVTapeTool.type = "CVTapeTool";
 exports.default = CVTapeTool;
 
 
@@ -32577,7 +33235,6 @@ class CVTours extends CVCollection_1.default {
         });
     }
 }
-CVTours.type = "CVTours";
 exports.default = CVTours;
 
 
@@ -32697,23 +33354,39 @@ exports.componentTypes = [
 Object.defineProperty(exports, "__esModule", { value: true });
 const uniqueId_1 = __webpack_require__(/*! @ff/core/uniqueId */ "../../libs/ff-core/source/uniqueId.ts");
 const Publisher_1 = __webpack_require__(/*! @ff/core/Publisher */ "../../libs/ff-core/source/Publisher.ts");
+const AnnotationSprite_1 = __webpack_require__(/*! ../annotations/AnnotationSprite */ "./explorer/annotations/AnnotationSprite.ts");
 class Annotation extends Publisher_1.default {
-    constructor(id) {
+    constructor(id, component) {
         super();
         this.title = "New Annotation";
         this.description = "";
-        this.style = "";
         this.expanded = false;
         this.documents = [];
         this.groups = [];
         this.position = null;
         this.direction = null;
         this.zoneIndex = -1;
-        this.addEvent("change");
+        this._style = "";
+        this._sprite = new AnnotationSprite_1.default(this);
+        this.addEvent("update");
         this.id = id || uniqueId_1.default(6);
+        this.component = component;
+    }
+    get style() {
+        return this._style;
+    }
+    set style(style) {
+        if (style !== this._style) {
+            this._style = style;
+            this.createSprite(style);
+        }
     }
     update() {
         this.emit({ type: "update", annotation: this });
+    }
+    dispose() {
+        this.component.sprites.remove(this._sprite);
+        this._sprite = null;
     }
     deflate() {
         const data = { id: this.id };
@@ -32757,6 +33430,13 @@ class Annotation extends Publisher_1.default {
         this.direction = data.direction.slice();
         this.zoneIndex = data.zoneIndex !== undefined ? data.zoneIndex : -1;
         return this;
+    }
+    createSprite(style) {
+        if (this._sprite) {
+            this.component.sprites.remove(this._sprite);
+        }
+        this._sprite = new AnnotationSprite_1.default(this);
+        this.component.sprites.add(this._sprite);
     }
 }
 exports.default = Annotation;
@@ -32940,22 +33620,22 @@ const CVDocuments_1 = __webpack_require__(/*! ../components/CVDocuments */ "./ex
 ////////////////////////////////////////////////////////////////////////////////
 class NVItem extends NTransform_1.default {
     get item() {
-        return this.components.get(CVItemData_1.default);
+        return this.getComponent(CVItemData_1.default);
     }
     get meta() {
-        return this.components.get(CVMeta_1.default);
+        return this.getComponent(CVMeta_1.default);
     }
     get process() {
-        return this.components.get(CVProcess_1.default);
+        return this.getComponent(CVProcess_1.default);
     }
     get model() {
-        return this.components.get(CVModel_1.default);
+        return this.getComponent(CVModel_1.default);
     }
     get documents() {
-        return this.components.get(CVDocuments_1.default);
+        return this.getComponent(CVDocuments_1.default);
     }
     get annotations() {
-        return this.components.get(CVAnnotations_1.default);
+        return this.getComponent(CVAnnotations_1.default);
     }
     createComponents() {
         super.createComponents();
@@ -32968,7 +33648,6 @@ class NVItem extends NTransform_1.default {
         this.name = "Item";
     }
 }
-NVItem.type = "NVItem";
 exports.default = NVItem;
 
 
@@ -33023,35 +33702,35 @@ class NVPresentationConfig extends NTransform_1.default {
     }
     // shortcuts to access system-global components
     get renderer() {
-        return this.system.graph.components.safeGet(CRenderer_1.default);
+        return this.getMainComponent(CRenderer_1.default);
     }
     get interface() {
-        return this.system.graph.components.safeGet(CVInterface_1.default);
+        return this.getMainComponent(CVInterface_1.default);
     }
     get reader() {
-        return this.system.graph.components.safeGet(CVReader_1.default);
+        return this.getMainComponent(CVReader_1.default);
     }
     get navigation() {
-        return this.system.graph.components.safeGet(CVOrbitNavigation_1.default);
+        return this.getMainComponent(CVOrbitNavigation_1.default);
     }
     // shortcuts to access project-local components
     get scene() {
-        return this.graph.components.safeGet(CVScene_1.default);
+        return this.getGraphComponent(CVScene_1.default);
     }
     get background() {
-        return this.components.safeGet(CVBackground_1.default);
+        return this.getComponent(CVBackground_1.default);
     }
     get groundPlane() {
-        return this.components.safeGet(CVGroundPlane_1.default);
+        return this.getComponent(CVGroundPlane_1.default);
     }
     get homeGrid() {
-        return this.components.safeGet(CVHomeGrid_1.default);
+        return this.getComponent(CVHomeGrid_1.default);
     }
     get tapeTool() {
-        return this.components.safeGet(CVTapeTool_1.default);
+        return this.getComponent(CVTapeTool_1.default);
     }
     get sectionTool() {
-        return this.components.safeGet(CVSectionTool_1.default);
+        return this.getComponent(CVSectionTool_1.default);
     }
     createComponents() {
         super.createComponents();
@@ -33168,7 +33847,6 @@ class NVPresentationConfig extends NTransform_1.default {
         this._data.reader = this.reader.toData();
     }
 }
-NVPresentationConfig.type = "NVPresentationConfig";
 exports.default = NVPresentationConfig;
 
 
@@ -33224,10 +33902,10 @@ const _quat = new THREE.Quaternion();
 const _euler = new THREE.Euler();
 class NVPresentationScene extends NScene_1.default {
     get scene() {
-        return this.components.safeGet(CVScene_1.default);
+        return this.getComponent(CVScene_1.default);
     }
     get loadingManager() {
-        return this.system.components.safeGet(CVLoaders_1.default);
+        return this.getMainComponent(CVLoaders_1.default);
     }
     setUrl(url, assetPath) {
         this.url = url;
@@ -33362,18 +34040,18 @@ class NVPresentationScene extends NScene_1.default {
             color: ins.color.value.slice(),
             intensity: ins.intensity.value
         };
-        switch (node.type) {
-            case NDirectionalLight_1.default.type:
+        switch (node.constructor) {
+            case NDirectionalLight_1.default:
                 data.type = "directional";
                 break;
-            case NPointLight_1.default.type:
+            case NPointLight_1.default:
                 data.type = "point";
                 data.point = {
                     distance: ins.distance.value,
                     decay: ins.decay.value
                 };
                 break;
-            case NSpotLight_1.default.type:
+            case NSpotLight_1.default:
                 data.type = "spot";
                 data.spot = {
                     distance: ins.distance.value,
@@ -33383,7 +34061,7 @@ class NVPresentationScene extends NScene_1.default {
                 };
                 break;
             default:
-                throw new Error(`unsupported light type: '${node.type}'`);
+                throw new Error(`unsupported light type: '${node.className}'`);
         }
         return data;
     }
@@ -33530,7 +34208,6 @@ class NVPresentationScene extends NScene_1.default {
         return node;
     }
 }
-NVPresentationScene.type = "NVPresentationScene";
 exports.default = NVPresentationScene;
 
 
@@ -33567,7 +34244,7 @@ const CVReference_1 = __webpack_require__(/*! ../components/CVReference */ "./ex
 ////////////////////////////////////////////////////////////////////////////////
 class NVReference extends NTransform_1.default {
     get reference() {
-        return this.components.get(CVReference_1.default);
+        return this.getComponent(CVReference_1.default);
     }
     createComponents() {
         super.createComponents();
@@ -33581,7 +34258,6 @@ class NVReference extends NTransform_1.default {
         return this.reference.toData();
     }
 }
-NVReference.type = "NVReference";
 exports.default = NVReference;
 
 
@@ -33665,64 +34341,100 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 __webpack_require__(/*! @ff/ui/ButtonGroup */ "../../libs/ff-ui/source/ButtonGroup.ts");
 __webpack_require__(/*! @ff/ui/PopupButton */ "../../libs/ff-ui/source/PopupButton.ts");
+const CVPresentationController_1 = __webpack_require__(/*! ../components/CVPresentationController */ "./explorer/components/CVPresentationController.ts");
 const CVInterface_1 = __webpack_require__(/*! ../components/CVInterface */ "./explorer/components/CVInterface.ts");
+const CVReader_1 = __webpack_require__(/*! ../components/CVReader */ "./explorer/components/CVReader.ts");
 const ViewMenu_1 = __webpack_require__(/*! ./ViewMenu */ "./explorer/ui/ViewMenu.ts");
 const RenderMenu_1 = __webpack_require__(/*! ./RenderMenu */ "./explorer/ui/RenderMenu.ts");
 const CustomElement_1 = __webpack_require__(/*! @ff/ui/CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
+const CVAnnotations_1 = __webpack_require__(/*! ../components/CVAnnotations */ "./explorer/components/CVAnnotations.ts");
 ////////////////////////////////////////////////////////////////////////////////
 let ChromeView = class ChromeView extends CustomElement_1.default {
     constructor(system) {
         super();
+        this._viewMenu = null;
+        this._renderMenu = null;
         this.system = system;
-        this.interface = system.components.safeGet(CVInterface_1.default);
+    }
+    get activePresentation() {
+        return this.system.getMainComponent(CVPresentationController_1.default).activePresentation;
+    }
+    get interface() {
+        return this.system.getMainComponent(CVInterface_1.default);
+    }
+    get reader() {
+        return this.system.getMainComponent(CVReader_1.default);
     }
     firstConnected() {
         this.style.pointerEvents = "none";
         this.setAttribute("pointer-events", "none");
+        this._viewMenu = new ViewMenu_1.default(this.system);
+        this._viewMenu.portal = this;
+        this._renderMenu = new RenderMenu_1.default(this.system);
+        this._renderMenu.portal = this;
     }
     connected() {
-        const { visible, logo } = this.interface.ins;
-        visible.on("value", this.onInterfaceUpdate, this);
-        logo.on("value", this.onInterfaceUpdate, this);
+        const iface = this.interface;
+        iface.ins.visible.on("value", this.performUpdate, this);
+        iface.ins.logo.on("value", this.performUpdate, this);
+        iface.outs.fullscreenEnabled.on("value", this.performUpdate, this);
+        this.reader.ins.visible.on("value", this.performUpdate, this);
     }
     disconnected() {
-        const { visible, logo } = this.interface.ins;
-        visible.off("value", this.onInterfaceUpdate, this);
-        logo.off("value", this.onInterfaceUpdate, this);
+        const iface = this.interface;
+        iface.ins.visible.off("value", this.performUpdate, this);
+        iface.ins.logo.off("value", this.performUpdate, this);
+        iface.outs.fullscreenEnabled.off("value", this.performUpdate, this);
+        this.reader.ins.visible.off("value", this.performUpdate, this);
     }
     render() {
-        const { visible, logo } = this.interface.ins;
-        const isVisible = visible.value;
-        const showLogo = logo.value;
-        if (!isVisible) {
+        const iface = this.interface;
+        const interfaceVisible = iface.ins.visible.value;
+        const logoVisible = iface.ins.logo.value;
+        const fullscreenEnabled = iface.outs.fullscreenEnabled.value;
+        const fullscreenAvailable = iface.outs.fullscreenAvailable.value;
+        const readerVisible = this.reader.ins.visible.value;
+        const activePresentation = this.activePresentation;
+        const annotationsVisible = activePresentation
+            ? activePresentation.getInnerComponent(CVAnnotations_1.default).ins.visible.value : false;
+        if (!interfaceVisible) {
             return CustomElement_1.html ``;
         }
-        const viewMenu = new ViewMenu_1.default(this.system);
-        viewMenu.portal = this;
-        const renderMenu = new RenderMenu_1.default(this.system);
-        renderMenu.portal = this;
         return CustomElement_1.html `
             <div class="sv-main-menu">
                 <ff-button-group mode="exclusive">
-                    <ff-popup-button class="ff-menu-button" icon="eye" .content=${viewMenu}>
+                    <ff-popup-button class="ff-menu-button" icon="eye" .content=${this._viewMenu}>
                     </ff-popup-button>
-                    <ff-popup-button class="ff-menu-button" icon="palette" .content=${renderMenu}>
+                    <ff-popup-button class="ff-menu-button" icon="palette" .content=${this._renderMenu}>
                     </ff-popup-button>
                 </ff-button-group>
-                <ff-button class="ff-menu-button" icon="comment" selectable>
+                <ff-button class="ff-menu-button" icon="comment" title="show/hide annotations"
+                    ?selected=${annotationsVisible} @click=${this.onClickAnnotations}>
                 </ff-button>
-                <ff-button class="ff-menu-button" icon="document" selectable>
+                <ff-button class="ff-menu-button" icon="document" title="show/hide document reader"
+                    ?selected=${readerVisible} @click=${this.onClickReader}>
                 </ff-button>
+                ${fullscreenAvailable ? CustomElement_1.html `<ff-button class="ff-menu-button" icon="expand" title="enable/disable fullscreen mode"
+                    ?selected=${fullscreenEnabled} @click=${this.onClickFullscreen}></ff-button>` : null}
             </div>
-            ${showLogo ? CustomElement_1.html `
-                <div class="sv-logo">
-                    <img src="images/si-dpo3d-logo-neg.svg" alt="Smithsonian DPO 3D Logo">
-                </div>
-            ` : null}
+            ${logoVisible ? CustomElement_1.html `<div class="sv-logo">
+                <img src="images/si-dpo3d-logo-neg.svg" alt="Smithsonian DPO 3D Logo">
+            </div>` : null}
         `;
     }
-    onInterfaceUpdate() {
-        this.requestUpdate();
+    onClickAnnotations() {
+        const activePresentation = this.activePresentation;
+        if (activePresentation) {
+            const visible = activePresentation.getInnerComponent(CVAnnotations_1.default).ins.visible.value;
+            activePresentation.getInnerComponents(CVAnnotations_1.default).forEach(comp => comp.ins.visible.setValue(!visible));
+        }
+    }
+    onClickReader() {
+        const prop = this.reader.ins.visible;
+        prop.setValue(!prop.value);
+    }
+    onClickFullscreen() {
+        this.interface.toggleFullscreen();
     }
 };
 __decorate([
@@ -33793,8 +34505,10 @@ let ContentView = class ContentView extends CustomElement_1.default {
     firstConnected() {
         this.setStyle({
             position: "absolute",
-            top: "0", bottom: "0", left: "0", right: "0"
+            top: "0", bottom: "0", left: "0", right: "0",
+            touchAction: "none",
         });
+        this.setAttribute("touch-action", "none");
         this.canvas = this.createElement("canvas", {
             display: "block",
             width: "100%",
@@ -33883,6 +34597,7 @@ const CustomElement_1 = __webpack_require__(/*! @ff/ui/CustomElement */ "../../l
 const Icon_1 = __webpack_require__(/*! @ff/ui/Icon */ "../../libs/ff-ui/source/Icon.ts");
 const Notification_1 = __webpack_require__(/*! @ff/ui/Notification */ "../../libs/ff-ui/source/Notification.ts");
 const ExplorerApplication_1 = __webpack_require__(/*! ../ExplorerApplication */ "./explorer/ExplorerApplication.ts");
+const CVInterface_1 = __webpack_require__(/*! ../components/CVInterface */ "./explorer/components/CVInterface.ts");
 const ContentView_1 = __webpack_require__(/*! ./ContentView */ "./explorer/ui/ContentView.ts");
 const ChromeView_1 = __webpack_require__(/*! ./ChromeView */ "./explorer/ui/ChromeView.ts");
 __webpack_require__(/*! ./styles.scss */ "./explorer/ui/styles.scss");
@@ -33921,6 +34636,9 @@ let MainView = class MainView extends CustomElement_1.default {
             this.application = new ExplorerApplication_1.default(null, props);
         }
     }
+    get interface() {
+        return this.application.system.getMainComponent(CVInterface_1.default);
+    }
     firstConnected() {
         const system = this.application.system;
         new ContentView_1.default(system).appendTo(this);
@@ -33928,6 +34646,12 @@ let MainView = class MainView extends CustomElement_1.default {
         const notifications = document.createElement("div");
         notifications.setAttribute("id", Notification_1.default.stackId);
         this.appendChild(notifications);
+    }
+    connected() {
+        this.interface.fullscreenElement = this;
+    }
+    disconnected() {
+        this.interface.fullscreenElement = null;
     }
 };
 MainView = __decorate([
@@ -34217,7 +34941,7 @@ class StoryApplication {
         this.commander = this.explorer.commander;
         // register additional story tool components
         const registry = this.system.registry;
-        registry.registerComponentType(components_1.componentTypes);
+        registry.add(components_1.componentTypes);
         //this.logController = new LogController(this.system, this.commander);
         // add story components
         const storyNode = this.system.graph.createNode("Story");
@@ -34227,28 +34951,6 @@ class StoryApplication {
         if (element) {
             new MainView_1.default(this).appendTo(element);
         }
-    }
-    addItemFromURL(itemURL, assetBaseName) {
-        // // try to get active presentation
-        // let presentation = this.presentations.activePresentation;
-        //
-        // // if no success, try to get first available presentation and set it active
-        // if (!presentation) {
-        //     presentation = this.presentations.presentations[0];
-        //     if (presentation) {
-        //         this.presentations.activePresentation = presentation;
-        //     }
-        // }
-        // // if still no success, create a default presentation
-        // if (presentation) {
-        //     presentation.addItemFromUrl(itemUrl, assetBaseName)
-        // }
-        // if (!presentation) {
-        //     this.presentations.openDefaultPresentation()
-        //     .then(() => {
-        //
-        //     })
-        // }
     }
     initFromProps(props) {
         props.referrer = props.referrer || parseUrlParameter_1.default("referrer");
@@ -34304,13 +35006,13 @@ var EAnnotationsTaskMode;
     EAnnotationsTaskMode[EAnnotationsTaskMode["Move"] = 1] = "Move";
     EAnnotationsTaskMode[EAnnotationsTaskMode["Create"] = 2] = "Create";
 })(EAnnotationsTaskMode = exports.EAnnotationsTaskMode || (exports.EAnnotationsTaskMode = {}));
-const ins = {
+const _inputs = {
     mode: propertyTypes_1.types.Enum("Mode", EAnnotationsTaskMode, EAnnotationsTaskMode.Off)
 };
 class CVAnnotationsTask extends CVTask_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
         this.activeAnnotations = null;
     }
     createView() {
@@ -34334,12 +35036,11 @@ class CVAnnotationsTask extends CVTask_1.default {
         }
     }
     onSelectAnnotations(event) {
-        if (event.add && event.component.node instanceof NVItem_1.default) {
-            this.presentations.activeItem = event.component.node;
+        if (event.add && event.object.node instanceof NVItem_1.default) {
+            this.presentations.activeItem = event.object.node;
         }
     }
 }
-CVAnnotationsTask.type = "CVAnnotationsTask";
 CVAnnotationsTask.text = "Annotations";
 CVAnnotationsTask.icon = "comment";
 exports.default = CVAnnotationsTask;
@@ -34412,7 +35113,7 @@ const _typeExtensions = {
     [EFileType.JPEG]: "jpg",
     [EFileType.PNG]: "png"
 };
-const ins = {
+const _inputs = {
     take: Component_1.types.Event("Picture.Take"),
     save: Component_1.types.Event("Picture.Save"),
     download: Component_1.types.Event("Picture.Download"),
@@ -34420,14 +35121,14 @@ const ins = {
     type: Component_1.types.Enum("Picture.Type", EFileType),
     quality: Component_1.types.Number("Picture.Quality", { min: 0, max: 1, preset: 0.85 }),
 };
-const outs = {
+const _outputs = {
     ready: Component_1.types.Boolean("Picture.Ready")
 };
 class CVCaptureTask extends CVTask_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
-        this.outs = this.addOutputs(outs);
+        this.ins = this.addInputs(_inputs);
+        this.outs = this.addOutputs(_outputs);
         this.activeModel = null;
         this._interfaceVisible = false;
         this._gridVisible = false;
@@ -34437,11 +35138,11 @@ class CVCaptureTask extends CVTask_1.default {
         this._mimeType = "";
         this._extension = "";
     }
-    get interface() {
-        return this.system.components.get(CVInterface_1.default);
-    }
     get renderer() {
-        return this.system.components.get(CRenderer_1.default);
+        return this.getMainComponent(CRenderer_1.default);
+    }
+    get interface() {
+        return this.getMainComponent(CVInterface_1.default);
     }
     getImageElement(quality = Derivative_1.EDerivativeQuality.Low) {
         return this._imageElements[quality];
@@ -34596,12 +35297,11 @@ class CVCaptureTask extends CVTask_1.default {
         }
     }
     onSelectModel(event) {
-        if (event.add && event.component.node instanceof NVItem_1.default) {
-            this.presentations.activeItem = event.component.node;
+        if (event.add && event.object.node instanceof NVItem_1.default) {
+            this.presentations.activeItem = event.object.node;
         }
     }
 }
-CVCaptureTask.type = "CVCaptureTask";
 CVCaptureTask.text = "Capture";
 CVCaptureTask.icon = "camera";
 exports.default = CVCaptureTask;
@@ -34662,7 +35362,6 @@ class CVDerivativesTask extends CVTask_1.default {
         }
     }
 }
-CVDerivativesTask.type = "CVDerivativesTask";
 CVDerivativesTask.text = "Derivatives";
 CVDerivativesTask.icon = "hierarchy";
 exports.default = CVDerivativesTask;
@@ -34696,6 +35395,7 @@ exports.default = CVDerivativesTask;
  * limitations under the License.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
+const CVModel_1 = __webpack_require__(/*! ../../core/components/CVModel */ "./core/components/CVModel.ts");
 const ExploreTaskView_1 = __webpack_require__(/*! ../ui/ExploreTaskView */ "./story/ui/ExploreTaskView.ts");
 const CVTask_1 = __webpack_require__(/*! ./CVTask */ "./story/components/CVTask.ts");
 ////////////////////////////////////////////////////////////////////////////////
@@ -34714,8 +35414,8 @@ class CVExploreTask extends CVTask_1.default {
         super.deactivate();
     }
     setActiveItem(item) {
-        if (item && item.model) {
-            this.activeModel = item.model;
+        if (item && item.hasComponent(CVModel_1.default)) {
+            this.activeModel = item.getComponent(CVModel_1.default);
             this.selection.selectComponent(this.activeModel);
         }
         else {
@@ -34723,7 +35423,6 @@ class CVExploreTask extends CVTask_1.default {
         }
     }
 }
-CVExploreTask.type = "CVExploreTask";
 CVExploreTask.text = "Explore";
 CVExploreTask.icon = "eye";
 exports.default = CVExploreTask;
@@ -34793,10 +35492,10 @@ class CVPoseTask extends CVTask_1.default {
         this._deltaY = 0;
     }
     get renderer() {
-        return this.system.graph.components.get(CRenderer_1.default);
+        return this.getMainComponent(CRenderer_1.default);
     }
     get interface() {
-        return this.system.graph.components.get(CVInterface_1.default);
+        return this.getMainComponent(CVInterface_1.default);
     }
     createView() {
         return new PoseTaskView_1.default(this);
@@ -34895,12 +35594,11 @@ class CVPoseTask extends CVTask_1.default {
         }
     }
     onSelectModel(event) {
-        if (event.add && event.component.node instanceof NVItem_1.default) {
-            this.presentations.activeItem = event.component.node;
+        if (event.add && event.object.node instanceof NVItem_1.default) {
+            this.presentations.activeItem = event.object.node;
         }
     }
 }
-CVPoseTask.type = "CVPoseTask";
 CVPoseTask.text = "Pose";
 CVPoseTask.icon = "move";
 exports.default = CVPoseTask;
@@ -34944,7 +35642,7 @@ const CVPresentationController_1 = __webpack_require__(/*! ../../explorer/compon
 const CVTaskController_1 = __webpack_require__(/*! ./CVTaskController */ "./story/components/CVTaskController.ts");
 const taskSets_1 = __webpack_require__(/*! ../taskSets */ "./story/taskSets.ts");
 exports.EStoryMode = taskSets_1.EStoryMode;
-const ins = {
+const _inputs = {
     save: CController_1.types.Event("Save"),
     download: CController_1.types.Event("Download"),
     exit: CController_1.types.Event("Exit"),
@@ -34955,7 +35653,7 @@ const ins = {
 class CVStoryController extends CController_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
         this.selection = null;
         this.presentations = null;
         this.tasks = null;
@@ -34964,9 +35662,9 @@ class CVStoryController extends CController_1.default {
         return {};
     }
     create() {
-        this.selection = this.graph.components.get(CSelection_1.default);
-        this.presentations = this.graph.components.get(CVPresentationController_1.default);
-        this.tasks = this.graph.components.get(CVTaskController_1.default);
+        this.selection = this.getMainComponent(CSelection_1.default);
+        this.presentations = this.getMainComponent(CVPresentationController_1.default);
+        this.tasks = this.getMainComponent(CVTaskController_1.default);
     }
     update() {
         const ins = this.ins;
@@ -35033,7 +35731,6 @@ class CVStoryController extends CController_1.default {
         }
     }
 }
-CVStoryController.type = "CVStoryController";
 CVStoryController.isSystemSingleton = true;
 exports.default = CVStoryController;
 
@@ -35072,13 +35769,13 @@ const CPickSelection_1 = __webpack_require__(/*! @ff/scene/components/CPickSelec
 const CVPresentationController_1 = __webpack_require__(/*! ../../explorer/components/CVPresentationController */ "./explorer/components/CVPresentationController.ts");
 const CVTaskController_1 = __webpack_require__(/*! ./CVTaskController */ "./story/components/CVTaskController.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const ins = {
+const _inputs = {
     activate: propertyTypes_1.types.Event("Activate")
 };
 class CVTask extends Component_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
+        this.ins = this.addInputs(_inputs);
         this.tasks = null;
         this.presentations = null;
         this.selection = null;
@@ -35086,9 +35783,9 @@ class CVTask extends Component_1.default {
         this.activeItem = null;
     }
     create() {
-        this.tasks = this.system.graph.components.safeGet(CVTaskController_1.default);
-        this.presentations = this.system.graph.components.safeGet(CVPresentationController_1.default);
-        this.selection = this.system.graph.components.safeGet(CPickSelection_1.default);
+        this.tasks = this.getMainComponent(CVTaskController_1.default);
+        this.presentations = this.getMainComponent(CVPresentationController_1.default);
+        this.selection = this.getMainComponent(CPickSelection_1.default);
     }
     update() {
         if (this.ins.activate.changed) {
@@ -35128,7 +35825,6 @@ class CVTask extends Component_1.default {
         this.activeItem = event.next;
     }
 }
-CVTask.type = "CVTask";
 CVTask.text = "Task";
 CVTask.icon = "fa fa-tasks";
 exports.default = CVTask;
@@ -35201,7 +35897,7 @@ class CVTaskController extends CController_1.default {
         return this._tasks;
     }
     get selection() {
-        return this.system.components.safeGet(CSelection_1.default);
+        return this.getMainComponent(CSelection_1.default);
     }
     createActions(commander) {
         return {};
@@ -35217,11 +35913,10 @@ class CVTaskController extends CController_1.default {
     }
     onSelectTask(event) {
         if (event.add) {
-            this.activeTask = event.component;
+            this.activeTask = event.object;
         }
     }
 }
-CVTaskController.type = "CVTaskController";
 exports.default = CVTaskController;
 
 
@@ -35309,7 +36004,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const CVExploreTask_1 = __webpack_require__(/*! ./components/CVExploreTask */ "./story/components/CVExploreTask.ts");
 const CVPoseTask_1 = __webpack_require__(/*! ./components/CVPoseTask */ "./story/components/CVPoseTask.ts");
 const CVCaptureTask_1 = __webpack_require__(/*! ./components/CVCaptureTask */ "./story/components/CVCaptureTask.ts");
-const CVAnnotationsTask_1 = __webpack_require__(/*! ./components/CVAnnotationsTask */ "./story/components/CVAnnotationsTask.ts");
 ////////////////////////////////////////////////////////////////////////////////
 var EStoryMode;
 (function (EStoryMode) {
@@ -35324,9 +36018,78 @@ exports.default = {
     ],
     "Authoring": [
         CVExploreTask_1.default,
-        CVAnnotationsTask_1.default,
     ],
 };
+
+
+/***/ }),
+
+/***/ "./story/ui/AnnotationList.ts":
+/*!************************************!*\
+  !*** ./story/ui/AnnotationList.ts ***!
+  \************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const CustomElement_1 = __webpack_require__(/*! @ff/ui/CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
+const List_1 = __webpack_require__(/*! @ff/ui/List */ "../../libs/ff-ui/source/List.ts");
+let AnnotationList = class AnnotationList extends List_1.default {
+    constructor() {
+        super(...arguments);
+        this.selectedItem = null;
+    }
+    firstConnected() {
+        super.firstConnected();
+        this.classList.add("sv-annotation-list");
+    }
+    renderItem(item) {
+        return item.title;
+    }
+    isItemSelected(item) {
+        return item === this.selectedItem;
+    }
+    onClickItem(event, item) {
+        this.dispatchEvent(new CustomEvent("select", {
+            detail: { annotation: item }
+        }));
+    }
+    onClickEmpty(event) {
+        this.dispatchEvent(new CustomEvent("select", {
+            detail: { annotation: null }
+        }));
+    }
+};
+__decorate([
+    CustomElement_1.property({ attribute: false })
+], AnnotationList.prototype, "selectedItem", void 0);
+AnnotationList = __decorate([
+    CustomElement_1.customElement("sv-annotation-list")
+], AnnotationList);
 
 
 /***/ }),
@@ -35364,18 +36127,23 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const CustomElement_1 = __webpack_require__(/*! @ff/ui/CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
-const TaskView_1 = __webpack_require__(/*! ./TaskView */ "./story/ui/TaskView.ts");
 const CVAnnotationsTask_1 = __webpack_require__(/*! ../components/CVAnnotationsTask */ "./story/components/CVAnnotationsTask.ts");
+__webpack_require__(/*! ./AnnotationList */ "./story/ui/AnnotationList.ts");
+__webpack_require__(/*! @ff/ui/LineEdit */ "../../libs/ff-ui/source/LineEdit.ts");
+__webpack_require__(/*! @ff/ui/TextEdit */ "../../libs/ff-ui/source/TextEdit.ts");
+const TaskView_1 = __webpack_require__(/*! ./TaskView */ "./story/ui/TaskView.ts");
 ////////////////////////////////////////////////////////////////////////////////
 let AnnotationsTaskView = class AnnotationsTaskView extends TaskView_1.default {
     ////////////////////////////////////////////////////////////////////////////////
     constructor() {
         super(...arguments);
         this.activeAnnotations = null;
+        this.selectedAnnotation = null;
     }
     setActiveItem(item) {
         this.activeAnnotations = item ? item.annotations : null;
-        this.requestUpdate();
+        this.selectedAnnotation = null;
+        this.performUpdate();
     }
     firstConnected() {
         super.firstConnected();
@@ -35383,10 +36151,10 @@ let AnnotationsTaskView = class AnnotationsTaskView extends TaskView_1.default {
     }
     connected() {
         super.connected();
-        this.task.ins.mode.on("value", this.onModeValue, this);
+        this.task.ins.mode.on("value", this.performUpdate, this);
     }
     disconnected() {
-        this.task.ins.mode.off("value", this.onModeValue, this);
+        this.task.ins.mode.off("value", this.performUpdate, this);
         super.disconnected();
     }
     render() {
@@ -35394,20 +36162,32 @@ let AnnotationsTaskView = class AnnotationsTaskView extends TaskView_1.default {
             return CustomElement_1.html `<div class="sv-placeholder">Please select an item to edit its annotations</div>`;
         }
         const modeProp = this.task.ins.mode;
+        const annotations = this.activeAnnotations.getAnnotations();
+        const annotation = this.selectedAnnotation;
+        const detailView = annotation ? CustomElement_1.html `<div>
+            <div class="sv-label">Title</div>
+            <ff-line-edit text=${annotation.title}></ff-line-edit>
+            <div class="sv-label">Description</div>
+            <ff-text-edit text=${annotation.description}></ff-text-edit>
+            <div class="sv-label">Groups</div>
+        </div>` : null;
         return CustomElement_1.html `<div class="ff-flex-row ff-flex-wrap">
             <ff-button text="Off" index=${CVAnnotationsTask_1.EAnnotationsTaskMode.Off} selectedIndex=${modeProp.value} @click=${this.onClickMode}></ff-button>       
             <ff-button text="Move" index=${CVAnnotationsTask_1.EAnnotationsTaskMode.Move} selectedIndex=${modeProp.value} @click=${this.onClickMode}></ff-button>       
             <ff-button text="Create" index=${CVAnnotationsTask_1.EAnnotationsTaskMode.Create} selectedIndex=${modeProp.value} @click=${this.onClickMode}></ff-button>       
-            <ff-button text="Delete" @click=${this.onClickDelete}></ff-button>       
-        </div>`;
+            <ff-button text="Delete" @click=${this.onClickDelete}></ff-button>  
+        </div>
+        <sv-annotation-list .data=${annotations} .selectedItem=${annotation} @select=${this.onSelectAnnotation}></sv-annotation-list>
+        ${detailView}`;
     }
     onClickMode(event) {
         this.task.ins.mode.setValue(event.target.index);
     }
     onClickDelete() {
     }
-    onModeValue() {
-        this.requestUpdate();
+    onSelectAnnotation(event) {
+        this.selectedAnnotation = event.detail.annotation;
+        this.performUpdate();
     }
 };
 AnnotationsTaskView = __decorate([
@@ -35828,6 +36608,7 @@ const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/f
 const CSelection_1 = __webpack_require__(/*! @ff/graph/components/CSelection */ "../../libs/ff-graph/source/components/CSelection.ts");
 const CustomElement_1 = __webpack_require__(/*! @ff/ui/CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
 const List_1 = __webpack_require__(/*! @ff/ui/List */ "../../libs/ff-ui/source/List.ts");
+__webpack_require__(/*! @ff/ui/Icon */ "../../libs/ff-ui/source/Icon.ts");
 const NVItem_1 = __webpack_require__(/*! ../../explorer/nodes/NVItem */ "./explorer/nodes/NVItem.ts");
 const CVPresentationController_1 = __webpack_require__(/*! ../../explorer/components/CVPresentationController */ "./explorer/components/CVPresentationController.ts");
 ////////////////////////////////////////////////////////////////////////////////
@@ -35842,21 +36623,21 @@ let ItemList = class ItemList extends List_1.default {
     firstConnected() {
         super.firstConnected();
         this.classList.add("sv-scrollable", "sv-item-list");
-        this.presentations = this.system.components.safeGet(CVPresentationController_1.default);
-        this.selection = this.system.components.safeGet(CSelection_1.default);
+        this.presentations = this.system.getMainComponent(CVPresentationController_1.default);
+        this.selection = this.system.getMainComponent(CSelection_1.default);
     }
     connected() {
         super.connected();
-        this.selection.selectedNodes.on(NVItem_1.default, this.onSelectItem, this);
         this.selection.selectedComponents.on(Component_1.default, this.onSelectComponent, this);
-        this.presentations.on("active-presentation", this.onActivePresentation, this);
-        this.presentations.on("active-item", this.onActiveItem, this);
+        this.selection.selectedNodes.on(NVItem_1.default, this.performUpdate, this);
+        this.presentations.on("active-presentation", this.performUpdate, this);
+        this.presentations.on("active-item", this.performUpdate, this);
     }
     disconnected() {
-        this.selection.selectedNodes.off(NVItem_1.default, this.onSelectItem, this);
         this.selection.selectedComponents.off(Component_1.default, this.onSelectComponent, this);
-        this.presentations.off("active-presentation", this.onActivePresentation, this);
-        this.presentations.off("active-item", this.onActiveItem, this);
+        this.selection.selectedNodes.off(NVItem_1.default, this.performUpdate, this);
+        this.presentations.off("active-presentation", this.performUpdate, this);
+        this.presentations.off("active-item", this.performUpdate, this);
         super.disconnected();
     }
     update(props) {
@@ -35875,19 +36656,8 @@ let ItemList = class ItemList extends List_1.default {
     onClickItem(event, node) {
         this.presentations.activeItem = node;
     }
-    onClickEmpty() {
-    }
-    onActivePresentation(event) {
-        this.requestUpdate();
-    }
-    onActiveItem(event) {
-        this.requestUpdate();
-    }
-    onSelectItem(event) {
-        this.requestUpdate();
-    }
     onSelectComponent(event) {
-        if (event.component.node.type === NVItem_1.default.type) {
+        if (event.object.node.is(NVItem_1.default)) {
             this.requestUpdate();
         }
     }
@@ -36001,7 +36771,10 @@ const NavigatorPanel_1 = __webpack_require__(/*! ./NavigatorPanel */ "./story/ui
 ////////////////////////////////////////////////////////////////////////////////
 // STORY ICONS
 Icon_1.default.add("hierarchy", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><path d="M104 272h192v48h48v-48h192v48h48v-57.59c0-21.17-17.22-38.41-38.41-38.41H344v-64h40c17.67 0 32-14.33 32-32V32c0-17.67-14.33-32-32-32H256c-17.67 0-32 14.33-32 32v96c0 8.84 3.58 16.84 9.37 22.63S247.16 160 256 160h40v64H94.41C73.22 224 56 241.23 56 262.41V320h48v-48zm168-160V48h96v64h-96zm336 240h-96c-17.67 0-32 14.33-32 32v96c0 17.67 14.33 32 32 32h96c17.67 0 32-14.33 32-32v-96c0-17.67-14.33-32-32-32zm-16 112h-64v-64h64v64zM368 352h-96c-17.67 0-32 14.33-32 32v96c0 17.67 14.33 32 32 32h96c17.67 0 32-14.33 32-32v-96c0-17.67-14.33-32-32-32zm-16 112h-64v-64h64v64zM128 352H32c-17.67 0-32 14.33-32 32v96c0 17.67 14.33 32 32 32h96c17.67 0 32-14.33 32-32v-96c0-17.67-14.33-32-32-32zm-16 112H48v-64h64v64z"/></svg>`);
-Icon_1.default.add("move", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M352.201 425.775l-79.196 79.196c-9.373 9.373-24.568 9.373-33.941 0l-79.196-79.196c-15.119-15.119-4.411-40.971 16.971-40.97h51.162L228 284H127.196v51.162c0 21.382-25.851 32.09-40.971 16.971L7.029 272.937c-9.373-9.373-9.373-24.569 0-33.941L86.225 159.8c15.119-15.119 40.971-4.411 40.971 16.971V228H228V127.196h-51.23c-21.382 0-32.09-25.851-16.971-40.971l79.196-79.196c9.373-9.373 24.568-9.373 33.941 0l79.196 79.196c15.119 15.119 4.411 40.971-16.971 40.971h-51.162V228h100.804v-51.162c0-21.382 25.851-32.09 40.97-16.971l79.196 79.196c9.373 9.373 9.373 24.569 0 33.941L425.773 352.2c-15.119 15.119-40.971 4.411-40.97-16.971V284H284v100.804h51.23c21.382 0 32.09 25.851 16.971 40.971z"/></svg>`);
+Icon_1.default.add("move", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M360.549 412.216l-96.064 96.269c-4.686 4.686-12.284 4.686-16.971 0l-96.064-96.269c-4.686-4.686-4.686-12.284 0-16.971l19.626-19.626c4.753-4.753 12.484-4.675 17.14.173L230 420.78h2V280H91.22v2l44.986 41.783c4.849 4.656 4.927 12.387.173 17.14l-19.626 19.626c-4.686 4.686-12.284 4.686-16.971 0L3.515 264.485c-4.686-4.686-4.686-12.284 0-16.971l96.269-96.064c4.686-4.686 12.284-4.686 16.97 0l19.626 19.626c4.753 4.753 4.675 12.484-.173 17.14L91.22 230v2H232V91.22h-2l-41.783 44.986c-4.656 4.849-12.387 4.927-17.14.173l-19.626-19.626c-4.686-4.686-4.686-12.284 0-16.971l96.064-96.269c4.686-4.686 12.284-4.686 16.971 0l96.064 96.269c4.686 4.686 4.686 12.284 0 16.971l-19.626 19.626c-4.753 4.753-12.484 4.675-17.14-.173L282 91.22h-2V232h140.78v-2l-44.986-41.783c-4.849-4.656-4.927-12.387-.173-17.14l19.626-19.626c4.686-4.686 12.284-4.686 16.971 0l96.269 96.064c4.686 4.686 4.686 12.284 0 16.971l-96.269 96.064c-4.686 4.686-12.284 4.686-16.971 0l-19.626-19.626c-4.753-4.753-4.675-12.484.173-17.14L420.78 282v-2H280v140.78h2l41.783-44.986c4.656-4.849 12.387-4.927 17.14-.173l19.626 19.626c4.687 4.685 4.687 12.283 0 16.969z"/></svg>`);
+Icon_1.default.add("rotate", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M370.72 133.28C339.458 104.008 298.888 87.962 255.848 88c-77.458.068-144.328 53.178-162.791 126.85-1.344 5.363-6.122 9.15-11.651 9.15H24.103c-7.498 0-13.194-6.807-11.807-14.176C33.933 94.924 134.813 8 256 8c66.448 0 126.791 26.136 171.315 68.685L463.03 40.97C478.149 25.851 504 36.559 504 57.941V192c0 13.255-10.745 24-24 24H345.941c-21.382 0-32.09-25.851-16.971-40.971l41.75-41.749zM32 296h134.059c21.382 0 32.09 25.851 16.971 40.971l-41.75 41.75c31.262 29.273 71.835 45.319 114.876 45.28 77.418-.07 144.315-53.144 162.787-126.849 1.344-5.363 6.122-9.15 11.651-9.15h57.304c7.498 0 13.194 6.807 11.807 14.176C478.067 417.076 377.187 504 256 504c-66.448 0-126.791-26.136-171.315-68.685L48.97 471.03C33.851 486.149 8 475.441 8 454.059V320c0-13.255 10.745-24 24-24z"/></svg>`);
+Icon_1.default.add("expand", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M0 180V56c0-13.3 10.7-24 24-24h124c6.6 0 12 5.4 12 12v40c0 6.6-5.4 12-12 12H64v84c0 6.6-5.4 12-12 12H12c-6.6 0-12-5.4-12-12zM288 44v40c0 6.6 5.4 12 12 12h84v84c0 6.6 5.4 12 12 12h40c6.6 0 12-5.4 12-12V56c0-13.3-10.7-24-24-24H300c-6.6 0-12 5.4-12 12zm148 276h-40c-6.6 0-12 5.4-12 12v84h-84c-6.6 0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h124c13.3 0 24-10.7 24-24V332c0-6.6-5.4-12-12-12zM160 468v-40c0-6.6-5.4-12-12-12H64v-84c0-6.6-5.4-12-12-12H12c-6.6 0-12 5.4-12 12v124c0 13.3 10.7 24 24 24h124c6.6 0 12-5.4 12-12z"/></svg>`);
+Icon_1.default.add("compress", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M436 192H312c-13.3 0-24-10.7-24-24V44c0-6.6 5.4-12 12-12h40c6.6 0 12 5.4 12 12v84h84c6.6 0 12 5.4 12 12v40c0 6.6-5.4 12-12 12zm-276-24V44c0-6.6-5.4-12-12-12h-40c-6.6 0-12 5.4-12 12v84H12c-6.6 0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h124c13.3 0 24-10.7 24-24zm0 300V344c0-13.3-10.7-24-24-24H12c-6.6 0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h84v84c0 6.6 5.4 12 12 12h40c6.6 0 12-5.4 12-12zm192 0v-84h84c6.6 0 12-5.4 12-12v-40c0-6.6-5.4-12-12-12H312c-13.3 0-24 10.7-24 24v124c0 6.6 5.4 12 12 12h40c6.6 0 12-5.4 12-12z"/></svg>`);
 Icon_1.default.add("camera", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M512 144v288c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V144c0-26.5 21.5-48 48-48h88l12.3-32.9c7-18.7 24.9-31.1 44.9-31.1h125.5c20 0 37.9 12.4 44.9 31.1L376 96h88c26.5 0 48 21.5 48 48zM376 288c0-66.2-53.8-120-120-120s-120 53.8-120 120 53.8 120 120 120 120-53.8 120-120zm-32 0c0 48.5-39.5 88-88 88s-88-39.5-88-88 39.5-88 88-88 88 39.5 88 88z"/></svg>`);
 Icon_1.default.add("save", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M433.941 129.941l-83.882-83.882A48 48 0 0 0 316.118 32H48C21.49 32 0 53.49 0 80v352c0 26.51 21.49 48 48 48h352c26.51 0 48-21.49 48-48V163.882a48 48 0 0 0-14.059-33.941zM224 416c-35.346 0-64-28.654-64-64 0-35.346 28.654-64 64-64s64 28.654 64 64c0 35.346-28.654 64-64 64zm96-304.52V212c0 6.627-5.373 12-12 12H76c-6.627 0-12-5.373-12-12V108c0-6.627 5.373-12 12-12h228.52c3.183 0 6.235 1.264 8.485 3.515l3.48 3.48A11.996 11.996 0 0 1 320 111.48z"/></svg>`);
 Icon_1.default.add("exit", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M497 273L329 441c-15 15-41 4.5-41-17v-96H152c-13.3 0-24-10.7-24-24v-96c0-13.3 10.7-24 24-24h136V88c0-21.4 25.9-32 41-17l168 168c9.3 9.4 9.3 24.6 0 34zM192 436v-40c0-6.6-5.4-12-12-12H96c-17.7 0-32-14.3-32-32V160c0-17.7 14.3-32 32-32h84c6.6 0 12-5.4 12-12V76c0-6.6-5.4-12-12-12H96c-53 0-96 43-96 96v192c0 53 43 96 96 96h84c6.6 0 12-5.4 12-12z"/></svg>`);
@@ -36259,10 +37032,10 @@ const SystemElement_1 = __webpack_require__(/*! ./SystemElement */ "./story/ui/S
 ////////////////////////////////////////////////////////////////////////////////
 let NavigatorPanel = class NavigatorPanel extends SystemElement_1.default {
     get story() {
-        return this.system.components.safeGet(CVStoryController_1.default);
+        return this.system.getMainComponent(CVStoryController_1.default);
     }
     get renderer() {
-        return this.system.components.safeGet(CRenderer_1.default);
+        return this.system.getMainComponent(CRenderer_1.default);
     }
     firstConnected() {
         this.classList.add("sv-scrollable", "sv-panel", "sv-navigator-panel");
@@ -36376,10 +37149,10 @@ let PoseTaskView = class PoseTaskView extends TaskView_1.default {
         const rotation = model.ins.rotation;
         return CustomElement_1.html `
             <div class="sv-commands">
-                <ff-button text="Rotate" index=${CVPoseTask_1.EPoseManipMode.Rotate} selectedIndex=${modeProp.value} @click=${this.onClickMode}></ff-button>
-                <ff-button text="Move" index=${CVPoseTask_1.EPoseManipMode.Translate} selectedIndex=${modeProp.value} @click=${this.onClickMode}></ff-button>
-                <ff-button text="Center" @click=${this.onClickCenter}></ff-button>
-                <ff-button text="Zoom Views" @click=${this.onClickZoomViews}></ff-button>
+                <ff-button icon="rotate" text="Rotate" index=${CVPoseTask_1.EPoseManipMode.Rotate} selectedIndex=${modeProp.value} @click=${this.onClickMode}></ff-button>
+                <ff-button icon="move" text="Move" index=${CVPoseTask_1.EPoseManipMode.Translate} selectedIndex=${modeProp.value} @click=${this.onClickMode}></ff-button>
+                <ff-button icon="compress" text="Center" @click=${this.onClickCenter}></ff-button>
+                <ff-button icon="expand" text="Zoom Extent" @click=${this.onClickZoomViews}></ff-button>
             </div>
             <div class="sv-scrollable">
                 <sv-property-view .property=${globalUnits} label="Global Units"></sv-property-view>    
@@ -36444,6 +37217,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const CSelection_1 = __webpack_require__(/*! @ff/graph/components/CSelection */ "../../libs/ff-graph/source/components/CSelection.ts");
 const CustomElement_1 = __webpack_require__(/*! @ff/ui/CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
 const List_1 = __webpack_require__(/*! @ff/ui/List */ "../../libs/ff-ui/source/List.ts");
+__webpack_require__(/*! @ff/ui/Icon */ "../../libs/ff-ui/source/Icon.ts");
 const CVPresentation_1 = __webpack_require__(/*! ../../explorer/components/CVPresentation */ "./explorer/components/CVPresentation.ts");
 const CVPresentationController_1 = __webpack_require__(/*! ../../explorer/components/CVPresentationController */ "./explorer/components/CVPresentationController.ts");
 ////////////////////////////////////////////////////////////////////////////////
@@ -36458,19 +37232,19 @@ let PresentationList = class PresentationList extends List_1.default {
     firstConnected() {
         super.firstConnected();
         this.classList.add("sv-presentation-list");
-        this.presentations = this.system.components.safeGet(CVPresentationController_1.default);
-        this.selection = this.system.components.safeGet(CSelection_1.default);
+        this.presentations = this.system.getMainComponent(CVPresentationController_1.default);
+        this.selection = this.system.getMainComponent(CSelection_1.default);
     }
     connected() {
         super.connected();
-        this.selection.selectedComponents.on(CVPresentation_1.default, this.onSelectPresentation, this);
-        this.presentations.on("presentation", this.onPresentation, this);
-        this.presentations.on("active-presentation", this.onActivePresentation, this);
+        this.selection.selectedComponents.on(CVPresentation_1.default, this.performUpdate, this);
+        this.presentations.on("presentation", this.performUpdate, this);
+        this.presentations.on("active-presentation", this.performUpdate, this);
     }
     disconnected() {
-        this.selection.selectedComponents.off(CVPresentation_1.default, this.onSelectPresentation, this);
-        this.presentations.off("presentation", this.onPresentation, this);
-        this.presentations.off("active-presentation", this.onActivePresentation, this);
+        this.selection.selectedComponents.off(CVPresentation_1.default, this.performUpdate, this);
+        this.presentations.off("presentation", this.performUpdate, this);
+        this.presentations.off("active-presentation", this.performUpdate, this);
         super.disconnected();
     }
     update(props) {
@@ -36488,17 +37262,6 @@ let PresentationList = class PresentationList extends List_1.default {
     onClickItem(event, component) {
         this.presentations.activePresentation = component;
         this.selection.selectComponent(component);
-    }
-    onClickEmpty() {
-    }
-    onPresentation(event) {
-        this.requestUpdate();
-    }
-    onSelectPresentation(event) {
-        this.requestUpdate();
-    }
-    onActivePresentation(event) {
-        this.requestUpdate();
     }
 };
 __decorate([
@@ -36700,9 +37463,9 @@ let TaskBar = class TaskBar extends SystemElement_1.default {
         this.story = null;
         this.tasks = null;
         this.presentations = null;
-        this.story = system.graph.components.safeGet(CVStoryController_1.default);
-        this.tasks = system.graph.components.safeGet(CVTaskController_1.default);
-        this.presentations = system.graph.components.safeGet(CVPresentationController_1.default);
+        this.story = system.getMainComponent(CVStoryController_1.default);
+        this.tasks = system.getMainComponent(CVTaskController_1.default);
+        this.presentations = system.getMainComponent(CVPresentationController_1.default);
     }
     firstConnected() {
         this.classList.add("sv-task-bar");
@@ -36811,7 +37574,7 @@ let TaskPanel = class TaskPanel extends SystemElement_1.default {
     constructor(system) {
         super(system);
         this.taskController = null;
-        this.taskController = system.graph.components.safeGet(CVTaskController_1.default);
+        this.taskController = system.getMainComponent(CVTaskController_1.default);
         if (!this.taskController) {
             throw new Error("missing task manager");
         }
@@ -36895,8 +37658,8 @@ class TaskView extends CustomElement_1.default {
     }
     firstConnected() {
         this.classList.add("sv-task-view");
-        this.presentations = this.system.components.safeGet(CVPresentationController_1.default);
-        this.selection = this.system.components.safeGet(CSelection_1.default);
+        this.presentations = this.system.getMainComponent(CVPresentationController_1.default);
+        this.selection = this.system.getMainComponent(CSelection_1.default);
     }
     connected() {
         this.presentations.on("active-presentation", this.onActivePresentation, this);
