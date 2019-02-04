@@ -48,10 +48,17 @@
       <div class="panel panel-default">
         <div class="panel-heading"><h3>{{ data.interface.header|raw }}</h3></div>
         <div class="panel-body" style="min-height: 28rem;">
+
+          {% if data.interface.thumbnail %}
+            <div>
+              <img src="{{ data.interface.thumbnail }}" alt="2D thubnail image of the model" class="img-responsive img-thumbnail" style="max-height: 300px;">
+            </div>
+          {% endif %}
+
           <p>{{ data.interface.message|raw }}</p>
 
           {% if data.step_state == 'error' %}
-            <!-- Fil Upload Template Begins -->
+            <!-- Upload Template Begins -->
             {# <div class="files" id="previews" style="border: 2px dashed #337ab7; border-radius: 4px; min-height: 14rem; padding: 2rem;"></div> #}
             <div class="dropzone-container" style="border: 2px dashed gray; border-radius: 4px; min-height: 14rem; padding: 2rem; background-color: #efefef;">            
               <div class="table table-striped files" id="previews">
@@ -110,7 +117,7 @@
                 </button>
               </div>
             </div>
-            <!-- Fil Upload Template Ends -->
+            <!-- Upload Template Ends -->
           {% endif %}
 
         </div>
