@@ -50,11 +50,11 @@ class ScaleBarBarcodeTypeController extends Controller
      */
     public function browse(Connection $conn, Request $request)
     {
-
-        return $this->render('resources/browse_scale_bar_barcode_types.html.twig', array(
-            'page_title' => "Browse Scale Bar Barcode Types",
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        ));
+      return $this->render('resources/browse_scale_bar_barcode_types.html.twig', array(
+        'page_title' => "Browse Scale Bar Barcode Types",
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'resources'
+      ));
     }
 
     /**
@@ -164,12 +164,13 @@ class ScaleBarBarcodeTypeController extends Controller
             $this->addFlash('message', 'Scale Bar Barcode Type successfully updated.');
             return $this->redirectToRoute('scale_bar_barcode_types_browse');
         } else {
-            return $this->render('resources/scale_bar_barcode_types_form.html.twig', array(
-                "page_title" => !empty($id) ? 'Manage Scale Bar Barcode Type: ' . $data['label'] : 'Create Scale Bar Barcode Type'
-                ,"data" => $data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
+          return $this->render('resources/scale_bar_barcode_types_form.html.twig', array(
+            "page_title" => !empty($id) ? 'Manage Scale Bar Barcode Type: ' . $data['label'] : 'Create Scale Bar Barcode Type',
+            "data" => $data,
+            "errors" => $errors,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'current_tab' => 'resources'
+          ));
         }
 
     }

@@ -50,10 +50,11 @@ class UnitController extends Controller
      */
     public function browse(Connection $conn, Request $request)
     {
-        return $this->render('resources/browse_units.html.twig', array(
-            'page_title' => "Browse Units",
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        ));
+      return $this->render('resources/browse_units.html.twig', array(
+        'page_title' => "Browse Units",
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'resources'
+      ));
     }
 
     /**
@@ -162,12 +163,13 @@ class UnitController extends Controller
             $this->addFlash('message', 'Unit successfully updated.');
             return $this->redirectToRoute('units_browse');
         } else {
-            return $this->render('resources/units_form.html.twig', array(
-                "page_title" => !empty($id) ? 'Manage Unit: ' . $data['label'] : 'Create Unit'
-                ,"data" => $data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
+          return $this->render('resources/units_form.html.twig', array(
+            "page_title" => !empty($id) ? 'Manage Unit: ' . $data['label'] : 'Create Unit',
+            "data" => $data,
+            "errors" => $errors,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'current_tab' => 'resources'
+          ));
         }
 
     }

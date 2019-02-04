@@ -54,9 +54,10 @@ class UnitStakeholderController extends Controller
      */
     public function browse(Request $request)
     {
-        return $this->render('resources/browse_unit_stakeholder.html.twig', array(
-            'page_title' => "Browse Unit/Stakeholder",
-        ));
+      return $this->render('resources/browse_unit_stakeholder.html.twig', array(
+        'page_title' => "Browse Unit/Stakeholder",
+        'current_tab' => 'resources'
+      ));
     }
 
     /**
@@ -162,9 +163,10 @@ class UnitStakeholderController extends Controller
             return $this->redirectToRoute('unit_stakeholder_browse');
         } else {
             return $this->render('resources/unit_stakeholder_form.html.twig', array(
-                "page_title" => !empty($id) ? 'Manage Unit/Stakeholder: ' . $data['unit_stakeholder_label'] : 'Create Unit/Stakeholder'
-                ,"data" => $data
-                ,"errors" => $errors
+                "page_title" => !empty($id) ? 'Manage Unit/Stakeholder: ' . $data['unit_stakeholder_label'] : 'Create Unit/Stakeholder',
+                "data" => $data,
+                "errors" => $errors,
+              'current_tab' => 'resources'
             ));
         }
 

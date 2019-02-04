@@ -37,10 +37,11 @@ class ResourceController extends Controller
      */
     public function showAdmin(Connection $conn, Request $request)
     {
-        return $this->render('resources/resources.html.twig', array(
-            'page_title' => 'Resources',
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        ));
+      return $this->render('resources/resources.html.twig', array(
+        'page_title' => 'Resources',
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'resources'
+      ));
     }
 
 }

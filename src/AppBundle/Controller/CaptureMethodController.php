@@ -50,11 +50,11 @@ class CaptureMethodController extends Controller
      */
     public function browse(Connection $conn, Request $request)
     {
-
-        return $this->render('resources/browse_capture_methods.html.twig', array(
-            'page_title' => "Browse Capture Methods",
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        ));
+      return $this->render('resources/browse_capture_methods.html.twig', array(
+        'page_title' => "Browse Capture Methods",
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'resources'
+      ));
     }
 
     /**
@@ -163,12 +163,13 @@ class CaptureMethodController extends Controller
             $this->addFlash('message', 'Capture Method successfully updated.');
             return $this->redirectToRoute('capture_methods_browse');
         } else {
-            return $this->render('resources/capture_method_form.html.twig', array(
-                "page_title" => !empty($capture_methods_id) ? 'Manage Capture Method: ' . $data['label'] : 'Create Capture Method'
-                ,"data" => $data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
+          return $this->render('resources/capture_method_form.html.twig', array(
+            "page_title" => !empty($capture_methods_id) ? 'Manage Capture Method: ' . $data['label'] : 'Create Capture Method',
+            "data" => $data,
+            "errors" => $errors,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'current_tab' => 'resources'
+          ));
         }
 
     }

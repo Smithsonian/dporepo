@@ -115,8 +115,9 @@ class ImportController extends Controller
     public function importSummaryDashboard(Connection $conn, Request $request)
     {
       return $this->render('import/import_summary_dashboard.html.twig', array(
-          'page_title' => 'Browse Ingests',
-          'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
+        'page_title' => 'Browse Ingests',
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'ingest'
       ));
     }
 
@@ -320,14 +321,15 @@ class ImportController extends Controller
         $accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
 
         return $this->render('import/simple_ingest.html.twig', array(
-            'page_title' => 'Simple Ingest',
-            'form' => $form->createView(),
-            'subject_form' => $subject_form->createView(),
-            'item_form' => $item_form->createView(),
-            'accepted_file_types' => $accepted_file_types,
-            'service_error' => $service_error,
-            'dataset_data' => $dataset,
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
+          'page_title' => 'Simple Ingest',
+          'form' => $form->createView(),
+          'subject_form' => $subject_form->createView(),
+          'item_form' => $item_form->createView(),
+          'accepted_file_types' => $accepted_file_types,
+          'service_error' => $service_error,
+          'dataset_data' => $dataset,
+          'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+          'current_tab' => 'ingest'
         ));
     }
 
@@ -374,11 +376,12 @@ class ImportController extends Controller
         $accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
 
         return $this->render('import/bulk_ingest.html.twig', array(
-            'page_title' => 'Bulk Ingest',
-            'form' => $form->createView(),
-            'accepted_file_types' => $accepted_file_types,
-            'service_error' => $service_error,
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
+          'page_title' => 'Bulk Ingest',
+          'form' => $form->createView(),
+          'accepted_file_types' => $accepted_file_types,
+          'service_error' => $service_error,
+          'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+          'current_tab' => 'ingest'
         ));
     }
 
@@ -748,7 +751,8 @@ class ImportController extends Controller
         'project' => $project,
         'job_data' => $job_data,
         'id' => $job_data['job_id'],
-        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'ingest'
       ));
     }
 
@@ -1207,6 +1211,7 @@ class ImportController extends Controller
         'page_title' => 'Initialize Processing Job',
         'data' => $data,
         'processing_results' => $processing_results,
+        'current_tab' => 'ingest'
       ));
     }
 
@@ -1248,6 +1253,7 @@ class ImportController extends Controller
         'page_title' => 'Get Processing Job',
         'data' => $data,
         'processing_results' => $processing_results,
+        'current_tab' => 'ingest'
       ));
     }
 
