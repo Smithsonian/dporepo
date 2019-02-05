@@ -5066,7 +5066,7 @@ class RepoStorageHybrid implements RepoStorage {
     $step_state = array_key_exists('step_state', $params) ? $params['step_state'] : NULL;
     $item_id = array_key_exists('item_id', $params) ? (int)$params['item_id'] : NULL;
 
-    $sql = "SELECT * FROM workflow ";
+    $sql = "SELECT * FROM workflow LEFT JOIN fos_user on fos_user.id = workflow.created_by_user_account_id";
     $where_parts = array();
     if(NULL !== $ingest_job_uuid) {
       $where_parts[] = "ingest_job_uuid=:ingest_job_uuid ";
