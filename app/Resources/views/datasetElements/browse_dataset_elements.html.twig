@@ -74,6 +74,8 @@
                 <dd>{{ dataset_data.capture_dataset_description|e|nl2br }}</dd>
                 <dt>Dataset Collection Notes</dt>
                 <dd>{{ dataset_data.collection_notes|e|nl2br }}</dd>
+                <dt>Dataset Variant Types</dt>
+                <dd>{{ dataset_data.variant_types }}</dd>
             </dl>
             {% if dataset_data.directory_path is defined and dataset_data.directory_path %}
             <hr>
@@ -84,7 +86,7 @@
         </div>
 
         <div class="col-sm-12 col-md-12">
-            <a href="javascript:void(0);" class="view-hidden-content" role="button" data-original-text="Expand Details and View Uploaded Files"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span> <span class="view-hidden-content-text">Expand Details and View Uploaded Files</span></a>
+            <a href="javascript:void(0);" class="view-hidden-content" role="button" data-original-text="Expand Details"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span> <span class="view-hidden-content-text">Expand Details and View Uploaded Files</span></a>
             <hr>
         </div>
 
@@ -110,6 +112,7 @@
                             <th class="text-center">Capture Sequence Number</th>
                             <th class="text-center">Cluster Position Field ID</th>
                             <th class="text-center">Position In Cluster Field ID</th>
+                            <th class="text-center">Variant Types</th>
                             <!--th class="text-center">EXIF Metadata</th -->
                             <th class="text-center">Last Modified</th>
                         </tr>
@@ -306,6 +309,7 @@
             { "data": "capture_sequence_number" },
             { "data": "cluster_position_field_id" },
             { "data": "position_in_cluster_field_id" },
+            { "data": "variant_types" },
             { "data": "last_modified" }
           ],
           "dom": 'lfip<"datatables_bulk_actions">tip',

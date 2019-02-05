@@ -674,6 +674,13 @@ class RepoStorageHybrid implements RepoStorage {
           ,camera_cluster_type.label AS camera_cluster_type_label
           ,item.subject_id
           ,item.project_id
+          , ( SELECT GROUP_CONCAT(DISTINCT variant_type) from capture_data_file 
+            LEFT JOIN capture_data_element ON capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id 
+            WHERE capture_data_element.capture_dataset_id = :capture_dataset_id
+            GROUP BY capture_data_element.capture_dataset_id
+          )
+          as variant_types
+          
         FROM capture_dataset
         LEFT JOIN capture_method ON capture_method.capture_method_id = capture_dataset.capture_method
         LEFT JOIN dataset_type ON dataset_type.dataset_type_id = capture_dataset.capture_dataset_type
@@ -3201,7 +3208,19 @@ class RepoStorageHybrid implements RepoStorage {
                   AND file_upload.metadata IS NOT NULL AND file_upload.metadata NOT LIKE ''              
                   GROUP BY capture_data_file.capture_data_element_id
               )
-                as metadata
+              as metadata 
+             , ( SELECT file_path from file_upload 
+                LEFT JOIN capture_data_file on file_upload.file_upload_id = capture_data_file.file_upload_id    
+                WHERE capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
+                AND file_path is not NULL
+                AND file_type='jpg'              
+                LIMIT 1
+            )
+            as file_path
+            , ( SELECT GROUP_CONCAT(variant_type) from capture_data_file 
+                WHERE capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
+            )
+            as variant_types
           FROM capture_data_element
           WHERE capture_data_element.active = 1 ";
 
