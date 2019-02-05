@@ -474,6 +474,9 @@ class WorkflowController extends Controller
       $workflow_data['model_id'] = $model[0]['model_id'];
     }
 
+    // Get the job's data via job_uuid.
+    $workflow_data['ingest_job'] = $this->repo_storage_controller->execute('getJobData', array($workflow_data['ingest_job_uuid']));
+
     // If the HD QC is done (url GET param qc_hd_done), pass it to $this->setInterface().
     // and write the QC 'done' file to the filesystem.
     if (null !== $request->query->get('qc_hd_done')) {
@@ -550,6 +553,12 @@ class WorkflowController extends Controller
           if (empty($w['step_state'])) {
             $data = $this->qcWeb($w);
           }
+          // QC Done
+          if ($w['step_state'] === 'done') {
+            $data = $this->qcWeb($w);
+            $data['header'] = 'QC Completed';
+            $data['message'] .= 'Web HD and derivatives have been processed and passed quality control.';
+          }
           break;
       }
       
@@ -558,6 +567,15 @@ class WorkflowController extends Controller
     if (!empty($w) && ($w['step_type'] === 'auto')) {
 
       switch ($w['step_id']) {
+        case 'web-hd':
+          // Initialize the 'web-multi' procesing job.
+          $data = array(
+            'action' => 'process',
+            'header' => 'Generating HD Web Model',
+            'message' => 'The high definition web model is being processed. No actions available.',
+            'processing_job_id' => $w['processing_job_id'],
+          );
+          break;
         case 'web-multi':
           // Initialize the 'web-multi' procesing job.
           if (empty($w['step_state'])) {
@@ -570,25 +588,50 @@ class WorkflowController extends Controller
 
     }
 
-    // Check for 2D image thumbnail(s).
-    $data['thumbnail'] = false;
-    // Get the master model's path.
-    $path = $this->getPathInfo($w['ingest_job_uuid']);
-    // If the model path can't be found, throw a createNotFoundException (404).
-    if (empty($path)) throw $this->createNotFoundException('Model path not found');
-
-    $directory = pathinfo($path[0]['asset_path'], PATHINFO_DIRNAME);
-    $jpg = $directory . DIRECTORY_SEPARATOR . 'image-low.jpg';
-    $png = $directory . DIRECTORY_SEPARATOR . 'image-low.png';
-
-    if (is_file($jpg)) {
-      $data['thumbnail'] = '/' . str_replace($this->project_directory . 'web/', '', $jpg);
-    }
-
-    if (is_file($png)) {
-      $data['thumbnail'] = '/' . str_replace($this->project_directory . 'web/', '', $png);
-    }
+    // Check for 2D thumbnail images.
+    $data['thumbnail_images'] = $this->getThumbnailImages($w);
     
+    return $data;
+  }
+
+  /**
+   * Get Thumbnail Images
+   *
+   * @param array $w Workflow data
+   * @return array
+   */
+  private function getThumbnailImages($w = array())
+  {
+    $data = false;
+    $image_sizes = array('thumb', 'low', 'medium', 'high');
+
+    if (!empty($w)) {
+    
+      // Get the master model's path.
+      $path = $this->getPathInfo($w['ingest_job_uuid']);
+
+      // If the model path can't be found, throw a createNotFoundException (404).
+      if (empty($path)) throw $this->createNotFoundException('Model path not found');
+
+      $directory = pathinfo($path[0]['asset_path'], PATHINFO_DIRNAME);
+
+      foreach ($image_sizes as $key => $value) {
+
+        // Thumbnail images can be either JPEGs or PNGs.
+        $jpg = $directory . DIRECTORY_SEPARATOR . 'image-' . $value . '.jpg';
+        $png = $directory . DIRECTORY_SEPARATOR . 'image-' . $value . '.png';
+
+        if (is_file($jpg)) {
+          $data[$value] = '/' . str_replace($this->project_directory . 'web/', '', $jpg);
+        }
+
+        if (is_file($png)) {
+          $data[$value] = '/' . str_replace($this->project_directory . 'web/', '', $png);
+        }
+      }
+
+    }
+
     return $data;
   }
 
@@ -777,7 +820,7 @@ class WorkflowController extends Controller
       $data = array(
         'action' => 'qc',
         'header' => 'QC: HD Model',
-        'message' => '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?' . http_build_query($url_params) . '"><strong>View the HD model</strong></a>' . $check_icon . '</p>',
+        'message' => '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?' . http_build_query($url_params) . '"><strong>QC/Position HD model</strong></a>' . $check_icon . '</p>',
       );
 
       // If QC is done, add a link to generate web derivatives.
@@ -840,6 +883,8 @@ class WorkflowController extends Controller
   {
     $data = array();
 
+    // $this->u->dumper($w);
+
     if (!empty($w)) {
 
       // Get the master model's path.
@@ -896,7 +941,25 @@ class WorkflowController extends Controller
         $end = '</strong></a>' . $check_icon . '</p>';
 
         // Set the message for the UI interface.
-        $data['message'] .= $start . '<a href="' . $url . http_build_query($url_params) . '"><strong>View 3D model (' . $key . ')' . $end;
+        $data['message'] .= $start . '<a href="' . $url . http_build_query($url_params) . '"><strong>QC/Position model (' . $key . ')' . $end;
+      }
+
+      // If the step_state is done, add the HD web model.
+      if ($w['step_state'] === 'done') {
+        // Load item.json if present.
+        if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . '-item.json')) {
+
+          $url_params = array(
+            'item' => str_replace($this->project_directory . 'web/uploads/repository', '/webdav', $directory) . '/' . $base_file_name . '-item.json',
+            'referrer' => '/admin/workflow/' . $w['workflow_id'] . '?qc_hd_done'
+          );
+
+          // If QC is done, add a check icon.
+          $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done') ? $this->check_icon_markup : '';
+
+          // Interface data.
+          $data['message'] .= '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?' . http_build_query($url_params) . '"><strong>QC/Position HD model</strong></a>' . $check_icon . '</p>';
+        }
       }
 
     }
@@ -923,7 +986,7 @@ class WorkflowController extends Controller
         $data = array(
           'action' => 'process',
           'header' => 'Generating Multi-level Web Assets',
-          'message' => 'The processing job has been initialized.',
+          'message' => 'The processing job has been initialized and launched.',
           'processing_job_id' => $w['processing_job_id'],
         );
 
