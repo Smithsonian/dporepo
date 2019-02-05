@@ -352,22 +352,22 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'api_access_uv_map_size_id',
     );
 
-      // Joins.
-      $query_params['related_tables'][] = array(
-        'table_name' => 'item_type',
-        'table_join_field' => 'item_type_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'item',
-        'base_join_field' => 'item_type',
-      );
+    // Joins.
+    $query_params['related_tables'][] = array(
+      'table_name' => 'item_type',
+      'table_join_field' => 'item_type_id',
+      'join_type' => 'LEFT JOIN',
+      'base_join_table' => 'item',
+      'base_join_field' => 'item_type',
+    );
 
-      $query_params['records_values'] = array();
-      $ret = $this->getRecords($query_params);
-      //@todo do something if $ret has errors
+    $query_params['records_values'] = array();
+    $ret = $this->getRecords($query_params);
+    //@todo do something if $ret has errors
 
-      if(array_key_exists(0, $ret)) {
-        $return_data = $ret[0];
-      }
+    if(array_key_exists(0, $ret)) {
+      $return_data = $ret[0];
+    }
 
     if(empty($return_data)) {
       return $return_data;
@@ -386,7 +386,7 @@ class RepoStorageHybrid implements RepoStorage {
     $return_data['inherit_api_access_model_face_count_id'] = isset($download_permissions['inherit_api_access_model_face_count_id']) ? $download_permissions['inherit_api_access_model_face_count_id'] : NULL;
     $return_data['inherit_api_access_uv_map_size_id'] = isset($download_permissions['inherit_api_access_uv_map_size_id']) ? $download_permissions['inherit_api_access_uv_map_size_id'] : NULL;
 
-      return $return_data;
+    return $return_data;
   }
 
   public function getModel($params) {
@@ -433,7 +433,9 @@ class RepoStorageHybrid implements RepoStorage {
     $return_data['files'] = $file_data;
 
     $return_data['viewable_model'] = false;
-    foreach($file_data as $file) {
+    //foreach($file_data as $file) {
+    if(!empty($file_data)) {
+      $file = $file_data;
       $fn = $file['file_name'];
       $fn_exploded = explode('.', $fn);
       if(count($fn_exploded) == 2 && strtolower($fn_exploded[1]) == 'obj') {
@@ -463,7 +465,6 @@ class RepoStorageHybrid implements RepoStorage {
       else {
         $return_data['model_id_3d_thumb'] = $rm['model_id'];
       }
->>>>>>> db49b62... Return web-ready and 3D thumb model IDs if available.
     }
 
     $return_data['viewable_model'] = false;
@@ -3325,6 +3326,8 @@ class RepoStorageHybrid implements RepoStorage {
 
     $statement->execute();
     $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $this->unpack_metadata($data['aaData']);
 
     $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
     $statement->execute();
