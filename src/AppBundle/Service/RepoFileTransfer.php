@@ -185,12 +185,22 @@ class RepoFileTransfer implements RepoFileTransferInterface {
           try {
             $stream = fopen($file->getPathname(), 'r+');
             $filesystem->writeStream($path_external, $stream);
+            // TODO: writeStream doesn't overwrite, but updateStream does overwrite, which is probably what we want for now?
+            // $filesystem->updateStream($path_external, $stream);
             // Before calling fclose on the resource, check if it’s still valid using is_resource.
             if (is_resource($stream)) fclose($stream);
           }
           // Catch the error.
-          catch(\League\Flysystem\FileExistsException | \League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
+          catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
             $data[$i]['errors'][] = $e->getMessage();
+          }
+          catch(\League\Flysystem\FileExistsException $e) {
+
+            $stream = fopen($file->getPathname(), 'r+');
+            $filesystem->updateStream($path_external, $stream);
+            // Before calling fclose on the resource, check if it’s still valid using is_resource.
+            if (is_resource($stream)) fclose($stream);
+
           }
 
           // Return some information about the file.

@@ -9,6 +9,9 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Doctrine\DBAL\Driver\Connection;
 use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\Process\Process;
+use Symfony\Component\Process\Exception\ProcessFailedException;
+use Symfony\Component\Process\PhpExecutableFinder;
 
 use AppBundle\Service\RepoProcessingService;
 use AppBundle\Controller\RepoStorageHybridController;
@@ -495,6 +498,10 @@ class WorkflowController extends Controller
       }
     }
 
+    if (null !== $request->query->get('completed')) {
+
+    }
+
     // Set a flag for the template for handling the next step (e.g. upload, advance, etc.).
     $workflow_data['interface'] = $this->setInterface($workflow_data);
     $workflow_data['accepted_file_types'] = $this->accepted_file_types;
@@ -504,7 +511,10 @@ class WorkflowController extends Controller
       $workflow_data['processing_job_id'] = $workflow_data['interface']['processing_job_id'];
     }
 
-    // $this->u->dumper($workflow_data);
+    // If the workflow step_state is 'done', transfer all assets to external file storage.
+    if ($workflow_data['step_state'] === 'done') $pid = $this->transferAssets($workflow_data);
+
+    // $this->u->dumper($pid);
 
     return $this->render('workflow/workflow.html.twig', array(
       'page_title' => 'Workflow',
@@ -614,12 +624,13 @@ class WorkflowController extends Controller
       if (empty($path)) throw $this->createNotFoundException('Model path not found');
 
       $directory = pathinfo($path[0]['asset_path'], PATHINFO_DIRNAME);
+      $base_file_name = pathinfo($path[0]['asset_path'], PATHINFO_FILENAME);
 
       foreach ($image_sizes as $key => $value) {
 
         // Thumbnail images can be either JPEGs or PNGs.
-        $jpg = $directory . DIRECTORY_SEPARATOR . 'image-' . $value . '.jpg';
-        $png = $directory . DIRECTORY_SEPARATOR . 'image-' . $value . '.png';
+        $jpg = $directory . DIRECTORY_SEPARATOR . $base_file_name . '-image-' . $value . '.jpg';
+        $png = $directory . DIRECTORY_SEPARATOR . $base_file_name . '-image-' . $value . '.png';
 
         if (is_file($jpg)) {
           $data[$value] = '/' . str_replace($this->project_directory . 'web/', '', $jpg);
@@ -905,6 +916,7 @@ class WorkflowController extends Controller
       $end = '</strong></a></p>';
       $url = '/lib/javascripts/voyager-tools/voyager-story-dev.html?';
 
+      $data['qc_done_count'] = 0;
       foreach ($this->derivatives as $key => $value) {
 
         // Load item.json if present.
@@ -938,7 +950,11 @@ class WorkflowController extends Controller
 
         // If QC is done, add a check icon.
         $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_' . $key . '_done') ? $this->check_icon_markup : '';
+        // Overwrite the $end variable.
         $end = '</strong></a>' . $check_icon . '</p>';
+
+        // Advance the qc_done_count, so we have an indication when to display the "Complete QC Workflow" button.
+        if (!empty($check_icon)) $data['qc_done_count']++;
 
         // Set the message for the UI interface.
         $data['message'] .= $start . '<a href="' . $url . http_build_query($url_params) . '"><strong>QC/Position model (' . $key . ')' . $end;
@@ -1205,6 +1221,54 @@ class WorkflowController extends Controller
     }
 
     return $data;
+  }
+
+  /**
+   * Write QC Done File
+   *
+   * @param array $w Workflow data
+   * @return bool/int
+   */
+  public function transferAssets($w = array()) {
+
+    $pid = false;
+
+    // $this->u->dumper($w);
+
+    // Get the master model's path.
+    $path = $this->getPathInfo($w['ingest_job_uuid']);
+
+    // If the model path can't be found, throw a createNotFoundException (404).
+    if (!empty($path) && is_file($path[0]['asset_path'])) {
+
+      // Hack for XAMPP on Windows.
+      if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+        $php_binary_path = 'c:/xampp/php/php.exe';
+      } else {
+        // Find the executable PHP binary.
+        $php_binary_finder = new PhpExecutableFinder();
+        $php_binary_path = $php_binary_finder->find();
+      }
+
+      // $command = 'cd ' . $this->container->getParameter('kernel.project_dir') . ' && ';
+      chdir($this->container->getParameter('kernel.project_dir'));
+      if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {            
+        $command = $php_binary_path . ' bin/console app:transfer-files ' . $w['ingest_job_uuid'] . ' > NUL';
+      } else {
+        $command = $php_binary_path . ' bin/console app:transfer-files ' . $w['ingest_job_uuid'] . ' > /dev/null 2>&1 &';
+      }
+
+      $process = new Process($command);
+      $process->setTimeout(3600);
+
+      $process->start();
+      $pid = $process->getPid();
+
+      $process->wait();
+
+    }
+
+    return $pid;
   }
 
 

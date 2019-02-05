@@ -30,6 +30,11 @@
       <div class="panel panel-default">
         <div class="panel-heading"><h3><span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span> Workflow Details</h3></div>
         <div class="panel-body" style="min-height: 28rem;">
+
+          {% if data.step_state == 'done' %}
+            <div class="alert alert-success" role="alert"> <strong>QC Completed!</strong> The QC workflow has been completed.</div>
+          {% endif %}
+
           <p><strong>Workflow Recipe:</strong> {{ data.workflow_recipe_name }}</p>
           <p><strong>Current step ID:</strong> {{ data.step_id }}</p>
           {% if (data.step_state) %}
@@ -92,6 +97,12 @@
                   </ul>
                 </div>
               {% endif %}
+
+              {% if data.step_state != 'done' and data.interface.qc_done_count == 3 %}
+                <hr>
+                <a href="/admin/workflow/{{ data.workflow_id }}/go/done" class="btn btn-primary" role="button"><span class="glyphicon glyphicon-check" aria-hidden="true"></span> Complete QC Workflow</a>
+              {% endif %}
+
             </div>
           </div>
           <!-- // row -->
