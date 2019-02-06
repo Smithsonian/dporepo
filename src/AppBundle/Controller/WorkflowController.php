@@ -605,6 +605,31 @@ class WorkflowController extends Controller
   }
 
   /**
+   * @Route("/admin/get_processing_status/{workflow_id}", name="get_processing_status", methods={"GET"})
+   *
+   * @param Request $request
+   * @param object $request Symfony's request object
+   */
+  public function getProcessingStatus(Request $request)
+  {
+
+    $workflow_id = $request->attributes->get('workflow_id');
+    
+    // Get workflow data.
+    $query_params = array('workflow_id' => $workflow_id);
+    $workflow_data = $this->repo_storage_controller->execute('getWorkflows', $query_params);
+    // If the workflow isn't found, throw a createNotFoundException (404).
+    if (empty($workflow_data)) throw $this->createNotFoundException('Workflow not found');
+
+    // Get processing job data.
+    $processing_job = $this->processing->getJob($workflow_data['processing_job_id']);
+    // If the processing job isn't found, throw a createNotFoundException (404).
+    if (!$processing_job['result']) throw $this->createNotFoundException('Processing job not found');
+
+    return $this->json($processing_job['result']['state']);
+  }
+
+  /**
    * Get Thumbnail Images
    *
    * @param array $w Workflow data

@@ -98,7 +98,7 @@
                 </div>
               {% endif %}
 
-              {% if data.step_state != 'done' and data.interface.qc_done_count == 3 %}
+              {% if data.step_state != 'done' and data.interface.qc_done_count is defined and data.interface.qc_done_count == 3 %}
                 <hr>
                 <a href="/admin/workflow/{{ data.workflow_id }}/go/done" class="btn btn-primary" role="button"><span class="glyphicon glyphicon-check" aria-hidden="true"></span> Complete QC Workflow</a>
               {% endif %}
@@ -178,6 +178,45 @@
 {% endblock %}
 {% block js_bottom %}
     {{ parent() }}
+
+    <script type="text/javascript">
+      $(document).ready(function() {
+
+        {% if data.step_id == 'web-multi' %}
+          var getProcessingStatus = setInterval(getProcessingStatus, 2000);
+
+          // Processing service status checker.
+          function getProcessingStatus() {
+
+            $.ajax({
+              'type': 'GET'
+              ,'dataType': 'json'
+              ,'url': '/admin/get_processing_status/{{ data.workflow_id }}'
+              ,success: function(result) {
+                if (result) {
+
+                  console.log(result);
+
+                  // clearInterval(getProcessingStatus);
+                }
+              }
+              ,error: function(result) {
+                if (result) {
+                  swal({
+                    title: 'Error',
+                    text: 'Processing status check failed (' + result.status + ')',
+                    icon: 'error',
+                  });
+                  clearInterval(getProcessingStatus);
+                }
+              }
+            });
+          }
+        {% endif %}
+
+      });
+    </script>
+
     {% if data.step_state == 'error' %}
       <script type="text/javascript" src="{{ asset('lib/javascripts/dropzone.js') }}"></script>
       <script type="text/javascript">
