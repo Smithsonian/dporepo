@@ -507,11 +507,6 @@ class WorkflowController extends Controller
       $workflow_data['processing_job_id'] = $workflow_data['interface']['processing_job_id'];
     }
 
-    // If the workflow step_state is 'done', transfer all assets to external file storage.
-    if ($workflow_data['step_state'] === 'done') $pid = $this->transferAssets($workflow_data);
-
-    // $this->u->dumper($pid);
-
     return $this->render('workflow/workflow.html.twig', array(
       'page_title' => 'Workflow',
       'data' => $workflow_data,
@@ -1279,55 +1274,6 @@ class WorkflowController extends Controller
 
     return $data;
   }
-
-  /**
-   * Write QC Done File
-   *
-   * @param array $w Workflow data
-   * @return bool/int
-   */
-  public function transferAssets($w = array()) {
-
-    $pid = false;
-
-    // $this->u->dumper($w);
-
-    // Get the master model's path.
-    $path = $this->getPathInfo($w['ingest_job_uuid']);
-
-    // If the model path can't be found, throw a createNotFoundException (404).
-    if (!empty($path) && is_file($path[0]['asset_path'])) {
-
-      // Hack for XAMPP on Windows.
-      if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-        $php_binary_path = 'c:/xampp/php/php.exe';
-      } else {
-        // Find the executable PHP binary.
-        $php_binary_finder = new PhpExecutableFinder();
-        $php_binary_path = $php_binary_finder->find();
-      }
-
-      // $command = 'cd ' . $this->container->getParameter('kernel.project_dir') . ' && ';
-      chdir($this->container->getParameter('kernel.project_dir'));
-      if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {            
-        $command = $php_binary_path . ' bin/console app:transfer-files ' . $w['ingest_job_uuid'] . ' > NUL';
-      } else {
-        $command = $php_binary_path . ' bin/console app:transfer-files ' . $w['ingest_job_uuid'] . ' > /dev/null 2>&1 &';
-      }
-
-      $process = new Process($command);
-      $process->setTimeout(3600);
-
-      $process->start();
-      $pid = $process->getPid();
-
-      $process->wait();
-
-    }
-
-    return $pid;
-  }
-
 
 
 
