@@ -4,10 +4,6 @@
   {{ parent() }}
   <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
   <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
-
-    <link href="css/voyager-story.dev.css" rel="stylesheet"></head>
-
-
   <style>
     .dz-preview {
       display: block;
@@ -78,10 +74,7 @@
                 <hr>
                 <div>
                   <h4>Processing Logs</h4>
-                  <p><span class="glyphicon glyphicon-ok" aria-hidden="true" style="color:green;"></span> DecimateMesh: Decimate mesh using Meshlab</p>
-                  <p><span class="glyphicon glyphicon-ok" aria-hidden="true" style="color:green;"></span> UnwrapMesh: Unwrap mesh using Unfold</p>
-                  <p><span class="glyphicon glyphicon-ok" aria-hidden="true" style="color:green;"></span> InspectMesh: Calculate mesh size and max. ray distance for bake</p>
-                  <p><img src="/lib/images/spinner-40px.gif" alt="Visual job status indicator" width="26" height="26"> BakeMaps: Bake diffuse, normal and occlusion maps using xNormal</p>
+                  <div id="processing-status"></div>
                 </div>
               {% endif %}
 
@@ -183,7 +176,24 @@
       $(document).ready(function() {
 
         {% if data.step_id == 'web-multi' %}
-          var getProcessingStatus = setInterval(getProcessingStatus, 2000);
+
+          // Poll the processing service every 10 seconds for the status.
+          var getProcessingStatus = setInterval(getProcessingStatus, 10000);
+
+          var targetContainer = $('#processing-status');
+          var p = $('<p />').addClass('get-status');
+          var processing_span = $('<span />')
+              .addClass('glyphicon glyphicon-ok')
+              .attr('aria-hidden', 'true')
+              .attr('style', 'color:green;');
+          var img = $('<img />')
+              .attr('src', '/lib/images/spinner-40px.gif')
+              .attr('alt', 'Visual job status indicator')
+              .attr('width', '26')
+              .attr('height', '26');
+
+          p.append(img, '&nbsp;Retrieving processing status...');
+          targetContainer.append(p);
 
           // Processing service status checker.
           function getProcessingStatus() {
@@ -195,9 +205,97 @@
               ,success: function(result) {
                 if (result) {
 
-                  console.log(result);
+                  // After processing is done, check to see if file transfers have completed.
+                  if (result.state === 'done') {
+                    // Get workflow data.
+                    $.ajax({
+                      'type': 'GET'
+                      ,'dataType': 'json'
+                      ,'url': '/admin/get_workflow_status/{{ data.workflow_id }}'
+                      ,success: function(result) {
+                        if (result) {
+                          // If the step_id is set to 'qc-web', reload the page.
+                          if (result.step_id === 'qc-web') {
+                            // Remove the initial 'Retrieving processing status' message.
+                            $('.get-status').remove();
+                            // Clear the interval.
+                            clearInterval(getProcessingStatus);
 
-                  // clearInterval(getProcessingStatus);
+                            // Display an alert
+                            swal("Processing Finished!", {
+                              buttons: {
+                                catch: {
+                                  text: "Go to QC",
+                                  value: "goto",
+                                }
+                              },
+                            })
+                            .then((value) => {
+                              switch (value) {
+                                case "goto":
+                                  // Reload the page.
+                                  location.reload();
+                                  break;
+                              }
+                            });
+
+                          }
+
+                        }
+                      }
+                      ,error: function(result) {
+                        if (result) {
+                          swal({
+                            title: 'Error',
+                            text: 'File transfer status check failed.',
+                            icon: 'error',
+                          });
+                          clearInterval(getProcessingStatus);
+                        }
+                      }
+                    });
+                  }
+
+                  // Add the processing job's submission timestamp.
+                  if (!$(targetContainer).find('.submission').length) {
+                    // Remove the initial 'Retrieving processing status' message.
+                    $('.get-status').remove();
+                    // Elements
+                    var initialized_p = $('<p />').addClass('initialized');
+                    var initialized_span = $('<span />')
+                        .addClass('glyphicon glyphicon-ok submission')
+                        .attr('aria-hidden', 'true')
+                        .attr('style', 'color:green;');
+                    initialized_p.append(initialized_span, '&nbsp;&nbsp;Job initialized: ' + result.submission);
+                    targetContainer.append(initialized_p);
+                  }
+
+                  // Create a unique class for the next status elements.
+                  var words = result.step.split(' ');
+                  var pclass = words[0].replace(':', '');
+
+                  // Add the processing job's step.
+                  if (result.step.length && !$(targetContainer).find('.' + pclass).length) {
+                    // Elements
+                    var processing_p = $('<p />').addClass(pclass);
+                    var processing_img = $('<img />')
+                        .attr('src', '/lib/images/spinner-40px.gif')
+                        .attr('alt', 'Visual job status indicator')
+                        .attr('width', '26')
+                        .attr('height', '26')
+                        .addClass(pclass);
+
+                    // Remove the spinner gif image from all paragraph elements.
+                    targetContainer.find('p').find('img').remove();
+
+                    // Reset all statuses
+                    resetStatuses();
+
+                    // Add the paragraph element along with the spinner gif image to the new active step.
+                    processing_p.append(processing_img, '&nbsp;&nbsp;' + result.step);
+                    targetContainer.append(processing_p);
+                  }
+
                 }
               }
               ,error: function(result) {
@@ -212,6 +310,14 @@
               }
             });
           }
+
+          function resetStatuses() {
+            // To avoid duplicates, remove the <span> from all paragraph elements.
+            targetContainer.find('p:not(.initialized)').find('span').remove();
+            // Add the <span> to all paragraph elements.
+            targetContainer.find('p:not(.initialized)').prepend(processing_span);
+          }
+
         {% endif %}
 
       });

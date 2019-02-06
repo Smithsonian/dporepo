@@ -498,10 +498,6 @@ class WorkflowController extends Controller
       }
     }
 
-    // if (null !== $request->query->get('completed')) {
-
-    // }
-
     // Set a flag for the template for handling the next step (e.g. upload, advance, etc.).
     $workflow_data['interface'] = $this->setInterface($workflow_data);
     $workflow_data['accepted_file_types'] = $this->accepted_file_types;
@@ -594,8 +590,6 @@ class WorkflowController extends Controller
           break;
       }
 
-      // $this->u->dumper($w['step_id']);
-
     }
 
     // Check for 2D thumbnail images.
@@ -613,20 +607,49 @@ class WorkflowController extends Controller
   public function getProcessingStatus(Request $request)
   {
 
+    $json_decoded = array();
     $workflow_id = $request->attributes->get('workflow_id');
-    
-    // Get workflow data.
-    $query_params = array('workflow_id' => $workflow_id);
-    $workflow_data = $this->repo_storage_controller->execute('getWorkflows', $query_params);
-    // If the workflow isn't found, throw a createNotFoundException (404).
-    if (empty($workflow_data)) throw $this->createNotFoundException('Workflow not found');
 
-    // Get processing job data.
-    $processing_job = $this->processing->getJob($workflow_data['processing_job_id']);
-    // If the processing job isn't found, throw a createNotFoundException (404).
-    if (!$processing_job['result']) throw $this->createNotFoundException('Processing job not found');
+    if (!empty($workflow_id)) {
+      // Get workflow data.
+      $query_params = array('workflow_id' => $workflow_id);
+      $workflow_data = $this->repo_storage_controller->execute('getWorkflows', $query_params);
+      // If the workflow isn't found, throw a createNotFoundException (404).
+      if (empty($workflow_data)) throw $this->createNotFoundException('Workflow not found');
 
-    return $this->json($processing_job['result']['state']);
+      // Get processing job data.
+      $processing_job = $this->processing->getJob($workflow_data['processing_job_id']);
+      // If the processing job isn't found, throw a createNotFoundException (404).
+      if (!$processing_job['result']) throw $this->createNotFoundException('Processing job not found');
+
+      // Decode the JSON coming from the processing service.
+      $json_decoded = json_decode($processing_job['result'], true);
+    }
+
+    return $this->json($json_decoded);
+  }
+
+  /**
+   * @Route("/admin/get_workflow_status/{workflow_id}", name="get_workflow_status", methods={"GET"})
+   *
+   * @param Request $request
+   * @param object $request Symfony's request object
+   */
+  public function getWorkflowStatus(Request $request)
+  {
+
+    $data = array();
+    $workflow_id = $request->attributes->get('workflow_id');
+
+    if (!empty($workflow_id)) {
+      // Get workflow data.
+      $query_params = array('workflow_id' => $workflow_id);
+      $data = $this->repo_storage_controller->execute('getWorkflows', $query_params);
+      // If the workflow isn't found, throw a createNotFoundException (404).
+      if (empty($data)) throw $this->createNotFoundException('Workflow not found');
+    }
+
+    return $this->json($data);
   }
 
   /**
@@ -643,7 +666,7 @@ class WorkflowController extends Controller
     if (!empty($w)) {
     
       // Get the master model's path.
-      $path = $this->getPathInfo($w['ingest_job_uuid']);
+      $path = $this->getPathInfo($w);
 
       // If the model path can't be found, throw a createNotFoundException (404).
       if (empty($path)) throw $this->createNotFoundException('Model path not found');
@@ -656,14 +679,14 @@ class WorkflowController extends Controller
         // Thumbnail images can be either JPEGs or PNGs.
         $jpg = $directory . DIRECTORY_SEPARATOR . $base_file_name . '-image-' . $value . '.jpg';
         $png = $directory . DIRECTORY_SEPARATOR . $base_file_name . '-image-' . $value . '.png';
+        if (is_file($jpg)) $data[$value] = '/' . str_replace($this->project_directory . 'web/', '', $jpg);
+        if (is_file($png)) $data[$value] = '/' . str_replace($this->project_directory . 'web/', '', $png);
 
-        if (is_file($jpg)) {
-          $data[$value] = '/' . str_replace($this->project_directory . 'web/', '', $jpg);
-        }
-
-        if (is_file($png)) {
-          $data[$value] = '/' . str_replace($this->project_directory . 'web/', '', $png);
-        }
+        // Sometimes the Voyager QC tool outputs files without a base name.
+        $jpg_plain = $directory . DIRECTORY_SEPARATOR . 'image-' . $value . '.jpg';
+        $png_plain = $directory . DIRECTORY_SEPARATOR . 'image-' . $value . '.png';
+        if (is_file($jpg_plain)) $data[$value] = '/' . str_replace($this->project_directory . 'web/', '', $jpg_plain);
+        if (is_file($png_plain)) $data[$value] = '/' . str_replace($this->project_directory . 'web/', '', $png_plain);
       }
 
     }
@@ -734,14 +757,23 @@ class WorkflowController extends Controller
   /**
    * Get Path Info
    *
-   * @param object $ingest_job_uuid Ingest job UUID
+   * @param array $w Workflow data
    */
-  public function getPathInfo($ingest_job_uuid = null)
+  public function getPathInfo($w = null)
   {
 
     $data = array();
 
-    if (!empty($ingest_job_uuid)) {
+    if (!empty($w)) {
+
+      if (!empty($w['processing_job_id'])) {
+        $search_field = 'processing_service_job_id';
+        $search_value = $w['processing_job_id'];
+      } else {
+        $search_field = 'ingest_job_uuid';
+        $search_value = $w['ingest_job_uuid'];
+      }
+
       // Get the file path from the processing_job metadata storage.
       $data = $this->repo_storage_controller->execute('getRecords', array(
           'base_table' => 'processing_job',
@@ -753,8 +785,8 @@ class WorkflowController extends Controller
           ),
           'limit' => 1,
           'search_params' => array(
-            0 => array('field_names' => array('processing_job.ingest_job_uuid'), 'search_values' => array($ingest_job_uuid), 'comparison' => '='),
-            1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('web-hd'), 'comparison' => '='),
+            0 => array('field_names' => array('processing_job.' . $search_field . ''), 'search_values' => array($search_value), 'comparison' => '='),
+            // 1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('web-hd'), 'comparison' => '='),
           ),
           'search_type' => 'AND',
           'omit_active_field' => true,
@@ -814,7 +846,7 @@ class WorkflowController extends Controller
     if (!empty($w)) {
 
       // Get the master model's path.
-      $path = $this->getPathInfo($w['ingest_job_uuid']);
+      $path = $this->getPathInfo($w);
       // If the model path can't be found, throw a createNotFoundException (404).
       if (empty($path)) throw $this->createNotFoundException('Model path not found');
 
@@ -850,7 +882,7 @@ class WorkflowController extends Controller
       $url_params['referrer'] = '/admin/workflow/' . $w['workflow_id'] . '?qc_hd_done';
 
       // If QC is done, add a check icon.
-      $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done') ? $this->check_icon_markup : '';
+      $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done.txt') ? $this->check_icon_markup : '';
 
       // Interface data.
       $data = array(
@@ -860,7 +892,7 @@ class WorkflowController extends Controller
       );
 
       // If QC is done, add a link to generate web derivatives.
-      if (is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done')) {
+      if (is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done.txt')) {
         $data['message'] .= '<p><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> <a href="/admin/workflow/' . $w['workflow_id'] . '/go/success"><strong>Generate web derivatives</strong></a></p>';
       }
 
@@ -882,7 +914,7 @@ class WorkflowController extends Controller
     if (!empty($w)) {
 
       // Get the master model's path.
-      $path = $this->getPathInfo($w['ingest_job_uuid']);
+      $path = $this->getPathInfo($w);
 
       // If the model path can't be found, throw a createNotFoundException (404).
       if (empty($path)) throw $this->createNotFoundException('Model path not found');
@@ -919,12 +951,11 @@ class WorkflowController extends Controller
   {
     $data = array();
 
-    // $this->u->dumper($w);
-
     if (!empty($w)) {
 
       // Get the master model's path.
-      $path = $this->getPathInfo($w['ingest_job_uuid']);
+      $path = $this->getPathInfo($w);
+
       // If the model path can't be found, throw a createNotFoundException (404).
       if (empty($path)) throw $this->createNotFoundException('Model path not found');
 
@@ -974,7 +1005,7 @@ class WorkflowController extends Controller
         $url_params['referrer'] = '/admin/workflow/' . $w['workflow_id'] . '?qc_' . $key . '_done';
 
         // If QC is done, add a check icon.
-        $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_' . $key . '_done') ? $this->check_icon_markup : '';
+        $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_' . $key . '_done.txt') ? $this->check_icon_markup : '';
         // Overwrite the $end variable.
         $end = '</strong></a>' . $check_icon . '</p>';
 
@@ -996,7 +1027,7 @@ class WorkflowController extends Controller
           );
 
           // If QC is done, add a check icon.
-          $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done') ? $this->check_icon_markup : '';
+          $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done.txt') ? $this->check_icon_markup : '';
 
           // Interface data.
           $data['message'] .= '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?' . http_build_query($url_params) . '"><strong>QC/Position HD model</strong></a>' . $check_icon . '</p>';
@@ -1018,6 +1049,8 @@ class WorkflowController extends Controller
   {
     $data = array();
 
+    // $this->u->dumper($w);
+
     if (!empty($w)) {
 
       // Check to see if the processing job already exists.
@@ -1035,8 +1068,7 @@ class WorkflowController extends Controller
       }
 
       // Get the master model's path.
-      $path = $this->getPathInfo($w['ingest_job_uuid']);
-
+      $path = $this->getPathInfo($w);
       // If the model path can't be found, throw a createNotFoundException (404).
       if (empty($path)) throw $this->createNotFoundException('Model path not found');
       // Get metadata for the errored file so pertinent information can be logged to the new file_upload record.
@@ -1206,7 +1238,7 @@ class WorkflowController extends Controller
     if (!empty($w)) {
 
       // Get the master model's path.
-      $path = $this->getPathInfo($w['ingest_job_uuid']);
+      $path = $this->getPathInfo($w);
       $directory = pathinfo($path[0]['asset_path'], PATHINFO_DIRNAME);
       $base_file_name = pathinfo($path[0]['asset_path'], PATHINFO_FILENAME);
 
@@ -1218,7 +1250,7 @@ class WorkflowController extends Controller
           if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . '-item.json')) {
             // Move into the target directory.
             chdir($directory);
-            $handle = fopen($directory . DIRECTORY_SEPARATOR . 'qc_hd_done', 'w');
+            $handle = fopen($directory . DIRECTORY_SEPARATOR . 'qc_hd_done.txt', 'w');
             // Write the 'done' file.
             fwrite($handle, '');
             if (is_resource($handle)) fclose($handle);
@@ -1233,7 +1265,7 @@ class WorkflowController extends Controller
             if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . $value['item_json_file_name'])) {
               // Move into the target directory.
               chdir($directory);
-              $handle = fopen($directory . DIRECTORY_SEPARATOR . 'qc_' . $key . '_done', 'w');
+              $handle = fopen($directory . DIRECTORY_SEPARATOR . 'qc_' . $key . '_done.txt', 'w');
               // Write the 'done' file.
               fwrite($handle, '');
               if (is_resource($handle)) fclose($handle);
