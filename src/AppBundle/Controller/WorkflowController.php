@@ -455,7 +455,7 @@ class WorkflowController extends Controller
   }
 
   /**
-   * @Route("/admin/workflow/{workflow_id}", name="workflow", methods={"GET","POST"})
+   * @Route("/admin/workflow/{workflow_id}", name="workflow", methods={"GET"})
    *
    * @param Request $request
    * @param object $request Symfony's request object
@@ -498,9 +498,9 @@ class WorkflowController extends Controller
       }
     }
 
-    if (null !== $request->query->get('completed')) {
+    // if (null !== $request->query->get('completed')) {
 
-    }
+    // }
 
     // Set a flag for the template for handling the next step (e.g. upload, advance, etc.).
     $workflow_data['interface'] = $this->setInterface($workflow_data);
