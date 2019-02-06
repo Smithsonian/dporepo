@@ -381,6 +381,10 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           )
         );
 
+        if (count($processing_job) > 1) {
+          $data[0]['errors'][] = 'More than one processing job found in metadata storage. Please contact the administrator for assistance.';
+        }
+
         // If the model file path is found, continue.
         if (!empty($processing_job)) {
 
