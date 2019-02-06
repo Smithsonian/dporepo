@@ -567,7 +567,7 @@ class WorkflowController extends Controller
           if ($w['step_state'] === 'done') {
             $data = $this->qcWeb($w);
             $data['header'] = 'QC Completed';
-            $data['message'] .= 'Web HD and derivatives have been processed and passed quality control.';
+            $data['message'] .= 'Web HD and derivative models have been processed and approved.';
           }
           break;
       }
