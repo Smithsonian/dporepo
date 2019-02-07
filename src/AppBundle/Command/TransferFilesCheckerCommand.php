@@ -95,7 +95,8 @@ class TransferFilesCheckerCommand extends ContainerAwareCommand
 
               // After files are transferred, rename the directory by prepending 'transferred_' to the directory name.
               // Another cron job can do the actual purge, later on- perhaps overnight during off-hours.
-              rename($this->uploads_directory . $value['ingest_job_uuid'], $this->uploads_directory . 'transferred_' .  $value['ingest_job_uuid']);
+              // TODO: 2019-01-07 Commented-out until we straighten out logic for switching from the local filesystem to external (Drastic)
+              // rename($this->uploads_directory . $value['ingest_job_uuid'], $this->uploads_directory . 'transferred_' .  $value['ingest_job_uuid']);
 
             }
           }
