@@ -331,12 +331,10 @@ class RepoFileTransfer implements RepoFileTransferInterface {
       )
     ));
 
-    if (in_array($file->getExtension(), $this->model_extensions)) {
-
-      // $this->u->dumper($file->getExtension());
-
-      $model_id = $this->logModelAssets($file);
-    }
+    // if (in_array($file->getExtension(), $this->model_extensions)) {
+    //   // $this->u->dumper($file->getExtension());
+    //   $model_id = $this->logModelAssets($file);
+    // }
 
     return $data;
   }
@@ -352,50 +350,50 @@ class RepoFileTransfer implements RepoFileTransferInterface {
    * @param string $file The file object
    * @return array
    */
-  public function logModelAssets($file = null)
-  {
-    $data = array();
-    $record_id = '';
+  // public function logModelAssets($file = null)
+  // {
+  //   $data = array();
+  //   $record_id = '';
 
-    $full_path = str_replace($this->project_directory, '', $file->getPathname());
-    $full_path = str_replace('web', '', $full_path);
+  //   $full_path = str_replace($this->project_directory, '', $file->getPathname());
+  //   $full_path = str_replace('web', '', $full_path);
 
-    $this->u->dumper($full_path);
+  //   $this->u->dumper($full_path);
 
-    // // Query the metadata storage for the file to update the record, and avoid duplicates.
-    // $existing_file = $this->repo_storage_controller->execute('getRecords', array(
-    //     'base_table' => 'file_upload',
-    //     'fields' => array(),
-    //     'limit' => 1,
-    //     'search_params' => array(
-    //       0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($full_path), 'comparison' => '='),
-    //     ),
-    //     'search_type' => 'AND',
-    //     'omit_active_field' => true,
-    //   )
-    // );
+  //   // // Query the metadata storage for the file to update the record, and avoid duplicates.
+  //   // $existing_file = $this->repo_storage_controller->execute('getRecords', array(
+  //   //     'base_table' => 'file_upload',
+  //   //     'fields' => array(),
+  //   //     'limit' => 1,
+  //   //     'search_params' => array(
+  //   //       0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($full_path), 'comparison' => '='),
+  //   //     ),
+  //   //     'search_type' => 'AND',
+  //   //     'omit_active_field' => true,
+  //   //   )
+  //   // );
 
-    // if (!empty($existing_file)) {
-    //   $record_id = $existing_file[0]['file_upload_id'];
-    // }
+  //   // if (!empty($existing_file)) {
+  //   //   $record_id = $existing_file[0]['file_upload_id'];
+  //   // }
 
-    // $this_id = $this->repo_storage_controller->execute('saveRecord', array(
-    //   'base_table' => 'file_upload',
-    //   'record_id' => $record_id,
-    //   'user_id' => $job_data['created_by_user_account_id'],
-    //   'values' => array(
-    //     'job_id' => $job_data['job_id'],
-    //     'parent_record_id' => $job_data['project_id'],
-    //     'parent_record_type' => 'project',
-    //     'file_name' => $file->getBasename(),
-    //     'file_path' => $full_path,
-    //     'file_size' => filesize($file->getPathname()),
-    //     'file_type' => $file->getExtension(), // $file->getMimeType()
-    //     'file_hash' => md5($file->getBasename()),
-    //   )
-    // ));
+  //   // $this_id = $this->repo_storage_controller->execute('saveRecord', array(
+  //   //   'base_table' => 'file_upload',
+  //   //   'record_id' => $record_id,
+  //   //   'user_id' => $job_data['created_by_user_account_id'],
+  //   //   'values' => array(
+  //   //     'job_id' => $job_data['job_id'],
+  //   //     'parent_record_id' => $job_data['project_id'],
+  //   //     'parent_record_type' => 'project',
+  //   //     'file_name' => $file->getBasename(),
+  //   //     'file_path' => $full_path,
+  //   //     'file_size' => filesize($file->getPathname()),
+  //   //     'file_type' => $file->getExtension(), // $file->getMimeType()
+  //   //     'file_hash' => md5($file->getBasename()),
+  //   //   )
+  //   // ));
 
-    return $data;
-  }
+  //   return $data;
+  // }
 
 }
