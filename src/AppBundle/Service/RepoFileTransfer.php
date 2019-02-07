@@ -336,7 +336,7 @@ class RepoFileTransfer implements RepoFileTransferInterface {
       // $this->u->dumper($file->getExtension());
 
       $model_id = $this->logModelAssets($file);
-    )
+    }
 
     return $data;
   }
