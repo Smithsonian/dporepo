@@ -90,7 +90,7 @@ class TransferFilesCheckerCommand extends ContainerAwareCommand
               $container = $this->getContainer();
               $flysystem = $container->get('oneup_flysystem.assets_filesystem');
               $conn = $container->get('doctrine.dbal.default_connection');
-              // Transfer files.
+              // Transfer files to external file storage and log files to metadata storage.
               $result = $this->fileTransfer->transferFiles($value['ingest_job_uuid'], $flysystem, $conn);
 
               // After files are transferred, rename the directory by prepending 'transferred_' to the directory name.
