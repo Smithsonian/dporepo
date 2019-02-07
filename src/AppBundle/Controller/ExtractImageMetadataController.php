@@ -116,8 +116,14 @@ class ExtractImageMetadataController extends Controller
     if (!$localpath) throw $this->createNotFoundException('The Job directory doesn\'t exist - extract_metadata()');
 
     // Get the job ID, so errors can be logged to the database.
+    //@todo- on windows $localpath is being stored as C:\xampp\htdocs\dporepo_dev\web/uploads/repository/[UUID]
+    // Temp hack for this
     $dir_array = explode(DIRECTORY_SEPARATOR, $localpath);
-    $uuid = array_pop($dir_array);
+    //$uuid = array_pop($dir_array);
+    $uuid_path = array_pop($dir_array);
+    $uuid_path_array = explode("/", $uuid_path);
+    $uuid = array_pop($uuid_path_array);
+
     $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
 
     // Search for the data directory.
