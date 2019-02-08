@@ -1674,14 +1674,16 @@ class RepoStorageHybrid implements RepoStorage {
 
         // Remove data from tables containing repository data.
         foreach ($table_names['data_tables'] as $data_table_name) {
+          $id_append = '_id';
           // TODO: won't need this after refactoring... be sure to remove it!
-          switch($data_table_name) {
+          /*switch($data_table_name) {
             case 'model_file':
               $id_append = '_id';
               break;
             default:
               $id_append = '_repository_id';
           }
+          */
           // Remove records.
           $sql_data = "DELETE FROM {$data_table_name}
             WHERE {$data_table_name}.{$data_table_name}{$id_append} IN (SELECT record_id
