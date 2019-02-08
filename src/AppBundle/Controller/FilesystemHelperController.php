@@ -214,13 +214,18 @@ class FilesystemHelperController extends Controller
 
     // If the external storage directory isn't in the path, try to set the right path.
     if(strpos($path, $this->external_file_storage_path) !== 0) {
+
       if(strpos($path, 'web') !== 0) {
         $path = 'web' . $path;
       }
-      $path = str_replace("\\", "/",  $path);
-      $path = str_replace(str_replace("\\", "/",  $this->uploads_directory), '', $path);
+      // Remove the uploads directory if it exists.
+      if(strpos($path, $this->uploads_directory) !== false) {
+        $path = str_replace("\\", "/",  $path);
+        $path = str_replace(str_replace("\\", "/",  $this->uploads_directory), '', $path);
+      }
       $path = str_replace("\\", "/", $this->external_file_storage_path . $path);
       $path = str_replace("//", "/", $path);
+
       // The complete path should now look like this:
       // /3DRepo/uploads/1E155C38-DC69-E33B-4208-7757D5CDAA35/data/cc/camera/f1978_40-cc_j3a.JPG
     }
