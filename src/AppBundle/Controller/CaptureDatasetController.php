@@ -112,10 +112,10 @@ class CaptureDatasetController extends Controller
                 $model_url = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $model_url) : $model_url;
               }
 
-              $uploads_path = str_replace('web', '', $this->uploads_path);
+              //$uploads_path = str_replace('web', '', $this->uploads_directory);
               $path = $uploads_path . $dataset_file[0]['file_path'];
               // Windows fix for the file path.
-              $path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $path) : $path;
+              //$path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $path) : $path;
               //$path = str_replace($uploads_path, $this->external_file_storage_path, $path);
               $data['aaData'][$k]['file_path'] = $path;
             }
