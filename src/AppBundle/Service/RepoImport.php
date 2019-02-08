@@ -420,43 +420,43 @@ class RepoImport implements RepoImportInterface {
                 // Look-up the ID for the 'capture_method'.
                 if ($field_name === 'capture_method') {
                   $capture_method_lookup_options = $this->datasetsController->getCaptureMethods();
-                  $json_array[$key][$field_name] = (int)$capture_method_lookup_options[$v];
+                  $json_array[$key][$field_name] = isset($capture_method_lookup_options[$v]) ? (int)$capture_method_lookup_options[$v] : 0;
                 }
 
                 // Look-up the ID for the 'capture_dataset_type'.
                 if ($field_name === 'capture_dataset_type') {
                   $capture_dataset_type_lookup_options = $this->datasetsController->getDatasetTypes();
-                  $json_array[$key][$field_name] = (int)$capture_dataset_type_lookup_options[$v];
+                  $json_array[$key][$field_name] = isset($capture_dataset_type_lookup_options[$v]) ? (int)$capture_dataset_type_lookup_options[$v] : 0;
                 }
 
                 // Look-up the ID for the 'item_position_type'.
                 if ($field_name === 'item_position_type') {
                   $item_position_type_lookup_options = $this->datasetsController->getItemPositionTypes();
-                  $json_array[$key][$field_name] = (int)$item_position_type_lookup_options[$v];
+                  $json_array[$key][$field_name] = isset($item_position_type_lookup_options[$v]) ? (int)$item_position_type_lookup_options[$v] : 0;
                 }
 
                 // Look-up the ID for the 'focus_type'.
                 if ($field_name === 'focus_type') {
                   $focus_type_lookup_options = $this->datasetsController->getFocusTypes();
-                  $json_array[$key][$field_name] = (int)$focus_type_lookup_options[$v];
+                  $json_array[$key][$field_name] = isset($focus_type_lookup_options[$v]) ? (int)$focus_type_lookup_options[$v] : 0;
                 }
 
                 // Look-up the ID for the 'light_source_type'.
                 if ($field_name === 'light_source_type') {
                   $light_source_type_lookup_options = $this->datasetsController->getLightSourceTypes();
-                  $json_array[$key][$field_name] = (int)$light_source_type_lookup_options[$v];
+                  $json_array[$key][$field_name] = isset($light_source_type_lookup_options[$v]) ? (int)$light_source_type_lookup_options[$v] : 0;
                 }
 
                 // Look-up the ID for the 'background_removal_method'.
                 if ($field_name === 'background_removal_method') {
                   $background_removal_method_lookup_options = $this->datasetsController->getBackgroundRemovalMethods();
-                  $json_array[$key][$field_name] = (int)$background_removal_method_lookup_options[$v];
+                  $json_array[$key][$field_name] = isset($background_removal_method_lookup_options[$v]) ? (int)$background_removal_method_lookup_options[$v] : 0;
                 }
 
                 // Look-up the ID for the 'cluster_type'.
                 if ($field_name === 'cluster_type') {
                   $camera_cluster_types_lookup_options = $this->datasetsController->getCameraClusterTypes();
-                  $json_array[$key][$field_name] = (int)$camera_cluster_types_lookup_options[$v];
+                  $json_array[$key][$field_name] = isset($camera_cluster_types_lookup_options[$v]) ? (int)$camera_cluster_types_lookup_options[$v] : 0;
                 }
 
                 // MODEL LOOKUPS
@@ -1150,7 +1150,9 @@ class RepoImport implements RepoImportInterface {
               }
 
               // Establish the map key so we know which slot in the file name to obtain the data from.
-              $key = (isset($file_name_map) && array_search('local_subject_id', $file_name_map)) ? array_search('local_subject_id', $file_name_map) : array_search('local_subject_id', $this->default_image_file_name_map);
+              $key = (isset($file_name_map) && array_search('local_subject_id', $file_name_map))
+                ? array_search('local_subject_id', $file_name_map)
+                : array_search('local_subject_id', $this->default_image_file_name_map);
 
               // Transform the file name to an array.
               $file_name_parts = explode('-', $files[0][0]['filename']);
