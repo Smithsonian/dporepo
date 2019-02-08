@@ -6,7 +6,7 @@
       <div class="col-sm-12 col-md-12">
         <div class="form-group">
         {% if project_data is defined and project_data.project_id is defined %}
-          <a href="/admin/project/{{ project_data.project_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
+          <a href="/admin/project/view/{{ project_data.project_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
         {% else %}
           <a href="/admin/workspace/" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
         {% endif %}
