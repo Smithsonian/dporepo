@@ -258,6 +258,11 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   public function getDatasetFiles($params){
+
+    if(!isset($params['capture_dataset_id'])) {
+      return array();
+    }
+
     $capture_dataset_id = $params['capture_dataset_id'];
     $limit = $params['limit'];
 
