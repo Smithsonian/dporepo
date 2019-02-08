@@ -24,7 +24,6 @@ interface RepoStorageStructure {
 
   public function install();
 
-  public function backup($schema, $data);
 
 
 }
