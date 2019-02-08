@@ -1339,7 +1339,9 @@ class RepoImport implements RepoImportInterface {
               $file_name_parts = explode('-', $file);
               // Populate the CSV's item entries with the item_description from the file name.
               foreach ($data->csv as $ck => $cv) {
-                $data->csv[$ck]->item_description = $file_name_parts[$key1];
+                if (isset($file_name_parts[$key1])) {
+                  $data->csv[$ck]->item_description = $file_name_parts[$key1];
+                }
               }
             }
           }
