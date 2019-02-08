@@ -28,10 +28,10 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
    */
   private $external_file_storage_path;
 
-  public function __construct(Connection $connection, $uploads_directory, $external_file_storage_path) {
+  public function __construct(Connection $connection) { //, $uploads_directory, $external_file_storage_path) {
     $this->connection = $connection;
-    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
-    $this->external_file_storage_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $external_file_storage_path) : $external_file_storage_path;;
+    //$this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+    //$this->external_file_storage_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $external_file_storage_path) : $external_file_storage_path;;
   }
 
   /***
@@ -149,7 +149,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
     
   }
 
-  public function backup($include_schema = true, $include_data = true) {
+  public function createBackupFile($include_schema = true, $include_data = true) {
 
     $db_exists = $this->checkDatabaseExists();
 
@@ -161,45 +161,6 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
     $backup_results = $this->writeBackupToFile($include_schema = true, $include_data = true);
     if(isset($backup_results['errors']) && count($backup_results['errors']) > 0) {
       return $backup_results;
-    }
-
-    try {
-      $backup_filename = $backup_results['backup_filename'];
-      $backup_filepath = $backup_results['backup_filepath'];
-
-      // Push file to Drastic.
-      $remote_filename = $this->external_file_storage_path . 'mysql_backups/' . $backup_filename;
-      $push_result = $this->pushFileToDrastic($backup_filepath, $remote_filename);
-      if($push_result['result'] !== 'success') {
-        return $backup_results;
-      }
-
-      $backup_results = $push_result;
-
-      // Record the backup in the database table.
-      // backup_filename, result, error, date_created, created_by_user_account_id, last_modified_user_account_id
-      $backup_results['backup_filename'] = $backup_filepath;
-      if(isset($push_result['errors'])) {
-        $backup_results['error'] = implode(', ', $push_result['errors']);
-        unset($backup_results['errors']);
-      }
-
-      $rs = new RepoStorageHybrid(
-        $this->connection
-      );
-      $id = $rs->execute('saveRecord', array(
-        'base_table' => 'backup',
-        'user_id' => $this->getUser()->getId(),
-        'values' => $backup_results
-      ));
-      //@todo error checking
-
-      $backup_results['id'] = $id;
-
-      return $backup_results;
-    }
-    catch(\Throwable $ex) {
-      return array('return' => 'fail', 'errors' => array('Unable to dump database. ' . $ex->getMessage()));
     }
 
   }
@@ -303,7 +264,8 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
    * @param $source_filename The remote path.
    * @return mixed array containing success/fail value, and any messages.
    */
-  private function pushFileToDrastic($source_file_fullpath = null, $destination_filename = null) {
+  /*
+  private function pushFileToDrastic($source_file_fullpath = null, $destination_filename = null, $flysystem) {
     $data = array();
 
     if (!file_exists($source_file_fullpath)) {
@@ -339,6 +301,6 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
     }
 
   }
-
+  */
 
 }
