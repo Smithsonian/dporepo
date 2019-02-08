@@ -102,21 +102,12 @@ class CaptureDatasetController extends Controller
             );
             $data['aaData'][$k]['file_path'] = '';
             if (count($dataset_file)) {
-              $uploads_path = str_replace('web', '', $this->uploads_directory);
-              // Windows fix for the file path.
-              $uploads_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_path) : $uploads_path;
-              // Model URL.
-              if(isset($data['viewable_model']['file_path'])) {
-                $model_url = str_replace($uploads_path, $this->external_file_storage_path, $data['viewable_model']['file_path']);
-                // Windows fix for the file path.
-                $model_url = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $model_url) : $model_url;
-              }
-
-              //$uploads_path = str_replace('web', '', $this->uploads_directory);
-              $path = $uploads_path . $dataset_file[0]['file_path'];
-              // Windows fix for the file path.
-              //$path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $path) : $path;
-              //$path = str_replace($uploads_path, $this->external_file_storage_path, $path);
+              $path = 'web' . str_replace("\\", "/",  $dataset_file[0]['file_path']);
+              $path = str_replace($this->uploads_directory, '', $path);
+              $path = str_replace("\\", "/", $this->external_file_storage_path . $path);
+              $path = str_replace("//", "/", $path);
+              // The complete path should look like this:
+              // /3DRepo/uploads/1E155C38-DC69-E33B-4208-7757D5CDAA35/data/cc/camera/f1978_40-cc_j3a.JPG
               $data['aaData'][$k]['file_path'] = $path;
             }
           }
