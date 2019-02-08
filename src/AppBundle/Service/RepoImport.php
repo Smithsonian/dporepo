@@ -311,7 +311,8 @@ class RepoImport implements RepoImportInterface {
       ));
       // Populate the errors array to return to front end.
       $return['errors'][] = 'Metadata ingest failed. Job ID: ' . $job_data['job_id'];
-    } else {
+    }
+    else {
       // Update the job table to set the status from 'metadata ingest in progress' to 'file transfer in progress'.
       $this->repo_storage_controller->execute('saveRecord', array(
         'base_table' => 'job',
@@ -1310,7 +1311,9 @@ class RepoImport implements RepoImportInterface {
               $file_name_parts = explode('-', $file);
               // Populate the CSV's subject entries with the local_subject_id from the file name.
               foreach ($data->csv as $ck => $cv) {
-                $data->csv[$ck]->local_subject_id = $file_name_parts[$key1];
+                if(isset($file_name_parts[$key1])) {
+                  $data->csv[$ck]->local_subject_id = $file_name_parts[$key1];
+                }
               }
             }
           }
