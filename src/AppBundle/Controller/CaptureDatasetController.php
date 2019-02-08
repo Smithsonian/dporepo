@@ -101,7 +101,7 @@ class CaptureDatasetController extends Controller
                 'limit' => 1)
             );
             $data['aaData'][$k]['file_path'] = '';
-            if (count($dataset_file)) {
+            if (count($dataset_file) > 0) {
               $path = 'web' . str_replace("\\", "/",  $dataset_file[0]['file_path']);
               $path = str_replace($this->uploads_directory, '', $path);
               $path = str_replace("\\", "/", $this->external_file_storage_path . $path);
@@ -161,22 +161,14 @@ class CaptureDatasetController extends Controller
               'limit' => 1)
           );
           $data['aaData'][$k]['file_path'] = '';
-          if (count($dataset_file)) {
-            $uploads_path = str_replace('web', '', $this->uploads_directory);
-            // Windows fix for the file path.
-            $uploads_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_path) : $uploads_path;
-            // Model URL.
-            $model_url = str_replace($uploads_path, $this->external_file_storage_path, $data['viewable_model']['file_path']);
-            // Windows fix for the file path.
-            $model_url = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $model_url) : $model_url;
-
-
-
-            $uploads_path = str_replace('web', '', $this->uploads_path);
-            $path = $uploads_path . $dataset_file[0]['file_path'];
-            // Windows fix for the file path.
-            $path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $path) : $path;
-            //$path = str_replace($uploads_path, $this->external_file_storage_path, $path);
+          if (count($dataset_file) > 0) {
+            $path = 'web' . str_replace("\\", "/",  $dataset_file[0]['file_path']);
+            $path = str_replace($this->uploads_directory, '', $path);
+            $path = str_replace("\\", "/", $this->external_file_storage_path . $path);
+            $path = str_replace("//", "/", $path);
+            // The complete path should look like this:
+            // /3DRepo/uploads/1E155C38-DC69-E33B-4208-7757D5CDAA35/data/cc/camera/f1978_40-cc_j3a.JPG
+            //$model_url = str_replace($uploads_path, $this->external_file_storage_path, $data['viewable_model']['file_path']);
             $data['aaData'][$k]['file_path'] = $path;
           }
         }
@@ -382,10 +374,11 @@ class CaptureDatasetController extends Controller
       $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
       $item_data['item_description_truncated'] = substr($item_data['item_description'], 0, 50) . $more_indicator;
 
+      //@todo- get rid of this, thumbs should be included with elements
       $dataset_files = $this->repo_storage_controller->execute('getDatasetFiles',
         array(
           'limit' => 10,
-          'capture_dataset_repository_id' => $id
+          'capture_dataset_id' => $id //@todo
         )
       );
 
@@ -398,7 +391,7 @@ class CaptureDatasetController extends Controller
         'item_data' => $item_data,
         'dataset_data' => $dataset_data,
         'dataset_files' => $dataset_files,
-        'uploads_path' => $this->uploads_path,
+        'uploads_path' => $this->uploads_directory,
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
       ));
     }
