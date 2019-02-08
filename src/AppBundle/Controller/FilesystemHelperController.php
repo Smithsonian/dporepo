@@ -211,6 +211,20 @@ class FilesystemHelperController extends Controller
   public function getFile(Request $request) {
 
     $path = !empty($request->get('path')) ? $request->get('path') : '';
+
+    // If the external storage directory isn't in the path, try to set the right path.
+    if(strpos($path, $this->external_file_storage_path) === false) {
+      if(strpos($path, 'web') !== 0) {
+        $path = 'web' . $path;
+      }
+      $path = str_replace("\\", "/",  $path);
+      $path = str_replace($this->uploads_directory, '', $path);
+      $path = str_replace("\\", "/", $this->external_file_storage_path . $path);
+      $path = str_replace("//", "/", $path);
+      // The complete path should now look like this:
+      // /3DRepo/uploads/1E155C38-DC69-E33B-4208-7757D5CDAA35/data/cc/camera/f1978_40-cc_j3a.JPG
+    }
+
     $file_path_array = explode('/', $path);
     $file_name = array_pop($file_path_array);
 
@@ -219,7 +233,7 @@ class FilesystemHelperController extends Controller
       $filesystem = $this->container->get('oneup_flysystem.assets_filesystem');
       $stream = $filesystem->readStream($path);
       $contents = stream_get_contents($stream);
-      // Before calling fclose on the resource, check if it’s still valid using is_resource.
+      // Before calling fclose on the resource, check if it's still valid using is_resource.
       if (is_resource($stream)) fclose($stream);
       // Return a response with a specific content
       $response = new Response($contents);
