@@ -213,12 +213,12 @@ class FilesystemHelperController extends Controller
     $path = !empty($request->get('path')) ? $request->get('path') : '';
 
     // If the external storage directory isn't in the path, try to set the right path.
-    if(strpos($path, $this->external_file_storage_path) === false) {
+    if(strpos($path, $this->external_file_storage_path) !== 0) {
       if(strpos($path, 'web') !== 0) {
         $path = 'web' . $path;
       }
       $path = str_replace("\\", "/",  $path);
-      $path = str_replace($this->uploads_directory, '', $path);
+      $path = str_replace(str_replace("\\", "/",  $this->uploads_directory), '', $path);
       $path = str_replace("\\", "/", $this->external_file_storage_path . $path);
       $path = str_replace("//", "/", $path);
       // The complete path should now look like this:
@@ -249,7 +249,7 @@ class FilesystemHelperController extends Controller
     }
     // Catch the error.
     catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
-      throw $this->createNotFoundException($e->getMessage());
+      throw $this->createNotFoundException($e->getMessage() . " (File Path: $path)");
     }
 
   }
