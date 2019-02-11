@@ -140,6 +140,8 @@ class ValidateCommand extends Command
       sleep(5);
 
       // Run the model generation processes.
+      //@todo fix path issues in RepoProcessingService- Windoze slash issues
+      /*
       $command_model_generate = $this->getApplication()->find('app:model-generate');
       $arguments_model_generate = array(
           'command' => 'app:model-generate',
@@ -149,6 +151,7 @@ class ValidateCommand extends Command
       $return_model_generate = $command_model_generate->run($input_model_generate, $output);
 
       sleep(5);
+      */
 
       // Outputs multiple lines to the console (adding "\n" at the end of each line).
       $output->writeln([
