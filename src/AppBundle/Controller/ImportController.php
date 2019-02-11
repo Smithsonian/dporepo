@@ -1041,7 +1041,9 @@ class ImportController extends Controller
           $csv = $file->getContents();
         }
 
-        $csv = explode("\r\n", $csv);
+        // Changed to a regular expression.
+        // See: https://stackoverflow.com/questions/3997336/explode-php-string-by-new-line
+        $csv = preg_split('/\r\n|\r|\n/', $csv);
 
         foreach ($csv as $key => $line) {
           $json_array[$key] = str_getcsv($line);
