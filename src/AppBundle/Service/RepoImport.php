@@ -1679,7 +1679,7 @@ class RepoImport implements RepoImportInterface {
           'values' => array(
             'job_id' => $data->job_id,
             'record_id' => (int)$id,
-            'project_id' => (int)$data->parent_project_id,
+            'project_id' => (int)$data->project_id,
             'record_table' => 'model_file',
             'description' => $file_info[0]['file_name'],
           )
@@ -1755,7 +1755,7 @@ class RepoImport implements RepoImportInterface {
                 'values' => array(
                   'job_id' => $data->job_id,
                   'record_id' => (int)$id,
-                  'project_id' => (int)$data->parent_project_id,
+                  'project_id' => (int)$data->project_id,
                   'record_table' => 'uv_map',
                   'description' => $file_info[0]['file_name'],
                 )
