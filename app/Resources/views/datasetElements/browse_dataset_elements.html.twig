@@ -74,6 +74,8 @@
                 <dd>{{ dataset_data.capture_dataset_description|e|nl2br }}</dd>
                 <dt>Dataset Collection Notes</dt>
                 <dd>{{ dataset_data.collection_notes|e|nl2br }}</dd>
+                <dt>Dataset Variant Types</dt>
+                <dd>{{ dataset_data.variant_types }}</dd>
             </dl>
             {% if dataset_data.directory_path is defined and dataset_data.directory_path %}
             <hr>
@@ -84,7 +86,7 @@
         </div>
 
         <div class="col-sm-12 col-md-12">
-            <a href="javascript:void(0);" class="view-hidden-content" role="button" data-original-text="Expand Details and View Uploaded Files"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span> <span class="view-hidden-content-text">Expand Details and View Uploaded Files</span></a>
+            <a href="javascript:void(0);" class="view-hidden-content" role="button" data-original-text="Expand Details"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span> <span class="view-hidden-content-text">Expand Details and View Uploaded Files</span></a>
             <hr>
         </div>
 
@@ -110,14 +112,49 @@
                             <th class="text-center">Capture Sequence Number</th>
                             <th class="text-center">Cluster Position Field ID</th>
                             <th class="text-center">Position In Cluster Field ID</th>
-                            <th class="text-center">EXIF Metadata</th>
+                            <th class="text-center">Variant Types</th>
+                            <!--th class="text-center">EXIF Metadata</th -->
                             <th class="text-center">Last Modified</th>
                         </tr>
                         </thead>
                     </table>
                 </div>
             </div>
-
+            {% if dataset_files|length > 0 %}
+                <div class="panel panel-default">
+                    <div class="panel-body">
+                        <h2>Capture Dataset Gallery</h2>
+                        <table id="dataset_files" class="table table-striped table-bordered" cellspacing="0" width="100%">
+                            <thead>
+                            <tr>
+                                <th class="text-center">Date created</th>
+                                <th class="text-center">File Name</th>
+                                <th class="text-center">File Type</th>
+                                <th class="text-center">Location</th>
+                                <th class="text-center">Preview</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in dataset_files %}
+                                    <tr>
+                                        <td>{{file.date_created}}</td>
+                                        <td>{{file.file_name}}</td>
+                                        <td>{{file.file_type}}</td>
+                                        <td>{{file.file_path}}</td>
+                                        <td>
+                                            <div class="text-center">
+                                                {% if file.file_path %}
+                                                    <img src="/admin/get_file?path={{file.file_path}}" width="250px">
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% endif %}
             <div class="panel panel-default">
                 <div class="panel-body">
                     <h2>Capture Dataset Rights</h2>
@@ -256,7 +293,13 @@
         $('#jstreeContainer').on('click', 'a', function(e) {
           document.location.href = this.href;
         });
+        $("#dataset_files").dataTable({
+            "paging": false,
+            "bPaginate": false,
+            "bLengthChange": false,
+        });
 
+        // was also - "data": "metadata"
         $('#browse').dataTable( {
           "columns": [
             { "data": "manage" },
@@ -266,13 +309,13 @@
             { "data": "capture_sequence_number" },
             { "data": "cluster_position_field_id" },
             { "data": "position_in_cluster_field_id" },
-            { "data": "metadata" },
+            { "data": "variant_types" },
             { "data": "last_modified" }
           ],
           "dom": 'lfip<"datatables_bulk_actions">tip',
           "pagingType": "simple_numbers",
           "stateSave": true,
-          "order": [[8,"desc"]],
+          "order": [[7,"desc"]],
           // Show processing throbber.
           "processing": true,
           "serverMethod": "POST",
@@ -406,8 +449,8 @@
             { "data": "manage" },
             { "data": "manage" },
             { "data": "model_id", "title": "Model Repository ID"  },
-            { "data": "capture_dataset_id", "title": "Parent Capture Dataset Repository ID"  },
             { "data": "item_id", "title": "Parent Item Repository ID"  },
+            { "data": "count_capture_datasets", "title": "Datasets Count"  },
             { "data": "model_file_type", "title": "Model File Type"  },
             { "data": "model_guid", "title": "Model Guid"  },
             { "data": "date_of_creation", "title": "Date of Creation"  },

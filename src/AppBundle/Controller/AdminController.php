@@ -75,6 +75,7 @@ class AdminController extends Controller
             return $this->render('admin/admin.html.twig', array(
                 'page_title' => 'Dashboard',
                 'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+                'current_tab' => 'admin'
             ));
         }
     }

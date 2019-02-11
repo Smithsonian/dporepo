@@ -51,10 +51,11 @@ class CalibrationObjectTypeController extends Controller
      */
     public function browse(Connection $conn, Request $request)
     {
-        return $this->render('resources/browse_calibration_object_types.html.twig', array(
-            'page_title' => "Browse Calibration Object Types",
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-        ));
+      return $this->render('resources/browse_calibration_object_types.html.twig', array(
+        'page_title' => "Browse Calibration Object Types",
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'resources'
+      ));
     }
 
     /**
@@ -161,12 +162,13 @@ class CalibrationObjectTypeController extends Controller
             $this->addFlash('message', 'Calibration Object Type successfully updated.');
             return $this->redirectToRoute('calibration_object_types_browse');
         } else {
-            return $this->render('resources/calibration_object_types_form.html.twig', array(
-                "page_title" => !empty($calibration_object_types_id) ? 'Manage Calibration Object Type: ' . $data['label'] : 'Create Calibration Object Type'
-                ,"data" => $data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
+          return $this->render('resources/calibration_object_types_form.html.twig', array(
+            "page_title" => !empty($calibration_object_types_id) ? 'Manage Calibration Object Type: ' . $data['label'] : 'Create Calibration Object Type',
+            "data" => $data,
+            "errors" => $errors,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'current_tab' => 'resources'
+          ));
         }
 
     }

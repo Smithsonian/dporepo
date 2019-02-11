@@ -50,10 +50,11 @@ class CameraClusterTypeController extends Controller
      */
     public function browse(Connection $conn, Request $request)
     {
-        return $this->render('resources/browse_camera_cluster_types.html.twig', array(
-            'page_title' => "Browse Camera Cluster Types",
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        ));
+      return $this->render('resources/browse_camera_cluster_types.html.twig', array(
+        'page_title' => "Browse Camera Cluster Types",
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'resources'
+      ));
     }
 
     /**
@@ -160,12 +161,13 @@ class CameraClusterTypeController extends Controller
             $this->addFlash('message', 'Camera Cluster Type successfully updated.');
             return $this->redirectToRoute('camera_cluster_types_browse');
         } else {
-            return $this->render('resources/camera_cluster_types_form.html.twig', array(
-                "page_title" => !empty($id) ? 'Manage Camera Cluster Type: ' . $data['label'] : 'Create Camera Cluster Type'
-                ,"data" => $data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
+          return $this->render('resources/camera_cluster_types_form.html.twig', array(
+            "page_title" => !empty($id) ? 'Manage Camera Cluster Type: ' . $data['label'] : 'Create Camera Cluster Type',
+            "data" => $data,
+            "errors" => $errors,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'current_tab' => 'resources'
+          ));
         }
 
     }

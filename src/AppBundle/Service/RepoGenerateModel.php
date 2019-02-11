@@ -144,6 +144,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
         $processing_job = $this->runWebMulti($path, $job_data, $recipe_name, $filesystem);
       }
 
+
       // Check the job's status to insure that the job_status hasn't been set to 'failed'.
       $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid, 'generateModelAssets'));
       // If the job status has been set to 'failed', return with the error message.
@@ -178,7 +179,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
     // Update the 'job_status' in the 'job' table accordingly (only for the web-hd recipe).
     if (!empty($job_status) && ($recipe_name === 'web-hd')) {
-      $this->repo_storage_controller->execute('setJobStatus', 
+      $this->repo_storage_controller->execute('setJobStatus',
         array(
           'job_id' => $job_data['uuid'], 
           'status' => $job_status, 

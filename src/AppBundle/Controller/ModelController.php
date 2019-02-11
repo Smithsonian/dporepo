@@ -97,7 +97,7 @@ class ModelController extends Controller
           $query_params['search_value'] = $search;
         }
 
-        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
+        $data = $this->repo_storage_controller->execute('getDatatableModels', $query_params);
 
         return $this->json($data);
     }
@@ -412,7 +412,7 @@ class ModelController extends Controller
           $query_params['search_value'] = $search;
         }
 
-        $data = $this->repo_storage_controller->execute('getDatatable', $query_params);
+        $data = $this->repo_storage_controller->execute('getDatatableModels', $query_params);
 
         return $this->json($data);
         /*

@@ -50,10 +50,11 @@ class ItemPositionTypeController extends Controller
      */
     public function browse(Connection $conn, Request $request)
     {
-        return $this->render('resources/browse_item_position_types.html.twig', array(
-            'page_title' => "Browse Item Position Types",
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-        ));
+      return $this->render('resources/browse_item_position_types.html.twig', array(
+        'page_title' => "Browse Item Position Types",
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'resources'
+      ));
     }
 
     /**
@@ -158,12 +159,13 @@ class ItemPositionTypeController extends Controller
             $this->addFlash('message', 'Item Position Type successfully updated.');
             return $this->redirectToRoute('item_position_types_browse');
         } else {
-            return $this->render('resources/item_position_types_form.html.twig', array(
-                "page_title" => !empty($id) ? 'Manage Item Position Type: ' . $data['label'] : 'Create Item Position Type'
-                ,"data" => $data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
+          return $this->render('resources/item_position_types_form.html.twig', array(
+            "page_title" => !empty($id) ? 'Manage Item Position Type: ' . $data['label'] : 'Create Item Position Type',
+            "data" => $data,
+            "errors" => $errors,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'current_tab' => 'resources'
+          ));
         }
 
     }

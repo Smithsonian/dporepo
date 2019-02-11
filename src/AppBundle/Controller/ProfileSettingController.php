@@ -44,8 +44,8 @@ class ProfileSettingController extends Controller
         $roles = $this->getUser()->getRoles();
 
         return $this->render('profileSettings/profile_settings.html.twig', array(
-            'page_title' => 'Profile and Settings',
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+          'page_title' => 'Profile and Settings',
+          'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         ));
     }
 

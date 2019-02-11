@@ -64,7 +64,23 @@
                                 <th class="text-center">Capture Data File Name</th>
                                 <th class="text-center">Capture Data File Type</th>
                                 <th class="text-center">Is Compressed Multiple Files</th>
-                                <th class="text-center">EXIF Metadata</th>
+                                <th class="text-center">EXIF Filename</th>
+                                <th class="text-center">EXIF File Size</th>
+                                <th class="text-center">EXIF File Timestamp</th>
+                                <th class="text-center">EXIF Height</th>
+                                <th class="text-center">EXIF Width</th>
+                                <th class="text-center">EXIF Aperture</th>
+                                <th class="text-center">EXIF Camera Make</th>
+                                <th class="text-center">EXIF Camera Model</th>
+                                <th class="text-center">EXIF Timestamp</th>
+                                <th class="text-center">EXIF Original Timestamp</th>
+                                <th class="text-center">EXIF Digitized Timestamp</th>
+                                <th class="text-center">EXIF Exposure</th>
+                                <th class="text-center">EXIF Focal Length</th>
+                                <th class="text-center">EXIF ISO Speed</th>
+                                <th class="text-center">EXIF Camera Serial</th>
+                                <th class="text-center">EXIF Lens Model</th>
+                                <th class="text-center">EXIF Lens Serial</th>
                                 <th class="text-center">Last Modified</th>
                             </tr>
                             </thead>
@@ -101,6 +117,12 @@
         <script src="{{ asset('lib/javascripts/datatables/js/dataTables.bootstrap.min.js') }}"></script>
         <script src="{{ asset('lib/javascripts/buttons/js/buttons.bootstrap.min.js') }}"></script>
         <script src="{{ asset('lib/javascripts/buttons/js/buttons.colVis.min.js') }}"></script>
+        <!-- The following Javascript is needed for download CSV, download Excel, and print capabilities -->
+        <script src="{{ asset('lib/javascripts/buttons/js/buttons.flash.min.js') }}"></script>
+        <script src="{{ asset('lib/javascripts/datatables/js/jszip.min.js') }}"></script>
+        <script src="{{ asset('lib/javascripts/pdfmake/js/vfs_fonts.js') }}"></script>
+        <script src="{{ asset('lib/javascripts/buttons/js/buttons.html5.min.js') }}"></script>
+        <script src="{{ asset('lib/javascripts/buttons/js/buttons.print.min.js') }}"></script>
         <script type="text/javascript">
           $(document).ready(function() {
             var capture_data_element_id =  "{{ dataset_element_data.capture_data_element_id }}";
@@ -110,13 +132,29 @@
                 { "data": "capture_data_file_name" },
                 { "data": "capture_data_file_type" },
                 { "data": "is_compressed_multiple_files" },
-                { "data": "metadata" },
+                { "data": "exif_filename" },
+                { "data": "exif_file_size" },
+                { "data": "exif_file_timestamp" },
+                { "data": "exif_height" },
+                { "data": "exif_width" },
+                { "data": "exif_aperture" },
+                { "data": "exif_camera_make" },
+                { "data": "exif_camera_model" },
+                { "data": "exif_timestamp" },
+                { "data": "exif_original_timestamp" },
+                { "data": "exif_digitized_timestamp" },
+                { "data": "exif_exposure" },
+                { "data": "exif_focal_length" },
+                { "data": "exif_iso_speed" },
+                { "data": "exif_camera_serial" },
+                { "data": "exif_lens_model" },
+                { "data": "exif_lens_serial" },
                 { "data": "last_modified" }
               ],
-              "dom": 'lfip<"datatables_bulk_actions">tip',
+              "dom": 'lfip<"datatables_bulk_actions"B>tip',
               "pagingType": "simple_numbers",
               "stateSave": true,
-              "order": [[5,"desc"]],
+              "order": [[1,"asc"]],
               // Show processing throbber.
               "processing": true,
               "serverMethod": "POST",
@@ -135,8 +173,19 @@
               "lengthMenu":[10,50,100,500],
               // Set some widths.
               "aoColumnDefs":[
-                {"sWidth":"106px","aTargets":[0]},
-                {"bSortable":false,"aTargets":[0]},
+                {
+                  "targets": [ 0 ],
+                  "sWidth": '106px',
+                  "bSortable": false
+                },
+                {
+                  "targets": [ 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 ],
+                  "bSortable": false
+                },
+                {
+                  "targets": [ 4, 5, 6, 10, 13, 14, 15, 16, 17, 18, 19, 20, 21 ],
+                  "visible": false,
+                }
               ],
               "fnRowCallback":function(nRow, aData, iDisplayIndex) {
 
@@ -156,13 +205,20 @@
                   var this_id = thisTableCell.closest("tr").attr('id');
                   window.location.href = '/admin/capture_data_file/manage' + '/' + this_id;
                 });
-              }
+              },
+              buttons: [
+                {
+                  extend: 'colvis',
+                  postfixButtons: [ 'colvisRestore' ]
+                }
+              ]
             });
             var capture_data_file_add_button = $('<a />')
               .addClass('btn btn-default add-record-button')
               .attr('href', '/admin/capture_data_file/add/' + capture_data_element_id)
               .html('<span class="glyphicon glyphicon-plus"></span> Add a Capture Data File');
             $('#browse_capture_data_files_wrapper').find('.datatables_bulk_actions').append(capture_data_file_add_button);
+
             $('#browse_capture_devices').dataTable( {
               "columns": [
                 { "data": "manage" },
@@ -170,6 +226,13 @@
                 { "data": "last_modified" }
               ],
               "dom": 'lfip<"datatables_bulk_actions">tip',
+              buttons: [
+                'csv', 'excel', 'print',
+                {
+                  extend: 'colvis',
+                  postfixButtons: [ 'colvisRestore' ]
+                }
+              ],
               "pagingType": "simple_numbers",
               "stateSave": true,
               "order": [[2,"desc"]],

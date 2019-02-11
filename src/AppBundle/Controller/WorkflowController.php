@@ -22,6 +22,8 @@ use AppBundle\Form\WorkflowParametersForm;
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
 
+use AppBundle\Service\RepoUserAccess;
+
 class WorkflowController extends Controller
 {
 
@@ -83,6 +85,7 @@ class WorkflowController extends Controller
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
     $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
     $this->accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
+    $this->repo_user_access = new RepoUserAccess($conn);
 
     $this->derivatives = array(
       '1024' => array(
@@ -100,6 +103,7 @@ class WorkflowController extends Controller
     );
 
     $this->check_icon_markup = '&nbsp;<span class="glyphicon glyphicon-ok" aria-hidden="true" style="color:green;"></span> <span class="text-success">QC done</span>';
+
   }
 
   /**
@@ -411,11 +415,8 @@ class WorkflowController extends Controller
     return $workflow_data;
   }
 
-
-
   /**
-   * @Route("/admin/datatables_browse_workflows", name="datatables_browse_workflows", methods="POST")
-   * /// Route("/admin/workflows/{item_id}/{workflow_id}", name="workflows", methods={"GET","POST"})
+   * @Route("/admin/datatables_browse_workflows", name="workflow_browse_datatables", methods="POST")
    *
    * Browse Workflows
    * @param Request $request
@@ -423,33 +424,39 @@ class WorkflowController extends Controller
    */
   public function datatablesBrowseWorkflows(Request $request)
   {
+    $username = $this->getUser()->getUsernameCanonical();
+    //@todo which permission?
+    /*$access = $this->repo_user_access->get_user_access_any($username, 'view_projects');
+
+    $project_ids = array(0);
+    if(array_key_exists('project_ids', $access) && isset($access['project_ids'])) {
+      $project_ids = $access['project_ids'];
+    }
+    */
 
     $req = $request->request->all();
-    $item_id = !empty($req['item_id']) ? $req['item_id'] : false;
+    $item_id = !empty($req['item_id']) ? $req['item_id'] : NULL;
 
-    // Proceed only if the item_id is present.
-    if($item_id) {
+    $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+    $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
+    $sort_order = $req['order'][0]['dir'];
+    $start_record = !empty($req['start']) ? $req['start'] : 0;
+    $stop_record = !empty($req['length']) ? $req['length'] : 20;
 
-      $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
-      $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
-      $sort_order = $req['order'][0]['dir'];
-      $start_record = !empty($req['start']) ? $req['start'] : 0;
-      $stop_record = !empty($req['length']) ? $req['length'] : 20;
-
-      $query_params = array(
-        'sort_field' => $sort_field,
-        'sort_order' => $sort_order,
-        'start_record' => $start_record,
-        'stop_record' => $stop_record,
-        'item_id' => $item_id,
-      );
-      if ($search) {
-        $query_params['search_value'] = $search;
-      }
-
-      // Look in workflow table for workflows belonging to an item_id.
-      $data = $this->repo_storage_controller->execute('getWorkflowsDatatable', $query_params);
+    $query_params = array(
+      'sort_field' => $sort_field,
+      'sort_order' => $sort_order,
+      'start_record' => $start_record,
+      'stop_record' => $stop_record,
+      'item_id' => $item_id,
+    );
+    if ($search) {
+      $query_params['search_value'] = $search;
     }
+    //$query_params['project_ids'] = $project_ids;
+
+    // Look in workflow table for workflows belonging to an item_id.
+    $data = $this->repo_storage_controller->execute('getDatatableWorkflows', $query_params);
 
     return $this->json($data);
   }

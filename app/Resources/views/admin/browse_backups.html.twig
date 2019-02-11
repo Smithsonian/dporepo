@@ -1,0 +1,109 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block content %}
+
+    <ol class="breadcrumb">
+        <li><a href="/admin">Dashboard</a></li>
+        <li>Backups</li>
+    </ol>
+
+    <div class="row">
+        <div class="col-sm-12 col-md-12 child-data">
+            <div class="panel panel-default">
+                <div class="panel-body">
+
+                    <h2>Backups</h2>
+                    <a href="/admin/backup/add" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Create a Backup</a>
+                    <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
+                        <thead>
+                        <tr>
+                            <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
+                            <th class="text-center">Backup Filename</th>
+                            <th class="text-center">Result</th>
+                            <th class="text-center">Created</th>
+                            <th class="text-center">Last Modified</th>
+                        </tr>
+                        </thead>
+                    </table>
+
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- /row -->
+{% endblock %}
+{% block js_bottom %}
+    {{ parent() }}
+    <script src="{{ asset('lib/javascripts/datatables/js/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ asset('lib/javascripts/datatables/js/dataTables.buttons.min.js') }}"></script>
+    <script src="{{ asset('lib/javascripts/datatables/js/dataTables.bootstrap.min.js') }}"></script>
+    <script src="{{ asset('lib/javascripts/buttons/js/buttons.bootstrap.min.js') }}"></script>
+    <script src="{{ asset('lib/javascripts/buttons/js/buttons.colVis.min.js') }}"></script>
+    <script type="text/javascript">
+      $(document).ready(function() {
+
+        var details_page = "/admin/backup/view/";
+
+        $('#browse').dataTable( {
+          "columns": [
+            { "data": "manage" },
+            { "data": "backup_filename" },
+            { "data": "result" },
+            { "data": "date_created" },
+            { "data": "last_modified" },
+          ],
+          "dom": 'lfip<"datatables_bulk_actions">tip',
+          "pagingType": "simple_numbers",
+          "stateSave": true,
+          "order": [[2,"desc"]],
+          // Show processing throbber.
+          "processing": true,
+          "serverMethod": "POST",
+          // All data management will be done on the server side.
+          "serverSide": true,
+          // Path to the file that is going to handle the queries.
+          "ajax": "/admin/datatables_browse_backups",
+          // Method type.
+          "serverMethod": "POST",
+          // Values in the length dropdown.
+          "lengthMenu":[10,50,100,500],
+          // Set some widths.
+          "aoColumnDefs":[
+            {"sWidth":"105px","aTargets":[0]},
+            {"sWidth":"92px","aTargets":[1]},
+            {"bSortable":false,"aTargets":[0,1]}
+          ],
+          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+
+            // This table row.
+            var thisTableRow = $(nRow);
+
+            // Create the delete record checkboxes.
+            thisTableRow.find('td:eq(0)')
+              .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+              .addClass("manage_column");
+
+            // Send to details page when clicked.
+            thisTableRow.find('td').click(function() {
+              // This table cell.
+              var thisTableCell = $(this);
+              // Don't do anything if the table cell has the 'manage_column' CSS class.
+              if(thisTableCell.hasClass('manage_column')) return;
+              // Send to the details page.
+              var backup_id = thisTableCell.closest("tr").attr('id');
+              window.location.href = details_page + backup_id;
+            });
+
+          }
+        });
+
+
+      });
+    </script>
+{% endblock %}

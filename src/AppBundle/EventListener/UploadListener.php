@@ -8,10 +8,12 @@ use Symfony\Component\HttpFoundation\File\Exception\UploadException;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Oneup\UploaderBundle\Event\PostPersistEvent;
+use Doctrine\DBAL\Driver\Connection;
+
 use AppBundle\Service\RepoValidateData;
 use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Controller\ImportController;
-use Doctrine\DBAL\Driver\Connection;
+use AppBundle\Service\RepoEdan;
 
 class UploadListener
 {
@@ -21,15 +23,18 @@ class UploadListener
   private $repo_storage_controller;
   private $tokenStorage;
   private $import_controller;
+  private $edan;
 
   public function __construct(
     Connection $conn,
     TokenStorageInterface $tokenStorage,
-    ImportController $import_controller)
+    ImportController $import_controller,
+    RepoEdan $edan)
   {
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->tokenStorage = $tokenStorage;
     $this->import_controller = $import_controller;
+    $this->edan = $edan;
     $this->connection = $conn;
   }
   
@@ -143,6 +148,7 @@ class UploadListener
           // Run the CSV validation.
           $validation_results = $this->validateMetadata($data->job_id, $data->job_id_directory, $data->record_type, $file_data->record_id, $file->getBasename());
           // Remove the CSV file.
+          // TODO: Remove the temporary directory.
           $finder = new Finder();
           $finder->files()->in($data->job_id_directory . '/');
           $finder->files()->name($file->getBasename());
@@ -320,6 +326,11 @@ class UploadListener
         // Execute the validation against the JSON schema.
         $data->results = (object)$repoValidate->validateData($data->csv, $schema, $record_type, $blacklisted_fields);
 
+        // Validate that the EDAN record exists (subject_guid)
+        if (($schema === 'subject') && !empty($data->csv)) {
+          $data->edan_results = $this->validateEdanRecord($data);
+        }
+
         // Add the column headers back to the array.
         array_unshift($data->csv, $column_headers);
 
@@ -334,10 +345,48 @@ class UploadListener
           unset($data->capture_dataset_field_id_results['is_valid']);
           $data->results = (object)array_merge_recursive($data->capture_dataset_field_id_results, (array)$data->results);
         }
+
+        // Merge edan_results messages.
+        if(isset($data->edan_results['messages'])) {
+          unset($data->edan_results['is_valid']);
+          $data->results = (object)array_merge_recursive($data->edan_results, (array)$data->results);
+        }
       }
     }
 
     return $data;
+  }
+
+  /**
+   * @param null $data The data to validate.
+   * @return mixed array containing success/fail value, and any messages.
+   */
+  public function validateEdanRecord(&$data = NULL) {
+
+    $return = array('is_valid' => false);
+
+    // If no data is passed, set a message.
+    if(empty($data)) $return['messages'][] = 'Nothing to validate. Please provide an object to validate.';
+
+    // If data is passed, go ahead and process.
+    if(!empty($data)) {
+      // Loop through the data.
+      foreach($data->csv as $csv_key => $csv_value) {
+        // Query EDAN
+        $result = $this->edan->getRecord($csv_value->subject_guid);
+        // Catch if there is an error.
+        if (isset($result['error'])) {
+          $return['messages'][$csv_key] = array('row' => 'Row ' . ($csv_key+1), 'error' => 'EDAN record not found. subject_guid: ' . $csv_value->subject_guid);
+        }
+      }
+    }
+
+    // If there are no messages, then return true for 'is_valid'.
+    if(!isset($return['messages'])) {
+      $return['is_valid'] = true;
+    }
+
+    return $return;
   }
 
   public function dumper($data = false, $die = true, $ip_address=false){

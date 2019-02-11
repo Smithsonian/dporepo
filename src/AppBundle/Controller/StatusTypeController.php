@@ -50,10 +50,11 @@ class StatusTypeController extends Controller
      */
     public function browse(Connection $conn, Request $request)
     {
-        return $this->render('resources/browse_status_types.html.twig', array(
-            'page_title' => "Browse Status Types",
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        ));
+      return $this->render('resources/browse_status_types.html.twig', array(
+        'page_title' => "Browse Status Types",
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'resources'
+      ));
     }
 
     /**
@@ -162,12 +163,13 @@ class StatusTypeController extends Controller
             $this->addFlash('message', 'Status Type successfully updated.');
             return $this->redirectToRoute('status_types_browse');
         } else {
-            return $this->render('resources/status_types_form.html.twig', array(
-                "page_title" => !empty($id) ? 'Manage Status Type: ' . $data['label'] : 'Create Status Type'
-                ,"data" => $data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
+          return $this->render('resources/status_types_form.html.twig', array(
+            "page_title" => !empty($id) ? 'Manage Status Type: ' . $data['label'] : 'Create Status Type',
+            "data" => $data,
+            "errors" => $errors,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'current_tab' => 'resources'
+          ));
         }
 
     }

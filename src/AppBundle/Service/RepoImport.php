@@ -13,6 +13,7 @@ use AppBundle\Utils\AppUtilities;
 use AppBundle\Controller\ItemController;
 use AppBundle\Controller\CaptureDatasetController;
 use AppBundle\Controller\ModelController;
+use AppBundle\Service\RepoEdan;
 
 use Psr\Log\LoggerInterface;
 
@@ -109,6 +110,11 @@ class RepoImport implements RepoImportInterface {
   private $logger;
 
   /**
+   * @var object $edan
+   */
+  private $edan;
+
+  /**
    * Constructor
    * @param object  $kernel  Symfony's kernel object
    * @param string  $uploads_directory  Uploads directory path
@@ -116,7 +122,7 @@ class RepoImport implements RepoImportInterface {
    * @param string  $conn  The database connection
    * @param string  $uploads_directory  Uploads directory path
    */
-  public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemController $itemsController, CaptureDatasetController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn, LoggerInterface $logger)
+  public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemController $itemsController, CaptureDatasetController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn, LoggerInterface $logger, RepoEdan $edan)
   {
     $this->u = new AppUtilities();
     $this->tokenStorage = $tokenStorage;
@@ -134,6 +140,7 @@ class RepoImport implements RepoImportInterface {
     $this->logger = $logger;
     // Usage:
     // $this->logger->info('Import started. Job ID: ' . $job_id);
+    $this->edan = $edan;
 
     // Image extensions.
     $this->image_extensions = array(
@@ -156,9 +163,10 @@ class RepoImport implements RepoImportInterface {
 
     // Texture map file name parts.
     $this->texture_map_file_name_parts = array(
-      '-diffuse-',
-      '-normal-',
-      '-occlusion-',
+      '-diffuse',
+      '-normal_t',
+      '-normal_w',
+      '-occlusion',
     );
 
     // Default image file name mapping.
@@ -298,7 +306,8 @@ class RepoImport implements RepoImportInterface {
       ));
       // Populate the errors array to return to front end.
       $return['errors'][] = 'Metadata ingest failed. Job ID: ' . $job_data['job_id'];
-    } else {
+    }
+    else {
       // Update the job table to set the status from 'metadata ingest in progress' to 'file transfer in progress'.
       $this->repo_storage_controller->execute('saveRecord', array(
         'base_table' => 'job',
@@ -407,43 +416,43 @@ class RepoImport implements RepoImportInterface {
                 // Look-up the ID for the 'capture_method'.
                 if ($field_name === 'capture_method') {
                   $capture_method_lookup_options = $this->datasetsController->getCaptureMethods();
-                  $json_array[$key][$field_name] = (int)$capture_method_lookup_options[$v];
+                  $json_array[$key][$field_name] = isset($capture_method_lookup_options[$v]) ? (int)$capture_method_lookup_options[$v] : 0;
                 }
 
                 // Look-up the ID for the 'capture_dataset_type'.
                 if ($field_name === 'capture_dataset_type') {
                   $capture_dataset_type_lookup_options = $this->datasetsController->getDatasetTypes();
-                  $json_array[$key][$field_name] = (int)$capture_dataset_type_lookup_options[$v];
+                  $json_array[$key][$field_name] = isset($capture_dataset_type_lookup_options[$v]) ? (int)$capture_dataset_type_lookup_options[$v] : 0;
                 }
 
                 // Look-up the ID for the 'item_position_type'.
                 if ($field_name === 'item_position_type') {
                   $item_position_type_lookup_options = $this->datasetsController->getItemPositionTypes();
-                  $json_array[$key][$field_name] = (int)$item_position_type_lookup_options[$v];
+                  $json_array[$key][$field_name] = isset($item_position_type_lookup_options[$v]) ? (int)$item_position_type_lookup_options[$v] : 0;
                 }
 
                 // Look-up the ID for the 'focus_type'.
                 if ($field_name === 'focus_type') {
                   $focus_type_lookup_options = $this->datasetsController->getFocusTypes();
-                  $json_array[$key][$field_name] = (int)$focus_type_lookup_options[$v];
+                  $json_array[$key][$field_name] = isset($focus_type_lookup_options[$v]) ? (int)$focus_type_lookup_options[$v] : 0;
                 }
 
                 // Look-up the ID for the 'light_source_type'.
                 if ($field_name === 'light_source_type') {
                   $light_source_type_lookup_options = $this->datasetsController->getLightSourceTypes();
-                  $json_array[$key][$field_name] = (int)$light_source_type_lookup_options[$v];
+                  $json_array[$key][$field_name] = isset($light_source_type_lookup_options[$v]) ? (int)$light_source_type_lookup_options[$v] : 0;
                 }
 
                 // Look-up the ID for the 'background_removal_method'.
                 if ($field_name === 'background_removal_method') {
                   $background_removal_method_lookup_options = $this->datasetsController->getBackgroundRemovalMethods();
-                  $json_array[$key][$field_name] = (int)$background_removal_method_lookup_options[$v];
+                  $json_array[$key][$field_name] = isset($background_removal_method_lookup_options[$v]) ? (int)$background_removal_method_lookup_options[$v] : 0;
                 }
 
                 // Look-up the ID for the 'cluster_type'.
                 if ($field_name === 'cluster_type') {
                   $camera_cluster_types_lookup_options = $this->datasetsController->getCameraClusterTypes();
-                  $json_array[$key][$field_name] = (int)$camera_cluster_types_lookup_options[$v];
+                  $json_array[$key][$field_name] = isset($camera_cluster_types_lookup_options[$v]) ? (int)$camera_cluster_types_lookup_options[$v] : 0;
                 }
 
                 // MODEL LOOKUPS
@@ -609,6 +618,14 @@ class RepoImport implements RepoImportInterface {
           case 'subject':
             // Set the project_id
             $csv_val->project_id = (int)$data->project_id;
+            // Query EDAN to populate the CSV with EDAN record info (subject_name, and subject_display_name)
+            $result = $this->edan->getRecord($csv_val->subject_guid);
+            // The EDAN record assignment has already been validated during pre-validation,
+            // so no error handling - for now.
+            if (!isset($result['error'])) {
+              $csv_val->subject_name = $result['title'];
+              $csv_val->subject_display_name = $result['title'];
+            }
             break;
           case 'item':
             // Set the project_id
@@ -627,6 +644,10 @@ class RepoImport implements RepoImportInterface {
             } else {
               $csv_val->item_id = $data->record_id;
             }
+
+            // Generate an RFC 4122 version 4 UUID
+            $csv_val->capture_dataset_guid = $this->u->createUuid();
+
             // Get the parent project ID.
             $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
               'base_record_id' => $csv_val->item_id,
@@ -713,10 +734,6 @@ class RepoImport implements RepoImportInterface {
         // Log the model file and any processed assets to the 'model_file' table.
         if(!empty($csv_val->file_path)) {
 
-          $uploads_directory = str_replace('web', '', $this->uploads_directory);
-          // Windows fix for the model's file path.
-          $uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_directory) : $uploads_directory;
-          $uploads_directory = substr($uploads_directory, 0, -1);
           // Windows fix for the model's file path.
           $file_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $csv_val->file_path) : $csv_val->file_path;
 
@@ -765,6 +782,8 @@ class RepoImport implements RepoImportInterface {
               )
             ));
           }
+          // Scan the model's directory for UV maps, and insert into metadata storage.
+          $this->insert_uv_maps($file_path, $this_id, $data);
 
           // TODO: BREAK-OUT INTO A DEDICATED FUNCTION?
           // Gather model assets generated by the HD processing recipe.
@@ -1319,7 +1338,9 @@ class RepoImport implements RepoImportInterface {
               }
 
               // Establish the map key so we know which slot in the file name to obtain the data from.
-              $key = (isset($file_name_map) && array_search('local_subject_id', $file_name_map)) ? array_search('local_subject_id', $file_name_map) : array_search('local_subject_id', $this->default_image_file_name_map);
+              $key = (isset($file_name_map) && array_search('local_subject_id', $file_name_map))
+                ? array_search('local_subject_id', $file_name_map)
+                : array_search('local_subject_id', $this->default_image_file_name_map);
 
               // Transform the file name to an array.
               $file_name_parts = explode('-', $files[0][0]['filename']);
@@ -1477,7 +1498,9 @@ class RepoImport implements RepoImportInterface {
               $file_name_parts = explode('-', $file);
               // Populate the CSV's subject entries with the local_subject_id from the file name.
               foreach ($data->csv as $ck => $cv) {
-                $data->csv[$ck]->local_subject_id = $file_name_parts[$key1];
+                if(isset($file_name_parts[$key1])) {
+                  $data->csv[$ck]->local_subject_id = $file_name_parts[$key1];
+                }
               }
             }
           }
@@ -1503,7 +1526,9 @@ class RepoImport implements RepoImportInterface {
               $file_name_parts = explode('-', $file);
               // Populate the CSV's item entries with the item_description from the file name.
               foreach ($data->csv as $ck => $cv) {
-                $data->csv[$ck]->item_description = $file_name_parts[$key1];
+                if (isset($file_name_parts[$key1])) {
+                  $data->csv[$ck]->item_description = $file_name_parts[$key1];
+                }
               }
             }
           }
@@ -1604,6 +1629,145 @@ class RepoImport implements RepoImportInterface {
     }
 
     return $data;
+  }
+
+  /**
+   * Insert Model Files
+   *
+   * @param string $file_path The file path
+   * @param string $model_repository_id The model's ID
+   * @param string $data The data array
+   * @return null
+   */
+  public function insert_model_files($file_path = null, $model_repository_id = null, $data = array()) {
+
+    if (!empty($file_path) && !empty($model_repository_id) && !empty($data)) {
+
+      $uploads_directory = str_replace('web', '', $this->uploads_directory);
+      // Windows fix for the model's file path.
+      $uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_directory) : $uploads_directory;
+      $uploads_directory = substr($uploads_directory, 0, -1);
+
+      // Query the metadata storage for the file's ID using the file_path.
+      $file_info = $this->repo_storage_controller->execute('getRecords', array(
+        'base_table' => 'file_upload',
+        'fields' => array(),
+        'limit' => 1,
+        'search_params' => array(
+          0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($uploads_directory . $file_path), 'comparison' => '='),
+        ),
+        'search_type' => 'AND',
+        'omit_active_field' => true,
+        )
+      );
+
+      // Insert the model into the metadata storage.
+      if (!empty($file_info)) {
+        $id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'model_file',
+          'user_id' => $data->user_id,
+          'values' => array(
+            'model_repository_id' => (int)$model_repository_id,
+            'file_upload_id' => $file_info[0]['file_upload_id'],
+          )
+        ));
+
+        // Insert into the job_import_record table
+        $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'job_import_record',
+          'user_id' => $data->user_id,
+          'values' => array(
+            'job_id' => $data->job_id,
+            'record_id' => (int)$id,
+            'project_id' => (int)$data->parent_project_id,
+            'record_table' => 'model_file',
+            'description' => $file_info[0]['file_name'],
+          )
+        ));
+      }
+
+    }
+  }
+
+  /**
+   * Insert UV Maps
+   *
+   * @param string $file_path The file path
+   * @param string $model_repository_id The model's ID
+   * @param string $data The data array
+   * @return null
+   */
+  public function insert_uv_maps($file_path = null, $model_repository_id = null, $data = array()) {
+
+    if (!empty($file_path) && !empty($model_repository_id) && !empty($data)) {
+
+      $file_path_parts = explode(DIRECTORY_SEPARATOR, $file_path);
+      array_pop($file_path_parts);
+      $file_path_root_directory = implode(DIRECTORY_SEPARATOR, $file_path_parts);
+      $file_path_absolute_root_directory = $this->project_directory . substr($this->uploads_directory, 0, -1) . $file_path_root_directory;
+
+      $finder = new Finder();
+      $finder->files()->in($file_path_absolute_root_directory);
+      // Loop through uploaded files.
+      foreach ($finder as $file) {
+
+        // Loop through the texture map file name parts, and see if there's a match.
+        foreach ($this->texture_map_file_name_parts as $tkey => $tvalue) {
+          
+          if (strstr($file->getFilename(), $tvalue)) {
+
+            $uploads_directory = substr(str_replace('web', '', $this->uploads_directory), 0, -1);
+            $uv_map_file_path = str_replace($this->project_directory . substr($this->uploads_directory, 0, -1), '', $file->getPathname());
+
+            // Query the metadata storage for the file's data using the file_path.
+            $file_info = $this->repo_storage_controller->execute('getRecords', array(
+              'base_table' => 'file_upload',
+              'fields' => array(),
+              'limit' => 1,
+              'search_params' => array(
+                0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($uploads_directory . $uv_map_file_path), 'comparison' => '='),
+              ),
+              'search_type' => 'AND',
+              'omit_active_field' => true,
+              )
+            );
+
+            // Log the UV map file to 'uv_map' metadata storage.
+            if (!empty($file_info)) {
+              $id = $this->repo_storage_controller->execute('saveRecord', array(
+                'base_table' => 'uv_map',
+                'user_id' => $data->user_id,
+                'values' => array(
+                  'model_repository_id' => (int)$model_repository_id,
+                  'file_upload_id' => $file_info[0]['file_upload_id'],
+                  'map_type' => str_replace('-', '', $tvalue),
+                  'map_file_type' => $file_info[0]['file_type'],
+                  'map_size' => $file_info[0]['file_size'],
+                  'file_path' => $file_info[0]['file_path'],
+                  'file_checksum' => $file_info[0]['file_hash'],
+                )
+              ));
+
+              // Insert into the job_import_record table
+              $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+                'base_table' => 'job_import_record',
+                'user_id' => $data->user_id,
+                'values' => array(
+                  'job_id' => $data->job_id,
+                  'record_id' => (int)$id,
+                  'project_id' => (int)$data->parent_project_id,
+                  'record_table' => 'uv_map',
+                  'description' => $file_info[0]['file_name'],
+                )
+              ));
+            }
+          }
+
+        }
+        
+      }
+
+    }
   }
 
 }

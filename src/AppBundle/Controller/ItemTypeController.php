@@ -50,10 +50,11 @@ class ItemTypeController extends Controller
      */
     public function browse(Connection $conn, Request $request)
     {
-        return $this->render('resources/browse_item_types.html.twig', array(
-            'page_title' => "Browse Item Types",
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        ));
+      return $this->render('resources/browse_item_types.html.twig', array(
+        'page_title' => "Browse Item Types",
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'resources'
+      ));
     }
 
     /**
@@ -166,12 +167,13 @@ class ItemTypeController extends Controller
           $this->addFlash('message', 'Item Type successfully updated.');
             return $this->redirectToRoute('item_types_browse');
         } else {
-            return $this->render('resources/item_types_form.html.twig', array(
-                "page_title" => !empty($id) ? 'Manage Item Type: ' . $data['label'] : 'Create Item Type'
-                ,"data" => $data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
+          return $this->render('resources/item_types_form.html.twig', array(
+            "page_title" => !empty($id) ? 'Manage Item Type: ' . $data['label'] : 'Create Item Type',
+            "data" => $data,
+            "errors" => $errors,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'current_tab' => 'resources'
+          ));
         }
 
     }

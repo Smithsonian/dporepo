@@ -50,10 +50,11 @@ class LightSourceTypeController extends Controller
      */
     public function browse(Connection $conn, Request $request)
     {
-        return $this->render('resources/browse_light_source_types.html.twig', array(
-            'page_title' => "Browse Light Source Types",
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        ));
+      return $this->render('resources/browse_light_source_types.html.twig', array(
+        'page_title' => "Browse Light Source Types",
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'resources'
+      ));
     }
 
     /**
@@ -154,12 +155,13 @@ class LightSourceTypeController extends Controller
           $this->addFlash('message', 'Light Source Type successfully updated.');
             return $this->redirectToRoute('light_source_types_browse');
         } else {
-            return $this->render('resources/light_source_types_form.html.twig', array(
-                "page_title" => !empty($id) ? 'Manage Light Source Type: ' . $data['label'] : 'Create Light Source Type'
-                ,"data" => $data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
+          return $this->render('resources/light_source_types_form.html.twig', array(
+            "page_title" => !empty($id) ? 'Manage Light Source Type: ' . $data['label'] : 'Create Light Source Type',
+            "data" => $data,
+            "errors" => $errors,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'current_tab' => 'resources'
+          ));
         }
 
     }

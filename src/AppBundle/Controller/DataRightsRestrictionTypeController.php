@@ -50,10 +50,11 @@ class DataRightsRestrictionTypeController extends Controller
      */
     public function browse(Connection $conn, Request $request)
     {
-        return $this->render('resources/browse_data_rights_restriction_types.html.twig', array(
-            'page_title' => "Browse Data Rights Restriction Types",
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        ));
+      return $this->render('resources/browse_data_rights_restriction_types.html.twig', array(
+        'page_title' => "Browse Data Rights Restriction Types",
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'resources'
+      ));
     }
 
     /**
@@ -163,12 +164,13 @@ class DataRightsRestrictionTypeController extends Controller
           $this->addFlash('message', 'Data Rights Restriction Type successfully updated.');
             return $this->redirectToRoute('data_rights_restriction_types_browse');
         } else {
-            return $this->render('resources/data_rights_restriction_types_form.html.twig', array(
-                "page_title" => !empty($data_rights_restriction_types_id) ? 'Manage Data Rights Restriction Type: ' . $data['label'] : 'Create Data Rights Restriction Type'
-                ,"data" => $data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
+          return $this->render('resources/data_rights_restriction_types_form.html.twig', array(
+            "page_title" => !empty($data_rights_restriction_types_id) ? 'Manage Data Rights Restriction Type: ' . $data['label'] : 'Create Data Rights Restriction Type',
+            "data" => $data,
+            "errors" => $errors,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'current_tab' => 'resources'
+          ));
         }
 
     }

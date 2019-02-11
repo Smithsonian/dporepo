@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
+use Symfony\Component\HttpKernel\KernelInterface;
 
 use AppBundle\Controller\RepoStorageHybridController;
 use PDO;
@@ -30,21 +31,30 @@ class CaptureDatasetController extends Controller
     private $repo_user_access;
 
     /**
-     * @var string
+     * @var string $uploads_directory
      */
-    private $uploads_path;
+    private $uploads_directory;
+    // private $uploads_path;
+
+    /**
+     * @var string $external_file_storage_path
+     */
+    private $external_file_storage_path;
 
     /**
     * Constructor
     * @param object  $u  Utility functions object
     */
-    public function __construct(AppUtilities $u, string $uploads_directory, Connection $conn)
+    public function __construct(AppUtilities $u, string $uploads_directory, string $external_file_storage_path, Connection $conn, KernelInterface $kernel)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
         $this->repo_user_access = new RepoUserAccess($conn);
-        $this->uploads_path = str_replace('web', '', $uploads_directory);
+        $this->kernel = $kernel;
+        $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+        $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+        $this->external_file_storage_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $external_file_storage_path) : $external_file_storage_path;;
     }
 
     /**
@@ -80,11 +90,94 @@ class CaptureDatasetController extends Controller
         }
 
         $data = $this->repo_storage_controller->execute('getDatatableCaptureDataset', $query_params);
+        if (is_array($data) && isset($data['aaData'])) {
+          //@todo bad practice- instead get the dataset files in the above function, getDatatableCaptureDataset.
+          foreach($data['aaData'] as $k => $row) {
+            $id = $row['manage'];
+
+            $dataset_file = $this->repo_storage_controller->execute('getDatasetFiles',
+              array(
+                'capture_dataset_id' => $id,
+                'limit' => 1)
+            );
+            $data['aaData'][$k]['file_path'] = '';
+            if (count($dataset_file) > 0) {
+              $path = 'web' . str_replace("\\", "/",  $dataset_file[0]['file_path']);
+              $path = str_replace($this->uploads_directory, '', $path);
+              $path = str_replace("\\", "/", $path);
+              $path = str_replace("//", "/", $path);
+              // The complete path should look like this:
+              // 1E155C38-DC69-E33B-4208-7757D5CDAA35/data/cc/camera/f1978_40-cc_j3a.JPG
+              $data['aaData'][$k]['file_path'] = $path;
+            }
+          }
+        }
 
         return $this->json($data);
     }
 
     /**
+     * @Route("/admin/datatables_browse_model_datasets/{model_id}", name="datasets_browse_model_datatables", methods={"POST","GET"})
+     *
+     * Browse datasets that were used to construct a specific model.
+     *
+     * Run a query to retrieve all datasets in the database, for the specified model_id.
+     *
+     * @param   object  Request     Request object
+     * @return  array|bool          The query result
+     */
+    public function datatablesBrowseModelDatasets(Request $request)
+    {
+      $req = $request->request->all();
+      $model_id = !empty($request->attributes->get('model_id')) ? $request->attributes->get('model_id') : false;
+
+      $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+      $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
+      $sort_order = $req['order'][0]['dir'];
+      $start_record = !empty($req['start']) ? $req['start'] : 0;
+      $stop_record = !empty($req['length']) ? $req['length'] : 20;
+
+      $query_params = array(
+        'sort_field' => $sort_field,
+        'sort_order' => $sort_order,
+        'start_record' => $start_record,
+        'stop_record' => $stop_record,
+        'model_id' => $model_id,
+      );
+      if ($search) {
+        $query_params['search_value'] = $search;
+      }
+
+      $data = $this->repo_storage_controller->execute('getDatatableCaptureDataset', $query_params);
+
+      if (is_array($data) && isset($data['aaData'])) {
+        //@todo bad practice- instead get the dataset files in the above function, getDatatableCaptureDataset.
+        foreach($data['aaData'] as $k => $row) {
+          $id = $row['manage'];
+
+          $dataset_file = $this->repo_storage_controller->execute('getDatasetFiles',
+            array(
+              'capture_dataset_id' => $id,
+              'limit' => 1)
+          );
+          $data['aaData'][$k]['file_path'] = '';
+          if (count($dataset_file) > 0) {
+            $path = 'web' . str_replace("\\", "/",  $dataset_file[0]['file_path']);
+            $path = str_replace($this->uploads_directory, '', $path);
+            $path = str_replace("\\", "/", $this->external_file_storage_path . $path);
+            $path = str_replace("//", "/", $path);
+            // The complete path should look like this:
+            // /3DRepo/uploads/1E155C38-DC69-E33B-4208-7757D5CDAA35/data/cc/camera/f1978_40-cc_j3a.JPG
+            //$model_url = str_replace($uploads_path, $this->external_file_storage_path, $data['viewable_model']['file_path']);
+            $data['aaData'][$k]['file_path'] = $path;
+          }
+        }
+      }
+
+      return $this->json($data);
+    }
+
+  /**
      * Matches /admin/capture_dataset/*
      *
      * @Route("/admin/capture_dataset/add/{item_id}", name="dataset_add", methods={"GET","POST"}, defaults={"capture_dataset_id" = null})
@@ -281,6 +374,14 @@ class CaptureDatasetController extends Controller
       $more_indicator = (strlen($item_data['item_description']) > 50) ? '...' : '';
       $item_data['item_description_truncated'] = substr($item_data['item_description'], 0, 50) . $more_indicator;
 
+      //@todo- get rid of this, thumbs should be included with elements
+      $dataset_files = $this->repo_storage_controller->execute('getDatasetFiles',
+        array(
+          'limit' => 10,
+          'capture_dataset_id' => $id //@todo
+        )
+      );
+
       return $this->render('datasetElements/browse_dataset_elements.html.twig', array(
         'page_title' => 'Capture Dataset: ' .  $dataset_data['capture_dataset_name'],
         'project_id' => $project_id,
@@ -289,7 +390,8 @@ class CaptureDatasetController extends Controller
         'project_data' => $project_data,
         'item_data' => $item_data,
         'dataset_data' => $dataset_data,
-        'uploads_path' => $this->uploads_path,
+        'dataset_files' => $dataset_files,
+        'uploads_path' => $this->uploads_directory,
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
       ));
     }

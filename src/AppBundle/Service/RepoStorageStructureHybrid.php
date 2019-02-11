@@ -2,14 +2,42 @@
 
 namespace AppBundle\Service;
 
+// use \Symfony\Component\DependencyInjection\ContainerAware;
+// use AppBundle\Controller\RepoStorageStructureHybridController;
 use Doctrine\DBAL\Driver\Connection;
+use Symfony\Component\Filesystem;
+use PDO;
+
+use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\Finder\Finder;
+use AppBundle\Utils\AppUtilities;
+use AppBundle\Controller\RepoStorageHybridController;
+use AppBundle\Controller\FilesystemHelperController;
 
 class RepoStorageStructureHybrid implements RepoStorageStructure {
 
   private $connection;
 
-  public function __construct(Connection $connection) {
+  /**
+   * @var string $uploads_directory
+   */
+  private $uploads_directory;
+
+  private $user_id;
+
+  private $fs;
+
+  /**
+   * @var string $project_directory
+   */
+  private $project_directory;
+
+  public function __construct(Connection $connection, $uploads_directory, $project_directory, FilesystemHelperController $filesystem_helper) {//, $user_id) {
     $this->connection = $connection;
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+    $this->project_directory = $project_directory;
+    //$this->user_id = $user_id;
+    $this->fs = $filesystem_helper;
   }
 
   /***
@@ -126,4 +154,154 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
     }
     
   }
+
+  public function createBackup($include_schema = true, $include_data = true) {
+
+    $db_exists = $this->checkDatabaseExists();
+
+    if($db_exists['installed'] == false) {
+      return array('return' => 'fail', 'errors' => array($db_exists['error']));
+    }
+
+    // Write backup to local file.
+    $backup_results = $this->writeBackupToFile($include_schema = true, $include_data = true);
+
+    $backup_filename = $backup_results['backup_filename'];
+    $backup_filepath = $backup_results['backup_filepath'];
+
+    if(isset($backup_filename) && isset($backup_filepath)) {
+
+      if(!file_exists($backup_filepath)) {
+        return array('return' => 'fail', 'errors' => array('Backup file not written- check permissions at ' . $backup_filepath));
+      }
+
+      // Push file to Drastic.
+      $path_external = str_replace($this->uploads_directory, 'mysql_backups/', $backup_filename);
+      $backup_results = $this->fs->transferFile($backup_filepath, $path_external);
+
+      $rs = new RepoStorageHybridController(
+        $this->connection
+      );
+
+      //@todo error checking
+      $db_results = $backup_results;
+      $db_results['result'] = isset($backup_results['result']) && $backup_results['result'] == 'success' ? 1 : 0;
+      $id = $rs->execute('saveRecord',
+        array(
+          'base_table' => 'backup',
+          'user_id' => 0, //$this->user_id,
+          'values' => $db_results
+        )
+      );
+      $backup_results['id'] = $id;
+    }
+    else {
+      $backup_results['errors'][] = 'Backup file not written.';
+    }
+
+    return $backup_results;
+
+  }
+
+  private function writeBackupToFile($include_schema = true, $include_data = true) {
+
+    $backup_dir = $this->uploads_directory . '/mysqlbackups/';
+    $handle = NULL;
+
+    if(!is_dir($backup_dir)) {
+      $filesystem = new Filesystem\Filesystem();
+      try {
+        $filesystem->mkdir($backup_dir);
+        $mode = 0666;
+        $umask = umask();
+        $filesystem->chmod($backup_dir, $mode, $umask);
+      } catch (IOException $e) {
+        // discard chmod failure (some filesystem may not support it)
+        return array('return' => 'fail', 'errors' => array('Could not create backup directory. ' . $e->getMessage()));
+      }
+    }
+    $backup_filename = 'repository_backup_' . (string)time() . '.sql';
+    $backup_file_path = $backup_dir . $backup_filename;
+    if(strpos($backup_file_path, $this->project_directory) === false) {
+      $backup_file_path = $this->project_directory . $backup_file_path;
+    }
+
+    try {
+      $params = $this->connection->getParams();
+      //$username = $params['user'];
+      //$password = $params['password'];
+      $dbname = $params['dbname'];
+
+      //@todo dump schema if $include_schema
+
+      $sql = "SELECT `TABLE_NAME` FROM information_schema.`TABLES` where table_schema like '" . $dbname . "' ORDER BY `TABLE_NAME` ASC";
+      $statement = $this->connection->prepare($sql);
+      $statement->execute();
+      $tables = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      if(true === $include_data) {
+
+        $handle = fopen($backup_file_path, "c");
+        foreach($tables as $t) {
+          $table_name = $t['TABLE_NAME'];
+
+          // Get the column info.
+          $sql_schema = "SELECT COLUMN_NAME FROM information_schema.`COLUMNS` WHERE table_schema LIKE '" . $dbname
+            . "' AND TABLE_NAME LIKE '" . $table_name . "' ORDER BY ORDINAL_POSITION";
+          $statement = $this->connection->prepare($sql_schema);
+          $statement->execute();
+          $columns = $statement->fetchAll(PDO::FETCH_COLUMN);
+          $column_names = "INSERT INTO `" . $table_name . "` (" . implode(', ', $columns) . ") VALUES \r\n";
+
+          // Dump the table data.
+          $sql_data = "SELECT * FROM " . $table_name;
+          $statement = $this->connection->prepare($sql_data);
+          $statement->execute();
+          $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+          if(count($rows) > 0) {
+            $row_count = count($rows);
+            $counter = 0;
+            fwrite($handle, $column_names);
+            foreach($rows as $row) {
+              $counter++;
+              $row_values_array = array();
+              foreach($row as $row_value) {
+                $row_values_array[] = $this->connection->quote($row_value);
+              }
+              //$row_values = '(' . $this->connection->quote(implode(',', array_values($row))) . ");\r\n";
+              $row_values = '(' . implode(',', array_values($row_values_array)) . ")";
+              if($counter == $row_count) {
+                $row_values .= ';';
+              }
+              else {
+                $row_values .= ",\r\n";
+              }
+              fwrite($handle, $row_values);
+            }
+            fwrite($handle, "\r\n");
+          }
+        }
+        fclose($handle);
+      }
+
+      if(!file_exists($backup_file_path)) {
+        return array('return' => 'fail', 'errors' => array('Unable to write to file. Check permissions for writing '. $backup_file_path));
+      }
+
+      //$mysqldump_output = shell_exec("mysqldump -u " . $username . " -p" . $password . " " . $dbname . " > " . $backup_file_path);
+      //echo $mysqldump_output; /* Your output of the restore command */
+
+      return array('result' => 'success', 'backup_filename' => $backup_filename, 'backup_filepath' => $backup_file_path);
+    }
+    catch(\Throwable $ex) {
+      if($handle) {
+        fclose($handle);
+      }
+      return array('return' => 'fail', 'errors' => array('Unable to dump database. ' . $ex->getMessage()));
+    }
+
+  }
+
+
 }
