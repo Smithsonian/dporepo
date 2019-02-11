@@ -45,11 +45,7 @@ class RepoStorageHybridController extends Controller
   /*
   public function build($function, $parameters) {
 
-<<<<<<< HEAD
-    // $this->repo_storage_structure = new RepoStorageStructureHybrid($this->connection, $this->uploads_directory, $this->external_file_storage_path);
-=======
->>>>>>> dev2
-    $this->repo_storage_structure = new RepoStorageStructureHybrid($this->connection);
+    $this->repo_storage_structure = new RepoStorageStructureHybrid($this->connection, $this->project_dir);
 
     if(!method_exists($this->repo_storage_structure, $function)) {
       //@todo
