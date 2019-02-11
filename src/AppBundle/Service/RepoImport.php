@@ -1635,13 +1635,13 @@ class RepoImport implements RepoImportInterface {
    * Insert Model Files
    *
    * @param string $file_path The file path
-   * @param string $model_repository_id The model's ID
+   * @param string $model_id The model's ID
    * @param string $data The data array
    * @return null
    */
-  public function insert_model_files($file_path = null, $model_repository_id = null, $data = array()) {
+  public function insert_model_files($file_path = null, $model_id = null, $data = array()) {
 
-    if (!empty($file_path) && !empty($model_repository_id) && !empty($data)) {
+    if (!empty($file_path) && !empty($model_id) && !empty($data)) {
 
       $uploads_directory = str_replace('web', '', $this->uploads_directory);
       // Windows fix for the model's file path.
@@ -1667,7 +1667,7 @@ class RepoImport implements RepoImportInterface {
           'base_table' => 'model_file',
           'user_id' => $data->user_id,
           'values' => array(
-            'model_repository_id' => (int)$model_repository_id,
+            'model_id' => (int)$model_id,
             'file_upload_id' => $file_info[0]['file_upload_id'],
           )
         ));
@@ -1693,13 +1693,13 @@ class RepoImport implements RepoImportInterface {
    * Insert UV Maps
    *
    * @param string $file_path The file path
-   * @param string $model_repository_id The model's ID
+   * @param string $model_id The model's ID
    * @param string $data The data array
    * @return null
    */
-  public function insert_uv_maps($file_path = null, $model_repository_id = null, $data = array()) {
+  public function insert_uv_maps($file_path = null, $model_id = null, $data = array()) {
 
-    if (!empty($file_path) && !empty($model_repository_id) && !empty($data)) {
+    if (!empty($file_path) && !empty($model_id) && !empty($data)) {
 
       $file_path_parts = explode(DIRECTORY_SEPARATOR, $file_path);
       array_pop($file_path_parts);
@@ -1713,7 +1713,7 @@ class RepoImport implements RepoImportInterface {
 
         // Loop through the texture map file name parts, and see if there's a match.
         foreach ($this->texture_map_file_name_parts as $tkey => $tvalue) {
-          
+
           if (strstr($file->getFilename(), $tvalue)) {
 
             $uploads_directory = substr(str_replace('web', '', $this->uploads_directory), 0, -1);
@@ -1738,7 +1738,7 @@ class RepoImport implements RepoImportInterface {
                 'base_table' => 'uv_map',
                 'user_id' => $data->user_id,
                 'values' => array(
-                  'model_repository_id' => (int)$model_repository_id,
+                  'model_id' => (int)$model_id,
                   'file_upload_id' => $file_info[0]['file_upload_id'],
                   'map_type' => str_replace('-', '', $tvalue),
                   'map_file_type' => $file_info[0]['file_type'],
