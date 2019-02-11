@@ -2,6 +2,7 @@
 
 namespace AppBundle\Controller;
 
+use AppBundle\Utils\AppUtilities;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -42,6 +43,8 @@ class RepoStorageStructureHybridController extends Controller {
 
   private $fs;
 
+  private $u;
+
   public function __construct(KernelInterface $kernel, Connection $conn, string $uploads_directory, FilesystemHelperController $fs) { // , string $external_file_storage_path
     $this->connection = $conn;
     $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
@@ -49,6 +52,8 @@ class RepoStorageStructureHybridController extends Controller {
     $this->project_directory = $kernel->getProjectDir() . DIRECTORY_SEPARATOR;
     $this->repo_user_access = new RepoUserAccess($conn);
     $this->fs = $fs;
+    $this->u = new AppUtilities();
+
   }
 
   public function backup($include_schema = true, $include_data = true) {
@@ -141,6 +146,7 @@ class RepoStorageStructureHybridController extends Controller {
    */
   function showBackupForm( Connection $conn, Request $request )
   {
+    $return = array();
 
     // Create the form
     $form = $this->createForm(BackupForm::class);
@@ -164,7 +170,7 @@ class RepoStorageStructureHybridController extends Controller {
     }
 
     return $this->render('admin/backup_form.html.twig', array(
-      'page_title' => (int)$id > 0
+      'page_title' => (isset($id) && (int)$id > 0)
         ? 'Backup: ' . $id
         : 'Add Backup',
       'backup_data' => $return,
