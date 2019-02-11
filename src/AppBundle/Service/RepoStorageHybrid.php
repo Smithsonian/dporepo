@@ -451,8 +451,8 @@ class RepoStorageHybrid implements RepoStorage {
 
     // Get model IDs for 3D thumb and low res, if available.
     // model_id_3d_thumb, model_id_low_res
-    $sql = "SELECT model_id, model_purpose       
-        FROM model  
+    $sql = "SELECT model_id, model_purpose
+        FROM model
         WHERE parent_model_id=:model_id
         AND model_purpose IN ('delivery_web','thumb_3d')
         AND active=1";
@@ -473,16 +473,16 @@ class RepoStorageHybrid implements RepoStorage {
     }
     if(empty($return_data['viewable_model'])) {
       foreach($file_data as $file) {
-      if(!empty($file_data)) {
-        $file = $file_data;
-        $fn = $file['file_name'];
-        $fn_exploded = explode('.', $fn);
-        if (count($fn_exploded) == 2 && strtolower($fn_exploded[1]) == 'obj') {
-          $return_data['viewable_model'] = $file;
+        if(!empty($file_data)) {
+          $file = $file_data;
+          $fn = $file['file_name'];
+          $fn_exploded = explode('.', $fn);
+          if (count($fn_exploded) == 2 && strtolower($fn_exploded[1]) == 'obj') {
+            $return_data['viewable_model'] = $file;
+          }
         }
       }
     }
-    // End get model IDs for derivatives
 
     // Get the source capture datasets for this model.
     $return_data['capture_datasets'] = array();
@@ -5309,60 +5309,64 @@ class RepoStorageHybrid implements RepoStorage {
     if(!empty($params)) {
 
       // Proceed only if the item_id is present.
-      $item_id = array_key_exists('item_id', $params) ? $params['item_id'] : false;
+      $item_id = array_key_exists('item_id', $params) ? $params['item_id'] : null;
+
+      $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+      $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : 'asc';
+      $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : 0;
+      $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : 20;
+      $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+
+      $sql = " workflow.workflow_id,
+        workflow.workflow_recipe_name,
+        workflow.ingest_job_uuid,
+        workflow.item_id,
+        workflow.step_id,
+        workflow.step_type,
+        workflow.step_state,
+        workflow.processing_job_id,
+        workflow.date_created,
+        workflow.created_by_user_account_id,
+        workflow.last_modified,
+        workflow.last_modified_user_account_id,
+        workflow.workflow_id AS DT_RowId 
+        FROM workflow ";
+      if ($item_id) {
+        $sql .= " WHERE workflow.item_id = :item_id ";
+      }
+      if ($sort_field) {
+        $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+      } else {
+        $sql .= " ORDER BY model_id ";
+      }
+
+      if (NULL !== $stop_record) {
+        $sql .= " LIMIT {$start_record}, {$stop_record} ";
+      } else {
+        $sql .= " LIMIT {$start_record} ";
+      }
+
+      $sql = "SELECT SQL_CALC_FOUND_ROWS " . $sql;
+
+      $statement = $this->connection->prepare($sql);
 
       if ($item_id) {
-        $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
-        $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : 'asc';
-        $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : 0;
-        $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : 20;
-        $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
-
-        $sql = " workflow.workflow_id,
-          workflow.workflow_recipe_name,
-          workflow.step_id,
-          workflow.step_type,
-          workflow.step_state,
-          workflow.processing_job_id,
-          workflow.date_created,
-          workflow.created_by_user_account_id,
-          workflow.last_modified,
-          workflow.last_modified_user_account_id,
-          workflow.workflow_id AS DT_RowId 
-          FROM workflow 
-          WHERE workflow.item_id = :item_id ";
-
-        if ($sort_field) {
-          $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
-        } else {
-          $sql .= " ORDER BY model_id ";
-        }
-
-        if (NULL !== $stop_record) {
-          $sql .= " LIMIT {$start_record}, {$stop_record} ";
-        } else {
-          $sql .= " LIMIT {$start_record} ";
-        }
-
-        $sql = "SELECT SQL_CALC_FOUND_ROWS " . $sql;
-
-        $statement = $this->connection->prepare($sql);
-
         $statement->bindValue(":item_id", $item_id, PDO::PARAM_INT);
-        if(strlen(trim($search_value)) > 0) {
-          $statement->bindValue(":search_value", $search_value, PDO::PARAM_STR);
-        }
-
-        $statement->execute();
-
-        $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
-
-        $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
-        $statement->execute();
-        $count = $statement->fetch(PDO::FETCH_ASSOC);
-        $data["iTotalRecords"] = $count["FOUND_ROWS()"];
-        $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
       }
+      if(strlen(trim($search_value)) > 0) {
+        $statement->bindValue(":search_value", $search_value, PDO::PARAM_STR);
+      }
+
+      $statement->execute();
+
+      $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
+      $statement->execute();
+      $count = $statement->fetch(PDO::FETCH_ASSOC);
+      $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+      $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
+
     }
 
     return $data;
