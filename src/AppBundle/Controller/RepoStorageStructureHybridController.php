@@ -15,7 +15,11 @@ use AppBundle\Form\BackupForm;
 
 use AppBundle\Service\RepoUserAccess;
 use AppBundle\Controller\RepoStorageHybridController;
+use AppBundle\Controller\FilesystemHelperController;
 use League\Flysystem;
+
+use Symfony\Component\HttpKernel\KernelInterface;
+
 
 class RepoStorageStructureHybridController extends Controller {
 
@@ -30,16 +34,21 @@ class RepoStorageStructureHybridController extends Controller {
   private $repo_user_access;
 
   /**
-   * @var string $external_file_storage_path
+   * @var string $project_directory
    */
-  private $external_file_storage_path;
+  private $project_directory;
 
-  public function __construct(Connection $conn, string $uploads_directory, string $external_file_storage_path) {
+  //private $external_file_storage_path;
+
+  private $fs;
+
+  public function __construct(KernelInterface $kernel, Connection $conn, string $uploads_directory, FilesystemHelperController $fs) { // , string $external_file_storage_path
     $this->connection = $conn;
     $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
-    $this->external_file_storage_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $external_file_storage_path) : $external_file_storage_path;;
-
+    //$this->external_file_storage_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $external_file_storage_path) : $external_file_storage_path;;
+    $this->project_directory = $kernel->getProjectDir() . DIRECTORY_SEPARATOR;
     $this->repo_user_access = new RepoUserAccess($conn);
+    $this->fs = $fs;
   }
 
   public function backup($include_schema = true, $include_data = true) {
@@ -47,75 +56,16 @@ class RepoStorageStructureHybridController extends Controller {
     $this->repo_storage_structure = new RepoStorageStructureHybrid(
       $this->connection,
       $this->uploads_directory,
-      $this->external_file_storage_path
+      $this->project_directory,
+      $this->fs
+      //, $this->getUser()->getId()
     );
 
     // Create the backup.
-    $backup_results = $this->repo_storage_structure->createBackupFile((bool)$include_schema, (bool)$include_data);
-    // result is an array containing 'result' (success or fail) and optionally 'errors' array.
+    $backup_results = $this->repo_storage_structure->createBackup((bool)$include_schema, (bool)$include_data);
 
-    //try {
-      $backup_filename = $backup_results['backup_filename'];
-      $backup_filepath = $backup_results['backup_filepath'];
-
-      // Push file to Drastic.
-      $remote_filename = 'mysql_backups/' . $backup_filename;
-
-      $cmd = 'php bin/console app:webdav-transfer ' . $backup_filepath . ' ' . $remote_filename;
-
-      $process = new Process($cmd);
-      $process->setTimeout(60);
-      //print($this->get('kernel')->getRootDir() . '/../<br />');
-      //$process->setWorkingDirectory($this->get('kernel')->getRootDir() . '/../');
-      $process->setWorkingDirectory("/Users/quoadmin/_http2/dporepo_dev/");
-
-      $process->run(
-      /*function ($type, $buffer) use ($output) {
-        $output->write((Process::ERR === $type) ? 'ERR:' . $buffer : $buffer);
-      }*/
-      );
-
-      /*if($push_result['result'] !== 'success') {
-        return $backup_results;
-      }
-      $backup_results = $push_result;
-
-      // Record the backup in the database table.
-      // backup_filename, result, error, date_created, created_by_user_account_id, last_modified_user_account_id
-      $backup_results['backup_filename'] = $backup_filepath;
-      if(isset($push_result['errors'])) {
-        $backup_results['error'] = implode(', ', $push_result['errors']);
-        unset($backup_results['errors']);
-      }
-      */
-
-      $rs = new RepoStorageHybridController(
-        $this->connection
-      );
-      /*
-      $id = $rs->execute('saveRecord',
-        array(
-          'base_table' => 'backup',
-          'user_id' => $this->getUser()->getId(),
-          'values' => $backup_results
-        )
-      );
-      */
-      //@todo error checking
-
-      $backup_results['id'] = $id;
-
-      return $backup_results;
-    try {
-    }
-    catch(\Throwable $ex) {
-      return array('return' => 'fail', 'errors' => array('Unable to dump database. ' . $ex->getMessage()));
-    }
-
-    print_r($backup_results);
-    die();
-
-    return $backup_results['id'];
+    // $backup_results is an array containing 'result' (success or fail) and optionally 'errors' array.
+    return $backup_results;
 
   }
 
@@ -202,7 +152,15 @@ class RepoStorageStructureHybridController extends Controller {
     if($form->isSubmitted() && $form->isValid()) {
       $return = $this->backup(true, true);
       $id = isset($return['id']) ? $return['id'] : 0;
-      print_r($return);
+
+      if(!isset($return['errors'])) {
+        $this->addFlash('message', 'Backup created.');
+        return $this->redirect('/admin/backups');
+      }
+      else {
+        $this->addFlash('error', 'Backup not created: ' . implode(" ", $return['errors']));
+      }
+
     }
 
     return $this->render('admin/backup_form.html.twig', array(

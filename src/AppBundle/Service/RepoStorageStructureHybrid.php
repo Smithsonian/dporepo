@@ -2,8 +2,8 @@
 
 namespace AppBundle\Service;
 
-use \Symfony\Component\DependencyInjection\ContainerAware;
-use AppBundle\Controller\RepoStorageStructureHybridController;
+// use \Symfony\Component\DependencyInjection\ContainerAware;
+// use AppBundle\Controller\RepoStorageStructureHybridController;
 use Doctrine\DBAL\Driver\Connection;
 use Symfony\Component\Filesystem;
 use PDO;
@@ -11,27 +11,33 @@ use PDO;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Finder\Finder;
 use AppBundle\Utils\AppUtilities;
-
+use AppBundle\Controller\RepoStorageHybridController;
+use AppBundle\Controller\FilesystemHelperController;
 
 class RepoStorageStructureHybrid implements RepoStorageStructure {
 
   private $connection;
-  protected $flysystem;
 
   /**
    * @var string $uploads_directory
    */
   private $uploads_directory;
 
-  /**
-   * @var string $external_file_storage_path
-   */
-  private $external_file_storage_path;
+  private $user_id;
 
-  public function __construct(Connection $connection) { //, $uploads_directory, $external_file_storage_path) {
+  private $fs;
+
+  /**
+   * @var string $project_directory
+   */
+  private $project_directory;
+
+  public function __construct(Connection $connection, $uploads_directory, $project_directory, FilesystemHelperController $filesystem_helper) {//, $user_id) {
     $this->connection = $connection;
-    //$this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
-    //$this->external_file_storage_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $external_file_storage_path) : $external_file_storage_path;;
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+    $this->project_directory = $project_directory;
+    //$this->user_id = $user_id;
+    $this->fs = $filesystem_helper;
   }
 
   /***
@@ -149,7 +155,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
     
   }
 
-  public function createBackupFile($include_schema = true, $include_data = true) {
+  public function createBackup($include_schema = true, $include_data = true) {
 
     $db_exists = $this->checkDatabaseExists();
 
@@ -159,21 +165,54 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
 
     // Write backup to local file.
     $backup_results = $this->writeBackupToFile($include_schema = true, $include_data = true);
-    if(isset($backup_results['errors']) && count($backup_results['errors']) > 0) {
-      return $backup_results;
+
+    $backup_filename = $backup_results['backup_filename'];
+    $backup_filepath = $backup_results['backup_filepath'];
+
+    if(isset($backup_filename) && isset($backup_filepath)) {
+
+      if(!file_exists($backup_filepath)) {
+        return array('return' => 'fail', 'errors' => array('Backup file not written- check permissions at ' . $backup_filepath));
+      }
+
+      // Push file to Drastic.
+      $path_external = str_replace($this->uploads_directory, 'mysql_backups/', $backup_filename);
+      $backup_results = $this->fs->transferFile($backup_filepath, $path_external);
+
+      $rs = new RepoStorageHybridController(
+        $this->connection
+      );
+
+      //@todo error checking
+      $db_results = $backup_results;
+      $db_results['result'] = isset($backup_results['result']) && $backup_results['result'] == 'success' ? 1 : 0;
+      $id = $rs->execute('saveRecord',
+        array(
+          'base_table' => 'backup',
+          'user_id' => 0, //$this->user_id,
+          'values' => $db_results
+        )
+      );
+      $backup_results['id'] = $id;
     }
+    else {
+      $backup_results['errors'][] = 'Backup file not written.';
+    }
+
+    return $backup_results;
 
   }
 
   private function writeBackupToFile($include_schema = true, $include_data = true) {
 
     $backup_dir = $this->uploads_directory . '/mysqlbackups/';
+    $handle = NULL;
 
-    if(!file_exists($backup_dir)) {
+    if(!is_dir($backup_dir)) {
       $filesystem = new Filesystem\Filesystem();
       try {
         $filesystem->mkdir($backup_dir);
-        $mode = 0664;
+        $mode = 0666;
         $umask = umask();
         $filesystem->chmod($backup_dir, $mode, $umask);
       } catch (IOException $e) {
@@ -181,9 +220,11 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         return array('return' => 'fail', 'errors' => array('Could not create backup directory. ' . $e->getMessage()));
       }
     }
-
     $backup_filename = 'repository_backup_' . (string)time() . '.sql';
     $backup_file_path = $backup_dir . $backup_filename;
+    if(strpos($backup_file_path, $this->project_directory) === false) {
+      $backup_file_path = $this->project_directory . $backup_file_path;
+    }
 
     try {
       $params = $this->connection->getParams();
@@ -244,6 +285,10 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
         fclose($handle);
       }
 
+      if(!file_exists($backup_file_path)) {
+        return array('return' => 'fail', 'errors' => array('Unable to write to file. Check permissions for writing '. $backup_file_path));
+      }
+
       //$mysqldump_output = shell_exec("mysqldump -u " . $username . " -p" . $password . " " . $dbname . " > " . $backup_file_path);
       //echo $mysqldump_output; /* Your output of the restore command */
 
@@ -258,49 +303,5 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
 
   }
 
-
-  /**
-   * @param $local_file_path The directory which contains files to be transferred.
-   * @param $source_filename The remote path.
-   * @return mixed array containing success/fail value, and any messages.
-   */
-  /*
-  private function pushFileToDrastic($source_file_fullpath = null, $destination_filename = null, $flysystem) {
-    $data = array();
-
-    if (!file_exists($source_file_fullpath)) {
-      return (array('errors' => array('Backup not copied to Drastic. Source backup file not found: ' . $source_file_fullpath)));
-    }
-    else {
-
-      // Write the file to Drastic.
-      try {
-
-        $container = $this->getContainer();
-        $flysystem = $container->get('oneup_flysystem.assets_filesystem');
-
-        $stream = fopen($source_file_fullpath, 'r+');
-        $flysystem->writeStream($destination_filename, $stream);
-        // Before calling fclose on the resource, check if it’s still valid using is_resource.
-        if (is_resource($stream)) {
-          fclose($stream);
-        }
-      } // Catch the error.
-      catch (Exception $e) {
-        return(
-          array(
-            'result' => 'fail',
-            'errors' => array($e->getMessage()
-            )
-          )
-        );
-      }
-
-      $data['result'] = 'success';
-      return $data;
-    }
-
-  }
-  */
 
 }

@@ -2,22 +2,38 @@
 
 namespace AppBundle\Command;
 
-use AppBundle\Service\RepoStorageStructureHybrid;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\HttpKernel\KernelInterface;
 
 use AppBundle\Controller\RepoStorageStructureHybridController;
+use AppBundle\Controller\FilesystemHelperController;
 
 class RepoStorageHybridBackupCommand extends Command
 {
-  private $repo;
+  private $repo_storage_controller;
 
-  public function __construct(RepoStorageStructureHybridController $repo)
+  /**
+   * @var string $uploads_directory
+   */
+  private $uploads_directory;
+
+  /**
+   * @var string $project_directory
+   */
+  private $project_directory;
+
+  public function __construct(KernelInterface $kernel, object $conn, string $uploads_directory, FilesystemHelperController $fs)
   {
-    $this->repo = $repo;
+    // Storage controller
+    $this->kernel = $kernel;
+    $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+    $this->uploads_directory = $this->project_directory . $uploads_directory;
+    $this->repo_storage_controller = new RepoStorageStructureHybridController($kernel, $conn, $this->uploads_directory, $fs);
+
     // This is required due to parent constructor, which sets up name.
     parent::__construct();
   }
@@ -62,7 +78,7 @@ class RepoStorageHybridBackupCommand extends Command
       $include_data = $input->getArgument('nodata') ? false : true;
 
       // Execute the backup.
-      $result = $this->repo->backup($include_schema, $include_data);
+      $result = $this->repo_storage_controller->backup($include_schema, $include_data);
 
       // Output results.
       if (isset($result['result']) && ($result['result'] === 'success')) {
