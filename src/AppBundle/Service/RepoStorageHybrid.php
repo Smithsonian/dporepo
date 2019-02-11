@@ -471,13 +471,15 @@ class RepoStorageHybrid implements RepoStorage {
         $return_data['model_id_3d_thumb'] = $rm['model_id'];
       }
     }
-
-    $return_data['viewable_model'] = false;
-    foreach($file_data as $file) {
-      $fn = $file['file_name'];
-      $fn_exploded = explode('.', $fn);
-      if (count($fn_exploded) == 2 && strtolower($fn_exploded[1]) == 'obj') {
-        $return_data['viewable_model'] = $file;
+    if(empty($return_data['viewable_model'])) {
+      foreach($file_data as $file) {
+      if(!empty($file_data)) {
+        $file = $file_data;
+        $fn = $file['file_name'];
+        $fn_exploded = explode('.', $fn);
+        if (count($fn_exploded) == 2 && strtolower($fn_exploded[1]) == 'obj') {
+          $return_data['viewable_model'] = $file;
+        }
       }
     }
     // End get model IDs for derivatives
@@ -592,7 +594,11 @@ class RepoStorageHybrid implements RepoStorage {
       $model['file_path'] = null;
       $fileupload = $this->getFiles(array("parent_record_id"=>$modelid,"parent_record_type"=>"model","limit"=>1));
       if (count($fileupload)) {
-        $model['file_path'] = $fileupload[0]['file_path'];
+        $path = 'web' . str_replace("\\", "/",  $fileupload[0]['file_path']);
+        $path = str_replace($this->uploads_directory, '', $path);
+        $path = str_replace("\\", "/", $this->external_file_storage_path . $path);
+        $path = str_replace("//", "/", $path);
+        $model['file_path'] = $path;
       }
       if ($model['parent_capture_dataset_id'] != null) {
         $capturedataset = $this->connection->fetchAll("SELECT * FROM capture_dataset WHERE capture_dataset_id =".$model['parent_capture_dataset_id']);
@@ -707,12 +713,30 @@ class RepoStorageHybrid implements RepoStorage {
       $return_data = $ret[0];
     }
 
+    // Get dataset files
+    $sql = "SELECT file_upload.*
+        FROM file_upload
+        LEFT JOIN capture_data_file on file_upload.file_upload_id = capture_data_file.file_upload_id
+        LEFT JOIN capture_data_element on capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
+        WHERE capture_data_element.active = 1
+        AND capture_data_element.capture_dataset_id = :capture_dataset_id";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":capture_dataset_id", $capture_dataset_id, PDO::PARAM_INT);
+    $statement->execute();
+    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $dataset_files = array();
+    if(count($ret) > 0) {
+      $dataset_files = $ret;
+    }
+
     $id_params = array(
       'record_type' => 'capture_dataset',
       'project_id' => $return_data['project_id'],
       'subject_id' => $return_data['subject_id'],
       'item_id' => $return_data['item_id'],
       'capture_dataset_id' => $capture_dataset_id,
+      'dataset_files' => $dataset_files,
     );
     $download_permissions = $this->getApiPermissions($id_params);
     $return_data['inherit_api_published'] = isset($download_permissions['inherit_api_published']) ? $download_permissions['inherit_api_published'] : NULL;
@@ -3337,7 +3361,7 @@ class RepoStorageHybrid implements RepoStorage {
 
       $statement = $this->connection->prepare($sql);
       if(strlen(trim($search_value)) > 0) {
-        $statement->bindValue(":search_value", $search_value, PDO::PARAM_STR);
+        $statement->bindValue(":search_value", '%' . $search_value . '%', PDO::PARAM_STR);
       }
       if(NULL !== $capture_dataset_id) {
         $statement->bindValue(":capture_dataset_id", $capture_dataset_id, PDO::PARAM_INT);
@@ -3394,6 +3418,7 @@ class RepoStorageHybrid implements RepoStorage {
       $sql .= " AND (
         capture_data_file_name LIKE :search_value OR
         capture_data_file_type LIKE :search_value OR
+        file_upload.metadata LIKE :search_value OR
         is_compressed_multiple_files LIKE :search_value
       )";
     }
@@ -3417,7 +3442,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     $statement = $this->connection->prepare($sql);
     if(strlen(trim($search_value)) > 0) {
-      $statement->bindValue(":search_value", $search_value, PDO::PARAM_STR);
+      $statement->bindValue(":search_value", '%' . $search_value . '%', PDO::PARAM_STR);
     }
     if(NULL !== $parent_id) {
       $statement->bindValue(":capture_data_element_id", $parent_id, PDO::PARAM_INT);
