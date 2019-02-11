@@ -128,6 +128,8 @@ class ValidateCommand extends Command
 
       sleep(5);
 
+      //@todo fix path issues in RepoProcessingService- Windoze slash issues
+      /*
       // Run the models validation.
       $command_models = $this->getApplication()->find('app:model-validate');
       $arguments_models = array(
@@ -140,8 +142,6 @@ class ValidateCommand extends Command
       sleep(5);
 
       // Run the model generation processes.
-      //@todo fix path issues in RepoProcessingService- Windoze slash issues
-      /*
       $command_model_generate = $this->getApplication()->find('app:model-generate');
       $arguments_model_generate = array(
           'command' => 'app:model-generate',
