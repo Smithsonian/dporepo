@@ -42,6 +42,7 @@ class RepoStorageHybridController extends Controller
 
   }
 
+  /*
   public function build($function, $parameters) {
 
     $this->repo_storage_structure = new RepoStorageStructureHybrid($this->connection);
@@ -60,4 +61,5 @@ class RepoStorageHybridController extends Controller
     }
 
   }
+*/
 }
