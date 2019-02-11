@@ -1745,6 +1745,80 @@ class RepoStorageHybrid implements RepoStorage {
     return $data;
   }
 
+  public function getImportedCaptureDatasetImages($params) {
+
+    $job_uuid = isset($params['job_uuid']) ? $params['job_uuid'] : NULL;
+    if(NULL == $job_uuid) {
+      return array();
+    }
+
+    $sql = "SELECT job.uuid, job.job_id, 
+        file_upload.job_id, file_upload.parent_record_id, file_upload.parent_record_type, 
+        file_upload.file_name, file_upload.file_path, file_upload.file_size, file_upload.file_type, 
+        capture_data_file.* 
+      FROM file_upload
+      JOIN capture_data_file ON file_upload.file_upload_id = capture_data_file.file_upload_id
+      JOIN capture_data_element ON capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
+      JOIN capture_dataset ON capture_data_element.capture_dataset_id = capture_dataset.capture_dataset_id
+      JOIN item ON capture_dataset.item_id = item.item_id
+      JOIN job ON item.project_id = job.project_id
+      WHERE job.uuid = :job_uuid      
+      AND file_upload.job_id = job.job_id
+      AND file_upload.file_type='jpg'
+      LIMIT 0, 100
+      ";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":job_uuid", $job_uuid, PDO::PARAM_STR);
+    $statement->execute();
+    $data = $statement->fetchAll();
+    if(empty($data)) {
+      return array();
+    }
+    return $data;
+  }
+
+  function createCaptureDatasetImageDerivatives($params) {
+
+    //@todo needs love- check params
+
+    $sql = "INSERT INTO file_upload (job_id, parent_record_id, parent_record_type, file_name, file_path, file_size, file_type, 
+      created_by_user_account_id, last_modified_user_account_id)
+    VALUES (:job_id, :parent_record_id, :parent_record_type, :file_name, :file_path, :file_size, :file_type, :user_id, :user_id)
+    ";
+    $statement = $this->connection->prepare($sql);
+
+    $statement->bindValue(":job_id", $params['job_id'], PDO::PARAM_STR);
+    $statement->bindValue(":parent_record_id", $params['parent_record_id'], PDO::PARAM_INT);
+    $statement->bindValue(":parent_record_type", $params['parent_record_type'], PDO::PARAM_STR);
+    $statement->bindValue(":file_name", $params['file_name'], PDO::PARAM_STR);
+    $statement->bindValue(":file_path", $params['file_path'], PDO::PARAM_STR);
+    $statement->bindValue(":file_size", $params['file_size'], PDO::PARAM_STR);
+    $statement->bindValue(":file_type", $params['file_type'], PDO::PARAM_STR);
+    $statement->bindValue(":user_id", $params['created_by_user_account_id'], PDO::PARAM_INT);
+    $statement->execute();
+    $file_upload_id = $this->connection->lastInsertId();
+
+
+    $sql = "INSERT INTO capture_data_file (capture_data_element_id, file_upload_id, capture_data_file_name, capture_data_file_type,
+      variant_type, date_created, created_by_user_account_id, last_modified_user_account_id)
+    VALUES (:capture_data_element_id, :file_upload_id, :capture_data_file_name, :capture_data_file_type, 
+      :variant_type, NOW(), :user_id, :user_id)
+    ";
+    $statement = $this->connection->prepare($sql);
+
+    $statement->bindValue(":capture_data_element_id", $params['parent_record_id'], PDO::PARAM_INT);
+    $statement->bindValue(":file_upload_id", $file_upload_id, PDO::PARAM_INT);
+    $statement->bindValue(":capture_data_file_name", $params['file_name'], PDO::PARAM_STR);
+    $statement->bindValue(":capture_data_file_type", $params['capture_data_file_type'], PDO::PARAM_STR);
+    $statement->bindValue(":variant_type", $params['variant_type'], PDO::PARAM_STR);
+    $statement->bindValue(":user_id", $params['created_by_user_account_id'], PDO::PARAM_INT);
+
+    $statement->execute();
+    return;
+
+  }
+
   public function getStakeholderGuids() {
     $sql = "
       SELECT project.project_id
