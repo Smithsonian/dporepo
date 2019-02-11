@@ -454,7 +454,7 @@ class RepoStorageHybrid implements RepoStorage {
         FROM model LEFT JOIN model_file on model.model_id = model_file.model_id
         WHERE parent_model_id=:model_id
         AND model_purpose IN ('delivery_web','thumb_3d')
-        AND active=1";
+        AND model.active=1";
 
     $statement = $this->connection->prepare($sql);
     $statement->bindValue(":model_id", $id, PDO::PARAM_INT);
