@@ -107,6 +107,7 @@
                         <tr>
                             <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
                             <th class="text-center">Download</th>
+                            <th class="text-center">Preview</th>
                             <th class="text-center">Capture Device Configuration ID</th>
                             <th class="text-center">Capture Device Field ID</th>
                             <th class="text-center">Capture Sequence Number</th>
@@ -304,6 +305,17 @@
           "columns": [
             { "data": "manage" },
             { "data": "manage" },
+            { "data": "file_path",
+              "render": function ( data, type, row, meta ) {
+                //@todo use a class instead of hard-coded width
+                if(data) {
+                  return '<img src="admin/get_file?path=' + data + '" width="120px" />';
+                }
+                else {
+                  return '';
+                }
+              }
+            },
             { "data": "capture_device_configuration_id" },
             { "data": "capture_device_field_id" },
             { "data": "capture_sequence_number" },
