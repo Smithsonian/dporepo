@@ -416,7 +416,7 @@ class WorkflowController extends Controller
   }
 
   /**
-   * @Route("/admin/datatables_browse_workflows", name="workflow_browse_datatables", methods="POST")
+   * @Route("/admin/datatables_browse_workflows", name="datatables_browse_workflows", methods="POST")
    *
    * Browse Workflows
    * @param Request $request
