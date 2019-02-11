@@ -438,7 +438,6 @@ class RepoStorageHybrid implements RepoStorage {
     $return_data['files'] = $file_data;
 
     $return_data['viewable_model'] = false;
-    //foreach($file_data as $file) {
     if(!empty($file_data)) {
       $file = $file_data;
       $fn = $file['file_name'];
@@ -451,8 +450,8 @@ class RepoStorageHybrid implements RepoStorage {
 
     // Get model IDs for 3D thumb and low res, if available.
     // model_id_3d_thumb, model_id_low_res
-    $sql = "SELECT model_id, model_purpose
-        FROM model
+    $sql = "SELECT model_id, model_purpose, model_file.*       
+        FROM model LEFT JOIN model_file on model.model_id = model_file.model_id
         WHERE parent_model_id=:model_id
         AND model_purpose IN ('delivery_web','thumb_3d')
         AND active=1";
@@ -471,15 +470,15 @@ class RepoStorageHybrid implements RepoStorage {
         $return_data['model_id_3d_thumb'] = $rm['model_id'];
       }
     }
+    // End get model IDs for derivatives
+
+    // If this model doesn't have a viewable model file, see if any of the derivatives do.
     if(empty($return_data['viewable_model'])) {
-      foreach($file_data as $file) {
-        if(!empty($file_data)) {
-          $file = $file_data;
-          $fn = $file['file_name'];
-          $fn_exploded = explode('.', $fn);
-          if (count($fn_exploded) == 2 && strtolower($fn_exploded[1]) == 'obj') {
-            $return_data['viewable_model'] = $file;
-          }
+      foreach ($ret as $file) {
+        $fn = $file['file_name'];
+        $fn_exploded = explode('.', $fn);
+        if (count($fn_exploded) == 2 && strtolower($fn_exploded[1]) == 'obj') {
+          $return_data['viewable_model'] = $file;
         }
       }
     }
