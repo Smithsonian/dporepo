@@ -709,7 +709,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
                 // Log the file to file_upload metadata storage.
                 $this->repo_storage_controller->execute('saveRecord', array(
                   'base_table' => 'file_upload',
-                  'user_id' => $repo_job_data['created_by_user_account_id'],
+                  'user_id' => isset($repo_job_data['created_by_user_account_id']) ? $repo_job_data['created_by_user_account_id'] : 0,
                   'values' => array(
                     'job_id' => $repo_job_data['job_id'],
                     'file_name' => $asset['file_name'],
