@@ -1224,7 +1224,16 @@ class RepoImport implements RepoImportInterface {
 
         // Get image files.
         // If this file's extension exists in the $this->image_extensions array, add to the $images array.
-        if (in_array(strtolower($file->getExtension()), $this->image_extensions)) {
+
+        // Don't process model texture maps.
+        $process_capture_dataset_element_files = true;
+        foreach ($this->texture_map_file_name_parts as $tkey => $tvalue) {
+          if (strstr(strtolower($file->getFilename()), $tvalue)) {
+            $process_capture_dataset_element_files = false;
+          }
+        }
+
+        if ($process_capture_dataset_element_files && in_array(strtolower($file->getExtension()), $this->image_extensions)) {
           // Establish the file key so a capture dataset element's files are grouped together.
           $raw_file_name = str_replace('.' . $file->getExtension(), '', $file->getFilename());
           $file_name_array = explode('-', $raw_file_name);
