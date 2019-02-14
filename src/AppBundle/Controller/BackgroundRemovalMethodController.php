@@ -51,10 +51,11 @@ class BackgroundRemovalMethodController extends Controller
      */
     public function browse(Connection $conn, Request $request)
     {
-        return $this->render('resources/browse_background_removal_methods.html.twig', array(
-            'page_title' => "Browse Background Removal Methods",
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-        ));
+      return $this->render('resources/browse_background_removal_methods.html.twig', array(
+        'page_title' => "Browse Background Removal Methods",
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'resources'
+      ));
     }
 
     /**
@@ -163,10 +164,11 @@ class BackgroundRemovalMethodController extends Controller
           return $this->redirectToRoute('background_removal_methods_browse');
         } else {
             return $this->render('resources/background_removal_methods_form.html.twig', array(
-                "page_title" => !empty($id) ? 'Manage Background Removal Method: ' . $data['label'] : 'Create Background Removal Method'
-                ,"data" => $data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
+              "page_title" => !empty($id) ? 'Manage Background Removal Method: ' . $data['label'] : 'Create Background Removal Method',
+              "data" => $data,
+              "errors" => $errors,
+              'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+              'current_tab' => 'resources'
             ));
         }
 

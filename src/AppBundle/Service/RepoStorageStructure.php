@@ -22,5 +22,8 @@ interface RepoStorageStructure {
    */
   public function setSchema($schema_json, $diff_only);
 
+  public function install();
+
+
 
 }

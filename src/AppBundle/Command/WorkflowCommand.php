@@ -9,17 +9,24 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\ArrayInput;
 use AppBundle\Controller\RepoStorageHybridController;
+use AppBundle\Service\RepoProcessingService;
+use AppBundle\Utils\AppUtilities;
 
 class WorkflowCommand extends ContainerAwareCommand
 {
   protected $container;
   private $repo_storage_controller;
+  private $processing;
+  public $u;
 
-  public function __construct(object $conn)
+  public function __construct(object $conn, RepoProcessingService $processing)
   {
     // Storage controller
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
-
+    // Processing service.
+    $this->processing = $processing;
+    // App Utilities
+    $this->u = new AppUtilities();
     // This is required due to parent constructor, which sets up name.
     parent::__construct();
   }
@@ -74,6 +81,10 @@ class WorkflowCommand extends ContainerAwareCommand
 
     $recipe_id = NULL;
 
+    // Set up flysystem.
+    $container = $this->getContainer();
+    $flysystem = $container->get('oneup_flysystem.processing_filesystem');
+
     // Get the recipeId for the current, un-executed step.
     $workflow_definition = $workflow['workflow_definition'];
     $workflow_definition_json_array = json_decode($workflow_definition, true);
@@ -87,6 +98,11 @@ class WorkflowCommand extends ContainerAwareCommand
       // If the step doesn't have a recipeId, we don't have anything to launch.
       return;
     }
+
+    // echo '<pre>';
+    // var_dump($recipe_id);
+    // echo '</pre>';
+    // die();
 
     // By default we set the step_state to created.
     $query_params = array(
@@ -102,6 +118,7 @@ class WorkflowCommand extends ContainerAwareCommand
       case "web-hd":
         //@todo kick off recipe
         //@todo get the job_id, and put it in $query_params
+        // $data = $this->processing->initializeJob($workflow_name, $params, $local_path, $this->getUser()->getId(), $parent_record_data, $filesystem);
         break;
       case "web-multi":
         //@todo kick off recipe
@@ -214,7 +231,7 @@ class WorkflowCommand extends ContainerAwareCommand
         'step_id' => $next_step_details['stepId'],
         'step_type' => $next_step_details['stepType'],
         'step_state' => NULL,
-        'job_id' => NULL,
+        'processing_job_id' => NULL,
       );
       $this->repo_storage_controller->execute('updateWorkflow', $query_params);
     }

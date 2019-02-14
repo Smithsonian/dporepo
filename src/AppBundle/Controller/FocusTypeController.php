@@ -50,11 +50,11 @@ class FocusTypeController extends Controller
      */
     public function browse(Connection $conn, Request $request)
     {
-
-        return $this->render('resources/browse_focus_types.html.twig', array(
-            'page_title' => "Browse Focus Types",
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        ));
+      return $this->render('resources/browse_focus_types.html.twig', array(
+        'page_title' => "Browse Focus Types",
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'resources'
+      ));
     }
 
     /**
@@ -163,12 +163,13 @@ class FocusTypeController extends Controller
             $this->addFlash('message', 'Focus Type successfully updated.');
             return $this->redirectToRoute('focus_types_browse');
         } else {
-            return $this->render('resources/focus_types_form.html.twig', array(
-                "page_title" => !empty($id) ? 'Manage Focus Type: ' . $data['label'] : 'Create Focus Type'
-                ,"data" => $data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
+          return $this->render('resources/focus_types_form.html.twig', array(
+            "page_title" => !empty($id) ? 'Manage Focus Type: ' . $data['label'] : 'Create Focus Type',
+            "data" => $data,
+            "errors" => $errors,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'current_tab' => 'resources'
+          ));
         }
 
     }

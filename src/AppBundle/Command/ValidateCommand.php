@@ -128,6 +128,8 @@ class ValidateCommand extends Command
 
       sleep(5);
 
+      //@todo fix path issues in RepoProcessingService- Windoze slash issues
+      /*
       // Run the models validation.
       $command_models = $this->getApplication()->find('app:model-validate');
       $arguments_models = array(
@@ -138,6 +140,18 @@ class ValidateCommand extends Command
       $return_models = $command_models->run($input_models, $output);
 
       sleep(5);
+
+      // Run the model generation processes.
+      $command_model_generate = $this->getApplication()->find('app:model-generate');
+      $arguments_model_generate = array(
+          'command' => 'app:model-generate',
+          'uuid' => $input->getArgument('uuid')
+      );
+      $input_model_generate = new ArrayInput($arguments_model_generate);
+      $return_model_generate = $command_model_generate->run($input_model_generate, $output);
+
+      sleep(5);
+      */
 
       // Outputs multiple lines to the console (adding "\n" at the end of each line).
       $output->writeln([
@@ -168,8 +182,21 @@ class ValidateCommand extends Command
 
       if (isset($import_results['errors'])) {
         $output->writeln('<comment>Metadata ingest failed. Errors: ' . implode(', ', $import_results['errors']) . '</comment>');
-      } else {
+      }
+      else {
         $output->writeln('<comment>Metadata ingest complete.</comment>');
+
+        // Run the command to generate image thumbs and mid-size images for all capture datasets.
+        $command_derivatives = $this->getApplication()->find('app:derivatives-generate');
+        $arguments_derivatives = array(
+          'command' => 'app:derivatives-generate',
+          'uuid' => $input->getArgument('uuid')
+        );
+        $input_derivatives = new ArrayInput($arguments_derivatives);
+        $return_derivatives = $command_derivatives->run($input_derivatives, $output);
+
+        sleep(5);
+
 
         // If the external file storage is turned on (in the parameters.yml config),
         // transfer files to the external file storage.

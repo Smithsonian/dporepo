@@ -21,6 +21,16 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   public $kernel;
 
   /**
+   * @var string $project_directory
+   */
+  private $project_directory;
+
+  /**
+   * @var string $uploads_directory
+   */
+  private $uploads_directory;
+
+  /**
    * @var object $conn
    */
   private $conn;
@@ -47,10 +57,12 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
    * @param string  $processing_service_location  Processing service location (e.g. URL)
    * @param string  $processing_service_client_id  Processing service client ID
    */
-  public function __construct(KernelInterface $kernel, \Doctrine\DBAL\Connection $conn, string $processing_service_location, string $processing_service_client_id)
+  public function __construct(KernelInterface $kernel, string $uploads_directory, \Doctrine\DBAL\Connection $conn, string $processing_service_location, string $processing_service_client_id)
   {
     $this->u = new AppUtilities();
     $this->kernel = $kernel;
+    $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->processing_service_location = $processing_service_location;
     $this->processing_service_client_id = $processing_service_client_id;
@@ -609,32 +621,33 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
                     // Before calling fclose on the resource, check if it’s still valid using is_resource.
                     if (is_resource($stream)) fclose($stream);
 
-                    if (($file_value['mimetype'] !== 'text/plain; charset=utf-8') && ($file_value['mimetype'] !== 'application/json; charset=utf-8')) {
-
-                      // Save the processed asset to the repository's file system.
-                      // If asset is a file, get the parent directory from the $local_assets_path.
-                      if (is_file($local_assets_path)) {
-                        $local_assets_path_array = explode(DIRECTORY_SEPARATOR, $local_assets_path);
-                        array_pop($local_assets_path_array);
-                        $local_assets_path = implode(DIRECTORY_SEPARATOR, $local_assets_path_array);
-                      }
-                      // Create the 'processed' directory.
-                      chdir($local_assets_path);
-                      if (!is_dir($local_assets_path . DIRECTORY_SEPARATOR . 'processed')) {
-                        mkdir($local_assets_path . DIRECTORY_SEPARATOR . 'processed', 0755);
-                      }
-                      // Write the file to the 'processed' directory.
-                      $handle = fopen($local_assets_path . DIRECTORY_SEPARATOR . 'processed' . DIRECTORY_SEPARATOR . $file_name, 'w');
-                      fwrite($handle, $contents);
-                      if (is_resource($handle)) fclose($handle);
-                      // Reset $contents to null.
-                      $contents = null;
+                    // Save the processed asset to the repository's file system.
+                    // If asset is a file, get the parent directory from the $local_assets_path.
+                    if (is_file($local_assets_path)) {
+                      $local_assets_path_array = explode(DIRECTORY_SEPARATOR, $local_assets_path);
+                      array_pop($local_assets_path_array);
+                      $local_assets_path = implode(DIRECTORY_SEPARATOR, $local_assets_path_array);
                     }
+                    // Move into the target directory.
+                    chdir($local_assets_path);
+                    // // Create the 'processed' directory.
+                    // if (!is_dir($local_assets_path . DIRECTORY_SEPARATOR . 'processed')) {
+                    //   mkdir($local_assets_path . DIRECTORY_SEPARATOR . 'processed', 0755);
+                    // }
+                    // // Write the file to the 'processed' directory.
+                    // $handle = fopen($local_assets_path . DIRECTORY_SEPARATOR . 'processed' . DIRECTORY_SEPARATOR . $file_name, 'w');
+                    $handle = fopen($local_assets_path . DIRECTORY_SEPARATOR . $file_name, 'w');
+                    fwrite($handle, $contents);
+                    if (is_resource($handle)) fclose($handle);
+                    // Reset $contents to null.
+                    $contents = null;
+
                   }
 
                   $processing_assets[] = array(
                     'job_id' => $job_id,
                     'file_name' => $file_name,
+                    'file_path' => $local_assets_path . DIRECTORY_SEPARATOR . $file_name,
                     'file_contents' => $contents,
                   );
 
@@ -656,12 +669,58 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
           // Loop through the processing-based logs.
           if (!empty($processing_assets)) {
             foreach ($processing_assets as $asset) {
+
               // Insert one processing-based log.
               $id = $this->repo_storage_controller->execute('saveRecord', array(
                 'base_table' => 'processing_job_file',
                 'user_id' => $job_data[0]['created_by_user_account_id'],
                 'values' => $asset,
               ));
+
+              // Format the file path for the file_upload metadata storage.
+              // Changes this:
+              // /var/www/htdocs/web/uploads/repository/AEF81E05-128C-3439-4E24-4C9CB58BB25E/...
+              // Into this:
+              // e.g. /uploads/repository/AEF81E05-128C-3439-4E24-4C9CB58BB25E/...
+              $path = $this->project_directory . $this->uploads_directory;
+              $path = str_replace($path, '/uploads/repository/', $asset['file_path']);
+
+              // Get the UUID so we can get the job_id.
+              $uuid_path = str_replace(DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'repository' . DIRECTORY_SEPARATOR, '', $path);
+              $uuid_path_parts = explode(DIRECTORY_SEPARATOR, $uuid_path);
+              $uuid = array_shift($uuid_path_parts);
+              // Get the job's data.
+              $repo_job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
+
+              // Check to see if the file already exists.
+              $file_exists = $this->repo_storage_controller->execute('getRecords', array(
+                'base_table' => 'file_upload',
+                'fields' => array(),
+                'limit' => 1,
+                'search_params' => array(
+                  0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($path), 'comparison' => '='),
+                ),
+                'search_type' => 'AND',
+                'omit_active_field' => true,
+                )
+              );
+
+              if (empty($file_exists)) {
+                // Log the file to file_upload metadata storage.
+                $this->repo_storage_controller->execute('saveRecord', array(
+                  'base_table' => 'file_upload',
+                  'user_id' => isset($repo_job_data['created_by_user_account_id']) ? $repo_job_data['created_by_user_account_id'] : 0,
+                  'values' => array(
+                    'job_id' => $repo_job_data['job_id'],
+                    'file_name' => $asset['file_name'],
+                    'file_path' => $path,
+                    'file_size' => filesize($asset['file_path']),
+                    'file_type' => pathinfo($asset['file_path'], PATHINFO_EXTENSION),
+                    'file_hash' => md5($asset['file_name']),
+                  )
+                ));
+              }
+
             }
           }
 

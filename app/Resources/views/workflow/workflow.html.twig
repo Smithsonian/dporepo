@@ -1,0 +1,424 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+  <style>
+    .dz-preview {
+      display: block;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+
+  {# {{ dump(data) }} #}
+
+  <ol class="breadcrumb">
+    <li><a href="/admin">Dashboard</a></li>
+    <li><a href="/admin/item/view/{{ data.item_id }}">Item</a></li>
+    <li>Workflow: {{ data.step_id }} - {{ data.step_type }}</li>
+  </ol>
+
+  <div class="row">
+    <div class="col-sm-6 col-md-6">
+      <div class="panel panel-default">
+        <div class="panel-heading"><h3><span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span> Workflow Details</h3></div>
+        <div class="panel-body" style="min-height: 28rem;">
+
+          {% if data.step_state == 'done' %}
+            <div class="alert alert-success" role="alert"> <strong>Done!</strong> The QC workflow has been completed.</div>
+          {% endif %}
+
+          <p><strong>Workflow Recipe:</strong> {{ data.workflow_recipe_name }}</p>
+          <p><strong>Current step ID:</strong> {{ data.step_id }}</p>
+          {% if (data.step_state) %}
+            <p><strong>Step State:</strong> {{ data.step_state }}</p>
+          {% endif %}
+          <p><strong>Step Type:</strong> {{ data.step_type }}</p>
+          <p><strong>Created By:</strong> {{ data.username }}</p>
+          <p><strong>Date Created:</strong> {{ data.date_created }}</p>
+          {% if (data.processing_job_id) %}
+            <p><strong>Processing Job ID:</strong> <a href="http://si-3ddigip01.si.edu:8000/clients/7210f16c-d71a-4845-837f-b598ea38d36b/jobs/{{ data.processing_job_id }}" target="_blank">{{ data.processing_job_id }}</a></p>
+          {% endif %}
+          <p><strong>Ingest Job ID:</strong> <a href="/admin/ingest/{{ data.ingest_job_uuid }}/{{ data.ingest_job.project_id }}">{{ data.ingest_job_uuid }}</a></p>
+          {% if (data.model_id is defined) %}
+            <p><span class="glyphicon glyphicon-new-window" aria-hidden="true"></span> <a href="/admin/model/view/{{ data.model_id }}"><strong>View Master Model Record</strong></a></p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-6">
+      <div class="panel panel-default">
+        <div class="panel-heading"><h3><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> {{ data.interface.header|raw }}</h3></div>
+        <div class="panel-body" style="min-height: 28rem;">
+          
+          <!-- row -->
+          <div class="row">
+            {% if data.step_state != 'error' and data.interface.thumbnail_images %}
+              <div class="col-sm-6 col-md-6">
+                <a href="{{ data.interface.thumbnail_images.low }}" title="Open thumbnail image in a new tab/window" target="_blank"><img src="{{ data.interface.thumbnail_images.low }}" alt="2D thubnail image of the model" class="img-responsive img-thumbnail" style="max-height: 300px;"></a>
+              </div>
+            {% endif %}
+
+            {% if data.step_id == 'web-multi' and data.step_type == 'auto' %}
+            <div class="col-sm-12 col-md-12">
+            {% else %}
+            <div class="col-sm-6 col-md-6">
+            {% endif %}
+              <h4>Actions</h4>
+              <p>{{ data.interface.message|raw }}</p>
+
+              {% if data.step_id == 'web-multi' and data.step_type == 'auto' %}
+                <hr>
+                <div>
+                  <h4>Processing Logs</h4>
+                  <div id="processing-status"></div>
+                </div>
+              {% endif %}
+
+              {% if data.step_state != 'error' and data.interface.thumbnail_images %}
+                <hr>
+                <div>
+                  <h4>2D Images</h4>
+                  <p class="text-muted">(images open in a new tab/window)</p>
+                  <ul class="list-inline">
+                    {% for key, thumb in data.interface.thumbnail_images %}
+                      <li><a href="{{ thumb }}" title="Open thumbnail image in a new tab/window" target="_blank">{{ key }}</a></li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+
+              {% if data.step_state != 'done' and data.interface.qc_done_count is defined and data.interface.qc_done_count == 3 %}
+                <hr>
+                <a href="/admin/workflow/{{ data.workflow_id }}/go/done" class="btn btn-primary" role="button"><span class="glyphicon glyphicon-check" aria-hidden="true"></span> Complete QC Workflow</a>
+              {% endif %}
+
+            </div>
+          </div>
+          <!-- // row -->
+
+          {% if data.step_state == 'error' %}
+            <!-- Upload Template Begins -->
+            {# <div class="files" id="previews" style="border: 2px dashed #337ab7; border-radius: 4px; min-height: 14rem; padding: 2rem;"></div> #}
+            <div class="dropzone-container" style="border: 2px dashed gray; border-radius: 4px; min-height: 14rem; padding: 2rem; background-color: #efefef;">            
+              <div class="table table-striped files" id="previews">
+                <div id="template" class="row file-row dz-image-preview" style="border-bottom: 2px solid #fff; background-color: #efefef;">
+                  <!-- This is used as the file preview template -->
+                  <div class="col-sm-9 col-md-9">
+                    <span class="preview"><h1><i class="glyphicon glyphicon-file"></i></h1><img data-dz-thumbnail></span>
+                  {#
+                  </div>
+                  <div>
+                  #}
+                    <p class="name" data-dz-name></p>
+                    <strong class="error text-danger" data-dz-errormessage></strong>
+                  </div>
+                  {#
+                  <div>
+                    <p class="size" data-dz-size></p>
+                    <div class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                      <div class="progress-bar progress-bar-success" style="width:0%;" data-dz-uploadprogress></div>
+                    </div>
+                  </div>
+                  #}
+                  <div class="col-sm-3 col-md-3">
+                    {#
+                    <button class="btn btn-primary start">
+                      <i class="glyphicon glyphicon-upload"></i>
+                      <span>Start</span>
+                    </button>
+                    <button data-dz-remove class="btn btn-default cancel">
+                      <i class="glyphicon glyphicon-ban-circle"></i>
+                      <span>Cancel</span>
+                    </button>
+                    #}
+                    <button data-dz-remove class="btn btn-default delete pull-right" style="margin: 5.5rem 0 0 0.5rem;">
+                      <i class="glyphicon glyphicon-trash"></i>
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="actions" class="row" style="margin-top: 2rem;">
+              <div class="col-lg-12">
+                <!-- The fileinput-button span is used to style the file input field as button -->
+                <span class="btn btn-default fileinput-button dz-clickable">
+                  <i class="glyphicon glyphicon-plus"></i>
+                  <span>Add Files</span>
+                </span>
+                <button type="submit" class="btn btn-default start">
+                  <i class="glyphicon glyphicon-upload"></i>
+                  <span>Start Upload</span>
+                </button>
+                <button type="reset" class="btn btn-default cancel">
+                  <i class="glyphicon glyphicon-ban-circle"></i>
+                  <span>Cancel Upload</span>
+                </button>
+              </div>
+            </div>
+            <!-- Upload Template Ends -->
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+  </div> <!-- /row -->
+
+{% endblock %}
+{% block js_bottom %}
+    {{ parent() }}
+
+    <script type="text/javascript">
+      $(document).ready(function() {
+
+        {% if data.step_id == 'web-multi' %}
+
+          // Poll the processing service every 10 seconds for the status.
+          var getProcessingStatus = setInterval(getProcessingStatus, 10000);
+
+          var targetContainer = $('#processing-status');
+          var p = $('<p />').addClass('get-status');
+          var processing_span = $('<span />')
+              .addClass('glyphicon glyphicon-ok')
+              .attr('aria-hidden', 'true')
+              .attr('style', 'color:green;');
+          var img = $('<img />')
+              .attr('src', '/lib/images/spinner-40px.gif')
+              .attr('alt', 'Visual job status indicator')
+              .attr('width', '26')
+              .attr('height', '26');
+
+          p.append(img, '&nbsp;Retrieving processing status...');
+          targetContainer.append(p);
+
+          // Processing service status checker.
+          function getProcessingStatus() {
+
+            $.ajax({
+              'type': 'GET'
+              ,'dataType': 'json'
+              ,'url': '/admin/get_processing_status/{{ data.workflow_id }}'
+              ,success: function(result) {
+                if (result) {
+
+                  // After processing is done, check to see if file transfers have completed.
+                  if (result.state === 'done') {
+                    // Get workflow data.
+                    $.ajax({
+                      'type': 'GET'
+                      ,'dataType': 'json'
+                      ,'url': '/admin/get_workflow_status/{{ data.workflow_id }}'
+                      ,success: function(result) {
+                        if (result) {
+                          // If the step_id is set to 'qc-web', reload the page.
+                          if (result.step_id === 'qc-web') {
+                            // Remove the initial 'Retrieving processing status' message.
+                            $('.get-status').remove();
+                            // Clear the interval.
+                            clearInterval(getProcessingStatus);
+
+                            // Display an alert
+                            swal("Processing Finished!", {
+                              buttons: {
+                                catch: {
+                                  text: "Go to QC",
+                                  value: "goto",
+                                }
+                              },
+                            })
+                            .then((value) => {
+                              switch (value) {
+                                case "goto":
+                                  // Reload the page.
+                                  location.reload();
+                                  break;
+                              }
+                            });
+
+                          }
+
+                        }
+                      }
+                      ,error: function(result) {
+                        if (result) {
+                          swal({
+                            title: 'Error',
+                            text: 'File transfer status check failed.',
+                            icon: 'error',
+                          });
+                          clearInterval(getProcessingStatus);
+                        }
+                      }
+                    });
+                  }
+
+                  // Add the processing job's submission timestamp.
+                  if (!$(targetContainer).find('.submission').length) {
+                    // Remove the initial 'Retrieving processing status' message.
+                    $('.get-status').remove();
+                    // Elements
+                    var initialized_p = $('<p />').addClass('initialized');
+                    var initialized_span = $('<span />')
+                        .addClass('glyphicon glyphicon-ok submission')
+                        .attr('aria-hidden', 'true')
+                        .attr('style', 'color:green;');
+                    initialized_p.append(initialized_span, '&nbsp;&nbsp;Job initialized: ' + result.submission);
+                    targetContainer.append(initialized_p);
+                  }
+
+                  // Create a unique class for the next status elements.
+                  var words = result.step.split(' ');
+                  var pclass = words[0].replace(':', '');
+
+                  // Add the processing job's step.
+                  if (result.step.length && !$(targetContainer).find('.' + pclass).length) {
+                    // Elements
+                    var processing_p = $('<p />').addClass(pclass);
+                    var processing_img = $('<img />')
+                        .attr('src', '/lib/images/spinner-40px.gif')
+                        .attr('alt', 'Visual job status indicator')
+                        .attr('width', '26')
+                        .attr('height', '26')
+                        .addClass(pclass);
+
+                    // Remove the spinner gif image from all paragraph elements.
+                    targetContainer.find('p').find('img').remove();
+
+                    // Reset all statuses
+                    resetStatuses();
+
+                    // Add the paragraph element along with the spinner gif image to the new active step.
+                    processing_p.append(processing_img, '&nbsp;&nbsp;' + result.step);
+                    targetContainer.append(processing_p);
+                  }
+
+                }
+              }
+              ,error: function(result) {
+                if (result) {
+                  swal({
+                    title: 'Error',
+                    text: 'Processing status check failed (' + result.status + ')',
+                    icon: 'error',
+                  });
+                  clearInterval(getProcessingStatus);
+                }
+              }
+            });
+          }
+
+          function resetStatuses() {
+            // To avoid duplicates, remove the <span> from all paragraph elements.
+            targetContainer.find('p:not(.initialized)').find('span').remove();
+            // Add the <span> to all paragraph elements.
+            targetContainer.find('p:not(.initialized)').prepend(processing_span);
+          }
+
+        {% endif %}
+
+      });
+    </script>
+
+    {% if data.step_state == 'error' %}
+      <script type="text/javascript" src="{{ asset('lib/javascripts/dropzone.js') }}"></script>
+      <script type="text/javascript">
+
+        // Get the template HTML and remove it from the doumenthe template HTML and remove it from the doument
+        var previewNode = document.querySelector("#template");
+        previewNode.id = "";
+        var previewTemplate = previewNode.parentNode.innerHTML;
+        previewNode.parentNode.removeChild(previewNode);
+
+        // var uploadsDropzone = new Dropzone("div#previews", {
+        var myDropzone = new Dropzone(".dropzone-container", {
+          url: "{{ oneup_uploader_endpoint('repository') }}",
+          autoQueue: false, // Make sure the files aren't queued until manually added
+          previewsContainer: "#previews", // Define the container to display the previews
+          previewTemplate: previewTemplate,
+          clickable: ".fileinput-button", // Define the element that should be used as click trigger to select files.
+          createImageThumbnails: false,
+          maxFilesize: 20000, // how many files this Dropzone handles
+          ignoreHiddenFiles: true,
+          timeout: 300000, // The timeout for the XHR requests in milliseconds (default is 30000 - 30 seconds)
+          chunking: true,
+          // forceChunking: true,
+          // parallelChunkUploads: true,
+          chunkSize: 5000000,
+          retryChunks: true,
+          retryChunksLimit: 2000,
+          acceptedFiles: "{{ data.accepted_file_types }}",
+          dictInvalidFileType: "File type not allowed"
+        });
+
+        myDropzone.on("addedfile", function(file) {
+          // // Hookup the start button
+          // file.previewElement.querySelector(".start").onclick = function() { myDropzone.enqueueFile(file); };
+        });
+
+        // Update the total progress bar
+        myDropzone.on("totaluploadprogress", function(progress) {
+          // document.querySelector("#total-progress .progress-bar").style.width = progress + "%";
+        });
+
+        myDropzone.on("sending", function(file, xhr, formData) {
+          xhr.timeout = 99999999;
+          // Add the simpleUpload flag to the formData
+          formData.append("simpleUpload", true);
+          // Add the fullPath to the formData
+          formData.append("uploadPath", "{{ data.interface.upload_path }}");
+          // Add the erroredFileName to the formData
+          formData.append("erroredFileName", "{{ data.interface.errored_file_name }}");
+          // Add the jobId to the formData
+          formData.append('jobId', "{{ data.interface.job_id }}");
+          // Add the parentRecordId value to the formData
+          formData.append('parentRecordId', "{{ data.interface.parent_record_id }}");
+          // Add the parentRecordType value to the formData
+          formData.append('parentRecordType', "{{ data.interface.parent_record_type }}");
+          // Disable the file input, start, and delete buttons
+          document.querySelector(".fileinput-button").setAttribute("disabled", "disabled");
+          document.querySelector(".start").setAttribute("disabled", "disabled");
+          file.previewElement.querySelector(".delete").setAttribute("disabled", "disabled");
+        });
+
+        // Hide the total progress bar when nothing's uploading anymore
+        myDropzone.on("queuecomplete", function(progress) {
+          // Disable the cancel button
+          document.querySelector(".cancel").setAttribute("disabled", "disabled");
+          // Display a success message in the UI, advance to next step (QC).
+          swal({
+            title: 'File(s) Successfully Uploaded',
+            text: 'Next step: QC',
+            icon: 'success',
+            buttons: {
+              catch: {
+                text: "OK",
+                value: "ok",
+              }
+            },
+          })
+          .then((value) => {
+            switch (value) {
+              case "ok":
+                window.location.href = '/admin/workflow/{{ data.workflow_id }}/go/success';
+                break;
+            }
+          });
+
+        });
+
+        // Setup the buttons for all transfers
+        // The "add files" button doesn't need to be setup because the config
+        // `clickable` has already been specified.
+        document.querySelector("#actions .start").onclick = function() {
+          myDropzone.enqueueFiles(myDropzone.getFilesWithStatus(Dropzone.ADDED));
+        };
+        document.querySelector("#actions .cancel").onclick = function() {
+          myDropzone.removeAllFiles(true);
+        };
+      </script>
+    {% endif %}
+{% endblock %}

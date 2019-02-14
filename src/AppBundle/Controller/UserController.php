@@ -94,6 +94,7 @@ class UserController extends Controller {
 
     return $this->render('users/browse_roles.html.twig', array(
       'page_title' => 'User Roles',
+      'current_tab' => 'roles'
     ));
   }
 
@@ -206,6 +207,7 @@ class UserController extends Controller {
       'role_data' => $role,
       'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
       'form' => $form->createView(),
+      'current_tab' => 'users'
     ));
 
   }
@@ -273,6 +275,7 @@ class UserController extends Controller {
 
     return $this->render('users/browse_users.html.twig', array(
       'page_title' => 'Users',
+      'current_tab' => 'users'
     ));
 
   }
@@ -339,6 +342,7 @@ class UserController extends Controller {
     return $this->render('users/browse_user_roles.html.twig', array(
       'page_title' => 'User Roles for ' . $username_canonical,
       'username_canonical' => $username_canonical,
+      'current_tab' => 'roles'
     ));
 
   }
@@ -458,6 +462,7 @@ class UserController extends Controller {
       'page_title' => (!empty($user_role_id) ? 'Edit Role' : 'Add Role') . ' for ' . $user_role['username_canonical'],
       'data' => (array)$user_role,
       'form' => $form->createView(),
+      'current_tab' => 'roles'
     ));
   }
 

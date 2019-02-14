@@ -140,10 +140,11 @@ class CaptureDataFileController extends Controller
         }
 
         return $this->render('datasetElements/capture_data_file_form.html.twig', array(
-            'page_title' => !empty($id) ? 'Capture Data File: ' . $data->capture_data_file_name : 'Create Capture Data File',
-            'data' => $data,
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-            'form' => $form->createView(),
+          'page_title' => !empty($id) ? 'Capture Data File: ' . $data->capture_data_file_name : 'Create Capture Data File',
+          'data' => $data,
+          'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+          'form' => $form->createView(),
+          'current_tab' => 'resources'
         ));
     }
 

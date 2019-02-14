@@ -349,7 +349,7 @@ class RepoValidateData implements RepoValidate {
    */
   public function logErrors($params = array()) {
 
-    if(!empty($params)) {
+    if(!empty($params) && !empty($params['errors'])) {
       foreach ($params['errors'] as $ekey => $error) {
         $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'job_log',

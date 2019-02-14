@@ -101,7 +101,8 @@ class RepoModelValidate implements RepoModelValidateInterface {
   {
 
     $data = array();
-    $job_status = 'metadata ingest in progress';
+    $job_status = 'model processing in progress';
+    $job_failed_message = 'The job has failed. Exiting model validation process.';
 
     // Absolute local path.
     $path = $this->project_directory . $this->uploads_directory . $uuid;
@@ -116,18 +117,27 @@ class RepoModelValidate implements RepoModelValidateInterface {
 
     // Don't perform the model validation if the job_status has been set to 'failed'.
     if ($job_data['job_status'] === 'failed') {
-      $return['errors'][] = 'The job has failed. Exiting model validation process.';
+      $return['errors'][] = $job_failed_message;
       return $return;
     }
 
     if (!is_dir($path)) {
-      $data[0]['errors'][] = 'Target directory not found - ' . $path;
+      $return['errors'][] = 'Target directory not found - ' . $path;
+      return $return;
     }
 
     if (is_dir($path)) {
 
       // Create a new inspect-mesh job and run.
       $processing_job = $this->runValidateModels($path, $job_data, $filesystem);
+
+      // Check the job's status to insure that the job_status hasn't been set to 'failed'.
+      $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid, 'generateModelAssets'));
+      // If the job status has been set to 'failed', return with the error message.
+      if ($job_data['job_status'] === 'failed') {
+        $return['errors'][] = $job_failed_message;
+        return $return;
+      }
 
       // Continue only if job_ids are returned.
       if (!empty($processing_job) && !empty($processing_job['job_ids'])) {
@@ -217,6 +227,7 @@ class RepoModelValidate implements RepoModelValidateInterface {
                   'base_table' => 'processing_job',
                   'user_id' => $this->user_id,
                   'values' => array(
+                    'ingest_job_uuid' => $job_data['uuid'],
                     'processing_service_job_id' => $job['id'],
                     'recipe' =>  $job['recipe']['name'],
                     'job_json' => json_encode($job),

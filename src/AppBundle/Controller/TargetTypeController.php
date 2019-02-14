@@ -50,10 +50,11 @@ class TargetTypeController extends Controller
      */
     public function browse(Connection $conn, Request $request)
     {
-        return $this->render('resources/browse_target_types.html.twig', array(
-            'page_title' => "Browse Target Types",
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        ));
+      return $this->render('resources/browse_target_types.html.twig', array(
+        'page_title' => "Browse Target Types",
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'resources'
+      ));
     }
 
     /**
@@ -161,12 +162,13 @@ class TargetTypeController extends Controller
             $this->addFlash('message', 'Target Type successfully updated.');
             return $this->redirectToRoute('target_types_browse');
         } else {
-            return $this->render('resources/target_types_form.html.twig', array(
-                "page_title" => !empty($target_types_id) ? 'Manage Target Type: ' . $data['label'] : 'Create Target Type'
-                ,"data" => $data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
+          return $this->render('resources/target_types_form.html.twig', array(
+            "page_title" => !empty($target_types_id) ? 'Manage Target Type: ' . $data['label'] : 'Create Target Type',
+            "data" => $data,
+            "errors" => $errors,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'current_tab' => 'resources'
+          ));
         }
 
     }

@@ -74,6 +74,8 @@
                 <dd>{{ dataset_data.capture_dataset_description|e|nl2br }}</dd>
                 <dt>Dataset Collection Notes</dt>
                 <dd>{{ dataset_data.collection_notes|e|nl2br }}</dd>
+                <dt>Dataset Variant Types</dt>
+                <dd>{{ dataset_data.variant_types }}</dd>
             </dl>
             {% if dataset_data.directory_path is defined and dataset_data.directory_path %}
             <hr>
@@ -84,7 +86,7 @@
         </div>
 
         <div class="col-sm-12 col-md-12">
-            <a href="javascript:void(0);" class="view-hidden-content" role="button" data-original-text="Expand Details and View Uploaded Files"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span> <span class="view-hidden-content-text">Expand Details and View Uploaded Files</span></a>
+            <a href="javascript:void(0);" class="view-hidden-content" role="button" data-original-text="Expand Details"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span> <span class="view-hidden-content-text">Expand Details and View Uploaded Files</span></a>
             <hr>
         </div>
 
@@ -105,12 +107,14 @@
                         <tr>
                             <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
                             <th class="text-center">Download</th>
+                            <th class="text-center">Preview</th>
                             <th class="text-center">Capture Device Configuration ID</th>
                             <th class="text-center">Capture Device Field ID</th>
                             <th class="text-center">Capture Sequence Number</th>
                             <th class="text-center">Cluster Position Field ID</th>
                             <th class="text-center">Position In Cluster Field ID</th>
-                            <th class="text-center">EXIF Metadata</th>
+                            <th class="text-center">Variant Types</th>
+                            <!--th class="text-center">EXIF Metadata</th -->
                             <th class="text-center">Last Modified</th>
                         </tr>
                         </thead>
@@ -256,23 +260,40 @@
         $('#jstreeContainer').on('click', 'a', function(e) {
           document.location.href = this.href;
         });
+        $("#dataset_files").dataTable({
+            "paging": false,
+            "bPaginate": false,
+            "bLengthChange": false,
+        });
 
+        // was also - "data": "metadata"
         $('#browse').dataTable( {
           "columns": [
             { "data": "manage" },
             { "data": "manage" },
+            { "data": "file_path",
+              "render": function ( data, type, row, meta ) {
+                //@todo use a class instead of hard-coded width
+                if(data) {
+                  return '<img src="/admin/get_file?path=' + data + '" width="120px" />';
+                }
+                else {
+                  return '';
+                }
+              }
+            },
             { "data": "capture_device_configuration_id" },
             { "data": "capture_device_field_id" },
             { "data": "capture_sequence_number" },
             { "data": "cluster_position_field_id" },
             { "data": "position_in_cluster_field_id" },
-            { "data": "metadata" },
+            { "data": "variant_types" },
             { "data": "last_modified" }
           ],
           "dom": 'lfip<"datatables_bulk_actions">tip',
           "pagingType": "simple_numbers",
           "stateSave": true,
-          "order": [[8,"desc"]],
+          "order": [[7,"desc"]],
           // Show processing throbber.
           "processing": true,
           "serverMethod": "POST",
@@ -406,8 +427,8 @@
             { "data": "manage" },
             { "data": "manage" },
             { "data": "model_id", "title": "Model Repository ID"  },
-            { "data": "capture_dataset_id", "title": "Parent Capture Dataset Repository ID"  },
             { "data": "item_id", "title": "Parent Item Repository ID"  },
+            { "data": "count_capture_datasets", "title": "Datasets Count"  },
             { "data": "model_file_type", "title": "Model File Type"  },
             { "data": "model_guid", "title": "Model Guid"  },
             { "data": "date_of_creation", "title": "Date of Creation"  },

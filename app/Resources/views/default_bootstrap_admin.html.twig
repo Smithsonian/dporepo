@@ -8,6 +8,8 @@
 
 {% block body %}
 
+    <input type="hidden" id="current_tab" value="{% if current_tab is defined %}{{ current_tab }}{% else %}admin{% endif %}" />
+
     <nav class="navbar navbar-inverse navbar-fixed-top">
       
       {% include 'default/banner.html.twig' %}

@@ -50,10 +50,11 @@ class CaptureDatasetTypeController extends Controller
      */
     public function browse(Connection $conn, Request $request)
     {
-        return $this->render('resources/browse_dataset_types.html.twig', array(
-            'page_title' => "Browse Dataset Types",
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        ));
+      return $this->render('resources/browse_dataset_types.html.twig', array(
+        'page_title' => "Browse Dataset Types",
+        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'current_tab' => 'resources'
+      ));
     }
 
     /**
@@ -163,12 +164,13 @@ class CaptureDatasetTypeController extends Controller
             $this->addFlash('message', 'Dataset Type successfully updated.');
             return $this->redirectToRoute('dataset_types_browse');
         } else {
-            return $this->render('resources/dataset_types_form.html.twig', array(
-                "page_title" => !empty($id) ? 'Manage Dataset Type: ' . $data['label'] : 'Create Dataset Type'
-                ,"data" => $data
-                ,"errors" => $errors
-                ,'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
-            ));
+          return $this->render('resources/dataset_types_form.html.twig', array(
+            "page_title" => !empty($id) ? 'Manage Dataset Type: ' . $data['label'] : 'Create Dataset Type',
+            "data" => $data,
+            "errors" => $errors,
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'current_tab' => 'resources'
+          ));
         }
 
     }

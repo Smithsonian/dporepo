@@ -126,4 +126,106 @@ class AppUtilities
     }
 
   }
+
+
+  public function resizeImage($path, $width, $height = NULL, $new_filename = NULL) {
+
+    // Validate file exists
+    if (!file_exists($path)) return "Image was not found";
+
+    // Get image size, fail if unsupported image.
+    if(!list($widthOriginal, $heightOriginal) = getimagesize($path)) {
+      return "Error: Unsupported image type";
+    }
+
+    if(NULL !== $height && $height < 0) {
+      return "Error: Height cannot be less than zero.";
+    }
+    if($width < 0) {
+      return "Error: Width cannot be less than zero.";
+    }
+
+    // Get file name
+    $filename = basename($path);
+
+    // Get file path
+    $filepath = str_replace($filename, "", $path);
+
+    // If height is NULL set it to the corresponding dimension to $width
+    // Based on the ratio of $widthOriginal to $heightOriginal
+    if(NULL == $height || $height < 1) {
+      $height = ceil($heightOriginal / $widthOriginal * $width);
+    }
+
+    // Create new file name with size
+    if(NULL == $new_filename) {
+      $new_filename = str_replace(".", "_" . $width . "x" . $height . ".", $filename);
+    }
+
+    // Create new file path
+    $new_path = $filepath . $new_filename;
+
+    // Get extension
+    $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    $ext = ($ext == 'jpeg') ? 'jpg' : $ext;
+
+    //@todo these functions result in out of memory errors for large images
+    // Cheesy hack to set the memory to unlimited, followed by re-setting it after the expensive function.
+    $php_current_memory = ini_get('memory_limit');
+    ini_set("memory_limit", -1);
+
+    // Temp hack to limit the size of the file used to generate derivatives.
+    switch($ext){
+      case 'jpg':
+        $img = imagecreatefromjpeg($path);
+        break;
+      case 'png':
+        $img = imagecreatefrompng($path);
+        break;
+      default :
+        print("Unsupported image type $ext\r\n");
+        ini_set("memory_limit", $php_current_memory);
+        return "Unsupported image type $ext";
+    }
+
+    $newImg = imagecreatetruecolor($width, $height);
+
+    // If type is png this set of properties will preserve transparency
+    if($ext == "png"){
+      imagecolortransparent($newImg, imagecolorallocatealpha($newImg, 0, 0, 0, 127));
+      imagealphablending($newImg, false);
+      imagesavealpha($newImg, true);
+    }
+    // Re-sampling image
+    imagecopyresampled($newImg, $img, 0, 0, 0, 0, $width, $height, $widthOriginal, $heightOriginal);
+
+    // If file exists it will be re-created
+    if (file_exists($new_path)) {
+      unlink($new_path);
+    }
+
+    // Create the same type of image as the original, based on the extension.
+    switch($ext) {
+      case 'jpg':
+        // generate jpg image
+        imagejpeg($newImg, $new_path);
+        break;
+      case 'png':
+        // generate png image
+        imagepng($newImg, $new_path);
+        break;
+    }
+
+    ini_set("memory_limit", $php_current_memory);
+
+    // Validate file exists
+    if (file_exists($new_path)) {
+      return "$width" . "x" . "$height";
+    }
+    else{
+      return "Error: " . $new_path." was not created";
+    }
+
+  }
+
 }

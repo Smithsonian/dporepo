@@ -8,10 +8,12 @@ use Symfony\Component\HttpFoundation\File\Exception\UploadException;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Oneup\UploaderBundle\Event\PostPersistEvent;
+use Doctrine\DBAL\Driver\Connection;
+
 use AppBundle\Service\RepoValidateData;
 use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Controller\ImportController;
-use Doctrine\DBAL\Driver\Connection;
+use AppBundle\Service\RepoEdan;
 
 class UploadListener
 {
@@ -21,15 +23,18 @@ class UploadListener
   private $repo_storage_controller;
   private $tokenStorage;
   private $import_controller;
+  private $edan;
 
   public function __construct(
     Connection $conn,
     TokenStorageInterface $tokenStorage,
-    ImportController $import_controller)
+    ImportController $import_controller,
+    RepoEdan $edan)
   {
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->tokenStorage = $tokenStorage;
     $this->import_controller = $import_controller;
+    $this->edan = $edan;
     $this->connection = $conn;
   }
   
@@ -47,6 +52,7 @@ class UploadListener
     $response = $event->getResponse();
     $request = $event->getRequest();
     $file = $event->getFile();
+    $record_id = '';
 
     // Posted data.
     $data = (object)[];
@@ -56,6 +62,9 @@ class UploadListener
     $data->record_id = !empty($post['parentRecordId']) ? $post['parentRecordId'] : false;
     $data->record_type = !empty($post['parentRecordType']) ? $post['parentRecordType'] : false;
     $data->prevalidate = (!empty($post['prevalidate']) && ($post['prevalidate'] === 'true')) ? true : false;
+    $data->simple_upload = (!empty($post['simpleUpload']) && ($post['simpleUpload'] === 'true')) ? true : false;
+    $data->upload_path = !empty($post['uploadPath']) ? $post['uploadPath'] : false;
+
     // User data.
     $user = $this->tokenStorage->getToken()->getUser();
     $data->user_id = $user->getId();
@@ -71,29 +80,60 @@ class UploadListener
       
     }
 
+    // $this->dumper($data);
+
     // Move uploaded files into the original directory structures, under a parent directory the jobId.
-    if ($data->job_id && $data->record_id) {
+    if ($data->job_id) {
 
       // Move the files.
       $file_data = $this->moveFiles($file, $data);
 
-      // Windows fix for the file path.
-      $full_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $file_data->full_path) : $file_data->full_path;
+      // If this is a simple upload (not Bulk Ingest or Simple Ingest), use the supplied upload_path - minus the document root.
+      if ($data->simple_upload) {
+        $full_path = str_replace($_SERVER['DOCUMENT_ROOT'], '', $data->upload_path . DIRECTORY_SEPARATOR . $file->getBasename());
+        $file_size = filesize($data->upload_path . DIRECTORY_SEPARATOR .  $file->getBasename());
+      } else {
+        // Windows fix for the file path.
+        $full_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $file_data->full_path) : $file_data->full_path;
+        $file_size = filesize($file_data->job_id_directory . DIRECTORY_SEPARATOR . $full_path);
+      }
 
       // Log the file to the 'file_uploads' table.
       if(!$file_data->prevalidate) {
+
+        // If this is a simple upload, files are most likely being replaced.
+        // Query the metadata storage for the file to update the record, and avoid duplicates.
+        if ($data->simple_upload) {
+          $existing_file = $this->repo_storage_controller->execute('getRecords', array(
+              'base_table' => 'file_upload',
+              'fields' => array(),
+              'limit' => 1,
+              'search_params' => array(
+                0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($full_path), 'comparison' => '='),
+              ),
+              'search_type' => 'AND',
+              'omit_active_field' => true,
+            )
+          );
+
+          if (!empty($existing_file)) {
+            $record_id = $existing_file[0]['file_upload_id'];
+          }
+        }
+
         $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'file_upload',
+          'record_id' => $record_id,
           'user_id' => $file_data->user_id,
           'values' => array(
             'job_id' => $file_data->job_id,
             'record_id' => $file_data->record_id,
             'record_type' => $file_data->record_type,
             'file_name' => $file->getBasename(),
-            'file_path' => DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'repository' . DIRECTORY_SEPARATOR . $file_data->target_directory . DIRECTORY_SEPARATOR . $full_path,
-            'file_size' => filesize($file_data->job_id_directory . '/' . $full_path),
+            'file_path' => $full_path,
+            'file_size' => $file_size,
             'file_type' => $file->getExtension(), // $file->getMimeType()
-            'file_hash' => '',
+            'file_hash' => md5($file->getBasename()),
           )
         ));
       }
@@ -108,6 +148,7 @@ class UploadListener
           // Run the CSV validation.
           $validation_results = $this->validateMetadata($data->job_id, $data->job_id_directory, $data->record_type, $file_data->record_id, $file->getBasename());
           // Remove the CSV file.
+          // TODO: Remove the temporary directory.
           $finder = new Finder();
           $finder->files()->in($data->job_id_directory . '/');
           $finder->files()->name($file->getBasename());
@@ -138,11 +179,17 @@ class UploadListener
    */
   public function moveFiles($file = null, $data = null)
   {
-    if (!empty($file) && !empty($data) && $data->job_id && $data->record_id) {
+
+    if (!empty($file) && !empty($data) && $data->job_id) {
 
       // If pre-validating, the target directory is a temporary directory. Otherwise, it's the job's UUID.
       $data->target_directory = $data->prevalidate ? $data->job_id : $data->uuid;
       $data->job_id_directory = str_replace($file->getBasename(), '', $file->getPathname()) . $data->target_directory;
+
+      // If this is a simple upload, use the supplied upload_path.
+      if ($data->simple_upload) {
+        $data->job_id_directory = $data->upload_path;
+      }
 
       // Create a directory with the job ID as the name if not present.
       if (!file_exists($data->job_id_directory)) {
@@ -279,6 +326,11 @@ class UploadListener
         // Execute the validation against the JSON schema.
         $data->results = (object)$repoValidate->validateData($data->csv, $schema, $record_type, $blacklisted_fields);
 
+        // Validate that the EDAN record exists (subject_guid)
+        if (($schema === 'subject') && !empty($data->csv)) {
+          $data->edan_results = $this->validateEdanRecord($data);
+        }
+
         // Add the column headers back to the array.
         array_unshift($data->csv, $column_headers);
 
@@ -293,10 +345,48 @@ class UploadListener
           unset($data->capture_dataset_field_id_results['is_valid']);
           $data->results = (object)array_merge_recursive($data->capture_dataset_field_id_results, (array)$data->results);
         }
+
+        // Merge edan_results messages.
+        if(isset($data->edan_results['messages'])) {
+          unset($data->edan_results['is_valid']);
+          $data->results = (object)array_merge_recursive($data->edan_results, (array)$data->results);
+        }
       }
     }
 
     return $data;
+  }
+
+  /**
+   * @param null $data The data to validate.
+   * @return mixed array containing success/fail value, and any messages.
+   */
+  public function validateEdanRecord(&$data = NULL) {
+
+    $return = array('is_valid' => false);
+
+    // If no data is passed, set a message.
+    if(empty($data)) $return['messages'][] = 'Nothing to validate. Please provide an object to validate.';
+
+    // If data is passed, go ahead and process.
+    if(!empty($data)) {
+      // Loop through the data.
+      foreach($data->csv as $csv_key => $csv_value) {
+        // Query EDAN
+        $result = $this->edan->getRecord($csv_value->subject_guid);
+        // Catch if there is an error.
+        if (isset($result['error'])) {
+          $return['messages'][$csv_key] = array('row' => 'Row ' . ($csv_key+1), 'error' => 'EDAN record not found. subject_guid: ' . $csv_value->subject_guid);
+        }
+      }
+    }
+
+    // If there are no messages, then return true for 'is_valid'.
+    if(!isset($return['messages'])) {
+      $return['is_valid'] = true;
+    }
+
+    return $return;
   }
 
   public function dumper($data = false, $die = true, $ip_address=false){
