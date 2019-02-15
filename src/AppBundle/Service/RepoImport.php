@@ -1270,6 +1270,15 @@ class RepoImport implements RepoImportInterface {
         $data = $this->getDatasetDataFromFilenames($image_file_names, $data);
       }
 
+      // // Get model files (re-worked version).
+      // if (in_array(strtolower($file->getExtension()), $this->model_extensions)) {
+      //   foreach ($data->csv as $ckey => $cvalue) {
+      //     // Get the model's file name from the directory path.
+      //     $model_file_names[] = pathinfo($cvalue->file_path, PATHINFO_FILENAME);
+      //   }
+      // }
+
+
       if (!empty($model_file_names)) {
         $data = $this->getModelDataFromFilenames($model_file_names, $data);
       }
