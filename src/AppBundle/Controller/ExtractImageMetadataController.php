@@ -128,7 +128,7 @@ class ExtractImageMetadataController extends Controller
 
     // Search for the data directory.
     $finder = new Finder();
-    $finder->path('data')->name('/\.jpg|\.tif$/');
+    $finder->path('data')->name('/\.jpg|\.JPG|\.tif|\.TIF$/');
     $finder->in($localpath);
 
     $i = 0;
