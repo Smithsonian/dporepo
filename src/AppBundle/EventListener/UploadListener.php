@@ -98,6 +98,11 @@ class UploadListener
         $file_size = filesize($file_data->job_id_directory . DIRECTORY_SEPARATOR . $full_path);
       }
 
+      // The final full path
+      // Should look like this:
+      // /uploads/repository/E13AB3F8-97FE-BB6B-CEE6-73BBEDE0DF91/FSGA-Incense-burner-v1-t/data/f1978_40-master/processed/f1978_40-master.obj
+      $final_full_path = DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'repository' . DIRECTORY_SEPARATOR . $file_data->target_directory . DIRECTORY_SEPARATOR . $full_path;
+
       // Log the file to the 'file_uploads' table.
       if(!$file_data->prevalidate) {
 
@@ -109,7 +114,7 @@ class UploadListener
               'fields' => array(),
               'limit' => 1,
               'search_params' => array(
-                0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($full_path), 'comparison' => '='),
+                0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($final_full_path), 'comparison' => '='),
               ),
               'search_type' => 'AND',
               'omit_active_field' => true,
@@ -123,17 +128,16 @@ class UploadListener
 
         $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'file_upload',
-          'record_id' => $record_id,
           'user_id' => $file_data->user_id,
           'values' => array(
             'job_id' => $file_data->job_id,
             'record_id' => $file_data->record_id,
             'record_type' => $file_data->record_type,
             'file_name' => $file->getBasename(),
-            'file_path' => $full_path,
-            'file_size' => $file_size,
+            'file_path' => $final_full_path,
+            'file_size' => filesize($_SERVER['DOCUMENT_ROOT'] . $final_full_path),
             'file_type' => $file->getExtension(), // $file->getMimeType()
-            'file_hash' => md5($file->getBasename()),
+            'file_hash' => md5_file($_SERVER['DOCUMENT_ROOT'] . $final_full_path),
           )
         ));
       }
