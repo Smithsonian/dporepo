@@ -193,7 +193,7 @@ class ExtractImageMetadataController extends Controller
             if (empty($file_data)) $data[$i]['errors'][] = 'Extract Image Metadata - file not found in the database: ' . $file_path . DIRECTORY_SEPARATOR . $file->getBasename();
 
             // If the record is found, save the metadata to the record.
-            if (!empty($file_data) && (count($file_data)) === 1) {
+            if (!empty($file_data) && (count($file_data) === 1)) {
               $id = $this->repo_storage_controller->execute('saveRecord', array(
                 'base_table' => 'file_upload',
                 'record_id' => $file_data[0]['file_upload_id'],
