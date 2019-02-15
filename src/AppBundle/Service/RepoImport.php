@@ -1261,7 +1261,7 @@ class RepoImport implements RepoImportInterface {
 
         // If this file's extension exists in the $this->model_extensions array, add to the $models array.
         if (in_array(strtolower($file->getExtension()), $this->model_extensions)) {
-          $model_file_names[] = str_replace('.' . $file->getExtension(), '', $file->getFilename());
+          $model_file_names[] = pathinfo($file->getFilename(), PATHINFO_FILENAME);
         }
 
       }
