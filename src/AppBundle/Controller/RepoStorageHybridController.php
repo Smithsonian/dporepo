@@ -42,9 +42,11 @@ class RepoStorageHybridController extends Controller
 
   }
 
-  /*
   public function build($function, $parameters) {
 
+    //@todo
+    /*
+     *
     $this->repo_storage_structure = new RepoStorageStructureHybrid($this->connection, $this->project_dir);
 
     if(!method_exists($this->repo_storage_structure, $function)) {
@@ -59,6 +61,10 @@ class RepoStorageHybridController extends Controller
       }
       
     }
+    */
+    return array('installed' => true);
+
+  }
 
   }
 */
