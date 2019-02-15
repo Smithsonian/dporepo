@@ -177,7 +177,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
 
       // Push file to Drastic.
       $path_external = str_replace($this->uploads_directory, 'mysql_backups/', $backup_filename);
-      $backup_results = $this->fs->transferFile($backup_filepath, $path_external);
+      $transfer_results = $this->fs->transferFile($backup_filepath, $path_external);
 
       $rs = new RepoStorageHybridController(
         $this->connection
@@ -205,7 +205,8 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
 
   private function writeBackupToFile($include_schema = true, $include_data = true) {
 
-    $backup_dir = $this->uploads_directory . '/mysqlbackups/';
+    $backup_dir = str_replace('/', DIRECTORY_SEPARATOR, $this->uploads_directory . DIRECTORY_SEPARATOR . 'mysqlbackups' . DIRECTORY_SEPARATOR);
+    $backup_dir = str_replace(DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR, $backup_dir);
     $handle = NULL;
 
     if(!is_dir($backup_dir)) {

@@ -438,7 +438,7 @@ class RepoStorageHybrid implements RepoStorage {
     $return_data['files'] = $file_data;
 
     $return_data['viewable_model'] = false;
-    if(!empty($file_data)) {
+    if(!empty($file_data) && $return_data['model_purpose'] == 'delivery_web') {
       $file = $file_data;
       $fn = $file['file_name'];
       $fn_exploded = explode('.', $fn);
@@ -1778,7 +1778,7 @@ class RepoStorageHybrid implements RepoStorage {
     $sql = "SELECT job.uuid, job.job_id, 
         file_upload.job_id, file_upload.parent_record_id, file_upload.parent_record_type, 
         file_upload.file_name, file_upload.file_path, file_upload.file_size, file_upload.file_type, 
-        capture_data_file.* 
+        capture_data_file.capture_data_element_id, capture_data_file.variant_type, capture_data_file.created_by_user_account_id, capture_data_file.capture_data_file_type
       FROM file_upload
       JOIN capture_data_file ON file_upload.file_upload_id = capture_data_file.file_upload_id
       JOIN capture_data_element ON capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
@@ -1805,15 +1805,15 @@ class RepoStorageHybrid implements RepoStorage {
 
     //@todo needs love- check params
 
-    $sql = "INSERT INTO file_upload (job_id, parent_record_id, parent_record_type, file_name, file_path, file_size, file_type, 
+    $sql = "INSERT INTO file_upload (job_id, file_name, file_path, file_size, file_type, 
       created_by_user_account_id, last_modified_user_account_id)
-    VALUES (:job_id, :parent_record_id, :parent_record_type, :file_name, :file_path, :file_size, :file_type, :user_id, :user_id)
+    VALUES (:job_id, :file_name, :file_path, :file_size, :file_type, :user_id, :user_id)
     ";
     $statement = $this->connection->prepare($sql);
 
     $statement->bindValue(":job_id", $params['job_id'], PDO::PARAM_STR);
-    $statement->bindValue(":parent_record_id", $params['parent_record_id'], PDO::PARAM_INT);
-    $statement->bindValue(":parent_record_type", $params['parent_record_type'], PDO::PARAM_STR);
+    //$statement->bindValue(":parent_record_id", $params['parent_record_id'], PDO::PARAM_INT);
+    //$statement->bindValue(":parent_record_type", $params['parent_record_type'], PDO::PARAM_STR);
     $statement->bindValue(":file_name", $params['file_name'], PDO::PARAM_STR);
     $statement->bindValue(":file_path", $params['file_path'], PDO::PARAM_STR);
     $statement->bindValue(":file_size", $params['file_size'], PDO::PARAM_STR);
@@ -1830,7 +1830,7 @@ class RepoStorageHybrid implements RepoStorage {
     ";
     $statement = $this->connection->prepare($sql);
 
-    $statement->bindValue(":capture_data_element_id", $params['parent_record_id'], PDO::PARAM_INT);
+    $statement->bindValue(":capture_data_element_id", $params['capture_data_element_id'], PDO::PARAM_INT);
     $statement->bindValue(":file_upload_id", $file_upload_id, PDO::PARAM_INT);
     $statement->bindValue(":capture_data_file_name", $params['file_name'], PDO::PARAM_STR);
     $statement->bindValue(":capture_data_file_type", $params['capture_data_file_type'], PDO::PARAM_STR);
