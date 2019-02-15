@@ -1569,7 +1569,7 @@ class RepoImport implements RepoImportInterface {
               // Transform the file name to an array.
               $file_name_parts = explode('-', $file);
               // Remove '_model' from the model_purpose chunk from the file name ('master_model' becomes 'master').
-              if (isset($file_name_parts[$key1])) {
+              if (isset($data->csv[$key]) && isset($file_name_parts[$key1])) {
                 $data->csv[$key]->model_purpose = str_replace('_model', '', $file_name_parts[$key1]);
               }
             }
