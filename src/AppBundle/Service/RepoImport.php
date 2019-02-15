@@ -1220,8 +1220,11 @@ class RepoImport implements RepoImportInterface {
           $file_name_array = explode('-', $raw_file_name);
           $file_key = (int)array_pop($file_name_array);
           // Add the file to the group.
-          $image_file_names[ $dir_parent[0] ][ $file_key-1 ][] = array('filename' => $file->getFilename(), 'variant' => $dir_parent[1]);
-          ksort($image_file_names[ $dir_parent[0] ]);
+          // Cheesy hack to insure we're not pulling from the 'data' directory's root.
+          if ($dir_parent[0] !== 'data') {
+            $image_file_names[ $dir_parent[0] ][ $file_key-1 ][] = array('filename' => $file->getFilename(), 'variant' => $dir_parent[1]);
+            ksort($image_file_names[ $dir_parent[0] ]);
+          }
 
           // Result should look like this (just one piece of the array - a capture dataset, with capture data elements, and capture data files):
           // ["side1"]=>
