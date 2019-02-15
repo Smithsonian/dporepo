@@ -296,7 +296,7 @@ class RepoValidateData implements RepoValidate {
   /**
    * @param string $status The status text to check for.
    * @param string $uploads_directory The uploads directory.
-   * @return array The next directory to validate.
+   * @return string The next directory to validate.
    */
   public function needsValidationChecker($status = null, $uploads_directory = null) {
 
