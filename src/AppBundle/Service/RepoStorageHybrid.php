@@ -1745,21 +1745,21 @@ class RepoStorageHybrid implements RepoStorage {
         }
 
         // Remove data from tables containing processing job-based data.
-        // foreach ($table_names['processing_job_tables'] as $processing_job_table_name) {
-        //   // Remove records.
-        //   $sql_job = "DELETE pj, pjf FROM {$processing_job_table_name} pj
-        //     LEFT JOIN `processing_job_file` pjf ON pjf.`job_id` = pj.`processing_service_job_id`
-        //     WHERE pj.`job_id` = 3";
-        //   $statement = $this->connection->prepare($sql_job);
-        //   $statement->bindValue(":job_id", $job_data['job_id'], PDO::PARAM_INT);
-        //   $statement->execute();
-        //   $data[ $processing_job_table_name ] = $statement->rowCount();
-        //   // Reset the auto increment value.
-        //   $sql_job_reset = "ALTER TABLE {$processing_job_table_name} MODIFY {$processing_job_table_name}.{$processing_job_table_name}_id INT(11) UNSIGNED;
-        //   ALTER TABLE {$processing_job_table_name} MODIFY {$processing_job_table_name}.{$processing_job_table_name}_id INT(11) UNSIGNED AUTO_INCREMENT";
-        //   $statement = $this->connection->prepare($sql_job_reset);
-        //   $statement->execute();
-        // }
+        foreach ($table_names['processing_job_tables'] as $processing_job_table_name) {
+          // Remove records.
+          $sql_job = "DELETE pj, pjf FROM {$processing_job_table_name} pj
+            LEFT JOIN `processing_job_file` pjf ON pjf.`job_id` = pj.`processing_service_job_id`
+            WHERE pj.`ingest_job_uuid` = :ingest_job_uuid";
+          $statement = $this->connection->prepare($sql_job);
+          $statement->bindValue(":ingest_job_uuid", $job_data['uuid'], PDO::PARAM_STR);
+          $statement->execute();
+          $data[ $processing_job_table_name ] = $statement->rowCount();
+          // Reset the auto increment value.
+          $sql_job_reset = "ALTER TABLE {$processing_job_table_name} MODIFY {$processing_job_table_name}.{$processing_job_table_name}_id INT(11) UNSIGNED;
+          ALTER TABLE {$processing_job_table_name} MODIFY {$processing_job_table_name}.{$processing_job_table_name}_id INT(11) UNSIGNED AUTO_INCREMENT";
+          $statement = $this->connection->prepare($sql_job_reset);
+          $statement->execute();
+        }
 
       }
 
