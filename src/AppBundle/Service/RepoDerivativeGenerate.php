@@ -108,47 +108,61 @@ class RepoDerivativeGenerate {
         // Generate the derivatives.
         // php bin/console app:derivative-image [file_path] [desired_width] [desired_height] [desired_filename]
 
-        $new_thumb_file_name = str_replace('.jpg', '_thumb.jpg', $file_name);
-        $new_thumb_path = str_replace('.jpg', '_thumb.jpg', $path);
+        $file_parts = explode('.', $file_name);
+        if(count($file_parts) > 1) {
 
-        $res = $utils->resizeImage($path, 200, NULL, $new_thumb_file_name);
+          $last = count($file_parts) - 1;
+          $file_ext = $file_parts[$last];
+          unset($file_parts[$last]);
+          $file_base_name = implode('.', $file_parts);
 
-        // Write the derivative records to the capture_data_file and file_upload tables.
-        // $cd_image_file contains all of the original capture_data_file and file_upload values.
-        if(file_exists($new_thumb_path)) {
-          $new_capture_data_file = $cd_image_file;
-          $new_capture_data_file['variant_type'] = isset($cd_image_file['variant_type']) ? $cd_image_file['variant_type'] . ' thumb' : 'thumb';
-          $new_capture_data_file['capture_data_file_name'] = $new_capture_data_file['file_name'] = $new_thumb_file_name;
-          $new_capture_data_file['file_path'] = $new_thumb_path;
-          $new_capture_data_file['file_size'] = filesize($new_thumb_path);
+          $new_thumb_file_name = $file_base_name . '_thumb.' . $file_ext;
+          $new_thumb_path = str_replace($file_name, $new_thumb_file_name, $path);
 
-          $ret = $this->repo_storage_controller->execute('createCaptureDatasetImageDerivatives', $new_capture_data_file);
+          $res = $utils->resizeImage($path, 200, NULL, $new_thumb_file_name);
 
-          $file_info[$new_thumb_file_name] = $res;
+          // Write the derivative records to the capture_data_file and file_upload tables.
+          // $cd_image_file contains all of the original capture_data_file and file_upload values.
+          if(file_exists($new_thumb_path)) {
+            $new_capture_data_file = $cd_image_file;
+            $new_capture_data_file['variant_type'] = isset($cd_image_file['variant_type']) ? $cd_image_file['variant_type'] . ' thumb' : 'thumb';
+            $new_capture_data_file['capture_data_file_name'] = $new_thumb_file_name;
+            $new_capture_data_file['file_name'] = $new_thumb_file_name;
+            $new_capture_data_file['file_path'] = $new_thumb_path;
+            $new_capture_data_file['file_size'] = filesize($new_thumb_path);
+
+            $ret = $this->repo_storage_controller->execute('createCaptureDatasetImageDerivatives', $new_capture_data_file);
+
+            $file_info[$new_thumb_file_name] = $res;
+          }
+          else {
+            $errors[] = "Unable to generate thumbnail $new_thumb_path";
+          }
+
+          $new_midsize_file_name = $file_base_name . '_mid.' . $file_ext;
+          $new_midsize_path = str_replace($file_name, $new_midsize_file_name, $path);
+
+          $res = $utils->resizeImage($path, 800, 0, $new_midsize_file_name);
+
+          if(file_exists($new_midsize_path)) {
+            $new_capture_data_file = $cd_image_file;
+            $new_capture_data_file['variant_type'] = isset($cd_image_file['variant_type']) ? $cd_image_file['variant_type'] . ' thumb' : 'thumb';
+            $new_capture_data_file['capture_data_file_name'] = $new_midsize_file_name;
+            $new_capture_data_file['file_name'] = $new_midsize_file_name;
+            $new_capture_data_file['file_path'] = $new_midsize_path;
+            $new_capture_data_file['file_size'] = filesize($new_midsize_path);
+
+            $ret = $this->repo_storage_controller->execute('createCaptureDatasetImageDerivatives', $new_capture_data_file);
+
+            $file_info[$new_midsize_file_name] = $res;
+          }
+          else {
+            $errors[] = "Unable to generate midsize image $new_midsize_path";
+          }
+
         }
-        else {
-          $errors[] = "Unable to generate thumbnail $new_thumb_path";
-        }
 
-        $new_midsize_file_name = str_replace('.jpg', '_mid.jpg', $file_name);
-        $new_midsize_path = str_replace('.jpg', '_mid.jpg', $path);
 
-        $res = $utils->resizeImage($path, 800, 0, $new_midsize_file_name);
-
-        if(file_exists($new_midsize_path)) {
-          $new_capture_data_file = $cd_image_file;
-          $new_capture_data_file['variant_type'] = isset($cd_image_file['variant_type']) ? $cd_image_file['variant_type'] . ' thumb' : 'thumb';
-          $new_capture_data_file['capture_data_file_name'] = $new_capture_data_file['file_name'] = $new_midsize_file_name;
-          $new_capture_data_file['file_path'] = $new_midsize_path;
-          $new_capture_data_file['file_size'] = filesize($new_midsize_path);
-
-          $ret = $this->repo_storage_controller->execute('createCaptureDatasetImageDerivatives', $new_capture_data_file);
-
-          $file_info[$new_midsize_file_name] = $res;
-        }
-        else {
-          $errors[] = "Unable to generate midsize image $new_midsize_path";
-        }
 
         if(!empty($file_info)) {
           $data[$file_name] = $file_info;
