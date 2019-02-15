@@ -771,7 +771,7 @@ class RepoImport implements RepoImportInterface {
             ),
             'limit' => 1,
             'search_params' => array(
-              0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($uploads_directory . $file_path), 'comparison' => '='),
+              0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($this->uploads_directory . $file_path), 'comparison' => '='),
             ),
             'search_type' => 'AND',
             'omit_active_field' => true,
