@@ -450,8 +450,10 @@ class RepoStorageHybrid implements RepoStorage {
 
     // Get model IDs for 3D thumb and low res, if available.
     // model_id_3d_thumb, model_id_low_res
-    $sql = "SELECT model.model_id, model_purpose, model_file.*       
-        FROM model LEFT JOIN model_file on model.model_id = model_file.model_id
+    $sql = "SELECT model.model_id, model_purpose, model_file.*, file_upload.*
+        FROM model
+        LEFT JOIN model_file on model.model_id = model_file.model_id
+        LEFT JOIN file_upload on model_file.file_upload_id = file_upload.file_upload_id
         WHERE parent_model_id=:model_id
         AND model_purpose IN ('delivery_web','thumb_3d')
         AND model.active=1";
