@@ -128,7 +128,8 @@ class RepoDerivativeGenerate {
             $new_capture_data_file['variant_type'] = isset($cd_image_file['variant_type']) ? $cd_image_file['variant_type'] . ' thumb' : 'thumb';
             $new_capture_data_file['capture_data_file_name'] = $new_thumb_file_name;
             $new_capture_data_file['file_name'] = $new_thumb_file_name;
-            $new_capture_data_file['file_path'] = $new_thumb_path;
+            // Path should start with '/uploads/repository/'.
+            $new_capture_data_file['file_path'] = str_replace($this->project_directory . 'web', '', $new_thumb_path);
             $new_capture_data_file['file_size'] = filesize($new_thumb_path);
 
             $ret = $this->repo_storage_controller->execute('createCaptureDatasetImageDerivatives', $new_capture_data_file);
@@ -149,7 +150,8 @@ class RepoDerivativeGenerate {
             $new_capture_data_file['variant_type'] = isset($cd_image_file['variant_type']) ? $cd_image_file['variant_type'] . ' thumb' : 'thumb';
             $new_capture_data_file['capture_data_file_name'] = $new_midsize_file_name;
             $new_capture_data_file['file_name'] = $new_midsize_file_name;
-            $new_capture_data_file['file_path'] = $new_midsize_path;
+            // Path should start with '/uploads/repository/'.
+            $new_capture_data_file['file_path'] = str_replace($this->project_directory . 'web', '', $new_midsize_path);
             $new_capture_data_file['file_size'] = filesize($new_midsize_path);
 
             $ret = $this->repo_storage_controller->execute('createCaptureDatasetImageDerivatives', $new_capture_data_file);
