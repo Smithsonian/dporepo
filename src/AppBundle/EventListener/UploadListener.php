@@ -136,7 +136,7 @@ class UploadListener
             'file_name' => $file->getBasename(),
             'file_path' => $final_full_path,
             'file_size' => filesize($_SERVER['DOCUMENT_ROOT'] . $final_full_path),
-            'file_type' => $file->getExtension(), // $file->getMimeType()
+            'file_type' => strtolower($file->getExtension()), // $file->getMimeType()
             'file_hash' => md5_file($_SERVER['DOCUMENT_ROOT'] . $final_full_path),
           )
         ));

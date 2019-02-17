@@ -326,7 +326,7 @@ class RepoFileTransfer implements RepoFileTransferInterface {
         'file_name' => $file->getBasename(),
         'file_path' => $full_path,
         'file_size' => filesize($file->getPathname()),
-        'file_type' => $file->getExtension(), // $file->getMimeType()
+        'file_type' => strtolower($file->getExtension()), // $file->getMimeType()
         'file_hash' => md5($file->getBasename()),
       )
     ));
