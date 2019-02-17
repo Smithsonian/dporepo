@@ -1807,9 +1807,9 @@ class RepoStorageHybrid implements RepoStorage {
 
     //@todo needs love- check params
 
-    $sql = "INSERT INTO file_upload (job_id, file_name, file_path, file_size, file_type, 
+    $sql = "INSERT INTO file_upload (job_id, file_name, file_path, file_size, file_type, file_hash,
       created_by_user_account_id, last_modified_user_account_id)
-    VALUES (:job_id, :file_name, :file_path, :file_size, :file_type, :user_id, :user_id)
+    VALUES (:job_id, :file_name, :file_path, :file_size, :file_type, :file_hash, :user_id, :user_id)
     ";
     $statement = $this->connection->prepare($sql);
 
@@ -1820,6 +1820,7 @@ class RepoStorageHybrid implements RepoStorage {
     $statement->bindValue(":file_path", $params['file_path'], PDO::PARAM_STR);
     $statement->bindValue(":file_size", $params['file_size'], PDO::PARAM_STR);
     $statement->bindValue(":file_type", strtolower($params['file_type']), PDO::PARAM_STR);
+    $statement->bindValue(":file_hash", $params['file_hash'], PDO::PARAM_STR);
     $statement->bindValue(":user_id", $params['created_by_user_account_id'], PDO::PARAM_INT);
     $statement->execute();
     $file_upload_id = $this->connection->lastInsertId();
