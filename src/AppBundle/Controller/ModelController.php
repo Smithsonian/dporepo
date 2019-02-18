@@ -354,6 +354,9 @@ class ModelController extends Controller
 
         // $this->u->dumper($data);
 
+        // If the file_path key doesn't exist, throw a createNotFoundException (404).
+        if (!array_key_exists('file_path', $data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');
+
         //@todo in the future perhaps this should be an array of all files
         // Replace local path with Drastic path. Twig template will serve the file using admin/get_file?path=blah
         $uploads_path = str_replace('web', '', $this->uploads_directory);
