@@ -1001,6 +1001,7 @@ class RepoImport implements RepoImportInterface {
   public function insertCaptureDataElementsAndFiles($capture_data_elements = array(), $capture_dataset_id = null, $data = array()) {
 
     if (!empty($capture_data_elements) && !empty($capture_dataset_id) && !empty($data)) {
+
       // Loop through capture data elements and add to storage.
       foreach ($capture_data_elements as $ekey => $evalue) {
 
@@ -1190,7 +1191,8 @@ class RepoImport implements RepoImportInterface {
     if (!empty($data)) {
 
       $finder = new Finder();
-      $finder->files()->in($this->project_directory . $this->uploads_directory . $data->uuid . '/');
+      $finder->files()->in($this->project_directory . $this->uploads_directory . $data->uuid . DIRECTORY_SEPARATOR);
+      $finder->path('data');
       // Loop through uploaded files.
       foreach ($finder as $file) {
 
@@ -1200,58 +1202,70 @@ class RepoImport implements RepoImportInterface {
         $dir_parent = array_slice($dir_parts, -2, 2);
 
         // Get image files.
-        // If this file's extension exists in the $this->image_extensions array, add to the $images array.
-        // Don't process model texture maps.
-        $process_capture_dataset_element_files = true;
-        foreach ($this->texture_map_file_name_parts as $tkey => $tvalue) {
-          if (strstr(strtolower($file->getFilename()), $tvalue)) {
-            $process_capture_dataset_element_files = false;
-          }
-        }
+        if (in_array(strtolower($file->getExtension()), $this->image_extensions)) {
 
-        if ($process_capture_dataset_element_files && in_array(strtolower($file->getExtension()), $this->image_extensions)) {
-          // Establish the file key so a capture dataset element's files are grouped together.
-          $raw_file_name = str_replace('.' . $file->getExtension(), '', $file->getFilename());
-          $file_name_array = explode('-', $raw_file_name);
-          $file_key = (int)array_pop($file_name_array);
-          // Add the file to the group.
-          // Cheesy hack to insure we're not pulling from the 'data' directory's root.
-          if ($dir_parent[0] !== 'data') {
+          // @TODO - Somewhat of a hack. Not sure what to do if directory structure isn't as we're expecting it to be.
+          // If the parent directory is 'data', force the name of the directory to be 'camera'.
+          // This means the files weren't placed into a subdirectory. Whether this is correct or not is questionable.
+          if ($dir_parent[0] === 'data') {
+            $dir_parent[0] = $dir_parent[1];
+            $dir_parent[1] = 'camera';
+          }
+
+          // If this file's extension exists in the $this->image_extensions array, add to the $images array.
+          // Don't process model texture maps.
+          $process_capture_dataset_element_files = true;
+          foreach ($this->texture_map_file_name_parts as $tkey => $tvalue) {
+            if (strstr(strtolower($file->getFilename()), $tvalue)) {
+              $process_capture_dataset_element_files = false;
+            }
+          }
+
+          if ($process_capture_dataset_element_files && in_array(strtolower($file->getExtension()), $this->image_extensions)) {
+
+            // Establish the file key so a capture dataset element's files are grouped together.
+            $raw_file_name = str_replace('.' . $file->getExtension(), '', $file->getFilename());
+            $file_name_array = explode('-', $raw_file_name);
+            $file_key = (int)array_pop($file_name_array);
+
+            // Add the file to the group.
             $image_file_names[ $dir_parent[0] ][ $file_key-1 ][] = array('filename' => $file->getFilename(), 'variant' => $dir_parent[1]);
             ksort($image_file_names[ $dir_parent[0] ]);
+            ksort($image_file_names);
+
+            // Result should look like this (just one piece of the array - a capture dataset, with capture data elements, and capture data files):
+            // ["side1"]=>
+            //   array(5) {
+            //     [0]=>
+            //     array(3) {
+            //       [0]=>
+            //       string(25) "usnm_44359-s01-p01-01.jpg"
+            //       [1]=>
+            //       string(25) "usnm_44359-s01-p01-01.tif"
+            //       [2]=>
+            //       string(25) "usnm_44359-s01-p01-01.cr2"
+            //     }
+            //     [1]=>
+            //     array(3) {
+            //       [0]=>
+            //       string(25) "usnm_44359-s01-p01-02.jpg"
+            //       [1]=>
+            //       string(25) "usnm_44359-s01-p01-02.tif"
+            //       [2]=>
+            //       string(25) "usnm_44359-s01-p01-02.cr2"
+            //     }
+            //     [2]=>
+            //     array(3) {
+            //       [0]=>
+            //       string(25) "usnm_44359-s01-p01-03.jpg"
+            //       [1]=>
+            //       string(25) "usnm_44359-s01-p01-03.tif"
+            //       [2]=>
+            //       string(25) "usnm_44359-s01-p01-03.cr2"
+            //     }
+            //   }
           }
 
-          // Result should look like this (just one piece of the array - a capture dataset, with capture data elements, and capture data files):
-          // ["side1"]=>
-          //   array(5) {
-          //     [0]=>
-          //     array(3) {
-          //       [0]=>
-          //       string(25) "usnm_44359-s01-p01-01.jpg"
-          //       [1]=>
-          //       string(25) "usnm_44359-s01-p01-01.tif"
-          //       [2]=>
-          //       string(25) "usnm_44359-s01-p01-01.cr2"
-          //     }
-          //     [1]=>
-          //     array(3) {
-          //       [0]=>
-          //       string(25) "usnm_44359-s01-p01-02.jpg"
-          //       [1]=>
-          //       string(25) "usnm_44359-s01-p01-02.tif"
-          //       [2]=>
-          //       string(25) "usnm_44359-s01-p01-02.cr2"
-          //     }
-          //     [2]=>
-          //     array(3) {
-          //       [0]=>
-          //       string(25) "usnm_44359-s01-p01-03.jpg"
-          //       [1]=>
-          //       string(25) "usnm_44359-s01-p01-03.tif"
-          //       [2]=>
-          //       string(25) "usnm_44359-s01-p01-03.cr2"
-          //     }
-          //   }
         }
 
         // If this file's extension exists in the $this->model_extensions array, add to the $models array.
@@ -1260,6 +1274,9 @@ class RepoImport implements RepoImportInterface {
         }
 
       }
+
+      // $this->u->dumper(array_keys($image_file_names),0);
+      // $this->u->dumper($image_file_names);
 
       if (!empty($image_file_names)) {
         $data = $this->getDatasetDataFromFilenames($image_file_names, $data);
@@ -1311,7 +1328,7 @@ class RepoImport implements RepoImportInterface {
           // Grab the first file name to get the local_subject_id.
           foreach ($image_file_names as $dir_name => $files) {
 
-            // Only pull data from the 'camera' directory
+            // Only pull data from the 'scale' directory
             if (!empty($files) && ($dir_name === 'scale')) {
 
               // Get the file's info from the metadata storage.
