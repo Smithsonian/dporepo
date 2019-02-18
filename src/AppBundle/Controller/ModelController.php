@@ -239,6 +239,29 @@ class ModelController extends Controller
     }
 
     /**
+     * Get Model Purpose
+     * @return  array|bool  The query result
+     */
+    public function getModelPurpose()
+    {
+      $data = array();
+      $temp = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'model_purpose',
+          'sort_fields' => array(
+            0 => array('field_name' => 'model_purpose')
+          ),
+        )
+      );
+
+      foreach ($temp as $key => $value) {
+        $label = $value['model_purpose'];
+        $data[$label] = $value['model_purpose_id'];
+      }
+
+      return $data;
+    }
+
+    /**
      * @Route("/admin/model/delete", name="model_remove_records", methods={"GET"})
      *
      * @param Request $request

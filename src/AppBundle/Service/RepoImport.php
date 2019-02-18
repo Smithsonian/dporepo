@@ -485,10 +485,15 @@ class RepoImport implements RepoImportInterface {
                 }
 
                 // Look-up the ID for the 'model_purpose'.
-                // if ($field_name === 'model_purpose') {
-                //   $model_purpose_lookup_options = array('master' => 1, 'delivery_web' => 2, 'delivery_print' => 3, 'intermediate_processing_step' => 4);
-                //   $json_array[$key][$field_name] = (int)$model_purpose_lookup_options[$v];
-                // }
+                if ($field_name === 'model_purpose') {
+                  // Get the lookup options from metadata storage.
+                  $model_purpose_lookup_options = $this->modelsController->getModelPurpose();
+                  // Remove '_model' from the model_purpose chunk from the file name ('master_model' becomes 'master').
+                  $v = str_replace('_model', '', $v);
+                  // Set values for the model_purpose and model_purpose_id fields.
+                  $json_array[$key][$field_name] = (int)$model_purpose_lookup_options[$v];
+                  $json_array[$key][$field_name . '_id'] = (int)$model_purpose_lookup_options[$v];
+                }
 
               }
 
@@ -813,6 +818,9 @@ class RepoImport implements RepoImportInterface {
 
                 if (empty($model_record_exists)) {
 
+                  // Get the lookup options from metadata storage.
+                  $model_purpose_lookup_options = $this->modelsController->getModelPurpose();
+
                   // Log the HD model to metadata storage.
                   $model_id = $this->repo_storage_controller->execute('saveRecord', array(
                     'base_table' => 'model',
@@ -822,6 +830,7 @@ class RepoImport implements RepoImportInterface {
                       'parent_model_id' => $this_id,
                       'model_file_type' => '.' . strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)),
                       'model_purpose' => 'delivery_web',
+                      'model_purpose_id' => $model_purpose_lookup_options['delivery_web'],
                       'has_normals' => 0,
                       'file_path' => $file_info[0]['file_path'],
                       'file_checksum' => md5($filename_value),
@@ -1558,7 +1567,13 @@ class RepoImport implements RepoImportInterface {
               $file_name_parts = explode('-', $file);
               // Remove '_model' from the model_purpose chunk from the file name ('master_model' becomes 'master').
               if (isset($data->csv[$key]) && isset($file_name_parts[$key1])) {
-                $data->csv[$key]->model_purpose = str_replace('_model', '', $file_name_parts[$key1]);
+                // Get the lookup options from metadata storage.
+                $model_purpose_lookup_options = $this->modelsController->getModelPurpose();
+                // Remove '_model' from the model_purpose value.
+                $model_purpose = str_replace('_model', '', $file_name_parts[$key1]);
+                // Set values for the model_purpose and model_purpose_id fields.
+                $data->csv[$key]->model_purpose = $model_purpose;
+                $data->csv[$key]->model_purpose_id = (int)$model_purpose_lookup_options[$model_purpose];
               }
             }
           }
