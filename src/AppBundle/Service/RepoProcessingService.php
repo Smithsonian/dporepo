@@ -715,7 +715,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
                     'file_name' => $asset['file_name'],
                     'file_path' => $path,
                     'file_size' => filesize($asset['file_path']),
-                    'file_type' => pathinfo($asset['file_path'], PATHINFO_EXTENSION),
+                    'file_type' => strtolower(pathinfo($asset['file_path'], PATHINFO_EXTENSION)),
                     'file_hash' => md5($asset['file_name']),
                   )
                 ));

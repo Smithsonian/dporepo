@@ -450,8 +450,10 @@ class RepoStorageHybrid implements RepoStorage {
 
     // Get model IDs for 3D thumb and low res, if available.
     // model_id_3d_thumb, model_id_low_res
-    $sql = "SELECT model.model_id, model_purpose, model_file.*       
-        FROM model LEFT JOIN model_file on model.model_id = model_file.model_id
+    $sql = "SELECT model.model_id, model_purpose, model_file.*, file_upload.*
+        FROM model
+        LEFT JOIN model_file on model.model_id = model_file.model_id
+        LEFT JOIN file_upload on model_file.file_upload_id = file_upload.file_upload_id
         WHERE parent_model_id=:model_id
         AND model_purpose IN ('delivery_web','thumb_3d')
         AND model.active=1";
@@ -1745,21 +1747,21 @@ class RepoStorageHybrid implements RepoStorage {
         }
 
         // Remove data from tables containing processing job-based data.
-        // foreach ($table_names['processing_job_tables'] as $processing_job_table_name) {
-        //   // Remove records.
-        //   $sql_job = "DELETE pj, pjf FROM {$processing_job_table_name} pj
-        //     LEFT JOIN `processing_job_file` pjf ON pjf.`job_id` = pj.`processing_service_job_id`
-        //     WHERE pj.`job_id` = 3";
-        //   $statement = $this->connection->prepare($sql_job);
-        //   $statement->bindValue(":job_id", $job_data['job_id'], PDO::PARAM_INT);
-        //   $statement->execute();
-        //   $data[ $processing_job_table_name ] = $statement->rowCount();
-        //   // Reset the auto increment value.
-        //   $sql_job_reset = "ALTER TABLE {$processing_job_table_name} MODIFY {$processing_job_table_name}.{$processing_job_table_name}_id INT(11) UNSIGNED;
-        //   ALTER TABLE {$processing_job_table_name} MODIFY {$processing_job_table_name}.{$processing_job_table_name}_id INT(11) UNSIGNED AUTO_INCREMENT";
-        //   $statement = $this->connection->prepare($sql_job_reset);
-        //   $statement->execute();
-        // }
+        foreach ($table_names['processing_job_tables'] as $processing_job_table_name) {
+          // Remove records.
+          $sql_job = "DELETE pj, pjf FROM {$processing_job_table_name} pj
+            LEFT JOIN `processing_job_file` pjf ON pjf.`job_id` = pj.`processing_service_job_id`
+            WHERE pj.`ingest_job_uuid` = :ingest_job_uuid";
+          $statement = $this->connection->prepare($sql_job);
+          $statement->bindValue(":ingest_job_uuid", $job_data['uuid'], PDO::PARAM_STR);
+          $statement->execute();
+          $data[ $processing_job_table_name ] = $statement->rowCount();
+          // Reset the auto increment value.
+          $sql_job_reset = "ALTER TABLE {$processing_job_table_name} MODIFY {$processing_job_table_name}.{$processing_job_table_name}_id INT(11) UNSIGNED;
+          ALTER TABLE {$processing_job_table_name} MODIFY {$processing_job_table_name}.{$processing_job_table_name}_id INT(11) UNSIGNED AUTO_INCREMENT";
+          $statement = $this->connection->prepare($sql_job_reset);
+          $statement->execute();
+        }
 
       }
 
@@ -1805,9 +1807,9 @@ class RepoStorageHybrid implements RepoStorage {
 
     //@todo needs love- check params
 
-    $sql = "INSERT INTO file_upload (job_id, file_name, file_path, file_size, file_type, 
+    $sql = "INSERT INTO file_upload (job_id, file_name, file_path, file_size, file_type, file_hash,
       created_by_user_account_id, last_modified_user_account_id)
-    VALUES (:job_id, :file_name, :file_path, :file_size, :file_type, :user_id, :user_id)
+    VALUES (:job_id, :file_name, :file_path, :file_size, :file_type, :file_hash, :user_id, :user_id)
     ";
     $statement = $this->connection->prepare($sql);
 
@@ -1817,7 +1819,8 @@ class RepoStorageHybrid implements RepoStorage {
     $statement->bindValue(":file_name", $params['file_name'], PDO::PARAM_STR);
     $statement->bindValue(":file_path", $params['file_path'], PDO::PARAM_STR);
     $statement->bindValue(":file_size", $params['file_size'], PDO::PARAM_STR);
-    $statement->bindValue(":file_type", $params['file_type'], PDO::PARAM_STR);
+    $statement->bindValue(":file_type", strtolower($params['file_type']), PDO::PARAM_STR);
+    $statement->bindValue(":file_hash", $params['file_hash'], PDO::PARAM_STR);
     $statement->bindValue(":user_id", $params['created_by_user_account_id'], PDO::PARAM_INT);
     $statement->execute();
     $file_upload_id = $this->connection->lastInsertId();

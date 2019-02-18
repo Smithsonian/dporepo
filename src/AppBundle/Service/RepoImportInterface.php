@@ -113,7 +113,7 @@ interface RepoImportInterface {
    * @param string $data The data array
    * @return null
    */
-  public function insert_model_files($file_path = null, $model_id = null, $data = array());
+  public function insertModelFiles($file_path = null, $model_id = null, $data = array());
 
   /**
    * Insert UV Maps
@@ -123,6 +123,6 @@ interface RepoImportInterface {
    * @param string $data The data array
    * @return null
    */
-  public function insert_uv_maps($file_path = null, $model_id = null, $data = array());
+  public function insertUvMaps($file_path = null, $model_id = null, $data = array());
 
 }
