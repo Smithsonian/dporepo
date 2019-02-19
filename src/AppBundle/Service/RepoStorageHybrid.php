@@ -280,7 +280,20 @@ class RepoStorageHybrid implements RepoStorage {
     $statement->bindValue(':capture_dataset_id', $capture_dataset_id, PDO::PARAM_INT);
     $statement->execute();
     $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
-    return $ret;
+
+    //@todo Temp change to render the thumb for DPO3DREP-478
+    //@todo DPO3DREP-556 will result in changes to this function.
+    // Now $ret has 0 or more files. It may include the original, the mid-size, and the thumb.
+    // Choose the thumb, or return nothing.
+    $thumb = array();
+    foreach($ret as $f) {
+      $filename = $f['file_name'];
+      if(strpos($filename, '_thumb.') !== false) {
+        $thumb = $f;
+      }
+    }
+
+    return $thumb;
   }
 
   public function getItem($params) {
