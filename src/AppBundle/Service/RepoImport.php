@@ -673,7 +673,10 @@ class RepoImport implements RepoImportInterface {
             $csv_val->model_guid = $this->u->createUuid();
             // 1) Append the job ID to the file path
             // 2) Add the file's checksum to the $csv_val object.
+            // 3) Set the model_file_type
             if(!empty($csv_val->file_path)) {
+              // model_file_type
+              $csv_val->model_file_type = pathinfo($csv_val->file_path, PATHINFO_EXTENSION);
               // Append the job ID to the file path.
               $csv_val->file_path = '/' . $data->uuid . $csv_val->file_path;
               // Get the file's checksum from the BagIt manifest.
@@ -949,7 +952,7 @@ class RepoImport implements RepoImportInterface {
             $data->description = $data->for_model_description = $csv_val->capture_dataset_name;
             break;
           case 'model':
-            $data->description = $project['project_name'] . ' - ' . $csv_val->model_file_type;
+            $data->description = $project['project_name'];
             break;
         }
 
