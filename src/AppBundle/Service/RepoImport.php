@@ -606,14 +606,14 @@ class RepoImport implements RepoImportInterface {
     // foreach() begins
     foreach ($data->csv as $csv_key => $csv_val) {
 
-      // If the import_row_id is missing, set the job to failed and set the error.
-      if (!isset($csv_val->import_row_id)) {
+      // If this is not capture_data_elements, and the import_row_id is missing, set the job to failed and set the error.
+      if (!isset($csv_val->capture_data_elements) && !isset($csv_val->import_row_id)) {
         $job_status = 'failed';
         $error = array($data->type . ' CSV is missing the import_row_id column');
       }
 
-      // If this is not a subject, and the import_parent_id is missing, set the job to failed and set the error.
-      if (($data->type !== 'subject') && !isset($csv_val->import_parent_id)) {
+      // If this is not a subject, not capture_data_elements, and the import_parent_id is missing, set the job to failed and set the error.
+      if (($data->type !== 'subject') && !isset($csv_val->capture_data_elements) && !isset($csv_val->import_parent_id)) {
         $job_status = 'failed';
         $error = array($data->type . ' CSV is missing the import_parent_id column');
       }
