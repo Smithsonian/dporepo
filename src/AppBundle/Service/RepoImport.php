@@ -261,6 +261,7 @@ class RepoImport implements RepoImportInterface {
           // In order to associate a Model to an Item (normally a Model is associated to a Capture Dataset), need to:
           // 1) Get 'type' field values in the $data array.
           // 2) Then determine if there's an 'item' type and a 'model' type, but no 'capture_dataset' type.
+          // 3) Sort the capture_dataset CSV by directory_path so it's easier to work with when dealing with the filesystem.
           foreach ($data as $csv_key => $csv_value) {
             $csv_types[] = $csv_value['type'];
           }
@@ -275,6 +276,21 @@ class RepoImport implements RepoImportInterface {
                 'job_type' => 'models metadata import',
               )
             ));
+          }
+
+          // Sort the capture_dataset CSV by directory_path.
+          foreach ($data as $csv_key => $csv_value) {
+            if ($csv_value['type'] === 'capture_dataset') {
+              $csv_sorted_by_directory_path = (array)$csv_value['csv'];
+              array_multisort(array_column($csv_sorted_by_directory_path, 'directory_path'), SORT_ASC, $csv_sorted_by_directory_path);
+
+              // // Adjust the import_row_id value to line-up with the new sort.
+              // foreach ($csv_sorted_by_directory_path as $key => $value) {
+              //   $csv_sorted_by_directory_path[$key]->import_row_id = $key;
+              // }
+
+              $data[$csv_key]['csv'] = $csv_sorted_by_directory_path;
+            }
           }
 
           // Execute the ingest.
@@ -590,14 +606,14 @@ class RepoImport implements RepoImportInterface {
     // foreach() begins
     foreach ($data->csv as $csv_key => $csv_val) {
 
-      // If the import_row_id is missing, set the job to failed and set the error.
-      if (!isset($csv_val->import_row_id)) {
+      // If this is not capture_data_elements, and the import_row_id is missing, set the job to failed and set the error.
+      if (!isset($csv_val->capture_data_elements) && !isset($csv_val->import_row_id)) {
         $job_status = 'failed';
         $error = array($data->type . ' CSV is missing the import_row_id column');
       }
 
-      // If this is not a subject, and the import_parent_id is missing, set the job to failed and set the error.
-      if (($data->type !== 'subject') && !isset($csv_val->import_parent_id)) {
+      // If this is not a subject, not capture_data_elements, and the import_parent_id is missing, set the job to failed and set the error.
+      if (($data->type !== 'subject') && !isset($csv_val->capture_data_elements) && !isset($csv_val->import_parent_id)) {
         $job_status = 'failed';
         $error = array($data->type . ' CSV is missing the import_parent_id column');
       }
@@ -1239,9 +1255,10 @@ class RepoImport implements RepoImportInterface {
             $raw_file_name = str_replace('.' . $file->getExtension(), '', $file->getFilename());
             $file_name_array = explode('-', $raw_file_name);
             $file_key = (int)array_pop($file_name_array);
+            $file_key = ($file_key === 1) ? ($file_key-1) : $file_key;
 
             // Add the file to the group.
-            $image_file_names[ $dir_parent[0] ][ $file_key-1 ][] = array('filename' => $file->getFilename(), 'variant' => $dir_parent[1]);
+            $image_file_names[ $dir_parent[0] ][ $file_key ][] = array('filename' => $file->getFilename(), 'variant' => $dir_parent[1]);
             ksort($image_file_names[ $dir_parent[0] ]);
             ksort($image_file_names);
 
@@ -1381,13 +1398,15 @@ class RepoImport implements RepoImportInterface {
 
               foreach ($files as $file_variants) {
 
+                $final_files = array();
+
                 foreach ($file_variants as $file_variant_key => $file) {
 
                   // Get this file's info from the metadata storage.
                   $file_info = $this->getFileInfo($data->uuid, $file['filename']);
 
                   // File info for the capture_data_file columns
-                  $final_files[ $file_variant_key ] = array(
+                  $final_files[] = array(
                     'file_upload_id' => $file_info[0]['file_upload_id'],
                     'capture_data_file_name' => $file_info[0]['file_name'],
                     'capture_data_file_type' => strtolower($file_info[0]['file_type']),
@@ -1396,7 +1415,7 @@ class RepoImport implements RepoImportInterface {
                   );
 
                   // Only pull data from the 'camera' directory
-                  if ($file['variant'] === 'camera') {
+                  // if ($file['variant'] === 'camera') {
 
                     // Don't process model texture maps.
                     foreach ($this->texture_map_file_name_parts as $tkey => $tvalue) {
@@ -1443,7 +1462,7 @@ class RepoImport implements RepoImportInterface {
                       $file_name_parts = explode('-', $file['filename']);
                     }
 
-                  }
+                  // }
 
                 }
 
