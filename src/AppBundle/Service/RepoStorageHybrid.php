@@ -1786,7 +1786,7 @@ class RepoStorageHybrid implements RepoStorage {
     $limit = isset($params['limit']) ? $params['limit'] : 100;
 
     // Get all capture_dataset_id values for this import job.
-    $sql = "SELECT capture_dataset.capture_dataset_id
+    $sql = "SELECT DISTINCT capture_dataset.capture_dataset_id
       FROM file_upload
       JOIN capture_data_file ON file_upload.file_upload_id = capture_data_file.file_upload_id
       JOIN capture_data_element ON capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
@@ -1851,7 +1851,9 @@ class RepoStorageHybrid implements RepoStorage {
       $statement->execute();
       $data = $statement->fetchAll();
       if(!empty($data)) {
-        $capture_dataset_images = array_merge($capture_dataset_images, $data);
+        foreach($data as $d) {
+          $capture_dataset_images['capture_data_file_id'] = $d;
+        }
       }
     }
     return $capture_dataset_images;
@@ -1894,8 +1896,8 @@ class RepoStorageHybrid implements RepoStorage {
     $statement->bindValue(":file_upload_id", $file_upload_id, PDO::PARAM_INT);
     $statement->bindValue(":derivative_file_name", $params['file_name'], PDO::PARAM_STR);
     $statement->bindValue(":derivative_file_type", $params['derivative_file_type'], PDO::PARAM_STR);
-    $statement->bindValue(":image_width", $params['image_width'], PDO::PARAM_INT);
-    $statement->bindValue(":image_height", $params['image_height'], PDO::PARAM_INT);
+    $statement->bindValue(":image_width", (int)$params['image_width'], PDO::PARAM_INT);
+    $statement->bindValue(":image_height", (int)$params['image_height'], PDO::PARAM_INT);
     $statement->bindValue(":user_id", $params['created_by_user_account_id'], PDO::PARAM_INT);
 
     $statement->execute();
