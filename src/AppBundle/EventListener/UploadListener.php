@@ -152,7 +152,6 @@ class UploadListener
           // Run the CSV validation.
           $validation_results = $this->validateMetadata($data->job_id, $data->job_id_directory, $data->record_type, $file_data->record_id, $file->getBasename());
           // Remove the CSV file.
-          // TODO: Remove the temporary directory.
           $finder = new Finder();
           $finder->files()->in($data->job_id_directory . '/');
           $finder->files()->name($file->getBasename());
