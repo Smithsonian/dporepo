@@ -49,27 +49,28 @@ class CaptureDataFileController extends Controller
     public function datatablesBrowse(Request $request)
     {
 
-        $req = $request->request->all();
-        $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
-        $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
-        $sort_order = $req['order'][0]['dir'];
-        $start_record = !empty($req['start']) ? $req['start'] : 0;
-        $stop_record = !empty($req['length']) ? $req['length'] : 20;
+      $req = $request->request->all();
+      $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+      $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
+      $sort_order = $req['order'][0]['dir'];
+      $start_record = !empty($req['start']) ? $req['start'] : 0;
+      $stop_record = !empty($req['length']) ? $req['length'] : 20;
+      $parent_id = isset($req['parent_id']) ? $req['parent_id'] : 0;
 
-        $query_params = array(
-          'sort_field' => $sort_field,
-          'sort_order' => $sort_order,
-          'start_record' => $start_record,
-          'stop_record' => $stop_record,
-          'parent_id' => $req['parent_id']
-        );
-        if ($search) {
-          $query_params['search_value'] = $search;
-        }
+      $query_params = array(
+        'sort_field' => $sort_field,
+        'sort_order' => $sort_order,
+        'start_record' => $start_record,
+        'stop_record' => $stop_record,
+        'parent_id' => $parent_id,
+      );
+      if ($search) {
+        $query_params['search_value'] = $search;
+      }
 
-        $data = $this->repo_storage_controller->execute('getDatatableCaptureDataFile', $query_params);
+      $data = $this->repo_storage_controller->execute('getDatatableCaptureDataFile', $query_params);
 
-        return $this->json($data);
+      return $this->json($data);
     }
 
     /**
