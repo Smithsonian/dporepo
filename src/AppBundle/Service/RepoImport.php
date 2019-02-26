@@ -693,8 +693,6 @@ class RepoImport implements RepoImportInterface {
             if(!empty($csv_val->file_path)) {
               // model_file_type
               $csv_val->model_file_type = pathinfo($csv_val->file_path, PATHINFO_EXTENSION);
-              // Append the job ID to the file path.
-              $csv_val->file_path = '/' . $data->uuid . $csv_val->file_path;
               // Get the file's checksum from the BagIt manifest.
               $finder = new Finder();
               $finder->files()->in($this->project_directory . $this->uploads_directory . $data->uuid . '/');
@@ -705,9 +703,19 @@ class RepoImport implements RepoImportInterface {
                 $manifest_lines = preg_split('/\r\n|\n|\r/', trim($manifest_contents));
                 foreach ($manifest_lines as $mkey => $mvalue) {
                   $manifest_line_array = preg_split('/\s+/', $mvalue);
-                  // If there's a match against file paths, add the checksum to the $csv_val object.
-                  if (strstr($csv_val->file_path, $manifest_line_array[1])) {
+                  // If there's a match against file paths,
+                  // 1) add the checksum to the $csv_val object,
+                  // 2) append the job ID and any parent directories to the file path.
+                  if ($manifest_line_array[1] === 'data/' . $csv_val->file_path) {
+                    // Add the checksum to the $csv_val object.
                     $csv_val->file_checksum = $manifest_line_array[0];
+                    // Get the file's full info from metadata storage.
+                    $model_file_name = pathinfo($csv_val->file_path, PATHINFO_BASENAME);
+                    $file_info = $this->getFileInfo($data->uuid, $model_file_name);
+                    if (!empty($file_info)) {
+                      // Append the job ID and any parent directories to the file path.
+                      $csv_val->file_path = str_replace(DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'repository', '', $file_info[0]['file_path']);
+                    }
                     break;
                   }
                 }
@@ -839,6 +847,9 @@ class RepoImport implements RepoImportInterface {
 
                   // Get the lookup options from metadata storage.
                   $model_purpose_lookup_options = $this->modelsController->getModelPurpose();
+                  // Model file paths should begin with the job directory: /27E88C10-B77D-0AFC-2F2D-7B6BF50EB4DC/...
+                  $replacement = (DIRECTORY_SEPARATOR === '\\') ? '\uploads\repository' : '/uploads/repository';
+                  $model_file_path = str_replace($replacement, '', $file_info[0]['file_path']);
 
                   // Log the HD model to metadata storage.
                   $model_id = $this->repo_storage_controller->execute('saveRecord', array(
@@ -851,7 +862,7 @@ class RepoImport implements RepoImportInterface {
                       'model_purpose' => 'delivery_web',
                       'model_purpose_id' => $model_purpose_lookup_options['delivery_web'],
                       'has_normals' => 0,
-                      'file_path' => $file_info[0]['file_path'],
+                      'file_path' => $model_file_path,
                       'file_checksum' => md5($filename_value),
                       'date_of_creation' => date('Y-m-d H:i:s'),
                       'model_guid' => $this->u->createUuid(),
