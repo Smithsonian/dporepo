@@ -1893,7 +1893,7 @@ class RepoStorageHybrid implements RepoStorage {
     $statement->bindValue(":capture_data_file_id", $params['capture_data_file_id'], PDO::PARAM_INT);
     $statement->bindValue(":file_upload_id", $file_upload_id, PDO::PARAM_INT);
     $statement->bindValue(":derivative_file_name", $params['file_name'], PDO::PARAM_STR);
-    $statement->bindValue(":derivative_file_type", $params['capture_data_file_type'], PDO::PARAM_STR);
+    $statement->bindValue(":derivative_file_type", $params['derivative_file_type'], PDO::PARAM_STR);
     $statement->bindValue(":image_width", $params['image_width'], PDO::PARAM_INT);
     $statement->bindValue(":image_height", $params['image_height'], PDO::PARAM_INT);
     $statement->bindValue(":user_id", $params['created_by_user_account_id'], PDO::PARAM_INT);

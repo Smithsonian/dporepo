@@ -125,7 +125,7 @@ class RepoDerivativeGenerate {
           // $cd_image_file contains all of the original capture_data_file and file_upload values.
           if(file_exists($new_thumb_path)) {
             $new_capture_data_file = $cd_image_file;
-            $new_capture_data_file['variant_type'] = isset($cd_image_file['variant_type']) ? $cd_image_file['variant_type'] . ' thumb' : 'thumb';
+            $new_capture_data_file['derivative_file_type'] = 'thumb';
             $new_capture_data_file['capture_data_file_name'] = $new_thumb_file_name;
             $new_capture_data_file['file_name'] = $new_thumb_file_name;
             // Path should start with '/uploads/repository/'.
@@ -159,7 +159,7 @@ class RepoDerivativeGenerate {
 
           if(file_exists($new_midsize_path)) {
             $new_capture_data_file = $cd_image_file;
-            $new_capture_data_file['variant_type'] = isset($cd_image_file['variant_type']) ? $cd_image_file['variant_type'] . ' thumb' : 'thumb';
+            $new_capture_data_file['derivative_file_type'] = 'midsize';
             $new_capture_data_file['capture_data_file_name'] = $new_midsize_file_name;
             $new_capture_data_file['file_name'] = $new_midsize_file_name;
             // Path should start with '/uploads/repository/'.
