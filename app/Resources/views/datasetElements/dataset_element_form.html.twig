@@ -61,6 +61,7 @@
                             <thead>
                             <tr>
                                 <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                                <th class="text-center">Preview</th>
                                 <th class="text-center">Capture Data File Name</th>
                                 <th class="text-center">Capture Data File Type</th>
                                 <th class="text-center">Is Compressed Multiple Files</th>
@@ -129,6 +130,17 @@
             $('#browse_capture_data_files').dataTable( {
               "columns": [
                 { "data": "manage" },
+                { "data": "thumb_file_path",
+                  "render": function ( data, type, row, meta ) {
+                    //@todo use a class instead of hard-coded width
+                    if(data) {
+                      return '<img src="/admin/get_file?path=' + data + '" width="120px" />';
+                    }
+                    else {
+                      return '';
+                    }
+                  }
+                },
                 { "data": "capture_data_file_name" },
                 { "data": "capture_data_file_type" },
                 { "data": "is_compressed_multiple_files" },
@@ -179,7 +191,7 @@
                   "bSortable": false
                 },
                 {
-                  "targets": [ 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 ],
+                  "targets": [ 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 ],
                   "bSortable": false
                 },
                 {

@@ -128,6 +128,15 @@ class AppUtilities
   }
 
 
+  /**
+   * Takes an image specified by $path and generates a derivative image specified by width and optionally height.
+   * Stores the derivative image in the same filesystem location as $path, named $new_filename.
+   * @param $path Local filesystme path for an imag
+   * @param $width
+   * @param null $height
+   * @param null $new_filename
+   * @return string
+   */
   public function resizeImage($path, $width, $height = NULL, $new_filename = NULL) {
 
     // Validate file exists
