@@ -1783,7 +1783,7 @@ class RepoStorageHybrid implements RepoStorage {
     if(NULL == $job_uuid) {
       return array();
     }
-    $limit = isset($params['limit']) ? $params['limit'] : 100;
+    $limit = isset($params['limit']) && is_numeric($params['limit']) && $params['limit'] > 0 ? $params['limit'] : 100;
 
     // Get all capture_dataset_id values for this import job.
     $sql = "SELECT DISTINCT capture_dataset.capture_dataset_id
@@ -1791,14 +1791,11 @@ class RepoStorageHybrid implements RepoStorage {
       JOIN capture_data_file ON file_upload.file_upload_id = capture_data_file.file_upload_id
       JOIN capture_data_element ON capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
       JOIN capture_dataset ON capture_data_element.capture_dataset_id = capture_dataset.capture_dataset_id
-      JOIN item ON capture_dataset.item_id = item.item_id
-      JOIN job ON item.project_id = job.project_id
+      JOIN job ON file_upload.job_id = job.job_id
       WHERE job.uuid = :job_uuid      
-      AND file_upload.job_id = job.job_id
       AND file_upload.file_type='jpg'
       GROUP BY capture_dataset.capture_dataset_id
       ";
-
     $statement = $this->connection->prepare($sql);
     $statement->bindValue(":job_uuid", $job_uuid, PDO::PARAM_STR);
     $statement->execute();
@@ -1852,7 +1849,8 @@ class RepoStorageHybrid implements RepoStorage {
       $data = $statement->fetchAll();
       if(!empty($data)) {
         foreach($data as $d) {
-          $capture_dataset_images['capture_data_file_id'] = $d;
+          $cdf_id = $d['capture_data_file_id'];
+          $capture_dataset_images[$cdf_id] = $d;
         }
       }
     }
