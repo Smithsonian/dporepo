@@ -639,8 +639,13 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
                     $handle = fopen($local_assets_path . DIRECTORY_SEPARATOR . $file_name, 'w');
                     fwrite($handle, $contents);
                     if (is_resource($handle)) fclose($handle);
-                    // Reset $contents to null.
-                    $contents = null;
+
+                    // Reset $contents to null if the file mime type isn't text/plain or application/json
+                    // so that we're not inserting the contents of model and image files into metadata storage.
+                    if (($file_value['mimetype'] !== 'text/plain; charset=utf-8') && ($file_value['mimetype'] !== 'application/json; charset=utf-8')) {
+                      // Reset $contents to null.
+                      $contents = null;
+                    }
 
                   }
 
