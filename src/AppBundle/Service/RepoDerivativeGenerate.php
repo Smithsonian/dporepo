@@ -121,17 +121,29 @@ class RepoDerivativeGenerate {
 
           $res = $utils->resizeImage($path, 200, NULL, $new_thumb_file_name);
 
+          // Get the image height.
+          $height = 0;
+          $width = 200;
+          // $res will be [width]x[height]
+          $dimensions_array = explode('x', $res);
+          if(count($dimensions_array) == 2) {
+            $width = $dimensions_array[0]; // Should be 200
+            $height = $dimensions_array[1];
+          }
+
           // Write the derivative records to the capture_data_file and file_upload tables.
           // $cd_image_file contains all of the original capture_data_file and file_upload values.
           if(file_exists($new_thumb_path)) {
             $new_capture_data_file = $cd_image_file;
-            $new_capture_data_file['variant_type'] = isset($cd_image_file['variant_type']) ? $cd_image_file['variant_type'] . ' thumb' : 'thumb';
+            $new_capture_data_file['derivative_file_type'] = 'thumb';
             $new_capture_data_file['capture_data_file_name'] = $new_thumb_file_name;
             $new_capture_data_file['file_name'] = $new_thumb_file_name;
             // Path should start with '/uploads/repository/'.
             $new_capture_data_file['file_path'] = str_replace($this->project_directory . 'web', '', $new_thumb_path);
             $new_capture_data_file['file_size'] = filesize($new_thumb_path);
             $new_capture_data_file['file_hash'] = md5_file($new_thumb_path);
+            $new_capture_data_file['image_width'] = $width;
+            $new_capture_data_file['image_height'] = $height;
 
             $ret = $this->repo_storage_controller->execute('createCaptureDatasetImageDerivatives', $new_capture_data_file);
 
@@ -146,15 +158,27 @@ class RepoDerivativeGenerate {
 
           $res = $utils->resizeImage($path, 800, 0, $new_midsize_file_name);
 
+          // Get the image height.
+          $height = 0;
+          $width = 800;
+          // $res will be [width]x[height]
+          $dimensions_array = explode('x', $res);
+          if(count($dimensions_array) == 2) {
+            $width = $dimensions_array[0]; // Should be 800
+            $height = $dimensions_array[1];
+          }
+
           if(file_exists($new_midsize_path)) {
             $new_capture_data_file = $cd_image_file;
-            $new_capture_data_file['variant_type'] = isset($cd_image_file['variant_type']) ? $cd_image_file['variant_type'] . ' thumb' : 'thumb';
+            $new_capture_data_file['derivative_file_type'] = 'midsize';
             $new_capture_data_file['capture_data_file_name'] = $new_midsize_file_name;
             $new_capture_data_file['file_name'] = $new_midsize_file_name;
             // Path should start with '/uploads/repository/'.
             $new_capture_data_file['file_path'] = str_replace($this->project_directory . 'web', '', $new_midsize_path);
             $new_capture_data_file['file_size'] = filesize($new_midsize_path);
             $new_capture_data_file['file_hash'] = md5_file($new_midsize_path);
+            $new_capture_data_file['image_width'] = $width;
+            $new_capture_data_file['image_height'] = $height;
 
             $ret = $this->repo_storage_controller->execute('createCaptureDatasetImageDerivatives', $new_capture_data_file);
 
@@ -165,8 +189,6 @@ class RepoDerivativeGenerate {
           }
 
         }
-
-
 
         if(!empty($file_info)) {
           $data[$file_name] = $file_info;
