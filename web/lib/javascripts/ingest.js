@@ -57,15 +57,19 @@ var uploadsDropzone = new Dropzone(document.body, { // Make the whole body a dro
           image.onload = function() {
             // Check to see if the WIDTH is a power of 2.
             if (!powerOf2(this.width)) {
-              var widthLI = $('<li />').text('Width is not a power of 2 (' + file.name + ')');
+              var widthLI = $('<li />').text('Texture map width is not a power of 2 (' + file.name + ')');
               fileOL.append(widthLI);
               // done('Width is not a power of 2 (' + file.name + ')');
             }
             // Check to see if the HEIGHT is a power of 2.
             if (!powerOf2(this.height)) {
-              var heightLI = $('<li />').text('Height is not a power of 2 (' + file.name + ')');
+              var heightLI = $('<li />').text('Texture map height is not a power of 2 (' + file.name + ')');
               fileOL.append(heightLI);
               // done('Height is not a power of 2 (' + file.name + ')');
+            }
+            if (this.width !== this.height) {
+              var equalLI = $('<li />').text('Texture map width and height don\'t match (' + file.name + ')');
+              fileOL.append(equalLI);
             }
           };
         });
