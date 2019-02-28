@@ -15,6 +15,7 @@ use Symfony\Component\HttpKernel\KernelInterface;
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
 
+use AppBundle\Service\FileHelperService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class FilesystemHelperController extends Controller
@@ -49,16 +50,19 @@ class FilesystemHelperController extends Controller
    */
   private $external_file_storage_path;
 
+  private $f;
+
   protected $container;
 
   /**
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(ContainerInterface $container, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, Connection $conn)
+  public function __construct(ContainerInterface $container, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, Connection $conn, FileHelperService $f)
   {
     // Usage: $this->u->dumper($variable);
     $this->u = new AppUtilities();
+    $this->f = $f;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
 
     $this->container = $container;
@@ -145,15 +149,8 @@ class FilesystemHelperController extends Controller
     } else {
       $target_directory = $project_dir . $job_id . $id . DIRECTORY_SEPARATOR;
     }
-    
-    // If on a Windows based system, replace forward slashes with backslashes.
-    if (DIRECTORY_SEPARATOR === '\\') {
-      $target_directory = str_replace('/', '\\', $target_directory);
-    }
-    // If on a *nix based system, replace backslashes with forward slashes.
-    if (DIRECTORY_SEPARATOR === '/') {
-      $target_directory = str_replace('\\', '/', $target_directory);
-    }
+
+    $target_directory = $this->f->normalizePathForFilesystem($target_directory);
 
     if (!empty($job_id) && is_dir($target_directory)) {
 
@@ -164,12 +161,21 @@ class FilesystemHelperController extends Controller
 
       foreach ($finder as $file) {
 
-        $this_file_path = str_replace($project_dir, '', $file->getPathname());
-        $this_file_path = $this->external_file_storage_path . $this_file_path;
+        $path_data = $this->f->getAlternateFilePaths($file->getPathname());
+        if($path_data['incoming_path_type'] == 'unknown') {
+          //@todo - this is an error condition, and the following original lines of code probably won't help
+          $this_file_path = str_replace($project_dir, '', $file->getPathname());
+          $this_file_path = $this->external_file_storage_path . $this_file_path;
+          $this_external_file_path = str_replace(DIRECTORY_SEPARATOR, '/', $this_file_path);
+        }
+        else {
+          $this_file_path = $path_data['alternate_paths']['local_uploads_relative_path'];
+          $this_external_file_path = $path_data['alternate_paths']['remote_storage_path'];
+        }
+
         $this_file_path_array = explode(DIRECTORY_SEPARATOR, $this_file_path);
         $this_file_name = array_pop($this_file_path_array);
         $this_file_id = str_replace($project_dir . $job_id . DIRECTORY_SEPARATOR, '', $file->getPathname());
-        $this_external_file_path = str_replace(DIRECTORY_SEPARATOR, '/', $this_file_path);
 
         // $this->u->dumper($project_dir,0);
         // $this->u->dumper($this_file_id,0);
@@ -218,34 +224,23 @@ class FilesystemHelperController extends Controller
 
     $path = !empty($request->get('path')) ? $request->get('path') : '';
 
-    $path = str_replace("\\", "/", $path);
+    $path_array = $this->f->getAlternateFilePaths($path, true);
+    // The complete path should now look like this:
+    // /3DRepo/uploads/1E155C38-DC69-E33B-4208-7757D5CDAA35/data/cc/camera/f1978_40-cc_j3a.JPG
 
-    // If the external storage directory isn't in the path, try to set the right path.
-    if(strpos($path, $this->external_file_storage_path) !== 0) {
-
-      $uploads_dir = str_replace("\\", "/", $this->uploads_directory);
-      // Remove the uploads directory if it exists.
-      if(strpos($path, str_replace("web", "", $uploads_dir)) !== false) {
-        if(strpos($path, 'web') !== 0) {
-          $path = 'web' . $path;
-        }
-        $path = str_replace("\\", "/",  $path);
-        $path = str_replace(str_replace("\\", "/",  $uploads_dir), '', $path);
-      }
-      $path = str_replace("\\", "/", $this->external_file_storage_path . $path);
-      $path = str_replace("//", "/", $path);
-
-      // The complete path should now look like this:
-      // /3DRepo/uploads/1E155C38-DC69-E33B-4208-7757D5CDAA35/data/cc/camera/f1978_40-cc_j3a.JPG
+    if($path_array['incoming_path_type']  == 'unknown') {
+      // Need to return something other than a 404.
+      return new Response();
     }
 
-    $file_path_array = explode('/', $path);
+    $remote_path = $path_array['alternate_paths']['remote_storage_path'];
+    $file_path_array = explode('/', $remote_path);
     $file_name = array_pop($file_path_array);
 
     // Retrieve a read-stream
     try {
       $filesystem = $this->container->get('oneup_flysystem.assets_filesystem');
-      $stream = $filesystem->readStream($path);
+      $stream = $filesystem->readStream($remote_path);
       $contents = stream_get_contents($stream);
       // Before calling fclose on the resource, check if it's still valid using is_resource.
       if (is_resource($stream)) fclose($stream);
@@ -263,7 +258,7 @@ class FilesystemHelperController extends Controller
     }
     // Catch the error.
     catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
-      throw $this->createNotFoundException($e->getMessage() . " (File Path: $path)");
+      throw $this->createNotFoundException($e->getMessage() . " (File Path: $remote_path)");
     }
 
   }
