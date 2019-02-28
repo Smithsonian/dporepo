@@ -17,6 +17,7 @@ use AppBundle\Service\RepoValidateData;
 
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
+use AppBundle\Service\FileHelperService;
 
 class ExtractImageMetadataController extends Controller
 {
@@ -24,6 +25,11 @@ class ExtractImageMetadataController extends Controller
    * @var object $u
    */
   public $u;
+
+  /**
+   * @var object $f
+   */
+  public $f;
 
   /**
    * @var string $uploads_directory
@@ -69,10 +75,11 @@ class ExtractImageMetadataController extends Controller
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(TokenStorageInterface $token_storage, Connection $conn, KernelInterface $kernel)
+  public function __construct(TokenStorageInterface $token_storage, Connection $conn, KernelInterface $kernel, FileHelperService $f)
   {
     // Usage: $this->u->dumper($variable);
     $this->u = new AppUtilities();
+    $this->f = $f;
     $this->token_storage = $token_storage;
     $this->kernel = $kernel;
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
@@ -116,14 +123,27 @@ class ExtractImageMetadataController extends Controller
     if (!$localpath) throw $this->createNotFoundException('The Job directory doesn\'t exist - extract_metadata()');
 
     // Get the job ID, so errors can be logged to the database.
+
+    $path_data = $this->f->getAlternateFilePaths($localpath);
+
+    // If the function can't figure out what kind of path this is, don't use it.
+    if ($path_data['incoming_path_type'] == 'unknown') {
+      return array();
+    }
+
+    // Remote path always uses forward slashes, so use that.
+    $dir_array = explode("/", $path_data['alternate_paths']['remote_storage_path']);
+    $uuid = array_pop($dir_array);
+
     //@todo- on windows $localpath is being stored as C:\xampp\htdocs\dporepo_dev\web/uploads/repository/[UUID]
-    // Temp hack for this
+    // Temp hack for getting the UUID
+/*
     $dir_array = explode(DIRECTORY_SEPARATOR, $localpath);
     //$uuid = array_pop($dir_array);
     $uuid_path = array_pop($dir_array);
     $uuid_path_array = explode("/", $uuid_path);
     $uuid = array_pop($uuid_path_array);
-
+*/
     $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
 
     // Search for the data directory.
