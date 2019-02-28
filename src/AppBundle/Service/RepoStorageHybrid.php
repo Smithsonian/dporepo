@@ -410,7 +410,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     $sql = "SELECT model.model_id, model.parent_model_id, model.item_id, model.model_guid, model.date_of_creation,
         model.model_file_type, model.derived_from, model.creation_method, model.model_modality, model.units, model.is_watertight,
-        model_purpose.model_purpose, model_purpose.model_purpose_description, model.point_count, model.has_normals, model.face_count, model.vertices_count, model.has_vertex_color,
+        model_purpose.model_purpose, model.model_purpose as old_model_purpose, model_purpose.model_purpose_description, model.point_count, model.has_normals, model.face_count, model.vertices_count, model.has_vertex_color,
         model.has_uv_space, model.model_maps          
         FROM model LEFT JOIN model_purpose ON model.model_purpose_id = model_purpose.model_purpose_id
         WHERE model.active = 1
@@ -445,7 +445,12 @@ class RepoStorageHybrid implements RepoStorage {
     $return_data['files'] = $file_data;
 
     $return_data['viewable_model'] = false;
-    if(!empty($file_data) && $return_data['model_purpose'] == 'delivery_web') {
+    //@todo Hack with old_model_purpose until ingest is sorted out.
+    if(!empty($file_data) &&
+      ($return_data['model_purpose'] == 'delivery_web'
+        || $return_data['old_model_purpose'] == 'delivery_web'
+      )
+    ) {
       $file = $file_data;
       $fn = $file['file_name'];
       $fn_exploded = explode('.', $fn);
