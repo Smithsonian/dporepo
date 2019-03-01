@@ -1606,7 +1606,12 @@ class RepoImport implements RepoImportInterface {
                 $model_purpose = str_replace('_model', '', $file_name_parts[$key1]);
                 // Set values for the model_purpose and model_purpose_id fields.
                 $data->csv[$key]->model_purpose = $model_purpose;
-                $data->csv[$key]->model_purpose_id = (int)$model_purpose_lookup_options[$model_purpose];
+                if(isset($model_purpose_lookup_options[$model_purpose])) {
+                  $data->csv[$key]->model_purpose_id = (int)$model_purpose_lookup_options[$model_purpose];
+                }
+                else {
+                  //@todo log a warning
+                }
               }
             }
           }
