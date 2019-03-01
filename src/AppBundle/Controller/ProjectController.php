@@ -58,7 +58,8 @@ class ProjectController extends Controller
 
         return $this->render('projects/browse_projects.html.twig', array(
             'page_title' => 'Browse Projects',
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn)
+            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+            'current_tab' => 'workspace'
         ));
     }
 
