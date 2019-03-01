@@ -63,10 +63,10 @@ class FileHelperService
       $paths['verbose']['application_directory'] = str_replace(DIRECTORY_SEPARATOR . "web", "", $_SERVER["DOCUMENT_ROOT"]);
     }
     else {
-      // Document root is specified to the web server.
+      // Document root is specific to the web server.
       // When this is run from the command line we don't get a document root.
-      $paths['verbose']['application_directory'] = getenv('PWD');
-      $paths['verbose']['application_web_directory'] = getenv('PWD') . DIRECTORY_SEPARATOR . 'web' . DIRECTORY_SEPARATOR;
+      $paths['verbose']['application_directory'] = getcwd();
+      $paths['verbose']['application_web_directory'] = $paths['verbose']['application_directory'] . DIRECTORY_SEPARATOR . 'web' . DIRECTORY_SEPARATOR;
     }
 
     $paths['verbose']['application_uploads_relative_path'] = $this->uploads_directory;
@@ -245,7 +245,8 @@ class FileHelperService
               $path_type = "remote_storage_path";
               $paths['alternate_paths']['remote_storage_path'] = $file_path_compare;
               $paths['alternate_paths']['local_uploads_relative_path'] = 'web' . $file_path;
-              $paths['alternate_paths']['local_uploads_directory'] = $paths['verbose']['application_web_directory'] . $file_path;
+              $paths['alternate_paths']['local_uploads_directory'] =
+                str_replace(DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR, $paths['verbose']['application_web_directory'] . $file_path);
             }
           }
         }
