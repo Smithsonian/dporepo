@@ -259,27 +259,40 @@ class RepoStorageHybrid implements RepoStorage {
 
   public function getDatasetFiles($params){
 
-    if(!isset($params['capture_dataset_id'])) {
+    $capture_dataset_id = isset($params['capture_dataset_id']) ? $params['capture_dataset_id'] : NULL;
+    $capture_data_element_id = isset($params['capture_data_element_id']) ? $params['capture_data_element_id'] : NULL;
+
+    if(NULL == $capture_data_element_id && NULL == $capture_dataset_id) {
       return array();
     }
-
-    $capture_dataset_id = $params['capture_dataset_id'];
-    $limit = $params['limit'];
+    $limit = isset($params['limit']) ? $params['limit'] : 100;
 
     $sql = "SELECT file_upload.file_path, file_upload.date_created, file_upload.file_type,
-      file_upload.file_name, capture_dataset.capture_dataset_id 
+      file_upload.file_name, capture_dataset.capture_dataset_id, capture_data_element.capture_data_element_id
       FROM file_upload 
       JOIN capture_data_file_derivative ON file_upload.file_upload_id = capture_data_file_derivative.file_upload_id      
       JOIN capture_data_file ON capture_data_file_derivative.capture_data_file_id = capture_data_file.capture_data_file_id      
       JOIN capture_data_element ON capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id 
       JOIN capture_dataset ON capture_data_element.capture_dataset_id = capture_dataset.capture_dataset_id      
-      WHERE capture_dataset.capture_dataset_id = :capture_dataset_id 
-      AND capture_data_file_derivative.derivative_file_type='thumb'
-      AND (file_upload.file_type = 'jpg' or file_upload.file_type = 'tif') 
-      LIMIT $limit";
+      WHERE capture_data_file_derivative.derivative_file_type='thumb'
+      AND (file_upload.file_type = 'jpg' or file_upload.file_type = 'tif') ";
+
+      if(NULL !== $capture_dataset_id) {
+        $sql .= " AND capture_dataset.capture_dataset_id = :capture_dataset_id ";
+      }
+      elseif(NULL !== $capture_data_element_id) {
+        $sql .= " AND capture_data_element.capture_data_element_id = :capture_data_element_id ";
+      }
+
+      $sql.= " LIMIT $limit";
 
     $statement = $this->connection->prepare($sql);
-    $statement->bindValue(':capture_dataset_id', $capture_dataset_id, PDO::PARAM_INT);
+    if(NULL !== $capture_dataset_id) {
+      $statement->bindValue(':capture_dataset_id', $capture_dataset_id, PDO::PARAM_INT);
+    }
+    else {
+      $statement->bindValue(':capture_dataset_id', $capture_dataset_id, PDO::PARAM_INT);
+    }
     $statement->execute();
     $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
 
@@ -3342,6 +3355,23 @@ class RepoStorageHybrid implements RepoStorage {
 
     $data = $this->getRecordsDatatable($query_params);
 
+
+    if (is_array($data) && isset($data['aaData'])) {
+      foreach($data['aaData'] as $k => $row) {
+        $id = $row['capture_dataset_id'];
+
+        $dataset_file = $this->execute('getDatasetFiles',
+          array(
+            'capture_dataset_id' => $id,
+            'limit' => 1)
+        );
+        $data['aaData'][$k]['file_path'] = '';
+        if (isset($dataset_file['file_path'])) {
+          $data['aaData'][$k]['file_path'] = $dataset_file['file_path'];
+        }
+      }
+    }
+
     return $data;
 
   }
@@ -3378,15 +3408,7 @@ class RepoStorageHybrid implements RepoStorage {
                   GROUP BY capture_data_file.capture_data_element_id
               )
               as metadata 
-             , ( SELECT file_path from file_upload 
-                LEFT JOIN capture_data_file on file_upload.file_upload_id = capture_data_file.file_upload_id    
-                WHERE capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
-                AND file_path is not NULL
-                AND file_type='jpg'              
-                LIMIT 1
-            )
-            as file_path
-            , ( SELECT GROUP_CONCAT(variant_type) from capture_data_file 
+             , ( SELECT GROUP_CONCAT(variant_type) from capture_data_file 
                 WHERE capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
             )
             as variant_types
@@ -3434,6 +3456,21 @@ class RepoStorageHybrid implements RepoStorage {
 
       $statement->execute();
       $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      if (is_array($data) && isset($data['aaData'])) {
+        foreach($data['aaData'] as $k => $row) {
+          $id = $row['capture_data_element_id'];
+          $dataset_file = $this->execute('getDatasetFiles',
+            array(
+              'capture_data_element_id' => $id,
+              'limit' => 1)
+          );
+          $data['aaData'][$k]['file_path'] = '';
+          if (isset($dataset_file['file_path'])) {
+            $data['aaData'][$k]['file_path'] = $dataset_file['file_path'];
+          }
+        }
+      }
 
       $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
       $statement->execute();
