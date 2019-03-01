@@ -291,7 +291,7 @@ class RepoStorageHybrid implements RepoStorage {
       $statement->bindValue(':capture_dataset_id', $capture_dataset_id, PDO::PARAM_INT);
     }
     else {
-      $statement->bindValue(':capture_dataset_id', $capture_dataset_id, PDO::PARAM_INT);
+      $statement->bindValue(':capture_data_element_id', $capture_data_element_id, PDO::PARAM_INT);
     }
     $statement->execute();
     $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
@@ -3358,7 +3358,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     if (is_array($data) && isset($data['aaData'])) {
       foreach($data['aaData'] as $k => $row) {
-        $id = $row['capture_dataset_id'];
+        $id = $row['manage'];
 
         $dataset_file = $this->getDatasetFiles(
           array(
