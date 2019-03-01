@@ -3360,7 +3360,7 @@ class RepoStorageHybrid implements RepoStorage {
       foreach($data['aaData'] as $k => $row) {
         $id = $row['capture_dataset_id'];
 
-        $dataset_file = $this->execute('getDatasetFiles',
+        $dataset_file = $this->getDatasetFiles(
           array(
             'capture_dataset_id' => $id,
             'limit' => 1)
@@ -3460,7 +3460,7 @@ class RepoStorageHybrid implements RepoStorage {
       if (is_array($data) && isset($data['aaData'])) {
         foreach($data['aaData'] as $k => $row) {
           $id = $row['capture_data_element_id'];
-          $dataset_file = $this->execute('getDatasetFiles',
+          $dataset_file = $this->getDatasetFiles(
             array(
               'capture_data_element_id' => $id,
               'limit' => 1)
