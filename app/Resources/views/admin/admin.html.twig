@@ -35,7 +35,7 @@
           <tr>
             <th class="text-center">Project</th>
             <th class="text-center">Stakeholder</th>
-            <th class="text-center">Subjects Count</th>
+            <th class="text-center">Items Count</th>
             <th class="text-center">Created</th>
             <th class="text-center">Modified</th>
           </tr>
@@ -141,7 +141,7 @@
         "columns": [
           { "data": "project_name" },
           { "data": "stakeholder_label" },
-          { "data": "subjects_count" },
+          { "data": "items_count" },
           { "data": "date_created" },
           { "data": "last_modified" }
         ],
@@ -171,11 +171,11 @@
        });
 
       // Send to details page when clicked.
-      var projects_details_page = "/admin/projects/subjects/";
+      var projects_details_page = "/admin/project/view/";
       $('#browse_recent_projects tbody').on('click','td',function(event){
         if(!$(this).hasClass("manage_column")){
-          var project_repository_id = $(this).closest("tr").attr('id');
-          window.location.href = projects_details_page + project_repository_id;
+          var project_id = $(this).closest("tr").attr('id');
+          window.location.href = projects_details_page + project_id;
         }
       });
 
@@ -216,11 +216,11 @@
             // .addClass("manage_column");
 
             // Send to details page when clicked.
-            var subjects_details_page = "/admin/projects/items/";
+            var subjects_details_page = "/admin/subject/view/";
             $('#browse_recent_subjects tbody').on('click','td',function(event){
               if(!$(this).hasClass("manage_column")){
-                var subject_repository_id = $(this).closest("tr").attr('id');
-                window.location.href = subjects_details_page + aData['project_repository_id'] + '/' + subject_repository_id;
+                var subject_id = $(this).closest("tr").attr('id');
+                window.location.href = subjects_details_page + subject_id;
               }
             });
 

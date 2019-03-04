@@ -319,10 +319,10 @@ uploadsDropzone.on("sending", function(file, xhr, formData) {
 uploadsDropzone.on("queuecomplete", function(file) {
 
   let jobId = $('.prevalidate-trigger').attr('data-jobid'),
-      // For the Simple Ingest, the value is stored in $('body').data('project_repository_id')
+      // For the Simple Ingest, the value is stored in $('body').data('project_id')
       // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker').attr('data-project-id')
-      parentProjectId = $('body').data('project_repository_id')
-          ? $('body').data('project_repository_id')
+      parentProjectId = $('body').data('project_id')
+          ? $('body').data('project_id')
           : $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
       parentRecordId = parentRecordChecker(),
       parentRecordType = getRecordType();
@@ -424,10 +424,10 @@ document.querySelector("#actions .cancel-upload").onclick = function() {
       case "yes":
         // Set the status of the job from 'uploading' to 'failed'.
         let jobId = $('.prevalidate-trigger').attr('data-jobid'),
-            // For the Simple Ingest, the value is stored in $('body').data('project_repository_id')
+            // For the Simple Ingest, the value is stored in $('body').data('project_id')
             // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker').attr('data-project-id')
-            parentProjectId = $('body').data('project_repository_id')
-                ? $('body').data('project_repository_id')
+            parentProjectId = $('body').data('project_id')
+                ? $('body').data('project_id')
                 : $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
             parentRecordId = parentRecordChecker(),
             parentRecordType = getRecordType();
@@ -632,8 +632,15 @@ function preValidateCsvBagged() {
     }
   }, 2000);
 
-  // Hide the progress modal.
+  // Remove the temporary directory + hide the progress modal.
   setTimeout(function() {
+    // Remove the temporary directory.
+    $.ajax({
+      'type': 'GET'
+      ,'dataType': 'html'
+      ,'url': '/admin/remove_temporary_directory/' + $('.prevalidate-trigger').attr('data-jobid')
+    });
+    // Hide the progress modal.
     $('#uploading-modal').modal('hide');
   }, 3000);
 }
@@ -724,10 +731,10 @@ function startUpload(restart, dropzoneFilesCopy) {
 
 function parentRecordChecker() {
   // Parent record ID value.
-  // For the Simple Ingest, the value is stored in $('body').data('item_repository_id')
+  // For the Simple Ingest, the value is stored in $('body').data('item_id')
   // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker')
-  let parentRecordId = $('body').data('item_repository_id')
-      ? $('body').data('item_repository_id')
+  let parentRecordId = $('body').data('item_id')
+      ? $('body').data('item_id')
       : $('#uploads_parent_picker_form_parent_picker').val();
   // If there is no parent ID selected, then display an alert.
   if(!parentRecordId.length) {
@@ -780,9 +787,9 @@ function queuedFilesChecker(files) {
 
   if((filenames.indexOf('manifest-sha1.txt') === -1) && (filenames.indexOf('manifest-md5.txt') === -1)) {
     var span = document.createElement('span');
-    span.innerHTML = 'Please add bagged (via BagIt) capture datasets and/or model files to the upload queue.';
+    span.innerHTML = 'Could not find the bagit file containing a hash of the manifest. This file is needed to validate the bag. Looked for manifest-md5.txt and manifest-sha1.txt. Please ensure that the bag includes one of these files.';
     swal({
-      title: 'File bag not found',
+      title: 'Bag manifest validation file not found',
       content: span,
       icon: "warning",
     });
@@ -1021,10 +1028,10 @@ function checkStatus() {
 
           // Set the status of the job from 'uploading' to 'failed'.
           let jobId = $('.prevalidate-trigger').attr('data-jobid'),
-              // For the Simple Ingest, the value is stored in $('body').data('project_repository_id')
+              // For the Simple Ingest, the value is stored in $('body').data('project_id')
               // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker').attr('data-project-id')
-              parentProjectId = $('body').data('project_repository_id')
-                  ? $('body').data('project_repository_id')
+              parentProjectId = $('body').data('project_id')
+                  ? $('body').data('project_id')
                   : $('#uploads_parent_picker_form_parent_picker').attr('data-project-id'),
               parentRecordId = parentRecordChecker(),
               parentRecordType = getRecordType();

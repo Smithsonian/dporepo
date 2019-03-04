@@ -1,0 +1,60 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block content %}
+
+    <ol class="breadcrumb">
+        <li><a href="/admin">Dashboard</a></li>
+        <li>Test Workflows</li>
+    </ol>
+
+    <div class="row">
+        <div class="col-sm-12 col-md-12 child-data">
+            <div class="panel panel-default">
+                <div class="panel-body">
+
+                    <h2>Workflows</h2>
+
+                    <p><a href="/admin/workflow/123/test_v1/launch">Create new workflow</a></p>
+                    <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
+                        <thead>
+                        <tr>
+                            <th class="text-center">Workflow ID</th>
+                            <th class="text-center">Recipe Name</th>
+                            <th class="text-center">Ingest Job UUID</th>
+                            <th class="text-center">Step ID</th>
+                            <th class="text-center">Step Type</th>
+                            <th class="text-center">Step State</th>
+                            <th class="text-center">Processing Job ID</th>
+                            <th class="text-center">Date Created</th>
+                        </tr>
+                        </thead>
+
+                        {% for w in workflows %}
+                            <tr>
+                                <td><a href="/admin/workflow_test/{{ w.workflow_id }}">Test workflow</a></td>
+                                <td>{{ w.workflow_recipe_name }}</td>
+                                <td>{{ w.ingest_job_uuid }}</td>
+                                <td>{{ w.step_id }}</td>
+                                <td>{{ w.step_type }}</td>
+                                <td>{{ w.step_state }}</td>
+                                <td>{{ w.processing_job_id }}</td>
+                                <td>{{ w.date_created }}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- /row -->
+{% endblock %}
+{% block js_bottom %}
+    {{ parent() }}
+{% endblock %}

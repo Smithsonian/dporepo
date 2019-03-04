@@ -1,3 +1,2 @@
-import_row_id,import_parent_id,date_of_creation,model_file_type,derived_from,creation_method,units,model_purpose,point_count,model_maps,file_path,file_checksum
-1,1,2018-05-22 00:00:00,.ply,22,scan-to-mesh,inch,master,123456,22,/testupload10/data/1/model.ply,
-2,1,2018-06-01 00:00:00,.obj,44,scan-to-mesh,inch,delivery web,789102,33,/testupload10/data/2/model.obj,
+import_row_id,import_parent_id,date_of_creation,derived_from,creation_method,units,model_purpose,file_path
+1,1,2015-12-04,1;2;3;4;5,scan-to-mesh,millimeter,master,f1978_40-master/f1978_40-master.obj

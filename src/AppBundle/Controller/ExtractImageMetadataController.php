@@ -105,7 +105,7 @@ class ExtractImageMetadataController extends Controller
    * @param array  $params  Parameters. For now, only 'localpath' is being sent.
    * @return array
    */
-  public function extract_metadata($params = array())
+  public function extractMetadata($params = array())
   {
 
     $data = array();
@@ -116,13 +116,19 @@ class ExtractImageMetadataController extends Controller
     if (!$localpath) throw $this->createNotFoundException('The Job directory doesn\'t exist - extract_metadata()');
 
     // Get the job ID, so errors can be logged to the database.
+    //@todo- on windows $localpath is being stored as C:\xampp\htdocs\dporepo_dev\web/uploads/repository/[UUID]
+    // Temp hack for this
     $dir_array = explode(DIRECTORY_SEPARATOR, $localpath);
-    $uuid = array_pop($dir_array);
+    //$uuid = array_pop($dir_array);
+    $uuid_path = array_pop($dir_array);
+    $uuid_path_array = explode("/", $uuid_path);
+    $uuid = array_pop($uuid_path_array);
+
     $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
 
     // Search for the data directory.
     $finder = new Finder();
-    $finder->path('data')->name('/\.jpg|\.tif$/');
+    $finder->path('data')->name('/\.jpg|\.JPG|\.tif|\.TIF$/');
     $finder->in($localpath);
 
     $i = 0;
@@ -140,7 +146,7 @@ class ExtractImageMetadataController extends Controller
         }
 
         // Validate the mime type.
-        $mime_type = $this->get_mime_type($file->getPathname());
+        $mime_type = $this->getMimeType($file->getPathname());
 
         // Check if this is a valid image according to our hard-coded arrays above.
         if(array_key_exists($mime_type, $this->valid_image_mimetypes)) {
@@ -148,7 +154,7 @@ class ExtractImageMetadataController extends Controller
           // $this->u->dumper('array_key_exists($mime_type, $this->valid_image_mimetypes)');
 
           // Set metadata, warnings or errors.
-          $data[$i] = $this->get_metadata_from_image($file->getPathname());
+          $data[$i] = $this->getMetadataFromImage($file->getPathname());
 
           // Write the metadata for this file.
           if(array_key_exists('metadata', $data[$i])) {
@@ -187,7 +193,7 @@ class ExtractImageMetadataController extends Controller
             if (empty($file_data)) $data[$i]['errors'][] = 'Extract Image Metadata - file not found in the database: ' . $file_path . DIRECTORY_SEPARATOR . $file->getBasename();
 
             // If the record is found, save the metadata to the record.
-            if (!empty($file_data) && (count($file_data)) === 1) {
+            if (!empty($file_data) && (count($file_data) === 1)) {
               $id = $this->repo_storage_controller->execute('saveRecord', array(
                 'base_table' => 'file_upload',
                 'record_id' => $file_data[0]['file_upload_id'],
@@ -240,7 +246,7 @@ class ExtractImageMetadataController extends Controller
    * @param string  $filename  The file name
    * @return string
    */
-  private function get_mime_type($filename = null) {
+  private function getMimeType($filename = null) {
 
     if (!empty($filename)) {
       $buffer = file_get_contents($filename);
@@ -250,7 +256,7 @@ class ExtractImageMetadataController extends Controller
 
   }
 
-  private function get_metadata_from_image($filename = null) {
+  private function getMetadataFromImage($filename = null) {
 
     $image_type = exif_imagetype($filename);
     if(false === $image_type) {

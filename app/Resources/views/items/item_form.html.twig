@@ -14,12 +14,23 @@
 
     <div class="row">
       <div class="col-sm-6 col-md-6">
+        {{ form_row(form.project_id) }}
+        {{ form_row(form.subject_id) }}
+        {{ form_row(form.subject_picker) }}
+        {{ form_row(form.item_description) }}
         {{ form_row(form.item_guid) }}
         {{ form_row(form.local_item_id) }}
+        {{ form_row(form.item_type) }}
       </div>
       <div class="col-sm-6 col-md-6">
-        {{ form_row(form.item_type) }}
-        {{ form_row(form.item_description) }}
+        <fieldset>
+          <legend>API Delivery Integration</legend>
+          {{ form_row(form.api_publication_picker) }}
+          {{ form_row(form.model_purpose_picker) }}
+          <h4>API Model Resolution Restrictions</h4>
+          {{ form_row(form.api_access_model_face_count_id) }}
+          {{ form_row(form.api_access_uv_map_size_id) }}
+        </fieldset>
       </div>
     </div>
 

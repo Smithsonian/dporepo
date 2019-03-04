@@ -48,9 +48,9 @@ class ValidateCommand extends Command
       ->setHelp('This command will 1) validate a BagIt "bag", which consists of a "payload" (the arbitrary content) and "tags", which are metadata files intended to document the storage and transfer of the "bag", and 2) validate the integrity of uploaded files.')
       // Add arguments...
       ->addArgument('uuid', InputArgument::OPTIONAL, 'Job UUID.')
-      ->addArgument('parent_project_id', InputArgument::OPTIONAL, 'parent_project_id.')
-      ->addArgument('parent_record_id', InputArgument::OPTIONAL, 'parent_record_id.')
-      ->addArgument('parent_record_type', InputArgument::OPTIONAL, 'parent_record_type.')
+      ->addArgument('project_id', InputArgument::OPTIONAL, 'project_id.')
+      ->addArgument('record_id', InputArgument::OPTIONAL, 'record_id.')
+      ->addArgument('record_type', InputArgument::OPTIONAL, 'record_type.')
       ->addArgument('localpath', InputArgument::OPTIONAL, 'The path to the directory to validate.');
   }
 
@@ -69,7 +69,7 @@ class ValidateCommand extends Command
       '<bg=green;options=bold>  == Validate Assets ==  </>',
       '<bg=green;options=bold>  =====================  </>',
       '',
-      'Command: ' . 'php bin/console app:validate-assets ' . $input->getArgument('uuid') . ' ' . $input->getArgument('parent_project_id') . ' ' . $input->getArgument('parent_record_id') . ' ' . $input->getArgument('parent_record_type') . "\n",
+      'Command: ' . 'php bin/console app:validate-assets ' . $input->getArgument('uuid') . ' ' . $input->getArgument('project_id') . ' ' . $input->getArgument('record_id') . ' ' . $input->getArgument('record_type') . "\n",
     ]);
 
     // First, check to see if the external storage is accessible (Drastic) - (if it's turned on in parameters.yml).
@@ -128,6 +128,8 @@ class ValidateCommand extends Command
 
       sleep(5);
 
+      //@todo fix path issues in RepoProcessingService- Windoze slash issues
+      //@here
       // Run the models validation.
       $command_models = $this->getApplication()->find('app:model-validate');
       $arguments_models = array(
@@ -139,6 +141,18 @@ class ValidateCommand extends Command
 
       sleep(5);
 
+      // Run the model generation processes.
+      $command_model_generate = $this->getApplication()->find('app:model-generate');
+      $arguments_model_generate = array(
+          'command' => 'app:model-generate',
+          'uuid' => $input->getArgument('uuid')
+      );
+      $input_model_generate = new ArrayInput($arguments_model_generate);
+      $return_model_generate = $command_model_generate->run($input_model_generate, $output);
+
+      sleep(5);
+      //@here
+
       // Outputs multiple lines to the console (adding "\n" at the end of each line).
       $output->writeln([
         '',
@@ -146,20 +160,20 @@ class ValidateCommand extends Command
         '',
         'Parameters: ' . "\n",
         'uuid: ' . $input->getArgument('uuid'),
-        'parent_project_id: ' . $input->getArgument('parent_project_id'),
-        'parent_record_id: ' . $input->getArgument('parent_record_id'),
-        'parent_record_type: ' . $input->getArgument('parent_record_type') . "\n"
+        'project_id: ' . $input->getArgument('project_id'),
+        'record_id: ' . $input->getArgument('record_id'),
+        'record_type: ' . $input->getArgument('record_type') . "\n"
       ]);
 
       // Run the metadata ingest.
       $params = array(
         'uuid' => $input->getArgument('uuid'),
-        'parent_project_id' => $input->getArgument('parent_project_id'),
-        'parent_record_id' => $input->getArgument('parent_record_id'),
-        'parent_record_type' => $input->getArgument('parent_record_type'),
+        'project_id' => $input->getArgument('project_id'),
+        'record_id' => $input->getArgument('record_id'),
+        'record_type' => $input->getArgument('record_type'),
       );
 
-      $import_results = $this->repo_import->import_csv($params);
+      $import_results = $this->repo_import->importCsv($params);
       
       // echo '<pre>';
       // var_dump($import_results);
@@ -168,8 +182,21 @@ class ValidateCommand extends Command
 
       if (isset($import_results['errors'])) {
         $output->writeln('<comment>Metadata ingest failed. Errors: ' . implode(', ', $import_results['errors']) . '</comment>');
-      } else {
+      }
+      else {
         $output->writeln('<comment>Metadata ingest complete.</comment>');
+
+        // Run the command to generate image thumbs and mid-size images for all capture datasets.
+        $command_derivatives = $this->getApplication()->find('app:derivatives-generate');
+        $arguments_derivatives = array(
+          'command' => 'app:derivatives-generate',
+          'uuid' => $input->getArgument('uuid')
+        );
+        $input_derivatives = new ArrayInput($arguments_derivatives);
+        $return_derivatives = $command_derivatives->run($input_derivatives, $output);
+
+        sleep(5);
+
 
         // If the external file storage is turned on (in the parameters.yml config),
         // transfer files to the external file storage.

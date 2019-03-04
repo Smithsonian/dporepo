@@ -92,8 +92,13 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
     // If the job directory exists, proceed with validating images.
     if (is_dir($localpath)) {
       // Get the job ID, so errors can be logged to the database.
+      //@todo- on windows $localpath is being stored as C:\xampp\htdocs\dporepo_dev\web/uploads/repository/[UUID]
+      // Temp hack for this
       $dir_array = explode(DIRECTORY_SEPARATOR, $localpath);
-      $uuid = array_pop($dir_array);
+      //$uuid = array_pop($dir_array);
+      $uuid_path = array_pop($dir_array);
+      $uuid_path_array = explode("/", $uuid_path);
+      $uuid = array_pop($uuid_path_array);
       $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
 
       // Set an error if the job record doesn't exist.
@@ -197,7 +202,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
             }
 
             // Validate the mime type.
-            $mime_type = $this->get_mime_type($file->getPathname());
+            $mime_type = $this->getMimeType($file->getPathname());
 
             // $this->u->dumper($mime_type,0);
 
@@ -217,7 +222,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
           $data[$i]['file_name'] = strtolower($file->getFilename());
           $data[$i]['file_size'] = $file->getSize();
           $data[$i]['file_extension'] = strtolower($file->getExtension());
-          $data[$i]['file_mime_type'] = $this->get_mime_type($file->getPathname());
+          $data[$i]['file_mime_type'] = $this->getMimeType($file->getPathname());
 
           $i++;
         }
@@ -256,9 +261,9 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
       $unique_file_extensions = array_unique($all_file_extensions);
 
       // If there are more than 2 unique file types present, set an error.
-      if (count($unique_file_extensions) > 2) {
-        $return[]['errors'] = 'More than 2 file types detected';
-      }
+      // if (count($unique_file_extensions) > 2) {
+      //   $return[]['errors'] = 'More than 2 file types detected';
+      // }
 
       $image_pair_type = null;
       if (in_array('jpg', $all_file_extensions)) $image_pair_type = 'jpg';
@@ -323,7 +328,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
    * @param string  $filename  The file name
    * @return string
    */
-  public function get_mime_type($filename = null) {
+  public function getMimeType($filename = null) {
 
     if (!empty($filename)) {
       $buffer = file_get_contents($filename);

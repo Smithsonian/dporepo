@@ -16,7 +16,8 @@ use GUMP;
 use AppBundle\Utils\GumpParseErrors;
 use AppBundle\Utils\AppUtilities;
 
-use AppBundle\Controller\ProjectsController;
+use AppBundle\Controller\ProjectController;
+use AppBundle\Service\RepoUserAccess;
 
 class UnitStakeholderController extends Controller
 {
@@ -25,6 +26,7 @@ class UnitStakeholderController extends Controller
      */
     public $u;
     private $repo_storage_controller;
+    private $repo_user_access;
 
     /**
      * Constructor
@@ -35,10 +37,11 @@ class UnitStakeholderController extends Controller
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->repo_storage_controller = new RepoStorageHybridController($conn);
+        $this->repo_user_access = new RepoUserAccess($conn);
 
         // Table name and field names.
         $this->table_name = 'unit_stakeholder';
-        $this->id_field_name_raw = 'unit_stakeholder_repository_id';
+        $this->id_field_name_raw = 'unit_stakeholder_id';
         $this->id_field_name = 'unit_stakeholder.' . $this->id_field_name_raw;
         $this->label_field_name_raw = 'unit_stakeholder_label';
         $this->label_field_name = 'unit_stakeholder.' . $this->label_field_name_raw;
@@ -51,13 +54,10 @@ class UnitStakeholderController extends Controller
      */
     public function browse(Request $request)
     {
-        // Database tables are only created if not present.
-        
-        $ret = $this->repo_storage_controller->build('createTable', array('table_name' => $this->table_name));
-
-        return $this->render('resources/browse_unit_stakeholder.html.twig', array(
-            'page_title' => "Browse Unit/Stakeholder",
-        ));
+      return $this->render('resources/browse_unit_stakeholder.html.twig', array(
+        'page_title' => "Browse Unit/Stakeholder",
+        'current_tab' => 'resources'
+      ));
     }
 
     /**
@@ -70,7 +70,7 @@ class UnitStakeholderController extends Controller
      * @param   object  Request     Request object
      * @return  array|bool          The query result
      */
-    public function datatables_browse_unit_stakeholder(Request $request)
+    public function datatablesBrowseUnitStakeholder(Request $request)
     {
         $req = $request->request->all();
         $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
@@ -117,7 +117,7 @@ class UnitStakeholderController extends Controller
      * @param   object  Request       Request object
      * @return  array|bool            The query result
      */
-    function show_unit_stakeholder_form(Request $request, GumpParseErrors $gump_parse_errors, ProjectsController $projects, IsniController $isni)
+    function showUnitStakeholderForm(Request $request, GumpParseErrors $gump_parse_errors, ProjectController $projects, IsniController $isni)
     {
         $errors = false;
         $data = array();
@@ -133,7 +133,7 @@ class UnitStakeholderController extends Controller
         }
 
         // Get data from lookup tables.
-        $data['units_stakeholders'] = $projects->get_units_stakeholders();
+        $data['units_stakeholders'] = $projects->getUnitsStakeholders();
         if(!array_key_exists('isni_id', $data)) {
           $data['isni_id'] = NULL;
         }
@@ -158,14 +158,15 @@ class UnitStakeholderController extends Controller
         }
 
         if (!$errors && !empty($post)) {
-          $id = $this->insert_update($post, $id);
+          $id = $this->insertUpdate($post, $id);
             $this->addFlash('message', 'Unit/Stakeholder successfully updated.');
             return $this->redirectToRoute('unit_stakeholder_browse');
         } else {
             return $this->render('resources/unit_stakeholder_form.html.twig', array(
-                "page_title" => !empty($id) ? 'Manage Unit/Stakeholder: ' . $data['unit_stakeholder_label'] : 'Create Unit/Stakeholder'
-                ,"data" => $data
-                ,"errors" => $errors
+                "page_title" => !empty($id) ? 'Manage Unit/Stakeholder: ' . $data['unit_stakeholder_label'] : 'Create Unit/Stakeholder',
+                "data" => $data,
+                "errors" => $errors,
+              'current_tab' => 'resources'
             ));
         }
 
@@ -180,7 +181,7 @@ class UnitStakeholderController extends Controller
      * @param   int $id      The id value
      * @return  void
      */
-    public function insert_update($data, $id = false)
+    public function insertUpdate($data, $id = false)
     {
         // Query the isni_data table to see if there's an entry.
         $isni_data = $this->repo_storage_controller->execute('getIsniRecordById', array (
@@ -218,7 +219,7 @@ class UnitStakeholderController extends Controller
      * @param   object  $request  Request object
      * @return  void
      */
-    public function delete_multiple(Request $request)
+    public function deleteMultiple(Request $request)
     {
         $ids = $request->query->get('ids');
 

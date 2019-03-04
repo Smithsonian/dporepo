@@ -5,8 +5,8 @@
     <div class="row">
       <div class="col-sm-12 col-md-12">
         <div class="form-group">
-        {% if project_data is defined and project_data.project_repository_id is defined %}
-          <a href="/admin/projects/subjects/{{ project_data.project_repository_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
+        {% if project_data is defined and project_data.project_id is defined %}
+          <a href="/admin/project/view/{{ project_data.project_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
         {% else %}
           <a href="/admin/workspace/" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
         {% endif %}
@@ -19,6 +19,7 @@
     <div class="row">
       <div class="col-sm-6 col-md-6">
         {{ form_row(form.project_name) }}
+        {{ form_row(form.api_publication_picker) }}
         {{ form_row(form.stakeholder_guid) }}
         {{ form_row(form.stakeholder_label) }}
         {{ form_row(form.stakeholder_guid_picker) }}
@@ -54,7 +55,7 @@
         <div class="modal-content">
           <div class="modal-header">
             <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            <h4 class="modal-title" id="isniSearchLabel">Coose a Stakeholder</h4>
+            <h4 class="modal-title" id="isniSearchLabel">Choose a Stakeholder</h4>
           </div>
           <div class="modal-body">
 
@@ -96,7 +97,9 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-            <button type="button" class="btn btn-primary" id="save-changes">Save changes</button>
+            {% if user_can_edit %}
+                <button type="button" class="btn btn-primary" id="save-changes">Save changes</button>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -195,12 +198,12 @@
       });
 
       // Save the stakeholder data (populate the display area and hidden fields in the parent form).
-      $('#project_stakeholder_guid_picker').on('change', function(){
+      $('#project_form_stakeholder_guid_picker').on('change', function(){
         var stakeholderId = this.value;
         var stakeholderName = $( "#stakeholder_guid_picker" ).val();
 
-        $('#project_stakeholder_guid').val('');
-        $('#project_stakeholder_label').val(stakeholderName);
+        $('#project_form_stakeholder_guid').val('');
+        $('#project_form_stakeholder_label').val(stakeholderName);
 
         $('#stakeholder-display').empty().append(stakeholderName);
       });
@@ -229,8 +232,8 @@
 
         // Populate the display area and hidden fields in the parent form.
         if(isniValuePresent) {
-          $('#project_stakeholder_label').val(chosenIsniLabel);
-          $('#project_stakeholder_guid').val(chosenIsniGuid);
+          $('#project_form_stakeholder_label').val(chosenIsniLabel);
+          $('#project_form_stakeholder_guid').val(chosenIsniGuid);
           $('#stakeholder_guid_picker').val(chosenIsniGuid);
           $('#stakeholder-display').empty().append(displayText);
           $('#isniSearchModal').modal('hide');

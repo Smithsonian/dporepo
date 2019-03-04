@@ -5,7 +5,7 @@
   <div class="row">
     <div class="col-sm-12 col-md-12">
       <div class="alert alert-warning" role="alert">
-          TODO: Fix the back button - hardwire to go to the parent Capture Data Element - e.g. /admin/projects/capture_device/manage/31/2
+          TODO: Fix the back button - hardwire to go to the parent Capture Data Element - e.g. /admin/capture_device/view/2
       </div>
       <div class="form-group">
         <a href="{{ app.request.headers.get('referer')|default('/admin/workspace/') }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
@@ -17,6 +17,7 @@
 
     <div class="row">
       <div class="col-sm-6 col-md-6">
+        {{ form_row(form.capture_device_id) }}
         {{ form_row(form.serial_number) }}
         {{ form_row(form.capture_device_component_type) }}
         {{ form_row(form.manufacturer) }}

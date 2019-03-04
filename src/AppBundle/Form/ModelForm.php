@@ -18,7 +18,7 @@ class ModelForm extends AbstractType
         $data = (array)$options['data'];
 
         $builder
-            ->add('parent_capture_dataset_repository_id', HiddenType::class, array(
+            ->add('item_id', HiddenType::class, array(
                 'required' => true,
               ))
             ->add('model_guid', null, array(

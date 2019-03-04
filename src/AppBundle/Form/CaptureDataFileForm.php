@@ -17,7 +17,7 @@ class CaptureDataFileForm extends AbstractType
         $data = (array)$options['data'];
 
         $builder
-            ->add('parent_capture_data_element_repository_id', HiddenType::class, array(
+            ->add('capture_data_element_id', HiddenType::class, array(
                 'required' => true,
               ))
             ->add('capture_data_file_name', null, array(

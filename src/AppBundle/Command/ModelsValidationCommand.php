@@ -62,7 +62,7 @@ class ModelsValidationCommand extends ContainerAwareCommand
       $container = $this->getContainer();
       $flysystem = $container->get('oneup_flysystem.processing_filesystem');
       // Validate models.
-      $result = $this->model_validate->validate_models($input->getArgument('uuid'), $flysystem);
+      $result = $this->model_validate->validateModels($input->getArgument('uuid'), $flysystem);
     }
 
     // Output validation results.

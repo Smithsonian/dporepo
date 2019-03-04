@@ -68,6 +68,13 @@ class RepoFileTransfer implements RepoFileTransferInterface {
     $this->conn = $conn;
     $this->repoValidate = new RepoValidateData($conn);
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
+    // Model extensions.
+    $this->model_extensions = array(
+      'obj',
+      'ply',
+      // 'gltf',
+      'glb',
+    );
   }
 
   /**
@@ -102,7 +109,7 @@ class RepoFileTransfer implements RepoFileTransferInterface {
     // Get the job's data via job_uuid.
     $job_data = $this->repo_storage_controller->execute('getJobData', array($job_uuid));
     // Absolute external path.
-    $uuid = uniqid('3df_', true); // (append a unique ID to the file name)
+    $uuid = $this->u->createUuid(); // (append a unique ID to the file name)
     $path_external = $this->external_file_storage_path . '_checker/' . $uuid . '_robots.txt';
     // Local file to be written.
     $stream = fopen($this->project_directory . 'web/robots.txt', 'r+');
@@ -148,10 +155,9 @@ class RepoFileTransfer implements RepoFileTransferInterface {
    * @param $target_directory The directory which contains files to be transferred.
    * @param $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
-   * @param $conn The database connection.
    * @return mixed array containing success/fail value, and any messages.
    */
-  public function transferFiles($target_directory = null, $filesystem = null, $conn = null)
+  public function transferFiles($target_directory = null, $filesystem = null)
   {
     $data = array();
     $job_status = 'complete';
@@ -185,12 +191,26 @@ class RepoFileTransfer implements RepoFileTransferInterface {
           try {
             $stream = fopen($file->getPathname(), 'r+');
             $filesystem->writeStream($path_external, $stream);
+            // TODO: writeStream doesn't overwrite, but updateStream does overwrite, which is probably what we want for now?
+            // $filesystem->updateStream($path_external, $stream);
             // Before calling fclose on the resource, check if it’s still valid using is_resource.
             if (is_resource($stream)) fclose($stream);
+            // Log the file to metadata storage.
+            $this->logFileToMetadataStorage($file);
           }
           // Catch the error.
-          catch(\League\Flysystem\FileExistsException | \League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
+          catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
             $data[$i]['errors'][] = $e->getMessage();
+          }
+          catch(\League\Flysystem\FileExistsException $e) {
+
+            $stream = fopen($file->getPathname(), 'r+');
+            $filesystem->updateStream($path_external, $stream);
+            // Before calling fclose on the resource, check if it’s still valid using is_resource.
+            if (is_resource($stream)) fclose($stream);
+            // Log the file to metadata storage.
+            $this->logFileToMetadataStorage($file);
+
           }
 
           // Return some information about the file.
@@ -255,5 +275,125 @@ class RepoFileTransfer implements RepoFileTransferInterface {
     
     return $data;
   }
+
+  /**
+   * Log Files to Metadata Storage
+   *
+   * @param string $file The file object
+   * @return array
+   */
+  public function logFileToMetadataStorage($file = null)
+  {
+    $data = array();
+    $record_id = '';
+
+    // Get the job's UUID.
+    $job_directory = str_replace($this->project_directory . $this->uploads_directory, '', $file->getPathname());
+    $job_directory_parts = explode(DIRECTORY_SEPARATOR, $job_directory);
+    $job_uuid = $job_directory_parts[0];
+
+    // Job data.
+    $job_data = $this->repo_storage_controller->execute('getJobData', array($job_uuid));
+
+    $full_path = str_replace($this->project_directory, '', $file->getPathname());
+    $full_path = str_replace('web', '', $full_path);
+
+    // Query the metadata storage for the file to update the record, and avoid duplicates.
+    $existing_file = $this->repo_storage_controller->execute('getRecords', array(
+        'base_table' => 'file_upload',
+        'fields' => array(),
+        'limit' => 1,
+        'search_params' => array(
+          0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($full_path), 'comparison' => '='),
+        ),
+        'search_type' => 'AND',
+        'omit_active_field' => true,
+      )
+    );
+
+    if (!empty($existing_file)) {
+      $record_id = $existing_file[0]['file_upload_id'];
+    }
+
+    $this_id = $this->repo_storage_controller->execute('saveRecord', array(
+      'base_table' => 'file_upload',
+      'record_id' => $record_id,
+      'user_id' => $job_data['created_by_user_account_id'],
+      'values' => array(
+        'job_id' => $job_data['job_id'],
+        'parent_record_id' => $job_data['project_id'],
+        'parent_record_type' => 'project',
+        'file_name' => $file->getBasename(),
+        'file_path' => $full_path,
+        'file_size' => filesize($file->getPathname()),
+        'file_type' => strtolower($file->getExtension()), // $file->getMimeType()
+        'file_hash' => md5($file->getBasename()),
+      )
+    ));
+
+    // if (in_array($file->getExtension(), $this->model_extensions)) {
+    //   // $this->u->dumper($file->getExtension());
+    //   $model_id = $this->logModelAssets($file);
+    // }
+
+    return $data;
+  }
+
+  /**
+   * Log Model Assets
+   *
+   * NOTE: going to need to parse through the report generated by the processing service
+   * to get certain pieces of metadata we'll need for the metadata storage inserts.
+   * Most of the metadata will probably be in *-report.json and *-item.json.
+   * See RepoImport.php for an existing example - look for $finder->files()->name('*-web-hd-report.json');
+   *
+   * @param string $file The file object
+   * @return array
+   */
+  // public function logModelAssets($file = null)
+  // {
+  //   $data = array();
+  //   $record_id = '';
+
+  //   $full_path = str_replace($this->project_directory, '', $file->getPathname());
+  //   $full_path = str_replace('web', '', $full_path);
+
+  //   $this->u->dumper($full_path);
+
+  //   // // Query the metadata storage for the file to update the record, and avoid duplicates.
+  //   // $existing_file = $this->repo_storage_controller->execute('getRecords', array(
+  //   //     'base_table' => 'file_upload',
+  //   //     'fields' => array(),
+  //   //     'limit' => 1,
+  //   //     'search_params' => array(
+  //   //       0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($full_path), 'comparison' => '='),
+  //   //     ),
+  //   //     'search_type' => 'AND',
+  //   //     'omit_active_field' => true,
+  //   //   )
+  //   // );
+
+  //   // if (!empty($existing_file)) {
+  //   //   $record_id = $existing_file[0]['file_upload_id'];
+  //   // }
+
+  //   // $this_id = $this->repo_storage_controller->execute('saveRecord', array(
+  //   //   'base_table' => 'file_upload',
+  //   //   'record_id' => $record_id,
+  //   //   'user_id' => $job_data['created_by_user_account_id'],
+  //   //   'values' => array(
+  //   //     'job_id' => $job_data['job_id'],
+  //   //     'parent_record_id' => $job_data['project_id'],
+  //   //     'parent_record_type' => 'project',
+  //   //     'file_name' => $file->getBasename(),
+  //   //     'file_path' => $full_path,
+  //   //     'file_size' => filesize($file->getPathname()),
+  //   //     'file_type' => $file->getExtension(), // $file->getMimeType()
+  //   //     'file_hash' => md5($file->getBasename()),
+  //   //   )
+  //   // ));
+
+  //   return $data;
+  // }
 
 }

@@ -14,16 +14,12 @@ class CaptureDeviceForm extends AbstractType
     {
 
         $builder
-            ->add('parent_capture_data_element_repository_id', HiddenType::class, array(
+            ->add('capture_data_element_id', HiddenType::class, array(
                 'required' => true,
               ))
             ->add('calibration_file', null, array(
                 'label' => 'Calibration File',
                 'required' => true,
-              ))
-            ->add('capture_device_component_ids', null, array(
-                'label' => 'Capture Device Component IDs',
-                'required' => false,
               ))
             ->add('save', SubmitType::class, array(
                 'label' => 'Save Edits',

@@ -15,6 +15,8 @@ use Symfony\Component\HttpKernel\KernelInterface;
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
 
+use Symfony\Component\DependencyInjection\ContainerInterface;
+
 class FilesystemHelperController extends Controller
 {
   /**
@@ -47,15 +49,19 @@ class FilesystemHelperController extends Controller
    */
   private $external_file_storage_path;
 
+  protected $container;
+
   /**
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, Connection $conn)
+  public function __construct(ContainerInterface $container, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, Connection $conn)
   {
     // Usage: $this->u->dumper($variable);
     $this->u = new AppUtilities();
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
+
+    $this->container = $container;
 
     $this->kernel = $kernel;
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
@@ -75,7 +81,7 @@ class FilesystemHelperController extends Controller
    * @param object  $request  Request object
    * @return string
    */
-  public function get_directory_contents(Request $request) {
+  public function getDirectoryContents(Request $request) {
 
     $data = $job_data = $parent_job_data = [];
     $data_directory_path = '';
@@ -103,13 +109,15 @@ class FilesystemHelperController extends Controller
         )
       );
 
-      $parent_job_data = $this->repo_storage_controller->execute('getRecord', array(
-          'base_table' => 'job',
-          'id_field' => 'job_id',
-          'id_value' => $job_data[0]['job_id'],
-          'omit_active_field' => true,
-        )
-      );
+      if (!empty($job_data)) {
+        $parent_job_data = $this->repo_storage_controller->execute('getRecord', array(
+            'base_table' => 'job',
+            'id_field' => 'job_id',
+            'id_value' => $job_data[0]['job_id'],
+            'omit_active_field' => true,
+          )
+        );
+      }
     }
 
     // Overwrite the $job_id if pulling data from the 'job_import_record' table.
@@ -206,9 +214,31 @@ class FilesystemHelperController extends Controller
    * @param object  $request  Request object
    * @return string
    */
-  public function get_file(Request $request) {
+  public function getFile(Request $request) {
 
     $path = !empty($request->get('path')) ? $request->get('path') : '';
+
+    $path = str_replace("\\", "/", $path);
+
+    // If the external storage directory isn't in the path, try to set the right path.
+    if(strpos($path, $this->external_file_storage_path) !== 0) {
+
+      $uploads_dir = str_replace("\\", "/", $this->uploads_directory);
+      // Remove the uploads directory if it exists.
+      if(strpos($path, str_replace("web", "", $uploads_dir)) !== false) {
+        if(strpos($path, 'web') !== 0) {
+          $path = 'web' . $path;
+        }
+        $path = str_replace("\\", "/",  $path);
+        $path = str_replace(str_replace("\\", "/",  $uploads_dir), '', $path);
+      }
+      $path = str_replace("\\", "/", $this->external_file_storage_path . $path);
+      $path = str_replace("//", "/", $path);
+
+      // The complete path should now look like this:
+      // /3DRepo/uploads/1E155C38-DC69-E33B-4208-7757D5CDAA35/data/cc/camera/f1978_40-cc_j3a.JPG
+    }
+
     $file_path_array = explode('/', $path);
     $file_name = array_pop($file_path_array);
 
@@ -217,7 +247,7 @@ class FilesystemHelperController extends Controller
       $filesystem = $this->container->get('oneup_flysystem.assets_filesystem');
       $stream = $filesystem->readStream($path);
       $contents = stream_get_contents($stream);
-      // Before calling fclose on the resource, check if it’s still valid using is_resource.
+      // Before calling fclose on the resource, check if it's still valid using is_resource.
       if (is_resource($stream)) fclose($stream);
       // Return a response with a specific content
       $response = new Response($contents);
@@ -233,7 +263,7 @@ class FilesystemHelperController extends Controller
     }
     // Catch the error.
     catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
-      throw $this->createNotFoundException($e->getMessage());
+      throw $this->createNotFoundException($e->getMessage() . " (File Path: $path)");
     }
 
   }
@@ -253,6 +283,75 @@ class FilesystemHelperController extends Controller
     $e = floor(log($bytes, 1024));
 
     return round($bytes/pow(1024, $e), 2) . ' ' . $s[$e];
+  }
+
+  public function transferFile($source_file_fullpath, $destination_filename) {
+
+    if (!file_exists($source_file_fullpath)) {
+      return (array('errors' => array('Backup not copied to Drastic. Source backup file not found: ' . $source_file_fullpath)));
+    }
+    else {
+
+      // Write the file to Drastic.
+      try {
+        $flysystem = $this->container->get('oneup_flysystem.assets_filesystem');
+
+        // Absolute external path.
+        $utils = new AppUtilities();
+        $uuid = $utils->createUuid(); // (append a unique ID to the file name)
+        $path_external = $this->external_file_storage_path . '_checker/' . $uuid . '_robots.txt';
+        // Local file to be written.
+        $stream = fopen($this->project_directory . 'web/robots.txt', 'r+');
+
+        // Write the file.
+        try {
+          $result = $flysystem->writeStream($path_external, $stream);
+          // Before calling fclose($stream) on the resource, check if it’s still valid using is_resource.
+          if (is_resource($stream)) fclose($stream);
+          // Remove the uploaded test file.
+          if ($result) $flysystem->delete($path_external);
+        }
+          // Catch the error.
+        catch(\Sabre\HTTP\ClientException $e) {
+          return(
+          array(
+            'result' => 'fail',
+            'errors' => array('External Storage Error - ' . $e->getMessage()
+            )
+          )
+          );
+        }
+
+        if($result) {
+          if(strpos($destination_filename, '/mysql_backups') === false) {
+            $destination_filename = '/mysql_backups/' . $destination_filename;
+          }
+          $stream = fopen($source_file_fullpath, 'r+');
+          $flysystem->writeStream($destination_filename, $stream);
+
+          // Before calling fclose on the resource, check if it’s still valid using is_resource.
+          if (is_resource($stream)) {
+            fclose($stream);
+          }
+        }
+      } // Catch the error.
+      catch (Exception $e) {
+        return(
+        array(
+          'result' => 'fail',
+          'errors' => array($e->getMessage()
+          )
+        )
+        );
+      }
+
+      $data = array(
+        'result' => 'success',
+        'destination_filename' => $destination_filename
+      );
+      return $data;
+    }
+
   }
 
 }

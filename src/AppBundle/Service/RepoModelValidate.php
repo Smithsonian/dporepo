@@ -97,37 +97,47 @@ class RepoModelValidate implements RepoModelValidateInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function validate_models($uuid = null, $filesystem)
+  public function validateModels($uuid = null, $filesystem)
   {
 
     $data = array();
-    $job_status = 'metadata ingest in progress';
+    $job_status = 'model processing in progress';
+    $job_failed_message = 'The job has failed. Exiting model validation process.';
 
     // Absolute local path.
     $path = $this->project_directory . $this->uploads_directory . $uuid;
     // Job data.
-    $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid, 'validate_models'));
+    $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid, 'validateModels'));
 
     // Throw an error if the job record doesn't exist.
     if (empty($job_data)) {
-      $return['errors'][] = 'The Job record doesn\'t exist - validate_models() - ' . $uuid;
+      $return['errors'][] = 'The Job record doesn\'t exist - validateModels() - ' . $uuid;
       return $return;
     }
 
     // Don't perform the model validation if the job_status has been set to 'failed'.
     if ($job_data['job_status'] === 'failed') {
-      $return['errors'][] = 'The job has failed. Exiting model validation process.';
+      $return['errors'][] = $job_failed_message;
       return $return;
     }
 
     if (!is_dir($path)) {
-      $data[0]['errors'][] = 'Target directory not found - ' . $path;
+      $return['errors'][] = 'Target directory not found - ' . $path;
+      return $return;
     }
 
     if (is_dir($path)) {
 
       // Create a new inspect-mesh job and run.
-      $processing_job = $this->run_validate_models($path, $job_data, $filesystem);
+      $processing_job = $this->runValidateModels($path, $job_data, $filesystem);
+
+      // Check the job's status to insure that the job_status hasn't been set to 'failed'.
+      $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid, 'generateModelAssets'));
+      // If the job status has been set to 'failed', return with the error message.
+      if ($job_data['job_status'] === 'failed') {
+        $return['errors'][] = $job_failed_message;
+        return $return;
+      }
 
       // Continue only if job_ids are returned.
       if (!empty($processing_job) && !empty($processing_job['job_ids'])) {
@@ -168,7 +178,7 @@ class RepoModelValidate implements RepoModelValidateInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function run_validate_models($path = null, $job_data = array(), $filesystem) {
+  public function runValidateModels($path = null, $job_data = array(), $filesystem) {
 
     $data = array();
 
@@ -185,7 +195,7 @@ class RepoModelValidate implements RepoModelValidateInterface {
         if ($file->isFile()) {
 
           // Get the ID of the recipe, so it can be passed to processing service's job creation endpoint (post_job).
-          $recipe = $this->processing->get_recipe_by_name('inspect-mesh');
+          $recipe = $this->processing->getRecipeByName('inspect-mesh');
 
           // Error handling
           if (isset($recipe['error']) && !empty($recipe['error'])) $data[$i]['errors'][] = $recipe['error'];
@@ -198,7 +208,7 @@ class RepoModelValidate implements RepoModelValidateInterface {
             $params = array(
               'meshFile' => $file->getFilename()
             );
-            $result = $this->processing->post_job($recipe['id'], $job_name, $params);
+            $result = $this->processing->postJob($recipe['id'], $job_name, $params);
 
             // Error handling
             if ($result['httpcode'] !== 201) $data[$i]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
@@ -206,7 +216,7 @@ class RepoModelValidate implements RepoModelValidateInterface {
             if ($result['httpcode'] === 201) {
 
               // Get the job data.
-              $job = $this->processing->get_job_by_name($job_name);
+              $job = $this->processing->getJobByName($job_name);
 
               // Error handling
               if (isset($job['error']) && !empty($job['error'])) $data[$i]['errors'][] = $job['error'];
@@ -217,6 +227,7 @@ class RepoModelValidate implements RepoModelValidateInterface {
                   'base_table' => 'processing_job',
                   'user_id' => $this->user_id,
                   'values' => array(
+                    'ingest_job_uuid' => $job_data['uuid'],
                     'processing_service_job_id' => $job['id'],
                     'recipe' =>  $job['recipe']['name'],
                     'job_json' => json_encode($job),
@@ -244,7 +255,7 @@ class RepoModelValidate implements RepoModelValidateInterface {
                 if (is_resource($stream)) fclose($stream);
 
                 // Now that the file has been transferred, go ahead and run the job.
-                $result = $this->processing->run_job($job['id']);
+                $result = $this->processing->runJob($job['id']);
 
                 // Error handling
                 if ($result['httpcode'] !== 202) $data[$i]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
@@ -287,17 +298,17 @@ class RepoModelValidate implements RepoModelValidateInterface {
 ////////////////
 
 // $this->u->dumper($uuid);
-// $result = $this->processing->get_recipes(); // good
+// $result = $this->processing->getRecipes(); // good
 // Empty array when a job is created.
-// post_job($recipe_id, $job_name, $file_name)
-// $result = $this->processing->post_job('ee77ee05-d832-4729-9914-18a96939f205', 'Gor test: ' . str_replace('+00:00', 'Z', gmdate('c', strtotime('now'))), 'model.ply');
+// postJob($recipe_id, $job_name, $file_name)
+// $result = $this->processing->postJob('ee77ee05-d832-4729-9914-18a96939f205', 'Gor test: ' . str_replace('+00:00', 'Z', gmdate('c', strtotime('now'))), 'model.ply');
 
-// $result = $this->processing->get_job($job_id); // good
-// $result = $this->processing->run_job($job_id);
+// $result = $this->processing->getJob($job_id); // good
+// $result = $this->processing->runJob($job_id);
 
-// $result = $this->processing->cancel_job($job_id);
-// $result = $this->processing->delete_job($job_id);
-// $result = $this->processing->get_jobs(); // good
+// $result = $this->processing->cancelJob($job_id);
+// $result = $this->processing->deleteJob($job_id);
+// $result = $this->processing->getJobs(); // good
 
 // $result = $this->processing->machine_state(); // good
 

@@ -38,7 +38,7 @@
     // Datepicker
     $(document).ready(function(){
 
-      var capture_dataset_repository_id =  "{{ dataset_data.capture_dataset_repository_id }}",
+      var capture_dataset_id =  "{{ dataset_data.capture_dataset_id }}",
           directory_path = "{{ dataset_data.directory_path }}";
 
       // Initialize jsTree.
@@ -48,7 +48,7 @@
           'state': { 'key': 'dpoJsTreeFiles' },
           'core': {
             'data': {
-              'url': '/admin/get_directory_contents/false?path=' + directory_path + '&record_id=' + capture_dataset_repository_id,
+              'url': '/admin/get_directory_contents/false?path=' + directory_path + '&record_id=' + capture_dataset_id,
               'data': function (node) {
                   return { 'id' : node.id };
               },
@@ -76,7 +76,7 @@
       });
 
       // Datepicker
-      var dateInput = $('input[name="dataset[date_of_capture]"]');
+      var dateInput = $('input[name="capture_dataset_form[date_of_capture]"]');
       var thisContainer = $('form.dataset_form').length>0 ? $('form.dataset_form').parent() : 'body';
       var options = {
         format: 'yyyy-mm-dd 00:00:00',

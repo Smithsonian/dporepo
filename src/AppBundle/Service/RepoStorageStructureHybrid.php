@@ -2,14 +2,42 @@
 
 namespace AppBundle\Service;
 
+// use \Symfony\Component\DependencyInjection\ContainerAware;
+// use AppBundle\Controller\RepoStorageStructureHybridController;
 use Doctrine\DBAL\Driver\Connection;
+use Symfony\Component\Filesystem;
+use PDO;
+
+use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\Finder\Finder;
+use AppBundle\Utils\AppUtilities;
+use AppBundle\Controller\RepoStorageHybridController;
+use AppBundle\Controller\FilesystemHelperController;
 
 class RepoStorageStructureHybrid implements RepoStorageStructure {
 
   private $connection;
 
-  public function __construct(Connection $connection) {
+  /**
+   * @var string $uploads_directory
+   */
+  private $uploads_directory;
+
+  private $user_id;
+
+  private $fs;
+
+  /**
+   * @var string $project_directory
+   */
+  private $project_directory;
+
+  public function __construct(Connection $connection, $uploads_directory, $project_directory, FilesystemHelperController $filesystem_helper) {//, $user_id) {
     $this->connection = $connection;
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+    $this->project_directory = $project_directory;
+    //$this->user_id = $user_id;
+    $this->fs = $filesystem_helper;
   }
 
   /***
@@ -28,6 +56,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
     return json_encode($temp);
 
   }
+
   /***
    * @param $schema schema in JSON schema format.
    * @param $diff_only will return a diff between the existing schema and the newly specified schema.
@@ -43,566 +72,237 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
 
   }
 
-  /**
-   * Create Table
-   *
-   * This is a placeholder and may be either called by
-   * or superseded by the setSchema function.
-   *
-   * @param   string $table_name  Name of table to create
-   * @return  TRUE or die
-   */
-  public function createTable($parameters) {
+  public function checkDatabaseExists() {
 
-      if(!array_key_exists('table_name', $parameters)) {
-        return;
-      }
-      $table_name = $parameters['table_name'];
-
-      $sql = '';
-      switch($table_name) {
-        case 'background_removal_method':
-          $sql = "CREATE TABLE IF NOT EXISTS `background_removal_method` (
-            `background_removal_method_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `label` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`background_removal_method_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'calibration_object_type':
-          $sql = "CREATE TABLE IF NOT EXISTS `calibration_object_type` (
-            `calibration_object_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `label` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`calibration_object_type_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'camera_cluster_type':
-          $sql = "CREATE TABLE IF NOT EXISTS `camera_cluster_type` (
-            `camera_cluster_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `label` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`camera_cluster_type_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'capture_data_element':
-          $sql = "CREATE TABLE IF NOT EXISTS `capture_data_element` (
-            `capture_data_element_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `capture_dataset_repository_id` int(11) NOT NULL,
-            `capture_device_configuration_id` varchar(255) DEFAULT '',
-            `capture_device_field_id` int(11) DEFAULT NULL,
-            `capture_sequence_number` int(11) DEFAULT NULL,
-            `cluster_position_field_id` int(11) DEFAULT NULL,
-            `position_in_cluster_field_id` int(11) DEFAULT NULL,
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`capture_data_element_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
-            KEY `dataset_element_guid` (`capture_device_configuration_id`)
-          )";
-          break;
-        case 'capture_data_file':
-          $sql = "CREATE TABLE IF NOT EXISTS `capture_data_file` (
-            `capture_data_file_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-              `capture_data_element_repository_id` int(11) DEFAULT NULL,
-              `capture_data_file_name` varchar(255) DEFAULT NULL,
-              `capture_data_file_type` varchar(255) DEFAULT NULL,
-              `is_compressed_multiple_files` varchar(255) DEFAULT NULL,
-              `date_created` datetime NOT NULL,
-              `created_by_user_account_id` int(11) NOT NULL,
-              `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-              `last_modified_user_account_id` int(11) NOT NULL,
-              `active` tinyint(1) NOT NULL DEFAULT '1',
-              PRIMARY KEY (`capture_data_file_repository_id`),
-              KEY `created_by_user_account_id` (`created_by_user_account_id`),
-              KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            ) ";
-          break;
-        case 'capture_dataset':
-          $sql = "CREATE TABLE IF NOT EXISTS `capture_dataset` (
-            `capture_dataset_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `capture_dataset_guid` varchar(255) NOT NULL DEFAULT '',
-            `project_repository_id` int(255) DEFAULT NULL,
-            `item_repository_id` int(11) NOT NULL,
-            `capture_dataset_field_id` int(11) NOT NULL,
-            `capture_method` int(11) DEFAULT NULL,
-            `capture_dataset_type` int(11) DEFAULT NULL,
-            `capture_dataset_name` varchar(255) NOT NULL DEFAULT '',
-            `collected_by` varchar(255) NOT NULL DEFAULT '',
-            `date_of_capture` datetime NOT NULL,
-            `capture_dataset_description` text,
-            `collection_notes` text,
-            `support_equipment` varchar(255) DEFAULT NULL,
-            `item_position_type` int(11) DEFAULT NULL,
-            `item_position_field_id` int(11) NOT NULL,
-            `item_arrangement_field_id` int(11) NOT NULL,
-            `positionally_matched_capture_datasets` varchar(255) DEFAULT '',
-            `focus_type` int(11) DEFAULT NULL,
-            `light_source_type` int(11) DEFAULT NULL,
-            `background_removal_method` int(11) DEFAULT NULL,
-            `cluster_type` int(11) DEFAULT NULL,
-            `cluster_geometry_field_id` int(11) DEFAULT NULL,
-            `resource_capture_datasets` varchar(255) DEFAULT '',
-            `calibration_object_used` varchar(255) DEFAULT '',
-            `directory_path` varchar(8000) CHARACTER SET utf8 COLLATE utf8_unicode_ci DEFAULT NULL,
-            `file_path` varchar(8000) CHARACTER SET utf8 COLLATE utf8_unicode_ci DEFAULT NULL,
-            `file_checksum` varchar(1000) CHARACTER SET utf8 COLLATE utf8_unicode_ci DEFAULT NULL,
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            `workflow_id` int(11) DEFAULT NULL,
-            `workflow_processing_step` varchar(255) CHARACTER SET utf8 COLLATE utf8_unicode_ci DEFAULT NULL,
-            `workflow_status` varchar(100) DEFAULT NULL,
-            `workflow_status_detail` varchar(1000) DEFAULT NULL,
-            `file_package_id` int(11) DEFAULT NULL,
-            PRIMARY KEY (`capture_dataset_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-          )";
-          break;
-        case 'capture_dataset_rights':
-          $sql = "CREATE TABLE IF NOT EXISTS `capture_dataset_rights` (
-            `capture_dataset_rights_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `parent_capture_dataset_repository_id` int(11) DEFAULT NULL,
-            `data_rights_restriction` varchar(255) DEFAULT NULL,
-            `start_date` datetime DEFAULT NULL,
-            `end_date` datetime DEFAULT NULL,
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`capture_dataset_rights_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            ) ";
-          break;
-        case 'capture_device':
-          $sql = "CREATE TABLE IF NOT EXISTS `capture_device` (
-            `capture_device_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `capture_data_element_repository_id` int(11) DEFAULT NULL,
-            `capture_device_component_ids` varchar(255) DEFAULT NULL,
-            `calibration_file` varchar(255) DEFAULT NULL,
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`capture_device_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'capture_device_component':
-          $sql = "CREATE TABLE IF NOT EXISTS `capture_device_component` (
-            `capture_device_component_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `capture_device_repository_id` int(11) DEFAULT NULL,
-            `serial_number` varchar(255) DEFAULT NULL,
-            `capture_device_component_type` varchar(255) DEFAULT NULL,
-            `manufacturer` varchar(255) DEFAULT NULL,
-            `model_name` varchar(255) DEFAULT NULL,
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`capture_device_component_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'capture_method':
-          $sql = "CREATE TABLE IF NOT EXISTS `capture_method` (
-            `capture_method_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `label` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`capture_method_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-          )";
-          break;
-        case 'data_rights_restriction_type':
-          $sql = "CREATE TABLE IF NOT EXISTS `data_rights_restriction_type` (
-            `data_rights_restriction_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `label` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`data_rights_restriction_type_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'dataset_type':
-          $sql = "CREATE TABLE IF NOT EXISTS `dataset_type` (
-            `dataset_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `label` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`dataset_type_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'focus_type':
-          $sql = "CREATE TABLE IF NOT EXISTS `focus_type` (
-            `focus_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `label` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`focus_type_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'isni_data':
-          $sql = $this->connection->prepare("CREATE TABLE IF NOT EXISTS `isni_data` (
-            `isni_id` varchar(255) NOT NULL DEFAULT '',
-            `isni_label` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`isni_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-          ) ");
-          break;
-        case 'item_position_type':
-          $sql = "CREATE TABLE IF NOT EXISTS `item_position_type` (
-            `item_position_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `label` varchar(255) NOT NULL DEFAULT '',
-            `label_alias` varchar(255) NOT NULL DEFAULT '',
-            `label_alias_` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`item_position_type_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'item_type':
-          $sql = "CREATE TABLE IF NOT EXISTS `item_type` (
-            `item_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `label` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`item_type_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'item':
-          $sql = "CREATE TABLE IF NOT EXISTS `item` (
-            `item_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `subject_repository_id` int(11) NOT NULL,
-            `local_item_id` varchar(255) DEFAULT '',
-            `item_guid` varchar(255) DEFAULT '',
-            `item_description` mediumtext,
-            `item_type` varchar(255) DEFAULT NULL,
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`item_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
-            KEY `item_guid` (`item_guid`,`subject_repository_id`) )";
-          break;
-        case 'light_source_type':
-          $sql = "CREATE TABLE IF NOT EXISTS `light_source_type` (
-            `light_source_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `label` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`light_source_type_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'model':
-          $sql = "CREATE TABLE IF NOT EXISTS `model` (
-            `model_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `capture_dataset_repository_id` int(11) DEFAULT NULL,
-            `item_repository_id` int(11) DEFAULT NULL,
-            `model_guid` varchar(255) DEFAULT NULL,
-            `date_of_creation` datetime DEFAULT NULL,
-            `model_file_type` varchar(255) DEFAULT NULL,
-            `derived_from` varchar(255) DEFAULT NULL,
-            `creation_method` varchar(255) DEFAULT NULL,
-            `model_modality` varchar(255) DEFAULT NULL,
-            `units` varchar(255) DEFAULT NULL,
-            `is_watertight` tinyint(1) NOT NULL,
-            `model_purpose` varchar(255) DEFAULT NULL,
-            `point_count` varchar(255) DEFAULT NULL,
-            `has_normals` tinyint(1) NOT NULL,
-            `face_count` varchar(255) DEFAULT NULL,
-            `vertices_count` varchar(255) DEFAULT NULL,
-            `has_vertex_color` tinyint(1) NOT NULL,
-            `has_uv_space` tinyint(1) NOT NULL,
-            `model_maps` varchar(255) DEFAULT NULL,
-            `file_path` varchar(8000) CHARACTER SET utf8 COLLATE utf8_unicode_ci DEFAULT NULL,
-            `file_checksum` varchar(1000) CHARACTER SET utf8 COLLATE utf8_unicode_ci DEFAULT NULL,
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`model_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'photogrammetry_scale_bar':
-          $sql = "CREATE TABLE IF NOT EXISTS `photogrammetry_scale_bar` (
-            `photogrammetry_scale_bar_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `capture_dataset_repository_id` int(11) DEFAULT NULL,
-            `scale_bar_id` varchar(255) DEFAULT NULL,
-            `scale_bar_manufacturer` varchar(255) DEFAULT NULL,
-            `scale_bar_barcode_type` varchar(255) DEFAULT NULL,
-            `scale_bar_target_pairs` varchar(255) DEFAULT NULL,
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`photogrammetry_scale_bar_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'photogrammetry_scale_bar_target_pair':
-          $sql = "CREATE TABLE IF NOT EXISTS `photogrammetry_scale_bar_target_pair` (
-            `photogrammetry_scale_bar_target_pair_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `photogrammetry_scale_bar_repository_id` int(11) DEFAULT NULL,
-            `target_type` varchar(255) DEFAULT NULL,
-            `target_pair_1_of_2` varchar(255) DEFAULT NULL,
-            `target_pair_2_of_2` varchar(255) DEFAULT NULL,
-            `distance` varchar(255) DEFAULT NULL,
-            `units` varchar(255) DEFAULT NULL,
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`photogrammetry_scale_bar_target_pair_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'processing_action':
-          $sql = "CREATE TABLE IF NOT EXISTS `processing_action` (
-            `processing_action_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `model_repository_id` int(11) DEFAULT NULL,
-            `preceding_processing_action_repository_id` int(11) DEFAULT NULL,
-            `date_of_action` datetime DEFAULT NULL,
-            `action_method` varchar(255) DEFAULT NULL,
-            `software_used` varchar(255) DEFAULT NULL,
-            `action_description` mediumtext,
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`processing_action_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'project':
-          $sql = "CREATE TABLE IF NOT EXISTS `project` (
-            `project_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `project_name` varchar(255) DEFAULT '',
-            `stakeholder_guid` varchar(255) DEFAULT '',
-            `project_description` text,
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`project_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
-            KEY `projects_label` (`project_name`,`stakeholder_guid`)
-          )";
-          break;
-        case 'scale_bar_barcode_type':
-          $sql = "CREATE TABLE IF NOT EXISTS `scale_bar_barcode_type` (
-            `scale_bar_barcode_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `label` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`scale_bar_barcode_type_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'status_type':
-          $sql = "CREATE TABLE IF NOT EXISTS `status_type` (
-            `status_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `label` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`status_type_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'subject':
-          $sql = "CREATE TABLE IF NOT EXISTS `subject` (
-            `subject_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `project_repository_id` int(11) NOT NULL,
-            `local_subject_id` varchar(255) DEFAULT '',
-            `subject_guid` varchar(255) DEFAULT '',
-            `subject_name` varchar(255) DEFAULT '',
-            `subject_display_name` varchar(255) DEFAULT NULL,
-            `holding_entity_name` varchar(255) DEFAULT '',
-            `holding_entity_guid` varchar(255) DEFAULT '',
-            `date_created` varchar(255) NOT NULL DEFAULT '',
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`subject_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`),
-            KEY `project_repository_id` (`project_repository_id`,`subject_name`)
-          )";
-          break;
-        case 'target_type':
-          $sql = "CREATE TABLE IF NOT EXISTS `target_type` (
-            `target_type_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `label` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`target_type_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'unit_stakeholder':
-          $sql = "CREATE TABLE IF NOT EXISTS `unit_stakeholder` (
-            `unit_stakeholder_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `isni_id` varchar(255) DEFAULT NULL,
-            `unit_stakeholder_label` varchar(255) NOT NULL DEFAULT '',
-            `unit_stakeholder_label_aliases` text,
-            `unit_stakeholder_full_name` varchar(255) NOT NULL DEFAULT '',
-            `unit_stakeholder_guid` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`unit_stakeholder_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            ) ";
-          break;
-        case 'unit':
-          $sql = "CREATE TABLE IF NOT EXISTS `unit` (
-            `unit_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `label` varchar(255) NOT NULL DEFAULT '',
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`unit_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-        case 'uv_map':
-          $sql = "CREATE TABLE IF NOT EXISTS `uv_map` (
-            `uv_map_repository_id` int(11) NOT NULL AUTO_INCREMENT,
-            `capture_dataset_repository_id` int(11) DEFAULT NULL,
-            `map_type` varchar(255) DEFAULT NULL,
-            `map_file_type` varchar(255) DEFAULT NULL,
-            `map_size` varchar(255) DEFAULT NULL,
-            `date_created` datetime NOT NULL,
-            `created_by_user_account_id` int(11) NOT NULL,
-            `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            `last_modified_user_account_id` int(11) NOT NULL,
-            `active` tinyint(1) NOT NULL DEFAULT '1',
-            PRIMARY KEY (`uv_map_repository_id`),
-            KEY `created_by_user_account_id` (`created_by_user_account_id`),
-            KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
-            )";
-          break;
-      }
-
-      if(is_object($sql) || strlen($sql) == 0) {
-        return;
-        // die('CREATE TABLE `' . $table_name . '` failed. Table name not recognized. Could not build SQL for CREATE statement.');
-      }
-
-      $statement = $this->connection->prepare($sql . " ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8 COMMENT='This table stores " . $table_name . " metadata'");
+    try {
+    $params = $this->connection->getParams();
+    $dbname = $params['dbname'];
+      $statement = $this->connection->prepare("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '$dbname'");
       $statement->execute();
-      $error = $this->connection->errorInfo();
-
-      if ($error[0] !== '00000') {
-        var_dump($this->connection->errorInfo());
-        die('CREATE TABLE `' . $table_name . '` failed.');
-      } else {
-        return TRUE;
+      $ret = $statement->fetchAll();
+      if(count($ret) <> 1) {
+        return array('installed' => false, 'error' => 'Information_schema has ' . count($ret) . ' records for the database ' . $dbname);
       }
+    }
+    catch(\Throwable $ex) {
+      return array('installed' => false, 'error' => 'Unable to retrieve database information from Schemata. ' . $ex->getMessage());
+    }
+
+    // Check if primary tables exist.
+    $tables = array("project", "subject", "item", "model");
+
+    $count_tables = 0;
+      foreach ($tables as $table) {
+      $table_exists = $this->connection->fetchAll("show tables like '$table'");
+      if(count($table_exists) > 0) {
+        $count_tables++;
+      }
+    }
+    if(0 == $count_tables) {
+      return array('installed' => false, 'error' => '');
+    }
+    elseif($count_tables == count($tables))
+    {
+      return array('installed' => true, 'error' => '');
+    }
+    else {
+      return array('installed' => false, 'error' => 'The database is in an awkward state. Checked for ' . count($tables) . ' tables and ' . $count_tables . ' of these exist.');
+    }
+  }
+        
+  public function installDatabase() {
+
+    $ret = $this->checkDatabaseExists();
+
+    if (!is_array($ret) || (isset($ret['error']) && strlen(trim($ret['error'])) > 0)) {
+      return $ret;
+    }
+    elseif($ret['installed'] == true) {
+      $ret['error'] = 'The database already exists.';
+      return $ret;
+      }
+
+    $ret = $this->install();
+    return $ret;
+
+    }
+
+  public function install(){
+    $file = 'database_create.sql';
+
+    if (file_exists($file)) {
+
+      try {
+      $params = $this->connection->getParams();
+      $dbname = $params['dbname'];
+
+        $sql = 'USE ' . $dbname . '; ';
+        $sql .= file_get_contents($file);
+
+        $statement = $this->connection->prepare($sql);
+        $ret = $statement->execute();
+
+        return array('installed' => $ret, 'error' => '');
+      }
+      catch(\Throwable $ex) {
+        return array('installed' => false, 'error' => 'Unable to generate database. ' . $ex->getMessage());
+      }
+
+    }
+    else {
+      return array('installed' => false, 'error' => 'Source file not found for database creation. Missing: \\web\\' . $file);
+    }
+    
+  }
+
+  public function createBackup($include_schema = true, $include_data = true) {
+
+    $db_exists = $this->checkDatabaseExists();
+
+    if($db_exists['installed'] == false) {
+      return array('return' => 'fail', 'errors' => array($db_exists['error']));
+    }
+
+    // Write backup to local file.
+    $backup_results = $this->writeBackupToFile($include_schema = true, $include_data = true);
+
+    $backup_filename = $backup_results['backup_filename'];
+    $backup_filepath = $backup_results['backup_filepath'];
+
+    if(isset($backup_filename) && isset($backup_filepath)) {
+
+      if(!file_exists($backup_filepath)) {
+        return array('return' => 'fail', 'errors' => array('Backup file not written- check permissions at ' . $backup_filepath));
+      }
+
+      // Push file to Drastic.
+      $path_external = str_replace($this->uploads_directory, 'mysql_backups/', $backup_filename);
+      $transfer_results = $this->fs->transferFile($backup_filepath, $path_external);
+
+      $rs = new RepoStorageHybridController(
+        $this->connection
+      );
+
+      //@todo error checking
+      $db_results = $backup_results;
+      $db_results['result'] = isset($backup_results['result']) && $backup_results['result'] == 'success' ? 1 : 0;
+      $id = $rs->execute('saveRecord',
+        array(
+          'base_table' => 'backup',
+          'user_id' => 0, //$this->user_id,
+          'values' => $db_results
+        )
+      );
+      $backup_results['id'] = $id;
+    }
+    else {
+      $backup_results['errors'][] = 'Backup file not written.';
+    }
+
+    return $backup_results;
 
   }
+
+  private function writeBackupToFile($include_schema = true, $include_data = true) {
+
+    $backup_dir = str_replace('/', DIRECTORY_SEPARATOR, $this->uploads_directory . DIRECTORY_SEPARATOR . 'mysqlbackups' . DIRECTORY_SEPARATOR);
+    $backup_dir = str_replace(DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR, $backup_dir);
+    $handle = NULL;
+
+    if(!is_dir($backup_dir)) {
+      $filesystem = new Filesystem\Filesystem();
+      try {
+        $filesystem->mkdir($backup_dir);
+        $mode = 0666;
+        $umask = umask();
+        $filesystem->chmod($backup_dir, $mode, $umask);
+      } catch (IOException $e) {
+        // discard chmod failure (some filesystem may not support it)
+        return array('return' => 'fail', 'errors' => array('Could not create backup directory. ' . $e->getMessage()));
+      }
+    }
+    $backup_filename = 'repository_backup_' . (string)time() . '.sql';
+    $backup_file_path = $backup_dir . $backup_filename;
+    if(strpos($backup_file_path, $this->project_directory) === false) {
+      $backup_file_path = $this->project_directory . $backup_file_path;
+    }
+
+    try {
+      $params = $this->connection->getParams();
+      //$username = $params['user'];
+      //$password = $params['password'];
+      $dbname = $params['dbname'];
+
+      //@todo dump schema if $include_schema
+
+      $sql = "SELECT `TABLE_NAME` FROM information_schema.`TABLES` where table_schema like '" . $dbname . "' ORDER BY `TABLE_NAME` ASC";
+      $statement = $this->connection->prepare($sql);
+      $statement->execute();
+      $tables = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      if(true === $include_data) {
+
+        $handle = fopen($backup_file_path, "c");
+        foreach($tables as $t) {
+          $table_name = $t['TABLE_NAME'];
+
+          // Get the column info.
+          $sql_schema = "SELECT COLUMN_NAME FROM information_schema.`COLUMNS` WHERE table_schema LIKE '" . $dbname
+            . "' AND TABLE_NAME LIKE '" . $table_name . "' ORDER BY ORDINAL_POSITION";
+          $statement = $this->connection->prepare($sql_schema);
+          $statement->execute();
+          $columns = $statement->fetchAll(PDO::FETCH_COLUMN);
+          $column_names = "INSERT INTO `" . $table_name . "` (" . implode(', ', $columns) . ") VALUES \r\n";
+
+          // Dump the table data.
+          $sql_data = "SELECT * FROM " . $table_name;
+          $statement = $this->connection->prepare($sql_data);
+          $statement->execute();
+          $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+          if(count($rows) > 0) {
+            $row_count = count($rows);
+            $counter = 0;
+            fwrite($handle, $column_names);
+            foreach($rows as $row) {
+              $counter++;
+              $row_values_array = array();
+              foreach($row as $row_value) {
+                $row_values_array[] = $this->connection->quote($row_value);
+              }
+              //$row_values = '(' . $this->connection->quote(implode(',', array_values($row))) . ");\r\n";
+              $row_values = '(' . implode(',', array_values($row_values_array)) . ")";
+              if($counter == $row_count) {
+                $row_values .= ';';
+              }
+              else {
+                $row_values .= ",\r\n";
+              }
+              fwrite($handle, $row_values);
+            }
+            fwrite($handle, "\r\n");
+          }
+        }
+        fclose($handle);
+      }
+
+      if(!file_exists($backup_file_path)) {
+        return array('return' => 'fail', 'errors' => array('Unable to write to file. Check permissions for writing '. $backup_file_path));
+      }
+
+      //$mysqldump_output = shell_exec("mysqldump -u " . $username . " -p" . $password . " " . $dbname . " > " . $backup_file_path);
+      //echo $mysqldump_output; /* Your output of the restore command */
+
+      return array('result' => 'success', 'backup_filename' => $backup_filename, 'backup_filepath' => $backup_file_path);
+    }
+    catch(\Throwable $ex) {
+      if($handle) {
+        fclose($handle);
+      }
+      return array('return' => 'fail', 'errors' => array('Unable to dump database. ' . $ex->getMessage()));
+    }
+
+  }
+
 
 }

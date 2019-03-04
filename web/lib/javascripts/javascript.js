@@ -123,6 +123,8 @@ jQuery(document).ready(function($) {
   $('select.stakeholder-chosen-select').on('change', function(evt, params) {
     $('#stakeholder_guid').val(params.selected);
   });
+
+  console.log(currentPath);
   
   /**
    * Set the Active Navigation Tab
@@ -130,12 +132,18 @@ jQuery(document).ready(function($) {
   $('.nav-tabs.main-nav li').each(function(e) {
     const thisItem = $(this);
     thisItem.removeClass('active');
-    if(currentPath[1] === thisItem.attr('id')) {
+    // Get the indicated active tab
+    var current_tab = $('#current_tab').val();
+    if(current_tab === thisItem.attr('id')) {
       thisItem.addClass('active');
-    } else if(currentPath[1].length === 0) {
-      $('.nav-tabs.main-nav li#admin').addClass('active');
-    } else if (currentPath[1] === 'projects') {
+    } else if(current_tab.length === 0) {
+      // Default to the workspace tab if the tab is not defined.
       $('.nav-tabs.main-nav li#workspace').addClass('active');
+    } else if (current_tab === 'project') {
+      $('.nav-tabs.main-nav li#workspace').addClass('active');
+    }
+    else if ((current_tab === 'ingest') || (current_tab === 'simple_ingest') || (current_tab === 'bulk_ingest')) {
+      $('.nav-tabs.main-nav li#ingest').addClass('active');
     }
   });
 

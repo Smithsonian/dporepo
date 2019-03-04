@@ -36,6 +36,6 @@ interface RepoValidateAssetsInterface {
    * @param string  $filename  The file name
    * @return string
    */
-  public function get_mime_type(string $filename);
+  public function getMimeType(string $filename);
 
 }
