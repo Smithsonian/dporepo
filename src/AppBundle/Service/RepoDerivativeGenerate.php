@@ -90,6 +90,15 @@ class RepoDerivativeGenerate {
     // For this job_id, find corresponding capture dataset images.
     $cd_data = $this->repo_storage_controller->execute('getImportedCaptureDatasetImages', array('job_uuid' => $uuid));
 
+    // Update the 'job_status' in the 'job' table
+    $this->repo_storage_controller->execute('setJobStatus',
+      array(
+        'job_id' => $uuid,
+        'status' => 'image derivative creation in progress',
+        'date_completed' => date('Y-m-d h:i:s')
+      )
+    );
+
     // $cd_data now contains an array of the first 100 images of each capture dataset
     // For each image generate a 200px wide thumb and a 800px "fullscreen" image.
     foreach($cd_data as $cd_image_file) {
