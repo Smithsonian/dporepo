@@ -1089,9 +1089,9 @@ function modelsCaptureDatasetsCheck(captureDatasetsCsv, modelsCsv) {
   if ((captureDatasetsCsv.length) && (modelsCsv.length === 1)) {
     // The message.
     let multipleMessage = $('<div />')
-        .addClass('alert alert-warning cvs-validation-error')
+        .addClass('alert alert-warning')
         .attr('role', 'alert')
-        .html('The model will be associated with all ' + captureDatasetsCsv.length + ' capture datasets.');
+        .html('<strong>Notice:</strong> The model will be associated with all ' + captureDatasetsCsv.length + ' capture datasets.');
     // Prepend the message to the panel-body container.
     $('.panel-validation-results').find('.panel-body').prepend(multipleMessage);
     // swal({
@@ -1104,9 +1104,9 @@ function modelsCaptureDatasetsCheck(captureDatasetsCsv, modelsCsv) {
   if ((captureDatasetsCsv.length) && (modelsCsv.length > 1) && (masterModelCount === 1)) {
     // The message.
     let multipleMessage = $('<div />')
-        .addClass('alert alert-warning cvs-validation-error')
+        .addClass('alert alert-warning')
         .attr('role', 'alert')
-        .html('Multiple models with multiple capture datasets detected. Non-master models will be associated with the master model.');
+        .html('<strong>Notice:</strong> Multiple models with multiple capture datasets detected. Non-master models will be associated with the master model.');
     // Prepend the message to the panel-body container.
     $('.panel-validation-results').find('.panel-body').prepend(multipleMessage);
     // swal({
