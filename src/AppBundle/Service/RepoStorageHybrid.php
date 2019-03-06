@@ -259,28 +259,48 @@ class RepoStorageHybrid implements RepoStorage {
 
   public function getDatasetFiles($params){
 
-    if(!isset($params['capture_dataset_id'])) {
+    $capture_dataset_id = isset($params['capture_dataset_id']) ? $params['capture_dataset_id'] : NULL;
+    $capture_data_element_id = isset($params['capture_data_element_id']) ? $params['capture_data_element_id'] : NULL;
+
+    if(NULL == $capture_data_element_id && NULL == $capture_dataset_id) {
       return array();
     }
-
-    $capture_dataset_id = $params['capture_dataset_id'];
-    $limit = $params['limit'];
+    $limit = isset($params['limit']) ? $params['limit'] : 100;
 
     $sql = "SELECT file_upload.file_path, file_upload.date_created, file_upload.file_type,
-      file_upload.file_name, capture_dataset.capture_dataset_id 
+      file_upload.file_name, capture_dataset.capture_dataset_id, capture_data_element.capture_data_element_id
       FROM file_upload 
-      JOIN capture_data_file ON file_upload.file_upload_id = capture_data_file.file_upload_id      
+      JOIN capture_data_file_derivative ON file_upload.file_upload_id = capture_data_file_derivative.file_upload_id      
+      JOIN capture_data_file ON capture_data_file_derivative.capture_data_file_id = capture_data_file.capture_data_file_id      
       JOIN capture_data_element ON capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id 
       JOIN capture_dataset ON capture_data_element.capture_dataset_id = capture_dataset.capture_dataset_id      
-      WHERE capture_dataset.capture_dataset_id = :capture_dataset_id 
-      AND (file_upload.file_type = 'jpg' or file_upload.file_type = 'tif') 
-      LIMIT $limit";
+      WHERE capture_data_file_derivative.derivative_file_type='thumb'
+      AND (file_upload.file_type = 'jpg' or file_upload.file_type = 'tif') ";
+
+      if(NULL !== $capture_dataset_id) {
+        $sql .= " AND capture_dataset.capture_dataset_id = :capture_dataset_id ";
+      }
+      elseif(NULL !== $capture_data_element_id) {
+        $sql .= " AND capture_data_element.capture_data_element_id = :capture_data_element_id ";
+      }
+
+      $sql.= " LIMIT $limit";
 
     $statement = $this->connection->prepare($sql);
-    $statement->bindValue(':capture_dataset_id', $capture_dataset_id, PDO::PARAM_INT);
+    if(NULL !== $capture_dataset_id) {
+      $statement->bindValue(':capture_dataset_id', $capture_dataset_id, PDO::PARAM_INT);
+    }
+    else {
+      $statement->bindValue(':capture_data_element_id', $capture_data_element_id, PDO::PARAM_INT);
+    }
     $statement->execute();
     $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
-    return $ret;
+
+    $thumb = array();
+    if(count($ret) > 0) {
+      $thumb = $ret[0];
+    }
+    return $thumb;
   }
 
   public function getItem($params) {
@@ -403,7 +423,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     $sql = "SELECT model.model_id, model.parent_model_id, model.item_id, model.model_guid, model.date_of_creation,
         model.model_file_type, model.derived_from, model.creation_method, model.model_modality, model.units, model.is_watertight,
-        model_purpose.model_purpose, model_purpose.model_purpose_description, model.point_count, model.has_normals, model.face_count, model.vertices_count, model.has_vertex_color,
+        model_purpose.model_purpose, model.model_purpose as old_model_purpose, model_purpose.model_purpose_description, model.point_count, model.has_normals, model.face_count, model.vertices_count, model.has_vertex_color,
         model.has_uv_space, model.model_maps          
         FROM model LEFT JOIN model_purpose ON model.model_purpose_id = model_purpose.model_purpose_id
         WHERE model.active = 1
@@ -438,7 +458,12 @@ class RepoStorageHybrid implements RepoStorage {
     $return_data['files'] = $file_data;
 
     $return_data['viewable_model'] = false;
-    if(!empty($file_data) && $return_data['model_purpose'] == 'delivery_web') {
+    //@todo Hack with old_model_purpose until ingest is sorted out.
+    if(!empty($file_data) &&
+      ($return_data['model_purpose'] == 'delivery_web'
+        || $return_data['old_model_purpose'] == 'delivery_web'
+      )
+    ) {
       $file = $file_data;
       $fn = $file['file_name'];
       $fn_exploded = explode('.', $fn);
@@ -1777,31 +1802,79 @@ class RepoStorageHybrid implements RepoStorage {
     if(NULL == $job_uuid) {
       return array();
     }
+    $limit = isset($params['limit']) && is_numeric($params['limit']) && $params['limit'] > 0 ? $params['limit'] : 100;
 
-    $sql = "SELECT job.uuid, job.job_id, 
+    // Get all capture_dataset_id values for this import job.
+    $sql = "SELECT DISTINCT capture_dataset.capture_dataset_id
+      FROM file_upload
+      JOIN capture_data_file ON file_upload.file_upload_id = capture_data_file.file_upload_id
+      JOIN capture_data_element ON capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
+      JOIN capture_dataset ON capture_data_element.capture_dataset_id = capture_dataset.capture_dataset_id
+      JOIN job ON file_upload.job_id = job.job_id
+      WHERE job.uuid = :job_uuid      
+      AND file_upload.file_type='jpg'
+      GROUP BY capture_dataset.capture_dataset_id
+      ";
+    $statement = $this->connection->prepare($sql);
+    $statement->bindValue(":job_uuid", $job_uuid, PDO::PARAM_STR);
+    $statement->execute();
+    $capture_dataset_ids = $statement->fetchAll();
+
+    if(count($capture_dataset_ids) == 0) {
+      return array();
+    }
+
+    /*
+      $sql = "SELECT job.uuid, job.job_id,
+              file_upload.job_id, file_upload.parent_record_id, file_upload.parent_record_type,
+              file_upload.file_name, file_upload.file_path, file_upload.file_size, file_upload.file_type,
+              capture_data_file.capture_data_element_id, capture_data_file.capture_data_file_id,
+              capture_data_file.variant_type, capture_data_file.created_by_user_account_id, capture_data_file.capture_data_file_type
+            FROM file_upload
+            JOIN capture_data_file ON file_upload.file_upload_id = capture_data_file.file_upload_id
+            JOIN capture_data_element ON capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
+            JOIN capture_dataset ON capture_data_element.capture_dataset_id = capture_dataset.capture_dataset_id
+            JOIN item ON capture_dataset.item_id = item.item_id
+            JOIN job ON item.project_id = job.project_id
+            WHERE job.uuid = :job_uuid
+            AND file_upload.job_id = job.job_id
+            AND file_upload.file_type='jpg'
+            LIMIT 0, 100
+            ";
+      */
+
+    $capture_dataset_images = array();
+    foreach($capture_dataset_ids as $cd_values) {
+      $cd_id = $cd_values['capture_dataset_id'];
+      $sql = "SELECT job.uuid, job.job_id, 
         file_upload.job_id, file_upload.parent_record_id, file_upload.parent_record_type, 
         file_upload.file_name, file_upload.file_path, file_upload.file_size, file_upload.file_type, 
-        capture_data_file.capture_data_element_id, capture_data_file.variant_type, capture_data_file.created_by_user_account_id, capture_data_file.capture_data_file_type
+        capture_data_file.capture_data_element_id, capture_data_file.capture_data_file_id,
+        capture_data_file.variant_type, capture_data_file.created_by_user_account_id, capture_data_file.capture_data_file_type,
+        capture_data_element.capture_dataset_id
       FROM file_upload
       JOIN capture_data_file ON file_upload.file_upload_id = capture_data_file.file_upload_id
       JOIN capture_data_element ON capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
       JOIN capture_dataset ON capture_data_element.capture_dataset_id = capture_dataset.capture_dataset_id
       JOIN item ON capture_dataset.item_id = item.item_id
       JOIN job ON item.project_id = job.project_id
-      WHERE job.uuid = :job_uuid      
-      AND file_upload.job_id = job.job_id
-      AND file_upload.file_type='jpg'
-      LIMIT 0, 100
-      ";
+      WHERE file_upload.file_type='jpg' AND capture_data_element.capture_dataset_id=:capture_dataset_id
+      ORDER BY capture_data_element.capture_dataset_id 
+      LIMIT 0, " . $limit ;
 
-    $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":job_uuid", $job_uuid, PDO::PARAM_STR);
-    $statement->execute();
-    $data = $statement->fetchAll();
-    if(empty($data)) {
-      return array();
+      $statement = $this->connection->prepare($sql);
+      $statement->bindValue(":capture_dataset_id", $cd_id, PDO::PARAM_INT);
+      $statement->execute();
+      $data = $statement->fetchAll();
+      if(!empty($data)) {
+        foreach($data as $d) {
+          $cdf_id = $d['capture_data_file_id'];
+          $capture_dataset_images[$cdf_id] = $d;
+        }
+      }
     }
-    return $data;
+    return $capture_dataset_images;
+
   }
 
   function createCaptureDatasetImageDerivatives($params) {
@@ -1827,18 +1900,21 @@ class RepoStorageHybrid implements RepoStorage {
     $file_upload_id = $this->connection->lastInsertId();
 
 
-    $sql = "INSERT INTO capture_data_file (capture_data_element_id, file_upload_id, capture_data_file_name, capture_data_file_type,
-      variant_type, date_created, created_by_user_account_id, last_modified_user_account_id)
-    VALUES (:capture_data_element_id, :file_upload_id, :capture_data_file_name, :capture_data_file_type, 
-      :variant_type, NOW(), :user_id, :user_id)
+    $sql = "INSERT INTO capture_data_file_derivative (capture_data_file_id, file_upload_id, derivative_file_name, derivative_file_type,
+      image_width, image_height,
+      date_created, created_by_user_account_id, last_modified_user_account_id)
+    VALUES (:capture_data_file_id, :file_upload_id, :derivative_file_name, :derivative_file_type, 
+      :image_width, :image_height,
+      NOW(), :user_id, :user_id)
     ";
     $statement = $this->connection->prepare($sql);
 
-    $statement->bindValue(":capture_data_element_id", $params['capture_data_element_id'], PDO::PARAM_INT);
+    $statement->bindValue(":capture_data_file_id", $params['capture_data_file_id'], PDO::PARAM_INT);
     $statement->bindValue(":file_upload_id", $file_upload_id, PDO::PARAM_INT);
-    $statement->bindValue(":capture_data_file_name", $params['file_name'], PDO::PARAM_STR);
-    $statement->bindValue(":capture_data_file_type", $params['capture_data_file_type'], PDO::PARAM_STR);
-    $statement->bindValue(":variant_type", $params['variant_type'], PDO::PARAM_STR);
+    $statement->bindValue(":derivative_file_name", $params['file_name'], PDO::PARAM_STR);
+    $statement->bindValue(":derivative_file_type", $params['derivative_file_type'], PDO::PARAM_STR);
+    $statement->bindValue(":image_width", (int)$params['image_width'], PDO::PARAM_INT);
+    $statement->bindValue(":image_height", (int)$params['image_height'], PDO::PARAM_INT);
     $statement->bindValue(":user_id", $params['created_by_user_account_id'], PDO::PARAM_INT);
 
     $statement->execute();
@@ -3280,6 +3356,23 @@ class RepoStorageHybrid implements RepoStorage {
 
     $data = $this->getRecordsDatatable($query_params);
 
+
+    if (is_array($data) && isset($data['aaData'])) {
+      foreach($data['aaData'] as $k => $row) {
+        $id = $row['manage'];
+
+        $dataset_file = $this->getDatasetFiles(
+          array(
+            'capture_dataset_id' => $id,
+            'limit' => 1)
+        );
+        $data['aaData'][$k]['file_path'] = '';
+        if (isset($dataset_file['file_path'])) {
+          $data['aaData'][$k]['file_path'] = $dataset_file['file_path'];
+        }
+      }
+    }
+
     return $data;
 
   }
@@ -3316,15 +3409,7 @@ class RepoStorageHybrid implements RepoStorage {
                   GROUP BY capture_data_file.capture_data_element_id
               )
               as metadata 
-             , ( SELECT file_path from file_upload 
-                LEFT JOIN capture_data_file on file_upload.file_upload_id = capture_data_file.file_upload_id    
-                WHERE capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
-                AND file_path is not NULL
-                AND file_type='jpg'              
-                LIMIT 1
-            )
-            as file_path
-            , ( SELECT GROUP_CONCAT(variant_type) from capture_data_file 
+             , ( SELECT GROUP_CONCAT(variant_type) from capture_data_file 
                 WHERE capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
             )
             as variant_types
@@ -3372,6 +3457,21 @@ class RepoStorageHybrid implements RepoStorage {
 
       $statement->execute();
       $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      if (is_array($data) && isset($data['aaData'])) {
+        foreach($data['aaData'] as $k => $row) {
+          $id = $row['capture_data_element_id'];
+          $dataset_file = $this->getDatasetFiles(
+            array(
+              'capture_data_element_id' => $id,
+              'limit' => 1)
+          );
+          $data['aaData'][$k]['file_path'] = '';
+          if (isset($dataset_file['file_path'])) {
+            $data['aaData'][$k]['file_path'] = $dataset_file['file_path'];
+          }
+        }
+      }
 
       $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
       $statement->execute();
@@ -3427,7 +3527,10 @@ class RepoStorageHybrid implements RepoStorage {
     }
 
     if($sort_field) {
-      $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+      if($sort_field !== 'thumb_file_path') {
+        //@todo
+        $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+      }
     }
     else {
       $sql .= " ORDER BY capture_data_file_id ";
@@ -3462,6 +3565,28 @@ class RepoStorageHybrid implements RepoStorage {
     $data["iTotalRecords"] = $count["FOUND_ROWS()"];
     $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
 
+    // Now $data has 0 or more files.
+    // For each image, find its thumbnail derivative, and return that or nothing in thumb_file_path.
+    foreach($data['aaData'] as $k => $cdf) {
+      $filename = $cdf['capture_data_file_name'];
+      $filename_parts = explode('.', $filename);
+      $thumb_file_path = '';
+      if(count($filename_parts) == 2) {
+
+        // See if we have one:
+        $sql = "SELECT file_path FROM file_upload
+        JOIN capture_data_file_derivative on file_upload.file_upload_id = capture_data_file_derivative.file_upload_id
+        WHERE derivative_file_type = 'thumb'
+        AND capture_data_file_id =" . $cdf['capture_data_file_id'];
+        $statement = $this->connection->prepare($sql);
+        $statement->execute();
+        $thumb_file_record = $statement->fetchAll(PDO::FETCH_ASSOC);
+        if(count($thumb_file_record) > 0 && isset($thumb_file_record[0]['file_path'])) {
+          $thumb_file_path = $thumb_file_record[0]['file_path'];
+        }
+      }
+      $data['aaData'][$k]['thumb_file_path'] = $thumb_file_path;
+    }
     return $data;
 
   }

@@ -686,9 +686,13 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
               $path = str_replace($path, '/uploads/repository/', $asset['file_path']);
 
               // Get the UUID so we can get the job_id.
-              $uuid_path = str_replace(DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'repository' . DIRECTORY_SEPARATOR, '', $path);
+              //@todo use FileHelperService
+              $normalized_path = str_replace("\\", DIRECTORY_SEPARATOR, $path);
+              $normalized_path = str_replace("/", DIRECTORY_SEPARATOR, $normalized_path);
+              $uuid_path = str_replace(DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'repository' . DIRECTORY_SEPARATOR, '', $normalized_path);
               $uuid_path_parts = explode(DIRECTORY_SEPARATOR, $uuid_path);
               $uuid = array_shift($uuid_path_parts);
+
               // Get the job's data.
               $repo_job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
 

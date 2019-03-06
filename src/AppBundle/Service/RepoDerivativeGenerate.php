@@ -6,6 +6,7 @@ use Symfony\Component\HttpKernel\KernelInterface;
 
 use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Utils\AppUtilities;
+use AppBundle\Service\FileHelperService;
 
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -16,6 +17,8 @@ class RepoDerivativeGenerate {
    * @var object $u
    */
   public $u;
+
+  public $f;
 
   /**
    * @var object $kernel
@@ -59,9 +62,10 @@ class RepoDerivativeGenerate {
    * @param string  $external_file_storage_path  External file storage path
    * @param string  $conn  The database connection
    */
-  public function __construct(KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn)
+  public function __construct(KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn, FileHelperService $f)
   {
     $this->u = new AppUtilities();
+    $this->f = $f;
     $this->kernel = $kernel;
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
     $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
@@ -95,8 +99,14 @@ class RepoDerivativeGenerate {
 
       // Absolute local path.
       // For each image make full path using the file_path column.
-      $path = $this->project_directory . "web" . $file_path;
-      $path = str_replace("//", "/", str_replace("\\", "/", $path));
+      $path_data = $this->f->getAlternateFilePaths($file_path, true);
+      if($path_data['incoming_path_type'] !== 'unknown') {
+        $path = $path_data['alternate_paths']['local_uploads_directory'];
+      }
+      else {
+        //@todo- flag this as an issue, we can't grok the incoming $file_path
+        continue;
+      }
 
       if (!is_file($path)) {
         $errors = array('Target file not found - ' . $path);
@@ -121,17 +131,39 @@ class RepoDerivativeGenerate {
 
           $res = $utils->resizeImage($path, 200, NULL, $new_thumb_file_name);
 
+          // Get the image height.
+          $height = 0;
+          $width = 200;
+          // $res will be [width]x[height]
+          $dimensions_array = explode('x', $res);
+          if(count($dimensions_array) == 2) {
+            $width = $dimensions_array[0]; // Should be 200
+            $height = $dimensions_array[1];
+          }
+
           // Write the derivative records to the capture_data_file and file_upload tables.
           // $cd_image_file contains all of the original capture_data_file and file_upload values.
           if(file_exists($new_thumb_path)) {
             $new_capture_data_file = $cd_image_file;
-            $new_capture_data_file['variant_type'] = isset($cd_image_file['variant_type']) ? $cd_image_file['variant_type'] . ' thumb' : 'thumb';
+            $new_capture_data_file['derivative_file_type'] = 'thumb';
             $new_capture_data_file['capture_data_file_name'] = $new_thumb_file_name;
             $new_capture_data_file['file_name'] = $new_thumb_file_name;
             // Path should start with '/uploads/repository/'.
-            $new_capture_data_file['file_path'] = str_replace($this->project_directory . 'web', '', $new_thumb_path);
+            //@todo instead use fileservicehelper
+            $new_capture_data_file['file_path'] =
+            str_replace("\\", "/",
+              str_replace($path_data['verbose']['application_web_directory'], "",
+                str_replace($file_name, $new_thumb_file_name, $path)
+              )
+            );
+            if(substr($new_capture_data_file['file_path'], 0, 1) !== "/") {
+              $new_capture_data_file['file_path'] = "/" . $new_capture_data_file['file_path'];
+            }
+
             $new_capture_data_file['file_size'] = filesize($new_thumb_path);
             $new_capture_data_file['file_hash'] = md5_file($new_thumb_path);
+            $new_capture_data_file['image_width'] = $width;
+            $new_capture_data_file['image_height'] = $height;
 
             $ret = $this->repo_storage_controller->execute('createCaptureDatasetImageDerivatives', $new_capture_data_file);
 
@@ -146,15 +178,36 @@ class RepoDerivativeGenerate {
 
           $res = $utils->resizeImage($path, 800, 0, $new_midsize_file_name);
 
+          // Get the image height.
+          $height = 0;
+          $width = 800;
+          // $res will be [width]x[height]
+          $dimensions_array = explode('x', $res);
+          if(count($dimensions_array) == 2) {
+            $width = $dimensions_array[0]; // Should be 800
+            $height = $dimensions_array[1];
+          }
+
           if(file_exists($new_midsize_path)) {
             $new_capture_data_file = $cd_image_file;
-            $new_capture_data_file['variant_type'] = isset($cd_image_file['variant_type']) ? $cd_image_file['variant_type'] . ' thumb' : 'thumb';
+            $new_capture_data_file['derivative_file_type'] = 'midsize';
             $new_capture_data_file['capture_data_file_name'] = $new_midsize_file_name;
             $new_capture_data_file['file_name'] = $new_midsize_file_name;
-            // Path should start with '/uploads/repository/'.
-            $new_capture_data_file['file_path'] = str_replace($this->project_directory . 'web', '', $new_midsize_path);
+            //@todo instead use fileservicehelper
+            $new_capture_data_file['file_path'] =
+              str_replace("\\", "/",
+                str_replace($path_data['verbose']['application_web_directory'], "",
+                  str_replace($file_name, $new_midsize_file_name, $path)
+                )
+              );
+            if(substr($new_capture_data_file['file_path'], 0, 1) !== "/") {
+              $new_capture_data_file['file_path'] = "/" . $new_capture_data_file['file_path'];
+            }
+
             $new_capture_data_file['file_size'] = filesize($new_midsize_path);
             $new_capture_data_file['file_hash'] = md5_file($new_midsize_path);
+            $new_capture_data_file['image_width'] = $width;
+            $new_capture_data_file['image_height'] = $height;
 
             $ret = $this->repo_storage_controller->execute('createCaptureDatasetImageDerivatives', $new_capture_data_file);
 
@@ -165,8 +218,6 @@ class RepoDerivativeGenerate {
           }
 
         }
-
-
 
         if(!empty($file_info)) {
           $data[$file_name] = $file_info;

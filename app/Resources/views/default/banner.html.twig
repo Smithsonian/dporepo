@@ -1,5 +1,7 @@
 {% if url('homepage') == 'https://si-3ddigip01.si.edu:8444/' %}
     <div class="banner production">PRODUCTION Repository- proceed with caution</div>
 {% elseif url('homepage') == 'https://si-3ddigip01.si.edu:8443/' %}
-    <div class="banner dev">TEST Repository</div>
+    <div class="banner test">TEST Repository</div>
+{% elseif url('homepage') == 'https://si-3ddigip01.si.edu:8445/' %}
+    <div class="banner dev">DEV Repository - UNSTABLE</div>
 {% endif %}
