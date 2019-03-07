@@ -1712,6 +1712,7 @@ class RepoStorageHybrid implements RepoStorage {
             'capture_dataset',
             'capture_data_element',
             'capture_data_file',
+            'capture_dataset_model',
             'model',
             'model_file',
             'uv_map'
@@ -1730,15 +1731,7 @@ class RepoStorageHybrid implements RepoStorage {
         // Remove data from tables containing repository data.
         foreach ($table_names['data_tables'] as $data_table_name) {
           $id_append = '_id';
-          // TODO: won't need this after refactoring... be sure to remove it!
-          /*switch($data_table_name) {
-            case 'model_file':
-              $id_append = '_id';
-              break;
-            default:
-              $id_append = '_repository_id';
-          }
-          */
+
           // Remove records.
           $sql_data = "DELETE FROM {$data_table_name}
             WHERE {$data_table_name}.{$data_table_name}{$id_append} IN (SELECT record_id
@@ -1787,6 +1780,26 @@ class RepoStorageHybrid implements RepoStorage {
           $statement = $this->connection->prepare($sql_job_reset);
           $statement->execute();
         }
+
+        // Remove data from tables containing workflow-based data.
+        // Remove records.
+        $sql_job = "DELETE wf, wfl FROM workflow wf
+          LEFT JOIN `workflow_log` wfl ON wfl.`workflow_id` = wf.`workflow_id`
+          WHERE wf.`ingest_job_uuid` = :ingest_job_uuid";
+        $statement = $this->connection->prepare($sql_job);
+        $statement->bindValue(":ingest_job_uuid", $job_data['uuid'], PDO::PARAM_STR);
+        $statement->execute();
+        $data['workflow'] = $statement->rowCount();
+        // Reset the auto increment value for the workflow table.
+        $sql_workflow_reset = "ALTER TABLE workflow MODIFY workflow.workflow_id INT(11) UNSIGNED;
+        ALTER TABLE workflow MODIFY workflow.workflow_id INT(11) UNSIGNED AUTO_INCREMENT";
+        $statement = $this->connection->prepare($sql_workflow_reset);
+        $statement->execute();
+        // Reset the auto increment value for the workflow_log table.
+        $sql_workflow_log_reset = "ALTER TABLE workflow_log MODIFY workflow_log.workflow_log_id INT(11) UNSIGNED;
+        ALTER TABLE workflow_log MODIFY workflow_log.workflow_log_id INT(11) UNSIGNED AUTO_INCREMENT";
+        $statement = $this->connection->prepare($sql_workflow_log_reset);
+        $statement->execute();
 
       }
 
