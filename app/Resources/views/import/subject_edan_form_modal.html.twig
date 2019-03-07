@@ -1,4 +1,4 @@
-{% block subject_form %}
+{% block subject_edan_form %}
 <div class="modal fade" id="subject-form-modal" tabindex="-1" role="dialog" aria-labelledby="subjectFormLabel" data-keyboard="true">
   <div class="modal-dialog modal-lg" role="document">
     <div class="modal-content">
@@ -6,31 +6,8 @@
         <h2 class="modal-title" id="subjectFormLabel"><i class="glyphicon glyphicon-th-list"></i> <span id="subject-form-modal-title">Create a New Subject</span></h2>
       </div>
       <div class="modal-body" style="min-height: 24rem;">
-        {{ form_start(subject_form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
-
-
-
-          {# Manual Form Entry #}
-          <div class="row hidden">
-            <div class="col-sm-6 col-md-6">
-              {{ form_row(subject_form.subject_name) }}
-              {{ form_row(subject_form.subject_display_name) }}
-              {{ form_row(subject_form.subject_guid) }}
-              {{ form_row(subject_form.local_subject_id) }}
-              {{ form_row(subject_form.holding_entity_guid) }}
-            </div>
-            <div class="col-sm-6 col-md-6">
-              <fieldset>
-                <legend>API Delivery Integration</legend>
-                {# {{ form_row(subject_form.api_publication_picker) }} #}
-                {{ form_row(subject_form.model_purpose_picker) }}
-                <h4>API Model Resolution Restrictions</h4>
-                {{ form_row(subject_form.api_access_model_face_count_id) }}
-                {{ form_row(subject_form.api_access_uv_map_size_id) }}
-              </fieldset>
-            </div>
-          </div>
-
+        {# {{ form_start(subject_form) }} #} {# , {'attr': {'novalidate': 'novalidate'}} #}
+          
           {# EDAN Picker #}
           <div class="row">
             <div class="col-sm-12 col-md-12">
@@ -54,24 +31,18 @@
               </div>
             </div>
           </div>
+
           <div class="row">
             <div id="search-results" class="col-sm-12 col-md-12 center-block" style="margin-left: auto; float: none;">
+
             </div>
           </div>
-
-
-          <div class="field-group" style="clear:both;">
-            {{ form_row(subject_form.save) }}
-          </div>
-
-          
-
 
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
       </div>
-      {{ form_end(subject_form) }}
+      {# {{ form_end(subject_form) }} #}
     </div>
   </div>
 </div>

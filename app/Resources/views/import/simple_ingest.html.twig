@@ -2,6 +2,7 @@
 {% use 'import/ingest_wizard.html.twig' %}
 {% use 'import/record_picker_modal.html.twig' %}
 {% use 'import/subject_form_modal.html.twig' %}
+{% use 'import/subject_edan_form_modal.html.twig' %}
 {% use 'import/item_form_modal.html.twig' %}
 
 {% block stylesheets %}
@@ -55,6 +56,7 @@
   <!-- Subject Form Modal -->
   {# {% include 'import/subject_form_modal.html.twig' %} #}
   {% block subject_form %}{{ parent() }}{% endblock %}
+  {# {% block subject_edan_form %}{{ parent() }}{% endblock %} #}
   <!-- Item Form Modal -->
   {# {% include 'import/item_form_modal.html.twig' %} #}
   {% block item_form %}{{ parent() }}{% endblock %}
@@ -156,16 +158,218 @@
       };
       dateInput.datepicker(options);
 
-      // Subject form submit handler.
-      $(document).on('submit', 'form[name="subject_form"]', function(e){        
-        // Avoid submitting the form non-ajax.
-        e.preventDefault();
-        // Get the properties and values from the form.
-        var form = $('form[name="subject_form"]');
-        var formData = form.serializeObject();
-        // Submit via AJAX.
-        submitSubjectRecord(formData);
+      // // Subject form submit handler.
+      // $(document).on('submit', 'form[name="subject_form"]', function(e){
+      //   // Avoid submitting the form non-ajax.
+      //   e.preventDefault();
+      //   // Get the properties and values from the form.
+      //   var form = $('form[name="subject_form"]');
+      //   var formData = form.serializeObject();
+      //   // Submit via AJAX.
+      //   submitSubjectRecord(formData);
+      // });
+
+
+
+
+
+
+
+
+
+
+
+
+      // Set variables.
+      var resultsContainer = $('#search-results')
+          loadingGif = $('<img />').attr('src', '/lib/images/spinner.gif').attr('alt', 'loading animation').attr('style', 'width: 140px;'),
+          loadingGifContainer = $('<div />').addClass('center-block').attr('style', 'width: 140px;').append(loadingGif);
+
+      /**
+       * Search button click handler
+       */
+      $('#search-query-button').on('click', function(e) {
+
+        var searchQuery = $('#search-query').val();
+
+        // Validate - search query.
+        if(!searchQuery.length) {
+          swal({
+            title: "Search Term is Empty",
+            text: "Please enter a search term.",
+          });
+          return;
+        }
+
+        // Remove previous search results and search value, if present.
+        resultsContainer.empty();
+        // Add the loading gif.
+        resultsContainer.append(loadingGifContainer);
+
+        // Make an AJAX request to EDAN.
+        // Example: http://127.0.0.1:8000/admin/edan/calder/html/2
+        $.ajax({
+          type: 'GET'
+          ,dataType: 'html'
+          ,url: '/admin/edan/' + searchQuery + '/html/1/1/10'
+          ,success: function(result) {
+
+            if(result) {
+              // Remove the loading gif.
+              loadingGifContainer.remove();
+              // Append the results to the DOM.
+              resultsContainer.append(result);            
+            }
+
+          }
+        });
+
       });
+
+      /**
+       * Paging button click handler (Previous Page, Next Page)
+       */
+      $('#search-results').on('click', '.pager-button', function(e){
+
+        var thisButton = $(this),
+            targetPage = (typeof thisButton.data('page') !== 'undefined') ? (thisButton.data('page') + 1) : 1,
+            searchQuery = $('#search-query').val();
+
+        // Validate - search query.
+        if(!searchQuery.length) {
+          swal({
+            title: "Search Term is Empty",
+            text: "Please enter a search term.",
+          });
+          return;
+        }
+
+        // Remove previous search results and search value, if present.
+        resultsContainer.empty();
+        // Add the loading gif.
+        resultsContainer.append(loadingGifContainer);
+
+        // Make an AJAX request to EDAN.
+        // Example: http://127.0.0.1:8000/admin/edan/calder/html/2
+        $.ajax({
+          type: 'GET'
+          ,dataType: 'html'
+          ,url: '/admin/edan/' + searchQuery + '/html/' + thisButton.data('page')
+          ,success: function(result) {
+
+            if(result) {
+              // Remove the loading gif.
+              loadingGifContainer.remove();
+              // Append the results to the DOM.
+              resultsContainer.append(result);            
+            }
+
+          }
+        });
+
+      });
+
+      /**
+       * Choose This Record button click handler
+       * Transfer the chosen record's desired information to hidden fields in the parent form.
+       */
+      resultsContainer.on('click', '.choosen-record', function(e) {
+
+        // Are aliases for unit acronyms necessary?
+        // Case in point:
+        // In EDAN, AAA also has the id AAADCD. This is not exclusive to AAA. Similar scenarios exist with other units.
+        // This will lend itself to creating a solid data relation to the ISNI/Unit Stakeholder data, for the holding_entity_guid and holding_entity_name fields. Actually, we won't even need the holding_entity_name field if this relation is present. The holding_entity_guid would be mapped to both ISNI and SI Unit IDs, which when queried, would then also return the holding_entity_name.
+
+        // Maintaining a mapping for ALL ISNI records IS necessary. The sole reason for this is that ISNI's data contains name derivatives, which, by nature, forces us to choose one accepted/appropriate name.
+
+        // The unit_stakeholder table may need to be renamed to remove the 'unit' reference - maybe rename it to stakeholder_mappings?
+        // Need to add the isni_id field to this table
+
+        // subject_guid (row.id or row.record_ID???)
+        // subject_name (row.title)
+        // subject_holder_subject_id (row.content.freetext.identifier.0.content) (subject_id_from_holding_entity)
+        // !!! PROBLEM !!!
+        // holding_entity_guid (row.unitCode) - HIDDEN
+        // holding_entity_name (row.content.descriptiveNonRepeating.data_source) - DISPLAY
+
+        var  thisElement = $(this),
+             index = thisElement.attr('id').replace('loop-index-','');
+
+        // Validate that this is really the record.
+        swal('Proceed with this record? The appropriate fields will be auto filled, and this window will be dismissed.', {
+          buttons: {
+            cancel: 'No',
+            catch: {
+              text: 'Yes',
+              value: 'yes',
+            }
+          },
+        })
+        .then((value) => {
+          switch (value) {
+            case "yes":
+              // Set all of the variables.
+              var subject_guid = $('#subject_guid_chosen_' + index).val(),
+                  subject_name = $('#subject_name_chosen_' + index).val(),
+                  subject_holder_subject_id = $('#subject_holder_subject_id_chosen_' + index).val(),
+                  holding_entity_guid = $('#holding_entity_guid_chosen_' + index).val();
+                  // holding_entity_name = $('#holding_entity_name_chosen_' + index).val();
+
+              // Populate the fields in the parent form and close the modal.
+              $('#subject_form_subject_guid').val(subject_guid);
+              $('#subject_form_subject_name').val(subject_name);
+              $('#subject_form_local_subject_id').val(subject_holder_subject_id);
+              $('#subject_form_holding_entity_guid').val(holding_entity_guid);
+              // $('#subject_holding_entity_name').val(holding_entity_name);
+              $('#subject-form-modal').modal('hide');
+              break;
+            default:
+          }
+        });        
+
+      });
+
+      /**
+       * Actions for when the modal is shown
+       */
+      $('#edanSearchModal').on('show.bs.modal', function (e){
+        // Remove previous search results and search value, if present.
+        resultsContainer.empty();
+        $('#search-query').val('');
+        // Set focus on the search input.
+        setTimeout(function(){
+          $('#edanSearchModal input#search-query').focus();
+        }, 500);
+        // Enable keyboard enter/return capability on search query submit.
+        $(document).keypress(function(e) {
+          if(e.which === 13) {
+            if($('#search-query:focus').length) {
+              $('#search-query-button').trigger('click');
+            }
+          }
+        });
+
+      });
+
+      /**
+       * Actions for when the modal is hidden
+       */
+      $('#edanSearchModal').on('hidden.bs.modal', function (e){
+        // Remove previous search results and search value, if present.
+        resultsContainer.empty();
+        $('#search-query').val('');
+      });
+
+
+
+
+
+
+
+
+
+
+
 
       // Item form submit handler.
       $(document).on('submit', 'form[name="item_form"]', function(e){
