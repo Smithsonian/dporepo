@@ -100,11 +100,6 @@ class RepoImport implements RepoImportInterface {
   private $default_image_file_name_map;
 
   /**
-   * @var object $default_model_file_name_map
-   */
-  private $default_model_file_name_map;
-
-  /**
    * @var object $logger
    */
   private $logger;
@@ -175,13 +170,6 @@ class RepoImport implements RepoImportInterface {
       'capture_dataset_field_id',
       'position_in_cluster_field_id',
       'cluster_position_field_id',
-    );
-
-    // Default model file name mapping.
-    $this->default_model_file_name_map = array(
-      'local_subject_id',
-      // 'item_description',
-      'model_purpose',
     );
   }
 
@@ -507,7 +495,6 @@ class RepoImport implements RepoImportInterface {
                   // Remove '_model' from the model_purpose chunk from the file name ('master_model' becomes 'master').
                   $v = str_replace('_model', '', $v);
                   // Set values for the model_purpose and model_purpose_id fields.
-                  $json_array[$key][$field_name] = (int)$model_purpose_lookup_options[$v];
                   $json_array[$key][$field_name . '_id'] = (int)$model_purpose_lookup_options[$v];
                 }
 
@@ -1224,8 +1211,7 @@ class RepoImport implements RepoImportInterface {
   public function getDataFromFileNames($data = array())
   {
 
-    $image_file_names = $model_file_names = array();
-    $capture_datasets = $models = array();
+    $image_file_names = $capture_datasets = $models = array();
 
     if (!empty($data)) {
 
@@ -1308,11 +1294,6 @@ class RepoImport implements RepoImportInterface {
 
         }
 
-        // If this file's extension exists in the $this->model_extensions array, add to the $models array.
-        if (in_array(strtolower($file->getExtension()), $this->model_extensions)) {
-          $model_file_names[] = pathinfo($file->getFilename(), PATHINFO_FILENAME);
-        }
-
       }
 
       // $this->u->dumper(array_keys($image_file_names),0);
@@ -1320,19 +1301,6 @@ class RepoImport implements RepoImportInterface {
 
       if (!empty($image_file_names)) {
         $data = $this->getDatasetDataFromFilenames($image_file_names, $data);
-      }
-
-      // // Get model files (re-worked version).
-      // if (in_array(strtolower($file->getExtension()), $this->model_extensions)) {
-      //   foreach ($data->csv as $ckey => $cvalue) {
-      //     // Get the model's file name from the directory path.
-      //     $model_file_names[] = pathinfo($cvalue->file_path, PATHINFO_FILENAME);
-      //   }
-      // }
-
-
-      if (!empty($model_file_names)) {
-        $data = $this->getModelDataFromFilenames($model_file_names, $data);
       }
 
     }
@@ -1491,130 +1459,6 @@ class RepoImport implements RepoImportInterface {
             $i++;
           }
 
-          break;
-      }
-
-    }
-
-    return $data;
-  }
-
-  /**
-   * Get Data From File Names
-   *
-   * @param array $model_file_names Model file names
-   * @param array $data Job data
-   * @return array
-   */
-  public function getModelDataFromFilenames($model_file_names = array(), $data = array())
-  {
-    // Insert into subject (local_subject_id)
-    // Insert into item (item_description)
-    // Insert into model (model_purpose)
-    //
-    // Example file name mapping:
-    // nmnh-usnm_v_512384522-skull-master_model-2018_10_22.obj
-    // nmnh-[local_subject_id]-[item_description]-[model_purpose]-2018_10_22.obj
-
-    if (!empty($model_file_names)) {
-
-      // If there's a file_name_map.csv file at the root of the 'data' directory, use it.
-      $file_name_map_main = $this->getFilenameMap($data);
-
-      // Add data to uploaded CSVs.
-      switch ($data->type) {
-        case 'subject':
-          // Get the local_subject_id from the file name.
-          foreach ($model_file_names as $key => $file) {
-            if (!empty($file)) {
-              // Get the file's info from the metadata storage.
-              $file_info = $this->getFileInfo($data->uuid, $file);
-              // Get the file name map, if one exists in this directory.
-              if (!empty($file_info)) {
-                $file_name_map = $this->getFilenameMap($data);
-                // If no file name map exists, use the main one in the root of the 'data' directory.
-                $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
-              }
-              // Establish the file name map key so we know which slot in the file name to obtain the data from.
-              // local_subject_id
-              $key1 = (isset($file_name_map) && array_search('local_subject_id', $file_name_map))
-                  ? array_search('local_subject_id', $file_name_map)
-                  : array_search('local_subject_id', $this->default_model_file_name_map);
-              // Transform the file name to an array.
-              $file_name_parts = explode('-', $file);
-              // Populate the CSV's subject entries with the local_subject_id from the file name.
-              foreach ($data->csv as $ck => $cv) {
-                if(isset($file_name_parts[$key1])) {
-                  $data->csv[$ck]->local_subject_id = $file_name_parts[$key1];
-                }
-              }
-            }
-          }
-          break;
-        case 'item':
-          // Get the item_description from the file name.
-          foreach ($model_file_names as $key => $file) {
-            if (!empty($file)) {
-              // Get the file's info from the metadata storage.
-              $file_info = $this->getFileInfo($data->uuid, $file);
-              // Get the file name map, if one exists in this directory.
-              if (!empty($file_info)) {
-                $file_name_map = $this->getFilenameMap($data);
-                // If no file name map exists, use the main one in the root of the 'data' directory.
-                $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
-              }
-              // Establish the file name map key so we know which slot in the file name to obtain the data from.
-              // item_description
-              $key1 = (isset($file_name_map) && array_search('item_description', $file_name_map))
-                  ? array_search('item_description', $file_name_map)
-                  : array_search('item_description', $this->default_model_file_name_map);
-              // Transform the file name to an array.
-              $file_name_parts = explode('-', $file);
-              // Populate the CSV's item entries with the item_description from the file name.
-              foreach ($data->csv as $ck => $cv) {
-                if (isset($file_name_parts[$key1])) {
-                  $data->csv[$ck]->item_description = $file_name_parts[$key1];
-                }
-              }
-            }
-          }
-          break;
-        case 'model':
-          // Get the model_purpose from the file name.
-          foreach ($model_file_names as $key => $file) {
-            if (!empty($file)) {
-              // Get the file's info from the metadata storage.
-              $file_info = $this->getFileInfo($data->uuid, $file);
-              // Get the file name map, if one exists in this directory.
-              if (!empty($file_info)) {
-                $file_name_map = $this->getFilenameMap($data);
-                // If no file name map exists, use the main one in the root of the 'data' directory.
-                $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
-              }
-              // Establish the file name map key so we know which slot in the file name to obtain the data from.
-              // model_purpose
-              $key1 = (isset($file_name_map) && array_search('model_purpose', $file_name_map))
-                  ? array_search('model_purpose', $file_name_map)
-                  : array_search('model_purpose', $this->default_model_file_name_map);
-              // Transform the file name to an array.
-              $file_name_parts = explode('-', $file);
-              // Remove '_model' from the model_purpose chunk from the file name ('master_model' becomes 'master').
-              if (isset($data->csv[$key]) && isset($file_name_parts[$key1])) {
-                // Get the lookup options from metadata storage.
-                $model_purpose_lookup_options = $this->modelsController->getModelPurpose();
-                // Remove '_model' from the model_purpose value.
-                $model_purpose = str_replace('_model', '', $file_name_parts[$key1]);
-                // Set values for the model_purpose and model_purpose_id fields.
-                $data->csv[$key]->model_purpose = $model_purpose;
-                if(isset($model_purpose_lookup_options[$model_purpose])) {
-                  $data->csv[$key]->model_purpose_id = (int)$model_purpose_lookup_options[$model_purpose];
-                }
-                else {
-                  //@todo log a warning
-                }
-              }
-            }
-          }
           break;
       }
 
