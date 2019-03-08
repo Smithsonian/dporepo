@@ -472,7 +472,7 @@ class RepoImport implements RepoImportInterface {
 
                 // Look-up the ID for the 'creation_method'.
                 if ($field_name === 'creation_method') {
-                  $creation_method_lookup_options = array('scan-to-mesh' => 1, 'CAD' => 2);
+                  $creation_method_lookup_options = array('scan_to_mesh' => 1, 'CAD' => 2);
                   $json_array[$key][$field_name] = (int)$creation_method_lookup_options[$v];
                 }
 

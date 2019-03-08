@@ -43,7 +43,7 @@ class ModelForm extends AbstractType
                 'required' => true,
                 'placeholder' => 'Select',
                 // All options
-                'choices' => array('scan-to-mesh' => 1, 'CAD' => 2),
+                'choices' => array('scan_to_mesh' => 1, 'CAD' => 2),
                 // Selected option
                 'data' => $data['creation_method'],
                 'attr' => array('class' => 'default-chosen-select'),
