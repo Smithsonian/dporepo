@@ -927,9 +927,12 @@ class RepoImport implements RepoImportInterface {
               if (isset($model_id_for_uv_maps) && in_array(strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)), $this->image_extensions)) {
 
                 // Get the map_type and map_size from the file name.
-                // Example file name: f1978_40-master-1000k-8192-normals.jpg.
+                // Example file name: npg_91_28-1000k-8192-occlusion.jpg
                 $file_name_no_extension = pathinfo($filename_value, PATHINFO_FILENAME);
                 $file_name_parts = explode('-', $file_name_no_extension);
+
+                // Get the last 3 elements of the array.
+                $file_name_parts = array_slice($file_name_parts, -3, 3);
 
                 // Log the UV map to metadata storage.
                 $uv_map_id = $this->repo_storage_controller->execute('saveRecord', array(
@@ -941,8 +944,8 @@ class RepoImport implements RepoImportInterface {
                     'map_file_type' => strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)),
                     'file_path' => $file_info[0]['file_path'],
                     'file_checksum' => md5($filename_value),
-                    'map_type' => $file_name_parts[4],
-                    'map_size' => $file_name_parts[2],
+                    'map_type' => $file_name_parts[2],
+                    'map_size' => $file_name_parts[0],
                   )
                 ));
 
