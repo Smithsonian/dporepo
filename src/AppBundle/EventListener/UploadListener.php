@@ -377,24 +377,6 @@ class UploadListener
       // Loop through the data.
       foreach($data->csv as $csv_key => $csv_value) {
 
-        // Check to see if the subject already exists- DPO3DREP-546
-        $subject_exists = $this->repo_storage_controller->execute('getRecords', array(
-            'base_table' => 'subject',
-            'fields' => array(),
-            'limit' => 1,
-            'search_params' => array(
-              0 => array('field_names' => array('subject.subject_guid'), 'search_values' => array($csv_value->subject_guid), 'comparison' => '='),
-            ),
-            'search_type' => 'AND',
-            'omit_active_field' => true,
-          )
-        );
-
-        // If the subject exists, return an error.
-        if (!empty($subject_exists)) {
-          $return['messages'][$csv_key] = array('row' => 'Row ' . ($csv_key+1), 'error' => 'Subject record already exists. See: admin/subject/view/' . $subject_exists[0]['subject_id']);
-        }
-
         // Check to see if the EDAN record exists.
         if (empty($subject_exists)) {
           // Query EDAN
