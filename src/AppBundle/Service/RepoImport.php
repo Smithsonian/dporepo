@@ -795,7 +795,7 @@ class RepoImport implements RepoImportInterface {
           $file_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $csv_val->file_path) : $csv_val->file_path;
 
           // Log the model file to 'model_file' metadata storage.
-          $this->insertModelFiles($file_path, $this_id, $data);
+          $this->insertModelFiles($file_path, $this_id, $data, $csv_val->model_purpose);
 
           // Scan the model's directory for UV maps, and insert into metadata storage.
           $this->insertUvMaps($file_path, $this_id, $data);
@@ -1567,9 +1567,9 @@ class RepoImport implements RepoImportInterface {
    * @param string $data The data array
    * @return null
    */
-  public function insertModelFiles($file_path = null, $model_id = null, $data = array()) {
+  public function insertModelFiles($file_path = null, $model_id = null, $data = array(), $model_purpose = null) {
 
-    if (!empty($file_path) && !empty($model_id) && !empty($data)) {
+    if (!empty($file_path) && !empty($model_id) && !empty($data) && !empty($model_purpose)) {
 
       $uploads_directory = str_replace('web', '', $this->uploads_directory);
       // Windows fix for the model's file path.
@@ -1609,7 +1609,7 @@ class RepoImport implements RepoImportInterface {
             'record_id' => (int)$id,
             'project_id' => (int)$data->project_id,
             'record_table' => 'model_file',
-            'description' => $file_info[0]['file_name'],
+            'description' => $model_purpose . ': ' . $file_info[0]['file_name'],
           )
         ));
       }
@@ -1772,7 +1772,7 @@ class RepoImport implements RepoImportInterface {
             'search_params' => array(
               0 => array('field_names' => array('job.uuid'), 'search_values' => array($w[0]['ingest_job_uuid']), 'comparison' => '='),
               1 => array('field_names' => array('job_import_record.record_table'), 'search_values' => array('model_file'), 'comparison' => '='),
-              2 => array('field_names' => array('job_import_record.description'), 'search_values' => array('-master.obj'), 'comparison' => 'LIKE'),
+              2 => array('field_names' => array('job_import_record.description'), 'search_values' => array('master:'), 'comparison' => 'LIKE'),
             ),
             'search_type' => 'AND',
             'omit_active_field' => true,

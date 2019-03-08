@@ -203,6 +203,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
   {
 
     $data = $model_types = array();
+    $models_csv = null;
 
     if (!empty($path) && !empty($job_data)) {
 
@@ -215,117 +216,121 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
         $models_csv = $file->getContents();
       }
 
-      $model_types = $this->getModelsAndModelPurpose($models_csv);
+      if (!empty($models_csv)) {
+        
+        $model_types = $this->getModelsAndModelPurpose($models_csv);
 
-      // Traverse the local path and validate models.
-      $finder = new Finder();
-      $finder->path('data')->name('/\.obj|\.ply$/');
-      $finder->in($path);
-      $i = 0;
-      foreach ($finder as $file) {
+        // Traverse the local path and validate models.
+        $finder = new Finder();
+        $finder->path('data')->name('/\.obj|\.ply$/');
+        $finder->in($path);
+        $i = 0;
+        foreach ($finder as $file) {
 
-        // Make sure the asset is a file and not a directory (directories are automatically detected by WebDAV).
-        // Make sure that the model_purpose is master.
-        if ($file->isFile() && array_key_exists($file->getFilename(), $model_types) && ($model_types[$file->getFilename()] === 'master')) {
+          // Make sure the asset is a file and not a directory (directories are automatically detected by WebDAV).
+          // Make sure that the model_purpose is master.
+          if ($file->isFile() && array_key_exists($file->getFilename(), $model_types) && ($model_types[$file->getFilename()] === 'master')) {
 
-          $file_path = str_replace($this->project_directory . $this->uploads_directory, DIRECTORY_SEPARATOR, $file->getPathname());
+            $file_path = str_replace($this->project_directory . $this->uploads_directory, DIRECTORY_SEPARATOR, $file->getPathname());
 
-          // Get the ID of the recipe, so it can be passed to processing service's job creation endpoint (post_job).
-          $recipe = $this->processing->getRecipeByName( $recipe_name );
-
-          // Error handling
-          if (isset($recipe['error']) && !empty($recipe['error'])) $data[$i]['errors'][] = $recipe['error'];
-
-          if (!isset($recipe['error'])) {
-
-            // Create a timestamp for the procesing job name.
-            $job_name = str_replace('+00:00', 'Z', gmdate('c', strtotime('now')));
-            // Post a new job.
-            $params = array(
-              'highPolyMeshFile' => $file->getFilename()
-            );
-            $result = $this->processing->postJob($recipe['id'], $job_name, $params);
+            // Get the ID of the recipe, so it can be passed to processing service's job creation endpoint (post_job).
+            $recipe = $this->processing->getRecipeByName( $recipe_name );
 
             // Error handling
-            if ($result['httpcode'] !== 201) $data[$i]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
+            if (isset($recipe['error']) && !empty($recipe['error'])) $data[$i]['errors'][] = $recipe['error'];
 
-            if ($result['httpcode'] === 201) {
+            if (!isset($recipe['error'])) {
 
-              // Get the processing_job data.
-              $processing_job = $this->processing->getJobByName($job_name);
+              // Create a timestamp for the procesing job name.
+              $job_name = str_replace('+00:00', 'Z', gmdate('c', strtotime('now')));
+              // Post a new job.
+              $params = array(
+                'highPolyMeshFile' => $file->getFilename()
+              );
+              $result = $this->processing->postJob($recipe['id'], $job_name, $params);
 
               // Error handling
-              if (isset($processing_job['error']) && !empty($processing_job['error'])) $data[$i]['errors'][] = $processing_job['error'];
+              if ($result['httpcode'] !== 201) $data[$i]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
 
-              // Log processing_job data to the metadata storage
-              if (isset($processing_job['error']) && empty($processing_job['error'])) {
+              if ($result['httpcode'] === 201) {
 
-                $processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
-                  'base_table' => 'processing_job',
-                  'user_id' => $job_data['created_by_user_account_id'],
-                  'values' => array(
-                    'ingest_job_uuid' => $job_data['uuid'],
-                    'processing_service_job_id' => $processing_job['id'],
-                    'recipe' =>  $processing_job['recipe']['name'],
-                    'job_json' => json_encode($processing_job),
-                    'state' => $processing_job['state'],
-                    'asset_path' => $file->getPathname(),
-                  )
-                ));
-
-                // Create the workflow.
-                $query_params = array(
-                  'ingest_job_uuid' => $job_data['uuid'],
-                  'processing_job_id' => $processing_job['id'],
-                  'workflow_recipe_id' => 'test_v1',
-                  'step_state' => 'processing',
-                  'user_id' => $job_data['created_by_user_account_id'],
-                );
-
-                // TODO: error handling
-                $data[$i] = $this->repo_storage_controller->execute('createWorkflow', $query_params);
-              }
-
-              // The external path - on the processing service side.
-              $path_external = $processing_job['id'] . '/' . $file->getFilename();
-
-              // Transfer the file to the processing service via WebDAV.
-              try {
-
-                $stream = fopen($file->getPathname(), 'r+');
-                $filesystem->writeStream($path_external, $stream);
-                // Before calling fclose on the resource, check if it’s still valid using is_resource.
-                if (is_resource($stream)) fclose($stream);
-
-                // Now that the file has been transferred, go ahead and run the processing job.
-                $result = $this->processing->runJob($processing_job['id']);
+                // Get the processing_job data.
+                $processing_job = $this->processing->getJobByName($job_name);
 
                 // Error handling
-                if ($result['httpcode'] !== 202) $data[$i]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
+                if (isset($processing_job['error']) && !empty($processing_job['error'])) $data[$i]['errors'][] = $processing_job['error'];
 
-              }
-              // Catch the error.
-              catch(\League\Flysystem\FileExistsException | \League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
-                $data[$i]['errors'][] = $e->getMessage();
+                // Log processing_job data to the metadata storage
+                if (isset($processing_job['error']) && empty($processing_job['error'])) {
+
+                  $processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
+                    'base_table' => 'processing_job',
+                    'user_id' => $job_data['created_by_user_account_id'],
+                    'values' => array(
+                      'ingest_job_uuid' => $job_data['uuid'],
+                      'processing_service_job_id' => $processing_job['id'],
+                      'recipe' =>  $processing_job['recipe']['name'],
+                      'job_json' => json_encode($processing_job),
+                      'state' => $processing_job['state'],
+                      'asset_path' => $file->getPathname(),
+                    )
+                  ));
+
+                  // Create the workflow.
+                  $query_params = array(
+                    'ingest_job_uuid' => $job_data['uuid'],
+                    'processing_job_id' => $processing_job['id'],
+                    'workflow_recipe_id' => 'test_v1',
+                    'step_state' => 'processing',
+                    'user_id' => $job_data['created_by_user_account_id'],
+                  );
+
+                  // TODO: error handling
+                  $data[$i] = $this->repo_storage_controller->execute('createWorkflow', $query_params);
+                }
+
+                // The external path - on the processing service side.
+                $path_external = $processing_job['id'] . '/' . $file->getFilename();
+
+                // Transfer the file to the processing service via WebDAV.
+                try {
+
+                  $stream = fopen($file->getPathname(), 'r+');
+                  $filesystem->writeStream($path_external, $stream);
+                  // Before calling fclose on the resource, check if it’s still valid using is_resource.
+                  if (is_resource($stream)) fclose($stream);
+
+                  // Now that the file has been transferred, go ahead and run the processing job.
+                  $result = $this->processing->runJob($processing_job['id']);
+
+                  // Error handling
+                  if ($result['httpcode'] !== 202) $data[$i]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
+
+                }
+                // Catch the error.
+                catch(\League\Flysystem\FileExistsException | \League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
+                  $data[$i]['errors'][] = $e->getMessage();
+                }
+
               }
 
             }
 
+            if (!empty($data[$i]['errors'])) {
+              // Log the errors to the database.
+              $this->repoValidate->logErrors(
+                array(
+                  'job_id' => $job_data['job_id'],
+                  'user_id' => $job_data['created_by_user_account_id'],
+                  'job_log_label' => 'Validate Model',
+                  'errors' => $data[$i]['errors'],
+                )
+              );
+            }
+
+            $i++;
           }
 
-          if (!empty($data[$i]['errors'])) {
-            // Log the errors to the database.
-            $this->repoValidate->logErrors(
-              array(
-                'job_id' => $job_data['job_id'],
-                'user_id' => $job_data['created_by_user_account_id'],
-                'job_log_label' => 'Validate Model',
-                'errors' => $data[$i]['errors'],
-              )
-            );
-          }
-
-          $i++;
         }
 
       }
