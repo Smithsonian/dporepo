@@ -730,34 +730,6 @@ class RepoImport implements RepoImportInterface {
               }
             }
 
-            // /////////////////////////////////////////////////////////////////////////////////////////
-            // // Extract database column data from the processing server's 'inspect-mesh' results.
-            // $csv_val = $this->extractDataFromExternal('get_model_data_from_processing_service', $csv_val, $data);
-            // /////////////////////////////////////////////////////////////////////////////////////////
-
-            // Set the capture_dataset_id or item_id (when a model is associated to an item).
-            // TODO: add previous_record_type to the mix,
-            // so the system will automatically detect what to associate a model to (to make it a bit more bullet-proof).
-            if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
-              // If a model maps to an item, set the value for the 'parent_item_repository_id' field.
-              if ($data->record_type === 'item') {
-                $csv_val->item_id = $new_repository_ids[$i][$csv_val->import_parent_id];
-              }
-              // Otherwise, set the value for the 'capture_dataset_id' field.
-              else {
-                $csv_val->capture_dataset_id = $new_repository_ids[$i][$csv_val->import_parent_id];
-              }
-            } else {
-              // If a model maps to an item, set the value for the 'item_id' field.
-              if ($data->record_type === 'item') {
-                $csv_val->item_id = $data->record_id;
-              }
-              // Otherwise, set the value for the 'capture_dataset_id' field.
-              else {
-                $csv_val->capture_dataset_id = $data->record_id;
-              }
-            }
-
             // ALWAYS insert the item_id into the model record.
             // Get the item_id from the capture dataset.
             $capture_dataset_info = $this->repo_storage_controller->execute('getRecords', array(
@@ -773,7 +745,32 @@ class RepoImport implements RepoImportInterface {
             );
 
             if (!empty($capture_dataset_info)) {
+              $csv_val->capture_dataset_id = $capture_dataset_info[0]['capture_dataset_id'];
               $csv_val->item_id = $capture_dataset_info[0]['item_id'];
+            }
+
+            // If the capture_dataset doesn't exist, then the last inserted ID is an item_id. 
+            if (empty($capture_dataset_info)) {
+
+              $csv_val->capture_dataset_id = null;
+
+              // To be sure, check that the item exists.
+              $item_info = $this->repo_storage_controller->execute('getRecords', array(
+                'base_table' => 'item',
+                'fields' => array(),
+                'limit' => 1,
+                'search_params' => array(
+                  0 => array('field_names' => array('item.item_id'), 'search_values' => array($new_repository_ids[$i][$csv_val->import_parent_id]), 'comparison' => '='),
+                ),
+                'search_type' => 'AND',
+                'omit_active_field' => true,
+                )
+              );
+
+              if (!empty($item_info)) {
+                $csv_val->item_id = $item_info[0]['item_id'];
+              }
+
             }
 
             break;
