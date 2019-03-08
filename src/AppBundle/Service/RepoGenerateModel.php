@@ -202,19 +202,33 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
   public function runWebHd($path = null, $job_data = array(), $recipe_name = null, $filesystem)
   {
 
-    $data = array();
+    $data = $model_types = array();
 
     if (!empty($path) && !empty($job_data)) {
 
+      // Parse the models.csv to get model file names and model purposes.
+      $finder = new Finder();
+      $finder->name('models.csv');
+      $finder->in($path);
+      $i = 0;
+      foreach ($finder as $file) {
+        $models_csv = $file->getContents();
+      }
+
+      $model_types = $this->getModelsAndModelPurpose($models_csv);
+
       // Traverse the local path and validate models.
       $finder = new Finder();
-      $finder->path('data')->name('/-master\.obj|\-master.ply$/');
+      $finder->path('data')->name('/\.obj|\.ply$/');
       $finder->in($path);
       $i = 0;
       foreach ($finder as $file) {
 
         // Make sure the asset is a file and not a directory (directories are automatically detected by WebDAV).
-        if ($file->isFile()) {
+        // Make sure that the model_purpose is master.
+        if ($file->isFile() && array_key_exists($file->getFilename(), $model_types) && ($model_types[$file->getFilename()] === 'master')) {
+
+          $file_path = str_replace($this->project_directory . $this->uploads_directory, DIRECTORY_SEPARATOR, $file->getPathname());
 
           // Get the ID of the recipe, so it can be passed to processing service's job creation endpoint (post_job).
           $recipe = $this->processing->getRecipeByName( $recipe_name );
@@ -426,6 +440,50 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
  
       }
 
+    }
+
+    return $data;
+  }
+
+  /**
+   * @param string $models_csv The models.csv file.
+   * @return array
+   */
+  public function getModelsAndModelPurpose($models_csv = null)
+  {
+    $data = array();
+
+    if (!empty($models_csv)) {
+      // Convert the CSV to JSON.
+      $array = array_map('str_getcsv', explode("\n", $models_csv));
+      $json = json_encode($array);
+      // Convert the JSON to a PHP array.
+      $json_array = json_decode($json, false);
+      // Read the first key from the array, which is the column headers.
+      $target_fields = $json_array[0];
+      // Remove the column headers from the array.
+      array_shift($json_array);
+      foreach ($json_array as $key => $value) {
+        // Replace numeric keys with field names.
+        if (is_numeric($key)) {
+          foreach ($value as $k => $v) {
+            $field_name = $target_fields[$k];
+            unset($json_array[$key][$k]);
+            // Set the value of the field name.
+            $json_array[$key][$field_name] = $v;
+          }
+          // If an array of data contains 1 or fewer keys, then it means the row is empty.
+          // Unset the empty row, so it doesn't get inserted into the database.
+          if (count(array_keys((array)$json_array[$key])) > 1) {
+            $models[] = $json_array[$key];
+          }
+        }
+      }
+      // Create an array containing model file names as keys, and the model_purpose as the values.
+      foreach ($models as $mk => $mv) {
+        $model_file_name = pathinfo($mv['file_path'], PATHINFO_BASENAME);
+        $data[$model_file_name] = $mv['model_purpose'];
+      }
     }
 
     return $data;
