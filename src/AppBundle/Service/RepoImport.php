@@ -593,6 +593,8 @@ class RepoImport implements RepoImportInterface {
     // foreach() begins
     foreach ($data->csv as $csv_key => $csv_val) {
 
+      $subject_exists = array();
+
       // If this is not capture_data_elements, and the import_row_id is missing, set the job to failed and set the error.
       if (!isset($csv_val->capture_data_elements) && !isset($csv_val->import_row_id)) {
         $job_status = 'failed';
@@ -630,15 +632,34 @@ class RepoImport implements RepoImportInterface {
         // Set the parent record's repository ID.
         switch ($data->type) {
           case 'subject':
-            // Set the project_id
-            $csv_val->project_id = (int)$data->project_id;
-            // Query EDAN to populate the CSV with EDAN record info (subject_name, and subject_display_name)
-            $result = $this->edan->getRecord($csv_val->subject_guid);
-            // The EDAN record assignment has already been validated during pre-validation,
-            // so no error handling - for now.
-            if (!isset($result['error'])) {
-              $csv_val->subject_name = $result['title'];
-              $csv_val->subject_display_name = $result['title'];
+            
+            // Check to see if the subject already exists- DPO3DREP-546
+            $subject_exists = $this->repo_storage_controller->execute('getRecords', array(
+                'base_table' => 'subject',
+                'fields' => array(),
+                'limit' => 1,
+                'search_params' => array(
+                  0 => array('field_names' => array('subject.holding_entity_guid'), 'search_values' => array($csv_val->holding_entity_guid), 'comparison' => '='),
+                ),
+                'search_type' => 'AND',
+                'omit_active_field' => true,
+              )
+            );
+
+            // If the subject doesn't exist, process.
+            if (empty($subject_exists)) {
+              // Set the project_id
+              $csv_val->project_id = (int)$data->project_id;
+              // Query EDAN to populate the CSV with EDAN record info (subject_name, and subject_display_name)
+              $result = $this->edan->getRecord($csv_val->subject_guid);
+              // The EDAN record assignment has already been validated during pre-validation,
+              // so no error handling - for now.
+              if (!isset($result['error'])) {
+                $csv_val->subject_name = $result['title'];
+                $csv_val->subject_display_name = $result['title'];
+              }
+            } else {
+              $csv_val->subject_name = $subject_exists[0]['subject_name'];
             }
             break;
           case 'item':
@@ -758,12 +779,17 @@ class RepoImport implements RepoImportInterface {
             break;
         }
 
-        // Insert data from the CSV into the appropriate database table, using the $data->type as the table name.
-        $this_id = $this->repo_storage_controller->execute('saveRecord', array(
-          'base_table' => $data->type,
-          'user_id' => $data->user_id,
-          'values' => (array)$csv_val
-        ));
+        // This check is only for a subject. By default, $subject_exists is an empty array.
+        if (empty($subject_exists)) {
+          // Insert data from the CSV into the appropriate database table, using the $data->type as the table name.
+          $this_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => $data->type,
+            'user_id' => $data->user_id,
+            'values' => (array)$csv_val
+          ));
+        } else {
+          $this_id = $subject_exists[0]['subject_id'];
+        }
 
         // Log the model file and any processed assets to the 'model_file' table.
         if(!empty($csv_val->file_path)) {
@@ -970,18 +996,22 @@ class RepoImport implements RepoImportInterface {
             break;
         }
 
-        // Insert into the job_import_record table
-        $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
-          'base_table' => 'job_import_record',
-          'user_id' => $data->user_id,
-          'values' => array(
-            'job_id' => $data->job_id,
-            'record_id' => $this_id,
-            'project_id' => (int)$data->project_id,
-            'record_table' => $data->type,
-            'description' => $data->description,
-          )
-        ));
+        // This check is only for a subject. By default, $subject_exists is an empty array.
+        if (empty($subject_exists)) {
+          // Insert into the job_import_record table
+          $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'job_import_record',
+            'user_id' => $data->user_id,
+            'values' => array(
+              'job_id' => $data->job_id,
+              'record_id' => $this_id,
+              'project_id' => (int)$data->project_id,
+              'record_table' => $data->type,
+              'description' => $data->description,
+            )
+          ));
+        }
+
       }
     }
     // foreach() ends
