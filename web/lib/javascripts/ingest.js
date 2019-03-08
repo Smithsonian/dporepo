@@ -879,20 +879,14 @@ function requiredCsvValidation(parentRecordType, csvList) {
   if (parentRecordType.length && csvList.length) {
 
     if (parentRecordType === 'project') {
-      requiredCsvs = 'file_name_map.csv, subjects.csv, items.csv, capture_datasets.csv';
-    }
-    if (parentRecordType === 'subject') {
-      requiredCsvs = 'file_name_map.csv, items.csv, capture_datasets.csv';
-    }
-    if (parentRecordType === 'item') {
-      requiredCsvs = 'file_name_map.csv'; // , capture_datasets.csv
+      requiredCsvs = 'file_name_map.csv, subjects.csv, items.csv';
     }
 
-    // File name map - no file_name_map.csv found
-    if ( csvList.indexOf('file_name_map.csv') === -1 ) {
-      csvTargetFile = 'file_name_map.csv';
-      generateWarning = true;
-    }
+    // // File name map - no file_name_map.csv found
+    // if ( csvList.indexOf('file_name_map.csv') === -1 ) {
+    //   csvTargetFile = 'file_name_map.csv';
+    //   generateWarning = true;
+    // }
 
     // Project as parent record - no subjects.csv found
     if ( (parentRecordType === 'project') && (csvList.indexOf('subjects.csv') === -1) ) {
@@ -905,30 +899,6 @@ function requiredCsvValidation(parentRecordType, csvList) {
       csvTargetFile = 'items.csv';
       generateWarning = true;
     }
-
-    // Project as parent record - no capture_datasets.csv found
-    if ( (parentRecordType === 'project') && (csvList.indexOf('capture_datasets.csv') === -1) ) {
-      csvTargetFile = 'capture_datasets.csv';
-      generateWarning = true;
-    }
-
-    // Subject as parent record- no items.csv found
-    if ( (parentRecordType === 'subject') && (csvList.indexOf('items.csv') === -1) ) {
-      csvTargetFile = 'items.csv';
-      generateWarning = true;
-    }
-
-    // Subject as parent record- no capture_datasets.csv found
-    if ( (parentRecordType === 'subject') && (csvList.indexOf('capture_datasets.csv') === -1) ) {
-      csvTargetFile = 'capture_datasets.csv';
-      generateWarning = true;
-    }
-
-    // Item as parent record - no capture_datasets.csv found
-    // if ( (parentRecordType === 'item') && (csvList.indexOf('capture_datasets.csv') === -1) ) {
-    //   csvTargetFile = 'capture_datasets.csv';
-    //   generateWarning = true;
-    // }
 
     if (generateWarning) {
       errorText = '<strong>' + csvTargetFile + ':</strong> Not found. Required CSV files: ' + requiredCsvs;
