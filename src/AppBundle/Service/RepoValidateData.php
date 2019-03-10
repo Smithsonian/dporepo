@@ -335,7 +335,7 @@ class RepoValidateData implements RepoValidate {
         array(
           'job_id' => $data[0]['uuid'], 
           'status' => 'bagit validation in progress',
-          'date_completed' => date('Y-m-d h:i:s')
+          'date_completed' => date('Y-m-d H:i:s')
         )
       );
     }
