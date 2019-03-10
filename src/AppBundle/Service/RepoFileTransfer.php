@@ -62,7 +62,8 @@ class RepoFileTransfer implements RepoFileTransferInterface {
   {
     $this->u = new AppUtilities();
     $this->kernel = $kernel;
-    $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+    $project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+    $this->project_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $project_directory) : $project_directory;
     $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
     $this->external_file_storage_path = $external_file_storage_path;
     $this->conn = $conn;
@@ -297,6 +298,7 @@ class RepoFileTransfer implements RepoFileTransferInterface {
 
     $full_path = str_replace($this->project_directory, '', $file->getPathname());
     $full_path = str_replace('web', '', $full_path);
+    $full_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $full_path) : $full_path;
 
     // Query the metadata storage for the file to update the record, and avoid duplicates.
     $existing_file = $this->repo_storage_controller->execute('getRecords', array(
