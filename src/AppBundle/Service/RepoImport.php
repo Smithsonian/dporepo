@@ -222,6 +222,8 @@ class RepoImport implements RepoImportInterface {
     $session->remove('new_repository_ids_2');
     $session->remove('new_repository_ids_3');
     $session->remove('new_repository_ids_4');
+    $session->remove('model_import_type');
+    $session->remove('item_id');
 
     // Set the job type (e.g. subjects metadata import, items metadata import, capture datasets metadata import, models metadata import).
     // $job_data = $this->repo_storage_controller->execute('getJobData', array($params['uuid']));
@@ -245,38 +247,26 @@ class RepoImport implements RepoImportInterface {
 
         // Ingest data.
         if (!empty($data)) {
-          // Associate a Model to an Item
-          // In order to associate a Model to an Item (normally a Model is associated to a Capture Dataset), need to:
-          // 1) Get 'type' field values in the $data array.
-          // 2) Then determine if there's an 'item' type and a 'model' type, but no 'capture_dataset' type.
-          // 3) Sort the capture_dataset CSV by directory_path so it's easier to work with when dealing with the filesystem.
+
+          // Get 'type' field values in the $data array.
           foreach ($data as $csv_key => $csv_value) {
             $csv_types[] = $csv_value['type'];
           }
 
-          // Set the job_status to 'model' if that's the only CSV type being imported.
-          if((count($csv_types) === 1) && in_array('model', $csv_types)) {
-            $this->repo_storage_controller->execute('saveRecord', array(
-              'base_table' => 'job',
-              'record_id' => $job_info->job_id,
-              'user_id' => 0,
-              'values' => array(
-                'job_type' => 'models metadata import',
-              )
-            ));
+          // Associate models to an item record.
+          if(!in_array('capture_dataset', $csv_types) && in_array('model', $csv_types)) {
+            $session->set('model_import_type', 'without_dataset');
           }
 
-          // Sort the capture_dataset CSV by directory_path.
+          // Sort the capture_dataset CSV by directory_path so it's easier to work with when dealing with the filesystem.
           foreach ($data as $csv_key => $csv_value) {
             if ($csv_value['type'] === 'capture_dataset') {
               $csv_sorted_by_directory_path = (array)$csv_value['csv'];
               array_multisort(array_column($csv_sorted_by_directory_path, 'directory_path'), SORT_ASC, $csv_sorted_by_directory_path);
-
               // // Adjust the import_row_id value to line-up with the new sort.
               // foreach ($csv_sorted_by_directory_path as $key => $value) {
               //   $csv_sorted_by_directory_path[$key]->import_row_id = $key;
               // }
-
               $data[$csv_key]['csv'] = $csv_sorted_by_directory_path;
             }
           }
@@ -622,7 +612,7 @@ class RepoImport implements RepoImportInterface {
           array(
             'job_id' => $data->uuid, 
             'status' => $job_status,
-            'date_completed' => date('Y-m-d h:i:s')
+            'date_completed' => date('Y-m-d H:i:s')
           )
         );
         break;
@@ -730,47 +720,13 @@ class RepoImport implements RepoImportInterface {
               }
             }
 
-            // ALWAYS insert the item_id into the model record.
-            // Get the item_id from the capture dataset.
-            $capture_dataset_info = $this->repo_storage_controller->execute('getRecords', array(
-              'base_table' => 'capture_dataset',
-              'fields' => array(),
-              'limit' => 1,
-              'search_params' => array(
-                0 => array('field_names' => array('capture_dataset.capture_dataset_id'), 'search_values' => array($new_repository_ids[$i][$csv_val->import_parent_id]), 'comparison' => '='),
-              ),
-              'search_type' => 'AND',
-              'omit_active_field' => true,
-              )
-            );
-
-            if (!empty($capture_dataset_info)) {
-              $csv_val->capture_dataset_id = $capture_dataset_info[0]['capture_dataset_id'];
-              $csv_val->item_id = $capture_dataset_info[0]['item_id'];
-            }
-
-            // If the capture_dataset doesn't exist, then the last inserted ID is an item_id. 
-            if (empty($capture_dataset_info)) {
-
-              $csv_val->capture_dataset_id = null;
-
-              // To be sure, check that the item exists.
-              $item_info = $this->repo_storage_controller->execute('getRecords', array(
-                'base_table' => 'item',
-                'fields' => array(),
-                'limit' => 1,
-                'search_params' => array(
-                  0 => array('field_names' => array('item.item_id'), 'search_values' => array($new_repository_ids[$i][$csv_val->import_parent_id]), 'comparison' => '='),
-                ),
-                'search_type' => 'AND',
-                'omit_active_field' => true,
-                )
-              );
-
-              if (!empty($item_info)) {
-                $csv_val->item_id = $item_info[0]['item_id'];
+            // Set the capture_dataset_id.
+            if (null === $session->get('model_import_type')) {
+              if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
+                $csv_val->capture_dataset_id = $new_repository_ids[$i][$csv_val->import_parent_id];
+              } else {
+                $csv_val->capture_dataset_id = $data->record_id;
               }
-
             }
 
             break;
@@ -778,12 +734,22 @@ class RepoImport implements RepoImportInterface {
 
         // This check is only for a subject. By default, $subject_exists is an empty array.
         if (empty($subject_exists)) {
+
+          if ((null !== $session->get('item_id')) && ($data->type === 'model')) {
+            $csv_val->item_id = $session->get('item_id');
+          }
+
           // Insert data from the CSV into the appropriate database table, using the $data->type as the table name.
           $this_id = $this->repo_storage_controller->execute('saveRecord', array(
             'base_table' => $data->type,
             'user_id' => $data->user_id,
             'values' => (array)$csv_val
           ));
+
+          if ($data->type === 'item') {
+            $session->set('item_id', $this_id);
+          }
+
         } else {
           $this_id = $subject_exists[0]['subject_id'];
         }
