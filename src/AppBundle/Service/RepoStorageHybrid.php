@@ -1712,6 +1712,7 @@ class RepoStorageHybrid implements RepoStorage {
             'capture_dataset',
             'capture_data_element',
             'capture_data_file',
+            'capture_data_file_derivative',
             'capture_dataset_model',
             'model',
             'model_file',
@@ -1928,8 +1929,22 @@ class RepoStorageHybrid implements RepoStorage {
     $statement->bindValue(":image_width", (int)$params['image_width'], PDO::PARAM_INT);
     $statement->bindValue(":image_height", (int)$params['image_height'], PDO::PARAM_INT);
     $statement->bindValue(":user_id", $params['created_by_user_account_id'], PDO::PARAM_INT);
-
     $statement->execute();
+    $capture_data_file_derivative_id = $this->connection->lastInsertId();
+
+    // Insert into the job_import_record table
+    $this->saveRecord(array(
+      'base_table' => 'job_import_record',
+      'user_id' => $params['created_by_user_account_id'],
+      'values' => array(
+        'job_id' => $params['job_id'],
+        'record_id' => $capture_data_file_derivative_id,
+        'project_id' => null,
+        'record_table' => 'capture_data_file_derivative',
+        'description' => 'Capture Data File: ' . $params['file_name'],
+      )
+    ));
+
     return;
 
   }
