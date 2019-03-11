@@ -153,14 +153,10 @@ class RepoDerivativeGenerate {
             $new_capture_data_file['file_name'] = $new_thumb_file_name;
             // Path should start with '/uploads/repository/'.
             //@todo instead use fileservicehelper
-            $new_capture_data_file['file_path'] =
-            str_replace("\\", "/",
-              str_replace($path_data['verbose']['application_web_directory'], "",
-                str_replace($file_name, $new_thumb_file_name, $file_path)
-              )
-            );
-            if(substr($new_capture_data_file['file_path'], 0, 1) !== "/") {
-              $new_capture_data_file['file_path'] = "/" . $new_capture_data_file['file_path'];
+            $new_capture_data_file['file_path'] = str_replace($file_name, $new_thumb_file_name, $file_path);
+            $new_capture_data_file['file_path'] = str_replace($this->project_directory . 'web', '', $new_capture_data_file['file_path']);
+            if(substr($new_capture_data_file['file_path'], 0, 1) !== DIRECTORY_SEPARATOR) {
+              $new_capture_data_file['file_path'] = DIRECTORY_SEPARATOR . $new_capture_data_file['file_path'];
             }
 
             $new_capture_data_file['file_size'] = filesize($new_thumb_path);
@@ -197,14 +193,10 @@ class RepoDerivativeGenerate {
             $new_capture_data_file['capture_data_file_name'] = $new_midsize_file_name;
             $new_capture_data_file['file_name'] = $new_midsize_file_name;
             //@todo instead use fileservicehelper
-            $new_capture_data_file['file_path'] =
-              str_replace("\\", "/",
-                str_replace($path_data['verbose']['application_web_directory'], "",
-                  str_replace($file_name, $new_midsize_file_name, $file_path)
-                )
-              );
-            if(substr($new_capture_data_file['file_path'], 0, 1) !== "/") {
-              $new_capture_data_file['file_path'] = "/" . $new_capture_data_file['file_path'];
+            $new_capture_data_file['file_path'] = str_replace($file_name, $new_midsize_file_name, $file_path);
+            $new_capture_data_file['file_path'] = str_replace($this->project_directory . 'web', '', $new_capture_data_file['file_path']);
+            if(substr($new_capture_data_file['file_path'], 0, 1) !== DIRECTORY_SEPARATOR) {
+              $new_capture_data_file['file_path'] = DIRECTORY_SEPARATOR . $new_capture_data_file['file_path'];
             }
 
             $new_capture_data_file['file_size'] = filesize($new_midsize_path);
