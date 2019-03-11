@@ -37,4 +37,10 @@ interface RepoGenerateModelInterface {
    */
   public function runWebMulti(string $path, array $job_data, string $recipe_name, obj $filesystem);
 
+  /**
+   * @param string $models_csv The models.csv file.
+   * @return array
+   */
+  public function getModelsAndModelPurpose(string $models_csv);
+
 }

@@ -702,7 +702,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
                 'fields' => array(),
                 'limit' => 1,
                 'search_params' => array(
-                  0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($path), 'comparison' => '='),
+                  0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($normalized_path), 'comparison' => '='),
                 ),
                 'search_type' => 'AND',
                 'omit_active_field' => true,
@@ -717,7 +717,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
                   'values' => array(
                     'job_id' => $repo_job_data['job_id'],
                     'file_name' => $asset['file_name'],
-                    'file_path' => $path,
+                    'file_path' => $normalized_path,
                     'file_size' => filesize($asset['file_path']),
                     'file_type' => strtolower(pathinfo($asset['file_path'], PATHINFO_EXTENSION)),
                     'file_hash' => md5($asset['file_name']),

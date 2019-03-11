@@ -100,11 +100,6 @@ class RepoImport implements RepoImportInterface {
   private $default_image_file_name_map;
 
   /**
-   * @var object $default_model_file_name_map
-   */
-  private $default_model_file_name_map;
-
-  /**
    * @var object $logger
    */
   private $logger;
@@ -176,13 +171,6 @@ class RepoImport implements RepoImportInterface {
       'position_in_cluster_field_id',
       'cluster_position_field_id',
     );
-
-    // Default model file name mapping.
-    $this->default_model_file_name_map = array(
-      'local_subject_id',
-      // 'item_description',
-      'model_purpose',
-    );
   }
 
   /**
@@ -234,6 +222,8 @@ class RepoImport implements RepoImportInterface {
     $session->remove('new_repository_ids_2');
     $session->remove('new_repository_ids_3');
     $session->remove('new_repository_ids_4');
+    $session->remove('model_import_type');
+    $session->remove('item_id');
 
     // Set the job type (e.g. subjects metadata import, items metadata import, capture datasets metadata import, models metadata import).
     // $job_data = $this->repo_storage_controller->execute('getJobData', array($params['uuid']));
@@ -257,38 +247,26 @@ class RepoImport implements RepoImportInterface {
 
         // Ingest data.
         if (!empty($data)) {
-          // Associate a Model to an Item
-          // In order to associate a Model to an Item (normally a Model is associated to a Capture Dataset), need to:
-          // 1) Get 'type' field values in the $data array.
-          // 2) Then determine if there's an 'item' type and a 'model' type, but no 'capture_dataset' type.
-          // 3) Sort the capture_dataset CSV by directory_path so it's easier to work with when dealing with the filesystem.
+
+          // Get 'type' field values in the $data array.
           foreach ($data as $csv_key => $csv_value) {
             $csv_types[] = $csv_value['type'];
           }
 
-          // Set the job_status to 'model' if that's the only CSV type being imported.
-          if((count($csv_types) === 1) && in_array('model', $csv_types)) {
-            $this->repo_storage_controller->execute('saveRecord', array(
-              'base_table' => 'job',
-              'record_id' => $job_info->job_id,
-              'user_id' => 0,
-              'values' => array(
-                'job_type' => 'models metadata import',
-              )
-            ));
+          // Associate models to an item record.
+          if(!in_array('capture_dataset', $csv_types) && in_array('model', $csv_types)) {
+            $session->set('model_import_type', 'without_dataset');
           }
 
-          // Sort the capture_dataset CSV by directory_path.
+          // Sort the capture_dataset CSV by directory_path so it's easier to work with when dealing with the filesystem.
           foreach ($data as $csv_key => $csv_value) {
             if ($csv_value['type'] === 'capture_dataset') {
               $csv_sorted_by_directory_path = (array)$csv_value['csv'];
               array_multisort(array_column($csv_sorted_by_directory_path, 'directory_path'), SORT_ASC, $csv_sorted_by_directory_path);
-
               // // Adjust the import_row_id value to line-up with the new sort.
               // foreach ($csv_sorted_by_directory_path as $key => $value) {
               //   $csv_sorted_by_directory_path[$key]->import_row_id = $key;
               // }
-
               $data[$csv_key]['csv'] = $csv_sorted_by_directory_path;
             }
           }
@@ -484,7 +462,7 @@ class RepoImport implements RepoImportInterface {
 
                 // Look-up the ID for the 'creation_method'.
                 if ($field_name === 'creation_method') {
-                  $creation_method_lookup_options = array('scan-to-mesh' => 1, 'CAD' => 2);
+                  $creation_method_lookup_options = array('scan_to_mesh' => 1, 'CAD' => 2);
                   $json_array[$key][$field_name] = (int)$creation_method_lookup_options[$v];
                 }
 
@@ -507,7 +485,6 @@ class RepoImport implements RepoImportInterface {
                   // Remove '_model' from the model_purpose chunk from the file name ('master_model' becomes 'master').
                   $v = str_replace('_model', '', $v);
                   // Set values for the model_purpose and model_purpose_id fields.
-                  $json_array[$key][$field_name] = (int)$model_purpose_lookup_options[$v];
                   $json_array[$key][$field_name . '_id'] = (int)$model_purpose_lookup_options[$v];
                 }
 
@@ -606,6 +583,8 @@ class RepoImport implements RepoImportInterface {
     // foreach() begins
     foreach ($data->csv as $csv_key => $csv_val) {
 
+      $subject_exists = array();
+
       // If this is not capture_data_elements, and the import_row_id is missing, set the job to failed and set the error.
       if (!isset($csv_val->capture_data_elements) && !isset($csv_val->import_row_id)) {
         $job_status = 'failed';
@@ -633,7 +612,7 @@ class RepoImport implements RepoImportInterface {
           array(
             'job_id' => $data->uuid, 
             'status' => $job_status,
-            'date_completed' => date('Y-m-d h:i:s')
+            'date_completed' => date('Y-m-d H:i:s')
           )
         );
         break;
@@ -643,15 +622,34 @@ class RepoImport implements RepoImportInterface {
         // Set the parent record's repository ID.
         switch ($data->type) {
           case 'subject':
-            // Set the project_id
-            $csv_val->project_id = (int)$data->project_id;
-            // Query EDAN to populate the CSV with EDAN record info (subject_name, and subject_display_name)
-            $result = $this->edan->getRecord($csv_val->subject_guid);
-            // The EDAN record assignment has already been validated during pre-validation,
-            // so no error handling - for now.
-            if (!isset($result['error'])) {
-              $csv_val->subject_name = $result['title'];
-              $csv_val->subject_display_name = $result['title'];
+            
+            // Check to see if the subject already exists- DPO3DREP-546
+            $subject_exists = $this->repo_storage_controller->execute('getRecords', array(
+                'base_table' => 'subject',
+                'fields' => array(),
+                'limit' => 1,
+                'search_params' => array(
+                  0 => array('field_names' => array('subject.holding_entity_guid'), 'search_values' => array($csv_val->holding_entity_guid), 'comparison' => '='),
+                ),
+                'search_type' => 'AND',
+                'omit_active_field' => true,
+              )
+            );
+
+            // If the subject doesn't exist, process.
+            if (empty($subject_exists)) {
+              // Set the project_id
+              $csv_val->project_id = (int)$data->project_id;
+              // Query EDAN to populate the CSV with EDAN record info (subject_name, and subject_display_name)
+              $result = $this->edan->getRecord($csv_val->subject_guid);
+              // The EDAN record assignment has already been validated during pre-validation,
+              // so no error handling - for now.
+              if (!isset($result['error'])) {
+                $csv_val->subject_name = $result['title'];
+                $csv_val->subject_display_name = $result['title'];
+              }
+            } else {
+              $csv_val->subject_name = $subject_exists[0]['subject_name'];
             }
             break;
           case 'item':
@@ -722,61 +720,39 @@ class RepoImport implements RepoImportInterface {
               }
             }
 
-            // /////////////////////////////////////////////////////////////////////////////////////////
-            // // Extract database column data from the processing server's 'inspect-mesh' results.
-            // $csv_val = $this->extractDataFromExternal('get_model_data_from_processing_service', $csv_val, $data);
-            // /////////////////////////////////////////////////////////////////////////////////////////
-
-            // Set the capture_dataset_id or item_id (when a model is associated to an item).
-            // TODO: add previous_record_type to the mix,
-            // so the system will automatically detect what to associate a model to (to make it a bit more bullet-proof).
-            if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
-              // If a model maps to an item, set the value for the 'parent_item_repository_id' field.
-              if ($data->record_type === 'item') {
-                $csv_val->item_id = $new_repository_ids[$i][$csv_val->import_parent_id];
-              }
-              // Otherwise, set the value for the 'capture_dataset_id' field.
-              else {
+            // Set the capture_dataset_id.
+            if (null === $session->get('model_import_type')) {
+              if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
                 $csv_val->capture_dataset_id = $new_repository_ids[$i][$csv_val->import_parent_id];
-              }
-            } else {
-              // If a model maps to an item, set the value for the 'item_id' field.
-              if ($data->record_type === 'item') {
-                $csv_val->item_id = $data->record_id;
-              }
-              // Otherwise, set the value for the 'capture_dataset_id' field.
-              else {
+              } else {
                 $csv_val->capture_dataset_id = $data->record_id;
               }
-            }
-
-            // ALWAYS insert the item_id into the model record.
-            // Get the item_id from the capture dataset.
-            $capture_dataset_info = $this->repo_storage_controller->execute('getRecords', array(
-              'base_table' => 'capture_dataset',
-              'fields' => array(),
-              'limit' => 1,
-              'search_params' => array(
-                0 => array('field_names' => array('capture_dataset.capture_dataset_id'), 'search_values' => array($new_repository_ids[$i][$csv_val->import_parent_id]), 'comparison' => '='),
-              ),
-              'search_type' => 'AND',
-              'omit_active_field' => true,
-              )
-            );
-
-            if (!empty($capture_dataset_info)) {
-              $csv_val->item_id = $capture_dataset_info[0]['item_id'];
             }
 
             break;
         }
 
-        // Insert data from the CSV into the appropriate database table, using the $data->type as the table name.
-        $this_id = $this->repo_storage_controller->execute('saveRecord', array(
-          'base_table' => $data->type,
-          'user_id' => $data->user_id,
-          'values' => (array)$csv_val
-        ));
+        // This check is only for a subject. By default, $subject_exists is an empty array.
+        if (empty($subject_exists)) {
+
+          if ((null !== $session->get('item_id')) && ($data->type === 'model')) {
+            $csv_val->item_id = $session->get('item_id');
+          }
+
+          // Insert data from the CSV into the appropriate database table, using the $data->type as the table name.
+          $this_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => $data->type,
+            'user_id' => $data->user_id,
+            'values' => (array)$csv_val
+          ));
+
+          if ($data->type === 'item') {
+            $session->set('item_id', $this_id);
+          }
+
+        } else {
+          $this_id = $subject_exists[0]['subject_id'];
+        }
 
         // Log the model file and any processed assets to the 'model_file' table.
         if(!empty($csv_val->file_path)) {
@@ -785,7 +761,7 @@ class RepoImport implements RepoImportInterface {
           $file_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $csv_val->file_path) : $csv_val->file_path;
 
           // Log the model file to 'model_file' metadata storage.
-          $this->insertModelFiles($file_path, $this_id, $data);
+          $this->insertModelFiles($file_path, $this_id, $data, $csv_val->model_purpose);
 
           // Scan the model's directory for UV maps, and insert into metadata storage.
           $this->insertUvMaps($file_path, $this_id, $data);
@@ -917,9 +893,12 @@ class RepoImport implements RepoImportInterface {
               if (isset($model_id_for_uv_maps) && in_array(strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)), $this->image_extensions)) {
 
                 // Get the map_type and map_size from the file name.
-                // Example file name: f1978_40-master-1000k-8192-normals.jpg.
+                // Example file name: npg_91_28-1000k-8192-occlusion.jpg
                 $file_name_no_extension = pathinfo($filename_value, PATHINFO_FILENAME);
                 $file_name_parts = explode('-', $file_name_no_extension);
+
+                // Get the last 3 elements of the array.
+                $file_name_parts = array_slice($file_name_parts, -3, 3);
 
                 // Log the UV map to metadata storage.
                 $uv_map_id = $this->repo_storage_controller->execute('saveRecord', array(
@@ -931,8 +910,8 @@ class RepoImport implements RepoImportInterface {
                     'map_file_type' => strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)),
                     'file_path' => $file_info[0]['file_path'],
                     'file_checksum' => md5($filename_value),
-                    'map_type' => $file_name_parts[4],
-                    'map_size' => $file_name_parts[2],
+                    'map_type' => $file_name_parts[2],
+                    'map_size' => $file_name_parts[0],
                   )
                 ));
 
@@ -983,18 +962,22 @@ class RepoImport implements RepoImportInterface {
             break;
         }
 
-        // Insert into the job_import_record table
-        $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
-          'base_table' => 'job_import_record',
-          'user_id' => $data->user_id,
-          'values' => array(
-            'job_id' => $data->job_id,
-            'record_id' => $this_id,
-            'project_id' => (int)$data->project_id,
-            'record_table' => $data->type,
-            'description' => $data->description,
-          )
-        ));
+        // This check is only for a subject. By default, $subject_exists is an empty array.
+        if (empty($subject_exists)) {
+          // Insert into the job_import_record table
+          $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
+            'base_table' => 'job_import_record',
+            'user_id' => $data->user_id,
+            'values' => array(
+              'job_id' => $data->job_id,
+              'record_id' => $this_id,
+              'project_id' => (int)$data->project_id,
+              'record_table' => $data->type,
+              'description' => $data->description,
+            )
+          ));
+        }
+
       }
     }
     // foreach() ends
@@ -1224,8 +1207,7 @@ class RepoImport implements RepoImportInterface {
   public function getDataFromFileNames($data = array())
   {
 
-    $image_file_names = $model_file_names = array();
-    $capture_datasets = $models = array();
+    $image_file_names = $capture_datasets = $models = array();
 
     if (!empty($data)) {
 
@@ -1308,11 +1290,6 @@ class RepoImport implements RepoImportInterface {
 
         }
 
-        // If this file's extension exists in the $this->model_extensions array, add to the $models array.
-        if (in_array(strtolower($file->getExtension()), $this->model_extensions)) {
-          $model_file_names[] = pathinfo($file->getFilename(), PATHINFO_FILENAME);
-        }
-
       }
 
       // $this->u->dumper(array_keys($image_file_names),0);
@@ -1320,19 +1297,6 @@ class RepoImport implements RepoImportInterface {
 
       if (!empty($image_file_names)) {
         $data = $this->getDatasetDataFromFilenames($image_file_names, $data);
-      }
-
-      // // Get model files (re-worked version).
-      // if (in_array(strtolower($file->getExtension()), $this->model_extensions)) {
-      //   foreach ($data->csv as $ckey => $cvalue) {
-      //     // Get the model's file name from the directory path.
-      //     $model_file_names[] = pathinfo($cvalue->file_path, PATHINFO_FILENAME);
-      //   }
-      // }
-
-
-      if (!empty($model_file_names)) {
-        $data = $this->getModelDataFromFilenames($model_file_names, $data);
       }
 
     }
@@ -1500,130 +1464,6 @@ class RepoImport implements RepoImportInterface {
   }
 
   /**
-   * Get Data From File Names
-   *
-   * @param array $model_file_names Model file names
-   * @param array $data Job data
-   * @return array
-   */
-  public function getModelDataFromFilenames($model_file_names = array(), $data = array())
-  {
-    // Insert into subject (local_subject_id)
-    // Insert into item (item_description)
-    // Insert into model (model_purpose)
-    //
-    // Example file name mapping:
-    // nmnh-usnm_v_512384522-skull-master_model-2018_10_22.obj
-    // nmnh-[local_subject_id]-[item_description]-[model_purpose]-2018_10_22.obj
-
-    if (!empty($model_file_names)) {
-
-      // If there's a file_name_map.csv file at the root of the 'data' directory, use it.
-      $file_name_map_main = $this->getFilenameMap($data);
-
-      // Add data to uploaded CSVs.
-      switch ($data->type) {
-        case 'subject':
-          // Get the local_subject_id from the file name.
-          foreach ($model_file_names as $key => $file) {
-            if (!empty($file)) {
-              // Get the file's info from the metadata storage.
-              $file_info = $this->getFileInfo($data->uuid, $file);
-              // Get the file name map, if one exists in this directory.
-              if (!empty($file_info)) {
-                $file_name_map = $this->getFilenameMap($data);
-                // If no file name map exists, use the main one in the root of the 'data' directory.
-                $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
-              }
-              // Establish the file name map key so we know which slot in the file name to obtain the data from.
-              // local_subject_id
-              $key1 = (isset($file_name_map) && array_search('local_subject_id', $file_name_map))
-                  ? array_search('local_subject_id', $file_name_map)
-                  : array_search('local_subject_id', $this->default_model_file_name_map);
-              // Transform the file name to an array.
-              $file_name_parts = explode('-', $file);
-              // Populate the CSV's subject entries with the local_subject_id from the file name.
-              foreach ($data->csv as $ck => $cv) {
-                if(isset($file_name_parts[$key1])) {
-                  $data->csv[$ck]->local_subject_id = $file_name_parts[$key1];
-                }
-              }
-            }
-          }
-          break;
-        case 'item':
-          // Get the item_description from the file name.
-          foreach ($model_file_names as $key => $file) {
-            if (!empty($file)) {
-              // Get the file's info from the metadata storage.
-              $file_info = $this->getFileInfo($data->uuid, $file);
-              // Get the file name map, if one exists in this directory.
-              if (!empty($file_info)) {
-                $file_name_map = $this->getFilenameMap($data);
-                // If no file name map exists, use the main one in the root of the 'data' directory.
-                $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
-              }
-              // Establish the file name map key so we know which slot in the file name to obtain the data from.
-              // item_description
-              $key1 = (isset($file_name_map) && array_search('item_description', $file_name_map))
-                  ? array_search('item_description', $file_name_map)
-                  : array_search('item_description', $this->default_model_file_name_map);
-              // Transform the file name to an array.
-              $file_name_parts = explode('-', $file);
-              // Populate the CSV's item entries with the item_description from the file name.
-              foreach ($data->csv as $ck => $cv) {
-                if (isset($file_name_parts[$key1])) {
-                  $data->csv[$ck]->item_description = $file_name_parts[$key1];
-                }
-              }
-            }
-          }
-          break;
-        case 'model':
-          // Get the model_purpose from the file name.
-          foreach ($model_file_names as $key => $file) {
-            if (!empty($file)) {
-              // Get the file's info from the metadata storage.
-              $file_info = $this->getFileInfo($data->uuid, $file);
-              // Get the file name map, if one exists in this directory.
-              if (!empty($file_info)) {
-                $file_name_map = $this->getFilenameMap($data);
-                // If no file name map exists, use the main one in the root of the 'data' directory.
-                $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
-              }
-              // Establish the file name map key so we know which slot in the file name to obtain the data from.
-              // model_purpose
-              $key1 = (isset($file_name_map) && array_search('model_purpose', $file_name_map))
-                  ? array_search('model_purpose', $file_name_map)
-                  : array_search('model_purpose', $this->default_model_file_name_map);
-              // Transform the file name to an array.
-              $file_name_parts = explode('-', $file);
-              // Remove '_model' from the model_purpose chunk from the file name ('master_model' becomes 'master').
-              if (isset($data->csv[$key]) && isset($file_name_parts[$key1])) {
-                // Get the lookup options from metadata storage.
-                $model_purpose_lookup_options = $this->modelsController->getModelPurpose();
-                // Remove '_model' from the model_purpose value.
-                $model_purpose = str_replace('_model', '', $file_name_parts[$key1]);
-                // Set values for the model_purpose and model_purpose_id fields.
-                $data->csv[$key]->model_purpose = $model_purpose;
-                if(isset($model_purpose_lookup_options[$model_purpose])) {
-                  $data->csv[$key]->model_purpose_id = (int)$model_purpose_lookup_options[$model_purpose];
-                }
-                else {
-                  //@todo log a warning
-                }
-              }
-            }
-          }
-          break;
-      }
-
-    }
-
-    return $data;
-  }
-
-  /**
    * Get File Info
    *
    * @param string $uuid The job UUID
@@ -1696,9 +1536,9 @@ class RepoImport implements RepoImportInterface {
    * @param string $data The data array
    * @return null
    */
-  public function insertModelFiles($file_path = null, $model_id = null, $data = array()) {
+  public function insertModelFiles($file_path = null, $model_id = null, $data = array(), $model_purpose = null) {
 
-    if (!empty($file_path) && !empty($model_id) && !empty($data)) {
+    if (!empty($file_path) && !empty($model_id) && !empty($data) && !empty($model_purpose)) {
 
       $uploads_directory = str_replace('web', '', $this->uploads_directory);
       // Windows fix for the model's file path.
@@ -1738,7 +1578,7 @@ class RepoImport implements RepoImportInterface {
             'record_id' => (int)$id,
             'project_id' => (int)$data->project_id,
             'record_table' => 'model_file',
-            'description' => $file_info[0]['file_name'],
+            'description' => $model_purpose . ': ' . $file_info[0]['file_name'],
           )
         ));
       }
@@ -1901,7 +1741,7 @@ class RepoImport implements RepoImportInterface {
             'search_params' => array(
               0 => array('field_names' => array('job.uuid'), 'search_values' => array($w[0]['ingest_job_uuid']), 'comparison' => '='),
               1 => array('field_names' => array('job_import_record.record_table'), 'search_values' => array('model_file'), 'comparison' => '='),
-              2 => array('field_names' => array('job_import_record.description'), 'search_values' => array('-master.obj'), 'comparison' => 'LIKE'),
+              2 => array('field_names' => array('job_import_record.description'), 'search_values' => array('master:'), 'comparison' => 'LIKE'),
             ),
             'search_type' => 'AND',
             'omit_active_field' => true,
