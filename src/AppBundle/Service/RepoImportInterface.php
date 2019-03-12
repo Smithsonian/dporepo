@@ -81,15 +81,6 @@ interface RepoImportInterface {
   public function getDatasetDataFromFilenames(array $image_file_names, array $data);
   
   /**
-   * Get Data From File Names
-   *
-   * @param array $model_file_names Model file names
-   * @param array $data Job data
-   * @return array
-   */
-  public function getModelDataFromFilenames(array $model_file_names, array $data);
-
-  /**
    * Get File Info
    *
    * @param string $uuid The job UUID

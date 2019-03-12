@@ -67,7 +67,8 @@ class RepoDerivativeGenerate {
     $this->u = new AppUtilities();
     $this->f = $f;
     $this->kernel = $kernel;
-    $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+    $project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+    $this->project_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $project_directory) : $project_directory;
     $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
     $this->external_file_storage_path = $external_file_storage_path;
     $this->conn = $conn;
@@ -93,23 +94,25 @@ class RepoDerivativeGenerate {
     // $cd_data now contains an array of the first 100 images of each capture dataset
     // For each image generate a 200px wide thumb and a 800px "fullscreen" image.
     foreach($cd_data as $cd_image_file) {
-      $file_path = $cd_image_file['file_path'];
+      // Absolute local path.
+      $file_path = $this->project_directory . 'web' . $cd_image_file['file_path'];
       $file_name = $cd_image_file['file_name'];
       $job_id = $cd_image_file['job_id']; // Redundant, natch
 
-      // Absolute local path.
       // For each image make full path using the file_path column.
       $path_data = $this->f->getAlternateFilePaths($file_path, true);
-      if($path_data['incoming_path_type'] !== 'unknown') {
-        $path = $path_data['alternate_paths']['local_uploads_directory'];
-      }
-      else {
-        //@todo- flag this as an issue, we can't grok the incoming $file_path
-        continue;
-      }
+      // if($path_data['incoming_path_type'] !== 'unknown') {
+      //   $path = $path_data['alternate_paths']['local_uploads_directory'];
+      // }
+      // else {
+      //   //@todo- flag this as an issue, we can't grok the incoming $file_path
+      //   continue;
+      // }
 
-      if (!is_file($path)) {
-        $errors = array('Target file not found - ' . $path);
+      // $this->u->dumper($path_data);
+
+      if (!is_file($file_path)) {
+        $errors = array('Target file not found - ' . $file_path);
       }
       else {
         $errors = array();
@@ -127,9 +130,9 @@ class RepoDerivativeGenerate {
           $file_base_name = implode('.', $file_parts);
 
           $new_thumb_file_name = $file_base_name . '_thumb.' . $file_ext;
-          $new_thumb_path = str_replace($file_name, $new_thumb_file_name, $path);
+          $new_thumb_path = str_replace($file_name, $new_thumb_file_name, $file_path);
 
-          $res = $utils->resizeImage($path, 200, NULL, $new_thumb_file_name);
+          $res = $utils->resizeImage($file_path, 200, NULL, $new_thumb_file_name);
 
           // Get the image height.
           $height = 0;
@@ -150,14 +153,10 @@ class RepoDerivativeGenerate {
             $new_capture_data_file['file_name'] = $new_thumb_file_name;
             // Path should start with '/uploads/repository/'.
             //@todo instead use fileservicehelper
-            $new_capture_data_file['file_path'] =
-            str_replace("\\", "/",
-              str_replace($path_data['verbose']['application_web_directory'], "",
-                str_replace($file_name, $new_thumb_file_name, $path)
-              )
-            );
-            if(substr($new_capture_data_file['file_path'], 0, 1) !== "/") {
-              $new_capture_data_file['file_path'] = "/" . $new_capture_data_file['file_path'];
+            $new_capture_data_file['file_path'] = str_replace($file_name, $new_thumb_file_name, $file_path);
+            $new_capture_data_file['file_path'] = str_replace($this->project_directory . 'web', '', $new_capture_data_file['file_path']);
+            if(substr($new_capture_data_file['file_path'], 0, 1) !== DIRECTORY_SEPARATOR) {
+              $new_capture_data_file['file_path'] = DIRECTORY_SEPARATOR . $new_capture_data_file['file_path'];
             }
 
             $new_capture_data_file['file_size'] = filesize($new_thumb_path);
@@ -174,9 +173,9 @@ class RepoDerivativeGenerate {
           }
 
           $new_midsize_file_name = $file_base_name . '_mid.' . $file_ext;
-          $new_midsize_path = str_replace($file_name, $new_midsize_file_name, $path);
+          $new_midsize_path = str_replace($file_name, $new_midsize_file_name, $file_path);
 
-          $res = $utils->resizeImage($path, 800, 0, $new_midsize_file_name);
+          $res = $utils->resizeImage($file_path, 800, 0, $new_midsize_file_name);
 
           // Get the image height.
           $height = 0;
@@ -194,14 +193,10 @@ class RepoDerivativeGenerate {
             $new_capture_data_file['capture_data_file_name'] = $new_midsize_file_name;
             $new_capture_data_file['file_name'] = $new_midsize_file_name;
             //@todo instead use fileservicehelper
-            $new_capture_data_file['file_path'] =
-              str_replace("\\", "/",
-                str_replace($path_data['verbose']['application_web_directory'], "",
-                  str_replace($file_name, $new_midsize_file_name, $path)
-                )
-              );
-            if(substr($new_capture_data_file['file_path'], 0, 1) !== "/") {
-              $new_capture_data_file['file_path'] = "/" . $new_capture_data_file['file_path'];
+            $new_capture_data_file['file_path'] = str_replace($file_name, $new_midsize_file_name, $file_path);
+            $new_capture_data_file['file_path'] = str_replace($this->project_directory . 'web', '', $new_capture_data_file['file_path']);
+            if(substr($new_capture_data_file['file_path'], 0, 1) !== DIRECTORY_SEPARATOR) {
+              $new_capture_data_file['file_path'] = DIRECTORY_SEPARATOR . $new_capture_data_file['file_path'];
             }
 
             $new_capture_data_file['file_size'] = filesize($new_midsize_path);
