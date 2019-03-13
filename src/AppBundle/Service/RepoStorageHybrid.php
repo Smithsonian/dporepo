@@ -3732,7 +3732,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     $select_sql = " DISTINCT 
           item.item_id as manage, item.item_id, item.project_id, item.subject_id, 
-          item.local_item_id, CONCAT(SUBSTRING(item.item_description,1, 50), '...') as item_description,          
+          item.local_item_id, item.item_guid, item.item_description, item.item_type, CONCAT(SUBSTRING(item.item_description,1, 50), '...') as item_description,
           item.date_created, item.last_modified, item.active, item.item_id as DT_RowId,
           (SELECT COUNT(capture_dataset_id) FROM capture_dataset WHERE capture_dataset.item_id = item.item_id AND capture_dataset.active = 1) as datasets_count
           FROM item 

@@ -57,9 +57,9 @@
     </div>
   </div>
 
-  <input name="subject_guid_chosen_{{ loop.index }}" id="subject_guid_chosen_{{ loop.index }}" type="hidden" value="{{ row.id }}">
+  <input name="subject_guid_chosen_{{ loop.index }}" id="subject_guid_chosen_{{ loop.index }}" type="hidden" value="{{ row.url }}">
   <input name="subject_name_chosen_{{ loop.index }}" id="subject_name_chosen_{{ loop.index }}" type="hidden" value="{{ row.title }}">
-  <input name="subject_holder_subject_id_chosen_{{ loop.index }}" id="subject_holder_subject_id_chosen_{{ loop.index }}" type="hidden" value="{% if row.content.freetext.identifier is defined %}{{ row.content.freetext.identifier.0.content }}{% endif %}">
+  <input name="local_subject_id_chosen_{{ loop.index }}" id="local_subject_id_chosen_{{ loop.index }}" type="hidden" value="{% if row.content.freetext.identifier is defined %}{{ row.content.freetext.identifier.0.content }}{% endif %}">
   <input name="holding_entity_guid_chosen_{{ loop.index }}" id="holding_entity_guid_chosen_{{ loop.index }}" type="hidden" value="{{ row.unitCode }}">
   <input name="holding_entity_name_chosen_{{ loop.index }}" id="holding_entity_name_chosen_{{ loop.index }}" type="hidden" value="{% if row.content.freetext.identifier is defined %}{{ row.content.descriptiveNonRepeating.data_source }}{% endif %}">
 

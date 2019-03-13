@@ -158,26 +158,6 @@
       };
       dateInput.datepicker(options);
 
-      // // Subject form submit handler.
-      // $(document).on('submit', 'form[name="subject_form"]', function(e){
-      //   // Avoid submitting the form non-ajax.
-      //   e.preventDefault();
-      //   // Get the properties and values from the form.
-      //   var form = $('form[name="subject_form"]');
-      //   var formData = form.serializeObject();
-      //   // Submit via AJAX.
-      //   submitSubjectRecord(formData);
-      // });
-
-
-
-
-
-
-
-
-
-
 
 
       // Set variables.
@@ -186,7 +166,7 @@
           loadingGifContainer = $('<div />').addClass('center-block').attr('style', 'width: 140px;').append(loadingGif);
 
       /**
-       * Search button click handler
+       * EDAN search button click handler
        */
       $('#search-query-button').on('click', function(e) {
 
@@ -227,7 +207,7 @@
       });
 
       /**
-       * Paging button click handler (Previous Page, Next Page)
+       * EDAN paging button click handler (Previous Page, Next Page)
        */
       $('#search-results').on('click', '.pager-button', function(e){
 
@@ -311,16 +291,21 @@
               // Set all of the variables.
               var subject_guid = $('#subject_guid_chosen_' + index).val(),
                   subject_name = $('#subject_name_chosen_' + index).val(),
-                  subject_holder_subject_id = $('#subject_holder_subject_id_chosen_' + index).val(),
-                  holding_entity_guid = $('#holding_entity_guid_chosen_' + index).val();
-                  // holding_entity_name = $('#holding_entity_name_chosen_' + index).val();
+                  local_subject_id = $('#local_subject_id_chosen_' + index).val(),
+                  holding_entity_guid = $('#holding_entity_guid_chosen_' + index).val(),
+                  csvColumns = [
+                    'subject_guid',
+                    'subject_name',
+                    'local_subject_id',
+                    'holding_entity_guid'
+                  ],
+                  csvValues = [subject_guid, subject_name, local_subject_id, holding_entity_guid];
 
-              // Populate the fields in the parent form and close the modal.
-              $('#subject_form_subject_guid').val(subject_guid);
-              $('#subject_form_subject_name').val(subject_name);
-              $('#subject_form_local_subject_id').val(subject_holder_subject_id);
-              $('#subject_form_holding_entity_guid').val(holding_entity_guid);
-              // $('#subject_holding_entity_name').val(holding_entity_name);
+              // Populate the subject container in the DOM.
+              populateContainer('subject', csvColumns, csvValues, false);
+              // Create the CSV and add it to the Uploads Stage.
+              createCsv('subjects.csv', csvColumns, csvValues);
+
               $('#subject-form-modal').modal('hide');
               break;
             default:
@@ -359,17 +344,6 @@
         resultsContainer.empty();
         $('#search-query').val('');
       });
-
-
-
-
-
-
-
-
-
-
-
 
       // Item form submit handler.
       $(document).on('submit', 'form[name="item_form"]', function(e){
@@ -416,6 +390,73 @@
           });
           return o;
       };
+
+      function createCsv(csvName, csvColumns, csvValues) {
+        // Add the import_row_id_field and import_parent_id_field.
+        csvColumns.unshift('import_row_id_field', 'import_parent_id_field');
+        csvValues.unshift(1, 1);
+        // Add the CSV to the Uplaods Stage (Dropzone), in Step 3.
+        // See: https://stackoverflow.com/questions/17103398/convert-javascript-variable-value-to-csv-file
+        var blob = new Blob([csvColumns.join(',') + '\r\n' + csvValues.join(',')], {type: 'text/csv'});
+        blob.name = csvName;
+        uploadsDropzone.addFile(blob);
+        // Test to see if the CSV has been added to the Uploads Stage.
+        var acceptedFiles = uploadsDropzone.getAcceptedFiles();
+        console.log(acceptedFiles);
+      }
+
+      function populateContainer(dataType, csvColumns, csvValues, fromDatatable) {
+
+        if (dataType === 'project') {
+          var childType = 'subject';
+          var stepTab = '1';
+        }
+
+        if (dataType === 'subject') {
+          var childType = 'item';
+          var stepTab = '2';
+        }
+
+        // Since the parent record selection is changing, remove data and hide child well(s).
+        if ($('div.' + childType + '-well').html()) {
+          $('div.' + childType + '-well').empty().addClass('hidden');
+          // Disable Step tab.
+          rootwizard.bootstrapWizard('disable', stepTab);
+          // Remove any previously-stored piece(s) of data.
+          $('body').removeData(childType + '_id');
+        }
+
+        // Transfer record metadata to the parent window.
+        var html = '<dl>';
+        // Loop through the metadata and choose fileds in the 'csvColumns' array.
+        // console.log(csvColumns);
+        $.each(csvValues, function(key, value){
+          // If data IS coming from a DataTable
+          if (fromDatatable) {
+            if (csvColumns.indexOf(key) !== -1) {
+              html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
+              html += '<dd class="' + key + '">' + value + '</dd>';
+            }
+          }
+          // If data IS NOT coming from a DataTable
+          if (!fromDatatable) {
+            html += '<dt><strong>' + convertCase(csvColumns[key].replace(/_/g, ' ')) + '</strong></dt>';
+            html += '<dd class="' + key + '">' + value + '</dd>';
+          }
+        });
+        html += '</dl>';
+
+        $('div.' + dataType + '-well').html(html);
+        $('div.' + dataType + '-well').removeClass('hidden');
+
+        // Enable the child buttons.
+        $('[data-select="' + childType + '"], [data-create="' + childType + '"]').removeAttr('disabled');
+
+        // // Add the subject_id to data.
+        // $('body').data('subject_id', aData.DT_RowId);
+        // // Add the subject_id to the hidden input.
+        // $('input[name="dataset[subject_id]"]').val($('body').data('subject_id'));
+      }
 
       function addCsvToUploadsStage() {
         // Create a CSV file and make it downloadable.
@@ -534,39 +575,9 @@
               thisTableRow.parent().children().removeClass('warning');
               thisTableRow.addClass('warning');
 
-              // Since the parent record selection is changing, remove data and hide child well(s).
-              if ($('div.item-well').html()) {
-                $('div.subject-well, div.item-well').empty().addClass('hidden');
-                // Disable Step 2 tab.
-                rootwizard.bootstrapWizard('disable', '1');
-                // Remove any previously-stored piece(s) of data.
-                $('body').removeData('subject_id');
-                $('body').removeData('item_id');
-              }
-
-              // Transfer record metadata to the parent window.
-              var fields = ['project_id', 'project_name', 'last_modified', 'stakeholder_label', 'items_count'];
-              var html = '<dl>';
-              // Loop through the metadata and choose fileds in the 'fields' array.
-              // console.log(aData);
-              $.each(aData, function(key, value){
-                if (fields.indexOf(key) !== -1) {
-                  html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
-                  html += '<dd class="' + key + '">' + value + '</dd>'
-                }
-              });
-              html += '</dl>';
-
-              $('div.project-well').html(html);
-              $('div.project-well').removeClass('hidden');
-
-              // Enable the Subject buttons.
-              $('[data-select="subject"], [data-create="subject"]').removeAttr('disabled');
-
-              // Add the project_id to data.
-              $('body').data('project_id', aData.DT_RowId);
-              // Add the project_id to the hidden input.
-              $('input[name="dataset[project_id]"]').val($('body').data('project_id'));
+              // Populate the subject container in the DOM.
+              var csvColumns = ['project_id', 'project_name', 'last_modified', 'stakeholder_label', 'items_count'];
+              populateContainer('project', csvColumns, aData, true);
 
               // Also, take this opportunity to set the ajax data value.
               $('body').data('ajax', true);
@@ -626,33 +637,12 @@
               thisTableRow.parent().children().removeClass('warning');
               thisTableRow.addClass('warning');
 
-              // Since the parent record selection is changing, remove data and hide child well(s).
-              if ($('div.item-well').html()) {
-                $('div.item-well').empty().addClass('hidden');
-                // Disable Step 2 tab.
-                rootwizard.bootstrapWizard('disable', '1');
-                // Remove any previously-stored piece(s) of data.
-                $('body').removeData('item_id');
-              }
-
-              // Transfer record metadata to the parent window.
-              var fields = ['last_modified', 'local_subject_id', 'subject_name', 'subject_id'];
-              var html = '<dl>';
-              // Loop through the metadata and choose fileds in the 'fields' array.
-              // console.log(aData);
-              $.each(aData, function(key, value){
-                if (fields.indexOf(key) !== -1) {
-                  html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
-                  html += '<dd class="' + key + '">' + value + '</dd>'
-                }
-              });
-              html += '</dl>';
-
-              $('div.subject-well').html(html);
-              $('div.subject-well').removeClass('hidden');
-
-              // Enable the Item buttons.
-              $('[data-select="item"], [data-create="item"]').removeAttr('disabled');
+              var csvColumns = ['last_modified', 'local_subject_id', 'subject_name', 'subject_id'];
+              var csvValues = [aData.local_subject_id, aData.subject_guid, aData.holding_entity_name, aData.holding_entity_guid];
+              // Populate the subject container in the DOM.
+              populateContainer('subject', csvColumns, aData, true);
+              // Create the CSV and add it to the Uploads Stage.
+              createCsv('subjects.csv', csvColumns, csvValues);
 
               // Add the subject_id to data.
               $('body').data('subject_id', aData.DT_RowId);
@@ -716,21 +706,13 @@
               thisTableRow.parent().children().removeClass('warning');
               thisTableRow.addClass('warning');
 
-              // Transfer record metadata to the parent window.
-              var fields = ['datasets_count', 'item_description', 'last_modified', 'local_item_id', 'DT_RowId'];
-              var html = '<dl>';
-              // Loop through the metadata and choose fileds in the 'fields' array.
-              // console.log(aData);
-              $.each(aData, function(key, value){
-                if (fields.indexOf(key) !== -1) {
-                  html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
-                  html += '<dd class="' + key + '">' + value + '</dd>'
-                }
-              });
-              html += '</dl>';
+              var csvColumns = ['local_item_id', 'item_guid', 'item_display_name', 'item_description', 'item_type'];
+              var csvValues = [aData.local_item_id, aData.item_guid, aData.item_display_name, aData.item_description, aData.item_type];
 
-              $('div.item-well').html(html);
-              $('div.item-well').removeClass('hidden');
+              // Populate the item container in the DOM.
+              populateContainer('item', csvColumns, aData, true);
+              // Create the CSV and add it to the Uploads Stage.
+              createCsv('items.csv', csvColumns, csvValues);
 
               // Enable Step 2 tab.
               rootwizard.bootstrapWizard('enable', '1');
