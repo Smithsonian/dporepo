@@ -105,10 +105,50 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
     $job_status = 'metadata ingest in progress';
     $job_failed_message = 'The job has failed. Exiting model assets generation process.';
 
-    // Throw an error if the uuid doesn't exist.
+    // If uuid doesn't exist, then this is being called by a scheduled task / cron job to run a 'web-multi' recipe (multi-level web assets).
     if (empty($uuid)) {
-      $return['errors'][] = 'The UUID is missing';
-      return $return;
+      // Look for:
+      // 1) a 'workflow' which has a 'step_type' of 'auto'
+      // 2) a 'workflow' which has a 'step_id' of 'web-multi'
+      // 3) a 'processing_job' which has a 'step' of 'created'.
+      $workflow = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'workflow',
+          'fields' => array(
+            array(
+              'table_name' => 'workflow',
+              'field_name' => 'ingest_job_uuid',
+            ),
+          ),
+          'limit' => 1,
+          // Joins
+          'related_tables' => array(
+            array(
+              'table_name' => 'processing_job',
+              'table_join_field' => 'processing_service_job_id',
+              'join_type' => 'LEFT JOIN',
+              'base_join_table' => 'workflow',
+              'base_join_field' => 'processing_job_id',
+            )
+          ),
+          'search_params' => array(
+            0 => array('field_names' => array('workflow.step_type'), 'search_values' => array('auto'), 'comparison' => '='),
+            1 => array('field_names' => array('workflow.step_id'), 'search_values' => array('web-multi'), 'comparison' => '='),
+            2 => array('field_names' => array('processing_job.state'), 'search_values' => array('created'), 'comparison' => '='),
+          ),
+          'search_type' => 'AND',
+          'omit_active_field' => true,
+        )
+      );
+
+      if (empty($workflow)) {
+        $return['errors'][] = 'No workflow jobs found. All workflow jobs are completed.';
+        return $return;
+      }
+
+      if (!empty($workflow)) {
+        $uuid = $workflow[0]['ingest_job_uuid'];
+        $recipe_name = 'web-multi';
+      }
     }
 
     // Absolute local path.
@@ -143,7 +183,6 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
       } else {
         $processing_job = $this->runWebMulti($path, $job_data, $recipe_name, $filesystem);
       }
-
 
       // Check the job's status to insure that the job_status hasn't been set to 'failed'.
       $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid, 'generateModelAssets'));
