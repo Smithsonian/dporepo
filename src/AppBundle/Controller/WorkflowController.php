@@ -596,7 +596,7 @@ class WorkflowController extends Controller
 
     // Check for 2D thumbnail images.
     $data['thumbnail_images'] = $this->getThumbnailImages($w);
-    
+
     return $data;
   }
 
@@ -666,7 +666,7 @@ class WorkflowController extends Controller
     $image_sizes = array('thumb', 'low', 'medium', 'high');
 
     if (!empty($w)) {
-    
+
       // Get the master model's path.
       $path = $this->getPathInfo($w);
 
@@ -788,7 +788,7 @@ class WorkflowController extends Controller
           'limit' => 1,
           'search_params' => array(
             0 => array('field_names' => array('processing_job.' . $search_field . ''), 'search_values' => array($search_value), 'comparison' => '='),
-            // 1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('web-hd'), 'comparison' => '='),
+            1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('web-'), 'comparison' => 'LIKE'),
           ),
           'search_type' => 'AND',
           'omit_active_field' => true,
