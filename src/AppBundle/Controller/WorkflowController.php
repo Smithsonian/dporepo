@@ -1031,7 +1031,7 @@ class WorkflowController extends Controller
         if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . '-item.json')) {
 
           $url_params = array(
-            'item' => str_replace($this->project_directory . 'web/uploads/repository', '/webdav', $directory) . '/' . $base_file_name . '-item.json',
+            'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . '-item.json',
             'referrer' => '/admin/workflow/' . $w['workflow_id'] . '?qc_hd_done'
           );
 
