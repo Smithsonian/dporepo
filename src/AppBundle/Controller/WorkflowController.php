@@ -967,6 +967,9 @@ class WorkflowController extends Controller
 
       $directory = pathinfo($path[0]['asset_path'], PATHINFO_DIRNAME);
       $base_file_name = pathinfo($path[0]['asset_path'], PATHINFO_FILENAME);
+      // Since we're building the WebDAV path, all slashes need to be forward slashes.
+      $webdav_directory = str_replace('\\', '/', $directory);
+      $project_directory = str_replace('\\', '/', $this->project_directory);
 
       $data = array(
         'action' => 'qc',
@@ -984,7 +987,7 @@ class WorkflowController extends Controller
         // Load item.json if present.
         if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . $value['item_json_file_name'])) {
           $url_params = array(
-            'item' => str_replace($this->project_directory . 'web/uploads/repository', '/webdav', $directory) . '/' . $base_file_name . $value['item_json_file_name']
+            'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . $value['item_json_file_name']
           );
         } else {
           // Load the raw model, using the .glb file.
@@ -995,7 +998,7 @@ class WorkflowController extends Controller
           if (empty($glb_file_info)) throw $this->createNotFoundException('Model not found - ' . $base_file_name . $value['derivative_file_name']);
 
           // The webDav-based path to the model.
-          $model_path = str_replace($this->project_directory . 'web/uploads/repository', '/webdav', $directory) . '/' . $base_file_name . $value['derivative_file_name'];
+          $model_path = str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . $value['derivative_file_name'];
 
           $web_derivative_base_file_name = pathinfo($directory . DIRECTORY_SEPARATOR . $base_file_name . $value['item_json_file_name'], PATHINFO_FILENAME);
 
