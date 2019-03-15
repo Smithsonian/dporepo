@@ -83,7 +83,7 @@ class WorkflowController extends Controller
     $this->processing = $processing;
     $this->kernel = $kernel;
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
-    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_directory) : $uploads_directory;
     $this->accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
     $this->repo_user_access = new RepoUserAccess($conn);
 
@@ -681,14 +681,14 @@ class WorkflowController extends Controller
         // Thumbnail images can be either JPEGs or PNGs.
         $jpg = $directory . DIRECTORY_SEPARATOR . $base_file_name . '-image-' . $value . '.jpg';
         $png = $directory . DIRECTORY_SEPARATOR . $base_file_name . '-image-' . $value . '.png';
-        if (is_file($jpg)) $data[$value] = '/' . str_replace($this->project_directory . 'web/', '', $jpg);
-        if (is_file($png)) $data[$value] = '/' . str_replace($this->project_directory . 'web/', '', $png);
+        if (is_file($jpg)) $data[$value] = DIRECTORY_SEPARATOR . str_replace($this->project_directory . 'web' . DIRECTORY_SEPARATOR, '', $jpg);
+        if (is_file($png)) $data[$value] = DIRECTORY_SEPARATOR . str_replace($this->project_directory . 'web' . DIRECTORY_SEPARATOR, '', $png);
 
         // Sometimes the Voyager QC tool outputs files without a base name.
         $jpg_plain = $directory . DIRECTORY_SEPARATOR . 'image-' . $value . '.jpg';
         $png_plain = $directory . DIRECTORY_SEPARATOR . 'image-' . $value . '.png';
-        if (is_file($jpg_plain)) $data[$value] = '/' . str_replace($this->project_directory . 'web/', '', $jpg_plain);
-        if (is_file($png_plain)) $data[$value] = '/' . str_replace($this->project_directory . 'web/', '', $png_plain);
+        if (is_file($jpg_plain)) $data[$value] = DIRECTORY_SEPARATOR . str_replace($this->project_directory . 'web' . DIRECTORY_SEPARATOR, '', $jpg_plain);
+        if (is_file($png_plain)) $data[$value] = DIRECTORY_SEPARATOR . str_replace($this->project_directory . 'web' . DIRECTORY_SEPARATOR, '', $png_plain);
       }
 
     }
@@ -815,7 +815,7 @@ class WorkflowController extends Controller
       // e.g. /var/www/html/web/uploads/repository/5E4ED85E-EB10-374A-7366-6F8BDF49F46C/...
       // becomes: /uploads/repository/5E4ED85E-EB10-374A-7366-6F8BDF49F46C/...
       $search = $this->project_directory . $this->uploads_directory;
-      $replace = '/uploads/repository/';
+      $replace = (DIRECTORY_SEPARATOR === '\\') ? '\\uploads\\repository\\' : '/uploads/repository/';
       $file_path_for_query = str_replace($search, $replace, $path);
 
       $data = $this->repo_storage_controller->execute('getRecords', array(
@@ -854,11 +854,15 @@ class WorkflowController extends Controller
 
       $directory = pathinfo($path[0]['asset_path'], PATHINFO_DIRNAME);
       $base_file_name = pathinfo($path[0]['asset_path'], PATHINFO_FILENAME);
+      // Since we're building the WebDAV path, all slashes need to be forward slashes.
+      $webdav_directory = str_replace('\\', '/', $directory);
+      $project_directory = str_replace('\\', '/', $this->project_directory);
 
       // Load item.json if present.
       if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . '-item.json')) {
+        // The URL parameters.
         $url_params = array(
-          'item' => str_replace($this->project_directory . 'web/uploads/repository', '/webdav', $directory) . '/' . $base_file_name . '-item.json'
+          'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . '-item.json'
         );
       } else {
 
@@ -870,7 +874,7 @@ class WorkflowController extends Controller
         if (empty($glb_file_info)) throw $this->createNotFoundException('Model not found - ' . $base_file_name . '-1000k-8192-web-hd.glb');
 
         // The webDav-based path to the model.
-        $model_path = str_replace($this->project_directory . 'web/uploads/repository', '/webdav', $directory) . '/' . $base_file_name . '-1000k-8192-web-hd.glb';
+        $model_path = str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . '-1000k-8192-web-hd.glb';
 
         $url_params = array(
           'model' => $model_path,
