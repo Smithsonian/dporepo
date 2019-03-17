@@ -76,7 +76,7 @@ class RepoModelValidate implements RepoModelValidateInterface {
     $this->tokenStorage = $tokenStorage;
     $this->kernel = $kernel;
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
-    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_directory) : $uploads_directory;
     $this->conn = $conn;
     $this->repoValidate = new RepoValidateData($conn);
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
@@ -163,7 +163,7 @@ class RepoModelValidate implements RepoModelValidateInterface {
         array(
           'job_id' => $job_data['uuid'], 
           'status' => $job_status, 
-          'date_completed' => date('Y-m-d h:i:s')
+          'date_completed' => date('Y-m-d H:i:s')
         )
       );
     }

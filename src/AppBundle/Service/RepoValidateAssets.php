@@ -154,7 +154,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
         array(
           'job_id' => $job_data['uuid'], 
           'status' => $job_status, 
-          'date_completed' => date('Y-m-d h:i:s')
+          'date_completed' => date('Y-m-d H:i:s')
         )
       );
 

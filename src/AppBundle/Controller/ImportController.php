@@ -810,71 +810,36 @@ class ImportController extends Controller
      */
     public function getParentRecords(Request $request)
     {
-      $data = $params = array();
-
+      $data = array();
       $req = $request->request->all();
-      $params['query'] = !empty($req['query']) ? $req['query'] : false;
-      $params['limit'] = !empty($req['limit']) ? $req['limit'] : false;
-      $params['render'] = !empty($req['render']) ? $req['render'] : false;
-      $params['property'] = !empty($req['property']) ? $req['property'] : false;
+      $query = !empty($req['query']) ? $req['query'] : false;
+      $limit = !empty($req['limit']) ? $req['limit'] : false;
 
-      $record_types = array(
-        'project',
-        'subject',
-        'item',
-        // 'capture_dataset',
-      );
-
-      foreach ($record_types as $key => $value) {
-
-        $params['record_type'] = $value;
-
-        switch($value) {
-          case 'subject':
-            $params['field_name'] = 'subject_name';
-            $params['id_field_name'] = 'subject_id';
-            break;
-          case 'item':
-            $params['field_name'] = 'item_description';
-            $params['id_field_name'] = 'item_id';
-            break;
-          case 'capture_dataset':
-            $params['field_name'] = 'capture_dataset_name';
-            $params['id_field_name'] = 'capture_dataset_id';
-            break;
-          default: // project
-            $params['field_name'] = 'project_name';
-            $params['id_field_name'] = 'project_id';
-        }
-
-        // Query the database.
-        $results = $this->repo_storage_controller->execute('getRecords', array(
-          'base_table' => $params['record_type'],
+      // Query the database.
+      $results = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'project',
           'fields' => array(),
-          'limit' => (int)$params['limit'],
+          'limit' => (int)$limit,
           'search_params' => array(
-            // Lots of variables going on. Here's an example of what it looks like without variables:
-            // 0 => array('field_names' => array('project.active'), 'search_values' => array(1), 'comparison' => '='),
-            // 1 => array('field_names' => array('project.project_name'), 'search_values' => $params['query'], 'comparison' => 'LIKE')
-            0 => array('field_names' => array($params['record_type'] . '.active'), 'search_values' => array(1), 'comparison' => '='),
-            1 => array('field_names' => array($params['record_type'] . '.' . $params['field_name']), 'search_values' => $params['query'], 'comparison' => 'LIKE')
+            array('field_names' => array('project.active'), 'search_values' => array(1), 'comparison' => '='),
+            array('field_names' => array('project.project_name'), 'search_values' => $query, 'comparison' => 'LIKE')
           ),
           'search_type' => 'AND',
-          )
-        );
+        )
+      );
 
-        // Format the $data array for the typeahead-bundle.
-        if (!empty($results)) {
+      // Format the $data array for the typeahead-bundle.
+      if (!empty($results)) {
 
-          // $this->u->dumper($results);
+        // $this->u->dumper($results);
 
-          foreach ($results as $key => $value) {
-            // Truncate long field values.
-            $more_indicator = (strlen($value[ $params['field_name'] ]) > 38) ? '...' : '';
-            $truncated_value = substr($value[ $params['field_name'] ], 0, 38) . $more_indicator;
-            // Add to the $data array.
-            $data[] = array('id' => $value[ $params['id_field_name'] ], 'value' => $truncated_value . ' [ ' . strtoupper(str_replace('_', ' ', $params['record_type'])) . ' ]'); // ', Project: ' . $value['project_name'] . ']'
-          }
+        foreach ($results as $key => $value) {
+          // Truncate long field values.
+          $more_indicator = (strlen($value['project_name']) > 38) ? '...' : '';
+          $truncated_value = substr($value['project_name'], 0, 38) . $more_indicator;
+          // Add to the $data array.
+          // $data[] = array('id' => $value['project_id'], 'value' => $truncated_value);
+          $data[] = array('id' => $value[ 'project_id' ], 'value' => $truncated_value . ' [ ' . strtoupper(str_replace('_', ' ', 'project')) . ' ]');
         }
       }
 

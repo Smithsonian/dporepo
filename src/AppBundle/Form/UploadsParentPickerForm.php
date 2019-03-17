@@ -19,7 +19,7 @@ class UploadsParentPickerForm extends AbstractType
                 'required' => false,
                 'property' => 'uploads_parent_picker_form_parent_picker',
                 'attr' => array(
-                    'placeholder' => 'Begin typing a Project, Subject, Item, or Capture Dataset name',
+                    'placeholder' => 'Begin typing a project name',
                 ),
                 'class'  => null,
                 'render' => 'parent_record_name',
