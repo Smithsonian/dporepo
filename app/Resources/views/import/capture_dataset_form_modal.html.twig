@@ -1,0 +1,19 @@
+{% use 'datasets/dataset_form.html.twig' %}
+
+{% block capture_dataset_form_modal %}
+<div class="modal fade" id="capture-dataset-form-modal" tabindex="-1" role="dialog" aria-labelledby="captureDatasetFormLabel" data-keyboard="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="captureDatasetFormLabel"><i class="glyphicon glyphicon-th-list"></i> <span id="capture-dataset-form-modal-title">Create a New Capture Dataset</span></h2>
+      </div>
+      <div class="modal-body" style="min-height: 24rem;">
+        {% block dataset_form %}{{ parent() }}{% endblock %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
