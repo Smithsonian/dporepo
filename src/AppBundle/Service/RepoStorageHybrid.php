@@ -457,31 +457,29 @@ class RepoStorageHybrid implements RepoStorage {
     }
     $return_data['files'] = $file_data;
 
-    $return_data['viewable_model'] = false;
-
-    // model_purpose key defaults to delivery_web
-    // If this model is a web-ready, get that info.
-    $asset_params = array(
-      'model_id' => $id,
-    );
-    $model_assets = $this->getModelAssets($asset_params);
+    $return_data['has_viewable_model'] = false;
     $return_data['delivery_web'] = array();
-    if(isset($model_assets[$id]['model_files'])) {
-      $return_data['delivery_web'] = $model_assets[$id]['model_files'];
-    }
+    $return_data['thumb_3d'] = array();
 
-    // If this model is a 3D thumb, get that info.
+    // Get info for this model's derivatives
     $asset_params = array(
       'model_id' => $id,
-      'model_purpose' => 'thumb_3d',
     );
     $model_assets = $this->getModelAssets($asset_params);
-    $return_data['thumb_3d'] = array();
-    if(isset($model_assets[$id]['model_files'])) {
-      $return_data['thumb_3d'] = $model_assets[$id]['model_files'];
+
+    if(isset($model_assets['delivery_web'])) {
+      $return_data['delivery_web'] = $model_assets['delivery_web'];
     }
 
-    // If this model has one or more web-ready derivatives, get that info.
+    if(isset($model_assets['thumb_3d'])) {
+      $return_data['thumb_3d'] = $model_assets['thumb_3d'];
+    }
+
+    if(!empty($return_data['thumb_3d']) || !empty($return_data['delivery_web'])) {
+      $return_data['has_viewable_model'] = true;
+    }
+
+    // If this model has one or more derivative web delivery or 3d thumbs, get that info.
     $asset_params = array(
       'model_id' => $id,
       'model_purpose' => 'delivery_web',
@@ -489,8 +487,8 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $model_assets = $this->getModelAssets($asset_params);
     $return_data['derivative_delivery_web'] = array();
-    if(isset($model_assets[$id]['model_files'])) {
-      $return_data['derivative_delivery_web'] = $model_assets[$id]['model_files'];
+    if(isset($model_assets['delivery_web'])) {
+      $return_data['derivative_delivery_web'] = $model_assets['delivery_web'];
     }
 
     // If this model has one or more 3D thumb derivatives, get that info.
@@ -501,66 +499,9 @@ class RepoStorageHybrid implements RepoStorage {
     );
     $model_assets = $this->getModelAssets($asset_params);
     $return_data['derivative_thumb_3d'] = array();
-    if(isset($model_assets[$id]['model_files'])) {
-      $return_data['derivative_thumb_3d'] = $model_assets[$id]['model_files'];
+    if(isset($model_assets['thumb_3d'])) {
+      $return_data['derivative_thumb_3d'] = $model_assets['thumb_3d'];
     }
-
-
-    //@todo this is deprecated
-    //@todo Hack with old_model_purpose until ingest is sorted out.
-    if(!empty($file_data) &&
-      ($return_data['model_purpose'] == 'delivery_web'
-        || $return_data['old_model_purpose'] == 'delivery_web'
-      )
-    ) {
-      $file = $file_data;
-      $fn = $file['file_name'];
-      $fn_exploded = explode('.', $fn);
-      if(count($fn_exploded) == 2 && strtolower($fn_exploded[1]) == 'obj') {
-        $return_data['viewable_model'] = $file;
-      }
-    }
-    // End get model files.
-
-    // Get model IDs for 3D thumb and low res, if available.
-    // model_id_3d_thumb, model_id_low_res
-    $sql = "SELECT model.model_id, model_purpose, model_file.*, file_upload.*
-        FROM model
-        LEFT JOIN model_file on model.model_id = model_file.model_id
-        LEFT JOIN file_upload on model_file.file_upload_id = file_upload.file_upload_id
-        WHERE parent_model_id=:model_id
-        AND model_purpose IN ('delivery_web','thumb_3d')
-        AND model.active=1";
-
-    $statement = $this->connection->prepare($sql);
-    $statement->bindValue(":model_id", $id, PDO::PARAM_INT);
-    $statement->execute();
-    $ret = $statement->fetchAll(PDO::FETCH_ASSOC);
-
-    foreach($ret as $rm) {
-      $mp = $rm['model_purpose'];
-      if($mp == "delivery_web") {
-        $return_data['model_id_low_res'] = $rm['model_id'];
-      }
-      else {
-        $return_data['model_id_3d_thumb'] = $rm['model_id'];
-      }
-    }
-    // End get model IDs for derivatives
-    //@todo end deprecated.
-
-    //@todo to-delete: don't show preview unless this specific model can be previewed- it must have a purpose of delivery_web or thumb_3d
-    // If this model doesn't have a viewable model file, see if any of the derivatives do.
-    if(empty($return_data['viewable_model'])) {
-      foreach ($ret as $file) {
-        $fn = $file['file_name'];
-        $fn_exploded = explode('.', $fn);
-        if (count($fn_exploded) == 2 && strtolower($fn_exploded[1]) == 'obj') {
-          $return_data['viewable_model'] = $file;
-        }
-      }
-    }
-    //@todo end to-delete
 
     // Get the source capture datasets for this model.
     $return_data['capture_datasets'] = array();
@@ -622,6 +563,7 @@ class RepoStorageHybrid implements RepoStorage {
     return $return_data;
 
   }
+
   public function getFiles($params){
     $limit = '';
     if (!isset($params['parent_record_id'])) {
@@ -638,6 +580,7 @@ class RepoStorageHybrid implements RepoStorage {
     $files = $statement->fetchAll();
     return $files;
   }
+
   public function getFile($params){
     if (!isset($params['file_id'])) {
       return null;
@@ -650,12 +593,14 @@ class RepoStorageHybrid implements RepoStorage {
     return $file;
 
   }
+
   public function getPointofContact(){
     $statement = $this->connection->prepare("SELECT id,username FROM fos_user");
     $statement->execute();
     $contacts = $statement->fetchAll();
     return $contacts;
   }
+
   public function getModelDetail($params){
     $model = [];
     if (!isset($params['model_id'])) {
@@ -710,7 +655,7 @@ class RepoStorageHybrid implements RepoStorage {
   }
 
   /***
-   * Returns an array of renderable 3D models.
+   * Returns an array of 3D models.
    * Accepts as parameters one or more model IDs and an indicator for whether the incoming value is a parent model ID.
    * Single model_id or an array of model_ids
    * If is_parent is set to true, compares the model_id or model_ids to parent_model_id in the model table.
@@ -725,21 +670,21 @@ class RepoStorageHybrid implements RepoStorage {
   public function getModelAssets($params) {
     if (!isset($params['model_id']) && !isset($params['model_ids'])
       || (isset($params['model_ids']) && !is_array($params['model_ids']))) {
-      return false;
+      return array();
     }
 
     $model_id = isset($params['model_id']) ? $params['model_id'] : NULL;
     $model_ids = isset($params['model_ids']) ? $params['model_ids'] : NULL;
     $is_parent = isset($params['is_parent']) && $params['is_parent'] === true ? TRUE : FALSE;
 
-    // Most of the time the caller is just looking for web-readies.
-    $model_purpose = isset($params['model_purpose']) ? $params['model_purpose'] : 'delivery_web';
+    // Default to returning all derivatives with their files.
+    $model_purpose = isset($params['model_purpose']) ? $params['model_purpose'] : '*';
 
     // Base SQL for all queries- first just get the models.
     $sql = "SELECT model.model_id, model.model_guid, model.parent_model_id, model.model_file_type, model_purpose.model_purpose
           FROM model
           LEFT JOIN model_purpose ON model.model_purpose_id = model_purpose.model_purpose_id
-          WHERE 1=1 ";
+          WHERE model.active=1 ";
 
     if($model_purpose !== '*') {
       $sql .= " AND model_purpose.model_purpose = '" . $model_purpose . "'";
@@ -768,19 +713,115 @@ class RepoStorageHybrid implements RepoStorage {
     $tmp = $statement->fetchAll();
     $model_assets = array();
 
+    $i=0;
     foreach($tmp as $m) {
       $m_id = $m['model_id'];
-      $model_assets[$m_id] = $m;
+      $m_purpose = $m['model_purpose'];
 
       // Get the associated model files.
       $sql = "SELECT file_upload.file_upload_id,file_upload.file_name,file_upload.file_path,file_upload.file_type 
           FROM model_file  
           LEFT JOIN file_upload ON model_file.file_upload_id = file_upload.file_upload_id 
-          WHERE model_file.model_id=" . $m_id;
+          WHERE model_file.active=1 AND file_upload.active=1 AND model_file.model_id=" . $m_id;
       $statement = $this->connection->prepare($sql);
       $statement->execute();
       $tmp_files = $statement->fetchAll();
-      $model_assets[$m_id]['model_files'] = $tmp_files;
+      $m['model_files'] = $tmp_files;
+
+      // Are there corresponding UV maps?
+      // Get the associated model files.
+      $sql = "SELECT uv_map.map_type, uv_map.map_file_type, uv_map_size.uv_map_size, 
+            file_upload.file_upload_id,file_upload.file_name,file_upload.file_path,file_upload.file_type 
+          FROM uv_map  
+          LEFT JOIN file_upload ON uv_map.file_upload_id = file_upload.file_upload_id 
+          LEFT JOIN uv_map_size ON uv_map.uv_map_size_id = uv_map_size.uv_map_size_id
+          WHERE uv_map.active=1 AND file_upload.active=1 AND uv_map.model_id=" . $m_id;
+      $statement = $this->connection->prepare($sql);
+      $statement->execute();
+      $tmp_files = $statement->fetchAll();
+      $m['uv_maps'] = $tmp_files;
+
+      $model_assets[$m_purpose][] = $m;
+
+      $i++;
+    }
+
+    if(isset($model_assets['delivery_web']) && is_array($model_assets['delivery_web']) && count($model_assets['delivery_web']) > 0) {
+      $model_assets['model_id_delivery_web'] = $model_assets['delivery_web'][0]['model_id'];
+    }
+
+    return $model_assets;
+  }
+
+  /***
+   * Used to get renderable model data for a project, an item, or a capture dataset.
+   * For use in rendering a 3D thumb or web-ready (delivery_web) model for an item or capture_dataset.
+   * @param $params
+   * @return array|bool
+   */
+  public function getChildModelAssets($params) {
+    $model_assets = array();
+
+    if (!isset($params['item_id']) && !isset($params['capture_dataset_id'])
+      || (isset($params['project_id']))) {
+      return array();
+    }
+
+    $project_id = isset($params['project_id']) ? $params['project_id'] : NULL;
+    $item_id = isset($params['item_id']) ? $params['item_id'] : NULL;
+    $capture_dataset_id = isset($params['capture_dataset_id']) ? $params['capture_dataset_id'] : NULL;
+
+    // Default to returning all derivatives with their files.
+    $model_purpose = isset($params['model_purpose']) ? $params['model_purpose'] : '*';
+
+    // Base SQL for all queries- first just get the models.
+    $sql = "SELECT DISTINCT model.model_id, model.model_guid, model.parent_model_id, model.model_file_type, model_purpose.model_purpose
+          FROM model
+          LEFT JOIN model_purpose ON model.model_purpose_id = model_purpose.model_purpose_id
+          LEFT JOIN item on model.item_id = item.item_id
+          LEFT JOIN capture_dataset_model on model.model_id = capture_dataset_model.model_id
+          LEFT JOIN capture_dataset ON capture_dataset_model.capture_dataset_id = capture_dataset.capture_dataset_id
+          WHERE model.active=1 ";
+
+    if(isset($model_purpose)) {
+      if($model_purpose !== '*') {
+        $sql .= " AND model_purpose.model_purpose = '" . $model_purpose . "'";
+      }
+    }
+    else {
+      $sql .= " AND model_purpose.model_purpose IN('delivery_web', 'thumb_3d') ";
+    }
+
+    if(NULL !== $project_id) {
+      $sql .= " AND (item.project_id=" . $project_id . " OR capture_dataset.project_id =" . $project_id . ") ";
+    }
+    elseif(NULL !== $item_id) {
+      $sql .= " AND model.item_id=" . $item_id . " ";
+    }
+    else {
+      // capture_dataset
+      $sql .= " AND capture_dataset_model.capture_dataset_id=" . $capture_dataset_id . " ";
+    }
+
+    $statement = $this->connection->prepare($sql);
+    $statement->execute();
+    $tmp = $statement->fetchAll();
+    $model_assets = array();
+
+    $i=0;
+    foreach($tmp as $m) {
+      $model_purpose = $m['model_purpose'];
+      $params = array(
+        'model_id' => $m['model_id'],
+        'model_purpose' => $model_purpose,
+      );
+      $ret = $this->getModelAssets($params);
+      if(array_key_exists($model_purpose, $model_assets)) {
+        $model_assets[$model_purpose] = array_merge($model_assets[$model_purpose], $ret[$model_purpose]);
+      }
+      else {
+        $model_assets[$model_purpose] = $ret[$model_purpose];
+      }
     }
 
     return $model_assets;
@@ -795,6 +836,7 @@ class RepoStorageHybrid implements RepoStorage {
     $files = $statement->fetchAll();
     return $files;
   }
+
   public function getCaptureDataset($params) {
     //$params will be something like array('capture_dataset_id' => '123');
     $return_data = array();
@@ -4221,15 +4263,14 @@ class RepoStorageHybrid implements RepoStorage {
     foreach($data['aaData'] as $k => $m) {
       $id = $m['model_id'];
 
-      // model_purpose key defaults to delivery_web
+      // model_purpose key defaults to * so specify delivery_web
       $asset_params = array(
         'model_id' => $id,
+        'model_purpose' => 'delivery_web'
       );
       $model_assets = $this->getModelAssets($asset_params);
-      $return_data['aaData'][$k]['delivery_web'] = array();
-      if(isset($model_assets[$id]['model_files'])) {
-        $data['aaData'][$k]['delivery_web'] = $model_assets[$id]['model_files'];
-      }
+      $data['aaData'][$k]['delivery_web'] = $model_assets['delivery_web'];
+      $data['aaData'][$k]['model_id_delivery_web'] = isset($model_assets['model_id_delivery_web']) ? $model_assets['model_id_delivery_web'] : '';
     }
 
     return $data;
