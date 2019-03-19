@@ -26,7 +26,10 @@
 {% block content %}
     <div id="main">
     </div>
-    <input id="magic_url" type="hidden" value="/admin/get_file?path={{ data.model_url }}" />
+    <input id="magic_obj_url" type="hidden" value="{{ data.model_url }}" />
+    <input id="magic_uv_map_url" type="hidden" value="{{ data.uv_map_url }}" />
+    <input id="magic_item_json" type="hidden" value="{{ data.item_json_url }}" />
+    <input id="magic_thumb_3d" type="hidden" value="{{ data.thumb_3d_url }}" />
 {% endblock %}
 
 {% block javascripts %}
@@ -34,7 +37,7 @@
 
     <script src="{{asset('lib/javascripts/react/js/react.production.min.js')}}"></script>
     <script src="{{ asset('lib/javascripts/react/js/react-dom.production.min.js') }}"></script>
-    <script src="{{ asset('lib/javascripts/pep/pep.min.js') }}"></script>
+    <script src="{{ asset('lib/javascripts/pep/js/pep.min.js') }}"></script>
     <script src="{{ asset('lib/javascripts/tree/three.min.js') }}"></script>
 
     <script src="{{asset('lib/javascripts/voyager/js/voyager-explorer.js')}}"></script>
@@ -44,9 +47,23 @@
       $(document).ready(function(){
 
         const voyager = new Voyager({ element: document.getElementById("main") });
-        var model_url = $("#magic_url").val();
-        //var model_url = $('body').find('#magic_url').val();
-        voyager.loadGeometryAndTexture(model_url);
+        var obj_url = $("#magic_obj_url").val();
+        var uv_map = $("#magic_uv_map_url").val();
+        var item_json_url = $("#magic_item_json").val();
+        var thumb_3d_url = $("#magic_thumb_3d").val();
+
+        // Prefer item.json
+        if(item_json_url !== undefined && item_json_url !== '') {
+          voyager.loadItem('/admin/get_file?path=' + item_json_url);
+        }
+        // Then 3D thumb
+        else if(thumb_3d_url !== undefined && thumb_3d_url !== '') {
+          voyager.loadModel('/admin/get_file?path=' + thumb_3d_url);
+        }
+        else {
+          // Finally try .obj and texture maps
+          voyager.loadGeometryAndTexture('/admin/get_file?path=' + obj_url, '/admin/get_file?path=' + uv_map);
+        }
 
       });
     </script>
