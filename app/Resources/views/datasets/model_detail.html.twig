@@ -80,18 +80,18 @@
               {% endif %}
             </div>
             <div class="col-md-6">
-              {% if data.model_id_3d_thumb is defined %}
-                <div><a href="/admin/model/viewer/{{data.model_id_3d_thumb}}">Preview 3D thumbnail</a></div>
+              {% if data.model_purpose == 'master' %}
+                  <div><a href="/admin/model/viewer/{{data.model_id_thumb_3d}}" class="btn btn-primary" role="button">Author content</a></div>
               {% endif %}
-              {% if data.model_id_low_res is defined %}
-                <div><a href="/admin/model/viewer/{{data.model_id_low_res}}">Preview low-resolution model</a></div>
+
+              {% if data.model_id_thumb_3d is defined and data.model_id_thumb_3d != '' %}
+                <div><a href="/admin/model/viewer/{{data.model_id_thumb_3d}}" class="btn btn-primary" role="button">Preview 3D thumbnail</a></div>
+              {% endif %}
+
+              {% if data.model_id_delivery_web is defined and data.model_id_delivery_web  != '' %}
+                <div><a href="/admin/model/viewer/{{data.model_id_delivery_web}}" class="btn btn-primary" role="button">Preview low-resolution model</a></div>
               {% endif %}
             </div>
-        </div>
-        <div class="col-md-12">
-            {% if data.viewable_model != false %}
-              <a class="btn btn-primary" href="/admin/model/viewer/{{data.model_id}}" target="_blank">Preview 3D Model in Viewer</a>
-            {% endif %}
         </div>
     </div>
 
@@ -105,6 +105,7 @@
                     <tr>
                         <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
                         <th class="text-center">Download</th>
+                        <th class="text-center"></th>
                         <th class="text-center"></th>
                         <th class="text-center"></th>
                         <th class="text-center"></th>
@@ -344,6 +345,16 @@
           "columns": [
             { "data": "manage" },
             { "data": "manage" },
+            { "data": "model_id_delivery_web", "title": "Preview",
+              "render": function ( data, type, row, meta ) {
+                if(data) {
+                  return '<a href="/admin/model/viewer/' + data + '" class="btn btn-primary" role="button">Preview</a>';
+                }
+                else {
+                  return '';
+                }
+              }
+            },
             { "data": "model_id", "title": "Model Repository ID"  },
             { "data": "item_id", "title": "Parent Item Repository ID"  },
             { "data": "model_file_type", "title": "Model File Type"  },
