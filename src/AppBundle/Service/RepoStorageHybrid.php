@@ -3397,7 +3397,36 @@ class RepoStorageHybrid implements RepoStorage {
         if (isset($dataset_file['file_path'])) {
           $data['aaData'][$k]['file_path'] = $dataset_file['file_path'];
         }
-      }
+
+        // Get representative EXIF metadata, if available.
+        $sql = "SELECT file_upload.metadata
+          FROM file_upload
+          JOIN capture_data_file on file_upload.file_upload_id = capture_data_file.file_upload_id
+          JOIN capture_data_element on capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
+          WHERE capture_data_file.active = 1 
+          AND capture_data_element.capture_dataset_id = :capture_dataset_id
+          LIMIT 0,1 ";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":capture_dataset_id", $id, PDO::PARAM_INT);
+        $statement->execute();
+        $metadata_row = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        if(count($metadata_row) > 0) {
+          $this->unpack_metadata($metadata_row);
+        }
+        else {
+          // Get placeholders for the fields.
+          $metadata_row = array(0 => array('metadata' => array()));
+          $this->unpack_metadata($metadata_row);
+        }
+
+        $metadata = $metadata_row[0];
+        foreach($metadata as $mk => $mv) {
+          $data['aaData'][$k][$mk] = $mv;
+        }
+        unset($data['aaData'][$k]['metadata']);
+
+      } // for each capture dataset
     }
 
     return $data;
@@ -3497,6 +3526,34 @@ class RepoStorageHybrid implements RepoStorage {
           if (isset($dataset_file['file_path'])) {
             $data['aaData'][$k]['file_path'] = $dataset_file['file_path'];
           }
+
+          // Get representative EXIF metadata, if available.
+          $sql = "SELECT file_upload.metadata
+          FROM file_upload
+          JOIN capture_data_file on file_upload.file_upload_id = capture_data_file.file_upload_id
+          WHERE capture_data_file.active = 1 
+          AND capture_data_file.capture_data_element_id = :capture_data_element_id
+          LIMIT 0,1 ";
+          $statement = $this->connection->prepare($sql);
+          $statement->bindValue(":capture_data_element_id", $id, PDO::PARAM_INT);
+          $statement->execute();
+          $metadata_row = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+          if(count($metadata_row) > 0) {
+            $this->unpack_metadata($metadata_row);
+          }
+          else {
+            // Get placeholders for the fields.
+            $metadata_row = array(0 => array('metadata' => array()));
+            $this->unpack_metadata($metadata_row);
+          }
+
+          $metadata = $metadata_row[0];
+          foreach($metadata as $mk => $mv) {
+            $data['aaData'][$k][$mk] = $mv;
+          }
+          unset($data['aaData'][$k]['metadata']);
+
         }
       }
 
