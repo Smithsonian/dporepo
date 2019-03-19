@@ -97,10 +97,11 @@
       // Disable the "Next Step" button.
       rootwizard.find('.next').addClass('disabled');
 
+      // Uncomment during testing to have access to the Step 2 tab.
       // Enable Step 2 tab.
-        rootwizard.bootstrapWizard('enable', '1');
-        // Enable the "Next Step" button.
-        rootwizard.find('.next').removeClass('disabled');
+      rootwizard.bootstrapWizard('enable', '1');
+      // Enable the "Next Step" button.
+      rootwizard.find('.next').removeClass('disabled');
 
       /**
        * Create a New Subject / Create a New Item click handler
@@ -125,6 +126,47 @@
        */
       $('#bulk-ingest-tab').on('click', function(e) {
         window.location.href = '/admin/bulk_ingest';
+      });
+
+      /**
+       * Remove record click handler
+       */
+      $('#simple_ingest_tab_4').on('click', '.remove-record', function(e) {
+        // Data, which contains the identifier.
+        var buttonData = $(this).data();
+        // Confirm removing record.
+        swal('Remove Capture Dataset?', {
+          icon: 'warning',
+          buttons: {
+            cancel: 'No',
+            catch: {
+              text: 'Yes',
+              value: 'yes',
+            }
+          },
+        })
+        .then((value) => {
+          switch (value) {
+            case "yes":
+              // The current array of capture_dataset_ids stored in data.
+              var idArray = $('body').data('capture_dataset_ids');
+
+              // Remove the capture_dataset_id from data.
+              var index = $.inArray(buttonData.identifier, idArray);
+              if (index != -1) {
+                idArray.splice(index, 1);
+                $('body').data('capture_dataset_ids', idArray);
+              }
+
+              // Remove the record from the DOM.
+              $('#simple_ingest_tab_4').find('#' + buttonData.identifier).remove();
+
+              console.log($('body').data());
+
+              break;
+            default:
+          }
+        });
       });
 
       // Display the record picker modal for a project, subject, item, or capture dataset.
@@ -181,7 +223,7 @@
         // Get the properties and values from the form.
         var form = $('form[name="subject_form"]');
         var formData = form.serializeObject();
-        // Add CSV blob and display data
+        // Add CSV blob and display data.
         submitSubjectRecord(formData);
       });
 
@@ -192,7 +234,7 @@
         // Get the properties and values from the form.
         var form = $('form[name="item_form"]');
         var formData = form.serializeObject();
-        // Add CSV blob and display data
+        // Add CSV blob and display data.
         submitItemRecord(formData);
       });
 
@@ -200,16 +242,11 @@
       $(document).on('submit', 'form[name="capture_dataset_form"]', function(e){
         // Avoid submitting the form non-ajax.
         e.preventDefault();
-        // Convert form data to a CSV and add it to the Uploads Stage.
-        addCaptureDatasetCsvToUploadsStage();
-        // Avoid submitting the form multiple times.
-        $('#dataset_save').attr('disabled', true);
-        // Display a success message in the UI.
-        swal({
-          title: 'Dataset Saved',
-          text: 'Please proceed to Step 3',
-          icon: 'success',
-        });
+        // Get the properties and values from the form.
+        var form = $('form[name="capture_dataset_form"]');
+        var formData = form.serializeObject();
+        // Add CSV blob and display data.
+        submitCaptureDatasetRecord(formData);
       });
 
       // Serialize Object
@@ -411,9 +448,14 @@
        * Create CSV
        */
       function createCsv(csvName, csvColumns, csvValues) {
-        // Add the import_row_id_field and import_parent_id_field.
-        csvColumns.unshift('import_row_id_field', 'import_parent_id_field');
-        csvValues.unshift(1, 1);
+
+        csvColumns.unshift('import_row_id', 'import_parent_id');
+
+        if (csvName !== 'capture_datasets.csv') {
+          // Add the import_row_id and import_parent_id.
+          csvValues.unshift(1, 1);
+        }
+
         // Get all accepted files.
         var acceptedFiles = uploadsDropzone.getAcceptedFiles();
         // Loop through accepted files and remove an existing blob if already present.
@@ -423,21 +465,52 @@
             uploadsDropzone.removeFile(acceptedFiles[i]);
           }
         }
+
         // Add the CSV to the Uplaods Stage (Dropzone), in Step 3.
+        if (csvName === 'capture_datasets.csv') {
+
+          var vals = [];
+          for (var i = 0; i < csvValues.length; i++) {
+            vals[i] = [];
+            vals[i].push(1);
+            vals[i].push(1);
+            $.each(csvValues[i], function(key, value){
+              vals[i].push(value);
+            });
+          }
+
+          var lines = '';
+          $.each(vals, function(tkey, tvalue){
+            lines += tvalue.join(',') + '\r\n';
+          });
+
+          var values = lines;
+
+        } else {
+          var values = csvValues.join(',');
+        }
+
         // See: https://stackoverflow.com/questions/17103398/convert-javascript-variable-value-to-csv-file
-        var blob = new Blob([csvColumns.join(',') + '\r\n' + csvValues.join(',')], {type: 'text/csv'});
-        blob.name = csvName;
+        var blob = new Blob([csvColumns.join(',') + '\r\n' + values], {type: 'text/csv'});
+        blob.name = csvName.replace('_single', '');
         uploadsDropzone.addFile(blob);
+
         // Test to see if the CSV has been added to the Uploads Stage.
         acceptedFiles = uploadsDropzone.getAcceptedFiles();
         console.log('acceptedFiles');
         console.log(acceptedFiles);
+
       }
 
       /**
        * Populate Container
        */
       function populateContainer(dataType, csvColumns, csvValues, fromDatatable) {
+
+        // console.log('csvColumns');
+        // console.log(csvColumns);
+        // console.log('csvValues');
+        // console.log(csvValues);
 
         if (dataType === 'project') {
           var childType = 'subject';
@@ -459,9 +532,8 @@
         }
 
         // Transfer record metadata to the parent window.
-        var html = '<dl>';
+        var html = '<dl class="dl-horizontal">';
         // Loop through the metadata and choose fileds in the 'csvColumns' array.
-        // console.log(csvColumns);
         $.each(csvValues, function(key, value){
           // If data IS coming from a DataTable
           if (fromDatatable) {
@@ -472,131 +544,90 @@
           }
           // If data IS NOT coming from a DataTable
           if (!fromDatatable) {
+            // Add the <dt> and <dd> elements.
             html += '<dt><strong>' + convertCase(csvColumns[key].replace(/_/g, ' ')) + '</strong></dt>';
             html += '<dd class="' + key + '">' + value + '</dd>';
           }
         });
         html += '</dl>';
 
-        $('div.' + dataType + '-well').html(html);
-        $('div.' + dataType + '-well').removeClass('hidden');
+        if (dataType !== 'capture-dataset') {
+          $('div.' + dataType + '-well').html(html);
+          $('div.' + dataType + '-well').removeClass('hidden');
+        } else {
+          // Well
+          var well = $('<div />')
+              .addClass('well', dataType + '-well')
+              // .attr('id', identifier)
+              .attr('style', 'padding-bottom: 6rem;')
+              .html(html);
+              // .append(buttonDiv);
+
+          $('#capture-dataset-wells').append(well);
+        }
 
         // Enable the child buttons.
         $('[data-select="' + childType + '"], [data-create="' + childType + '"]').removeAttr('disabled');
-
-        // // Add the subject_id to data.
-        // $('body').data('subject_id', aData.DT_RowId);
-        // // Add the subject_id to the hidden input.
-        // $('input[name="dataset[subject_id]"]').val($('body').data('subject_id'));
       }
 
       /**
        * Populate Capture Dataset Container
        */
-      function populateCaptureDatasetContainer(dataType, csvColumns, csvValues, fromDatatable) {
+      function populateCaptureDatasetContainer(dataType, csvColumns, csvValues) {
 
+        var capture_dataset_ids = new Array;
+        
+        // Transfer record metadata to the parent window.
         $.each(csvValues, function(cdKey, cdValue){
-          // Transfer record metadata to the parent window.
+
+          var identifier = false;
           var html = '<dl class="dl-horizontal">';
           // Loop through the metadata and choose fileds in the 'csvColumns' array.
           $.each(cdValue, function(thisKey, thisValue){
-            if (csvColumns.indexOf(thisKey) !== -1) {
-              html += '<dt><strong>' + convertCase(thisKey.replace(/_/g, ' ')) + '</strong></dt>';
-              html += '<dd class="' + thisKey + '">' + thisValue + '</dd>';
+            html += '<dt><strong>' + convertCase(csvColumns[thisKey].replace(/_/g, ' ')) + '</strong></dt>';
+            html += '<dd class="' + thisKey + '">' + thisValue + '</dd>';
+            // Set the unique identifier to make it easier to key off of when updating/removing.
+            if (csvColumns[thisKey] === 'DT_RowId') {
+              identifier = thisValue;
+              capture_dataset_ids.push(thisValue);
             }
           });
+
           html += '</dl>';
 
-          var well = $('<div />').addClass('well', dataType + '-well').html(html);
+          // Only add the record if it doesn't already exist.
+          if (!$('#capture-dataset-wells').find('#' + identifier).length) {
+            // Remove record button.
+            var buttonIcon = $('<i />').addClass('glyphicon glyphicon-trash');
+            var button = $('<button />')
+                .addClass('btn btn-default remove-record')
+                .attr('type', 'button')
+                .data('identifier', identifier)
+                .append(buttonIcon)
+                .append(' Remove');
+            var buttonDiv = $('<div />').addClass('pull-right').append(button);
+            // Well
+            var well = $('<div />')
+                .addClass('well', dataType + '-well')
+                .attr('id', identifier)
+                .attr('style', 'padding-bottom: 6rem;')
+                .html(html)
+                .append(buttonDiv);
+            $('#capture-dataset-wells').append(well);
 
-          $('#capture-dataset-wells').append(well);
-
-          // // Add the subject_id to data.
-          // $('body').data('subject_id', aData.DT_RowId);
-          // // Add the subject_id to the hidden input.
-          // $('input[name="dataset[subject_id]"]').val($('body').data('subject_id'));
+            // Add the capture_dataset_ids to data.
+            $('body').data('capture_dataset_ids', capture_dataset_ids);
+          }
 
           // Modify the add Capture Dataset button text.
           $('[data-select="capture-dataset"]').find('span').text('Add Additional Capture Datasets');
           // Hide the modal window.
           $('#record-picker-modal').modal('hide');
 
+          // Enable Step 3 tab.
+          rootwizard.bootstrapWizard('enable', '2');
         });
 
-      }
-
-      /**
-       * Add CSV to Uploads Stage
-       */
-      function addCaptureDatasetCsvToUploadsStage() {
-        // Create a CSV file and make it downloadable.
-        // Example data from formData:
-        // "capture_dataset_form[background_removal_method]": "4"
-        // ​"capture_dataset_form[calibration_object_used]": "1"
-        // "capture_dataset_form[capture_dataset_description]": "Lorem Ipsum"
-        //
-        // Get the properties and values from the form.
-        var form = $('form[name="capture_dataset_form"]');
-        // Add the import_row_id and import_parent_id hidden fields to the form.
-        // Doing this here since unshift() was not working further on down the line (?)
-        var import_row_id_field = $('<input />').attr('type', 'hidden').attr('name', 'import_row_id').val('1');
-        var import_parent_id_field = $('<input />').attr('type', 'hidden').attr('name', 'import_parent_id').val( $('body').data('item_id') );
-        form.prepend(import_row_id_field, import_parent_id_field);
-        // Serialize the form object.
-        var formData = form.serializeObject();
-        // Array of CSV columns.
-        var csvColumns = Object.keys(formData);
-        // Array of CSV values.
-        var csvValues = Object.values(formData);
-        // Remove the capture_dataset_form[_token] key (in csvColumns) and the corresponding value (in csvValues).
-        // Looping through and finding the key is a bit more precise, as opposed to using csvColumns.pop() and csvValues.pop();
-        for(var i = 0; i < csvColumns.length; i++) {
-           if (csvColumns[i] === 'capture_dataset_form[_token]') {
-             csvColumns.splice(i, 1);
-             csvValues.splice(i, 1);
-           }
-        }
-        // Remove "dataset[" and "]" from the CSV columns.
-        for( var i = 0; i < csvColumns.length; i++){
-          csvColumns[i] = csvColumns[i].replace('capture_dataset_form[', '');
-          csvColumns[i] = csvColumns[i].replace(']', '');
-        }
-        // Massage the CSV data to required specs.
-        for(var i = 0; i < csvColumns.length; i++) {
-          switch(csvColumns[i]) {
-            // Strip the space and zeros from date
-            case 'date_of_capture':
-              csvValues[i] = csvValues[i].replace(' 00:00:00', '');
-              break;
-            // Swap out option value for option text.
-            case 'support_equipment':
-            case 'capture_method':
-            case 'capture_dataset_type':
-            case 'item_position_type':
-            case 'focus_type':
-            case 'light_source_type':
-            case 'background_removal_method':
-            case 'cluster_type':
-              csvValues[i] = $('select[name="capture_dataset_form[' + csvColumns[i] + ']"] option[value="' + csvValues[i] + '"]').text();
-              break;
-            default:
-              // Do nothing
-          }
-        }
-        // // Add quotes around CSV values.
-        // for( var i = 0; i < csvValues.length; i++){
-        //   csvValues[i] = '"' + csvValues[i] + '"';
-        // }
-        // Add the CSV to the Uplaods Stage (Dropzone), in Step 3.
-        // See: https://stackoverflow.com/questions/17103398/convert-javascript-variable-value-to-csv-file
-        var blob = new Blob([csvColumns.join(',') + '\r\n' + csvValues.join(',')], {type: 'text/csv'});
-        blob.name = 'capture_datasets.csv';
-        uploadsDropzone.addFile(blob);
-        // Disable all fields in the form
-        $('form[name="capture_dataset_form"]').find('input, select, textarea').attr('disabled', true);
-        $('form[name="capture_dataset_form"]').find('select').trigger("chosen:updated");
-        // Enable Step 3 tab.
-        rootwizard.bootstrapWizard('enable', '2');
       }
 
       /**
@@ -712,8 +743,15 @@
 
               var csvColumns = ['last_modified', 'local_subject_id', 'subject_name', 'subject_id'];
               var csvValues = [aData.local_subject_id, aData.subject_guid, aData.holding_entity_name, aData.holding_entity_guid];
+
               // Populate the subject container in the DOM.
               populateContainer('subject', csvColumns, aData, true);
+              
+              // Add the existing_record flag.
+              csvColumns.push('existing_record');
+              csvValues.push('true');
+              // Create the CSV and add it to the Uploads Stage.
+              createCsv('subjects.csv', csvColumns, csvValues);
 
               // Add the subject_id to data.
               $('body').data('subject_id', aData.DT_RowId);
@@ -777,6 +815,12 @@
 
               // Populate the item container in the DOM.
               populateContainer('item', csvColumns, aData, true);
+              
+              // Add the existing_record flag.
+              csvColumns.push('existing_record');
+              csvValues.push('true');
+              // Create the CSV and add it to the Uploads Stage.
+              createCsv('items.csv', csvColumns, csvValues);
 
               // Enable Step 2 tab.
               rootwizard.bootstrapWizard('enable', '1');
@@ -921,20 +965,75 @@
                 switch (value) {
                   case "yes":
 
-                    // Columns
-                    var columns = ['capture_method', 'capture_dataset_name', 'collected_by', 'date_of_capture', 'last_modified'];
+                    // model_import_row_id
+
+                    var targetColumns = [
+                        'capture_dataset_guid',
+                        'capture_dataset_field_id',
+                        'capture_method',
+                        'capture_dataset_type',
+                        'capture_dataset_name',
+                        'collected_by',
+                        'date_of_capture',
+                        'item_position_type',
+                        'item_position_field_id',
+                        'item_arrangement_field_id',
+                        'positionally_matched_capture_datasets',
+                        'focus_type',
+                        'light_source_type',
+                        'background_removal_method',
+                        'cluster_type',
+                        'directory_path',
+                        'DT_RowId'
+                    ];
+
+                    // Sort the target columns.
+                    targetColumns = targetColumns.sort();
+
                     // Get data from selected rows.
                     var records = new Array;
-                    $('#capture-dataset [name="select_record"]:checked').each(function(){
-                      // var thisRowData = captureDatasetDt.row( $(this).parent().parent() ).data();
-                      record = captureDatasetDt.fnGetData( $(this).parent().parent() );
+                    var columns = new Array;
+                    
+                    $('#capture-dataset [name="select_record"]:checked').each(function(k, v){
+
+                      var record = new Array;
+                      var thisRecord = captureDatasetDt.fnGetData( $(this).parent().parent() );
+
+                      $.each(thisRecord, function(key, value){
+
+                        if ((targetColumns.indexOf(key) !== -1) && (columns.indexOf(key) === -1)) {
+                          columns.push(key);
+                        }
+
+                        if (targetColumns.indexOf(key) !== -1) {
+                          // Remove the time from the date_of_capture.
+                          if (key === 'date_of_capture') value = value.replace(' 00:00:00', '');
+                          // Replace the cluster_type ID with the camera_cluster_type value.
+                          if (key === 'cluster_type') value = thisRecord['camera_cluster_type'];
+                          // Push the value to the record array.
+                          record.push(value);
+                        }
+
+                      });
+
+                      // Add the existing_record flag.
+                      columns.push('existing_record');
+                      record.push('true');
+
                       records.push(record);
                     });
 
+                    // console.log('======== columns ========');
+                    // console.log(columns);
+
+                    // console.log('======== records ========');
+                    // console.log(records);
 
                     // Populate the capture_dataset container in the DOM.
                     populateCaptureDatasetContainer('capture-dataset', columns, records);
 
+                    // Create the CSV and add it to the Uploads Stage.
+                    createCsv('capture_datasets.csv', columns, records);
 
                     // // Add the capture_dataset_id to data.
                     // $('body').data('capture_dataset_id', aData.DT_RowId);
@@ -994,20 +1093,120 @@
             formData['item_form[local_item_id]'],
             formData['item_form[item_guid]'],
             formData['item_form[item_description]'],
-            formData['item_form[item_type]']
+            // Get the text value of the selected item_type since this is what is validated against.
+            $("#item_form_item_type option:selected").text()
         ];
         // Populate the subject container in the DOM.
         populateContainer('item', csvColumns, csvValues, false);
         // Create the CSV and add it to the Uploads Stage.
         createCsv('items.csv', csvColumns, csvValues);
         // Display a success message in the UI.
-        swal({
-          title: 'Saved',
-          text: 'The item has been successfully saved.',
+        swal('Saved', {
           icon: 'success',
+          text: 'The item has been successfully saved.',
+          buttons: {
+            catch: {
+              text: 'Close',
+              value: 'close',
+            }
+          },
+        })
+        .then((value) => {
+          switch (value) {
+            case "close":
+              $('#item-form-modal').modal('hide');
+              break;
+            default:
+          }
         });
         // Enable Step 2 tab.
         rootwizard.bootstrapWizard('enable', '1');
+        // Enable the "Next Step" button.
+        rootwizard.find('.next').removeClass('disabled');
+      }
+
+      /**
+       * Submit Capture Dataset Record
+       */
+      function submitCaptureDatasetRecord(formData) {
+        // Avoid submitting the form multiple times.
+        $('#dataset_save').attr('disabled', true);
+        // Set up the csvColumns and csvValues.
+        var csvColumns = [
+            'background_removal_method',
+            'calibration_object_used',
+            'capture_dataset_description',
+            'capture_dataset_field_id',
+            'capture_dataset_guid',
+            'capture_dataset_name',
+            'capture_dataset_type',
+            'capture_method',
+            'cluster_geometry_field_id',
+            'cluster_type',
+            'collected_by',
+            'collection_notes',
+            'date_of_capture',
+            'directory_path',
+            'focus_type',
+            'item_arrangement_field_id',
+            // 'item_id',
+            'item_position_field_id',
+            'item_position_type',
+            'light_source_type',
+            'positionally_matched_capture_datasets',
+            'resource_capture_datasets',
+            'support_equipment'
+        ];
+        var csvValues = [
+            $("#capture_dataset_form_background_removal_method option:selected").text(),
+            $("#capture_dataset_form_calibration_object_used option:selected").text(),
+            formData['capture_dataset_form[capture_dataset_description]'],
+            formData['capture_dataset_form[capture_dataset_field_id]'],
+            formData['capture_dataset_form[capture_dataset_guid]'],
+            formData['capture_dataset_form[capture_dataset_name]'],
+            $("#capture_dataset_form_capture_dataset_type option:selected").text(),
+            $("#capture_dataset_form_capture_method option:selected").text(),
+            formData['capture_dataset_form[cluster_geometry_field_id]'],
+            $("#capture_dataset_form_cluster_type option:selected").text(),
+            formData['capture_dataset_form[collected_by]'],
+            formData['capture_dataset_form[collection_notes]'],
+            formData['capture_dataset_form[date_of_capture]'].replace(' 00:00:00', ''),
+            formData['capture_dataset_form[directory_path]'],
+            $("#capture_dataset_form_focus_type option:selected").text(),
+            formData['capture_dataset_form[item_arrangement_field_id]'],
+            // formData['capture_dataset_form[item_id]'],
+            formData['capture_dataset_form[item_position_field_id]'],
+            $("#capture_dataset_form_item_position_type option:selected").text(),
+            $("#capture_dataset_form_light_source_type option:selected").text(),
+            formData['capture_dataset_form[positionally_matched_capture_datasets]'],
+            formData['capture_dataset_form[resource_capture_datasets]'],
+            formData['capture_dataset_form[support_equipment]']
+        ];
+        // Populate the capture_dataset container in the DOM.        
+        populateContainer('capture-dataset', csvColumns, csvValues, false);
+        // Create the CSV and add it to the Uploads Stage.
+        createCsv('capture_datasets_single.csv', csvColumns, csvValues);
+        // Display a success message in the UI.
+        swal('Saved', {
+          icon: 'success',
+          text: 'The capture dataset has been successfully saved. Please proceed to Step 3',
+          buttons: {
+            catch: {
+              text: 'Close',
+              value: 'close',
+            }
+          },
+        })
+        .then((value) => {
+          switch (value) {
+            case "close":
+              $('#capture-dataset-form-modal').modal('hide');
+              break;
+            default:
+          }
+        });
+        // Enable Step 3 tab.
+        rootwizard.bootstrapWizard('enable', '2');
         // Enable the "Next Step" button.
         rootwizard.find('.next').removeClass('disabled');
       }
