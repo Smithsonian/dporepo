@@ -1152,53 +1152,41 @@
         // Set up the csvColumns and csvValues.
         var csvColumns = [
             'background_removal_method',
-            'calibration_object_used',
             'capture_dataset_description',
             'capture_dataset_field_id',
-            'capture_dataset_guid',
             'capture_dataset_name',
             'capture_dataset_type',
             'capture_method',
-            'cluster_geometry_field_id',
             'cluster_type',
             'collected_by',
-            'collection_notes',
             'date_of_capture',
             'directory_path',
             'focus_type',
             'item_arrangement_field_id',
-            'item_id',
+            // 'item_id',
             'item_position_field_id',
             'item_position_type',
             'light_source_type',
-            'positionally_matched_capture_datasets',
-            'resource_capture_datasets',
-            'support_equipment'
+            'positionally_matched_capture_datasets'
         ];
         var csvValues = [
             $("#capture_dataset_form_background_removal_method option:selected").text(),
-            $("#capture_dataset_form_calibration_object_used option:selected").text(),
             formData['capture_dataset_form[capture_dataset_description]'],
             formData['capture_dataset_form[capture_dataset_field_id]'],
-            formData['capture_dataset_form[capture_dataset_guid]'],
             formData['capture_dataset_form[capture_dataset_name]'],
             $("#capture_dataset_form_capture_dataset_type option:selected").text(),
             $("#capture_dataset_form_capture_method option:selected").text(),
-            formData['capture_dataset_form[cluster_geometry_field_id]'],
             $("#capture_dataset_form_cluster_type option:selected").text(),
             formData['capture_dataset_form[collected_by]'],
-            formData['capture_dataset_form[collection_notes]'],
             formData['capture_dataset_form[date_of_capture]'].replace(' 00:00:00', ''),
             formData['capture_dataset_form[directory_path]'],
             $("#capture_dataset_form_focus_type option:selected").text(),
             formData['capture_dataset_form[item_arrangement_field_id]'],
-            formData['capture_dataset_form[item_id]'],
+            // formData['capture_dataset_form[item_id]'],
             formData['capture_dataset_form[item_position_field_id]'],
             $("#capture_dataset_form_item_position_type option:selected").text(),
             $("#capture_dataset_form_light_source_type option:selected").text(),
-            formData['capture_dataset_form[positionally_matched_capture_datasets]'],
-            formData['capture_dataset_form[resource_capture_datasets]'],
-            formData['capture_dataset_form[support_equipment]']
+            formData['capture_dataset_form[positionally_matched_capture_datasets]']
         ];
         // Populate the capture_dataset container in the DOM.        
         populateContainer('capture-dataset', csvColumns, csvValues, false);

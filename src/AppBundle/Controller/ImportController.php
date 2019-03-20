@@ -322,6 +322,31 @@ class ImportController extends Controller
 
         // Create the form
         $form = $this->createForm(CaptureDatasetForm::class, $dataset);
+        // Keep these fields
+        // // model_import_row_id
+        // // capture_dataset_field_id
+        // // capture_method
+        // // capture_dataset_type
+        // // capture_dataset_name
+        // // collected_by
+        // // date_of_capture
+        // // item_position_type
+        // // item_position_field_id
+        // // item_arrangement_field_id
+        // // positionally_matched_capture_datasets
+        // // focus_type
+        // // light_source_type
+        // // background_removal_method
+        // // cluster_type
+        // // directory_path
+        // Remove these fields.
+        $form->remove('collection_notes');
+        $form->remove('cluster_geometry_field_id');
+        $form->remove('capture_dataset_guid');
+        $form->remove('support_equipment');
+        $form->remove('resource_capture_datasets');
+        $form->remove('calibration_object_used');
+
         // Create the model form.
         $model = new Model();
         // Get data from lookup tables.
