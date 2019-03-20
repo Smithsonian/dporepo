@@ -731,10 +731,10 @@ function startUpload(restart, dropzoneFilesCopy) {
 
 function parentRecordChecker() {
   // Parent record ID value.
-  // For the Simple Ingest, the value is stored in $('body').data('item_id')
+  // For the Simple Ingest, the value is stored in $('body').data('project_id')
   // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker')
-  let parentRecordId = $('body').data('item_id')
-      ? $('body').data('item_id')
+  let parentRecordId = $('body').data('project_id')
+      ? $('body').data('project_id')
       : $('#uploads_parent_picker_form_parent_picker').val();
   // If there is no parent ID selected, then display an alert.
   if(!parentRecordId.length) {
@@ -751,9 +751,9 @@ function parentRecordChecker() {
 
 function getRecordType() {
   // Parent record text value.
-  // For the Simple Ingest, the value is automatically '[ item ]'.
+  // For the Simple Ingest, the value is automatically '[ project ]'.
   // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker_text').val()
-  let parentRecordText = $('body').data('ajax') ? '[ item ]' : $('#uploads_parent_picker_form_parent_picker_text').val();
+  let parentRecordText = $('body').data('ajax') ? '[ project ]' : $('#uploads_parent_picker_form_parent_picker_text').val();
   // Get the string found between the brackets (e.g. [ subject ] would return 'subject').
   parentRecordText = parentRecordText.substring(parentRecordText.lastIndexOf("[")+1,parentRecordText.lastIndexOf("]"));
   // Clean it up...

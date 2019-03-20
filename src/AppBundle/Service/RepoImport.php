@@ -700,11 +700,11 @@ class RepoImport implements RepoImportInterface {
                 $manifest_contents = $file->getContents();
                 $manifest_lines = preg_split('/\r\n|\n|\r/', trim($manifest_contents));
                 foreach ($manifest_lines as $mkey => $mvalue) {
-                  $manifest_line_array = preg_split('/\s+/', $mvalue);
+                  $manifest_line_array = preg_split('/\s+/', $mvalue);                  
                   // If there's a match against file paths,
                   // 1) add the checksum to the $csv_val object,
                   // 2) append the job ID and any parent directories to the file path.
-                  if ($manifest_line_array[1] === 'data/' . $csv_val->file_path) {
+                  if (array_key_exists(1, $manifest_line_array) && ($manifest_line_array[1] === 'data/' . $csv_val->file_path)) {
                     // Add the checksum to the $csv_val object.
                     $csv_val->file_checksum = $manifest_line_array[0];
                     // Get the file's full info from metadata storage.
@@ -797,6 +797,7 @@ class RepoImport implements RepoImportInterface {
                 'limit' => 1,
                 'search_params' => array(
                   0 => array('field_names' => array('file_upload.file_name'), 'search_values' => array($filename_value), 'comparison' => '='),
+                  1 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($data->uuid), 'comparison' => 'LIKE'),
                 ),
                 'search_type' => 'AND',
                 'omit_active_field' => true,
