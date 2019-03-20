@@ -211,16 +211,26 @@
         });
       });
 
-      // Datepicker
-      var dateInput = $('input[name="capture_dataset_form[date_of_capture]"]');
+      // Datepicker: Capture Dataset
+      var dateInputCaptureDataset = $('input[name="capture_dataset_form[date_of_capture]"]');
       var thisContainer = $('form.dataset_form').length>0 ? $('form.dataset_form').parent() : 'body';
       var options = {
-        format: 'yyyy-mm-dd 00:00:00',
+        format: 'yyyy-mm-dd',
         container: thisContainer,
         todayHighlight: true,
         autoclose: true,
       };
-      dateInput.datepicker(options);
+      dateInputCaptureDataset.datepicker(options);
+      // Datepicker: Model
+      var dateInputModel = $('input[name="model_form[date_of_creation]"]');
+      var thisContainer = $('form.model_form').length>0 ? $('form.model_form').parent() : 'body';
+      var options = {
+        format: 'yyyy-mm-dd',
+        container: thisContainer,
+        todayHighlight: true,
+        autoclose: true,
+      };
+      dateInputModel.datepicker(options);
 
       // Subject form submit handler.
       $(document).on('submit', 'form[name="subject_form"]', function(e){
