@@ -449,10 +449,11 @@
        */
       function createCsv(csvName, csvColumns, csvValues) {
 
+        // Add the import_row_id and import_parent_id columns.
         csvColumns.unshift('import_row_id', 'import_parent_id');
 
         if (csvName !== 'capture_datasets.csv') {
-          // Add the import_row_id and import_parent_id.
+          // Add values for the import_row_id and import_parent_id.
           csvValues.unshift(1, 1);
         }
 
@@ -472,8 +473,8 @@
           var vals = [];
           for (var i = 0; i < csvValues.length; i++) {
             vals[i] = [];
-            vals[i].push(1);
-            vals[i].push(1);
+            vals[i].push(i+1);
+            vals[i].push(i+1);
             $.each(csvValues[i], function(key, value){
               vals[i].push(value);
             });
