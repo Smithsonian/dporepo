@@ -476,10 +476,15 @@
        */
       function createCsv(csvName, csvColumns, csvValues) {
 
-        // Add the import_row_id and import_parent_id columns.
-        csvColumns.unshift('import_row_id', 'import_parent_id');
+        if (csvName === 'capture_datasets.csv') {
+          // Capture Datasets: Add the import_row_id, import_parent_id, and model_import_row_id columns.
+          csvColumns.unshift('import_row_id', 'import_parent_id', 'model_import_row_id');
+        } else {
+          // All Other Record Types: Add the import_row_id and import_parent_id columns.
+          csvColumns.unshift('import_row_id', 'import_parent_id');
+        }
 
-        if (csvName !== 'capture_datasets.csv') {
+        if ((csvName !== 'capture_datasets.csv') && (csvName !== 'capture_datasets_single.csv')) {
           // Add values for the import_row_id and import_parent_id.
           csvValues.unshift(1, 1);
         }
@@ -488,20 +493,22 @@
         var acceptedFiles = uploadsDropzone.getAcceptedFiles();
         // Loop through accepted files and remove an existing blob if already present.
         for (var i = 0; i < acceptedFiles.length; i++) {
-          if(acceptedFiles[i].name === csvName) {
+          // if ((acceptedFiles[i].name === csvName) || (acceptedFiles[i].name === 'capture_datasets.csv')) {
+          if (acceptedFiles[i].name === csvName) {
             // Remove the existing blob.
             uploadsDropzone.removeFile(acceptedFiles[i]);
           }
         }
 
-        // Add the CSV to the Uplaods Stage (Dropzone), in Step 3.
+        // Add the CSV to the Uploads Stage (Dropzone), in Step 3.
         if (csvName === 'capture_datasets.csv') {
 
           var vals = [];
           for (var i = 0; i < csvValues.length; i++) {
             vals[i] = [];
             vals[i].push(i+1);
-            vals[i].push(i+1);
+            vals[i].push(1);
+            vals[i].push(1);
             $.each(csvValues[i], function(key, value){
               vals[i].push(value);
             });
@@ -582,6 +589,8 @@
         if (dataType !== 'capture-dataset') {
           $('div.' + dataType + '-well').html(html);
           $('div.' + dataType + '-well').removeClass('hidden');
+          // Show the model header.
+          if (dataType === 'model') $('div.' + dataType + '-well').parent().find('.model-header').removeClass('hidden');
         } else {
           // Well
           var well = $('<div />')
@@ -590,7 +599,12 @@
               .attr('style', 'padding-bottom: 6rem;')
               .html(html);
               // .append(buttonDiv);
-
+          // Show the capture dataset header.
+          $('#capture-dataset-wells').parent().find('.capture-dataset-header').removeClass('hidden');
+          // Remove the record from the DOM if creating a new record using the form.
+          if (!fromDatatable) {
+            $('#capture-dataset-wells').empty();
+          }
           $('#capture-dataset-wells').append(well);
         }
 
@@ -710,7 +724,7 @@
               thisTableRow.parent().children().removeClass('warning');
               thisTableRow.addClass('warning');
 
-              // Populate the subject container in the DOM.
+              // Populate the project container in the DOM.
               var csvColumns = ['project_id', 'project_name', 'last_modified', 'stakeholder_label', 'items_count'];
               populateContainer('project', csvColumns, aData, true);
 
@@ -778,6 +792,9 @@
               // Add the existing_record flag.
               csvColumns.push('existing_record');
               csvValues.push('true');
+              // Add the subject_id.
+              csvColumns.push('subject_id');
+              csvValues.push(aData.DT_RowId);
               // Create the CSV and add it to the Uploads Stage.
               createCsv('subjects.csv', csvColumns, csvValues);
 
@@ -847,6 +864,9 @@
               // Add the existing_record flag.
               csvColumns.push('existing_record');
               csvValues.push('true');
+              // Add the item_id.
+              csvColumns.push('item_id');
+              csvValues.push(aData.DT_RowId);
               // Create the CSV and add it to the Uploads Stage.
               createCsv('items.csv', csvColumns, csvValues);
 
@@ -1047,6 +1067,9 @@
                       // Add the existing_record flag.
                       columns.push('existing_record');
                       record.push('true');
+                      // Add the capture_dataset_id.
+                      columns.push('capture_dataset_id');
+                      record.push(thisRecord['DT_RowId']);
 
                       records.push(record);
                     });
@@ -1124,7 +1147,7 @@
             // Get the text value of the selected item_type since this is what is validated against.
             $("#item_form_item_type option:selected").text()
         ];
-        // Populate the subject container in the DOM.
+        // Populate the item container in the DOM.
         populateContainer('item', csvColumns, csvValues, false);
         // Create the CSV and add it to the Uploads Stage.
         createCsv('items.csv', csvColumns, csvValues);
