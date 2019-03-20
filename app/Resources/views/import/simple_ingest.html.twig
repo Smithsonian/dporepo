@@ -5,6 +5,7 @@
 {% use 'import/subject_edan_form_modal.html.twig' %}
 {% use 'import/item_form_modal.html.twig' %}
 {% use 'import/capture_dataset_form_modal.html.twig' %}
+{% use 'import/model_form_modal.html.twig' %}
 
 {% block stylesheets %}
   {{ parent() }}
@@ -64,6 +65,9 @@
     <!-- Capture Dataset Form Modal -->
   {# {% include 'import/capture_dataset_modal.html.twig' %} #}
   {% block capture_dataset_form_modal %}{{ parent() }}{% endblock %}
+  <!-- Model Form Modal -->
+  {# {% include 'import/model_form_modal.html.twig' %} #}
+  {% block model_form %}{{ parent() }}{% endblock %}
   <!-- Uploading Modal -->
   {% include 'import/uploading_modal.html.twig' %}
 
@@ -249,6 +253,17 @@
         var formData = form.serializeObject();
         // Add CSV blob and display data.
         submitCaptureDatasetRecord(formData);
+      });
+
+      // Model form submit handler.
+      $(document).on('submit', 'form[name="model_form"]', function(e){
+        // Avoid submitting the form non-ajax.
+        e.preventDefault();
+        // Get the properties and values from the form.
+        var form = $('form[name="model_form"]');
+        var formData = form.serializeObject();
+        // Add CSV blob and display data.
+        submitModelRecord(formData);
       });
 
       // Serialize Object
@@ -1204,6 +1219,51 @@
           switch (value) {
             case "close":
               $('#capture-dataset-form-modal').modal('hide');
+              break;
+            default:
+          }
+        });
+        // Enable Step 3 tab.
+        rootwizard.bootstrapWizard('enable', '2');
+        // Enable the "Next Step" button.
+        rootwizard.find('.next').removeClass('disabled');
+      }
+
+      /**
+       * Submit Model Record
+       */
+      function submitModelRecord(formData) {
+        // Avoid submitting the form multiple times.
+        $('#model_save').attr('disabled', true);
+        // Set up the csvColumns and csvValues.
+        var csvColumns = ['date_of_creation', 'derived_from', 'creation_method', 'units', 'model_purpose', 'file_path'];
+        var csvValues = [
+            formData['model_form[date_of_creation]'],
+            formData['model_form[derived_from]'],
+            $("#model_form_creation_method option:selected").text(),
+            $("#model_form_units option:selected").text(),
+            $("#model_form_model_purpose option:selected").text(),
+            formData['model_form[file_path]']
+        ];
+        // Populate the model container in the DOM.
+        populateContainer('model', csvColumns, csvValues, false);
+        // Create the CSV and add it to the Uploads Stage.
+        createCsv('models.csv', csvColumns, csvValues);
+        // Display a success message in the UI.
+        swal('Saved', {
+          icon: 'success',
+          text: 'The model has been successfully saved.',
+          buttons: {
+            catch: {
+              text: 'Close',
+              value: 'close',
+            }
+          },
+        })
+        .then((value) => {
+          switch (value) {
+            case "close":
+              $('#model-form-modal').modal('hide');
               break;
             default:
           }

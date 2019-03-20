@@ -27,15 +27,23 @@
       <div class="row">
         <!-- Panel 1 -->
         <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
-          <button type="button" class="btn btn-default select-record" data-select="capture-dataset"><i class="glyphicon glyphicon-plus"></i> <span>Select One or More Existing Capture Datasets</span></button>
-          <button type="button" class="btn btn-default create-record" data-create="capture-dataset"><i class="glyphicon glyphicon-pencil"></i> Create Capture Dataset(s)</button>
+          <button type="button" class="btn btn-default select-record" data-select="capture-dataset" style="margin-top: 1rem;"><i class="glyphicon glyphicon-plus"></i> <span>Select One or More Existing Capture Datasets</span></button>
+        </div>
+        <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
+          <button type="button" class="btn btn-default create-record" data-create="capture-dataset" style="margin-top: 1rem;"><i class="glyphicon glyphicon-pencil"></i> Create a Capture Dataset Record</button>
+        </div>
+        <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
+          <button type="button" class="btn btn-default create-record" data-create="model" style="margin-top: 1rem;"><i class="glyphicon glyphicon-pencil"></i> Create a Model Record</button>
         </div>
         <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
           <hr>
           <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> Uploaded model(s) will be associated to all selected Capture Datasets.</p>
         </div>
         <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
+          <h3 class="capture-dataset-header hidden">Capture Datasets</h3>
           <div id="capture-dataset-wells" style="margin-top: 1rem;"></div>
+          <h3 class="model-header hidden">Model</h3>
+          <div class="well model-well hidden" style="margin-top: 1rem;"></div>
         </div>
       </div>
 

@@ -1,0 +1,35 @@
+{% block model_form %}
+<div class="modal fade" id="model-form-modal" tabindex="-1" role="dialog" aria-labelledby="modelFormLabel" data-keyboard="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modelFormLabel"><i class="glyphicon glyphicon-th-list"></i> <span id="model-form-modal-title">Create a New Model</span></h2>
+      </div>
+      <div class="modal-body" style="min-height: 24rem;">
+        {{ form_start(model_form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
+          <div class="row">
+            <div class="col-sm-6 col-md-6">
+              {{ form_row(model_form.date_of_creation) }}
+              {{ form_row(model_form.derived_from) }}
+              {{ form_row(model_form.creation_method) }}
+            </div>
+            <div class="col-sm-6 col-md-6">
+              {{ form_row(model_form.units) }}
+              {{ form_row(model_form.model_purpose) }}
+              <div class="form-group">
+                <label class="control-label required" for="model_form_file_path">File Path</label>
+                <input type="text" id="model_form_file_path" name="model_form[file_path]" class="form-control" required="required">
+            </div>
+          </div>
+      </div>
+      <div class="field-group" style="clear:both;">
+        {{ form_row(model_form.save) }}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+      {{ form_end(model_form) }}
+    </div>
+  </div>
+</div>
+{% endblock %}

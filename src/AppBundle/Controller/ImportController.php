@@ -45,6 +45,10 @@ use AppBundle\Form\CaptureDatasetForm;
 use AppBundle\Entity\CaptureDataset;
 use AppBundle\Controller\CaptureDatasetController;
 
+use AppBundle\Form\ModelForm;
+use AppBundle\Entity\Model;
+use AppBundle\Controller\ModelController;
+
 class ImportController extends Controller
 {
     /**
@@ -82,7 +86,7 @@ class ImportController extends Controller
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, CaptureDatasetController $datasetsController, ItemController $itemsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, CaptureDatasetController $datasetsController, ItemController $itemsController, ModelController $modelController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
@@ -91,6 +95,7 @@ class ImportController extends Controller
 
         $this->datasetsController = $datasetsController;
         $this->itemsController = $itemsController;
+        $this->modelController = $modelController;
         $this->fileTransfer = $fileTransfer;
         $this->processing = $processing;
         $this->external_file_storage_on = $external_file_storage_on;
@@ -317,6 +322,30 @@ class ImportController extends Controller
 
         // Create the form
         $form = $this->createForm(CaptureDatasetForm::class, $dataset);
+        // Create the model form.
+        $model = new Model();
+        // Get data from lookup tables.
+        $model->unit_options = $this->modelController->getUnit();
+        // Create the form
+        $model_form = $this->createForm(ModelForm::class, $model);
+        // Keep these fields.
+        // // date_of_creation
+        // // derived_from
+        // // creation_method
+        // // units
+        // // model_purpose
+        // Remove these fields.
+        $model_form->remove('model_guid');
+        $model_form->remove('model_file_type');
+        $model_form->remove('model_modality');
+        $model_form->remove('is_watertight');
+        $model_form->remove('point_count');
+        $model_form->remove('has_normals');
+        $model_form->remove('face_count');
+        $model_form->remove('vertices_count');
+        $model_form->remove('has_vertex_color');
+        $model_form->remove('has_uv_space');
+        $model_form->remove('model_maps');
 
         $accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
 
@@ -325,6 +354,7 @@ class ImportController extends Controller
           'form' => $form->createView(),
           'subject_form' => $subject_form->createView(),
           'item_form' => $item_form->createView(),
+          'model_form' => $model_form->createView(),
           'accepted_file_types' => $accepted_file_types,
           'service_error' => $service_error,
           'dataset_data' => $dataset,

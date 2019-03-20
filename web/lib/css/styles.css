@@ -438,7 +438,8 @@ dd {
 
 #simple_ingest_tab_4 .chosen-container,
 #item-form-modal .chosen-container,
-#capture-dataset-form-modal .chosen-container {
+#capture-dataset-form-modal .chosen-container,
+#model-form-modal .chosen-container {
   width: 100% !important;
 }
 
