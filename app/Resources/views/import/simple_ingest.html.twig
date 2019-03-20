@@ -192,8 +192,10 @@
 
         // Display the target Datatable.
         $('#' + recordType).removeClass('hidden');
-        // Add the title to the modal (Example: Select a Project).
-        $('#record-picker-modal-title').empty().append('Select a ' + convertCase(recordType.replace('-', ' ')));
+        // Set the title (Example: Select a Project). More than one capture dataset can be selected.
+        var title = (recordType === 'capture-dataset') ? 'Select ' + convertCase(recordType.replace('-', ' ') + '(s)') : 'Select a ' + convertCase(recordType.replace('-', ' '));
+        // Add the title to the modal.
+        $('#record-picker-modal-title').empty().append(title);
         // Show the modal.
         $('#record-picker-modal').modal('show');
 
