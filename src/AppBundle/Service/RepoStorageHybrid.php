@@ -2919,7 +2919,7 @@ class RepoStorageHybrid implements RepoStorage {
     $date_range_end = array_key_exists('date_range_end', $params) ? $params['date_range_end'] : NULL;
 
     $select_sql = " DISTINCT 
-          subject.subject_id as manage, subject.subject_id, subject.subject_name, 
+          subject.subject_id as manage, subject.subject_id, subject.subject_name, subject.holding_entity_name, 
           subject.holding_entity_guid, subject.local_subject_id, subject.subject_name, subject.subject_display_name,
           subject.subject_guid, subject.last_modified, subject.active, subject.subject_id as DT_RowId, 
           (SELECT COUNT(item.item_id) FROM item WHERE item.subject_id = subject.subject_id AND item.active = 1) as items_count

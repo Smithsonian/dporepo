@@ -726,7 +726,7 @@
         var subjectDt = $('#subject').dataTable( {
           "columns": [
               { "data": "subject_name" },
-              { "data": "holding_entity_guid" },
+              { "data": "holding_entity_name" },
               { "data": "items_count" },
               { "data": "last_modified" }
             ],
@@ -759,8 +759,8 @@
               thisTableRow.parent().children().removeClass('warning');
               thisTableRow.addClass('warning');
 
-              var csvColumns = ['last_modified', 'local_subject_id', 'subject_name', 'subject_id'];
-              var csvValues = [aData.local_subject_id, aData.subject_guid, aData.holding_entity_name, aData.holding_entity_guid];
+              var csvColumns = ['subject_name', 'local_subject_id', 'subject_guid', 'holding_entity_name', 'holding_entity_guid'];
+              var csvValues = [aData.subject_name, aData.local_subject_id, aData.subject_guid, aData.holding_entity_name, aData.holding_entity_guid];
 
               // Populate the subject container in the DOM.
               populateContainer('subject', csvColumns, aData, true);
