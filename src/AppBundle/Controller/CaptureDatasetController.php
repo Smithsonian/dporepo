@@ -58,7 +58,7 @@ class CaptureDatasetController extends Controller
     }
 
     /**
-     * @Route("/admin/datatables_browse_datasets/{item_id}", name="datasets_browse_datatables", methods={"POST","GET"})
+     * @Route("/admin/datatables_browse_datasets/{item_id}", name="datasets_browse_datatables", methods={"POST","GET"}, defaults={"item_id" = null})
      *
      * Browse datasets
      *
