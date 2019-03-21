@@ -366,6 +366,64 @@ class RepoValidateData implements RepoValidate {
 
   }
 
+  /**
+   * Get Holding Entitiy
+   *
+   * @param string $holding_entity_guid The holding entity GUID.
+   * @return array
+   */
+  public function getHoldingEntity($holding_entity_guid = null)
+  {
+    $data = array();
+
+    if (!empty($holding_entity_guid)) {
+
+      // Remove the 'ISN:' prefix from the ISNI ID.
+      $holding_entity_guid = str_replace('ISN:', '', $holding_entity_guid);
+
+      $data = $this->repo_storage_controller->execute('getRecords', array(
+        'base_table' => 'isni_data',
+        'fields' => array(
+          array(
+            'table_name' => 'isni_data',
+            'field_name' => 'isni_id',
+          ),
+          array(
+            'table_name' => 'isni_data',
+            'field_name' => 'isni_label',
+            'field_alias' => 'holding_entity_name',
+          ),
+          array(
+            'table_name' => 'unit_stakeholder',
+            'field_name' => 'unit_stakeholder_guid',
+            'field_alias' => 'holding_entity_local_id',
+          ),
+        ),
+        // Joins
+        'related_tables' => array(
+          array(
+            'table_name' => 'unit_stakeholder',
+            'table_join_field' => 'isni_id',
+            'join_type' => 'LEFT JOIN',
+            'base_join_table' => 'isni_data',
+            'base_join_field' => 'isni_id',
+          )
+        ),
+        'limit' => 1,
+        'search_params' => array(
+          0 => array('field_names' => array('isni_data.isni_id'), 'search_values' => array($holding_entity_guid), 'comparison' => '='),
+        ),
+        'search_type' => 'AND',
+        'omit_active_field' => true,
+        )
+      );
+
+      if (!empty($data)) $data = $data[0];
+    }
+
+    return $data;
+  }
+
   public function dumper($data = false, $die = true, $ip_address=false){
     if(!$ip_address || $ip_address == $_SERVER["REMOTE_ADDR"]){
       echo '<pre>';

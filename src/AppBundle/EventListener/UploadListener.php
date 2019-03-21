@@ -330,9 +330,18 @@ class UploadListener
         // Execute the validation against the JSON schema.
         $data->results = (object)$repoValidate->validateData($data->csv, $schema, $record_type, $blacklisted_fields);
 
-        // Validate that the EDAN record exists (subject_guid)
+        // Validate that the EDAN record exists (subject_guid), and that the holding entity relation in metadata storage exists.
         if (($schema === 'subject') && !empty($data->csv)) {
+          // Validate that the EDAN record exists.
           $data->edan_results = $this->validateEdanRecord($data);
+          // Validate that the holding entity exists.
+          foreach($data->csv as $csv_key => $csv_value) {
+            $data->holding_entity_results = $repoValidate->getHoldingEntity($csv_value->holding_entity_guid);
+            // If not found, return the error message.
+            if (empty($data->holding_entity_results)) {
+              $data->holding_entity_results['messages'][] = array('row' => 'Row ' . ($csv_key+1), 'error' => $csv_value->holding_entity_guid . ' not found. Please contact the administrator for assistance.');
+            }
+          }
         }
 
         // Add the column headers back to the array.
@@ -354,6 +363,12 @@ class UploadListener
         if(isset($data->edan_results['messages'])) {
           unset($data->edan_results['is_valid']);
           $data->results = (object)array_merge_recursive($data->edan_results, (array)$data->results);
+        }
+
+        // Merge holding entity messages.
+        if(isset($data->holding_entity_results['messages'])) {
+          unset($data->holding_entity_results['is_valid']);
+          $data->results = (object)array_merge_recursive($data->holding_entity_results, (array)$data->results);
         }
       }
     }

@@ -652,6 +652,12 @@ class RepoImport implements RepoImportInterface {
             } else {
               $csv_val->subject_name = $subject_exists[0]['subject_name'];
             }
+            // Populate the holding_entity_name and holding_entity_local_id columns,
+            // using the holding_entity_guid provided in the CSV.
+            // The holding_entity_guid has been validated during pre-validation, so no error handling - for now.
+            $holding_entity = $this->repoValidate->getHoldingEntity($csv_val->holding_entity_guid);
+            $csv_val->holding_entity_name = $holding_entity['holding_entity_name'];
+            $csv_val->holding_entity_local_id = $holding_entity['holding_entity_local_id'];
             break;
           case 'item':
             // Set the project_id
