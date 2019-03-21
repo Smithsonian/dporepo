@@ -739,12 +739,18 @@ class RepoImport implements RepoImportInterface {
             $csv_val->item_id = $session->get('item_id');
           }
 
-          // Insert data from the CSV into the appropriate database table, using the $data->type as the table name.
-          $this_id = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => $data->type,
-            'user_id' => $data->user_id,
-            'values' => (array)$csv_val
-          ));
+          // If this is an existing record, set $this_id as the existing record's ID.
+          if (isset($csv_val->existing_record)) {
+            $csv_val_array = (array)$csv_val;
+            $this_id = $csv_val_array[$data->type . '_id'];
+          } else {
+            // Insert data from the CSV into the appropriate database table, using the $data->type as the table name.
+            $this_id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => $data->type,
+              'user_id' => $data->user_id,
+              'values' => (array)$csv_val
+            ));
+          }
 
           if ($data->type === 'item') {
             $session->set('item_id', $this_id);
@@ -964,7 +970,8 @@ class RepoImport implements RepoImportInterface {
         }
 
         // This check is only for a subject. By default, $subject_exists is an empty array.
-        if (empty($subject_exists)) {
+        // Don't enter an existing record into the job_import_record table.
+        if (empty($subject_exists) && !isset($csv_val->existing_record)) {
           // Insert into the job_import_record table
           $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
             'base_table' => 'job_import_record',
