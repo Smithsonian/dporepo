@@ -224,6 +224,7 @@ class RepoImport implements RepoImportInterface {
     $session->remove('new_repository_ids_4');
     $session->remove('model_import_type');
     $session->remove('item_id');
+    $session->remove('capture_dataset_models');
 
     // Set the job type (e.g. subjects metadata import, items metadata import, capture datasets metadata import, models metadata import).
     // $job_data = $this->repo_storage_controller->execute('getJobData', array($params['uuid']));
@@ -622,7 +623,7 @@ class RepoImport implements RepoImportInterface {
         // Set the parent record's repository ID.
         switch ($data->type) {
           case 'subject':
-            
+
             // Check to see if the subject already exists- DPO3DREP-546
             $subject_exists = $this->repo_storage_controller->execute('getRecords', array(
                 'base_table' => 'subject',
@@ -700,7 +701,7 @@ class RepoImport implements RepoImportInterface {
                 $manifest_contents = $file->getContents();
                 $manifest_lines = preg_split('/\r\n|\n|\r/', trim($manifest_contents));
                 foreach ($manifest_lines as $mkey => $mvalue) {
-                  $manifest_line_array = preg_split('/\s+/', $mvalue);                  
+                  $manifest_line_array = preg_split('/\s+/', $mvalue);
                   // If there's a match against file paths,
                   // 1) add the checksum to the $csv_val object,
                   // 2) append the job ID and any parent directories to the file path.
@@ -744,12 +745,14 @@ class RepoImport implements RepoImportInterface {
             $csv_val_array = (array)$csv_val;
             $this_id = $csv_val_array[$data->type . '_id'];
           } else {
+            /*********** PRIMARY INSERTS ***********/
             // Insert data from the CSV into the appropriate database table, using the $data->type as the table name.
             $this_id = $this->repo_storage_controller->execute('saveRecord', array(
               'base_table' => $data->type,
               'user_id' => $data->user_id,
               'values' => (array)$csv_val
             ));
+            /*********** PRIMARY INSERTS ***********/
           }
 
           if ($data->type === 'item') {
@@ -760,8 +763,26 @@ class RepoImport implements RepoImportInterface {
           $this_id = $subject_exists[0]['subject_id'];
         }
 
+        // If the model_import_row_id is populated,
+        // create an array of model_import_row_ids and capture_dataset_ids
+        // so they can be used to insert into capture_dataset_model.
+        if (($data->type === 'capture_dataset') && !empty($csv_val->model_import_row_id)) {
+          // Create the array.
+          $capture_dataset_models[] = array(
+            'model_import_row_id' => $csv_val->model_import_row_id,
+            'capture_dataset_id' => $this_id,
+          );
+          // Set the capture_dataset_models session variable.
+          $session->set('capture_dataset_models', $capture_dataset_models);
+        }
+
+        // Log the model/capture_dataset relationship to capture_dataset_models in metadata storage.
+        if ($data->type === 'model') {
+          $this->modelCaptureDatasetRelation($data, $csv_val, $this_id, $session);
+        }
+
         // Log the model file and any processed assets to the 'model_file' table.
-        if(!empty($csv_val->file_path)) {
+        if(($data->type === 'model') && !empty($csv_val->file_path)) {
 
           // Windows fix for the model's file path.
           $file_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $csv_val->file_path) : $csv_val->file_path;
@@ -1018,6 +1039,65 @@ class RepoImport implements RepoImportInterface {
 
     // TODO: return something more than job log IDs?
     return $job_log_ids;
+  }
+
+  /**
+   * Model Capture Dataset Relation
+   *
+   * @param obj $data  Data object
+   * @param array $csv_val  CSV values
+   * @param string $this_id  The last inserted ID
+   * @param obj $session  Symfony\Component\HttpFoundation\Session\Session
+   * @return bool
+   */
+  public function modelCaptureDatasetRelation($data = null, $csv_val = null, $this_id = null, $session)
+  {
+
+    $return = false;
+
+    if (!empty($data) && !empty($csv_val) && !empty($this_id)) {
+
+      // Get the capture_dataset_models session variable.
+      $sess = $session->get('capture_dataset_models');
+
+      if(($data->type === 'model') && !empty($sess)) {
+
+        // $this->u->dumper($sess);
+
+        foreach ($sess as $key => $value) {
+
+          if ($value['model_import_row_id'] === $csv_val->import_row_id) {
+            // Log the model/capture_dataset relationship to capture_dataset_models in metadata storage.
+            $capture_dataset_model_id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'capture_dataset_model',
+              'user_id' => $data->user_id,
+              'values' => array(
+                'capture_dataset_id' => $value['capture_dataset_id'],
+                'model_id' => $this_id,
+              )
+            ));
+            // Insert into the job_import_record table
+            $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'job_import_record',
+              'user_id' => $data->user_id,
+              'values' => array(
+                'job_id' => $data->job_id,
+                'record_id' => $capture_dataset_model_id,
+                'project_id' => (int)$data->project_id,
+                'record_table' => 'capture_dataset_model',
+                'description' => 'Model ID (' . $this_id . ') relation made to capture_dataset_id ' . $value['capture_dataset_id'],
+              )
+            ));
+          }
+
+        }
+
+        $return = true;
+      }
+
+    }
+
+    return $return;
   }
 
   /**

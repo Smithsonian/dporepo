@@ -5,7 +5,9 @@ var jobId,
     textureMapFileNameParts = ['diffuse', 'normal', 'occlusion'],
     // Set the spreadsheet count so unique IDs can be assigned to the Handsontable containers.
     spreadsheetCount = 1,
-    dropzoneFilesCopy = [];
+    dropzoneFilesCopy = [],
+    captureDatasetsCsv,
+    modelsCsv;
 
 // Texture map pre-validation error container.
 let fileContainer = $('<div />')
@@ -73,8 +75,8 @@ var uploadsDropzone = new Dropzone(document.body, { // Make the whole body a dro
       }
     }
 
-    // Append the ordered list to the fileContainer.
-    fileContainer.append(fileOL);
+    // Prepend the ordered list to the fileContainer.
+    fileContainer.prepend(fileOL);
     done();
   }
 });
@@ -180,13 +182,22 @@ uploadsDropzone.on("success", function(file, responseText) {
         }
         // Append the ordered list to the csvMessageContainer.
         csvMessageContainer.append(csvMessageOrderedList);
-        // Append the csvMessageContainer to the panel-body container.
+        // Prepend the csvMessageContainer to the panel-body container.
         $('.panel-validation-results').find('.panel-body').append(csvMessageContainer);
       }
 
     }
 
     if(responseText.csv && JSON.parse(responseText.csv).length) {
+
+      // Store the cature datasets and models CSVs if present.
+      if (file.name === 'capture_datasets.csv') captureDatasetsCsv = JSON.parse(responseText.csv);
+      if (file.name === 'models.csv') modelsCsv = JSON.parse(responseText.csv);
+      // Check for various combinations of capture datasets and models, and display a warning or error if/where applicable.
+      if ((typeof captureDatasetsCsv !== 'undefined') && (typeof modelsCsv !== 'undefined')) {
+        modelsCaptureDatasetsCheck(captureDatasetsCsv, modelsCsv);
+      }
+
       // Display the CSV within a spreadsheet interface, highlighting errors.
       // TODO: Make it possible to edit the spreadsheet and resubmit for pre-validation.
       // See: Handsontable
@@ -585,8 +596,8 @@ function preValidateCsvBagged() {
             // Append the ordered list to the fileMessageContainer.
             if(fileMessageOrderedList.find('li').length) {
               fileMessageContainer.append(fileMessageOrderedList);
-              // Append the fileMessageContainer to the panel-body container.
-              $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
+              // Prepend the fileMessageContainer to the panel-body container.
+              $('.panel-validation-results').find('.panel-body').prepend(fileMessageContainer);
             }
           }
 
@@ -605,8 +616,8 @@ function preValidateCsvBagged() {
           let fileMessageOrderedList = $('<ol />');
           fileMessageOrderedList.append('<li>BagIt manifest is empty</li>');
           fileMessageContainer.append(fileMessageOrderedList);
-          // Append the fileMessageContainer to the panel-body container.
-          $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
+          // Prepend the fileMessageContainer to the panel-body container.
+          $('.panel-validation-results').find('.panel-body').prepend(fileMessageContainer);
         }
 
       });
@@ -922,8 +933,8 @@ function requiredCsvValidation(parentRecordType, csvList) {
           .addClass('alert alert-danger cvs-validation-error')
           .attr('role', 'alert')
           .html(errorText);
-      // Append the message to the panel-body container.
-      $('.panel-validation-results').find('.panel-body').append(requiredCsvMessage);
+      // Prepend the message to the panel-body container.
+      $('.panel-validation-results').find('.panel-body').prepend(requiredCsvMessage);
     }
 
   }
@@ -1028,6 +1039,62 @@ function checkStatus() {
 
   }
 
+}
+
+// Models & Capture Datasets Check
+function modelsCaptureDatasetsCheck(captureDatasetsCsv, modelsCsv) {
+  // Remove the first row containing the column names.
+  delete captureDatasetsCsv[0];
+  delete modelsCsv[0];
+  // Reindex the arrays.
+  captureDatasetsCsv = captureDatasetsCsv.filter(val => val);
+  modelsCsv = modelsCsv.filter(val => val);
+
+  // Get the total number of master models present in the CSV.
+  let masterModelCount = 0;
+  for (var index = 0; index < modelsCsv.length; index += 1) {
+    if (modelsCsv[index].model_purpose === 'master') masterModelCount++;
+  }
+
+  if ((captureDatasetsCsv.length) && (modelsCsv.length === 1)) {
+    // The message.
+    let multipleMessage = $('<div />')
+        .addClass('alert alert-warning')
+        .attr('role', 'alert')
+        .html('<strong>Notice:</strong> The model will be associated with all ' + captureDatasetsCsv.length + ' capture datasets.');
+    // Prepend the message to the panel-body container.
+    $('.panel-validation-results').find('.panel-body').prepend(multipleMessage);
+    // swal({
+    //   title: 'Single Model With Multiple Capture Datasets',
+    //   text: 'The model will be associated with all ' + captureDatasetsCsv.length + ' capture datasets.',
+    //   icon: 'info',
+    // });
+  }
+
+  if ((captureDatasetsCsv.length) && (modelsCsv.length > 1) && (masterModelCount === 1)) {
+    // The message.
+    let multipleMessage = $('<div />')
+        .addClass('alert alert-warning')
+        .attr('role', 'alert')
+        .html('<strong>Notice:</strong> Multiple models with multiple capture datasets detected. Non-master models will be associated with the master model.');
+    // Prepend the message to the panel-body container.
+    $('.panel-validation-results').find('.panel-body').prepend(multipleMessage);
+    // swal({
+    //   title: 'Multiple Models With Multiple Capture Datasets',
+    //   text: 'Non-master models will be associated with the master model.',
+    //   icon: 'info',
+    // });
+  }
+
+  if ((captureDatasetsCsv.length) && (modelsCsv.length > 1) && (masterModelCount > 1)) {
+    // The message.
+    let multipleMessage = $('<div />')
+        .addClass('alert alert-danger cvs-validation-error')
+        .attr('role', 'alert')
+        .html('<strong>Error - models.csv</strong>: Multiple master models detected. Only one master model per CSV is allowed.');
+    // Prepend the message to the panel-body container.
+    $('.panel-validation-results').find('.panel-body').prepend(multipleMessage);
+  }
 }
 
 // Determine whether an integer is a power of 2.

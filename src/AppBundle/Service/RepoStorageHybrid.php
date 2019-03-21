@@ -1716,6 +1716,7 @@ class RepoStorageHybrid implements RepoStorage {
             'capture_dataset_model',
             'model',
             'model_file',
+            'capture_dataset_model',
             'uv_map'
           ),
           'job_and_file_tables' => array(
