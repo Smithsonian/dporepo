@@ -470,8 +470,25 @@ document.querySelector("#actions .cancel-upload").onclick = function() {
 
 // Remove files from the uploads stage.
 document.querySelector("#actions .cancel").onclick = function() {
-  // Remove files from Dropzone.
-  uploadsDropzone.removeAllFiles(true);
+
+  var dataProjectId = $('body').data('project_id');
+
+  // If this is the Simple Ingest, preserve CSV files.
+  if (typeof dataProjectId !== 'undefined') {
+    // Make a copy of all files.
+    var dropzoneFilesCopy = uploadsDropzone.files.slice(0);
+    var csvFileNames = ['projects.csv', 'subjects.csv', 'items.csv', 'capture_datasets.csv', 'models.csv'];
+    // Remove files from Dropzone, excluding CSV files.
+    $.each(dropzoneFilesCopy, function(i, file) {
+      if (csvFileNames.indexOf(file.name) === -1) {
+        uploadsDropzone.removeFile(file);
+      }
+    });
+  } else {
+    // Bulk Upload: Remove all files from Dropzone.
+    uploadsDropzone.removeAllFiles(true);
+  }
+
   $('#previews ul.directory-structure').empty();
   // Clear previous validation results from the validation panel.
   $('.panel-validation-results').find('.panel-body').empty();
@@ -528,12 +545,20 @@ function preValidateCsvBagged() {
   $('#uploading-modal-message').append('Pre-validation in progress');
   $('#uploading-modal').modal('show');
 
+  var existing_capture_datasets = $('body').data('capture_dataset_ids');
+
   // Validate file and directory paths entered in the capture_datasets.csv and models.csv CSVs.
   for (var i = 0; i < queuedFiles.length; i++) {
-    // Get all of the paths in the CSVs.
-    if((queuedFiles[i].name === 'capture_datasets.csv') || (queuedFiles[i].name === 'models.csv')) {
+
+    // Get all of the paths in the CSVs, excluding capture_datasets.csv if capture datasets are existing records.
+    if((typeof existing_capture_datasets === 'undefined') && (queuedFiles[i].name === 'capture_datasets.csv')) {
       getCsvPaths(queuedFiles[i], csvPaths);
     }
+
+    if (queuedFiles[i].name === 'models.csv') {
+      getCsvPaths(queuedFiles[i], csvPaths);
+    }
+
     // Get all unique paths in the BagIt manifest.
     if((queuedFiles[i].name === 'manifest-sha1.txt') || (queuedFiles[i].name === 'manifest-md5.txt')) {
       getManifestPaths(queuedFiles[i], manifestPaths);
@@ -1080,11 +1105,14 @@ function modelsCaptureDatasetsCheck(captureDatasetsCsv, modelsCsv) {
   if ((captureDatasetsCsv.length) && (modelsCsv.length === 1)) {
     // The message.
     let multipleMessage = $('<div />')
-        .addClass('alert alert-warning')
+        .addClass('alert alert-warning multiple-capture-datasets')
         .attr('role', 'alert')
         .html('<strong>Notice:</strong> The model will be associated with all ' + captureDatasetsCsv.length + ' capture datasets.');
-    // Prepend the message to the panel-body container.
-    $('.panel-validation-results').find('.panel-body').prepend(multipleMessage);
+
+    if ($('.panel-validation-results').find('.multiple-capture-datasets').length === 0) {
+      // Prepend the message to the panel-body container.
+      $('.panel-validation-results').find('.panel-body').prepend(multipleMessage);
+    }
     // swal({
     //   title: 'Single Model With Multiple Capture Datasets',
     //   text: 'The model will be associated with all ' + captureDatasetsCsv.length + ' capture datasets.',

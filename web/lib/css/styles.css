@@ -443,6 +443,10 @@ dd {
   width: 100% !important;
 }
 
+.well {
+  overflow: scroll;
+}
+
 .project-well, .subject-well, .item-well {
   margin-top: 1rem;
 }

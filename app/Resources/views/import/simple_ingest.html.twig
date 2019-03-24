@@ -108,7 +108,7 @@
       rootwizard.find('.next').removeClass('disabled');
 
       /**
-       * Create a New Subject / Create a New Item click handler
+       * Create a New Subject / Item / Capture Dataset click handler
        */
       $('.create-record').on('click', function(e) {
         var thisTrigger = $(this);
@@ -164,9 +164,6 @@
 
               // Remove the record from the DOM.
               $('#simple_ingest_tab_4').find('#' + buttonData.identifier).remove();
-
-              console.log($('body').data());
-
               break;
             default:
           }
@@ -427,6 +424,8 @@
               populateContainer('subject', csvColumns, csvValues, false);
               // Create the CSV and add it to the Uploads Stage.
               createCsv('subjects.csv', csvColumns, csvValues);
+              // If the subject exists, add the subject_exists flag to data.
+              subjectExists(subject_guid);
 
               $('#subject-form-modal').modal('hide');
               break;
@@ -608,8 +607,20 @@
           $('#capture-dataset-wells').append(well);
         }
 
+        var subjectExists = $('body').data('subject_exists');
+
         // Enable the child buttons.
-        $('[data-select="' + childType + '"], [data-create="' + childType + '"]').removeAttr('disabled');
+        if ( !fromDatatable && (dataType === 'subject') && !subjectExists ) {
+          // Only enable the Item create button if chosen subject doesn't exist.
+          var enableButtons = '[data-create="' + childType + '"]';
+          // Hide the select Item button.
+          $('[data-select="' + childType + '"]').hide();
+        } else {
+          var enableButtons = '[data-select="' + childType + '"], [data-create="' + childType + '"]';
+          // Display the select Item button.
+          $('[data-select="' + childType + '"]').show();
+        }
+        $(enableButtons).removeAttr('disabled');
       }
 
       /**
@@ -655,6 +666,10 @@
                 .attr('style', 'padding-bottom: 6rem;')
                 .html(html)
                 .append(buttonDiv);
+
+            // Show the capture dataset header.
+            $('#capture-dataset-wells').parent().find('.capture-dataset-header').removeClass('hidden');
+            // Add the well to the capture-dataset-wells container.
             $('#capture-dataset-wells').append(well);
 
             // Add the capture_dataset_ids to data.
@@ -784,7 +799,7 @@
               thisTableRow.addClass('warning');
 
               var csvColumns = ['subject_name', 'local_subject_id', 'subject_guid', 'holding_entity_name', 'holding_entity_guid'];
-              var csvValues = [aData.subject_name, aData.local_subject_id, aData.subject_guid, aData.holding_entity_name, aData.holding_entity_guid];
+              var csvValues = ['"' + aData.subject_name + '"', aData.local_subject_id, aData.subject_guid, aData.holding_entity_name, aData.holding_entity_guid];
 
               // Populate the subject container in the DOM.
               populateContainer('subject', csvColumns, aData, true);
@@ -872,6 +887,8 @@
 
               // Enable Step 2 tab.
               rootwizard.bootstrapWizard('enable', '1');
+              // Switch to the next tab.
+              // rootwizard.find('li:eq(1) a').click();
               // Enable the "Next Step" button.
               rootwizard.find('.next').removeClass('disabled');
 
@@ -978,7 +995,7 @@
 
         // Select record button.
         var select_records_button = $('<button></button>')
-          .addClass('btn btn-default')
+          .addClass('btn btn-primary')
           .attr('id', 'select-record-button')
           .html('<i class="glyphicon glyphicon-plus"></i> Add Selected Records')
           .on('click', function(){
@@ -1082,14 +1099,10 @@
 
                     // Populate the capture_dataset container in the DOM.
                     populateCaptureDatasetContainer('capture-dataset', columns, records);
-
                     // Create the CSV and add it to the Uploads Stage.
                     createCsv('capture_datasets.csv', columns, records);
-
-                    // // Add the capture_dataset_id to data.
-                    // $('body').data('capture_dataset_id', aData.DT_RowId);
-                    // // Add the capture_dataset_id to the hidden input.
-                    // $('input[name="dataset[capture_dataset_id]"]').val($('body').data('capture_dataset_id'));
+                    // Disable the create button.
+                    $('body').find('[data-create="capture-dataset"]').attr('disabled', 'disabled');
 
                     break;
                   default:
@@ -1129,7 +1142,7 @@
           icon: 'success',
         });
         // Enable the Item buttons.
-        $('[data-select="item"], [data-create="item"]').removeAttr('disabled');
+        $('[data-create="item"]').removeAttr('disabled');
       }
 
       /**
@@ -1172,6 +1185,8 @@
         });
         // Enable Step 2 tab.
         rootwizard.bootstrapWizard('enable', '1');
+        // Switch to the next tab.
+        // rootwizard.find('li:eq(1) a').click();
         // Enable the "Next Step" button.
         rootwizard.find('.next').removeClass('disabled');
       }
@@ -1257,10 +1272,9 @@
         // Avoid submitting the form multiple times.
         $('#model_save').attr('disabled', true);
         // Set up the csvColumns and csvValues.
-        var csvColumns = ['date_of_creation', 'derived_from', 'creation_method', 'units', 'model_purpose', 'file_path'];
+        var csvColumns = ['date_of_creation', 'creation_method', 'units', 'model_purpose', 'file_path'];
         var csvValues = [
             formData['model_form[date_of_creation]'],
-            formData['model_form[derived_from]'],
             $("#model_form_creation_method option:selected").text(),
             $("#model_form_units option:selected").text(),
             $("#model_form_model_purpose option:selected").text(),
@@ -1293,6 +1307,28 @@
         rootwizard.bootstrapWizard('enable', '2');
         // Enable the "Next Step" button.
         rootwizard.find('.next').removeClass('disabled');
+      }
+
+      /**
+       * Subject Exists
+       */
+      function subjectExists(subject_guid) {
+        $.ajax({
+          type: 'GET'
+          ,dataType: 'html'
+          ,url: '/admin/subject_record_check/' + subject_guid
+          ,success: function(result) {
+            if(result) {
+              var res = JSON.parse(result);
+              // If the subject exists, add the subject_exists flag to data
+              if(res.length) {
+                $('body').data('subject_exists', true);
+              } else {
+                $('body').data('subject_exists', false);
+              }
+            }
+          }
+        });
       }
 
     });
