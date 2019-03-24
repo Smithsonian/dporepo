@@ -10,23 +10,19 @@
           <div class="row">
             <div class="col-sm-6 col-md-6">
               {{ form_row(model_form.date_of_creation) }}
-              {{ form_row(model_form.derived_from) }}
+              {{ form_row(model_form.model_purpose) }}
               {{ form_row(model_form.creation_method) }}
             </div>
             <div class="col-sm-6 col-md-6">
               {{ form_row(model_form.units) }}
-              {{ form_row(model_form.model_purpose) }}
               <div class="form-group">
                 <label class="control-label required" for="model_form_file_path">File Path</label>
                 <input type="text" id="model_form_file_path" name="model_form[file_path]" class="form-control" required="required">
-            </div>
+              </div>
           </div>
       </div>
       <div class="field-group" style="clear:both;">
         {{ form_row(model_form.save) }}
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
       </div>
       {{ form_end(model_form) }}
     </div>
