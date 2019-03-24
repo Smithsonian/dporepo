@@ -122,7 +122,7 @@ class RepoValidateData implements RepoValidate {
     $return = array('is_valid' => false);
 
     // If no data is passed, set a message.
-    if(empty($data)) $return['messages'][] = 'Nothing to validate. Please provide an object to validate.';
+    if(empty($data)) $return['messages'][] = array('row' => 'Fatal error', 'error' => 'CSV is empty');
 
     // If data is passed, go ahead and process.
     if(!empty($data)) {
