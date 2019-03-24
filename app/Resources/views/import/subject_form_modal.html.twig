@@ -6,72 +6,77 @@
         <h2 class="modal-title" id="subjectFormLabel"><i class="glyphicon glyphicon-th-list"></i> <span id="subject-form-modal-title">Create a New Subject</span></h2>
       </div>
       <div class="modal-body" style="min-height: 24rem;">
-        {{ form_start(subject_form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
 
-
+        {% if edan_active == false %}
+          {{ form_start(subject_form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
+        {% endif %}
 
           {# Manual Form Entry #}
-          <div class="row hidden">
-            <div class="col-sm-6 col-md-6">
-              {{ form_row(subject_form.subject_name) }}
-              {{ form_row(subject_form.subject_display_name) }}
-              {{ form_row(subject_form.subject_guid) }}
-              {{ form_row(subject_form.local_subject_id) }}
-              {{ form_row(subject_form.holding_entity_guid) }}
+          {% if edan_active == false %}
+            <div class="row">
+              <div class="col-sm-6 col-md-6">
+                {{ form_row(subject_form.subject_name) }}
+                {{ form_row(subject_form.subject_display_name) }}
+                {{ form_row(subject_form.subject_guid) }}
+                {{ form_row(subject_form.local_subject_id) }}
+                {{ form_row(subject_form.holding_entity_guid) }}
+              </div>
+              <div class="col-sm-6 col-md-6">
+                <fieldset>
+                  <legend>API Delivery Integration</legend>
+                  {# {{ form_row(subject_form.api_publication_picker) }} #}
+                  {{ form_row(subject_form.model_purpose_picker) }}
+                  <h4>API Model Resolution Restrictions</h4>
+                  {{ form_row(subject_form.api_access_model_face_count_id) }}
+                  {{ form_row(subject_form.api_access_uv_map_size_id) }}
+                </fieldset>
+              </div>
             </div>
-            <div class="col-sm-6 col-md-6">
-              <fieldset>
-                <legend>API Delivery Integration</legend>
-                {# {{ form_row(subject_form.api_publication_picker) }} #}
-                {{ form_row(subject_form.model_purpose_picker) }}
-                <h4>API Model Resolution Restrictions</h4>
-                {{ form_row(subject_form.api_access_model_face_count_id) }}
-                {{ form_row(subject_form.api_access_uv_map_size_id) }}
-              </fieldset>
-            </div>
-          </div>
+          {% endif %}
 
           {# EDAN Picker #}
-          <div class="row">
-            <div class="col-sm-12 col-md-12">
-              <h3>Enter a Search Term</h3>
-              <div class="form-group panel panel-default">
-                <div class="panel-body">
-                  <div class="row">
-                    <div class="col-sm-10 col-md-10">
-                      <label class="control-label hidden" for="searchQuery">Search</label>
-                      <div class="controls">
-                        <input name="searchQuery" id="search-query" type="text" value="" class="form-control" placeholder="example: space shuttle">
+          {% if edan_active %}
+            <div class="row">
+              <div class="col-sm-12 col-md-12">
+                <h3>Enter a Search Term</h3>
+                <div class="form-group panel panel-default">
+                  <div class="panel-body">
+                    <div class="row">
+                      <div class="col-sm-10 col-md-10">
+                        <label class="control-label hidden" for="searchQuery">Search</label>
+                        <div class="controls">
+                          <input name="searchQuery" id="search-query" type="text" value="" class="form-control" placeholder="example: space shuttle">
+                        </div>
                       </div>
-                    </div>
-                    <div class="col-sm-2 col-md-2">
-                      <div class="controls">
-                        <button type="button" id="search-query-button" class="btn btn-default"><i class="glyphicon glyphicon-search"></i> Search</button>
+                      <div class="col-sm-2 col-md-2">
+                        <div class="controls">
+                          <button type="button" id="search-query-button" class="btn btn-default"><i class="glyphicon glyphicon-search"></i> Search</button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div class="row">
-            <div id="search-results" class="col-sm-12 col-md-12 center-block" style="margin-left: auto; float: none;">
+            <div class="row">
+              <div id="search-results" class="col-sm-12 col-md-12 center-block" style="margin-left: auto; float: none;">
+              </div>
             </div>
-          </div>
+          {% endif %}
 
-
-          <div class="field-group" style="clear:both;">
-            {{ form_row(subject_form.save) }}
-          </div>
-
-          
-
+          {% if edan_active == false %}
+            <div class="field-group" style="clear:both;">
+              {{ form_row(subject_form.save) }}
+            </div>
+          {% endif %}
 
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
       </div>
-      {{ form_end(subject_form) }}
+      {% if edan_active == false %}
+        {{ form_end(subject_form) }}
+      {% endif %}
     </div>
   </div>
 </div>

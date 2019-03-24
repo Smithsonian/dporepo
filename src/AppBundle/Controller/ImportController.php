@@ -83,10 +83,15 @@ class ImportController extends Controller
     private $external_file_storage_on;
 
     /**
+     * @var bool $edan_active
+     */
+    private $edan_active;
+
+    /**
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, CaptureDatasetController $datasetsController, ItemController $itemsController, ModelController $modelController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, CaptureDatasetController $datasetsController, ItemController $itemsController, ModelController $modelController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on, bool $edan_active) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
@@ -99,6 +104,7 @@ class ImportController extends Controller
         $this->fileTransfer = $fileTransfer;
         $this->processing = $processing;
         $this->external_file_storage_on = $external_file_storage_on;
+        $this->edan_active = $edan_active;
 
         // $this->logger = $logger;
         // Usage:
@@ -360,6 +366,7 @@ class ImportController extends Controller
         // // units
         // // model_purpose
         // Remove these fields.
+        $model_form->remove('derived_from');
         $model_form->remove('model_guid');
         $model_form->remove('model_file_type');
         $model_form->remove('model_modality');
@@ -383,6 +390,7 @@ class ImportController extends Controller
           'accepted_file_types' => $accepted_file_types,
           'service_error' => $service_error,
           'dataset_data' => $dataset,
+          'edan_active' => $this->edan_active,
           'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
           'current_tab' => 'ingest'
         ));
@@ -1075,9 +1083,11 @@ class ImportController extends Controller
         foreach ($json_array as $key => $value) {
           // Replace numeric keys with field names.
           foreach ($value as $k => $v) {
-            $field_name = $target_fields[$k];
-            unset($json_array[$key][$k]);
-            $json_array[$key][$field_name] = $v;
+            if (array_key_exists($k, $target_fields)) {
+              $field_name = $target_fields[$k];
+              unset($json_array[$key][$k]);
+              $json_array[$key][$field_name] = $v;
+            }
           }
           // Convert the array to an object.
           $json_object[] = (object)$json_array[$key];
