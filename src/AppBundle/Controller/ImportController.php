@@ -1314,4 +1314,40 @@ class ImportController extends Controller
 
       return $response;
     }
+
+
+    /**
+     * Subject Record Check
+     *
+     * @Route("/admin/subject_record_check/{subject_guid}", name="subject_record_check", methods="GET", defaults={"subject_guid" = null})
+     *
+     * @param string $subject_guid Subject GUID
+     * @return bool
+     */
+    public function subjectRecordCheck($subject_guid)
+    {
+
+      $data = false;
+
+      if (!empty($subject_guid)) {
+        
+        // Check to see if the subject already exists- DPO3DREP-546
+        $data = $this->repo_storage_controller->execute('getRecords', array(
+            'base_table' => 'subject',
+            'fields' => array(),
+            'limit' => 1,
+            'search_params' => array(
+              0 => array('field_names' => array('subject.subject_guid'), 'search_values' => array($subject_guid), 'comparison' => '='),
+            ),
+            'search_type' => 'AND',
+            'omit_active_field' => true,
+          )
+        );
+
+      }
+
+      return $this->json($data);
+    }
+
+
 }
