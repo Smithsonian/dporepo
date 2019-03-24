@@ -140,7 +140,7 @@ class CaptureDatasetController extends Controller
           );
           $data['aaData'][$k]['file_path'] = '';
           if (count($dataset_file) > 0) {
-            $path = str_replace("\\", "/",  $dataset_file[0]['file_path']);
+            $path = str_replace("\\", "/",  $dataset_file['file_path']);
             $path = str_replace($this->uploads_directory, '', $path);
             $path = str_replace("\\", "/", $this->external_file_storage_path . $path);
             $path = str_replace("//", "/", $path);
