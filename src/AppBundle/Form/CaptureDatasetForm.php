@@ -56,7 +56,7 @@ class CaptureDatasetForm extends AbstractType
             ->add('capture_dataset_description', TextareaType::class, array(
                 'label' => 'Capture Dataset Description',
                 'attr' => array('rows' => '10'),
-                'required' => true,
+                'required' => false,
               ))
             ->add('collection_notes', TextareaType::class, array(
                 'label' => 'Collection Notes',
@@ -75,7 +75,7 @@ class CaptureDatasetForm extends AbstractType
               ))
             ->add('positionally_matched_capture_datasets', null, array(
                 'label' => 'Positionally Matched Capture Datasets',
-                'required' => true,
+                'required' => false,
               ))
             ->add('focus_type', ChoiceType::class, array(
                 'label' => 'Focus Type',
