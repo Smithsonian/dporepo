@@ -423,7 +423,7 @@
               // Populate the subject container in the DOM.
               populateContainer('subject', csvColumns, csvValues, false);
               // Create the CSV and add it to the Uploads Stage.
-              createCsv('subjects.csv', csvColumns, csvValues);
+              createCsv('subjects.csv', csvColumns, csvValues, false);
               // If the subject exists, add the subject_exists flag to data.
               subjectExists(subject_guid);
 
@@ -473,19 +473,31 @@
       /**
        * Create CSV
        */
-      function createCsv(csvName, csvColumns, csvValues) {
+      function createCsv(csvName, csvColumns, csvValues, fromCaptureDatasetForm) {
 
+        // Capture Datasets: Add the model_import_row_id column and value.
         if (csvName === 'capture_datasets.csv') {
-          // Capture Datasets: Add the import_row_id, import_parent_id, and model_import_row_id columns.
-          csvColumns.unshift('import_row_id', 'import_parent_id', 'model_import_row_id');
-        } else {
-          // All Other Record Types: Add the import_row_id and import_parent_id columns.
-          csvColumns.unshift('import_row_id', 'import_parent_id');
+          csvColumns.unshift('model_import_row_id');
         }
 
-        if ((csvName !== 'capture_datasets.csv') && (csvName !== 'capture_datasets_single.csv')) {
+        // Add the import_row_id and import_parent_id columns.
+        csvColumns.unshift('import_row_id', 'import_parent_id');
+
+        if (csvName !== 'capture_datasets.csv') {
           // Add values for the import_row_id and import_parent_id.
           csvValues.unshift(1, 1);
+        }
+
+        // If this is a capture_datasets.csv created from the form, store the array in the body data attribute capture_datasets.
+        var captureDatasetsData = $('body').data('capture_datasets');
+
+        if ((csvName === 'capture_datasets.csv') && (fromCaptureDatasetForm)) {
+          if (typeof captureDatasetsData === 'undefined') {
+            $('body').data('capture_datasets', [csvValues]);
+          } else {
+            captureDatasetsData.push(csvValues);
+          }
+          csvValues = $('body').data('capture_datasets');
         }
 
         // Get all accepted files.
@@ -811,7 +823,7 @@
               csvColumns.push('subject_id');
               csvValues.push(aData.DT_RowId);
               // Create the CSV and add it to the Uploads Stage.
-              createCsv('subjects.csv', csvColumns, csvValues);
+              createCsv('subjects.csv', csvColumns, csvValues, false);
 
               // Add the subject_id to data.
               $('body').data('subject_id', aData.DT_RowId);
@@ -883,7 +895,7 @@
               csvColumns.push('item_id');
               csvValues.push(aData.DT_RowId);
               // Create the CSV and add it to the Uploads Stage.
-              createCsv('items.csv', csvColumns, csvValues);
+              createCsv('items.csv', csvColumns, csvValues, false);
 
               // Enable Step 2 tab.
               rootwizard.bootstrapWizard('enable', '1');
@@ -1100,7 +1112,7 @@
                     // Populate the capture_dataset container in the DOM.
                     populateCaptureDatasetContainer('capture-dataset', columns, records);
                     // Create the CSV and add it to the Uploads Stage.
-                    createCsv('capture_datasets.csv', columns, records);
+                    createCsv('capture_datasets.csv', columns, records, false);
                     // Disable the create button.
                     $('body').find('[data-create="capture-dataset"]').attr('disabled', 'disabled');
 
@@ -1134,7 +1146,7 @@
         // Populate the subject container in the DOM.
         populateContainer('subject', csvColumns, csvValues, false);
         // Create the CSV and add it to the Uploads Stage.
-        createCsv('subjects.csv', csvColumns, csvValues);
+        createCsv('subjects.csv', csvColumns, csvValues, false);
         // Display a success message in the UI.
         swal({
           title: 'Saved',
@@ -1163,7 +1175,7 @@
         // Populate the item container in the DOM.
         populateContainer('item', csvColumns, csvValues, false);
         // Create the CSV and add it to the Uploads Stage.
-        createCsv('items.csv', csvColumns, csvValues);
+        createCsv('items.csv', csvColumns, csvValues, false);
         // Display a success message in the UI.
         swal('Saved', {
           icon: 'success',
@@ -1211,11 +1223,12 @@
             'directory_path',
             'focus_type',
             'item_arrangement_field_id',
-            // 'item_id',
+            'item_id',
             'item_position_field_id',
             'item_position_type',
             'light_source_type',
-            'positionally_matched_capture_datasets'
+            'positionally_matched_capture_datasets',
+            'DT_RowId'
         ];
         var csvValues = [
             $("#capture_dataset_form_background_removal_method option:selected").text(),
@@ -1230,16 +1243,22 @@
             formData['capture_dataset_form[directory_path]'],
             $("#capture_dataset_form_focus_type option:selected").text(),
             formData['capture_dataset_form[item_arrangement_field_id]'],
-            // formData['capture_dataset_form[item_id]'],
+            formData['capture_dataset_form[item_id]'],
             formData['capture_dataset_form[item_position_field_id]'],
             $("#capture_dataset_form_item_position_type option:selected").text(),
             $("#capture_dataset_form_light_source_type option:selected").text(),
-            formData['capture_dataset_form[positionally_matched_capture_datasets]']
+            formData['capture_dataset_form[positionally_matched_capture_datasets]'],
+            formData['capture_dataset_form[capture_dataset_name]']
         ];
-        // Populate the capture_dataset container in the DOM.        
-        populateContainer('capture-dataset', csvColumns, csvValues, false);
+
+        // Populate the capture_dataset container in the DOM.
+        // populateContainer('capture-dataset', csvColumns, csvValues, false);
+        var populateValues = csvValues;
+        populateCaptureDatasetContainer('capture-dataset', csvColumns, [populateValues], false);
+
         // Create the CSV and add it to the Uploads Stage.
-        createCsv('capture_datasets_single.csv', csvColumns, csvValues);
+        createCsv('capture_datasets.csv', csvColumns, csvValues, true);
+        
         // Display a success message in the UI.
         swal('Saved', {
           icon: 'success',
@@ -1283,7 +1302,7 @@
         // Populate the model container in the DOM.
         populateContainer('model', csvColumns, csvValues, false);
         // Create the CSV and add it to the Uploads Stage.
-        createCsv('models.csv', csvColumns, csvValues);
+        createCsv('models.csv', csvColumns, csvValues, false);
         // Display a success message in the UI.
         swal('Saved', {
           icon: 'success',
