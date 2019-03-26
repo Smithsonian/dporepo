@@ -23,6 +23,12 @@
             {% endif %}
             <dt>Unit Code</dt>
             <dd>{{ row.unitCode }}</dd>
+            <dt>Unit ISNI ID</dt>
+            {% if row.holding_entity_guid is defined %}
+              <dd>ISN:{{ row.holding_entity_guid }}</dd>
+            {% else %}
+              <dd class="text-danger"><span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> ISNI ID not found. To properly associate "{{ row.unitCode }}", <a href="/admin/resources/unit_stakeholder/" target="_blank">create a relation</a> in metadata storage.</dd>
+            {% endif %}
             {% if row.content.descriptiveNonRepeating.record_link is defined %}
               <dt>Record Link</dt>
               <dd><a href="{{ row.content.descriptiveNonRepeating.record_link }}" target="_blank">{{ row.content.descriptiveNonRepeating.record_link }}</a></dd>
@@ -60,8 +66,8 @@
   <input name="subject_guid_chosen_{{ loop.index }}" id="subject_guid_chosen_{{ loop.index }}" type="hidden" value="{{ row.url }}">
   <input name="subject_name_chosen_{{ loop.index }}" id="subject_name_chosen_{{ loop.index }}" type="hidden" value="{{ row.title }}">
   <input name="local_subject_id_chosen_{{ loop.index }}" id="local_subject_id_chosen_{{ loop.index }}" type="hidden" value="{% if row.content.freetext.identifier is defined %}{{ row.content.freetext.identifier.0.content }}{% endif %}">
-  <input name="holding_entity_guid_chosen_{{ loop.index }}" id="holding_entity_guid_chosen_{{ loop.index }}" type="hidden" value="{{ row.unitCode }}">
-  <input name="holding_entity_name_chosen_{{ loop.index }}" id="holding_entity_name_chosen_{{ loop.index }}" type="hidden" value="{% if row.content.freetext.identifier is defined %}{{ row.content.descriptiveNonRepeating.data_source }}{% endif %}">
+  <input name="holding_entity_guid_chosen_{{ loop.index }}" id="holding_entity_guid_chosen_{{ loop.index }}" type="hidden" value="{{ row.holding_entity_guid }}">
+  <input name="holding_entity_name_chosen_{{ loop.index }}" id="holding_entity_name_chosen_{{ loop.index }}" type="hidden" value="{% if row.content.freetext.data_source is defined %}{{ row.content.descriptiveNonRepeating.data_source }}{% endif %}">
 
 {% endfor %}
 

@@ -398,6 +398,11 @@ class RepoValidateData implements RepoValidate {
             'field_name' => 'unit_stakeholder_guid',
             'field_alias' => 'holding_entity_local_id',
           ),
+          array(
+            'table_name' => 'unit_stakeholder',
+            'field_name' => 'isni_id',
+            'field_alias' => 'isni_id',
+          ),
         ),
         // Joins
         'related_tables' => array(
@@ -412,8 +417,10 @@ class RepoValidateData implements RepoValidate {
         'limit' => 1,
         'search_params' => array(
           0 => array('field_names' => array('isni_data.isni_id'), 'search_values' => array($holding_entity_guid), 'comparison' => '='),
+          1 => array('field_names' => array('unit_stakeholder.unit_stakeholder_label'), 'search_values' => array($holding_entity_guid), 'comparison' => '='),
+          2 => array('field_names' => array('unit_stakeholder.unit_stakeholder_label_aliases'), 'search_values' => array($holding_entity_guid), 'comparison' => 'LIKE'),
         ),
-        'search_type' => 'AND',
+        'search_type' => 'OR',
         'omit_active_field' => true,
         )
       );

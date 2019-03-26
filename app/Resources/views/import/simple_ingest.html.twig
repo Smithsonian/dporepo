@@ -489,7 +489,7 @@
               var subject_guid = $('#subject_guid_chosen_' + index).val(),
                   subject_name = $('#subject_name_chosen_' + index).val(),
                   local_subject_id = $('#local_subject_id_chosen_' + index).val(),
-                  holding_entity_guid = $('#holding_entity_guid_chosen_' + index).val(),
+                  holding_entity_guid = 'ISN:' + $('#holding_entity_guid_chosen_' + index).val(),
                   csvColumns = [
                     'subject_guid',
                     'subject_name',
