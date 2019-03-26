@@ -339,7 +339,6 @@ class ImportController extends Controller
         // // item_position_type
         // // item_position_field_id
         // // item_arrangement_field_id
-        // // positionally_matched_capture_datasets
         // // focus_type
         // // light_source_type
         // // background_removal_method
@@ -352,6 +351,7 @@ class ImportController extends Controller
         $form->remove('support_equipment');
         $form->remove('resource_capture_datasets');
         $form->remove('calibration_object_used');
+        $form->remove('positionally_matched_capture_datasets');
 
         // Create the model form.
         $model = new Model();
