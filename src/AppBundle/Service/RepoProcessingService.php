@@ -62,7 +62,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
     $this->u = new AppUtilities();
     $this->kernel = $kernel;
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
-    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_directory) : $uploads_directory;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->processing_service_location = $processing_service_location;
     $this->processing_service_client_id = $processing_service_client_id;
@@ -683,7 +683,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
               // Into this:
               // e.g. /uploads/repository/AEF81E05-128C-3439-4E24-4C9CB58BB25E/...
               $path = $this->project_directory . $this->uploads_directory;
-              $path = str_replace($path, '/uploads/repository/', $asset['file_path']);
+              $path = str_replace($path, DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'repository' . DIRECTORY_SEPARATOR, $asset['file_path']);
 
               // Get the UUID so we can get the job_id.
               //@todo use FileHelperService
@@ -702,7 +702,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
                 'fields' => array(),
                 'limit' => 1,
                 'search_params' => array(
-                  0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($path), 'comparison' => '='),
+                  0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($normalized_path), 'comparison' => '='),
                 ),
                 'search_type' => 'AND',
                 'omit_active_field' => true,
@@ -717,7 +717,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
                   'values' => array(
                     'job_id' => $repo_job_data['job_id'],
                     'file_name' => $asset['file_name'],
-                    'file_path' => $path,
+                    'file_path' => $normalized_path,
                     'file_size' => filesize($asset['file_path']),
                     'file_type' => strtolower(pathinfo($asset['file_path'], PATHINFO_EXTENSION)),
                     'file_hash' => md5($asset['file_name']),

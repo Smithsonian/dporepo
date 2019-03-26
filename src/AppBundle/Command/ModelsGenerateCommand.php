@@ -37,7 +37,7 @@ class ModelsGenerateCommand extends ContainerAwareCommand
       // the "--help" option.
       ->setHelp('This command genearates models and related assets.')
       // Add arguments...
-      ->addArgument('uuid', InputArgument::REQUIRED, 'Job UUID.')
+      ->addArgument('uuid', InputArgument::OPTIONAL, 'Job UUID.')
       ->addArgument('recipe_name', InputArgument::OPTIONAL, 'Processing recipe name.');
   }
 
@@ -61,20 +61,18 @@ class ModelsGenerateCommand extends ContainerAwareCommand
     ]);
 
     // Generate model/assets and transfer model metadata to metadata storage.
-    if (!empty($input->getArgument('uuid'))) {
-      // Processing recipe name. Default: web-hd.
-      $recipe_name = !empty($input->getArgument('recipe_name')) ? $input->getArgument('recipe_name') : 'web-hd';
-      // Set up flysystem.
-      $container = $this->getContainer();
-      $flysystem = $container->get('oneup_flysystem.processing_filesystem');
-      // Generate model/assets.
-      $result = $this->model_generate->generateModelAssets($input->getArgument('uuid'), $recipe_name, $flysystem);
-    }
+    // Processing recipe name. Default: web-hd.
+    $recipe_name = !empty($input->getArgument('recipe_name')) ? $input->getArgument('recipe_name') : 'web-hd';
+    // Set up flysystem.
+    $container = $this->getContainer();
+    $flysystem = $container->get('oneup_flysystem.processing_filesystem');
+    // Generate model/assets.
+    $result = $this->model_generate->generateModelAssets($input->getArgument('uuid'), $recipe_name, $flysystem);
 
     // $this->u->dumper($result);
 
     // Output results.
-    if (!empty($result) && ($result['state'] === 'done')) {
+    if (!empty($result) && isset($result['state']) && ($result['state'] === 'done')) {
       $output->writeln('<comment>Model(s) Generated</comment>' . "\n");
     }
 
