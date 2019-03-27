@@ -2,13 +2,16 @@
 {% use 'import/ingest_wizard.html.twig' %}
 {% use 'import/record_picker_modal.html.twig' %}
 {% use 'import/subject_form_modal.html.twig' %}
+{% use 'import/subject_edan_form_modal.html.twig' %}
 {% use 'import/item_form_modal.html.twig' %}
+{% use 'import/capture_dataset_form_modal.html.twig' %}
+{% use 'import/model_form_modal.html.twig' %}
 
 {% block stylesheets %}
   {{ parent() }}
-  <link href="https://cdn.datatables.net/1.10.16/css/dataTables.bootstrap.min.css" rel="stylesheet" type="text/css" />
-  <link href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.bootstrap.min.css" rel="stylesheet" type="text/css" />
-  <link href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/css/bootstrap-datepicker3.css" rel="stylesheet" type="text/css">
+  <link href="{{ asset('lib/javascripts/datatables/css/dataTables.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/buttons/css/buttons.bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('lib/javascripts/datepicker/css/bootstrap-datepicker3.css') }}" rel="stylesheet" type="text/css">
   <link href="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.css') }}" rel="stylesheet" type="text/css" />
 {% endblock %}
 
@@ -55,26 +58,38 @@
   <!-- Subject Form Modal -->
   {# {% include 'import/subject_form_modal.html.twig' %} #}
   {% block subject_form %}{{ parent() }}{% endblock %}
+  {# {% block subject_edan_form %}{{ parent() }}{% endblock %} #}
   <!-- Item Form Modal -->
   {# {% include 'import/item_form_modal.html.twig' %} #}
   {% block item_form %}{{ parent() }}{% endblock %}
+    <!-- Capture Dataset Form Modal -->
+  {# {% include 'import/capture_dataset_modal.html.twig' %} #}
+  {% block capture_dataset_form_modal %}{{ parent() }}{% endblock %}
+  <!-- Model Form Modal -->
+  {# {% include 'import/model_form_modal.html.twig' %} #}
+  {% block model_form %}{{ parent() }}{% endblock %}
   <!-- Uploading Modal -->
   {% include 'import/uploading_modal.html.twig' %}
 
 {% endblock %}
 
 {% block js_bottom %}
-  <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
-  <script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.bootstrap.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.colVis.min.js"></script>
+  <script src="{{ asset('lib/javascripts/datatables/js/jquery.dataTables.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/datatables/js/dataTables.buttons.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/datatables/js/dataTables.bootstrap.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/buttons/js/buttons.bootstrap.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/buttons/js/buttons.colVis.min.js') }}"></script>
   <script type="text/javascript" src="{{ asset('lib/javascripts/dropzone.js') }}"></script>
   <script type="text/javascript" src="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.js') }}"></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.4.1/js/bootstrap-datepicker.min.js"></script>
+  <script src="{{ asset('lib/javascripts/datepicker/js/bootstrap-datepicker.min.js') }}"></script>
   <script type="text/javascript" src="{{ asset('lib/javascripts/jquery.bootstrap.wizard.min.js') }}"></script>
   <script type="text/javascript">
     $(document).ready(function() {
+      /**
+       * Reset Dropzone by removing all accepted files on page load.
+       */
+      uploadsDropzone.removeAllFiles();
+      
       /**
        * Bootstrap Wizard
        */
@@ -86,15 +101,19 @@
       // Disable the "Next Step" button.
       rootwizard.find('.next').addClass('disabled');
 
+      // // Uncomment during testing to have access to the Step 2 tab.
+      // // Enable Step 2 tab.
+      // rootwizard.bootstrapWizard('enable', '1');
+      // // Enable the "Next Step" button.
+      // rootwizard.find('.next').removeClass('disabled');
+
       /**
-       * Create a New Subject / Create a New Item click handler
+       * Create a New Subject / Item / Capture Dataset click handler
        */
       $('.create-record').on('click', function(e) {
         var thisTrigger = $(this);
         // Show the modal.
         $('#' + thisTrigger.attr('data-create') + '-form-modal').modal('show');
-
-        // console.log(thisTrigger.attr('data-create'));
       });
 
       /**
@@ -113,7 +132,123 @@
         window.location.href = '/admin/bulk_ingest';
       });
 
-      // Display the record picker modal.
+      /**
+       * Remove record click handler
+       */
+      $('#simple_ingest_tab_4').on('click', '.remove-record', function(e) {
+        // Data, which contains the identifier.
+        var buttonData = $(this).data();
+        // Confirm removing record.
+        swal('Remove Capture Dataset?', {
+          icon: 'warning',
+          buttons: {
+            cancel: 'No',
+            catch: {
+              text: 'Yes',
+              value: 'yes',
+            }
+          },
+        })
+        .then((value) => {
+          switch (value) {
+            case "yes":
+              // The current array of capture_dataset_ids stored in data.
+              var idArray = $('body').data('capture_dataset_ids');
+
+              // Remove the capture_dataset_id from data.
+              var index = $.inArray(buttonData.identifier, idArray);
+              if (index != -1) {
+                idArray.splice(index, 1);
+                $('body').data('capture_dataset_ids', idArray);
+              }
+
+              // Remove the record from the DOM.
+              $('#simple_ingest_tab_4').find('#' + buttonData.identifier).remove();
+
+              // Remove the row from the CSV and write the CSV back to the DOM.
+              // Get queued files.
+              let queuedFiles = uploadsDropzone.getAcceptedFiles();
+
+              // Validate file and directory paths entered in the capture_datasets.csv and models.csv CSVs.
+              for (var i = 0; i < queuedFiles.length; i++) {
+
+                if (queuedFiles[i].name === 'capture_datasets.csv') {
+                  
+                  // Read the CSV file.
+                  let reader = new FileReader();
+                  reader.readAsText(queuedFiles[i]);
+                  reader.addEventListener('loadend', function(event) {
+
+                    let file = event.target.result,
+                        fileArray = file.split(/\r?\n/)
+                        csvType = 'capture_datasets';
+
+                    // Loop through CSV rows.
+                    for (var k = 0; k < fileArray.length; k++) {
+                      if((k > 0) && fileArray[k].length) {
+                        // Split the CSV row on the comma.
+                        let currentLineArray = fileArray[k].trim().split(',');
+                        // The identifier is the last item in the array.
+                        let identifier = currentLineArray.pop();
+                        // If identifiers match, remove the row from the CSV.
+                        if(identifier === buttonData.identifier) {
+                          fileArray.splice(k, 1);
+                        }
+                      }
+                    }
+
+                    // CSV columns.
+                    var csvColumns = fileArray.shift();
+                    csvColumns = csvColumns.split(',');
+                    // Remove the import_row_id, import_parent_id, and model_import_row_id columns.
+                    csvColumns.splice(0, 1);
+                    csvColumns.splice(0, 1);
+                    csvColumns.splice(0, 1);
+
+                    // CSV values.
+                    var csvValues = new Array;
+
+                    $.each(fileArray, function(key, value){
+                      // Skip empty rows.
+                      if (value.length) {
+                        // Remove the import_row_id, import_parent_id, and model_import_row_id values.
+                        var values = value.split(',');
+                        values.splice(0, 1);
+                        values.splice(0, 1);
+                        values.splice(0, 1);
+                        // Push to the csvValues array.
+                        csvValues.push(values);
+                      }
+                    });
+
+                    if (csvValues.length) {
+                      // Create the CSV.
+                      createCsv('capture_datasets.csv', csvColumns, csvValues, false);
+                    } else {
+                      // Remove the CSV if no rows exist.
+                      var acceptedFiles = uploadsDropzone.getAcceptedFiles();
+                      // Loop through accepted files and remove an existing blob if already present.
+                      for (var i = 0; i < acceptedFiles.length; i++) {
+                        // if ((acceptedFiles[i].name === csvName) || (acceptedFiles[i].name === 'capture_datasets.csv')) {
+                        if (acceptedFiles[i].name === 'capture_datasets.csv') {
+                          // Remove the existing blob.
+                          uploadsDropzone.removeFile(acceptedFiles[i]);
+                        }
+                      }
+                    }
+
+                  });
+
+                }
+
+              }
+              break;
+            default:
+          }
+        });
+      });
+
+      // Display the record picker modal for a project, subject, item, or capture dataset.
       $('.select-record').on('click', function(e) {
 
         var thisTrigger = $(this);
@@ -129,12 +264,17 @@
           case 'item':
             var dt = browseItems();
             break;
+            case 'capture-dataset':
+            var dt = browseCaptureDatasets();
+            break;
         }
 
         // Display the target Datatable.
         $('#' + recordType).removeClass('hidden');
-        // Add the title to the modal (Example: Select a Project).
-        $('#record-picker-modal-title').empty().append('Select a ' + convertCase(recordType));
+        // Set the title (Example: Select a Project). More than one capture dataset can be selected.
+        var title = (recordType === 'capture-dataset') ? 'Select ' + convertCase(recordType.replace('-', ' ') + '(s)') : 'Select a ' + convertCase(recordType.replace('-', ' '));
+        // Add the title to the modal.
+        $('#record-picker-modal-title').empty().append(title);
         // Show the modal.
         $('#record-picker-modal').modal('show');
 
@@ -142,28 +282,39 @@
         $('#record-picker-modal').on('hidden.bs.modal', function(e) {
           $('#' + thisTrigger.attr('data-select')).addClass('hidden');
           dt.fnDestroy();
+          dt.fnClearTable();
         });
       });
 
-      // Datepicker
-      var dateInput = $('input[name="capture_dataset_form[date_of_capture]"]');
+      // Datepicker: Capture Dataset
+      var dateInputCaptureDataset = $('input[name="capture_dataset_form[date_of_capture]"]');
       var thisContainer = $('form.dataset_form').length>0 ? $('form.dataset_form').parent() : 'body';
       var options = {
-        format: 'yyyy-mm-dd 00:00:00',
+        format: 'yyyy-mm-dd',
         container: thisContainer,
         todayHighlight: true,
         autoclose: true,
       };
-      dateInput.datepicker(options);
+      dateInputCaptureDataset.datepicker(options);
+      // Datepicker: Model
+      var dateInputModel = $('input[name="model_form[date_of_creation]"]');
+      var thisContainer = $('form.model_form').length>0 ? $('form.model_form').parent() : 'body';
+      var options = {
+        format: 'yyyy-mm-dd',
+        container: thisContainer,
+        todayHighlight: true,
+        autoclose: true,
+      };
+      dateInputModel.datepicker(options);
 
       // Subject form submit handler.
-      $(document).on('submit', 'form[name="subject_form"]', function(e){        
+      $(document).on('submit', 'form[name="subject_form"]', function(e){
         // Avoid submitting the form non-ajax.
         e.preventDefault();
         // Get the properties and values from the form.
         var form = $('form[name="subject_form"]');
         var formData = form.serializeObject();
-        // Submit via AJAX.
+        // Add CSV blob and display data.
         submitSubjectRecord(formData);
       });
 
@@ -174,29 +325,33 @@
         // Get the properties and values from the form.
         var form = $('form[name="item_form"]');
         var formData = form.serializeObject();
-        // Add the project_id and subject_id to the formData object.
-        formData['item_form[project_id]'] = $('body').data('project_id');
-        formData['item_form[subject_id]'] = $('body').data('subject_id');
-        // Submit via AJAX.
-        itemSubjectRecord(formData);
+        // Add CSV blob and display data.
+        submitItemRecord(formData);
       });
 
       // Dataset form submit handler.
       $(document).on('submit', 'form[name="capture_dataset_form"]', function(e){
         // Avoid submitting the form non-ajax.
         e.preventDefault();
-        // Convert form data to a CSV and add it to the Uploads Stage.
-        addCsvToUploadsStage();
-        // Avoid submitting the form multiple times.
-        $('#dataset_save').attr('disabled', true);
-        // Display a success message in the UI.
-        swal({
-          title: 'Dataset Saved',
-          text: 'Please proceed to Step 3',
-          icon: 'success',
-        });
+        // Get the properties and values from the form.
+        var form = $('form[name="capture_dataset_form"]');
+        var formData = form.serializeObject();
+        // Add CSV blob and display data.
+        submitCaptureDatasetRecord(formData);
       });
 
+      // Model form submit handler.
+      $(document).on('submit', 'form[name="model_form"]', function(e){
+        // Avoid submitting the form non-ajax.
+        e.preventDefault();
+        // Get the properties and values from the form.
+        var form = $('form[name="model_form"]');
+        var formData = form.serializeObject();
+        // Add CSV blob and display data.
+        submitModelRecord(formData);
+      });
+
+      // Serialize Object
       $.fn.serializeObject = function() {
           var o = {};
           var a = this.serializeArray();
@@ -213,77 +368,414 @@
           return o;
       };
 
-      function addCsvToUploadsStage() {
-        // Create a CSV file and make it downloadable.
-        // Example data from formData:
-        // "capture_dataset_form[background_removal_method]": "4"
-        // ​"capture_dataset_form[calibration_object_used]": "1"
-        // "capture_dataset_form[capture_dataset_description]": "Lorem Ipsum"
-        //
-        // Get the properties and values from the form.
-        var form = $('form[name="capture_dataset_form"]');
-        // Add the import_row_id and import_parent_id hidden fields to the form.
-        // Doing this here since unshift() was not working further on down the line (?)
-        var import_row_id_field = $('<input />').attr('type', 'hidden').attr('name', 'import_row_id').val('1');
-        var import_parent_id_field = $('<input />').attr('type', 'hidden').attr('name', 'import_parent_id').val( $('body').data('item_id') );
-        form.prepend(import_row_id_field, import_parent_id_field);
-        // Serialize the form object.
-        var formData = form.serializeObject();
-        // Array of CSV columns.
-        var csvColumns = Object.keys(formData);
-        // Array of CSV values.
-        var csvValues = Object.values(formData);
-        // Remove the capture_dataset_form[_token] key (in csvColumns) and the corresponding value (in csvValues).
-        // Looping through and finding the key is a bit more precise, as opposed to using csvColumns.pop() and csvValues.pop();
-        for(var i = 0; i < csvColumns.length; i++) {
-           if (csvColumns[i] === 'capture_dataset_form[_token]') {
-             csvColumns.splice(i, 1);
-             csvValues.splice(i, 1);
-           }
+
+      /******************************************************/
+      /** EDAN Picker ***************************************/
+      /******************************************************/
+      /**
+       * EDAN Picker: set variables.
+       */
+      var resultsContainer = $('#search-results')
+          loadingGif = $('<img />').attr('src', '/lib/images/spinner.gif').attr('alt', 'loading animation').attr('style', 'width: 140px;'),
+          loadingGifContainer = $('<div />').addClass('center-block').attr('style', 'width: 140px;').append(loadingGif);
+
+      /**
+       * EDAN Picker search button click handler
+       */
+      $('#search-query-button').on('click', function(e) {
+
+        var searchQuery = $('#search-query').val();
+
+        // Validate - search query.
+        if(!searchQuery.length) {
+          swal({
+            title: "Search Term is Empty",
+            text: "Please enter a search term.",
+          });
+          return;
         }
-        // Remove "dataset[" and "]" from the CSV columns.
-        for( var i = 0; i < csvColumns.length; i++){
-          csvColumns[i] = csvColumns[i].replace('capture_dataset_form[', '');
-          csvColumns[i] = csvColumns[i].replace(']', '');
+
+        // Remove previous search results and search value, if present.
+        resultsContainer.empty();
+        // Add the loading gif.
+        resultsContainer.append(loadingGifContainer);
+
+        // Make an AJAX request to EDAN.
+        // Example: http://127.0.0.1:8000/admin/edan/calder/html/2
+        $.ajax({
+          type: 'GET'
+          ,dataType: 'html'
+          ,url: '/admin/edan/' + searchQuery + '/html/1/1/10'
+          ,success: function(result) {
+
+            if(result) {
+              // Remove the loading gif.
+              loadingGifContainer.remove();
+              // Append the results to the DOM.
+              resultsContainer.append(result);            
+            }
+
+          }
+        });
+
+      });
+
+      /**
+       * EDAN Picker paging button click handler (Previous Page, Next Page)
+       */
+      $('#search-results').on('click', '.pager-button', function(e){
+
+        var thisButton = $(this),
+            targetPage = (typeof thisButton.data('page') !== 'undefined') ? (thisButton.data('page') + 1) : 1,
+            searchQuery = $('#search-query').val();
+
+        // Validate - search query.
+        if(!searchQuery.length) {
+          swal({
+            title: "Search Term is Empty",
+            text: "Please enter a search term.",
+          });
+          return;
         }
-        // Massage the CSV data to required specs.
-        for(var i = 0; i < csvColumns.length; i++) {
-          switch(csvColumns[i]) {
-            // Strip the space and zeros from date
-            case 'date_of_capture':
-              csvValues[i] = csvValues[i].replace(' 00:00:00', '');
-              break;
-            // Swap out option value for option text.
-            case 'support_equipment':
-            case 'capture_method':
-            case 'capture_dataset_type':
-            case 'item_position_type':
-            case 'focus_type':
-            case 'light_source_type':
-            case 'background_removal_method':
-            case 'cluster_type':
-              csvValues[i] = $('select[name="capture_dataset_form[' + csvColumns[i] + ']"] option[value="' + csvValues[i] + '"]').text();
+
+        // Remove previous search results and search value, if present.
+        resultsContainer.empty();
+        // Add the loading gif.
+        resultsContainer.append(loadingGifContainer);
+
+        // Make an AJAX request to EDAN.
+        // Example: http://127.0.0.1:8000/admin/edan/calder/html/2
+        $.ajax({
+          type: 'GET'
+          ,dataType: 'html'
+          ,url: '/admin/edan/' + searchQuery + '/html/' + thisButton.data('page')
+          ,success: function(result) {
+
+            if(result) {
+              // Remove the loading gif.
+              loadingGifContainer.remove();
+              // Append the results to the DOM.
+              resultsContainer.append(result);            
+            }
+
+          }
+        });
+
+      });
+
+      /**
+       * Choose This EDAN Record button click handler
+       * Transfer the chosen record's desired information to hidden fields in the parent form.
+       */
+      resultsContainer.on('click', '.choosen-record', function(e) {
+
+        var  thisElement = $(this),
+             index = thisElement.attr('id').replace('loop-index-','');
+
+        // Validate that this is really the record.
+        swal('Proceed with this record? The appropriate fields will be auto filled, and this window will be dismissed.', {
+          buttons: {
+            cancel: 'No',
+            catch: {
+              text: 'Yes',
+              value: 'yes',
+            }
+          },
+        })
+        .then((value) => {
+          switch (value) {
+            case "yes":
+              // Set all of the variables.
+              var subject_guid = $('#subject_guid_chosen_' + index).val(),
+                  subject_name = $('#subject_name_chosen_' + index).val(),
+                  local_subject_id = $('#local_subject_id_chosen_' + index).val(),
+                  holding_entity_guid = 'ISN:' + $('#holding_entity_guid_chosen_' + index).val(),
+                  csvColumns = [
+                    'subject_guid',
+                    'subject_name',
+                    'local_subject_id',
+                    'holding_entity_guid'
+                  ],
+                  csvValues = [subject_guid, subject_name, local_subject_id, holding_entity_guid];
+
+              // Populate the subject container in the DOM.
+              populateContainer('subject', csvColumns, csvValues, false);
+              // Create the CSV and add it to the Uploads Stage.
+              createCsv('subjects.csv', csvColumns, csvValues, false);
+              // If the subject exists, add the subject_exists flag to data.
+              subjectExists(subject_guid);
+
+              $('#subject-form-modal').modal('hide');
               break;
             default:
-              // Do nothing
+          }
+        });        
+
+      });
+
+      /**
+       * EDAN Picker: Actions for when the EDAN Picker modal is shown.
+       */
+      $('#edanSearchModal').on('show.bs.modal', function (e){
+        // Remove previous search results and search value, if present.
+        resultsContainer.empty();
+        $('#search-query').val('');
+        // Set focus on the search input.
+        setTimeout(function(){
+          $('#edanSearchModal input#search-query').focus();
+        }, 500);
+        // Enable keyboard enter/return capability on search query submit.
+        $(document).keypress(function(e) {
+          if(e.which === 13) {
+            if($('#search-query:focus').length) {
+              $('#search-query-button').trigger('click');
+            }
+          }
+        });
+
+      });
+
+      /**
+       * EDAN Picker: Actions for when the modal is hidden
+       */
+      $('#edanSearchModal').on('hidden.bs.modal', function (e){
+        // Remove previous search results and search value, if present.
+        resultsContainer.empty();
+        $('#search-query').val('');
+      });
+      /******************************************************/
+      /** EDAN Picker Ends **********************************/
+      /******************************************************/
+
+
+      /**
+       * Create CSV
+       */
+      function createCsv(csvName, csvColumns, csvValues, fromCaptureDatasetForm) {
+
+        // Capture Datasets: Add the model_import_row_id column and value.
+        if (csvName === 'capture_datasets.csv') {
+          csvColumns.unshift('model_import_row_id');
+        }
+
+        // Add the import_row_id and import_parent_id columns.
+        csvColumns.unshift('import_row_id', 'import_parent_id');
+
+        if (csvName !== 'capture_datasets.csv') {
+          // Add values for the import_row_id and import_parent_id.
+          csvValues.unshift(1, 1);
+        }
+
+        // If this is a capture_datasets.csv created from the form, store the array in the body data attribute capture_datasets.
+        var captureDatasetsData = $('body').data('capture_datasets');
+
+        if ((csvName === 'capture_datasets.csv') && (fromCaptureDatasetForm)) {
+          if (typeof captureDatasetsData === 'undefined') {
+            $('body').data('capture_datasets', [csvValues]);
+          } else {
+            captureDatasetsData.push(csvValues);
+          }
+          csvValues = $('body').data('capture_datasets');
+        }
+
+        // Get all accepted files.
+        var acceptedFiles = uploadsDropzone.getAcceptedFiles();
+        // Loop through accepted files and remove an existing blob if already present.
+        for (var i = 0; i < acceptedFiles.length; i++) {
+          // if ((acceptedFiles[i].name === csvName) || (acceptedFiles[i].name === 'capture_datasets.csv')) {
+          if (acceptedFiles[i].name === csvName) {
+            // Remove the existing blob.
+            uploadsDropzone.removeFile(acceptedFiles[i]);
           }
         }
-        // // Add quotes around CSV values.
-        // for( var i = 0; i < csvValues.length; i++){
-        //   csvValues[i] = '"' + csvValues[i] + '"';
-        // }
-        // Add the CSV to the Uplaods Stage (Dropzone), in Step 3.
+
+        // Add the CSV to the Uploads Stage (Dropzone), in Step 3.
+        if (csvName === 'capture_datasets.csv') {
+
+          var vals = [];
+          for (var i = 0; i < csvValues.length; i++) {
+            vals[i] = [];
+            // Add the import_row_id, import_parent_id, and model_import_row_id values.
+            vals[i].push(i+1);
+            vals[i].push(1);
+            vals[i].push(1);
+            $.each(csvValues[i], function(key, value){
+              vals[i].push(value);
+            });
+          }
+
+          var lines = '';
+          $.each(vals, function(tkey, tvalue){
+            lines += tvalue.join(',') + '\r\n';
+          });
+
+          var values = lines;
+
+        } else {
+          var values = csvValues.join(',');
+        }
+
         // See: https://stackoverflow.com/questions/17103398/convert-javascript-variable-value-to-csv-file
-        var blob = new Blob([csvColumns.join(',') + '\r\n' + csvValues.join(',')], {type: 'text/csv'});
-        blob.name = 'capture_datasets.csv';
+        var blob = new Blob([csvColumns.join(',') + '\r\n' + values], {type: 'text/csv'});
+        blob.name = csvName.replace('_single', '');
         uploadsDropzone.addFile(blob);
-        // Disable all fields in the form
-        $('form[name="capture_dataset_form"]').find('input, select, textarea').attr('disabled', true);
-        $('form[name="capture_dataset_form"]').find('select').trigger("chosen:updated");
-        // Enable Step 3 tab.
-        rootwizard.bootstrapWizard('enable', '2');
+
+        // // Test to see if the CSV has been added to the Uploads Stage.
+        // acceptedFiles = uploadsDropzone.getAcceptedFiles();
+        // console.log('acceptedFiles');
+        // console.log(acceptedFiles);
+
       }
 
+      /**
+       * Populate Container
+       */
+      function populateContainer(dataType, csvColumns, csvValues, fromDatatable) {
+
+        if (dataType === 'project') {
+          var childType = 'subject';
+          var stepTab = '1';
+        }
+
+        if (dataType === 'subject') {
+          var childType = 'item';
+          var stepTab = '2';
+        }
+
+        // Since the parent record selection is changing, remove data and hide child well(s).
+        if ($('div.' + childType + '-well').html()) {
+          $('div.' + childType + '-well').empty().addClass('hidden');
+          // Disable Step tab.
+          rootwizard.bootstrapWizard('disable', stepTab);
+          // Remove any previously-stored piece(s) of data.
+          $('body').removeData(childType + '_id');
+        }
+
+        // Transfer record metadata to the parent window.
+        var html = '<dl class="dl-horizontal">';
+        // Loop through the metadata and choose fileds in the 'csvColumns' array.
+        $.each(csvValues, function(key, value){
+          // If data IS coming from a DataTable
+          if (fromDatatable) {
+            if (csvColumns.indexOf(key) !== -1) {
+              html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
+              html += '<dd class="' + key + '">' + value + '</dd>';
+            }
+          }
+          // If data IS NOT coming from a DataTable
+          if (!fromDatatable) {
+            // Add the <dt> and <dd> elements.
+            html += '<dt><strong>' + convertCase(csvColumns[key].replace(/_/g, ' ')) + '</strong></dt>';
+            html += '<dd class="' + key + '">' + value + '</dd>';
+          }
+        });
+        html += '</dl>';
+
+        if (dataType !== 'capture-dataset') {
+          $('div.' + dataType + '-well').html(html);
+          $('div.' + dataType + '-well').removeClass('hidden');
+          // Show the model header.
+          if (dataType === 'model') $('div.' + dataType + '-well').parent().find('.model-header').removeClass('hidden');
+        } else {
+          // Well
+          var well = $('<div />')
+              .addClass('well', dataType + '-well')
+              // .attr('id', identifier)
+              .attr('style', 'padding-bottom: 6rem;')
+              .html(html);
+              // .append(buttonDiv);
+          // Show the capture dataset header.
+          $('#capture-dataset-wells').parent().find('.capture-dataset-header').removeClass('hidden');
+          // Remove the record from the DOM if creating a new record using the form.
+          if (!fromDatatable) {
+            $('#capture-dataset-wells').empty();
+          }
+          $('#capture-dataset-wells').append(well);
+        }
+
+        var subjectExists = $('body').data('subject_exists');
+
+        // Enable the child buttons.
+        if ( !fromDatatable && (dataType === 'subject') && !subjectExists ) {
+          // Only enable the Item create button if chosen subject doesn't exist.
+          var enableButtons = '[data-create="' + childType + '"]';
+          // Hide the select Item button.
+          $('[data-select="' + childType + '"]').hide();
+        } else {
+          var enableButtons = '[data-select="' + childType + '"], [data-create="' + childType + '"]';
+          // Display the select Item button.
+          $('[data-select="' + childType + '"]').show();
+        }
+        $(enableButtons).removeAttr('disabled');
+      }
+
+      /**
+       * Populate Capture Dataset Container
+       */
+      function populateCaptureDatasetContainer(dataType, csvColumns, csvValues) {
+
+        var capture_dataset_ids = new Array;
+        
+        // Transfer record metadata to the parent window.
+        $.each(csvValues, function(cdKey, cdValue){
+
+          var identifier = false;
+          var html = '<dl class="dl-horizontal">';
+          // Loop through the metadata and choose fileds in the 'csvColumns' array.
+          $.each(cdValue, function(thisKey, thisValue){
+            html += '<dt><strong>' + convertCase(csvColumns[thisKey].replace(/_/g, ' ')) + '</strong></dt>';
+            html += '<dd class="' + thisKey + '">' + thisValue + '</dd>';
+            // Set the unique identifier to make it easier to key off of when updating/removing.
+            if (csvColumns[thisKey] === 'DT_RowId') {
+              identifier = thisValue;
+              capture_dataset_ids.push(thisValue);
+            }
+          });
+
+          html += '</dl>';
+
+          // Only add the record if it doesn't already exist.
+          if (!$('#capture-dataset-wells').find('#' + identifier).length) {
+            // Remove record button.
+            var buttonIcon = $('<i />').addClass('glyphicon glyphicon-trash');
+            var button = $('<button />')
+                .addClass('btn btn-default remove-record')
+                .attr('type', 'button')
+                .data('identifier', identifier)
+                .append(buttonIcon)
+                .append(' Remove');
+            var buttonDiv = $('<div />').addClass('pull-right').append(button);
+            // Well
+            var well = $('<div />')
+                .addClass('well', dataType + '-well')
+                .attr('id', identifier)
+                .attr('style', 'padding-bottom: 6rem;')
+                .html(html)
+                .append(buttonDiv);
+
+            // Show the capture dataset header.
+            $('#capture-dataset-wells').parent().find('.capture-dataset-header').removeClass('hidden');
+            // Add the well to the capture-dataset-wells container.
+            $('#capture-dataset-wells').append(well);
+
+            // Add the capture_dataset_ids to data.
+            $('body').data('capture_dataset_ids', capture_dataset_ids);
+          }
+
+          // Modify the add Capture Dataset button text.
+          $('[data-select="capture-dataset"]').find('span').text('Add Additional Capture Datasets');
+          // Hide the modal window.
+          $('#record-picker-modal').modal('hide');
+
+          // Enable Step 3 tab.
+          rootwizard.bootstrapWizard('enable', '2');
+        });
+
+      }
+
+      /**
+       * Convert Case
+       */
       function convertCase(str) {
         var lower = String(str).toLowerCase();
         return lower.replace(/(^| )(\w)/g, function(x) {
@@ -291,7 +783,9 @@
         });
       }
 
-      // Browse Projects Datatable
+      /**
+       * Browse Projects Datatable
+       */
       function browseProjects() {
 
         var projectDt = $('#project').dataTable({
@@ -324,56 +818,21 @@
           ],
           "fnRowCallback":function(nRow, aData, iDisplayIndex) {
             // This table row.
-            var thisTableRow = $(nRow);            
+            var thisTableRow = $(nRow);
+            // Table row click handler.           
             thisTableRow.find('td').click(function() {
 
               thisTableRow.parent().children().removeClass('warning');
               thisTableRow.addClass('warning');
 
-              // Since the parent record selection is changing, remove data and hide child well(s).
-              if ($('div.item-well').html()) {
-                $('div.subject-well, div.item-well').empty().addClass('hidden');
-                // Disable Step 2 tab.
-                rootwizard.bootstrapWizard('disable', '1');
-                // Remove any previously-stored piece(s) of data.
-                $('body').removeData('subject_id');
-                $('body').removeData('item_id');
-              }
-
-              // Transfer record metadata to the parent window.
-              var fields = ['project_id', 'project_name', 'last_modified', 'stakeholder_label', 'items_count'];
-              var html = '<dl>';
-              // Loop through the metadata and choose fileds in the 'fields' array.
-              // console.log(aData);
-              $.each(aData, function(key, value){
-                if (fields.indexOf(key) !== -1) {
-                  html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
-                  html += '<dd class="' + key + '">' + value + '</dd>'
-                }
-              });
-              html += '</dl>';
-
-              $('div.project-well').html(html);
-              $('div.project-well').removeClass('hidden');
-
-              // Enable the Subject buttons.
-              $('[data-select="subject"], [data-create="subject"]').removeAttr('disabled');
+              // Populate the project container in the DOM.
+              var csvColumns = ['project_id', 'project_name', 'last_modified', 'stakeholder_label', 'items_count'];
+              populateContainer('project', csvColumns, aData, true);
 
               // Add the project_id to data.
               $('body').data('project_id', aData.DT_RowId);
-              // Add the project_id to the hidden input.
-              $('input[name="dataset[project_id]"]').val($('body').data('project_id'));
-
               // Also, take this opportunity to set the ajax data value.
               $('body').data('ajax', true);
-
-              // // This table cell.
-              // var thisTableCell = $(this);
-              // // Don't do anything if the table cell has the 'manage_column' CSS class.
-              // if(thisTableCell.hasClass('manage_column')) return;
-              // // Send to the details page.
-              // var project_id = thisTableCell.closest("tr").attr('id');
-              // // window.location.href = "/admin/project/view/" + project_id;
             });
           }
         });
@@ -381,7 +840,9 @@
         return projectDt;
       }
 
-      // Browse Subjects
+      /**
+       * Browse Subjects
+       */
       function browseSubjects(projectId) {
 
         var data = $('body').data();
@@ -390,7 +851,7 @@
         var subjectDt = $('#subject').dataTable( {
           "columns": [
               { "data": "subject_name" },
-              { "data": "holding_entity_guid" },
+              { "data": "holding_entity_name" },
               { "data": "items_count" },
               { "data": "last_modified" }
             ],
@@ -417,51 +878,31 @@
           "fnRowCallback":function(nRow, aData, iDisplayIndex) {
             // This table row.
             var thisTableRow = $(nRow);
+            // Table row click handler.
             thisTableRow.find('td').click(function() {
 
               thisTableRow.parent().children().removeClass('warning');
               thisTableRow.addClass('warning');
 
-              // Since the parent record selection is changing, remove data and hide child well(s).
-              if ($('div.item-well').html()) {
-                $('div.item-well').empty().addClass('hidden');
-                // Disable Step 2 tab.
-                rootwizard.bootstrapWizard('disable', '1');
-                // Remove any previously-stored piece(s) of data.
-                $('body').removeData('item_id');
-              }
+              var csvColumns = ['subject_name', 'local_subject_id', 'subject_guid', 'holding_entity_name', 'holding_entity_guid'];
+              var csvValues = ['"' + aData.subject_name + '"', aData.local_subject_id, aData.subject_guid, aData.holding_entity_name, aData.holding_entity_guid];
 
-              // Transfer record metadata to the parent window.
-              var fields = ['last_modified', 'local_subject_id', 'subject_name', 'subject_id'];
-              var html = '<dl>';
-              // Loop through the metadata and choose fileds in the 'fields' array.
-              // console.log(aData);
-              $.each(aData, function(key, value){
-                if (fields.indexOf(key) !== -1) {
-                  html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
-                  html += '<dd class="' + key + '">' + value + '</dd>'
-                }
-              });
-              html += '</dl>';
-
-              $('div.subject-well').html(html);
-              $('div.subject-well').removeClass('hidden');
-
-              // Enable the Item buttons.
-              $('[data-select="item"], [data-create="item"]').removeAttr('disabled');
+              // Populate the subject container in the DOM.
+              populateContainer('subject', csvColumns, aData, true);
+              
+              // Add the existing_record flag.
+              csvColumns.push('existing_record');
+              csvValues.push('true');
+              // Add the subject_id.
+              csvColumns.push('subject_id');
+              csvValues.push(aData.DT_RowId);
+              // Create the CSV and add it to the Uploads Stage.
+              createCsv('subjects.csv', csvColumns, csvValues, false);
 
               // Add the subject_id to data.
               $('body').data('subject_id', aData.DT_RowId);
               // Add the subject_id to the hidden input.
               $('input[name="dataset[subject_id]"]').val($('body').data('subject_id'));
-
-              // // This table cell.
-              // var thisTableCell = $(this);
-              // // Don't do anything if the table cell has the 'manage_column' CSS class.
-              // if(thisTableCell.hasClass('manage_column')) return;
-              // // Send to the details page.
-              // var subject_id = thisTableCell.closest("tr").attr('id');
-              // // window.location.href = "/admin/subject/view/" + '/' + subject_id;
             });
           }
         });
@@ -469,7 +910,9 @@
         return subjectDt;
       }
 
-      // Browse Items
+      /**
+       * Browse Items
+       */
       function browseItems(subjectId) {
 
         var data = $('body').data();
@@ -507,29 +950,31 @@
           "fnRowCallback":function(nRow, aData, iDisplayIndex) {
             // This table row.
             var thisTableRow = $(nRow);
+            // Table row click handler.
             thisTableRow.find('td').click(function() {
 
               thisTableRow.parent().children().removeClass('warning');
               thisTableRow.addClass('warning');
 
-              // Transfer record metadata to the parent window.
-              var fields = ['datasets_count', 'item_description', 'last_modified', 'local_item_id', 'DT_RowId'];
-              var html = '<dl>';
-              // Loop through the metadata and choose fileds in the 'fields' array.
-              // console.log(aData);
-              $.each(aData, function(key, value){
-                if (fields.indexOf(key) !== -1) {
-                  html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
-                  html += '<dd class="' + key + '">' + value + '</dd>'
-                }
-              });
-              html += '</dl>';
+              var csvColumns = ['local_item_id', 'item_guid', 'item_display_name', 'item_description', 'item_type'];
+              var csvValues = [aData.local_item_id, aData.item_guid, aData.item_display_name, aData.item_description, aData.item_type];
 
-              $('div.item-well').html(html);
-              $('div.item-well').removeClass('hidden');
+              // Populate the item container in the DOM.
+              populateContainer('item', csvColumns, aData, true);
+              
+              // Add the existing_record flag.
+              csvColumns.push('existing_record');
+              csvValues.push('true');
+              // Add the item_id.
+              csvColumns.push('item_id');
+              csvValues.push(aData.DT_RowId);
+              // Create the CSV and add it to the Uploads Stage.
+              createCsv('items.csv', csvColumns, csvValues, false);
 
               // Enable Step 2 tab.
               rootwizard.bootstrapWizard('enable', '1');
+              // Switch to the next tab.
+              // rootwizard.find('li:eq(1) a').click();
               // Enable the "Next Step" button.
               rootwizard.find('.next').removeClass('disabled');
 
@@ -537,14 +982,6 @@
               $('body').data('item_id', aData.DT_RowId);
               // Add the item_id to the hidden input.
               $('input[name="dataset[item_id]"]').val($('body').data('item_id'));
-
-              // // This table cell.
-              // var thisTableCell = $(this);
-              // // Don't do anything if the table cell has the 'manage_column' CSS class.
-              // if(thisTableCell.hasClass('manage_column')) return;
-              // // Send to the details page.
-              // var item_id = thisTableCell.closest("tr").attr('id');
-              // // window.location.href = details_page + project_id + '/' + subject_id + '/' + item_id;
             });
           }
         });
@@ -552,118 +989,429 @@
         return itemDt;
       }
 
+      /**
+       * Browse Capture Datasets
+       */
+      function browseCaptureDatasets(subjectId) {
+
+        var dataObj = $('body').data();
+
+        var captureDatasetDt = $('#capture-dataset').dataTable( {
+          "columns": [
+            { "data": "manage", "title": "Select" },
+            { "data": "capture_method", "title": "Capture Method" },
+            { "data": "capture_dataset_name", "title": "Capture Dataset Name" },
+            { "data": "collected_by", "title": "Collected By" },
+            { "data": "date_of_capture", "title": "Date of Capture" },
+            { "data": "last_modified", "title": "Last Modified" },
+            { "data": "file_path", "title": "Preview",
+            "render": function ( data, type, row, meta ) {
+                //@todo use a class instead of hard-coded width
+                if(data) {
+                  return '<img src="/admin/get_file?path=' + data + '" width="120px" />';
+                }
+                else {
+                  return '';
+                }
+              }
+            }
+          ],
+          "dom": 'lfip<"datatables_bulk_actions">tip',
+          "pagingType": "simple_numbers",
+          "stateSave": true,
+          "order": [[4,"desc"]],
+          // Show processing throbber.
+          "processing": true,
+          "serverMethod": "POST",
+          // All data management will be done on the server side.
+          "serverSide": true,
+          // Path to the file that is going to handle the queries.
+          "ajax": "/admin/datatables_browse_datasets/" + dataObj.item_id,
+          // Method type.
+          "serverMethod": "POST",
+          // Values in the length dropdown.
+          "lengthMenu":[10,50,100,500],
+          // Set some widths.
+          "columnDefs":[
+            {"sWidth":"60px", "aTargets":[ 0 ]},
+            {"sWidth":"120px", "aTargets":[ 6 ]},
+            {"bSortable":false, "aTargets":[ 0, 6 ]},
+            {
+              "targets": [ ],
+              "visible": false,
+              "searchable": true
+            }
+          ],
+          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
+
+            // This table row.
+            var thisTableRow = $(nRow);
+
+            // Select record checkbox.
+            var recordCheckbox = $('<input />')
+                .attr('type', 'checkbox')
+                .attr('name', 'select_record')
+                .val(aData['manage'])
+                .on('click', function(e){
+                  e.stopPropagation();
+                });
+
+            // Create the select record checkboxes.
+            thisTableRow.find('td:eq(0)')
+              .html(recordCheckbox)
+              .addClass("manage_column");
+
+            // Table row click handler.
+            thisTableRow.find('td').click(function() {
+
+              var selectRecordCheckbox = thisTableRow.find('td:eq(0)').find('[name="select_record"]');
+              // On row click, toggle the checkbox state.
+              if (selectRecordCheckbox.is(':checked')) {
+                selectRecordCheckbox.prop('checked', false);
+              } else {
+                selectRecordCheckbox.prop('checked', true);
+              }
+
+              thisTableRow.parent().children().removeClass('warning');
+              thisTableRow.addClass('warning');
+            });
+
+          }
+        });
+
+        // Select record button.
+        var select_records_button = $('<button></button>')
+          .addClass('btn btn-primary')
+          .attr('id', 'select-record-button')
+          .html('<i class="glyphicon glyphicon-plus"></i> Add Selected Records')
+          .on('click', function(){
+
+            var record_ids = new Array;
+            $('#capture-dataset [name="select_record"]:checked').each(function(){
+              record_ids.push($(this).val());
+            });
+
+            if(!record_ids.length) {
+              swal({
+                title: 'No Records Selected',
+                text: 'Please choose at least one record.',
+                icon: 'error',
+              });
+              return;
+            }
+
+            if(record_ids.length > 0) {
+              // Confirm adding record(s)
+              swal('Add ' + record_ids.length + ' selected Capture Dataset(s)', {
+                icon: 'warning',
+                buttons: {
+                  cancel: 'No',
+                  catch: {
+                    text: 'Yes',
+                    value: 'yes',
+                  }
+                },
+              })
+              .then((value) => {
+                switch (value) {
+                  case "yes":
+
+                    // model_import_row_id
+
+                    var targetColumns = [
+                        'capture_dataset_guid',
+                        'capture_dataset_field_id',
+                        'capture_method',
+                        'capture_dataset_type',
+                        'capture_dataset_name',
+                        'collected_by',
+                        'date_of_capture',
+                        'item_position_type',
+                        'item_position_field_id',
+                        'item_arrangement_field_id',
+                        // 'positionally_matched_capture_datasets',
+                        'focus_type',
+                        'light_source_type',
+                        'background_removal_method',
+                        'cluster_type',
+                        'directory_path',
+                        'DT_RowId'
+                    ];
+
+                    // Sort the target columns.
+                    targetColumns = targetColumns.sort();
+
+                    // Get data from selected rows.
+                    var records = new Array;
+                    var columns = new Array;
+                    
+                    $('#capture-dataset [name="select_record"]:checked').each(function(k, v){
+
+                      var record = new Array;
+                      var thisRecord = captureDatasetDt.fnGetData( $(this).parent().parent() );
+
+                      $.each(thisRecord, function(key, value){
+
+                        if ((targetColumns.indexOf(key) !== -1) && (columns.indexOf(key) === -1)) {
+                          columns.push(key);
+                        }
+
+                        if (targetColumns.indexOf(key) !== -1) {
+                          // Remove the time from the date_of_capture.
+                          if (key === 'date_of_capture') value = value.replace(' 00:00:00', '');
+                          // Replace the cluster_type ID with the camera_cluster_type value.
+                          if (key === 'cluster_type') value = thisRecord['camera_cluster_type'];
+                          // Push the value to the record array.
+                          record.push(value);
+                        }
+
+                      });
+
+                      // Add the existing_record flag.
+                      columns.push('existing_record');
+                      record.push('true');
+                      // Add the capture_dataset_id.
+                      columns.push('capture_dataset_id');
+                      record.push(thisRecord['DT_RowId']);
+
+                      records.push(record);
+                    });
+
+                    // Populate the capture_dataset container in the DOM.
+                    populateCaptureDatasetContainer('capture-dataset', columns, records);
+                    // Create the CSV and add it to the Uploads Stage.
+                    createCsv('capture_datasets.csv', columns, records, false);
+                    // Disable the create button.
+                    $('body').find('[data-create="capture-dataset"]').attr('disabled', 'disabled');
+
+                    break;
+                  default:
+                }
+              });
+            }
+        });
+
+        $("#capture-dataset_wrapper").find(".datatables_bulk_actions").prepend(select_records_button);
+
+        return captureDatasetDt;
+      }
+
+      /**
+       * Submit Subject Record
+       */
       function submitSubjectRecord(formData) {
         // Avoid submitting the form multiple times.
         $('#subject_save').attr('disabled', true);
-
-        // AJAX: Create a new dataset record.
-        $.ajax({
-          'type': 'POST'
-          ,'dataType': 'json'
-          ,'url': '/admin/subject/add/ajax'
-          ,'data': formData
-          ,success: function(data) {
-
-            if(data) {
-              // Response data handler.
-              if(data.id) {
-
-                // Add the subject_id to data.
-                $('body').data('subject_id', data.id);
-
-                // Transfer record metadata to the parent window.
-                var fields = ['holding_entity_guid', 'local_subject_id', 'subject_display_name', 'subject_guid', 'subject_name'];
-                var html = '<dl>';
-                // Loop through the metadata and choose fileds in the 'fields' array.
-                $.each(formData, function(key, value){
-                  key = key.replace('subject_form[', '');
-                  key = key.replace(']', '');
-                  if (fields.indexOf(key) !== -1) {
-                    html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
-                    html += '<dd class="' + key + '">' + value + '</dd>'
-                  }
-                });
-                html += '</dl>';
-
-                $('div.subject-well').html(html);
-                $('div.subject-well').removeClass('hidden');
-
-                // Display a success message in the UI.
-                swal({
-                  title: 'Saved',
-                  text: 'The subject has been successfully saved.',
-                  icon: 'success',
-                });
-
-                // Disable all fields in the form
-                $('form[name="subject_form"]').find('input, select, textarea').attr('disabled', true);
-                $('form[name="subject_form"]').find('select').trigger("chosen:updated");
-
-                // Enable the Item buttons.
-                $('[data-select="item"], [data-create="item"]').removeAttr('disabled');
-
-              } else {
-                // Error handling???
-              }
-            }
-          }
+        // Set up the csvColumns and csvValues.
+        var csvColumns = ['holding_entity_guid', 'local_subject_id', 'subject_display_name', 'subject_guid', 'subject_name'];
+        var csvValues = [
+            formData['subject_form[holding_entity_guid]'],
+            formData['subject_form[local_subject_id]'],
+            formData['subject_form[subject_display_name]'],
+            formData['subject_form[subject_guid]'],
+            formData['subject_form[subject_name]']
+        ];
+        // Populate the subject container in the DOM.
+        populateContainer('subject', csvColumns, csvValues, false);
+        // Create the CSV and add it to the Uploads Stage.
+        createCsv('subjects.csv', csvColumns, csvValues, false);
+        // Display a success message in the UI.
+        swal({
+          title: 'Saved',
+          text: 'The subject has been successfully saved.',
+          icon: 'success',
         });
+        // Enable the Item buttons.
+        $('[data-create="item"]').removeAttr('disabled');
       }
 
-      function itemSubjectRecord(formData) {
-
+      /**
+       * Submit Item Record
+       */
+      function submitItemRecord(formData) {
         // Avoid submitting the form multiple times.
         $('#item_save').attr('disabled', true);
+        // Set up the csvColumns and csvValues.
+        var csvColumns = ['local_item_id', 'item_guid', 'item_description', 'item_type'];
+        var csvValues = [
+            formData['item_form[local_item_id]'],
+            formData['item_form[item_guid]'],
+            formData['item_form[item_description]'],
+            // Get the text value of the selected item_type since this is what is validated against.
+            $("#item_form_item_type option:selected").text()
+        ];
+        // Populate the item container in the DOM.
+        populateContainer('item', csvColumns, csvValues, false);
+        // Create the CSV and add it to the Uploads Stage.
+        createCsv('items.csv', csvColumns, csvValues, false);
+        // Display a success message in the UI.
+        swal('Saved', {
+          icon: 'success',
+          text: 'The item has been successfully saved.',
+          buttons: {
+            catch: {
+              text: 'Close',
+              value: 'close',
+            }
+          },
+        })
+        .then((value) => {
+          switch (value) {
+            case "close":
+              $('#item-form-modal').modal('hide');
+              break;
+            default:
+          }
+        });
+        // Enable Step 2 tab.
+        rootwizard.bootstrapWizard('enable', '1');
+        // Switch to the next tab.
+        // rootwizard.find('li:eq(1) a').click();
+        // Enable the "Next Step" button.
+        rootwizard.find('.next').removeClass('disabled');
+      }
 
-        // AJAX: Create a new item record.
+      /**
+       * Submit Capture Dataset Record
+       */
+      function submitCaptureDatasetRecord(formData) {
+        // Avoid submitting the form multiple times.
+        $('#dataset_save').attr('disabled', true);
+        // Set up the csvColumns and csvValues.
+        var csvColumns = [
+            'background_removal_method',
+            'capture_dataset_description',
+            'capture_dataset_field_id',
+            'capture_dataset_name',
+            'capture_dataset_type',
+            'capture_method',
+            'cluster_type',
+            'collected_by',
+            'date_of_capture',
+            'directory_path',
+            'focus_type',
+            'item_arrangement_field_id',
+            // 'item_id',
+            'item_position_field_id',
+            'item_position_type',
+            'light_source_type',
+            // 'positionally_matched_capture_datasets',
+            'DT_RowId'
+        ];
+        var csvValues = [
+            $("#capture_dataset_form_background_removal_method option:selected").text(),
+            formData['capture_dataset_form[capture_dataset_description]'],
+            formData['capture_dataset_form[capture_dataset_field_id]'],
+            formData['capture_dataset_form[capture_dataset_name]'],
+            $("#capture_dataset_form_capture_dataset_type option:selected").text(),
+            $("#capture_dataset_form_capture_method option:selected").text(),
+            $("#capture_dataset_form_cluster_type option:selected").text(),
+            formData['capture_dataset_form[collected_by]'],
+            formData['capture_dataset_form[date_of_capture]'].replace(' 00:00:00', ''),
+            formData['capture_dataset_form[directory_path]'],
+            $("#capture_dataset_form_focus_type option:selected").text(),
+            formData['capture_dataset_form[item_arrangement_field_id]'],
+            // formData['capture_dataset_form[item_id]'],
+            formData['capture_dataset_form[item_position_field_id]'],
+            $("#capture_dataset_form_item_position_type option:selected").text(),
+            $("#capture_dataset_form_light_source_type option:selected").text(),
+            // formData['capture_dataset_form[positionally_matched_capture_datasets]'],
+            formData['capture_dataset_form[capture_dataset_name]']
+        ];
+
+        // Populate the capture_dataset container in the DOM.
+        // populateContainer('capture-dataset', csvColumns, csvValues, false);
+        var populateValues = csvValues;
+        populateCaptureDatasetContainer('capture-dataset', csvColumns, [populateValues], false);
+
+        // Create the CSV and add it to the Uploads Stage.
+        createCsv('capture_datasets.csv', csvColumns, csvValues, true);
+        
+        // Display a success message in the UI.
+        swal('Saved', {
+          icon: 'success',
+          text: 'The capture dataset has been successfully saved.',
+          buttons: {
+            catch: {
+              text: 'Close',
+              value: 'close',
+            }
+          },
+        })
+        .then((value) => {
+          switch (value) {
+            case "close":
+              $('#capture-dataset-form-modal').modal('hide');
+              break;
+            default:
+          }
+        });
+        // Enable Step 3 tab.
+        rootwizard.bootstrapWizard('enable', '2');
+        // Enable the "Next Step" button.
+        rootwizard.find('.next').removeClass('disabled');
+      }
+
+      /**
+       * Submit Model Record
+       */
+      function submitModelRecord(formData) {
+        // Avoid submitting the form multiple times.
+        $('#model_save').attr('disabled', true);
+        // Set up the csvColumns and csvValues.
+        var csvColumns = ['date_of_creation', 'creation_method', 'units', 'model_purpose', 'file_path'];
+        var csvValues = [
+            formData['model_form[date_of_creation]'],
+            $("#model_form_creation_method option:selected").text(),
+            $("#model_form_units option:selected").text(),
+            $("#model_form_model_purpose option:selected").text(),
+            formData['model_form[file_path]']
+        ];
+        // Populate the model container in the DOM.
+        populateContainer('model', csvColumns, csvValues, false);
+        // Create the CSV and add it to the Uploads Stage.
+        createCsv('models.csv', csvColumns, csvValues, false);
+        // Display a success message in the UI.
+        swal('Saved', {
+          icon: 'success',
+          text: 'The model has been successfully saved.',
+          buttons: {
+            catch: {
+              text: 'Close',
+              value: 'close',
+            }
+          },
+        })
+        .then((value) => {
+          switch (value) {
+            case "close":
+              $('#model-form-modal').modal('hide');
+              break;
+            default:
+          }
+        });
+        // Enable Step 3 tab.
+        rootwizard.bootstrapWizard('enable', '2');
+        // Enable the "Next Step" button.
+        rootwizard.find('.next').removeClass('disabled');
+      }
+
+      /**
+       * Subject Exists
+       */
+      function subjectExists(subject_guid) {
         $.ajax({
-          'type': 'POST'
-          ,'dataType': 'json'
-          ,'url': '/admin/item/add/' + $('body').data('project_id') + '/' + $('body').data('subject_id') + '/ajax'
-          ,'data': formData
-          ,success: function(data) {
-            if(data) {
-              // Response data handler.
-              if(data.id) {
-
-                // Add the item_id to data.
-                $('body').data('item_id', data.id);
-
-                // Transfer record metadata to the parent window.
-                var fields = ['item_description', 'item_guid', 'item_type', 'local_item_id'];
-                var html = '<dl>';
-                // Loop through the metadata and choose fileds in the 'fields' array.
-                $.each(formData, function(key, value){
-                  key = key.replace('item_form[', '');
-                  key = key.replace(']', '');
-                  if (fields.indexOf(key) !== -1) {
-                    html += '<dt><strong>' + convertCase(key.replace(/_/g, ' ')) + '</strong></dt>';
-                    html += '<dd class="' + key + '">' + value + '</dd>'
-                  }
-                });
-                html += '</dl>';
-
-                $('div.item-well').html(html);
-                $('div.item-well').removeClass('hidden');
-
-                // Display a success message in the UI.
-                swal({
-                  title: 'Saved',
-                  text: 'The item has been successfully saved.',
-                  icon: 'success',
-                });
-
-                // Disable all fields in the form
-                $('form[name="item_form"]').find('input, select, textarea').attr('disabled', true);
-                $('form[name="item_form"]').find('select').trigger("chosen:updated");
-
-                // Enable Step 2 tab.
-                rootwizard.bootstrapWizard('enable', '1');
-                // Enable the "Next Step" button.
-                rootwizard.find('.next').removeClass('disabled');
-
+          type: 'GET'
+          ,dataType: 'html'
+          ,url: '/admin/subject_record_check/' + subject_guid
+          ,success: function(result) {
+            if(result) {
+              var res = JSON.parse(result);
+              // If the subject exists, add the subject_exists flag to data
+              if(res.length) {
+                $('body').data('subject_exists', true);
               } else {
-                // Error handling???
+                $('body').data('subject_exists', false);
               }
             }
           }

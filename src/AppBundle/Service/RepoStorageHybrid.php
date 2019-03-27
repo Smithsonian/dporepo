@@ -1716,6 +1716,7 @@ class RepoStorageHybrid implements RepoStorage {
             'capture_dataset_model',
             'model',
             'model_file',
+            'capture_dataset_model',
             'uv_map'
           ),
           'job_and_file_tables' => array(
@@ -2919,7 +2920,7 @@ class RepoStorageHybrid implements RepoStorage {
     $date_range_end = array_key_exists('date_range_end', $params) ? $params['date_range_end'] : NULL;
 
     $select_sql = " DISTINCT 
-          subject.subject_id as manage, subject.subject_id, subject.subject_name, 
+          subject.subject_id as manage, subject.subject_id, subject.subject_name, subject.holding_entity_name, 
           subject.holding_entity_guid, subject.local_subject_id, subject.subject_name, subject.subject_display_name,
           subject.subject_guid, subject.last_modified, subject.active, subject.subject_id as DT_RowId, 
           (SELECT COUNT(item.item_id) FROM item WHERE item.subject_id = subject.subject_id AND item.active = 1) as items_count
@@ -3760,10 +3761,11 @@ class RepoStorageHybrid implements RepoStorage {
 
     $select_sql = " DISTINCT 
           item.item_id as manage, item.item_id, item.project_id, item.subject_id, 
-          item.local_item_id, CONCAT(SUBSTRING(item.item_description,1, 50), '...') as item_description,          
+          item.local_item_id, item.item_guid, item.item_description, item_type.label as item_type, CONCAT(SUBSTRING(item.item_description,1, 50), '...') as item_description,
           item.date_created, item.last_modified, item.active, item.item_id as DT_RowId,
           (SELECT COUNT(capture_dataset_id) FROM capture_dataset WHERE capture_dataset.item_id = item.item_id AND capture_dataset.active = 1) as datasets_count
           FROM item 
+          LEFT JOIN item_type ON item_type.item_type_id = item.item_type 
           ";
 
     $where_sql = " WHERE (item.active = 1) ";
@@ -4562,6 +4564,12 @@ class RepoStorageHybrid implements RepoStorage {
 
     $query_params['search_params'][1] = array('field_names' => array('job_import_record.job_id'), 'search_values' => array((int)$job_id),'comparison' => '=');
     $query_params['search_type'] = 'AND';
+
+    if ($job_data['job_type'] === 'subjects metadata import') {
+      $query_params['search_params'][2] = array('field_names' => array('subject.active'), 'search_values' => array(1),'comparison' => '=');
+      $query_params['search_params'][3] = array('field_names' => array('item.active'), 'search_values' => array(1),'comparison' => '=');
+      $query_params['search_type'] = 'AND';
+    }
 
     // $query_params['search_params'][2] = array('field_names' => array('item.item_id'), 'search_values' => array(''), 'comparison' => 'IS NOT NULL');
     // $query_params['search_type'] = 'AND';

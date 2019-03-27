@@ -6,6 +6,8 @@
         <h2 class="modal-title" id="recordPickerLabel"><i class="glyphicon glyphicon-th-list"></i> <span id="record-picker-modal-title">Select</span></h2>
       </div>
       <div class="modal-body" style="min-height: 24rem;">
+        <p class="text-primary"><i class="glyphicon glyphicon-exclamation-sign"></i> Selecting a record automatically populates the main window.</p>
+        <hr>
         <table id="project" class="table table-hover table-bordered hidden" cellspacing="0" width="100%">
           <thead>
             <tr>
@@ -28,19 +30,30 @@
           </thead>
         </table>
         <table id="item" class="table table-hover table-bordered hidden" cellspacing="0" width="100%">
-            <thead>
-              <tr>
-                <th class="text-center">Item Description</th>
-                <th class="text-center">Local Item ID</th>
-                <th class="text-center">Datasets Count</th>
-                <th class="text-center">Modified</th>
-              </tr>
-            </thead>
-          </table>
+          <thead>
+            <tr>
+              <th class="text-center">Item Description</th>
+              <th class="text-center">Local Item ID</th>
+              <th class="text-center">Datasets Count</th>
+              <th class="text-center">Modified</th>
+            </tr>
+          </thead>
+        </table>
+        <table id="capture-dataset" class="table table-hover table-bordered hidden" cellspacing="0" width="100%">
+          <thead>
+            <tr>
+              <th class="text-center"></th>
+              <th class="text-center"></th>
+              <th class="text-center"></th>
+              <th class="text-center"></th>
+              <th class="text-center"></th>
+              <th class="text-center"></th>
+              <th class="text-center"></th>
+            </tr>
+          </thead>
+        </table>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
-      </div>
+
     </div>
   </div>
 </div>
