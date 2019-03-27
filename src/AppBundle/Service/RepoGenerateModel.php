@@ -242,7 +242,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
   {
 
     $data = $model_types = array();
-    $models_csv = null;
+    $models_csv = $uv_map = null;
 
     if (!empty($path) && !empty($job_data)) {
 
@@ -253,6 +253,15 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
       $i = 0;
       foreach ($finder as $file) {
         $models_csv = $file->getContents();
+      }
+
+      // Get the UV map.
+      $finder = new Finder();
+      $finder->path('data')->name('/-diffuse\.png|-diffuse\.jpg$/');
+      $finder->in($path);
+      $i = 0;
+      foreach ($finder as $file) {
+        $uv_map = $file;
       }
 
       if (!empty($models_csv)) {
@@ -282,10 +291,14 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
               // Create a timestamp for the procesing job name.
               $job_name = str_replace('+00:00', 'Z', gmdate('c', strtotime('now')));
-              // Post a new job.
+              // Parameters.
               $params = array(
                 'highPolyMeshFile' => $file->getFilename()
               );
+              // Add the UV map to the parameters.
+              if (!empty($uv_map) && is_file($uv_map->getPathname())) $params['highPolyDiffuseMapFile'] = $uv_map->getFilename();
+
+              // Post a new job.
               $result = $this->processing->postJob($recipe['id'], $job_name, $params);
 
               // Error handling
@@ -328,18 +341,28 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
                   $data[$i] = $this->repo_storage_controller->execute('createWorkflow', $query_params);
                 }
 
-                // The external path - on the processing service side.
-                $path_external = $processing_job['id'] . '/' . $file->getFilename();
-
-                // Transfer the file to the processing service via WebDAV.
+                // Transfer the file(s) to the processing service via WebDAV.
                 try {
 
+                  // Model file.
+                  // The external path - on the processing service side.
+                  $path_external_model = $processing_job['id'] . '/' . $file->getFilename();
                   $stream = fopen($file->getPathname(), 'r+');
-                  $filesystem->writeStream($path_external, $stream);
+                  $filesystem->writeStream($path_external_model, $stream);
                   // Before calling fclose on the resource, check if it’s still valid using is_resource.
                   if (is_resource($stream)) fclose($stream);
 
-                  // Now that the file has been transferred, go ahead and run the processing job.
+                  // UV map file.
+                  if (is_file($uv_map->getPathname())) {
+                    // The external path - on the processing service side.
+                    $path_external_map = $processing_job['id'] . '/' . $uv_map->getFilename();
+                    $stream_uv = fopen($uv_map->getPathname(), 'r+');
+                    $filesystem->writeStream($path_external_map, $stream_uv);
+                    // Before calling fclose on the resource, check if it’s still valid using is_resource.
+                    if (is_resource($stream_uv)) fclose($stream_uv);
+                  }
+
+                  // After transferring file(s), run the processing job.
                   $result = $this->processing->runJob($processing_job['id']);
 
                   // Error handling
@@ -361,7 +384,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
                 array(
                   'job_id' => $job_data['job_id'],
                   'user_id' => $job_data['created_by_user_account_id'],
-                  'job_log_label' => 'Validate Model',
+                  'job_log_label' => 'Generate Model',
                   'errors' => $data[$i]['errors'],
                 )
               );
@@ -391,6 +414,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
   {
 
     $data = array();
+    $uv_map = null;
 
     // $this->u->dumper($path,0);
     // $this->u->dumper($job_data,0);
@@ -447,19 +471,40 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
         // If the model file path is found, continue.
         if (!empty($processing_job)) {
 
-          // $directory = pathinfo($path[0]['asset_path'], PATHINFO_DIRNAME);
+          $directory = pathinfo($processing_job[0]['asset_path'], PATHINFO_DIRNAME);
           $full_file_name = pathinfo($processing_job[0]['asset_path'], PATHINFO_BASENAME);
 
-          // The external path - on the processing service side - on the processing service side.
-          $path_external = $processing_job[0]['processing_service_job_id'] . '/' . $full_file_name;
+          // Get the UV map from the text file which was written to the model's directory in
+          // src/AppBundle/Controller/WorkflowController.php
+          $finder = new Finder();
+          $finder->path('data')->name('/\.uv_map\.txt$/');
+          $finder->in($path);
+          $i = 0;
+          foreach ($finder as $file) {
+            $uv_map = $file;
+          }
+
+          if (!empty($uv_map)) $uv_map = str_replace('.uv_map.txt', '', $uv_map->getFilename());
 
           // Transfer the file to the processing service via WebDAV.
           try {
 
+            // The external path - on the processing service side.
+            $path_external_model = $processing_job[0]['processing_service_job_id'] . '/' . $full_file_name;
             $stream = fopen($processing_job[0]['asset_path'], 'r+');
-            $filesystem->writeStream($path_external, $stream);
+            $filesystem->writeStream($path_external_model, $stream);
             // Before calling fclose on the resource, check if it’s still valid using is_resource.
             if (is_resource($stream)) fclose($stream);
+
+            // UV map file.
+            if (!empty($uv_map) && is_file($directory . DIRECTORY_SEPARATOR . $uv_map)) {
+              // The external path - on the processing service side.
+              $path_external_map = $processing_job[0]['processing_service_job_id'] . '/' . $uv_map;
+              $stream_uv = fopen($directory . DIRECTORY_SEPARATOR . $uv_map, 'r+');
+              $filesystem->writeStream($path_external_map, $stream_uv);
+              // Before calling fclose on the resource, check if it’s still valid using is_resource.
+              if (is_resource($stream_uv)) fclose($stream_uv);
+            }
 
             // Now that the file has been transferred, go ahead and run the processing job.
             $result = $this->processing->runJob($processing_job[0]['processing_service_job_id']);
