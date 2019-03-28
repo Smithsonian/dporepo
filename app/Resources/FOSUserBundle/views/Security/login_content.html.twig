@@ -26,9 +26,9 @@
     </form>
 
     {% if app.request.server.get("REMOTE_ADDR") == '172.16.26.11' or '127.0.0.1' %}
-        <div style="margin-top: 2rem;">
+        {# <div style="margin-top: 2rem;">
             <p><a href="/register">Register for an Account</a></p>
-        </div>
+        </div> #}
     {% endif %}
 
 {% else %}
