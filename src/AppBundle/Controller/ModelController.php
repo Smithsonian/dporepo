@@ -319,6 +319,9 @@ class ModelController extends Controller
       // The repository's upload path.
       $data['uploads_path'] = $this->uploads_directory;
 
+      // Organize the viewable model info for use in the template.
+      $this->getPreviewableModels($data);
+
       return $this->render('datasets/model_detail.html.twig', array(
         'page_title' => 'Model Detail',
         'data' => $data,
@@ -347,6 +350,9 @@ class ModelController extends Controller
       // If there are no results, throw a createNotFoundException (404).
       //if (empty($data) || empty($data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');
       if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
+
+      // Organize the viewable model info for use in the template.
+      $this->getPreviewableModels($data);
 
       // If we don't have a viewable model, throw a createNotFoundException (404).
       if(!isset($data['has_viewable_model']) || false === $data['has_viewable_model']) {
@@ -427,10 +433,73 @@ class ModelController extends Controller
         $data = $this->repo_storage_controller->execute('getDatatableModels', $query_params);
 
         return $this->json($data);
-        /*
-      $parent_id = $request->request->get("parent_id");
-      $models = $conn->fetchAll("SELECT * FROM model WHERE parent_model_id=$parent_id");
-      return new JsonResponse($models);
-      */
+    }
+
+    private function getPreviewableModels(&$data) {
+      $item_json_url = $thumb_3d_url = $model_url = $uv_map_url = '';
+      $model_id_delivery_web = $model_id_thumb_3d = '';
+      /**
+        derivative_thumb_3d
+          0 =>
+            model_files =>
+        derivative_delivery_web
+          0 =>
+            model_files =>
+          uv_maps =>
+          1 =>
+            model_files => (item.json)
+       */
+
+      $data['has_viewable_model'] = false;
+
+      if(array_key_exists('derivative_thumb_3d', $data)) {
+        foreach($data['derivative_thumb_3d'] as $k => $model_v) {
+          if(array_key_exists('model_files', $model_v) && count($model_v['model_files']) > 0) {
+            $thumb_3d_url = $model_v['model_files'][0]['file_path'];
+            $model_id_thumb_3d = $model_v['model_id'];
+            $data['has_viewable_model'] = true;
+            break;
+          }
+        }
+      }
+
+      if(array_key_exists('delivery_web', $data)) {
+        foreach($data['delivery_web'] as $k => $model_v) {
+          if(array_key_exists('model_files', $model_v) && count($model_v['model_files']) > 0) {
+            $file_name = $model_v['model_files'][0]['file_name'];
+            if($file_name == 'item.json') {
+              $item_json_url = $model_v['model_files'][0]['file_path'];
+              $model_id_delivery_web = $model_v['model_id'];
+              $data['has_viewable_model'] = true;
+              break;
+            }
+            else {
+              // Not item.json - see if we have .obj + texture map
+              foreach($model_v['model_files'] as $mf_k => $mf_v) {
+                $file_name = $mf_v['file_name'];
+                $file_name_parts = explode('.', $file_name);
+                if(count($file_name_parts) == 2 && $file_name_parts[1] == 'obj') {
+                  $model_url = $mf_v['file_path'];
+                  $model_id_delivery_web = $model_v['model_id'];
+                  $data['has_viewable_model'] = true;
+                  break;
+                }
+              } // each model file
+
+              if(array_key_exists('uv_maps', $model_v) && count($model_v['uv_maps']) > 0) {
+                $uv_map_url = $model_v['uv_maps'][0]['file_path'];
+              }
+            } // obj and texture map
+          } // check model files
+        } // each web model
+      }
+
+      $data['item_json_url'] = $item_json_url;
+      $data['thumb_3d_url'] = $thumb_3d_url;
+      $data['model_url'] = $model_url;
+      $data['uv_map_url'] = $uv_map_url;
+
+      $data['model_id_delivery_web'] = $model_id_delivery_web;
+      $data['model_id_thumb_3d'] = $model_id_thumb_3d;
     }
 }
