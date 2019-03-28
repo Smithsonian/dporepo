@@ -7,6 +7,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 
 use AppBundle\Service\RepoEdan;
+use AppBundle\Service\RepoValidateData;
 
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
@@ -24,14 +25,20 @@ class EdanController extends Controller
     private $edan;
 
     /**
+     * @var object $repoValidate
+     */
+    private $repoValidate;
+
+    /**
     * Constructor
     * @param object  $u  Utility functions object
     */
-    public function __construct(AppUtilities $u, RepoEdan $edan)
+    public function __construct(AppUtilities $u, RepoEdan $edan, RepoValidateData $repoValidate)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
         $this->edan = $edan;
+        $this->repoValidate = $repoValidate;
     }
 
     /**
@@ -70,7 +77,7 @@ class EdanController extends Controller
                 // If we're at the end of the results, set the next page to an empty value.
                 $data['next_page'] = (($data['start'] + (int)$request->attributes->get('rows')) <= $data['numFound']) ? $data['next_page'] : '';
 
-                // Process EDAN's freetext and images.
+                // Process EDAN's freetext and images. Get the unit's ISNI ID.
                 foreach ($data['rows'] as $key => $value) {
                     // Process freetext
                     $data['rows'][$key]['processed_freetext'] = $this->edan->freetextProcessor($value, $this->edan->metadata_fields);
@@ -78,6 +85,13 @@ class EdanController extends Controller
                     $images = $this->edan->edanmdmImagesProcessor($value);
                     if(!empty($images) && !empty($images['record_images'])) {
                         $data['rows'][$key]['primary_image'] = $images['record_images'][0];
+                    }
+
+                    // Look up for the ISNI ID so we can populate the subject.holding_entity_guid.
+                    $holding_entity = $this->repoValidate->getHoldingEntity($data['rows'][$key]['unitCode']);
+
+                    if (!empty($holding_entity)) {
+                        $data['rows'][$key]['holding_entity_guid'] = $holding_entity['isni_id'];
                     }
                 }
             }
