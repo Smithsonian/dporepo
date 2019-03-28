@@ -337,8 +337,8 @@
           { "data": "model_id",
             "title": "Preview",
             "render": function(data, type, row, meta){
-              if(row.file_name){
-                data = '<a class="btn btn-primary" href="/admin/model/viewer/' + row.model_id + '" target="_blank">Preview</a>';
+              if(row.model_id_delivery_web){
+                data = '<a class="btn btn-primary" href="/admin/model/viewer/' + row.model_id_delivery_web + '" target="_blank">Preview</a>';
               }
               else {
                 data = '';
