@@ -87,6 +87,24 @@
                 <th class="text-center"></th>
                 <th class="text-center"></th>
                 <th class="text-center"></th>
+
+                  <th class="text-center"></th>
+                  <th class="text-center"></th>
+                  <th class="text-center"></th>
+                  <th class="text-center"></th>
+                  <th class="text-center"></th>
+                  <th class="text-center"></th>
+                  <th class="text-center"></th>
+                  <th class="text-center"></th>
+                  <th class="text-center"></th>
+                  <th class="text-center"></th>
+                  <th class="text-center"></th>
+                  <th class="text-center"></th>
+                  <th class="text-center"></th>
+                  <th class="text-center"></th>
+                  <th class="text-center"></th>
+                  <th class="text-center"></th>
+                <th class="text-center"></th>
               </tr>
             </thead>
           </table>
@@ -215,6 +233,23 @@
           { "data": "workflow_processing_step", "title": "Processing Step" },
           { "data": "workflow_status", "title": "Processing Status" },
           { "data": "workflow_status_detail", "title": "Processing Detail" },
+          { "data": "exif_filename", "title": "EXIF Filename" },
+          { "data": "exif_file_size", "title": "EXIF File Size" },
+          { "data": "exif_file_timestamp", "title": "EXIF FileTimestamp" },
+          { "data": "exif_height", "title": "EXIF Height" },
+          { "data": "exif_width", "title": "EXIF Width" },
+          { "data": "exif_aperture", "title": "EXIF Aperture" },
+          { "data": "exif_camera_make", "title": "EXIF Camera Make" },
+          { "data": "exif_camera_model", "title": "EXIF Camera Model" },
+          { "data": "exif_timestamp", "title": "EXIF Timestamp" },
+          { "data": "exif_original_timestamp", "title": "EXIF Original Timestamp" },
+          { "data": "exif_digitized_timestamp", "title": "EXIF Digitized Timestamp" },
+          { "data": "exif_exposure", "title": "EXIF Exposure" },
+          { "data": "exif_focal_length", "title": "EXIF Focal Length" },
+          { "data": "exif_iso_speed", "title": "EXIF ISO Speed" },
+          { "data": "exif_camera_serial", "title": "EXIF Camera Serial" },
+          { "data": "exif_lens_model", "title": "EXIF Lens Model" },
+          { "data": "exif_lens_serial", "title": "EXIF Lens Serial" },
           { "data": "last_modified", "title": "Last Modified" },
           { "data": "file_path", "title": "Preview",
           "render": function ( data, type, row, meta ) {
@@ -246,12 +281,17 @@
         "lengthMenu":[10,50,100,500],
         // Set some widths.
         "columnDefs":[
-          {"sWidth":"106px","aTargets":[0,1]},
-          {"bSortable":false,"aTargets":[0,1,28]},
+          {"sWidth":"106px","aTargets":[0, 1]},
+          {"bSortable":false,"aTargets":[0, 1, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44]},
           {
             "targets": [ 2, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 ],
             "visible": false,
             "searchable": true
+          },
+          {
+            "targets": [ 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43 ],
+            "visible": false,
+            "searchable": false
           }
         ],
         buttons: [
