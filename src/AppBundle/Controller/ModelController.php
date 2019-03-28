@@ -305,20 +305,19 @@ class ModelController extends Controller
       {
       $data = array();
 
-      if (!empty($id)) {
-
-        // Get the model record.
-        $data = $this->repo_storage_controller->execute('getModel', array(
-          'model_id' => $id));
-
-        // If there are no results, throw a createNotFoundException (404).
-        if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
-
-        // The repository's upload path.
-        $data['uploads_path'] = $this->uploads_directory;
-
+      if (empty($id)) {
+        throw $this->createNotFoundException('Model not found (404)');
       }
-      // $this->u->dumper($data);
+
+      // Get the model record.
+      $data = $this->repo_storage_controller->execute('getModel', array(
+        'model_id' => $id));
+
+      // If there are no results, throw a createNotFoundException (404).
+      if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
+
+      // The repository's upload path.
+      $data['uploads_path'] = $this->uploads_directory;
 
       return $this->render('datasets/model_detail.html.twig', array(
         'page_title' => 'Model Detail',
@@ -336,40 +335,26 @@ class ModelController extends Controller
      */
     public function modelViewer($id = null, Connection $conn, Request $request)
     {
-      //@TODO use incoming model $id to retrieve model assets.
+      // use incoming model $id to retrieve model assets.
       // $model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
 
-      $data = array();
-      $model_url = NULL;
+      if (empty($id)) throw $this->createNotFoundException('Model not found (404)');
 
-      if (!empty($id)) {
+      // Get the model record.
+      $data = $this->repo_storage_controller->execute('getModel', array(
+        'model_id' => $id));
 
-        // Get the model record.
-        $data = $this->repo_storage_controller->execute('getModel', array(
-          'model_id' => $id));
+      // If there are no results, throw a createNotFoundException (404).
+      //if (empty($data) || empty($data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');
+      if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
 
-        // If there are no results, throw a createNotFoundException (404).
-        //if (empty($data) || empty($data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');
-        if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
-
-        // $this->u->dumper($data);
-
-        // If the file_path key doesn't exist, throw a createNotFoundException (404).
-        if (!array_key_exists('file_path', $data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');
-
-        //@todo in the future perhaps this should be an array of all files
-        // Replace local path with Drastic path. Twig template will serve the file using admin/get_file?path=blah
-        $uploads_path = str_replace('web', '', $this->uploads_directory);
-        // Windows fix for the file path.
-        $uploads_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_path) : $uploads_path;
-        // Model URL.
-        $model_url = str_replace($uploads_path, $this->external_file_storage_path, $data['viewable_model']['file_path']);
-        // Windows fix for the file path.
-        $model_url = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $model_url) : $model_url;
+      // If we don't have a viewable model, throw a createNotFoundException (404).
+      if(!isset($data['has_viewable_model']) || false === $data['has_viewable_model']) {
+        throw $this->createNotFoundException('Model not found (404)');
       }
 
-      $data['model_url'] = $model_url;
-
+      // Twig template will serve the file using admin/get_file?path=blah
+      // The get_file function will figure out pathing, we can pass it all kinds of nonsense.
       return $this->render('datasets/model_viewer.html.twig', array(
         'page_title' => 'Model Viewer',
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
