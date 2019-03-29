@@ -474,17 +474,8 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           $directory = pathinfo($processing_job[0]['asset_path'], PATHINFO_DIRNAME);
           $full_file_name = pathinfo($processing_job[0]['asset_path'], PATHINFO_BASENAME);
 
-          // Get the UV map from the text file which was written to the model's directory in
-          // src/AppBundle/Controller/WorkflowController.php
-          $finder = new Finder();
-          $finder->path('data')->name('/\.uv_map\.txt$/');
-          $finder->in($path);
-          $i = 0;
-          foreach ($finder as $file) {
-            $uv_map = $file;
-          }
-
-          if (!empty($uv_map)) $uv_map = str_replace('.uv_map.txt', '', $uv_map->getFilename());
+          // Get the UV map.
+          $uv_map = $this->processing->getUvMap($processing_job[0]['asset_path']);
 
           // Transfer the file to the processing service via WebDAV.
           try {
