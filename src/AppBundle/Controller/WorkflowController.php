@@ -1228,6 +1228,7 @@ class WorkflowController extends Controller
         $base_file_name = pathinfo($uv_map, PATHINFO_BASENAME);
       }
 
+
       // Initialize the processing job.
       // Create a timestamp for the procesing job name.
       $job_name = str_replace('+00:00', 'Z', gmdate('c', strtotime('now')));
@@ -1235,14 +1236,21 @@ class WorkflowController extends Controller
       $params = array(
         'highPolyMeshFile' => pathinfo($path[0]['asset_path'], PATHINFO_BASENAME)
       );
+
       // Add the UV map to the parameters.
       if (!empty($directory) && is_file($directory . DIRECTORY_SEPARATOR . $base_file_name)) $params['highPolyDiffuseMapFile'] = $base_file_name;
+
+      // Add the item.json file to the parameters.
+      $model_file_name = pathinfo($path[0]['asset_path'], PATHINFO_FILENAME);
+      $item_file_name = $model_file_name . '-item.json';
+      if (!empty($directory) && is_file($directory . DIRECTORY_SEPARATOR . $item_file_name)) $params['itemFile'] = $item_file_name;
 
       // Post the job to the processing service.
       $result = $this->processing->postJob($recipe['id'], $job_name, $params);
 
       // If the response http code isn't a 201, throw a createNotFoundException (404).
       if ($result['httpcode'] !== 201) throw $this->createNotFoundException('Error: The processing service returned HTTP code ' . $result['httpcode']);
+
 
       // Get the job data.
       $job = $this->processing->getJobByName($job_name);
