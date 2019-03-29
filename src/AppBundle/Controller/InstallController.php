@@ -4,6 +4,7 @@ namespace AppBundle\Controller;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
@@ -14,57 +15,83 @@ use PDO;
 
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
-
-// Subject methods
-use AppBundle\Controller\SubjectController;
-// Item methods
-use AppBundle\Controller\ItemController;
+use AppBundle\Service\RepoStorageStructureHybrid;
 
 class InstallController extends Controller
 {
-    /**
-     * @var object $u
-     */
-    public $u;
-    //private $repo_storage_controller;
+  public $fs;
+  public $project_directory;
+  public $uploads_directory;
+  private $kernel;
 
-    /**
-    * Constructor
-    * @param object  $u  Utility functions object
-    */
-    public function __construct(AppUtilities $u, Connection $conn)
-    {
-        // Usage: $this->u->dumper($variable);
-        $this->u = $u;
-        $this->repo_storage_controller = new RepoStorageHybridController($conn);
-    }
+  private $repo_storage_controller;
+  private $connection;
 
-    /**
-     * @Route("/install/", name="install")
-     */
-    public function install(Connection $conn, Request $request,$flag = null)
-    {
+  /**
+  * Constructor
+  * @param object  $u  Utility functions object
+  */
+  public function __construct(object $conn, FilesystemHelperController $fs, string $uploads_directory, KernelInterface $kernel)
+  {
+    $this->fs = $fs;
+    $this->project_directory = $kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+    $this->uploads_directory = $uploads_directory;
+    $this->repo_storage_controller = new RepoStorageHybridController($conn);
+    $this->connection = $conn;
+    $this->kernel = $kernel;
+  }
 
-      $ret = $this->repo_storage_controller->build('installDatabase', null);
+  /**
+   * @Route("/install/", name="install")
+   */
+  public function install(Connection $conn, Request $request,$flag = null)
+  {
 
-      $database_installed = false;
-      $database_error = '';
+    $ret = $this->build('installDatabase', null);
 
-      if(is_array($ret)) {
-        if(isset($ret['installed'])) {
-          $database_installed = $ret['installed'];
-        }
-        if(isset($ret['error'])) {
-          $database_error = $ret['error'];
-    	}
+    $database_installed = false;
+    $database_error = '';
+
+    if(is_array($ret)) {
+      if(isset($ret['installed'])) {
+        $database_installed = $ret['installed'];
       }
-        
-        return $this->render('install/install.html.twig', array(
-        'page_title' => 'Install Database',
-        'database_installed' => $database_installed,
-        'database_error' => $database_error
-        ));
+      if(isset($ret['error'])) {
+        $database_error = $ret['error'];
+      }
     }
 
+    return $this->render('install/install.html.twig', array(
+    'page_title' => 'Install Database',
+    'database_installed' => $database_installed,
+    'database_error' => $database_error
+    ));
+  }
+
+  public function build($function, $parameters) {
+
+    $this->repo_storage_structure = new RepoStorageStructureHybrid(
+      $this->connection,
+      $this->uploads_directory,
+      $this->project_directory,
+      $this->fs,
+      $this->container->getParameter('uploads_directory')
+  );
+
+    if(!method_exists($this->repo_storage_structure, $function)) {
+      //@todo
+      return NULL;
+    }
+    else {
+      if ($parameters) {
+        return $this->repo_storage_structure->$function($parameters);
+      }else{
+        return $this->repo_storage_structure->$function();
+      }
+
+    }
+    return array('installed' => true);
+
+  }
 
 }
