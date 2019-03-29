@@ -1089,7 +1089,7 @@ class WorkflowController extends Controller
         if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . '-item.json')) {
           $url_params = array(
             'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . '-item.json',
-            'referrer' => '/admin/workflow/' . $w['workflow_id'] . '?qc_hd_done'
+            'referrer' => '/admin/workflow/' . $w['workflow_id']
           );
           // If QC is done, add a check icon.
           $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done.txt') ? $this->check_icon_markup : '';
@@ -1102,7 +1102,8 @@ class WorkflowController extends Controller
         // Load item.json if present.
         if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . $item_json_file_name)) {
           $url_params = array(
-            'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . $item_json_file_name
+            'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . $item_json_file_name,
+            'referrer' => '/admin/workflow/' . $w['workflow_id']
           );
           // If QC is done, add a check icon.
           $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_thumb_done.txt') ? $this->check_icon_markup : '';
