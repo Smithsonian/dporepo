@@ -552,6 +552,26 @@ class WorkflowController extends Controller
             $data = $this->qcHd($w);
           }
           break;
+        case 'qc-web-thumb':
+          // Error: Manually upload replacement
+          if ($w['step_state'] === 'error') {
+
+
+            $this->u->dumper('error');
+
+
+            // $data = $this->qcHdError($w);
+          }
+          // Success: Manual QC
+          if (empty($w['step_state'])) {
+
+
+            $this->u->dumper('Manual QC');
+
+
+            $data = $this->qcWebThumb($w);
+          }
+          break;
         case 'qc-web':
           // Error: Manually upload replacement
           if ($w['step_state'] === 'error') {
@@ -585,8 +605,9 @@ class WorkflowController extends Controller
             'processing_job_id' => $w['processing_job_id'],
           );
           break;
+        case 'web-thumb':
         case 'web-multi':
-          // Initialize the 'web-multi' procesing job.
+          // Initialize the 'web-thumb' or 'web-multi' procesing job.
           if (empty($w['step_state'])) {
             $data = $this->initializeProcessingJob($w);
           }
@@ -898,9 +919,9 @@ class WorkflowController extends Controller
         'message' => '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?' . http_build_query($url_params) . '"><strong>QC/Position HD model</strong></a>' . $check_icon . '</p>',
       );
 
-      // If QC is done, add a link to generate web derivatives.
+      // If QC is done, add a link to generate web thumb.
       if (is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done.txt')) {
-        $data['message'] .= '<p><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> <a href="/admin/workflow/' . $w['workflow_id'] . '/go/success"><strong>Generate web derivatives</strong></a></p>';
+        $data['message'] .= '<p><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> <a href="/admin/workflow/' . $w['workflow_id'] . '/go/success"><strong>Generate web thumb</strong></a></p>';
       }
 
     }
@@ -1058,11 +1079,20 @@ class WorkflowController extends Controller
   public function initializeProcessingJob($w = array())
   {
     $data = array();
-    $uv_map = null;
+    $step_name = $uv_map = null;
+    $workflow_definition_json_array = json_decode($w['workflow_definition'], true);
 
-    // $this->u->dumper($w);
+    // Get the workflow step info.
+    foreach($workflow_definition_json_array['steps'] as $step) {
+      if($step['stepId'] === $w['step_id']) {
+        $step_name = $step['name'];
+        break;
+      }
+    }
 
-    if (!empty($w)) {
+    if (!empty($w) && !empty($step_name)) {
+
+      // $this->u->dumper($step_info['name']);
 
       // Check to see if the processing job already exists.
       if (isset($w['processing_job_id']) && !empty($w['processing_job_id'])) {
@@ -1070,7 +1100,7 @@ class WorkflowController extends Controller
         // Interface data.
         $data = array(
           'action' => 'process',
-          'header' => 'Generating Multi-level Web Assets',
+          'header' => $step_name,
           'message' => 'The processing job has been initialized and launched.',
           'processing_job_id' => $w['processing_job_id'],
         );
@@ -1090,9 +1120,7 @@ class WorkflowController extends Controller
       if (!is_file($path[0]['asset_path'])) throw $this->createNotFoundException('Model file not found');
 
       // Get the ID of the recipe, so it can be passed to processing service's job creation endpoint (post_job).
-      $recipe = $this->processing->getRecipeByName('web-multi');
-      // If the web-multi recipe can't be found, throw a createNotFoundException (404).
-      if (isset($recipe['error']) && !empty($recipe['error'])) throw $this->createNotFoundException($recipe['error']);
+      $recipe = $this->processing->getRecipeByName($w['step_id']);
 
 
       // $this->u->dumper($recipe);
@@ -1105,17 +1133,14 @@ class WorkflowController extends Controller
       $uv_map = $this->processing->getUvMap($path[0]['asset_path']);
 
       if (!empty($uv_map)) {
-      $directory = $this->project_directory . 'web' . pathinfo($uv_map, PATHINFO_DIRNAME);
-      $base_file_name = pathinfo($uv_map, PATHINFO_BASENAME);
+        $directory = $this->project_directory . 'web' . pathinfo($uv_map, PATHINFO_DIRNAME);
+        $base_file_name = pathinfo($uv_map, PATHINFO_BASENAME);
       }
 
-      // Write the UV's file name to a text file so it can be picked up when transferring the file.
-      // Move into the target directory.
-      chdir($directory);
-      $handle = fopen($directory . DIRECTORY_SEPARATOR . $base_file_name . '.uv_map.txt', 'w');
-      // Write the text file.
-      fwrite($handle, '');
-      if (is_resource($handle)) fclose($handle);
+
+      // $this->u->dumper($uv_map,0);
+      // $this->u->dumper($directory,0);
+      // $this->u->dumper($base_file_name);
 
       // Initialize the processing job.
       // Create a timestamp for the procesing job name.
@@ -1125,7 +1150,9 @@ class WorkflowController extends Controller
         'highPolyMeshFile' => pathinfo($path[0]['asset_path'], PATHINFO_BASENAME)
       );
       // Add the UV map to the parameters.
-      if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name)) $params['highPolyDiffuseMapFile'] = $base_file_name;
+      if (!empty($directory) && is_file($directory . DIRECTORY_SEPARATOR . $base_file_name)) $params['highPolyDiffuseMapFile'] = $base_file_name;
+
+      // $this->u->dumper($params);
       // Post the job to the processing service.
       $result = $this->processing->postJob($recipe['id'], $job_name, $params);
 
@@ -1166,7 +1193,7 @@ class WorkflowController extends Controller
       // Interface data.
       $data = array(
         'action' => 'process',
-        'header' => 'Generating Multi-level Web Assets',
+        'header' => $step_name,
         'message' => 'The processing job has been initialized.',
         'processing_job_id' => $job['id'],
       );

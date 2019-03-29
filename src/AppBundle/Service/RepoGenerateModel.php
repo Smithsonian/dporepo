@@ -101,11 +101,14 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
   public function generateModelAssets($uuid = null, $recipe_name = null, $filesystem)
   {
 
+    // $this->u->dumper($uuid,0);
+    // $this->u->dumper($recipe_name);
+
     $data = array();
     $job_status = 'metadata ingest in progress';
     $job_failed_message = 'The job has failed. Exiting model assets generation process.';
 
-    // If uuid doesn't exist, then this is being called by a scheduled task / cron job to run a 'web-multi' recipe (multi-level web assets).
+    // If uuid doesn't exist, then this is being called by a scheduled task / cron job to run a 'web-thumb' or 'web-multi' recipe.
     if (empty($uuid)) {
       // Look for:
       // 1) a 'workflow' which has a 'step_type' of 'auto'
@@ -132,7 +135,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           ),
           'search_params' => array(
             0 => array('field_names' => array('workflow.step_type'), 'search_values' => array('auto'), 'comparison' => '='),
-            1 => array('field_names' => array('workflow.step_id'), 'search_values' => array('web-multi'), 'comparison' => '='),
+            1 => array('field_names' => array('workflow.step_id'), 'search_values' => array($recipe_name), 'comparison' => '='),
             2 => array('field_names' => array('processing_job.state'), 'search_values' => array('created'), 'comparison' => '='),
           ),
           'search_type' => 'AND',
@@ -147,7 +150,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
       if (!empty($workflow)) {
         $uuid = $workflow[0]['ingest_job_uuid'];
-        $recipe_name = 'web-multi';
+        // $recipe_name = 'web-multi';
       }
     }
 
@@ -155,8 +158,19 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
     $path = $this->project_directory . $this->uploads_directory . $uuid;
     // Job data.
     $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid, 'generateModelAssets'));
-    // Set the workflow step, qc-hd or qc-web.
-    $workflow_step = ($recipe_name === 'web-hd') ? 'qc-hd' : 'qc-web';
+
+    // Set the workflow step.
+    switch ($recipe_name) {
+      case 'web-hd':
+        $workflow_step = 'qc-hd';
+        break;
+      case 'web-thumb':
+        $workflow_step = 'qc-web-thumb';
+        break;
+      case 'web-multi':
+        $workflow_step = 'qc-web';
+        break;
+    }
 
     // Throw an error if the job record doesn't exist.
     if (empty($job_data)) {
@@ -178,10 +192,15 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
     if (is_dir($path)) {
 
       // Run the processing job.
-      if ($recipe_name === 'web-hd') {
-        $processing_job = $this->runWebHd($path, $job_data, $recipe_name, $filesystem);
-      } else {
-        $processing_job = $this->runWebMulti($path, $job_data, $recipe_name, $filesystem);
+      switch($recipe_name) {
+        // web-thumb, web-multi
+        case 'web-thumb':
+        case 'web-multi':
+          $processing_job = $this->runWebDerivative($path, $job_data, $recipe_name, $filesystem);
+          break;
+        // web-hd
+        default:
+          $processing_job = $this->runWebHd($path, $job_data, $recipe_name, $filesystem);
       }
 
       // Check the job's status to insure that the job_status hasn't been set to 'failed'.
@@ -191,6 +210,9 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
         $return['errors'][] = $job_failed_message;
         return $return;
       }
+
+      // $this->u->dumper('processing_job',0);
+      // $this->u->dumper($processing_job);
 
       // Continue only if job_ids are returned.
       if (!empty($processing_job) && ($processing_job[0]['return'] === 'success')) {
@@ -279,7 +301,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           // Make sure that the model_purpose is master.
           if ($file->isFile() && array_key_exists($file->getFilename(), $model_types) && ($model_types[$file->getFilename()] === 'master')) {
 
-            $file_path = str_replace($this->project_directory . $this->uploads_directory, DIRECTORY_SEPARATOR, $file->getPathname());
+            // $file_path = str_replace($this->project_directory . $this->uploads_directory, DIRECTORY_SEPARATOR, $file->getPathname());
 
             // Get the ID of the recipe, so it can be passed to processing service's job creation endpoint (post_job).
             $recipe = $this->processing->getRecipeByName( $recipe_name );
@@ -410,7 +432,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function runWebMulti($path = null, $job_data = array(), $recipe_name = null, $filesystem)
+  public function runWebDerivative($path = null, $job_data = array(), $recipe_name = null, $filesystem)
   {
 
     $data = array();
@@ -456,7 +478,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
             'limit' => 1,
             'search_params' => array(
               0 => array('field_names' => array('processing_job.ingest_job_uuid'), 'search_values' => array($workflow[0]['ingest_job_uuid']), 'comparison' => '='),
-              1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('web-multi'), 'comparison' => '='),
+              1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array($recipe_name), 'comparison' => '='),
               2 => array('field_names' => array('processing_job.state'), 'search_values' => array('created'), 'comparison' => '='),
             ),
             'search_type' => 'AND',

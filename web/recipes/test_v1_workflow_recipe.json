@@ -25,7 +25,7 @@
       "stepProvider": "user",
       "success": "done",
       "failure": "failure",
-      "onSuccessStepId": "web-multi",
+      "onSuccessStepId": "web-thumb",
       "onFailureStepId": "upload-hd"
     },
     {
@@ -39,6 +39,42 @@
       "failure": "failure",
       "onSuccessStepId": "qc-hd",
       "onFailureStepId": "upload-hd"
+    },
+    {
+      "name": "Generate 3D web thumb from HD model",
+      "stepId": "web-thumb",
+      "recipeId": "web-thumb",
+      "stepVersion": 1,
+      "stepType": "auto",
+      "stepProvider": "cook",
+      "success": "done",
+      "failure": "failure",
+      "onSuccessStepId": "qc-web-thumb",
+      "onFailureStepId": "upload-web-thumb"
+    },
+    {
+      "name": "Quality Control for generated 3D web thumb",
+      "stepId": "qc-web-thumb",
+      "recipeId": "qc",
+      "stepVersion": 1,
+      "stepType": "manual",
+      "stepProvider": "user",
+      "success": "done",
+      "failure": "failure",
+      "onSuccessStepId": "web-multi",
+      "onFailureStepId": "upload-web-thumb"
+    },
+    {
+      "name": "Upload 3D web thumb",
+      "stepId": "upload-web-thumb",
+      "recipeId": "upload-web-thumb",
+      "stepVersion": 1,
+      "stepType": "manual",
+      "stepProvider": "user",
+      "success": "done",
+      "failure": "failure",
+      "onSuccessStepId": "qc-web-thumb",
+      "onFailureStepId": "upload-web-thumb"
     },
     {
       "name": "Generate web assets from HD model",

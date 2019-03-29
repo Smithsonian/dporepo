@@ -35,7 +35,7 @@ interface RepoGenerateModelInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function runWebMulti(string $path, array $job_data, string $recipe_name, obj $filesystem);
+  public function runWebDerivative(string $path, array $job_data, string $recipe_name, obj $filesystem);
 
   /**
    * @param string $models_csv The models.csv file.
