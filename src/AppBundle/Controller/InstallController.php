@@ -21,6 +21,7 @@ class InstallController extends Controller
 {
   public $fs;
   public $project_directory;
+  public $remote_uploads_directory;
   public $uploads_directory;
   private $kernel;
 
@@ -31,10 +32,12 @@ class InstallController extends Controller
   * Constructor
   * @param object  $u  Utility functions object
   */
-  public function __construct(object $conn, FilesystemHelperController $fs, string $uploads_directory, KernelInterface $kernel)
+  public function __construct(object $conn, FilesystemHelperController $fs, string $remote_uploads_directory, KernelInterface $kernel, string $uploads_directory)
   {
+
     $this->fs = $fs;
     $this->project_directory = $kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+    $this->remote_uploads_directory = $remote_uploads_directory;
     $this->uploads_directory = $uploads_directory;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->connection = $conn;
@@ -44,7 +47,7 @@ class InstallController extends Controller
   /**
    * @Route("/install/", name="install")
    */
-  public function install(Connection $conn, Request $request,$flag = null)
+  public function install(Connection $conn, Request $request, $flag = null)
   {
 
     $ret = $this->build('installDatabase', null);
@@ -75,7 +78,7 @@ class InstallController extends Controller
       $this->uploads_directory,
       $this->project_directory,
       $this->fs,
-      $this->container->getParameter('uploads_directory')
+      $this->uploads_directory //container->getParameter('uploads_directory')
   );
 
     if(!method_exists($this->repo_storage_structure, $function)) {

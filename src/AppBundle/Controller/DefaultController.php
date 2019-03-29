@@ -13,6 +13,7 @@ class DefaultController extends Controller
   private $fs;
   private $project_directory;
   private $uploads_directory;
+  private $remote_dir;
 
   /**
      * @Route("/", name="homepage")
@@ -24,13 +25,14 @@ class DefaultController extends Controller
 
       $this->fs = $fs;
       $this->project_directory = $this->uploads_directory = '';
+
+      $remote_dir = '';
       if(null !== $uploads_directory) {
-        //@todo
-        //$this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
-        //$this->uploads_directory = $this->project_directory . $uploads_directory;
+        $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
+        $this->remote_dir = $this->project_directory . $uploads_directory;
       }
 
-      $install_controller = new InstallController($conn, $this->fs, $this->uploads_directory, $kernel);
+      $install_controller = new InstallController($conn, $this->fs, (string)$this->remote_dir, $kernel, (string)$this->uploads_directory);
       $ret = $install_controller->build('checkDatabaseExists', null);
 
       $database_exists = false;

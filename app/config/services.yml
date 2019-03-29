@@ -43,6 +43,15 @@ services:
         public: true
         tags: ['controller.service_arguments']
 
+    AppBundle\Controller\DefaultController:
+        arguments:
+            - '%uploads_directory%'
+
+    AppBundle\Controller\InstallController:
+        arguments:
+            $remote_uploads_directory: '%uploads_directory%'
+
+
     # explicit commands registration
     AppBundle\Command\:
         resource: '../../src/AppBundle/Command/*'
