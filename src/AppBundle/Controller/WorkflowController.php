@@ -1007,12 +1007,12 @@ class WorkflowController extends Controller
 
       // Thumb file name + item JSON file name.
       $thumb_file_name = '-50k-1024-web-thumb.glb';
-      $item_json_file_name = '-50k-1024-web-thumb-item.json';
+      $item_json_file_name = $base_file_name . '-50k-1024-web-thumb-item.json';
 
       // Load item.json if present.
-      if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . $item_json_file_name)) {
+      if (is_file($directory . DIRECTORY_SEPARATOR . $item_json_file_name)) {
         $url_params = array(
-          'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . $item_json_file_name
+          'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $item_json_file_name
         );
       } else {
         // Load the raw model, using the .glb file.
