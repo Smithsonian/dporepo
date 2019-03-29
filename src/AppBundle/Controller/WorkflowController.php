@@ -1024,12 +1024,12 @@ class WorkflowController extends Controller
         // The webDav-based path to the model.
         $model_path = str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . $thumb_file_name;
 
-        $web_derivative_base_file_name = pathinfo($directory . DIRECTORY_SEPARATOR . $base_file_name . $item_json_file_name, PATHINFO_FILENAME);
+        $web_derivative_base_file_name = pathinfo($directory . DIRECTORY_SEPARATOR . $base_file_name . $thumb_file_name, PATHINFO_FILENAME);
 
         $url_params = array(
           'model' => $model_path,
           'quality' => 'Highest',
-          'base' => str_replace('-item', '', $web_derivative_base_file_name),
+          'base' => $web_derivative_base_file_name,
         );
       }
 
