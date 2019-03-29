@@ -496,6 +496,14 @@ class WorkflowController extends Controller
       $this->writeQcDoneFile($workflow_data);
     }
 
+    // If the web thumb QC is done (url GET param qc_thumb_done), pass it to $this->setInterface().
+    // and write the QC 'done' file to the filesystem.
+    if (null !== $request->query->get('qc_thumb_done')) {
+      $workflow_data['qc_thumb_done'] = true;
+      // Write the QC 'done' file to the filesystem.
+      $this->writeQcDoneFile($workflow_data);
+    }
+
     // If QC for a web derivative is done (url GET param qc_' . $key . '_done), pass it to $this->setInterface().
     // and write the QC 'done' file to the filesystem.
     foreach ($this->derivatives as $key => $value) {
@@ -556,26 +564,20 @@ class WorkflowController extends Controller
           // Error: Manually upload replacement
           if ($w['step_state'] === 'error') {
 
+            // $this->u->dumper('qc-web-thumb error');
 
-            $this->u->dumper('error');
-
-
-            // $data = $this->qcHdError($w);
+            // @todo
+            // $data = $this->qcWebThumbError($w);
           }
           // Success: Manual QC
           if (empty($w['step_state'])) {
-
-
-            $this->u->dumper('Manual QC');
-
-
             $data = $this->qcWebThumb($w);
           }
           break;
         case 'qc-web':
           // Error: Manually upload replacement
           if ($w['step_state'] === 'error') {
-            // TODO
+            // @todo
             // $data = $this->qcWebError($w);
           }
           // Success: Manual QC
@@ -970,6 +972,86 @@ class WorkflowController extends Controller
   }
 
   /**
+   * QC Web Thumb
+   *
+   * @param array $w Workflow data
+   * @return array
+   */
+  public function qcWebThumb($w = array())
+  {
+    $data = array();
+
+    if (!empty($w)) {
+
+      // Get the master model's path.
+      $path = $this->getPathInfo($w);
+
+      // If the model path can't be found, throw a createNotFoundException (404).
+      if (empty($path)) throw $this->createNotFoundException('Model path not found');
+
+      $directory = pathinfo($path[0]['asset_path'], PATHINFO_DIRNAME);
+      $base_file_name = pathinfo($path[0]['asset_path'], PATHINFO_FILENAME);
+      // Since we're building the WebDAV path, all slashes need to be forward slashes.
+      $webdav_directory = str_replace('\\', '/', $directory);
+      $project_directory = str_replace('\\', '/', $this->project_directory);
+
+      $data = array(
+        'action' => 'qc',
+        'header' => 'QC: Web Thumb',
+        'message' => '',
+      );
+
+      $start = '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> ';
+      $end = '</strong></a></p>';
+      $url = '/lib/javascripts/voyager-tools/voyager-story-dev.html?';
+
+      // Thumb file name + item JSON file name.
+      $thumb_file_name = '-50k-1024-web-thumb.glb';
+      $item_json_file_name = '-50k-1024-web-thumb-item.json';
+
+      // Load item.json if present.
+      if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . $item_json_file_name)) {
+        $url_params = array(
+          'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . $item_json_file_name
+        );
+      } else {
+        // Load the raw model, using the .glb file.
+        $glb_file_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . $thumb_file_name;
+        $glb_file_info = $this->getFileInfo($glb_file_path);
+        // If the .glb file can't be found, throw a createNotFoundException (404).
+        if (empty($glb_file_info)) throw $this->createNotFoundException('Model not found - ' . $base_file_name . $thumb_file_name);
+
+        // The webDav-based path to the model.
+        $model_path = str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . $thumb_file_name;
+
+        $web_derivative_base_file_name = pathinfo($directory . DIRECTORY_SEPARATOR . $base_file_name . $item_json_file_name, PATHINFO_FILENAME);
+
+        $url_params = array(
+          'model' => $model_path,
+          'quality' => 'Highest',
+          'base' => str_replace('-item', '', $web_derivative_base_file_name),
+        );
+      }
+
+      // Pass the referrer so the QC tool can redirect back to the workflow page after performing QC.
+      $url_params['referrer'] = '/admin/workflow/' . $w['workflow_id'] . '?qc_thumb_done';
+      // If QC is done, add a check icon.
+      $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_thumb_done.txt') ? $this->check_icon_markup : '';
+      // Overwrite the $end variable.
+      $end = '</strong></a>' . $check_icon . '</p>';
+      // Set the message for the UI interface.
+      $data['message'] .= $start . '<a href="' . $url . http_build_query($url_params) . '"><strong>QC/Position model (thumb)' . $end;
+
+      // If QC is done, add a link to generate web thumb.
+      if (is_file($directory . DIRECTORY_SEPARATOR . 'qc_thumb_done.txt')) {
+        $data['message'] .= '<p><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> <a href="/admin/workflow/' . $w['workflow_id'] . '/go/success"><strong>Generate web derivatives</strong></a></p>';
+      }
+    }
+
+    return $data;
+  }
+
+  /**
    * QC Web
    *
    * @param array $w Workflow data
@@ -999,6 +1081,38 @@ class WorkflowController extends Controller
         'message' => '',
       );
 
+      // If the step_state is done, add the HD web and web thumb models.
+      if ($w['step_state'] === 'done') {
+
+        // Web HD
+        // Load item.json if present.
+        if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . '-item.json')) {
+          $url_params = array(
+            'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . '-item.json',
+            'referrer' => '/admin/workflow/' . $w['workflow_id'] . '?qc_hd_done'
+          );
+          // If QC is done, add a check icon.
+          $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done.txt') ? $this->check_icon_markup : '';
+          // Interface data.
+          $data['message'] .= '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?' . http_build_query($url_params) . '"><strong>QC/Position HD model</strong></a>' . $check_icon . '</p>';
+        }
+
+        // Web Thumb
+        $item_json_file_name = '-50k-1024-web-thumb-item.json';
+        // Load item.json if present.
+        if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . $item_json_file_name)) {
+          $url_params = array(
+            'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . $item_json_file_name
+          );
+          // If QC is done, add a check icon.
+          $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_thumb_done.txt') ? $this->check_icon_markup : '';
+          // Interface data.
+          $data['message'] .= '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?' . http_build_query($url_params) . '"><strong>QC/Position Web Thumb model</strong></a>' . $check_icon . '</p>';
+        }
+
+      }
+
+      // Web Multi
       $start = '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> ';
       $end = '</strong></a></p>';
       $url = '/lib/javascripts/voyager-tools/voyager-story-dev.html?';
@@ -1047,24 +1161,6 @@ class WorkflowController extends Controller
         $data['message'] .= $start . '<a href="' . $url . http_build_query($url_params) . '"><strong>QC/Position model (' . $key . ')' . $end;
       }
 
-      // If the step_state is done, add the HD web model.
-      if ($w['step_state'] === 'done') {
-        // Load item.json if present.
-        if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . '-item.json')) {
-
-          $url_params = array(
-            'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . '-item.json',
-            'referrer' => '/admin/workflow/' . $w['workflow_id'] . '?qc_hd_done'
-          );
-
-          // If QC is done, add a check icon.
-          $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done.txt') ? $this->check_icon_markup : '';
-
-          // Interface data.
-          $data['message'] .= '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?' . http_build_query($url_params) . '"><strong>QC/Position HD model</strong></a>' . $check_icon . '</p>';
-        }
-      }
-
     }
 
     return $data;
@@ -1091,8 +1187,6 @@ class WorkflowController extends Controller
     }
 
     if (!empty($w) && !empty($step_name)) {
-
-      // $this->u->dumper($step_info['name']);
 
       // Check to see if the processing job already exists.
       if (isset($w['processing_job_id']) && !empty($w['processing_job_id'])) {
@@ -1122,10 +1216,6 @@ class WorkflowController extends Controller
       // Get the ID of the recipe, so it can be passed to processing service's job creation endpoint (post_job).
       $recipe = $this->processing->getRecipeByName($w['step_id']);
 
-
-      // $this->u->dumper($recipe);
-
-
       // If the web-multi recipe can't be found, throw a createNotFoundException (404).
       if (isset($recipe['error']) && !empty($recipe['error'])) throw $this->createNotFoundException($recipe['error']);
 
@@ -1137,11 +1227,6 @@ class WorkflowController extends Controller
         $base_file_name = pathinfo($uv_map, PATHINFO_BASENAME);
       }
 
-
-      // $this->u->dumper($uv_map,0);
-      // $this->u->dumper($directory,0);
-      // $this->u->dumper($base_file_name);
-
       // Initialize the processing job.
       // Create a timestamp for the procesing job name.
       $job_name = str_replace('+00:00', 'Z', gmdate('c', strtotime('now')));
@@ -1152,7 +1237,6 @@ class WorkflowController extends Controller
       // Add the UV map to the parameters.
       if (!empty($directory) && is_file($directory . DIRECTORY_SEPARATOR . $base_file_name)) $params['highPolyDiffuseMapFile'] = $base_file_name;
 
-      // $this->u->dumper($params);
       // Post the job to the processing service.
       $result = $this->processing->postJob($recipe['id'], $job_name, $params);
 
@@ -1307,13 +1391,16 @@ class WorkflowController extends Controller
 
       if (!empty($path)) {
 
+        $type = isset($w['qc_hd_done']) ? 'hd' : null;
+        $type = isset($w['qc_thumb_done']) ? 'thumb' : $type;
+
         // Web HD
-        if (isset($w['qc_hd_done'])) {
+        if (!empty($type)) {
           // Make sure the item.json exists before writing the 'done' file.
           if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . '-item.json')) {
             // Move into the target directory.
             chdir($directory);
-            $handle = fopen($directory . DIRECTORY_SEPARATOR . 'qc_hd_done.txt', 'w');
+            $handle = fopen($directory . DIRECTORY_SEPARATOR . 'qc_' . $type . '_done.txt', 'w');
             // Write the 'done' file.
             fwrite($handle, '');
             if (is_resource($handle)) fclose($handle);

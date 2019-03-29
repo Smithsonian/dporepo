@@ -101,9 +101,6 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
   public function generateModelAssets($uuid = null, $recipe_name = null, $filesystem)
   {
 
-    // $this->u->dumper($uuid,0);
-    // $this->u->dumper($recipe_name);
-
     $data = array();
     $job_status = 'metadata ingest in progress';
     $job_failed_message = 'The job has failed. Exiting model assets generation process.';
@@ -210,9 +207,6 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
         $return['errors'][] = $job_failed_message;
         return $return;
       }
-
-      // $this->u->dumper('processing_job',0);
-      // $this->u->dumper($processing_job);
 
       // Continue only if job_ids are returned.
       if (!empty($processing_job) && ($processing_job[0]['return'] === 'success')) {
@@ -393,7 +387,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
                 }
                 // Catch the error.
                 catch(\League\Flysystem\FileExistsException | \League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
-                  $data[$i]['errors'][] = $e->getMessage();
+                  $data[$i]['errors'][] = 'Processing Service: ' . $e->getMessage();
                 }
 
               }
@@ -494,30 +488,36 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
         if (!empty($processing_job)) {
 
           $directory = pathinfo($processing_job[0]['asset_path'], PATHINFO_DIRNAME);
-          $full_file_name = pathinfo($processing_job[0]['asset_path'], PATHINFO_BASENAME);
+          $base_model_file_name = pathinfo($processing_job[0]['asset_path'], PATHINFO_BASENAME);
 
           // Get the UV map.
           $uv_map = $this->processing->getUvMap($processing_job[0]['asset_path']);
+
+          if (!empty($uv_map)) {
+            $base_uv_file_name = pathinfo($uv_map, PATHINFO_BASENAME);
+          }
 
           // Transfer the file to the processing service via WebDAV.
           try {
 
             // The external path - on the processing service side.
-            $path_external_model = $processing_job[0]['processing_service_job_id'] . '/' . $full_file_name;
+            $path_external_model = $processing_job[0]['processing_service_job_id'] . '/' . $base_model_file_name;
             $stream = fopen($processing_job[0]['asset_path'], 'r+');
             $filesystem->writeStream($path_external_model, $stream);
             // Before calling fclose on the resource, check if it’s still valid using is_resource.
             if (is_resource($stream)) fclose($stream);
 
             // UV map file.
-            if (!empty($uv_map) && is_file($directory . DIRECTORY_SEPARATOR . $uv_map)) {
+            if (!empty($uv_map) && is_file($directory . DIRECTORY_SEPARATOR . $base_uv_file_name)) {
               // The external path - on the processing service side.
-              $path_external_map = $processing_job[0]['processing_service_job_id'] . '/' . $uv_map;
-              $stream_uv = fopen($directory . DIRECTORY_SEPARATOR . $uv_map, 'r+');
+              $path_external_map = $processing_job[0]['processing_service_job_id'] . '/' . $base_uv_file_name;
+              $stream_uv = fopen($directory . DIRECTORY_SEPARATOR . $base_uv_file_name, 'r+');
               $filesystem->writeStream($path_external_map, $stream_uv);
               // Before calling fclose on the resource, check if it’s still valid using is_resource.
               if (is_resource($stream_uv)) fclose($stream_uv);
             }
+
+            // die('done!!!!!');
 
             // Now that the file has been transferred, go ahead and run the processing job.
             $result = $this->processing->runJob($processing_job[0]['processing_service_job_id']);
@@ -535,7 +535,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           }
           // Catch the error.
           catch(\League\Flysystem\FileExistsException | \League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
-            $data[0]['errors'][] = $e->getMessage();
+            $data[0]['errors'][] = 'Processing Service: ' . $e->getMessage();
           }
 
         }
