@@ -9,6 +9,13 @@ namespace AppBundle\Service;
 interface RepoProcessingServiceInterface {
 
   /**
+   * Is Service Accessible
+   *
+   * @return bool
+   */
+  public function isServiceAccessible();
+
+  /**
    * Get recipes
    *
    * @return array

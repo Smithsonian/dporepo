@@ -69,6 +69,18 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
   }
 
   /**
+   * Is Service Accessible
+   *
+   * @return bool
+   */
+  public function isServiceAccessible() {
+    // Check to see if the processing service is available.
+    $headers = @get_headers($this->processing_service_location);
+    if(strpos($headers[0],'200') === false) return false;
+    return true;
+  }
+
+  /**
    * Get recipes
    *
    * @return array

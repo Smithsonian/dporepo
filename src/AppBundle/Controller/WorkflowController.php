@@ -44,6 +44,16 @@ class WorkflowController extends Controller
   private $processing;
 
   /**
+   * @var string $processing_service_location
+   */
+  private $processing_service_location;
+
+  /**
+   * @var bool $processing_service_on
+   */
+  private $processing_service_on;
+
+  /**
    * @var object $kernel
    */
   public $kernel;
@@ -74,14 +84,24 @@ class WorkflowController extends Controller
   private $check_icon_markup;
 
   /**
+   * @var string $processing_service_down_message
+   */
+  private $processing_service_down_message;
+
+  /**
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(AppUtilities $u, Connection $conn, RepoProcessingService $processing, KernelInterface $kernel, string $uploads_directory)
+  public function __construct(AppUtilities $u, Connection $conn, RepoProcessingService $processing, string $processing_service_location, bool $processing_service_on, KernelInterface $kernel, string $uploads_directory)
   {
     $this->u = $u;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->processing = $processing;
+    $this->processing_service_location = $processing_service_location;
+    // Check to see if the processing service is available.
+    $this->processing_service = $this->processing->isServiceAccessible();
+    $this->processing_service_on = $processing_service_on;
+
     $this->kernel = $kernel;
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
     $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_directory) : $uploads_directory;
@@ -104,7 +124,7 @@ class WorkflowController extends Controller
     );
 
     $this->check_icon_markup = '&nbsp;<span class="glyphicon glyphicon-ok" aria-hidden="true" style="color:green;"></span> <span class="text-success">QC done</span>';
-
+    $this->processing_service_down_message = 'The processing service is unavailable. Could not resolve host ';
   }
 
   /**
@@ -470,6 +490,12 @@ class WorkflowController extends Controller
    */
   public function workflow(Request $request)
   {
+
+    // If the processing service is not turned on (in parameters.yml) or if it is on and not accessible,
+    // disable the interface by setting $service_error = true, and display error messages.
+    if (!$this->processing_service_on || ($this->processing_service_on && !$this->processing_service)) {
+      $this->addFlash('error', $this->processing_service_down_message . $this->processing_service_location);
+    }
 
     $workflow_id = $request->attributes->get('workflow_id');
 
@@ -923,7 +949,13 @@ class WorkflowController extends Controller
 
       // If QC is done, add a link to generate web thumb.
       if (is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done.txt')) {
-        $data['message'] .= '<p><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> <a href="/admin/workflow/' . $w['workflow_id'] . '/go/success"><strong>Generate web thumb</strong></a></p>';
+        // If the processing service turned on (in parameters.yml) and is accessible, display the link. Otherwise just display text.
+        if ($this->processing_service_on && $this->processing_service) {
+          $link = '<a href="/admin/workflow/' . $w['workflow_id'] . '/go/success"><strong>Generate web thumb</strong></a>';
+        } else {
+          $link = '<span class="text-danger">Generate web thumb (disabled)</span>';
+        }
+        $data['message'] .= '<p><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> ' . $link . '</p>';
       }
 
     }
@@ -1044,7 +1076,13 @@ class WorkflowController extends Controller
 
       // If QC is done, add a link to generate web thumb.
       if (is_file($directory . DIRECTORY_SEPARATOR . 'qc_thumb_done.txt')) {
-        $data['message'] .= '<p><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> <a href="/admin/workflow/' . $w['workflow_id'] . '/go/success"><strong>Generate web derivatives</strong></a></p>';
+        // If the processing service is accessible, display the link. Otherwise just test.
+        if ($this->processing_service) {
+          $link = '<a href="/admin/workflow/' . $w['workflow_id'] . '/go/success"><strong>Generate web derivatives</strong></a>';
+        } else {
+          $link = '<span class="text-danger">Generate web derivatives (disabled)</span>';
+        }
+        $data['message'] .= '<p><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> ' . $link . '</p>';
       }
     }
 
