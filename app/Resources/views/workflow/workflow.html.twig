@@ -278,9 +278,13 @@
                   // Create a unique class for the next status elements.
                   var words = result.step.split(' ');
                   var pclass = words[0].replace(':', '');
+                  // If there is no step, return the state.
+                  var processingState = (result.state === 'done') ? 'Processing done, transferring assets' : 'Job state: ' + result.state;
+                  var stateOrStep = result.step.length ? result.step : processingState;
+                  pclass = !result.step.length ? result.state : pclass;
 
                   // Add the processing job's step.
-                  if (result.step.length && !$(targetContainer).find('.' + pclass).length) {
+                  if (pclass.length && !$(targetContainer).find('.' + pclass).length) {
                     // Elements
                     var processing_p = $('<p />').addClass(pclass);
                     var processing_img = $('<img />')
@@ -297,7 +301,7 @@
                     resetStatuses();
 
                     // Add the paragraph element along with the spinner gif image to the new active step.
-                    processing_p.append(processing_img, '&nbsp;&nbsp;' + result.step);
+                    processing_p.append(processing_img, '&nbsp;&nbsp;' + stateOrStep);
                     targetContainer.append(processing_p);
                   }
 
