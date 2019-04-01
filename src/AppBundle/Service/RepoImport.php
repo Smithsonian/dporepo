@@ -648,10 +648,18 @@ class RepoImport implements RepoImportInterface {
               if (!isset($result['error'])) {
                 $csv_val->subject_name = $result['title'];
                 $csv_val->subject_display_name = $result['title'];
+                // Add the local_subject_id.
+                if (array_key_exists('identifier', $result['content']['freetext'])) {
+                  $csv_val->local_subject_id = $result['content']['freetext']['identifier'][0]['content'];
+                }
               }
             } else {
               $csv_val->subject_name = $subject_exists[0]['subject_name'];
             }
+
+            // Remove the 'ISN:' prefix from the ISNI ID (if present).
+            $csv_val->holding_entity_guid = str_replace('ISN:', '', $csv_val->holding_entity_guid);
+
             // Populate the holding_entity_name and holding_entity_local_id columns,
             // using the holding_entity_guid provided in the CSV.
             // The holding_entity_guid has been validated during pre-validation, so no error handling - for now.
