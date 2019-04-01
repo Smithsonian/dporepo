@@ -16,6 +16,7 @@ use Symfony\Component\Process\PhpExecutableFinder;
 
 use AppBundle\Service\RepoProcessingService;
 use AppBundle\Controller\RepoStorageHybridController;
+use AppBundle\Service\RepoEdan;
 
 use AppBundle\Form\BatchProcessingForm;
 use AppBundle\Form\WorkflowParametersForm;
@@ -37,6 +38,11 @@ class WorkflowController extends Controller
    * @var object $repo_storage_controller
    */
   private $repo_storage_controller;
+
+  /**
+   * @var object $edan
+   */
+  private $edan;
 
   /**
    * @var object $processing
@@ -92,10 +98,11 @@ class WorkflowController extends Controller
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(AppUtilities $u, Connection $conn, RepoProcessingService $processing, string $processing_service_location, bool $processing_service_on, KernelInterface $kernel, string $uploads_directory)
+  public function __construct(AppUtilities $u, Connection $conn, RepoEdan $edan, RepoProcessingService $processing, string $processing_service_location, bool $processing_service_on, KernelInterface $kernel, string $uploads_directory)
   {
     $this->u = $u;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
+    $this->edan = $edan;
     $this->processing = $processing;
     $this->processing_service_location = $processing_service_location;
     // Check to see if the processing service is available.
@@ -894,6 +901,7 @@ class WorkflowController extends Controller
   public function qcHd($w = array())
   {
     $data = array();
+    $item_json_path = null;
 
     if (!empty($w)) {
 
@@ -907,9 +915,18 @@ class WorkflowController extends Controller
       // Since we're building the WebDAV path, all slashes need to be forward slashes.
       $webdav_directory = str_replace('\\', '/', $directory);
       $project_directory = str_replace('\\', '/', $this->project_directory);
+      // Path to the item.json file.
+      $item_json_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . '-item.json';
+
+      // Inject EDAN tombstone information into item.json.
+      if (is_file($item_json_path)) {
+        $edan_json = $this->edan->addEdanDataToJson($item_json_path, $w['item_id']);
+        // Send errors to the front end, if present.
+        if (is_array($edan_json) && array_key_exists('error', $edan_json)) $this->addFlash('error', $edan_json['error']);
+      }
 
       // Load item.json if present.
-      if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . '-item.json')) {
+      if (is_file($item_json_path)) {
         // The URL parameters.
         $url_params = array(
           'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . '-item.json'
@@ -1635,18 +1652,4 @@ class WorkflowController extends Controller
 
   }
 
-
 }
-
-// This is one way to check for the status of a processing job or multiple processing jobs
-
-// // Check to see if jobs are running. Don't pass "Go" until all jobs are finished.
-// while ($this->processing->are_jobs_running($processing_job['job_ids'])) {
-//   $this->processing->are_jobs_running($processing_job['job_ids']);
-//   sleep(5);
-// }
-
-// // Retrieve all of the logs produced by the processing service.
-// foreach ($processing_job['job_ids'] as $job_id_value) {
-//   $processing_assets[] = $this->processing->get_processing_assets($filesystem, $job_id_value);
-// }
