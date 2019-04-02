@@ -806,8 +806,9 @@ class RepoImport implements RepoImportInterface {
           // Find the *-web-hd-report.json file.
           $finder->files()->name('*-web-hd-report.json');
           foreach ($finder as $file) {
-            $report_json = json_decode($file->getContents());
-            $processed_hd_assets = (array)$report_json->steps->delivery->result->files;
+            $report_json = json_decode($file->getContents(), true);
+            $processed_hd_assets = $report_json['steps']['delivery']['result']['files'];
+            $hd_metadata = $report_json['steps']['update-item']['parameters'];
           }
 
           if (!empty($processed_hd_assets)) {
@@ -838,7 +839,7 @@ class RepoImport implements RepoImportInterface {
               );
 
               // Model files.
-              if (in_array(strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)), $this->model_extensions)) {
+              if (strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)) === 'glb') {
 
                 // Check to see if the model record already exists, to prevent double entries.
                 $model_record_exists = $this->repo_storage_controller->execute('getRecords', array(
@@ -871,7 +872,18 @@ class RepoImport implements RepoImportInterface {
                       'model_file_type' => '.' . strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)),
                       'model_purpose' => 'delivery_web',
                       'model_purpose_id' => $model_purpose_lookup_options['delivery_web'],
-                      'has_normals' => 0,
+                      // Inherit properties from master model
+                      'capture_dataset_id' => $csv_val->capture_dataset_id,
+                      'creation_method' => $csv_val->creation_method,
+                      'model_modality' => $csv_val->model_modality,
+                      'units' => $csv_val->units,
+                      'is_watertight' =>  $csv_val->is_watertight,
+                      'has_normals' => $csv_val->has_normals,
+                      'vertices_count' => $csv_val->vertices_count,
+                      'has_vertex_color' => $csv_val->has_vertex_color,
+                      'has_uv_space' => $csv_val->has_uv_space,
+                      // Get the face_count for the HD model from *-web-hd-report.json.
+                      'face_count' => $hd_metadata['numFaces'],
                       'file_path' => $model_file_path,
                       'file_checksum' => md5($filename_value),
                       'date_of_creation' => date('Y-m-d H:i:s'),
@@ -1252,7 +1264,7 @@ class RepoImport implements RepoImportInterface {
         ),
         'limit' => 1,
         'search_params' => array(
-          0 => array('field_names' => array('processing_job.processing_service_job_id'), 'search_values' => array($data->job_id), 'comparison' => '='),
+          0 => array('field_names' => array('processing_job.ingest_job_uuid'), 'search_values' => array($data->uuid), 'comparison' => '='),
           1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('inspect-mesh'), 'comparison' => '='),
           2 => array('field_names' => array('processing_job.state'), 'search_values' => array('done'), 'comparison' => '='),
           3 => array('field_names' => array('processing_job_file.file_name'), 'search_values' => array('-report.json'), 'comparison' => 'LIKE'),
