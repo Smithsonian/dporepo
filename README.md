@@ -48,7 +48,7 @@ The database settings must match the database and user account created in step P
 ```composer install```
 
 - If PHP runs out of memory you can brute-force it to use unlimited memory:
-``` php -d memory_limit=-1 /usr/local/bin/composer update```
+``` php -d memory_limit=-1 /usr/local/bin/composer install```
 
 - TODO: Right now users have to disable the EDAN client within composer.json in order for install to work.
 
