@@ -13,12 +13,12 @@ A port from the [PHP Slim-based project](https://github.com/Smithsonian/dporepo_
 ## Installation
 
 ### Install webserver and database
-TODO: needs specification for supported environments, and for tools
+TODO: needs specification for supported environments
 
-### Prepare website and PHP
+### Prepare website
 Create website root
 Create empty MySQL database, and user account.
-Enable ldap extension in php.ini
+Enable ldap extension and PDO extension, if not enabled, in php.ini
 
 ### Clone the Repositories
 In addition to the repository code you will need the JSON schemas.
@@ -45,9 +45,8 @@ The database settings must match the database and user account created in step P
 ### Install using Composer
 
 - Change directory into the web root. Run-
-```
-composer install
-```
+```composer install```
+
 - If PHP runs out of memory you can brute-force it to use unlimited memory:
 ``` php -d memory_limit=-1 /usr/local/bin/composer update```
 
@@ -65,4 +64,3 @@ If installation says it succeeded but you have no database, the most likely culp
 
 #### Click Register, and create a new user account.
 You should now have access to all repo functions.
-
