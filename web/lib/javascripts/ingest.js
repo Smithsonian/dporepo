@@ -202,6 +202,13 @@ uploadsDropzone.on("success", function(file, responseText) {
         modelsCaptureDatasetsCheck(captureDatasetsCsv, modelsCsv);
       }
 
+      // Store the items CSVs if present.
+      if (file.name === 'items.csv') itemsCsv = JSON.parse(responseText.csv);
+      // Check for duplicate values in item_description per subject, and display a warning or error if/where applicable.
+      if (typeof itemsCsv !== 'undefined') {
+        itemDescriptionsCheck(itemsCsv);
+      }
+
       // Display the CSV within a spreadsheet interface, highlighting errors.
       // TODO: Make it possible to edit the spreadsheet and resubmit for pre-validation.
       // See: Handsontable
@@ -1143,6 +1150,55 @@ function modelsCaptureDatasetsCheck(captureDatasetsCsv, modelsCsv) {
         .html('<strong>Error - models.csv</strong>: Multiple master models detected. Only one master model per CSV is allowed.');
     // Prepend the message to the panel-body container.
     $('.panel-validation-results').find('.panel-body').prepend(multipleMessage);
+  }
+}
+
+// Item Descriptions Check
+function itemDescriptionsCheck(itemsCsv) {
+  // Remove the first row containing the column names.
+  delete itemsCsv[0];
+  // Reindex the arrays.
+  itemsCsv = itemsCsv.filter(val => val);
+
+  var itemDescriptions = new Array();
+  var previousParent = 0;
+
+  // Build the itemDescriptions arrays for each parent subject.
+  for (var i = 0; i < itemsCsv.length; i++) {
+    // The current parent variable.
+    var currentParent = (parseInt(itemsCsv[i].import_parent_id) - 1);
+    // Create an array of item descriptions for the current parent (subject).
+    if (!itemDescriptions.length) itemDescriptions[currentParent] = new Array();
+    if (previousParent !== currentParent) itemDescriptions[currentParent] = new Array();
+    // Add the item description to the array.
+    itemDescriptions[currentParent].push(itemsCsv[i].item_description);
+    // The previous parent variable.
+    previousParent = (parseInt(itemsCsv[i].import_parent_id) - 1);
+  }
+
+  // Setup elements.
+  let csvMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>Duplicate Item Description Pre-validation</h4><p><strong>items.csv</strong></p><p>Repeating item_description values for a given Subject are not allowed.</p><hr>');
+  let csvMessageOrderedList = $('<ol />');
+  for (var d = 0; d < itemDescriptions.length; d++) {
+    if (itemDescriptions[d].length) {
+      // Find the duplicate item descriptions.
+      let findDuplicates = (arr) => arr.filter((item, index) => arr.indexOf(item) != index);
+      var duplicates = findDuplicates(itemDescriptions[d]);
+      // If duplicates are found, display a summary of duplicate item descriptions.
+      if (duplicates.length) {
+        // Loop through the errors and append to the message.
+        for (var dup = 0; dup < duplicates.length; dup++) {
+          listItem = $('<li />').text('Duplicate item description found: "' + duplicates[dup] + '"');
+          csvMessageOrderedList.append(listItem);
+        }
+        // Append the ordered list to the csvMessageContainer.
+        csvMessageContainer.append(csvMessageOrderedList);
+      }
+      // Prepend the csvMessageContainer to the panel-body container.
+      if (csvMessageOrderedList.children().length) {
+        $('.panel-validation-results').find('.panel-body').append(csvMessageContainer);
+      }
+    }
   }
 }
 
