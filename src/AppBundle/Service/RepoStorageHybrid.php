@@ -3398,7 +3398,36 @@ class RepoStorageHybrid implements RepoStorage {
         if (isset($dataset_file['file_path'])) {
           $data['aaData'][$k]['file_path'] = $dataset_file['file_path'];
         }
-      }
+
+        // Get representative EXIF metadata, if available.
+        $sql = "SELECT file_upload.metadata
+          FROM file_upload
+          JOIN capture_data_file on file_upload.file_upload_id = capture_data_file.file_upload_id
+          JOIN capture_data_element on capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
+          WHERE capture_data_file.active = 1 
+          AND capture_data_element.capture_dataset_id = :capture_dataset_id
+          LIMIT 0,1 ";
+        $statement = $this->connection->prepare($sql);
+        $statement->bindValue(":capture_dataset_id", $id, PDO::PARAM_INT);
+        $statement->execute();
+        $metadata_row = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        if(count($metadata_row) > 0) {
+          $this->unpack_metadata($metadata_row);
+        }
+        else {
+          // Get placeholders for the fields.
+          $metadata_row = array(0 => array('metadata' => array()));
+          $this->unpack_metadata($metadata_row);
+        }
+
+        $metadata = $metadata_row[0];
+        foreach($metadata as $mk => $mv) {
+          $data['aaData'][$k][$mk] = $mv;
+        }
+        unset($data['aaData'][$k]['metadata']);
+
+      } // for each capture dataset
     }
 
     return $data;
@@ -3498,6 +3527,34 @@ class RepoStorageHybrid implements RepoStorage {
           if (isset($dataset_file['file_path'])) {
             $data['aaData'][$k]['file_path'] = $dataset_file['file_path'];
           }
+
+          // Get representative EXIF metadata, if available.
+          $sql = "SELECT file_upload.metadata
+          FROM file_upload
+          JOIN capture_data_file on file_upload.file_upload_id = capture_data_file.file_upload_id
+          WHERE capture_data_file.active = 1 
+          AND capture_data_file.capture_data_element_id = :capture_data_element_id
+          LIMIT 0,1 ";
+          $statement = $this->connection->prepare($sql);
+          $statement->bindValue(":capture_data_element_id", $id, PDO::PARAM_INT);
+          $statement->execute();
+          $metadata_row = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+          if(count($metadata_row) > 0) {
+            $this->unpack_metadata($metadata_row);
+          }
+          else {
+            // Get placeholders for the fields.
+            $metadata_row = array(0 => array('metadata' => array()));
+            $this->unpack_metadata($metadata_row);
+          }
+
+          $metadata = $metadata_row[0];
+          foreach($metadata as $mk => $mv) {
+            $data['aaData'][$k][$mk] = $mv;
+          }
+          unset($data['aaData'][$k]['metadata']);
+
         }
       }
 
@@ -3761,11 +3818,10 @@ class RepoStorageHybrid implements RepoStorage {
 
     $select_sql = " DISTINCT 
           item.item_id as manage, item.item_id, item.project_id, item.subject_id, 
-          item.local_item_id, item.item_guid, item.item_description, item_type.label as item_type, CONCAT(SUBSTRING(item.item_description,1, 50), '...') as item_description,
-          item.date_created, item.last_modified, item.active, item.item_id as DT_RowId,
+          item.local_item_id, CONCAT(SUBSTRING(item.item_description,1, 50), '...') as item_description,          
+          item.date_created, item.last_modified, item.active, item.item_id as DT_RowId, subject.subject_name, 
           (SELECT COUNT(capture_dataset_id) FROM capture_dataset WHERE capture_dataset.item_id = item.item_id AND capture_dataset.active = 1) as datasets_count
-          FROM item 
-          LEFT JOIN item_type ON item_type.item_type_id = item.item_type 
+          FROM item LEFT JOIN subject on item.subject_id = subject.subject_id
           ";
 
     $where_sql = " WHERE (item.active = 1) ";

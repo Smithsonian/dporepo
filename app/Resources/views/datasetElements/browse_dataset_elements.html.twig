@@ -114,7 +114,23 @@
                             <th class="text-center">Cluster Position Field ID</th>
                             <th class="text-center">Position In Cluster Field ID</th>
                             <th class="text-center">Variant Types</th>
-                            <!--th class="text-center">EXIF Metadata</th -->
+                            <th class="text-center">EXIF Filename</th>
+                            <th class="text-center">EXIF File Size</th>
+                            <th class="text-center">EXIF File Timestamp</th>
+                            <th class="text-center">EXIF Height</th>
+                            <th class="text-center">EXIF Width</th>
+                            <th class="text-center">EXIF Aperture</th>
+                            <th class="text-center">EXIF Camera Make</th>
+                            <th class="text-center">EXIF Camera Model</th>
+                            <th class="text-center">EXIF Timestamp</th>
+                            <th class="text-center">EXIF Original Timestamp</th>
+                            <th class="text-center">EXIF Digitized Timestamp</th>
+                            <th class="text-center">EXIF Exposure</th>
+                            <th class="text-center">EXIF Focal Length</th>
+                            <th class="text-center">EXIF ISO Speed</th>
+                            <th class="text-center">EXIF Camera Serial</th>
+                            <th class="text-center">EXIF Lens Model</th>
+                            <th class="text-center">EXIF Lens Serial</th>
                             <th class="text-center">Last Modified</th>
                         </tr>
                         </thead>
@@ -288,9 +304,26 @@
             { "data": "cluster_position_field_id" },
             { "data": "position_in_cluster_field_id" },
             { "data": "variant_types" },
+            { "data": "exif_filename" },
+            { "data": "exif_file_size" },
+            { "data": "exif_file_timestamp" },
+            { "data": "exif_height" },
+            { "data": "exif_width" },
+            { "data": "exif_aperture" },
+            { "data": "exif_camera_make" },
+            { "data": "exif_camera_model" },
+            { "data": "exif_timestamp" },
+            { "data": "exif_original_timestamp" },
+            { "data": "exif_digitized_timestamp" },
+            { "data": "exif_exposure" },
+            { "data": "exif_focal_length" },
+            { "data": "exif_iso_speed" },
+            { "data": "exif_camera_serial" },
+            { "data": "exif_lens_model" },
+            { "data": "exif_lens_serial" },
             { "data": "last_modified" }
           ],
-          "dom": 'lfip<"datatables_bulk_actions">tip',
+          "dom": 'lfip<"datatables_bulk_actions"B>tip',
           "pagingType": "simple_numbers",
           "stateSave": true,
           "order": [[7,"desc"]],
@@ -306,9 +339,25 @@
           // Values in the length dropdown.
           "lengthMenu":[10,50,100,500],
           // Set some widths.
-          "aoColumnDefs":[
-            {"sWidth":"106px","aTargets":[0,1]},
-            {"bSortable":false,"aTargets":[0]},
+          "columnDefs":[
+            {"sWidth":"106px","aTargets":[0, 1]},
+            {"bSortable":false,"aTargets":[0, 1, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]},
+            {
+              "targets": [ 3, 4, 5, 6, 7, 8 ],
+              "searchable": true
+            },
+            {
+              "targets": [ 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 ],
+              "visible": false,
+              "searchable": false
+            }
+          ],
+          buttons: [
+            {
+              extend: 'colvis',
+              // collectionLayout: 'fixed two-column',
+              postfixButtons: [ 'colvisRestore' ]
+            }
           ],
           "fnRowCallback":function(nRow, aData, iDisplayIndex) {
 
