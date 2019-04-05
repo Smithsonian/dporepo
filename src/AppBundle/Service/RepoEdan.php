@@ -5,6 +5,8 @@ namespace AppBundle\Service;
 use Smithsonian\EdanClient\EdanClient;
 use Smithsonian\EdanClient\Util\Settings;
 
+use AppBundle\Controller\RepoStorageHybridController;
+
 // Custom utility bundle
 use AppBundle\Utils\AppUtilities;
 
@@ -15,6 +17,14 @@ class RepoEdan implements RepoEdanInterface
      * @var object $u
      */
     public $u;
+    /**
+     * @var object $conn
+     */
+    private $conn;
+    /**
+     * @var object $repo_storage_controller
+     */
+    private $repo_storage_controller;
     /**
      * @var string 
      */
@@ -44,10 +54,12 @@ class RepoEdan implements RepoEdanInterface
     * Constructor
     * @param object  $u  Utility functions object
     */
-    public function __construct(AppUtilities $u, string $edan_url, string $edan_app_id, string $edan_auth_token, string $edan_version, string $edan_search_endpoint, string $edan_content_endpoint)
+    public function __construct(AppUtilities $u, \Doctrine\DBAL\Connection $conn, string $edan_url, string $edan_app_id, string $edan_auth_token, string $edan_version, string $edan_search_endpoint, string $edan_content_endpoint)
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
+        $this->conn = $conn;
+        $this->repo_storage_controller = new RepoStorageHybridController($conn);
 
         // EDAN Client Settings
         $this->edanSettings = new Settings(
@@ -368,6 +380,81 @@ class RepoEdan implements RepoEdanInterface
       }
 
       $data['all_image_ids'] = json_encode($data['all_image_ids'], JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS);
+
+      return $data;
+    }
+
+    /**
+     * Add EDAN Data to JSON
+     *
+     * @param string $item_json_path Path to item.json.
+     * @param int $item_id The item iD.
+     * @return json
+     */
+    public function addEdanDataToJson($item_json_path = null, $item_id = null)
+    {
+
+      $data = array();
+
+      // Error handling for empty parameters.
+      if (empty($item_json_path)) $data['error'] = 'Error: $item_json_path is empty.';
+      if (empty($item_id)) $data['error'] = 'Error: $item_id is empty.';
+
+      // If $item_json_path and $item_id parameters aren't empty, proceed with processing.
+      if (!empty($item_json_path) && !empty($item_id)) {
+
+        // Inject EDAN tombstone information into item.json.
+        $item_json = file_get_contents($item_json_path);
+        $item_json_array = json_decode($item_json, true);
+
+        // Use the item_id to get the subject_id, the query EDAN using the subject_guid to get the EDAN record.
+        $subject_data = $this->repo_storage_controller->execute('getRecords', array(
+            'base_table' => 'item',
+            'fields' => array(
+              array(
+                'table_name' => 'subject',
+                'field_name' => 'subject_guid',
+              ),
+            ),
+            // Joins
+            'related_tables' => array(
+              array(
+                'table_name' => 'subject',
+                'table_join_field' => 'subject_id',
+                'join_type' => 'LEFT JOIN',
+                'base_join_table' => 'item',
+                'base_join_field' => 'subject_id',
+              )
+            ),
+            'limit' => 1,
+            'search_params' => array(
+              0 => array('field_names' => array('item.item_id'), 'search_values' => array($item_id), 'comparison' => '='),
+              1 => array('field_names' => array('item.active'), 'search_values' => array(1), 'comparison' => '='),
+              1 => array('field_names' => array('subject.active'), 'search_values' => array(1), 'comparison' => '='),
+            ),
+            'search_type' => 'AND',
+          )
+        );
+
+        if (!empty($subject_data)) {
+          $result = $this->getRecord($subject_data[0]['subject_guid']);
+          // Catch if there is an error.
+          if (isset($result['error'])) {
+            $data['error'] = 'Tombstone EDAN record not found (subject_guid: ' . $subject_data[0]['subject_guid'] . ')';
+          } else {
+            // Overwrite the item.json file with the new data.
+            $item_json_array['meta'] = $result;
+            file_put_contents($item_json_path, json_encode($item_json_array));
+          }
+        } else {
+          // Catch if the query returns nothing.
+          $data['error'] = 'Item record not found (item_id: ' . $item_id . '). This is used to inject EDAN tombstone information into item.json';
+        }
+
+        // If there are no errors, encode the return as JSON.
+        if (!array_key_exists('error', $data)) $data = json_encode($item_json_array);
+
+      }
 
       return $data;
     }

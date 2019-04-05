@@ -378,7 +378,7 @@ class RepoValidateData implements RepoValidate {
 
     if (!empty($holding_entity_guid)) {
 
-      // Remove the 'ISN:' prefix from the ISNI ID.
+      // Remove the 'ISN:' prefix from the ISNI ID (if present).
       $holding_entity_guid = str_replace('ISN:', '', $holding_entity_guid);
 
       $data = $this->repo_storage_controller->execute('getRecords', array(

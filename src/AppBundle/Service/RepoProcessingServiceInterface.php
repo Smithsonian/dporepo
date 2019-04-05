@@ -9,6 +9,13 @@ namespace AppBundle\Service;
 interface RepoProcessingServiceInterface {
 
   /**
+   * Is Service Accessible
+   *
+   * @return bool
+   */
+  public function isServiceAccessible();
+
+  /**
    * Get recipes
    *
    * @return array
@@ -159,5 +166,13 @@ interface RepoProcessingServiceInterface {
    * @return
    */
   public function getProcessingResults(string $job_id, string $user_id, string $path, $filesystem);
+
+  /**
+   * Get UV Map
+   *
+   * @param string $asset_path The path to the model
+   * @return string
+   */
+  public function getUvMap(string $asset_path);
 
 }
