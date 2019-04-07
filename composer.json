@@ -5,7 +5,8 @@
     "autoload": {
         "psr-4": {
             "AppBundle\\": "src/AppBundle",
-            "Smithsonian\\": "src/Smithsonian/src"
+            "Smithsonian\\": "src/Smithsonian/src",
+            "Edan\\DpoEdanBundle\\": "src/Edan/DpoEdanBundle"
         },
         "classmap": [
             "app/AppKernel.php",

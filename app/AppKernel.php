@@ -22,6 +22,7 @@ class AppKernel extends Kernel
             new Lifo\TypeaheadBundle\LifoTypeaheadBundle(),
             new Oneup\UploaderBundle\OneupUploaderBundle(),
             new Oneup\FlysystemBundle\OneupFlysystemBundle(),
+            new Edan\DpoEdanBundle\DpoEdanBundle(),
         ];
 
         if (in_array($this->getEnvironment(), ['dev', 'test'], true)) {
