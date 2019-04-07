@@ -6,6 +6,7 @@ use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Utils\AppUtilities;
@@ -13,7 +14,6 @@ use AppBundle\Utils\AppUtilities;
 use AppBundle\Controller\ItemController;
 use AppBundle\Controller\CaptureDatasetController;
 use AppBundle\Controller\ModelController;
-use AppBundle\Service\RepoEdan;
 
 use Psr\Log\LoggerInterface;
 
@@ -117,7 +117,7 @@ class RepoImport implements RepoImportInterface {
    * @param string  $conn  The database connection
    * @param string  $uploads_directory  Uploads directory path
    */
-  public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemController $itemsController, CaptureDatasetController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn, LoggerInterface $logger, RepoEdan $edan)
+  public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemController $itemsController, CaptureDatasetController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn, LoggerInterface $logger, ContainerInterface $container)
   {
     $this->u = new AppUtilities();
     $this->tokenStorage = $tokenStorage;
@@ -135,6 +135,8 @@ class RepoImport implements RepoImportInterface {
     $this->logger = $logger;
     // Usage:
     // $this->logger->info('Import started. Job ID: ' . $job_id);
+
+    $edan = $container->get('dpo_edan.edan');
     $this->edan = $edan;
 
     // Image extensions.

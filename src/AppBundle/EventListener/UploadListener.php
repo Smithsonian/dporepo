@@ -13,7 +13,7 @@ use Doctrine\DBAL\Driver\Connection;
 use AppBundle\Service\RepoValidateData;
 use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Controller\ImportController;
-use AppBundle\Service\RepoEdan;
+use Edan\DpoEdanBundle\Service\RepoEdan;
 
 class UploadListener
 {
