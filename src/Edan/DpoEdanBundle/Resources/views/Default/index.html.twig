@@ -1,0 +1,83 @@
+{% if data.numFound is same as(0) %}
+  <div class="alert alert-warning" role="alert"><span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> No results found</div>
+{% else %}
+  <p>{{ data.numFound }} results found</p>
+{% endif %}
+
+{% for row in data.rows %}
+
+  <div class="panel panel-default">
+    <div class="panel-body">
+
+      <h4>{{ row.title | raw }}</h4>
+      <hr>
+
+      <div class="row">
+        <div class="col-sm-9 col-md-9" style="margin-left: 0;">
+          <dl class="dl-horizontal">
+            <dt>Title</dt>
+            <dd>{{ row.title | raw }}</dd>
+            {% if row.content.descriptiveNonRepeating.data_source is defined %}
+              <dt>Data Source</dt>
+              <dd>{{ row.content.descriptiveNonRepeating.data_source }}</dd>
+            {% endif %}
+            <dt>Unit Code</dt>
+            <dd>{{ row.unitCode }}</dd>
+            <dt>Unit ISNI ID</dt>
+            {% if row.holding_entity_guid is defined %}
+              <dd>ISN:{{ row.holding_entity_guid }}</dd>
+            {% else %}
+              <dd class="text-danger"><span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> ISNI ID not found. To properly associate "{{ row.unitCode }}", <a href="/admin/resources/unit_stakeholder/" target="_blank">create a relation</a> in metadata storage.</dd>
+            {% endif %}
+            {% if row.content.descriptiveNonRepeating.record_link is defined %}
+              <dt>Record Link</dt>
+              <dd><a href="{{ row.content.descriptiveNonRepeating.record_link }}" target="_blank">{{ row.content.descriptiveNonRepeating.record_link }}</a></dd>
+            {% endif %}
+            <dt>Last Updated</dt>
+            <dd>{{ row.lastTimeUpdated }}</dd>
+          </dl>
+        </div>
+        <div class="col-sm-3 col-md-3">
+          {% if row.primary_image is defined %}
+            <a href="{{ row.primary_image.full_size }}" target="_blank"><img src="{{ row.primary_image.medium_size }}" alt="Image for the '{{ row.primary_image.record_title }}' record" title="Click to view full-sized image"></a>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if row.processed_freetext is not empty %}
+        <a href="javascript:void(0);" class="view-hidden-content" role="button"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span> <span class="view-hidden-content-text">Expand Details</span></a>&nbsp;&nbsp;
+        <a href="javascript:void(0);" id="loop-index-{{ loop.index }}" class="choosen-record" role="button"><span class="glyphicon glyphicon-check" aria-hidden="true"></span> <span class="view-hidden-content-text">Choose This Record</span></a>
+      {% endif %}
+
+      {% for freetext in row.processed_freetext %}
+        <dl class="dl-horizontal col-hidden-toggle" style="margin-top: 2rem;">
+          {% for fvalue in freetext.values %}
+            <dt>{{ fvalue.label }}</dt>
+            {% for value in fvalue.values %}
+              <dd>{{ value | raw }}</dd>
+            {% endfor %}
+          {% endfor %}
+        </dl>
+      {% endfor %}
+
+    </div>
+  </div>
+
+  <input name="subject_guid_chosen_{{ loop.index }}" id="subject_guid_chosen_{{ loop.index }}" type="hidden" value="{{ row.url }}">
+  <input name="subject_name_chosen_{{ loop.index }}" id="subject_name_chosen_{{ loop.index }}" type="hidden" value="{{ row.title }}">
+  <input name="local_subject_id_chosen_{{ loop.index }}" id="local_subject_id_chosen_{{ loop.index }}" type="hidden" value="{% if row.content.freetext.identifier is defined %}{{ row.content.freetext.identifier.0.content }}{% endif %}">
+
+  {% if row.holding_entity_guid is defined %}
+    <input name="holding_entity_guid_chosen_{{ loop.index }}" id="holding_entity_guid_chosen_{{ loop.index }}" type="hidden" value="{{ row.holding_entity_guid }}">
+  {% endif %}
+  
+  <input name="holding_entity_name_chosen_{{ loop.index }}" id="holding_entity_name_chosen_{{ loop.index }}" type="hidden" value="{% if row.content.freetext.data_source is defined %}{{ row.content.descriptiveNonRepeating.data_source }}{% endif %}">
+
+{% endfor %}
+
+{% if data.numFound is not same as(0) %}
+  <div class="btn-group pull-right" role="group" aria-label="results-pager">
+    <a href="javascript:void(0);" class="btn btn-default pager-button" data-page="{{ data.previous_page }}"{% if data.previous_page is empty %} disabled="disabled"{% endif %}>Previous Page</a>
+    <a href="javascript:void(0);" class="btn btn-default pager-button" data-page="{{ data.next_page }}"{% if data.next_page is empty %} disabled="disabled"{% endif %}>Next Page</a>
+  </div>
+{% endif %}

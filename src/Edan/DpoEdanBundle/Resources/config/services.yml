@@ -1,0 +1,29 @@
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: false
+
+    # Create the "dpo_edan.edan" service.
+    dpo_edan.edan:
+        class: Edan\DpoEdanBundle\Service\RepoEdan
+        # arguments: ["%edan_url%", "%edan_app_id%", "%edan_auth_token%", "%edan_version%", "%edan_search_endpoint%", "%edan_content_endpoint%"]
+
+    # Create an alias for the RepoEdan class to the existing "dpo_edan.edan" service.
+    Edan\DpoEdanBundle\Service\RepoEdan: '@dpo_edan.edan'
+
+    # # makes classes in src/Edan available to be used as services
+    # # this creates a service per class whose id is the fully-qualified class name
+    # Edan\DpoEdanBundle\:
+    #     resource: '../../../../Edan/DpoEdanBundle/*'
+    #     # you can exclude directories or files
+    #     # but if a service is unused, it's removed anyway
+    #     exclude: '../../../../Edan/DpoEdanBundle/{Entity,Repository,Tests}'
+
+    # controllers are imported separately to make sure they're public
+    # and have a tag that allows actions to type-hint services
+    Edan\DpoEdanBundle\Controller\:
+        resource: '../../../../Edan/DpoEdanBundle/Controller'
+        public: true
+        tags: ['controller.service_arguments']
