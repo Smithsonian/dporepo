@@ -1,8 +1,3 @@
-dpo_edan:
-    resource: "@DpoEdanBundle/Controller/"
-    type:     annotation
-    prefix:   /
-
 app:
     resource: '@AppBundle/Controller/'
     type: annotation
@@ -13,3 +8,8 @@ fos_user:
 oneup_uploader:
     resource: .
     type: uploader
+
+dpo_edan:
+    resource: "@DpoEdanBundle/Controller/"
+    type:     annotation
+    prefix:   /
