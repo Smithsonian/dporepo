@@ -4,9 +4,7 @@
     "type": "project",
     "autoload": {
         "psr-4": {
-            "AppBundle\\": "src/AppBundle",
-            "Smithsonian\\": "src/Smithsonian/src",
-            "Edan\\DpoEdanBundle\\": "src/Edan/DpoEdanBundle"
+            "": "src/"
         },
         "classmap": [
             "app/AppKernel.php",
@@ -21,12 +19,6 @@
             "vendor/symfony/symfony/src/Symfony/Component/VarDumper/Resources/functions/dump.php"
         ]
     },
-    "repositories": [
-        {
-            "type": "git",
-            "url": "https://github.com/Smithsonian/php-edan-client.git"
-        }
-    ],
     "require": {
         "php": ">=5.5.9",
         "doctrine/doctrine-bundle": "^1.6",
@@ -42,7 +34,6 @@
         "scholarslab/bagit": "^0.3.0",
         "sensio/distribution-bundle": "^5.0.19",
         "sensio/framework-extra-bundle": "^5.0.0",
-        "smithsonian/edan-client": "dev-master",
         "symfony/debug-bundle": "^3.4",
         "symfony/finder": "^4.0",
         "symfony/monolog-bundle": "^3.1.0",
