@@ -136,8 +136,9 @@ class RepoImport implements RepoImportInterface {
     // Usage:
     // $this->logger->info('Import started. Job ID: ' . $job_id);
 
-    $edan = $container->get('dpo_edan.edan');
-    $this->edan = $edan;
+    // Check for the presence of the EDAN bundle.
+    $bundles = $this->kernel->getBundles();
+    $this->edan = (array_key_exists('DpoEdanBundle', $bundles)) ? $container->get('dpo_edan.edan') : false;
 
     // Image extensions.
     $this->image_extensions = array(
@@ -644,12 +645,15 @@ class RepoImport implements RepoImportInterface {
               // Set the project_id
               $csv_val->project_id = (int)$data->project_id;
               // Query EDAN to populate the CSV with EDAN record info (subject_name, and subject_display_name)
-              $result = $this->edan->getRecord($csv_val->subject_guid);
-              // The EDAN record assignment has already been validated during pre-validation,
-              // so no error handling - for now.
-              if (!isset($result['error'])) {
-                $csv_val->subject_name = $result['title'];
-                $csv_val->subject_display_name = $result['title'];
+              if ($this->edan) {
+                // Query EDAN.
+                $result = $this->edan->getRecord($csv_val->subject_guid);
+                // The EDAN record assignment has already been validated during pre-validation,
+                // so no error handling - for now.
+                if (!isset($result['error'])) {
+                  $csv_val->subject_name = $result['title'];
+                  $csv_val->subject_display_name = $result['title'];
+                }
               }
             } else {
               $csv_val->subject_name = $subject_exists[0]['subject_name'];
@@ -1904,6 +1908,38 @@ class RepoImport implements RepoImportInterface {
     }
 
     return $data;
+  }
+
+  /**
+   * @param null $data The data to validate.
+   * @return mixed array containing success/fail value, and any messages.
+   */
+  public function validateEdanRecord(&$data = NULL) {
+
+    $return = array('is_valid' => false);
+
+    // If no data is passed, set a message.
+    if(empty($data)) $return['messages'][] = 'Nothing to validate. Please provide an object to validate.';
+
+    // If data is passed, go ahead and process.
+    if(!empty($data)) {
+      // Loop through the data.
+      foreach($data->csv as $csv_key => $csv_value) {
+        // Check to see if the EDAN record exists.
+        $result = $this->edan->getRecord($csv_value->subject_guid);
+        // Catch if there is an error.
+        if (isset($result['error'])) {
+          $return['messages'][$csv_key] = array('row' => 'Row ' . ($csv_key+1), 'error' => 'EDAN record not found. subject_guid: ' . $csv_value->subject_guid);
+        }
+      }
+    }
+
+    // If there are no messages, then return true for 'is_valid'.
+    if(!isset($return['messages'])) {
+      $return['is_valid'] = true;
+    }
+
+    return $return;
   }
 
 }
