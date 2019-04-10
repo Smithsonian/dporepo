@@ -1,6 +1,6 @@
 {
-    "name": "gor/dporepo",
-    "license": "proprietary",
+    "name": "smithsonian/dporepo",
+    "license": "Apache-2.0",
     "type": "project",
     "autoload": {
         "psr-4": {
