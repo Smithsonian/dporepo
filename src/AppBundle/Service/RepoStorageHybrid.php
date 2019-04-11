@@ -3817,11 +3817,12 @@ class RepoStorageHybrid implements RepoStorage {
     $subject_id = array_key_exists('subject_id', $params) ? $params['subject_id'] : NULL;
 
     $select_sql = " DISTINCT 
-          item.item_id as manage, item.item_id, item.project_id, item.subject_id, 
+          item.item_id as manage, item.item_id, item.project_id, item.subject_id, item_type.label as item_type, 
           item.local_item_id, CONCAT(SUBSTRING(item.item_description,1, 50), '...') as item_description,          
           item.date_created, item.last_modified, item.active, item.item_id as DT_RowId, subject.subject_name, 
           (SELECT COUNT(capture_dataset_id) FROM capture_dataset WHERE capture_dataset.item_id = item.item_id AND capture_dataset.active = 1) as datasets_count
           FROM item LEFT JOIN subject on item.subject_id = subject.subject_id
+          LEFT JOIN item_type on item.item_type = item_type.item_type_id
           ";
 
     $where_sql = " WHERE (item.active = 1) ";
