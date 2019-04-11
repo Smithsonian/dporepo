@@ -2,6 +2,7 @@
     "name": "smithsonian/dporepo",
     "license": "Apache-2.0",
     "type": "project",
+    "description": "DPO's 3D Repository Website",
     "autoload": {
         "psr-4": {
             "": "src/"
