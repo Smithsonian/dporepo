@@ -127,6 +127,9 @@ class AuthoringController extends Controller
    * @return string
    */
   public function webdav(Request $request) {
+
+    // If the WebDAV request is not coming from this server, throw a createNotFoundException (404).
+    if ($_SERVER['REMOTE_ADDR'] !== $_SERVER['SERVER_NAME']) throw $this->createNotFoundException('Not found (404)');
     
     // If the server is not in the webroot, make sure the following line has the correct information
     $this->server->setBaseUri('/webdav');
