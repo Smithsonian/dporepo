@@ -11,6 +11,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use AppBundle\Controller\RepoStorageHybridController;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Sabre\DAV;
+use Sabre\DAV\Auth;
 
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
@@ -130,6 +131,17 @@ class AuthoringController extends Controller
 
     // If the WebDAV request is not coming from this server, throw a createNotFoundException (404).
     if ($_SERVER['REMOTE_ADDR'] !== $_SERVER['SERVER_NAME']) throw $this->createNotFoundException('Not found (404)');
+
+    // // Authentication-based Example
+    // // Uses a simple file to store usernames and passwords. The format of the file is identical to Apache's htdigest file.
+    // // See: Using the File backend - http://sabre.io/dav/authentication/
+    // if ($_SERVER['REMOTE_ADDR'] !== $_SERVER['SERVER_NAME']) {
+    //   $auth_backend = new Auth\Backend\File($this->project_directory . 'web/uploads/htdigest');
+    //   $auth_backend->setRealm('3drepoDAV');
+    //   $auth_plugin = new Auth\Plugin($auth_backend);
+    //   // Add the plugin to the server.
+    //   $this->server->addPlugin($auth_plugin);
+    // }
     
     // If the server is not in the webroot, make sure the following line has the correct information
     $this->server->setBaseUri('/webdav');
