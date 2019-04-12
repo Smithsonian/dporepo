@@ -19,7 +19,7 @@ services:
             $external_file_storage_on: '%external_file_storage_on%'
             $processing_service_location: '%processing_service_location%'
             $processing_service_client_id: '%processing_service_client_id%'
-            # $processing_service_on: '%processing_service_on%'
+            $processing_service_on: '%processing_service_on%'
             $conn: '@doctrine.dbal.default_connection'
 
     # makes classes in src/AppBundle available to be used as services
@@ -36,6 +36,15 @@ services:
         resource: '../../src/AppBundle/Controller'
         public: true
         tags: ['controller.service_arguments']
+
+    AppBundle\Controller\DefaultController:
+        arguments:
+            - '%uploads_directory%'
+
+    AppBundle\Controller\InstallController:
+        arguments:
+            $remote_uploads_directory: '%uploads_directory%'
+
 
     # explicit commands registration
     AppBundle\Command\:

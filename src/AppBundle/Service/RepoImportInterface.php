@@ -122,4 +122,13 @@ interface RepoImportInterface {
    */
   public function validateEdanRecord(&$data = null);
 
+  /**
+   * Add EDAN Data to JSON
+   *
+   * @param string $item_json_path Path to item.json.
+   * @param int $item_id The item iD.
+   * @return json
+   */
+  public function addEdanDataToJson($item_json_path = null, $item_id = null);
+
 }

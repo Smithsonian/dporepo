@@ -78,15 +78,35 @@ class ImportController extends Controller
     private $processing;
 
     /**
-     * @var string $external_file_storage_on
+     * @var string $processing_service_location
+     */
+    private $processing_service_location;
+
+    /**
+     * @var bool $processing_service_on
+     */
+    private $processing_service_on;
+
+    /**
+     * @var bool $external_file_storage_on
      */
     private $external_file_storage_on;
+
+    /**
+     * @var string $service_down_message
+     */
+    private $service_down_message;
+
+    /**
+     * @var string $processing_service_down_message
+     */
+    private $processing_service_down_message;
 
     /**
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, CaptureDatasetController $datasetsController, ItemController $itemsController, ModelController $modelController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, CaptureDatasetController $datasetsController, ItemController $itemsController, ModelController $modelController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, string $processing_service_location, bool $processing_service_on, bool $external_file_storage_on) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
@@ -98,7 +118,14 @@ class ImportController extends Controller
         $this->modelController = $modelController;
         $this->fileTransfer = $fileTransfer;
         $this->processing = $processing;
+        $this->processing_service_location = $processing_service_location;
+        // Check to see if the processing service is available.
+        $this->processing_service = $this->processing->isServiceAccessible();
+        $this->processing_service_on = $processing_service_on;
         $this->external_file_storage_on = $external_file_storage_on;
+
+        $this->service_down_message = '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).';
+        $this->processing_service_down_message = 'The processing service is unavailable. Could not resolve host ';
 
         // $this->logger = $logger;
         // Usage:
@@ -206,7 +233,7 @@ class ImportController extends Controller
           if (!empty($result)) {
             foreach ($result as $key => $value) {
               if (isset($value['errors'])) {
-                $this->addFlash('error', '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).');
+                $this->addFlash('error', $this->service_down_message);
                 $service_error = true;
                 foreach ($value['errors'] as $ekey => $evalue) {
                   $this->addFlash('error', $evalue);
@@ -214,6 +241,22 @@ class ImportController extends Controller
               }
             }
           }
+        }
+
+        // If the processing service is not turned on (in parameters.yml) or if it is on and not accessible,
+        // disable the interface by setting $service_error = true, and display error messages.
+        if (!$this->processing_service_on || ($this->processing_service_on && !$this->processing_service)) {
+          $service_error = true;
+          $this->addFlash('error', $this->service_down_message);
+          $this->addFlash('error', $this->processing_service_down_message . $this->processing_service_location);
+        }
+
+        // Prevent duplicate flash messages.
+        $notices = $this->get('session')->getFlashBag()->get('error', []);
+        $notices = array_unique($notices);
+        $this->get('session')->getFlashBag()->get('error');
+        foreach ($notices as $message) {
+          $this->addFlash('error', $message);
         }
 
         // Create the subject form
@@ -422,7 +465,7 @@ class ImportController extends Controller
           if (!empty($result)) {
             foreach ($result as $key => $value) {
               if (isset($value['errors'])) {
-                $this->addFlash('error', '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).');
+                $this->addFlash('error', $this->service_down_message);
                 $service_error = true;
                 foreach ($value['errors'] as $ekey => $evalue) {
                   $this->addFlash('error', $evalue);
@@ -430,6 +473,22 @@ class ImportController extends Controller
               }
             }
           }
+        }
+
+        // If the processing service is not turned on (in parameters.yml) or if it is on and not accessible,
+        // disable the interface by setting $service_error = true, and display error messages.
+        if (!$this->processing_service_on || ($this->processing_service_on && !$this->processing_service)) {
+          $service_error = true;
+          $this->addFlash('error', $this->service_down_message);
+          $this->addFlash('error', $this->processing_service_down_message . $this->processing_service_location);
+        }
+
+        // Prevent duplicate flash messages.
+        $notices = $this->get('session')->getFlashBag()->get('error', []);
+        $notices = array_unique($notices);
+        $this->get('session')->getFlashBag()->get('error');
+        foreach ($notices as $message) {
+          $this->addFlash('error', $message);
         }
 
         // Create the parent record picker typeahead form.

@@ -3,7 +3,6 @@
 namespace AppBundle\Controller;
 
 use AppBundle\Service\RepoStorageHybrid;
-use AppBundle\Service\RepoStorageStructureHybrid;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Doctrine\DBAL\Driver\Connection;
 
@@ -39,30 +38,6 @@ class RepoStorageHybridController extends Controller
         return $this->repo_storage->$function();
       }
     }
-
-  }
-
-  public function build($function, $parameters) {
-
-    //@todo
-    /*
-     *
-    $this->repo_storage_structure = new RepoStorageStructureHybrid($this->connection, $this->project_dir);
-
-    if(!method_exists($this->repo_storage_structure, $function)) {
-      //@todo
-      return NULL;
-    }
-    else {
-      if ($parameters) {
-        return $this->repo_storage_structure->$function($parameters);
-      }else{
-        return $this->repo_storage_structure->$function();
-      }
-      
-    }
-    */
-    return array('installed' => true);
 
   }
 

@@ -34,6 +34,8 @@ class RepoStorageStructureHybridController extends Controller {
 
   private $repo_user_access;
 
+  private $kernel;
+
   /**
    * @var string $project_directory
    */
@@ -46,6 +48,7 @@ class RepoStorageStructureHybridController extends Controller {
   private $u;
 
   public function __construct(KernelInterface $kernel, Connection $conn, string $uploads_directory, FilesystemHelperController $fs) { // , string $external_file_storage_path
+    $this->kernel = $kernel;
     $this->connection = $conn;
     $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
     //$this->external_file_storage_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $external_file_storage_path) : $external_file_storage_path;;
@@ -62,7 +65,8 @@ class RepoStorageStructureHybridController extends Controller {
       $this->connection,
       $this->uploads_directory,
       $this->project_directory,
-      $this->fs
+      $this->fs,
+      $this->container->getParameter('uploads_directory')
       //, $this->getUser()->getId()
     );
 
