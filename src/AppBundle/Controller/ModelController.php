@@ -474,7 +474,7 @@ class ModelController extends Controller
               break;
             }
             elseif(strpos($file_name, '.glb') !== false) {
-              $item_json_url = $model_v['model_files'][0]['file_path'];
+              $thumb_3d_url = $model_v['model_files'][0]['file_path'];
               $model_id_delivery_web = $model_v['model_id'];
               $data['has_viewable_model'] = true;
               break;
