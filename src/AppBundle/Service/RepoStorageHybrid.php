@@ -760,7 +760,6 @@ class RepoStorageHybrid implements RepoStorage {
    * @return array|bool
    */
   public function getChildModelAssets($params) {
-    $model_assets = array();
 
     if (!isset($params['item_id']) && !isset($params['capture_dataset_id'])
       || (isset($params['project_id']))) {
