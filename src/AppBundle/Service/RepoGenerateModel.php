@@ -102,8 +102,13 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
   {
 
     $data = array();
+    $recipe_query = array();
     $job_status = 'metadata ingest in progress';
     $job_failed_message = 'The job has failed. Exiting model assets generation process.';
+
+    if (!empty($recipe_name)) {
+      $recipe_query = array($recipe_name);
+    }
 
     // If uuid doesn't exist, then this is being called by a scheduled task / cron job to run a 'web-thumb' or 'web-multi' recipe.
     if (empty($uuid)) {
@@ -117,6 +122,10 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
             array(
               'table_name' => 'workflow',
               'field_name' => 'ingest_job_uuid',
+            ),
+            array(
+              'table_name' => 'processing_job',
+              'field_name' => 'recipe',
             ),
           ),
           'limit' => 1,
@@ -132,8 +141,8 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           ),
           'search_params' => array(
             0 => array('field_names' => array('workflow.step_type'), 'search_values' => array('auto'), 'comparison' => '='),
-            1 => array('field_names' => array('workflow.step_id'), 'search_values' => array($recipe_name), 'comparison' => '='),
-            2 => array('field_names' => array('processing_job.state'), 'search_values' => array('created'), 'comparison' => '='),
+            1 => array('field_names' => array('processing_job.state'), 'search_values' => array('created'), 'comparison' => '='),
+            2 => array('field_names' => array('workflow.step_id'), 'search_values' => $recipe_query, 'comparison' => '='),
           ),
           'search_type' => 'AND',
           'omit_active_field' => true,
@@ -147,7 +156,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
       if (!empty($workflow)) {
         $uuid = $workflow[0]['ingest_job_uuid'];
-        // $recipe_name = 'web-multi';
+        $recipe_name = $workflow[0]['recipe'];
       }
     }
 
@@ -195,8 +204,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
         case 'web-multi':
           $processing_job = $this->runWebDerivative($path, $job_data, $recipe_name, $filesystem);
           break;
-        // web-hd
-        default:
+        case 'web-hd':
           $processing_job = $this->runWebHd($path, $job_data, $recipe_name, $filesystem);
       }
 
