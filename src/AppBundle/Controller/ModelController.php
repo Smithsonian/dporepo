@@ -305,20 +305,22 @@ class ModelController extends Controller
       {
       $data = array();
 
-      if (!empty($id)) {
-
-        // Get the model record.
-        $data = $this->repo_storage_controller->execute('getModel', array(
-          'model_id' => $id));
-
-        // If there are no results, throw a createNotFoundException (404).
-        if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
-
-        // The repository's upload path.
-        $data['uploads_path'] = $this->uploads_directory;
-
+      if (empty($id)) {
+        throw $this->createNotFoundException('Model not found (404)');
       }
-      // $this->u->dumper($data);
+
+      // Get the model record.
+      $data = $this->repo_storage_controller->execute('getModel', array(
+        'model_id' => $id));
+
+      // If there are no results, throw a createNotFoundException (404).
+      if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
+
+      // The repository's upload path.
+      $data['uploads_path'] = $this->uploads_directory;
+
+      // Organize the viewable model info for use in the template.
+      $this->getPreviewableModels($data);
 
       return $this->render('datasets/model_detail.html.twig', array(
         'page_title' => 'Model Detail',
@@ -336,40 +338,29 @@ class ModelController extends Controller
      */
     public function modelViewer($id = null, Connection $conn, Request $request)
     {
-      //@TODO use incoming model $id to retrieve model assets.
+      // use incoming model $id to retrieve model assets.
       // $model_url = "/lib/javascripts/voyager/assets/f1986_19-mesh-smooth-textured/f1986_19-mesh-smooth-textured-item.json";
 
-      $data = array();
-      $model_url = NULL;
+      if (empty($id)) throw $this->createNotFoundException('Model not found (404)');
 
-      if (!empty($id)) {
+      // Get the model record.
+      $data = $this->repo_storage_controller->execute('getModel', array(
+        'model_id' => $id));
 
-        // Get the model record.
-        $data = $this->repo_storage_controller->execute('getModel', array(
-          'model_id' => $id));
+      // If there are no results, throw a createNotFoundException (404).
+      //if (empty($data) || empty($data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');
+      if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
 
-        // If there are no results, throw a createNotFoundException (404).
-        //if (empty($data) || empty($data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');
-        if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
+      // Organize the viewable model info for use in the template.
+      $this->getPreviewableModels($data);
 
-        // $this->u->dumper($data);
-
-        // If the file_path key doesn't exist, throw a createNotFoundException (404).
-        if (!array_key_exists('file_path', $data['viewable_model'])) throw $this->createNotFoundException('Model not found (404)');
-
-        //@todo in the future perhaps this should be an array of all files
-        // Replace local path with Drastic path. Twig template will serve the file using admin/get_file?path=blah
-        $uploads_path = str_replace('web', '', $this->uploads_directory);
-        // Windows fix for the file path.
-        $uploads_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_path) : $uploads_path;
-        // Model URL.
-        $model_url = str_replace($uploads_path, $this->external_file_storage_path, $data['viewable_model']['file_path']);
-        // Windows fix for the file path.
-        $model_url = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $model_url) : $model_url;
+      // If we don't have a viewable model, throw a createNotFoundException (404).
+      if(!isset($data['has_viewable_model']) || false === $data['has_viewable_model']) {
+        throw $this->createNotFoundException('Model not found (404)');
       }
 
-      $data['model_url'] = $model_url;
-
+      // Twig template will serve the file using admin/get_file?path=blah
+      // The get_file function will figure out pathing, we can pass it all kinds of nonsense.
       return $this->render('datasets/model_viewer.html.twig', array(
         'page_title' => 'Model Viewer',
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
@@ -442,10 +433,79 @@ class ModelController extends Controller
         $data = $this->repo_storage_controller->execute('getDatatableModels', $query_params);
 
         return $this->json($data);
-        /*
-      $parent_id = $request->request->get("parent_id");
-      $models = $conn->fetchAll("SELECT * FROM model WHERE parent_model_id=$parent_id");
-      return new JsonResponse($models);
-      */
+    }
+
+    private function getPreviewableModels(&$data) {
+      $item_json_url = $thumb_3d_url = $model_url = $uv_map_url = '';
+      $model_id_delivery_web = $model_id_thumb_3d = '';
+      /**
+        derivative_thumb_3d
+          0 =>
+            model_files =>
+        derivative_delivery_web
+          0 =>
+            model_files =>
+          uv_maps =>
+          1 =>
+            model_files => (item.json)
+       */
+
+      $data['has_viewable_model'] = false;
+
+      if(array_key_exists('derivative_thumb_3d', $data)) {
+        foreach($data['derivative_thumb_3d'] as $k => $model_v) {
+          if(array_key_exists('model_files', $model_v) && count($model_v['model_files']) > 0) {
+            $thumb_3d_url = $model_v['model_files'][0]['file_path'];
+            $model_id_thumb_3d = $model_v['model_id'];
+            $data['has_viewable_model'] = true;
+            break;
+          }
+        }
+      }
+
+      if(array_key_exists('delivery_web', $data)) {
+        foreach($data['delivery_web'] as $k => $model_v) {
+          if(array_key_exists('model_files', $model_v) && count($model_v['model_files']) > 0) {
+            $file_name = $model_v['model_files'][0]['file_name'];
+            if(strpos($file_name, 'item.json') !== false) {
+              $item_json_url = $model_v['model_files'][0]['file_path'];
+              $model_id_delivery_web = $model_v['model_id'];
+              $data['has_viewable_model'] = true;
+              break;
+            }
+            elseif(strpos($file_name, '.glb') !== false) {
+              $thumb_3d_url = $model_v['model_files'][0]['file_path'];
+              $model_id_delivery_web = $model_v['model_id'];
+              $data['has_viewable_model'] = true;
+              break;
+            }
+            else {
+              // Not item.json - see if we have .obj + texture map
+              foreach($model_v['model_files'] as $mf_k => $mf_v) {
+                $file_name = $mf_v['file_name'];
+                $file_name_parts = explode('.', $file_name);
+                if(count($file_name_parts) == 2 && $file_name_parts[1] == 'obj') {
+                  $model_url = $mf_v['file_path'];
+                  $model_id_delivery_web = $model_v['model_id'];
+                  $data['has_viewable_model'] = true;
+                  break;
+                }
+              } // each model file
+
+              if(array_key_exists('uv_maps', $model_v) && count($model_v['uv_maps']) > 0) {
+                $uv_map_url = $model_v['uv_maps'][0]['file_path'];
+              }
+            } // obj and texture map
+          } // check model files
+        } // each web model
+      }
+
+      $data['item_json_url'] = $item_json_url;
+      $data['thumb_3d_url'] = $thumb_3d_url;
+      $data['model_url'] = $model_url;
+      $data['uv_map_url'] = $uv_map_url;
+
+      $data['model_id_delivery_web'] = $model_id_delivery_web;
+      $data['model_id_thumb_3d'] = $model_id_thumb_3d;
     }
 }
