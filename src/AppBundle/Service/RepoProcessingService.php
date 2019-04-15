@@ -713,6 +713,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
               // Get the job's data.
               $repo_job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
 
+              if(!empty($repo_job_data)) {
               // Check to see if the file already exists.
               $file_exists = $this->repo_storage_controller->execute('getRecords', array(
                 'base_table' => 'file_upload',
@@ -740,6 +741,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
                     'file_hash' => md5($asset['file_name']),
                   )
                 ));
+              }
               }
 
             }
