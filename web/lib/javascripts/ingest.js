@@ -5,7 +5,9 @@ var jobId,
     textureMapFileNameParts = ['diffuse', 'normal', 'occlusion'],
     // Set the spreadsheet count so unique IDs can be assigned to the Handsontable containers.
     spreadsheetCount = 1,
-    dropzoneFilesCopy = [];
+    dropzoneFilesCopy = [],
+    captureDatasetsCsv,
+    modelsCsv;
 
 // Texture map pre-validation error container.
 let fileContainer = $('<div />')
@@ -57,15 +59,19 @@ var uploadsDropzone = new Dropzone(document.body, { // Make the whole body a dro
           image.onload = function() {
             // Check to see if the WIDTH is a power of 2.
             if (!powerOf2(this.width)) {
-              var widthLI = $('<li />').text('Width is not a power of 2 (' + file.name + ')');
+              var widthLI = $('<li />').text('Texture map width is not a power of 2 (' + file.name + ')');
               fileOL.append(widthLI);
               // done('Width is not a power of 2 (' + file.name + ')');
             }
             // Check to see if the HEIGHT is a power of 2.
             if (!powerOf2(this.height)) {
-              var heightLI = $('<li />').text('Height is not a power of 2 (' + file.name + ')');
+              var heightLI = $('<li />').text('Texture map height is not a power of 2 (' + file.name + ')');
               fileOL.append(heightLI);
               // done('Height is not a power of 2 (' + file.name + ')');
+            }
+            if (this.width !== this.height) {
+              var equalLI = $('<li />').text('Texture map width and height don\'t match (' + file.name + ')');
+              fileOL.append(equalLI);
             }
           };
         });
@@ -73,8 +79,8 @@ var uploadsDropzone = new Dropzone(document.body, { // Make the whole body a dro
       }
     }
 
-    // Append the ordered list to the fileContainer.
-    fileContainer.append(fileOL);
+    // Prepend the ordered list to the fileContainer.
+    fileContainer.prepend(fileOL);
     done();
   }
 });
@@ -180,13 +186,22 @@ uploadsDropzone.on("success", function(file, responseText) {
         }
         // Append the ordered list to the csvMessageContainer.
         csvMessageContainer.append(csvMessageOrderedList);
-        // Append the csvMessageContainer to the panel-body container.
+        // Prepend the csvMessageContainer to the panel-body container.
         $('.panel-validation-results').find('.panel-body').append(csvMessageContainer);
       }
 
     }
 
     if(responseText.csv && JSON.parse(responseText.csv).length) {
+
+      // Store the cature datasets and models CSVs if present.
+      if (file.name === 'capture_datasets.csv') captureDatasetsCsv = JSON.parse(responseText.csv);
+      if (file.name === 'models.csv') modelsCsv = JSON.parse(responseText.csv);
+      // Check for various combinations of capture datasets and models, and display a warning or error if/where applicable.
+      if ((typeof captureDatasetsCsv !== 'undefined') && (typeof modelsCsv !== 'undefined')) {
+        modelsCaptureDatasetsCheck(captureDatasetsCsv, modelsCsv);
+      }
+
       // Display the CSV within a spreadsheet interface, highlighting errors.
       // TODO: Make it possible to edit the spreadsheet and resubmit for pre-validation.
       // See: Handsontable
@@ -198,8 +213,7 @@ uploadsDropzone.on("success", function(file, responseText) {
           panelHeadingContent = $('<span />')
             .attr('style', 'font-size: 1.5rem; font-weight: normal;')
             .html('<i class="glyphicon glyphicon-info-sign" style="margin-left: 1.5rem;"></i> For now, only for representation of the data. The goal is to allow for edits and resubmission.'),
-          csvsRowCount = responseText.csv_row_count,
-          csvsRowCountParsed = JSON.parse(csvsRowCount),
+          csvsRowCountParsed = JSON.parse(responseText.csv_row_count),
           panelBody = $('<div />')
               .addClass('panel-body')
               .attr('id', 'csv-spreadsheet-' + spreadsheetCount)
@@ -236,28 +250,28 @@ uploadsDropzone.on("success", function(file, responseText) {
         let validationErrors = JSON.parse(responseText.error);
 
         if((typeof validationErrors !== 'undefined') && validationErrors.length) {
-
           for (var i = 0; i < validationErrors.length; i++) {
             // validationErrors[i].row
             // validationErrors[i].error
             let row = validationErrors[i].row.match(/\d/g);
-            row = row.join('');
             // Select the rows with errors.
             window[hotVarName + spreadsheetCount].selectRows(parseInt(row));
 
             var selected = window[hotVarName + spreadsheetCount].getSelected();
 
-            for (var index = 0; index < selected.length; index += 1) {
-              var item = selected[index];
-              var startRow = Math.min(item[0], item[2]);
-              var endRow = Math.max(item[0], item[2]);
-              var startCol = Math.min(item[1], item[3]);
-              var endCol = Math.max(item[1], item[3]);
+            if (typeof selected !== 'undefined') {
+              for (var index = 0; index < selected.length; index += 1) {
+                var item = selected[index];
+                var startRow = Math.min(item[0], item[2]);
+                var endRow = Math.max(item[0], item[2]);
+                var startCol = Math.min(item[1], item[3]);
+                var endCol = Math.max(item[1], item[3]);
 
-              for (var rowIndex = startRow; rowIndex <= endRow; rowIndex += 1) {
-                for (var columnIndex = startCol; columnIndex <= endCol; columnIndex += 1) {
-                  // Set the text-danger CSS class on the row containing the error.
-                  window[hotVarName + spreadsheetCount].setCellMeta(rowIndex, columnIndex, 'className', 'text-danger');
+                for (var rowIndex = startRow; rowIndex <= endRow; rowIndex += 1) {
+                  for (var columnIndex = startCol; columnIndex <= endCol; columnIndex += 1) {
+                    // Set the text-danger CSS class on the row containing the error.
+                    window[hotVarName + spreadsheetCount].setCellMeta(rowIndex, columnIndex, 'className', 'text-danger');
+                  }
                 }
               }
             }
@@ -456,8 +470,25 @@ document.querySelector("#actions .cancel-upload").onclick = function() {
 
 // Remove files from the uploads stage.
 document.querySelector("#actions .cancel").onclick = function() {
-  // Remove files from Dropzone.
-  uploadsDropzone.removeAllFiles(true);
+
+  var dataProjectId = $('body').data('project_id');
+
+  // If this is the Simple Ingest, preserve CSV files.
+  if (typeof dataProjectId !== 'undefined') {
+    // Make a copy of all files.
+    var dropzoneFilesCopy = uploadsDropzone.files.slice(0);
+    var csvFileNames = ['projects.csv', 'subjects.csv', 'items.csv', 'capture_datasets.csv', 'models.csv'];
+    // Remove files from Dropzone, excluding CSV files.
+    $.each(dropzoneFilesCopy, function(i, file) {
+      if (csvFileNames.indexOf(file.name) === -1) {
+        uploadsDropzone.removeFile(file);
+      }
+    });
+  } else {
+    // Bulk Upload: Remove all files from Dropzone.
+    uploadsDropzone.removeAllFiles(true);
+  }
+
   $('#previews ul.directory-structure').empty();
   // Clear previous validation results from the validation panel.
   $('.panel-validation-results').find('.panel-body').empty();
@@ -486,7 +517,9 @@ function simulateDrop(ev) {
 // Pre-validate CSV and Bagged Files
 function preValidateCsvBagged() {
 
-  let csvList = [];
+  let csvList = [],
+      csvPaths = [],
+      manifestPaths = [];
 
   // Set the parentRecordId.
   let parentRecordId = parentRecordChecker();
@@ -511,7 +544,31 @@ function preValidateCsvBagged() {
   $('#uploading-modal-message').empty();
   $('#uploading-modal-message').append('Pre-validation in progress');
   $('#uploading-modal').modal('show');
-  
+
+  var existing_capture_datasets = $('body').data('capture_dataset_ids');
+
+  // Validate file and directory paths entered in the capture_datasets.csv and models.csv CSVs.
+  for (var i = 0; i < queuedFiles.length; i++) {
+
+    // Get all of the paths in the CSVs, excluding capture_datasets.csv if capture datasets are existing records.
+    if((typeof existing_capture_datasets === 'undefined') && (queuedFiles[i].name === 'capture_datasets.csv')) {
+      getCsvPaths(queuedFiles[i], csvPaths);
+    }
+
+    if (queuedFiles[i].name === 'models.csv') {
+      getCsvPaths(queuedFiles[i], csvPaths);
+    }
+
+    // Get all unique paths in the BagIt manifest.
+    if((queuedFiles[i].name === 'manifest-sha1.txt') || (queuedFiles[i].name === 'manifest-md5.txt')) {
+      getManifestPaths(queuedFiles[i], manifestPaths);
+    }
+  }
+
+  // Run the diff and output any errors.
+  compareCsvManifestPaths(csvPaths, manifestPaths);
+
+
   for (var i = 0; i < queuedFiles.length; i++) {
 
     // Set a custom parameter, 'parentRecordId', so it can be passed to the back-end.
@@ -585,8 +642,8 @@ function preValidateCsvBagged() {
             // Append the ordered list to the fileMessageContainer.
             if(fileMessageOrderedList.find('li').length) {
               fileMessageContainer.append(fileMessageOrderedList);
-              // Append the fileMessageContainer to the panel-body container.
-              $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
+              // Prepend the fileMessageContainer to the panel-body container.
+              $('.panel-validation-results').find('.panel-body').prepend(fileMessageContainer);
             }
           }
 
@@ -605,8 +662,8 @@ function preValidateCsvBagged() {
           let fileMessageOrderedList = $('<ol />');
           fileMessageOrderedList.append('<li>BagIt manifest is empty</li>');
           fileMessageContainer.append(fileMessageOrderedList);
-          // Append the fileMessageContainer to the panel-body container.
-          $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
+          // Prepend the fileMessageContainer to the panel-body container.
+          $('.panel-validation-results').find('.panel-body').prepend(fileMessageContainer);
         }
 
       });
@@ -630,7 +687,7 @@ function preValidateCsvBagged() {
       // Reveal the "Start Upload" button.
       $('.start, .pause, .cancel-upload').removeClass('hidden');
     }
-  }, 2000);
+  }, 3500);
 
   // Remove the temporary directory + hide the progress modal.
   setTimeout(function() {
@@ -731,10 +788,10 @@ function startUpload(restart, dropzoneFilesCopy) {
 
 function parentRecordChecker() {
   // Parent record ID value.
-  // For the Simple Ingest, the value is stored in $('body').data('item_id')
+  // For the Simple Ingest, the value is stored in $('body').data('project_id')
   // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker')
-  let parentRecordId = $('body').data('item_id')
-      ? $('body').data('item_id')
+  let parentRecordId = $('body').data('project_id')
+      ? $('body').data('project_id')
       : $('#uploads_parent_picker_form_parent_picker').val();
   // If there is no parent ID selected, then display an alert.
   if(!parentRecordId.length) {
@@ -751,9 +808,9 @@ function parentRecordChecker() {
 
 function getRecordType() {
   // Parent record text value.
-  // For the Simple Ingest, the value is automatically '[ item ]'.
+  // For the Simple Ingest, the value is automatically '[ project ]'.
   // For the Bulk Ingest, the value is stored in $('#uploads_parent_picker_form_parent_picker_text').val()
-  let parentRecordText = $('body').data('ajax') ? '[ item ]' : $('#uploads_parent_picker_form_parent_picker_text').val();
+  let parentRecordText = $('body').data('ajax') ? '[ project ]' : $('#uploads_parent_picker_form_parent_picker_text').val();
   // Get the string found between the brackets (e.g. [ subject ] would return 'subject').
   parentRecordText = parentRecordText.substring(parentRecordText.lastIndexOf("[")+1,parentRecordText.lastIndexOf("]"));
   // Clean it up...
@@ -922,8 +979,8 @@ function requiredCsvValidation(parentRecordType, csvList) {
           .addClass('alert alert-danger cvs-validation-error')
           .attr('role', 'alert')
           .html(errorText);
-      // Append the message to the panel-body container.
-      $('.panel-validation-results').find('.panel-body').append(requiredCsvMessage);
+      // Prepend the message to the panel-body container.
+      $('.panel-validation-results').find('.panel-body').prepend(requiredCsvMessage);
     }
 
   }
@@ -1027,6 +1084,182 @@ function checkStatus() {
     });
 
   }
+
+}
+
+// Models & Capture Datasets Check
+function modelsCaptureDatasetsCheck(captureDatasetsCsv, modelsCsv) {
+  // Remove the first row containing the column names.
+  delete captureDatasetsCsv[0];
+  delete modelsCsv[0];
+  // Reindex the arrays.
+  captureDatasetsCsv = captureDatasetsCsv.filter(val => val);
+  modelsCsv = modelsCsv.filter(val => val);
+
+  // Get the total number of master models present in the CSV.
+  let masterModelCount = 0;
+  for (var index = 0; index < modelsCsv.length; index += 1) {
+    if (modelsCsv[index].model_purpose === 'master') masterModelCount++;
+  }
+
+  if ((captureDatasetsCsv.length) && (modelsCsv.length === 1)) {
+    // The message.
+    let multipleMessage = $('<div />')
+        .addClass('alert alert-warning multiple-capture-datasets')
+        .attr('role', 'alert')
+        .html('<strong>Notice:</strong> The model will be associated with all ' + captureDatasetsCsv.length + ' capture datasets.');
+
+    if ($('.panel-validation-results').find('.multiple-capture-datasets').length === 0) {
+      // Prepend the message to the panel-body container.
+      $('.panel-validation-results').find('.panel-body').prepend(multipleMessage);
+    }
+    // swal({
+    //   title: 'Single Model With Multiple Capture Datasets',
+    //   text: 'The model will be associated with all ' + captureDatasetsCsv.length + ' capture datasets.',
+    //   icon: 'info',
+    // });
+  }
+
+  if ((captureDatasetsCsv.length) && (modelsCsv.length > 1) && (masterModelCount === 1)) {
+    // The message.
+    let multipleMessage = $('<div />')
+        .addClass('alert alert-warning')
+        .attr('role', 'alert')
+        .html('<strong>Notice:</strong> Multiple models with multiple capture datasets detected. Non-master models will be associated with the master model.');
+    // Prepend the message to the panel-body container.
+    $('.panel-validation-results').find('.panel-body').prepend(multipleMessage);
+    // swal({
+    //   title: 'Multiple Models With Multiple Capture Datasets',
+    //   text: 'Non-master models will be associated with the master model.',
+    //   icon: 'info',
+    // });
+  }
+
+  if ((captureDatasetsCsv.length) && (modelsCsv.length > 1) && (masterModelCount > 1)) {
+    // The message.
+    let multipleMessage = $('<div />')
+        .addClass('alert alert-danger cvs-validation-error')
+        .attr('role', 'alert')
+        .html('<strong>Error - models.csv</strong>: Multiple master models detected. Only one master model per CSV is allowed.');
+    // Prepend the message to the panel-body container.
+    $('.panel-validation-results').find('.panel-body').prepend(multipleMessage);
+  }
+}
+
+function getCsvPaths(file, csvPaths) {
+  // Read the CSV file.
+  let reader = new FileReader();
+  reader.readAsText(file);
+  reader.addEventListener('loadend', function(event) {
+
+    let file = event.target.result,
+        fileArray = file.split(/\r?\n/)
+        csvType = 'capture_datasets';
+
+    // Loop through CSV rows.
+    for (var k = 0; k < fileArray.length; k++) {
+      if((k > 0) && fileArray[k].length) {
+        // Split the CSV row on the comma.
+        let currentLineArray = fileArray[k].trim().split(',');
+        // The directory_path (capture_dataset) and file_path (model) are always at the end of the array (last column in the CSV).
+        let path = currentLineArray.pop();
+        // Strip the file name from the model path.
+        if (event.target.result.indexOf('file_path') !== -1) {
+          // Strip the file name.
+          path = path.replace(/[^\/]*$/, '');
+          // Remove the trailing slash.
+          if(path.substr(-1) === '/') {
+            path = path.substr(0, path.length - 1);
+          }
+          csvType = 'models';
+        }
+        // Push the path to the csvPaths array.
+        csvPaths.push({type: csvType, path: path});
+      }
+    }
+
+  });
+}
+
+function getManifestPaths(file, manifestPaths) {
+  // Read the manifest file.
+  let reader = new FileReader();
+  reader.readAsText(file);
+  reader.addEventListener('loadend', function(event) {
+
+    let file = event.target.result,
+        fileArray = file.split(/\r?\n/);
+
+    // Loop through the manifest.
+    for (var j = 0; j < fileArray.length; j++) {
+
+        // Split the manifest line at the whitespace.
+        var arr = fileArray[j].split(/(\s+)/);
+
+        if (typeof arr[2] !== 'undefined') {
+          // Strip the file name from the path.
+          var path = arr[2].replace(/[^\/]*$/, '');
+          // Clean-up the paths.
+          path = path.replace('data/', '');
+          path = path.replace('/camera/', '');
+          path = path.replace('/raw/', '');
+          path = path.replace('/zeroed/', '');
+          // Remove trailing slash.
+          if(path.substr(-1) === '/') {
+            path = path.substr(0, path.length - 1);
+          }
+          // Only push unique paths, not present in the array.
+          if(manifestPaths.indexOf(path) === -1) {
+            manifestPaths.push(path);
+          }
+        }
+
+    }
+
+  });
+}
+
+function compareCsvManifestPaths(csvPaths, manifestPaths) {
+
+  // Wait 3 seconds for processing to complete.
+  setTimeout(function() {
+
+    // Sort both arrays.
+    csvPaths.sort();
+    manifestPaths.sort();
+
+    // Pull the paths from the csvPaths array.
+    var csvPathsRaw = [];
+    for (var c = 0; c < csvPaths.length; c++) {
+      csvPathsRaw.push(csvPaths[c].path);
+    }
+
+    // Sort the csvPathsRaw array.
+    csvPathsRaw.sort();
+
+    // console.log(csvPathsRaw);
+    // console.log(manifestPaths);
+
+    var diff = $(csvPathsRaw).not(manifestPaths).get();
+
+    // If there are file-based errors, populate the panel-body.
+    if(diff.length) {
+      let fileMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>File Paths Pre-validation</h4>');
+      let fileMessageOrderedList = $('<ol />');
+      for (var i = 0; i < diff.length; i++) {
+        if (diff[i].length) {
+          fileMessageOrderedList.append('<li>Path is not relative to the "data" directory in the ' + csvPaths[i].type + '.csv. Path: ' + diff[i] + '</li>');
+        }
+      }
+      // Append the ordered list to the fileMessageContainer.
+      if(fileMessageOrderedList.find('li').length) {
+        fileMessageContainer.append(fileMessageOrderedList);
+        // Append the fileMessageContainer to the panel-body container.
+        $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
+      }
+    }
+
+  }, 3000);
 
 }
 

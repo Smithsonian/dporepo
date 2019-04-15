@@ -105,7 +105,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
     $job_status = 'metadata ingest in progress';
     $job_failed_message = 'The job has failed. Exiting model assets generation process.';
 
-    // If uuid doesn't exist, then this is being called by a scheduled task / cron job to run a 'web-multi' recipe (multi-level web assets).
+    // If uuid doesn't exist, then this is being called by a scheduled task / cron job to run a 'web-thumb' or 'web-multi' recipe.
     if (empty($uuid)) {
       // Look for:
       // 1) a 'workflow' which has a 'step_type' of 'auto'
@@ -132,7 +132,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           ),
           'search_params' => array(
             0 => array('field_names' => array('workflow.step_type'), 'search_values' => array('auto'), 'comparison' => '='),
-            1 => array('field_names' => array('workflow.step_id'), 'search_values' => array('web-multi'), 'comparison' => '='),
+            1 => array('field_names' => array('workflow.step_id'), 'search_values' => array($recipe_name), 'comparison' => '='),
             2 => array('field_names' => array('processing_job.state'), 'search_values' => array('created'), 'comparison' => '='),
           ),
           'search_type' => 'AND',
@@ -147,7 +147,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
       if (!empty($workflow)) {
         $uuid = $workflow[0]['ingest_job_uuid'];
-        $recipe_name = 'web-multi';
+        // $recipe_name = 'web-multi';
       }
     }
 
@@ -155,8 +155,19 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
     $path = $this->project_directory . $this->uploads_directory . $uuid;
     // Job data.
     $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid, 'generateModelAssets'));
-    // Set the workflow step, qc-hd or qc-web.
-    $workflow_step = ($recipe_name === 'web-hd') ? 'qc-hd' : 'qc-web';
+
+    // Set the workflow step.
+    switch ($recipe_name) {
+      case 'web-hd':
+        $workflow_step = 'qc-hd';
+        break;
+      case 'web-thumb':
+        $workflow_step = 'qc-web-thumb';
+        break;
+      case 'web-multi':
+        $workflow_step = 'qc-web';
+        break;
+    }
 
     // Throw an error if the job record doesn't exist.
     if (empty($job_data)) {
@@ -178,10 +189,15 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
     if (is_dir($path)) {
 
       // Run the processing job.
-      if ($recipe_name === 'web-hd') {
-        $processing_job = $this->runWebHd($path, $job_data, $recipe_name, $filesystem);
-      } else {
-        $processing_job = $this->runWebMulti($path, $job_data, $recipe_name, $filesystem);
+      switch($recipe_name) {
+        // web-thumb, web-multi
+        case 'web-thumb':
+        case 'web-multi':
+          $processing_job = $this->runWebDerivative($path, $job_data, $recipe_name, $filesystem);
+          break;
+        // web-hd
+        default:
+          $processing_job = $this->runWebHd($path, $job_data, $recipe_name, $filesystem);
       }
 
       // Check the job's status to insure that the job_status hasn't been set to 'failed'.
@@ -242,7 +258,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
   {
 
     $data = $model_types = array();
-    $models_csv = null;
+    $models_csv = $uv_map = null;
 
     if (!empty($path) && !empty($job_data)) {
 
@@ -253,6 +269,15 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
       $i = 0;
       foreach ($finder as $file) {
         $models_csv = $file->getContents();
+      }
+
+      // Get the UV map.
+      $finder = new Finder();
+      $finder->path('data')->name('/-diffuse\.png|-diffuse\.jpg$/');
+      $finder->in($path);
+      $i = 0;
+      foreach ($finder as $file) {
+        $uv_map = $file;
       }
 
       if (!empty($models_csv)) {
@@ -270,7 +295,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           // Make sure that the model_purpose is master.
           if ($file->isFile() && array_key_exists($file->getFilename(), $model_types) && ($model_types[$file->getFilename()] === 'master')) {
 
-            $file_path = str_replace($this->project_directory . $this->uploads_directory, DIRECTORY_SEPARATOR, $file->getPathname());
+            // $file_path = str_replace($this->project_directory . $this->uploads_directory, DIRECTORY_SEPARATOR, $file->getPathname());
 
             // Get the ID of the recipe, so it can be passed to processing service's job creation endpoint (post_job).
             $recipe = $this->processing->getRecipeByName( $recipe_name );
@@ -282,10 +307,14 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
               // Create a timestamp for the procesing job name.
               $job_name = str_replace('+00:00', 'Z', gmdate('c', strtotime('now')));
-              // Post a new job.
+              // Parameters.
               $params = array(
                 'highPolyMeshFile' => $file->getFilename()
               );
+              // Add the UV map to the parameters.
+              if (!empty($uv_map) && is_file($uv_map->getPathname())) $params['highPolyDiffuseMapFile'] = $uv_map->getFilename();
+
+              // Post a new job.
               $result = $this->processing->postJob($recipe['id'], $job_name, $params);
 
               // Error handling
@@ -328,18 +357,28 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
                   $data[$i] = $this->repo_storage_controller->execute('createWorkflow', $query_params);
                 }
 
-                // The external path - on the processing service side.
-                $path_external = $processing_job['id'] . '/' . $file->getFilename();
-
-                // Transfer the file to the processing service via WebDAV.
+                // Transfer the file(s) to the processing service via WebDAV.
                 try {
 
+                  // Model file.
+                  // The external path - on the processing service side.
+                  $path_external_model = $processing_job['id'] . '/' . $file->getFilename();
                   $stream = fopen($file->getPathname(), 'r+');
-                  $filesystem->writeStream($path_external, $stream);
+                  $filesystem->writeStream($path_external_model, $stream);
                   // Before calling fclose on the resource, check if it’s still valid using is_resource.
                   if (is_resource($stream)) fclose($stream);
 
-                  // Now that the file has been transferred, go ahead and run the processing job.
+                  // UV map file.
+                  if (is_file($uv_map->getPathname())) {
+                    // The external path - on the processing service side.
+                    $path_external_map = $processing_job['id'] . '/' . $uv_map->getFilename();
+                    $stream_uv = fopen($uv_map->getPathname(), 'r+');
+                    $filesystem->writeStream($path_external_map, $stream_uv);
+                    // Before calling fclose on the resource, check if it’s still valid using is_resource.
+                    if (is_resource($stream_uv)) fclose($stream_uv);
+                  }
+
+                  // After transferring file(s), run the processing job.
                   $result = $this->processing->runJob($processing_job['id']);
 
                   // Error handling
@@ -348,7 +387,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
                 }
                 // Catch the error.
                 catch(\League\Flysystem\FileExistsException | \League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
-                  $data[$i]['errors'][] = $e->getMessage();
+                  $data[$i]['errors'][] = 'Processing Service: ' . $e->getMessage();
                 }
 
               }
@@ -361,7 +400,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
                 array(
                   'job_id' => $job_data['job_id'],
                   'user_id' => $job_data['created_by_user_account_id'],
-                  'job_log_label' => 'Validate Model',
+                  'job_log_label' => 'Generate Model',
                   'errors' => $data[$i]['errors'],
                 )
               );
@@ -387,10 +426,11 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function runWebMulti($path = null, $job_data = array(), $recipe_name = null, $filesystem)
+  public function runWebDerivative($path = null, $job_data = array(), $recipe_name = null, $filesystem)
   {
 
     $data = array();
+    $uv_map = null;
 
     // $this->u->dumper($path,0);
     // $this->u->dumper($job_data,0);
@@ -432,7 +472,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
             'limit' => 1,
             'search_params' => array(
               0 => array('field_names' => array('processing_job.ingest_job_uuid'), 'search_values' => array($workflow[0]['ingest_job_uuid']), 'comparison' => '='),
-              1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('web-multi'), 'comparison' => '='),
+              1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array($recipe_name), 'comparison' => '='),
               2 => array('field_names' => array('processing_job.state'), 'search_values' => array('created'), 'comparison' => '='),
             ),
             'search_type' => 'AND',
@@ -447,19 +487,50 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
         // If the model file path is found, continue.
         if (!empty($processing_job)) {
 
-          // $directory = pathinfo($path[0]['asset_path'], PATHINFO_DIRNAME);
-          $full_file_name = pathinfo($processing_job[0]['asset_path'], PATHINFO_BASENAME);
+          $directory = pathinfo($processing_job[0]['asset_path'], PATHINFO_DIRNAME);
+          $base_model_file_name = pathinfo($processing_job[0]['asset_path'], PATHINFO_BASENAME);
+          $model_file_name = pathinfo($processing_job[0]['asset_path'], PATHINFO_FILENAME);
+          $item_file_name = $model_file_name . '-item.json';
+          
+          // Get the UV map.
+          $uv_map = $this->processing->getUvMap($processing_job[0]['asset_path']);
 
-          // The external path - on the processing service side - on the processing service side.
-          $path_external = $processing_job[0]['processing_service_job_id'] . '/' . $full_file_name;
+          if (!empty($uv_map)) {
+            $base_uv_file_name = pathinfo($uv_map, PATHINFO_BASENAME);
+          }
 
           // Transfer the file to the processing service via WebDAV.
           try {
 
+            // Model file
+            // The external path - on the processing service side.
+            $path_external_model = $processing_job[0]['processing_service_job_id'] . '/' . $base_model_file_name;
             $stream = fopen($processing_job[0]['asset_path'], 'r+');
-            $filesystem->writeStream($path_external, $stream);
+            $filesystem->writeStream($path_external_model, $stream);
             // Before calling fclose on the resource, check if it’s still valid using is_resource.
             if (is_resource($stream)) fclose($stream);
+
+            // UV map file.
+            if (!empty($uv_map) && is_file($directory . DIRECTORY_SEPARATOR . $base_uv_file_name)) {
+              // The external path - on the processing service side.
+              $path_external_map = $processing_job[0]['processing_service_job_id'] . '/' . $base_uv_file_name;
+              $stream_uv = fopen($directory . DIRECTORY_SEPARATOR . $base_uv_file_name, 'r+');
+              $filesystem->writeStream($path_external_map, $stream_uv);
+              // Before calling fclose on the resource, check if it’s still valid using is_resource.
+              if (is_resource($stream_uv)) fclose($stream_uv);
+            }
+
+            // item.json file
+            if (is_file($directory . DIRECTORY_SEPARATOR . $item_file_name)) {
+              // The external path - on the processing service side.
+              $path_external_item_json = $processing_job[0]['processing_service_job_id'] . '/' . $item_file_name;
+              $stream_item_json = fopen($directory . DIRECTORY_SEPARATOR . $item_file_name, 'r+');
+              $filesystem->writeStream($path_external_item_json, $stream_item_json);
+              // Before calling fclose on the resource, check if it’s still valid using is_resource.
+              if (is_resource($stream_item_json)) fclose($stream_item_json);
+            }
+
+            // die('done!!!!!');
 
             // Now that the file has been transferred, go ahead and run the processing job.
             $result = $this->processing->runJob($processing_job[0]['processing_service_job_id']);
@@ -477,7 +548,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           }
           // Catch the error.
           catch(\League\Flysystem\FileExistsException | \League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
-            $data[0]['errors'][] = $e->getMessage();
+            $data[0]['errors'][] = 'Processing Service: ' . $e->getMessage();
           }
 
         }

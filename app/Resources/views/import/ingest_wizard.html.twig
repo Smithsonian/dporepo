@@ -1,4 +1,3 @@
-{% use 'datasets/dataset_form.html.twig' %}
 {% use 'import/uploads_stage.html.twig' %}
 {% use 'import/record_picker_panels.html.twig' %}
 
@@ -7,8 +6,8 @@
   <div class="navbar">
     <div class="navbar-inner">
       <ul>
-        <li><a href="#simple_ingest_tab_3" data-toggle="tab"><span class="tab-header">Step 1</span><br>Select Parent Records</a></li>
-        <li><a href="#simple_ingest_tab_4" data-toggle="tab"><span class="tab-header">Step 2</span><br>Dataset Metadata</a></li>
+        <li><a href="#simple_ingest_tab_3" data-toggle="tab"><span class="tab-header">Step 1</span><br>Add Project, Subject, and Item</a></li>
+        <li><a href="#simple_ingest_tab_4" data-toggle="tab"><span class="tab-header">Step 2</span><br>Add Capture Dataset(s) and/or a Model</a></li>
         <li><a href="#simple_ingest_tab_5" data-toggle="tab"><span class="tab-header">Step 3</span><br>Upload Assets</a></li>
       </ul>
     </div>
@@ -18,13 +17,36 @@
       <li class="previous"><a href="#"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Previous Step</a></li>
       <li class="next"><a href="#">Next Step <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span></a></li>
     </ul>
-    <!-- Select Parent Records -->
+    <!-- Project / Subject / Item -->
     <div class="tab-pane" id="simple_ingest_tab_3">
       {% include 'import/record_picker_panels.html.twig' %}
     </div>
-    <!-- Dataset Form -->
+    <!-- Capture Dataset(s) -->
     <div class="tab-pane" id="simple_ingest_tab_4">
-      {% block dataset_form %}{{ parent() }}{% endblock %}
+
+      <div class="row">
+        <!-- Panel 1 -->
+        <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
+          <button type="button" class="btn btn-default select-record" data-select="capture-dataset" style="margin-top: 1rem;"><i class="glyphicon glyphicon-plus"></i> <span>Select One or More Existing Capture Datasets</span></button>
+        </div>
+        <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
+          <button type="button" class="btn btn-default create-record" data-create="capture-dataset" style="margin-top: 1rem;"><i class="glyphicon glyphicon-pencil"></i> Create a Capture Dataset Record</button>
+        </div>
+        <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
+          <button type="button" class="btn btn-default create-record" data-create="model" style="margin-top: 1rem;"><i class="glyphicon glyphicon-pencil"></i> Create a Model Record</button>
+        </div>
+        <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
+          <hr>
+          <p><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> Uploaded model(s) will be associated to all selected Capture Datasets.</p>
+        </div>
+        <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
+          <h3 class="capture-dataset-header hidden">Capture Datasets</h3>
+          <div id="capture-dataset-wells" style="margin-top: 1rem;"></div>
+          <h3 class="model-header hidden">Model</h3>
+          <div class="well model-well hidden" style="margin-top: 1rem;"></div>
+        </div>
+      </div>
+
     </div>
     <!-- Uploads Stage -->
     <div class="tab-pane" id="simple_ingest_tab_5">

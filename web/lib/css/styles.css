@@ -238,6 +238,11 @@ dd {
   margin-bottom: 1rem;
 }
 
+/* Remove Bootstrap's truncated text on <dt>s */
+.dl-horizontal dt {
+  white-space: normal;
+}
+
 .nav-tabs.main-nav li a {
 	color: white;
 }
@@ -432,8 +437,14 @@ dd {
 }
 
 #simple_ingest_tab_4 .chosen-container,
-#item-form-modal .chosen-container {
+#item-form-modal .chosen-container,
+#capture-dataset-form-modal .chosen-container,
+#model-form-modal .chosen-container {
   width: 100% !important;
+}
+
+.well {
+  overflow: scroll;
 }
 
 .project-well, .subject-well, .item-well {

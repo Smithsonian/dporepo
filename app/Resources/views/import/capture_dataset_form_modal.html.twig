@@ -1,0 +1,50 @@
+{% use 'datasets/dataset_form.html.twig' %}
+
+{% block capture_dataset_form_modal %}
+<div class="modal fade" id="capture-dataset-form-modal" tabindex="-1" role="dialog" aria-labelledby="captureDatasetFormLabel" data-keyboard="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="captureDatasetFormLabel"><i class="glyphicon glyphicon-th-list"></i> <span id="capture-dataset-form-modal-title">Create a New Capture Dataset</span></h2>
+      </div>
+      <div class="modal-body" style="min-height: 24rem;">
+        {{ form_start(form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
+        <div class="row">
+          <div class="col-sm-6 col-md-6">
+            {{ form_row(form.capture_method) }}
+            {{ form_row(form.capture_dataset_type) }}
+            {{ form_row(form.capture_dataset_name) }}
+            {{ form_row(form.collected_by) }}
+            {{ form_row(form.date_of_capture) }}
+            {{ form_row(form.capture_dataset_description) }}
+            <fieldset>
+              <legend>API Delivery Integration</legend>
+              {{ form_row(form.api_publication_picker) }}
+              {{ form_row(form.model_purpose_picker) }}
+              <h4>API Model Resolution Restrictions</h4>
+              {{ form_row(form.api_access_model_face_count_id) }}
+              {{ form_row(form.api_access_uv_map_size_id) }}
+            </fieldset>
+          </div>
+          <div class="col-sm-6 col-md-6">
+            {{ form_row(form.item_position_type) }}
+            {# {{ form_row(form.positionally_matched_capture_datasets) }} #}
+            {{ form_row(form.focus_type) }}
+            {{ form_row(form.light_source_type) }}
+            {{ form_row(form.background_removal_method) }}
+            {{ form_row(form.cluster_type) }}
+            {{ form_row(form.capture_dataset_field_id) }}
+            {{ form_row(form.item_position_field_id) }}
+            {{ form_row(form.item_arrangement_field_id) }}
+            {{ form_row(form.directory_path) }}
+          </div>
+        </div>
+        <div class="field-group" style="clear:both;">
+          {{ form_row(form.save) }}
+        </div>
+      </div>
+      {{ form_end(form) }}
+    </div>
+  </div>
+</div>
+{% endblock %}

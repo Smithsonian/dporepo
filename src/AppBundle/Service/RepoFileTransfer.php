@@ -125,7 +125,7 @@ class RepoFileTransfer implements RepoFileTransferInterface {
     }
     // Catch the error.
     catch(\Sabre\HTTP\ClientException $e) {
-      $data[]['errors'][] = 'External Storage Error - ' . $e->getMessage();
+      $data[]['errors'][] = 'The external storage service is unavailable. ' . $e->getMessage();
     }
 
     // If this is a check related to a job, log the errors to the database.

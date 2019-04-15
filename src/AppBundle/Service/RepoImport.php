@@ -224,6 +224,7 @@ class RepoImport implements RepoImportInterface {
     $session->remove('new_repository_ids_4');
     $session->remove('model_import_type');
     $session->remove('item_id');
+    $session->remove('capture_dataset_models');
 
     // Set the job type (e.g. subjects metadata import, items metadata import, capture datasets metadata import, models metadata import).
     // $job_data = $this->repo_storage_controller->execute('getJobData', array($params['uuid']));
@@ -622,7 +623,7 @@ class RepoImport implements RepoImportInterface {
         // Set the parent record's repository ID.
         switch ($data->type) {
           case 'subject':
-            
+
             // Check to see if the subject already exists- DPO3DREP-546
             $subject_exists = $this->repo_storage_controller->execute('getRecords', array(
                 'base_table' => 'subject',
@@ -647,10 +648,24 @@ class RepoImport implements RepoImportInterface {
               if (!isset($result['error'])) {
                 $csv_val->subject_name = $result['title'];
                 $csv_val->subject_display_name = $result['title'];
+                // Add the local_subject_id.
+                if (array_key_exists('identifier', $result['content']['freetext'])) {
+                  $csv_val->local_subject_id = $result['content']['freetext']['identifier'][0]['content'];
+                }
               }
             } else {
               $csv_val->subject_name = $subject_exists[0]['subject_name'];
             }
+
+            // Remove the 'ISN:' prefix from the ISNI ID (if present).
+            $csv_val->holding_entity_guid = str_replace('ISN:', '', $csv_val->holding_entity_guid);
+
+            // Populate the holding_entity_name and holding_entity_local_id columns,
+            // using the holding_entity_guid provided in the CSV.
+            // The holding_entity_guid has been validated during pre-validation, so no error handling - for now.
+            $holding_entity = $this->repoValidate->getHoldingEntity($csv_val->holding_entity_guid);
+            $csv_val->holding_entity_name = $holding_entity['holding_entity_name'];
+            $csv_val->holding_entity_local_id = $holding_entity['holding_entity_local_id'];
             break;
           case 'item':
             // Set the project_id
@@ -704,7 +719,7 @@ class RepoImport implements RepoImportInterface {
                   // If there's a match against file paths,
                   // 1) add the checksum to the $csv_val object,
                   // 2) append the job ID and any parent directories to the file path.
-                  if ($manifest_line_array[1] === 'data/' . $csv_val->file_path) {
+                  if (array_key_exists(1, $manifest_line_array) && ($manifest_line_array[1] === 'data/' . $csv_val->file_path)) {
                     // Add the checksum to the $csv_val object.
                     $csv_val->file_checksum = $manifest_line_array[0];
                     // Get the file's full info from metadata storage.
@@ -739,12 +754,20 @@ class RepoImport implements RepoImportInterface {
             $csv_val->item_id = $session->get('item_id');
           }
 
-          // Insert data from the CSV into the appropriate database table, using the $data->type as the table name.
-          $this_id = $this->repo_storage_controller->execute('saveRecord', array(
-            'base_table' => $data->type,
-            'user_id' => $data->user_id,
-            'values' => (array)$csv_val
-          ));
+          // If this is an existing record, set $this_id as the existing record's ID.
+          if (isset($csv_val->existing_record)) {
+            $csv_val_array = (array)$csv_val;
+            $this_id = $csv_val_array[$data->type . '_id'];
+          } else {
+            /*********** PRIMARY INSERTS ***********/
+            // Insert data from the CSV into the appropriate database table, using the $data->type as the table name.
+            $this_id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => $data->type,
+              'user_id' => $data->user_id,
+              'values' => (array)$csv_val
+            ));
+            /*********** PRIMARY INSERTS ***********/
+          }
 
           if ($data->type === 'item') {
             $session->set('item_id', $this_id);
@@ -754,8 +777,26 @@ class RepoImport implements RepoImportInterface {
           $this_id = $subject_exists[0]['subject_id'];
         }
 
+        // If the model_import_row_id is populated,
+        // create an array of model_import_row_ids and capture_dataset_ids
+        // so they can be used to insert into capture_dataset_model.
+        if (($data->type === 'capture_dataset') && !empty($csv_val->model_import_row_id)) {
+          // Create the array.
+          $capture_dataset_models[] = array(
+            'model_import_row_id' => $csv_val->model_import_row_id,
+            'capture_dataset_id' => $this_id,
+          );
+          // Set the capture_dataset_models session variable.
+          $session->set('capture_dataset_models', $capture_dataset_models);
+        }
+
+        // Log the model/capture_dataset relationship to capture_dataset_models in metadata storage.
+        if ($data->type === 'model') {
+          $this->modelCaptureDatasetRelation($data, $csv_val, $this_id, $session);
+        }
+
         // Log the model file and any processed assets to the 'model_file' table.
-        if(!empty($csv_val->file_path)) {
+        if(($data->type === 'model') && !empty($csv_val->file_path)) {
 
           // Windows fix for the model's file path.
           $file_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $csv_val->file_path) : $csv_val->file_path;
@@ -773,8 +814,9 @@ class RepoImport implements RepoImportInterface {
           // Find the *-web-hd-report.json file.
           $finder->files()->name('*-web-hd-report.json');
           foreach ($finder as $file) {
-            $report_json = json_decode($file->getContents());
-            $processed_hd_assets = (array)$report_json->steps->delivery->result->files;
+            $report_json = json_decode($file->getContents(), true);
+            $processed_hd_assets = $report_json['steps']['delivery']['result']['files'];
+            $hd_metadata = $report_json['steps']['update-item']['parameters'];
           }
 
           if (!empty($processed_hd_assets)) {
@@ -797,6 +839,7 @@ class RepoImport implements RepoImportInterface {
                 'limit' => 1,
                 'search_params' => array(
                   0 => array('field_names' => array('file_upload.file_name'), 'search_values' => array($filename_value), 'comparison' => '='),
+                  1 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($data->uuid), 'comparison' => 'LIKE'),
                 ),
                 'search_type' => 'AND',
                 'omit_active_field' => true,
@@ -804,7 +847,7 @@ class RepoImport implements RepoImportInterface {
               );
 
               // Model files.
-              if (in_array(strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)), $this->model_extensions)) {
+              if (strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)) === 'glb') {
 
                 // Check to see if the model record already exists, to prevent double entries.
                 $model_record_exists = $this->repo_storage_controller->execute('getRecords', array(
@@ -837,7 +880,18 @@ class RepoImport implements RepoImportInterface {
                       'model_file_type' => '.' . strtolower(pathinfo($filename_value, PATHINFO_EXTENSION)),
                       'model_purpose' => 'delivery_web',
                       'model_purpose_id' => $model_purpose_lookup_options['delivery_web'],
-                      'has_normals' => 0,
+                      // Inherit properties from master model
+                      'capture_dataset_id' => $csv_val->capture_dataset_id,
+                      'creation_method' => $csv_val->creation_method,
+                      'model_modality' => $csv_val->model_modality,
+                      'units' => $csv_val->units,
+                      'is_watertight' =>  $csv_val->is_watertight,
+                      'has_normals' => $csv_val->has_normals,
+                      'vertices_count' => $csv_val->vertices_count,
+                      'has_vertex_color' => $csv_val->has_vertex_color,
+                      'has_uv_space' => $csv_val->has_uv_space,
+                      // Get the face_count for the HD model from *-web-hd-report.json.
+                      'face_count' => $hd_metadata['numFaces'],
                       'file_path' => $model_file_path,
                       'file_checksum' => md5($filename_value),
                       'date_of_creation' => date('Y-m-d H:i:s'),
@@ -963,7 +1017,8 @@ class RepoImport implements RepoImportInterface {
         }
 
         // This check is only for a subject. By default, $subject_exists is an empty array.
-        if (empty($subject_exists)) {
+        // Don't enter an existing record into the job_import_record table.
+        if (empty($subject_exists) && !isset($csv_val->existing_record)) {
           // Insert into the job_import_record table
           $job_import_record_id = $this->repo_storage_controller->execute('saveRecord', array(
             'base_table' => 'job_import_record',
@@ -1010,6 +1065,65 @@ class RepoImport implements RepoImportInterface {
 
     // TODO: return something more than job log IDs?
     return $job_log_ids;
+  }
+
+  /**
+   * Model Capture Dataset Relation
+   *
+   * @param obj $data  Data object
+   * @param array $csv_val  CSV values
+   * @param string $this_id  The last inserted ID
+   * @param obj $session  Symfony\Component\HttpFoundation\Session\Session
+   * @return bool
+   */
+  public function modelCaptureDatasetRelation($data = null, $csv_val = null, $this_id = null, $session)
+  {
+
+    $return = false;
+
+    if (!empty($data) && !empty($csv_val) && !empty($this_id)) {
+
+      // Get the capture_dataset_models session variable.
+      $sess = $session->get('capture_dataset_models');
+
+      if(($data->type === 'model') && !empty($sess)) {
+
+        // $this->u->dumper($sess);
+
+        foreach ($sess as $key => $value) {
+
+          if ($value['model_import_row_id'] === $csv_val->import_row_id) {
+            // Log the model/capture_dataset relationship to capture_dataset_models in metadata storage.
+            $capture_dataset_model_id = $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'capture_dataset_model',
+              'user_id' => $data->user_id,
+              'values' => array(
+                'capture_dataset_id' => $value['capture_dataset_id'],
+                'model_id' => $this_id,
+              )
+            ));
+            // Insert into the job_import_record table
+            $this->repo_storage_controller->execute('saveRecord', array(
+              'base_table' => 'job_import_record',
+              'user_id' => $data->user_id,
+              'values' => array(
+                'job_id' => $data->job_id,
+                'record_id' => $capture_dataset_model_id,
+                'project_id' => (int)$data->project_id,
+                'record_table' => 'capture_dataset_model',
+                'description' => 'Model ID (' . $this_id . ') relation made to capture_dataset_id ' . $value['capture_dataset_id'],
+              )
+            ));
+          }
+
+        }
+
+        $return = true;
+      }
+
+    }
+
+    return $return;
   }
 
   /**
@@ -1158,7 +1272,7 @@ class RepoImport implements RepoImportInterface {
         ),
         'limit' => 1,
         'search_params' => array(
-          0 => array('field_names' => array('processing_job.processing_service_job_id'), 'search_values' => array($data->job_id), 'comparison' => '='),
+          0 => array('field_names' => array('processing_job.ingest_job_uuid'), 'search_values' => array($data->uuid), 'comparison' => '='),
           1 => array('field_names' => array('processing_job.recipe'), 'search_values' => array('inspect-mesh'), 'comparison' => '='),
           2 => array('field_names' => array('processing_job.state'), 'search_values' => array('done'), 'comparison' => '='),
           3 => array('field_names' => array('processing_job_file.file_name'), 'search_values' => array('-report.json'), 'comparison' => 'LIKE'),

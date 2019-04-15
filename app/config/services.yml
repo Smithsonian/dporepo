@@ -20,12 +20,13 @@ services:
             $edan_version: '%edan_version%'
             $edan_search_endpoint: '%edan_search_endpoint%'
             $edan_content_endpoint: '%edan_content_endpoint%'
+            $edan_active: '%edan_active'
             $uploads_directory: '%uploads_directory%'
             $external_file_storage_path: '%external_file_storage_path%'
             $external_file_storage_on: '%external_file_storage_on%'
             $processing_service_location: '%processing_service_location%'
             $processing_service_client_id: '%processing_service_client_id%'
-            # $processing_service_on: '%processing_service_on%'
+            $processing_service_on: '%processing_service_on%'
             $conn: '@doctrine.dbal.default_connection'
 
     # makes classes in src/AppBundle available to be used as services
@@ -42,6 +43,15 @@ services:
         resource: '../../src/AppBundle/Controller'
         public: true
         tags: ['controller.service_arguments']
+
+    AppBundle\Controller\DefaultController:
+        arguments:
+            - '%uploads_directory%'
+
+    AppBundle\Controller\InstallController:
+        arguments:
+            $remote_uploads_directory: '%uploads_directory%'
+
 
     # explicit commands registration
     AppBundle\Command\:

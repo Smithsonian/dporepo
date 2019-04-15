@@ -74,4 +74,13 @@ interface RepoEdanInterface {
    */
   public function edanmdmImagesProcessor( $record = false );
 
+  /**
+   * Add EDAN Data to JSON
+   *
+   * @param string $json_path Path to json file.
+   * @param int $item_id The item iD.
+   * @return json
+   */
+  public function addEdanDataToJson($json_path = null, $item_id = null);
+
 }
