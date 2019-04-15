@@ -881,7 +881,7 @@ class RepoImport implements RepoImportInterface {
                       'model_purpose' => 'delivery_web',
                       'model_purpose_id' => $model_purpose_lookup_options['delivery_web'],
                       // Inherit properties from master model
-                      'capture_dataset_id' => $csv_val->capture_dataset_id,
+                      'capture_dataset_id' => isset($csv_val->capture_dataset_id) ? $csv_val->capture_dataset_id : null,
                       'creation_method' => $csv_val->creation_method,
                       'model_modality' => $csv_val->model_modality,
                       'units' => $csv_val->units,

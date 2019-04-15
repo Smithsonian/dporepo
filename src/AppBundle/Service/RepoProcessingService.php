@@ -62,7 +62,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
     $this->u = new AppUtilities();
     $this->kernel = $kernel;
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
-    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
+    $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_directory) : $uploads_directory;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->processing_service_location = $processing_service_location;
     $this->processing_service_client_id = $processing_service_client_id;
