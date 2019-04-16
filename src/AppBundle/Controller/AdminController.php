@@ -193,7 +193,54 @@ class AdminController extends Controller
 
         return $this->json($data);
     }
+  
+  /**
+   * @Route("/admin/datatables_browse_assigned_workflows", name="datatables_browse_assigned_workflows", methods="POST")
+   *
+   * Browse Workflows
+   * @param Request $request
+   * @return JsonResponse The query result in JSON
+   */
+  public function datatablesBrowseAssignedWorkflows(Request $request)
+  {
+    $username = $this->getUser()->getUsernameCanonical();
+    //@todo which permission?
+    /*$access = $this->repo_user_access->get_user_access_any($username, 'view_projects');
 
+    $project_ids = array(0);
+    if(array_key_exists('project_ids', $access) && isset($access['project_ids'])) {
+      $project_ids = $access['project_ids'];
+    }
+    */
+
+    $req = $request->request->all();
+    $item_id = !empty($req['item_id']) ? $req['item_id'] : NULL;
+
+    $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
+    $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
+    $start_record = !empty($req['start']) ? $req['start'] : 0;
+    $stop_record = !empty($req['length']) ? $req['length'] : 20;
+  $logged_user = $this->getUser()->getId();
+
+    $query_params = array(
+      'sort_field' => $sort_field,
+      'sort_order' => $sort_order,
+      'start_record' => $start_record,
+      'stop_record' => $stop_record,
+      'item_id' => $item_id,
+    'logged_user'=>$logged_user,
+    );
+  
+    if ($search) {
+      $query_params['search_value'] = $search;
+    }
+    //$query_params['project_ids'] = $project_ids;
+
+    // Look in workflow table for workflows belonging to an item_id.
+    $data = $this->repo_storage_controller->execute('getAssignedDatatableWorkflows', $query_params);
+
+    return $this->json($data);
+  }
 
     /**
      * @Route("/admin/get_favorites/", name="get_favorites", methods="POST")
