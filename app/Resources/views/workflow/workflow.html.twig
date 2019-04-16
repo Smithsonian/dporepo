@@ -62,7 +62,7 @@
               </div>
             {% endif %}
 
-            {% if data.step_id == 'web-multi' and data.step_type == 'auto' %}
+            {% if ((data.step_id == 'web-multi') or (data.step_id == 'web-thumb')) and data.step_type == 'auto' %}
             <div class="col-sm-12 col-md-12">
             {% else %}
             <div class="col-sm-6 col-md-6">
@@ -70,7 +70,7 @@
               <h4>Actions</h4>
               <p>{{ data.interface.message|raw }}</p>
 
-              {% if data.step_id == 'web-multi' and data.step_type == 'auto' %}
+              {% if ((data.step_id == 'web-multi') or (data.step_id == 'web-thumb')) and data.step_type == 'auto' %}
                 <hr>
                 <div>
                   <h4>Processing Logs</h4>
@@ -175,7 +175,7 @@
     <script type="text/javascript">
       $(document).ready(function() {
 
-        {% if data.step_id == 'web-multi' %}
+        {% if ((data.step_id == 'web-multi') or (data.step_id == 'web-thumb')) %}
 
           // Poll the processing service every 10 seconds for the status.
           var getProcessingStatus = setInterval(getProcessingStatus, 10000);
@@ -215,7 +215,7 @@
                       ,success: function(result) {
                         if (result) {
                           // If the step_id is set to 'qc-web', reload the page.
-                          if (result.step_id === 'qc-web') {
+                          if ((result.step_id === 'qc-web') || (result.step_id === 'qc-web-thumb')) {
                             // Remove the initial 'Retrieving processing status' message.
                             $('.get-status').remove();
                             // Clear the interval.
@@ -256,6 +256,11 @@
                     });
                   }
 
+                  if (result.state === 'error') {
+                    // @todo
+                    // console.log(result);
+                  }
+
                   // Add the processing job's submission timestamp.
                   if (!$(targetContainer).find('.submission').length) {
                     // Remove the initial 'Retrieving processing status' message.
@@ -273,9 +278,13 @@
                   // Create a unique class for the next status elements.
                   var words = result.step.split(' ');
                   var pclass = words[0].replace(':', '');
+                  // If there is no step, return the state.
+                  var processingState = (result.state === 'done') ? 'Processing done, transferring assets' : 'Job state: ' + result.state;
+                  var stateOrStep = result.step.length ? result.step : processingState;
+                  pclass = !result.step.length ? result.state : pclass;
 
                   // Add the processing job's step.
-                  if (result.step.length && !$(targetContainer).find('.' + pclass).length) {
+                  if (pclass.length && !$(targetContainer).find('.' + pclass).length) {
                     // Elements
                     var processing_p = $('<p />').addClass(pclass);
                     var processing_img = $('<img />')
@@ -292,7 +301,7 @@
                     resetStatuses();
 
                     // Add the paragraph element along with the spinner gif image to the new active step.
-                    processing_p.append(processing_img, '&nbsp;&nbsp;' + result.step);
+                    processing_p.append(processing_img, '&nbsp;&nbsp;' + stateOrStep);
                     targetContainer.append(processing_p);
                   }
 

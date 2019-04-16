@@ -25,6 +25,7 @@ parameters:
     edan_version: ~
     edan_search_endpoint: ~
     edan_content_endpoint: ~
+    edan_active: ~
 
     # SI Active Directory Settings
     si_ldap_host: ~

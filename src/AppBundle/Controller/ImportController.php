@@ -45,6 +45,10 @@ use AppBundle\Form\CaptureDatasetForm;
 use AppBundle\Entity\CaptureDataset;
 use AppBundle\Controller\CaptureDatasetController;
 
+use AppBundle\Form\ModelForm;
+use AppBundle\Entity\Model;
+use AppBundle\Controller\ModelController;
+
 class ImportController extends Controller
 {
     /**
@@ -74,15 +78,40 @@ class ImportController extends Controller
     private $processing;
 
     /**
-     * @var string $external_file_storage_on
+     * @var string $processing_service_location
+     */
+    private $processing_service_location;
+
+    /**
+     * @var bool $processing_service_on
+     */
+    private $processing_service_on;
+
+    /**
+     * @var bool $external_file_storage_on
      */
     private $external_file_storage_on;
+
+    /**
+     * @var bool $edan_active
+     */
+    private $edan_active;
+
+    /**
+     * @var string $service_down_message
+     */
+    private $service_down_message;
+
+    /**
+     * @var string $processing_service_down_message
+     */
+    private $processing_service_down_message;
 
     /**
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, CaptureDatasetController $datasetsController, ItemController $itemsController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, bool $external_file_storage_on) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, CaptureDatasetController $datasetsController, ItemController $itemsController, ModelController $modelController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, string $processing_service_location, bool $processing_service_on, bool $external_file_storage_on, bool $edan_active) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
@@ -91,9 +120,18 @@ class ImportController extends Controller
 
         $this->datasetsController = $datasetsController;
         $this->itemsController = $itemsController;
+        $this->modelController = $modelController;
         $this->fileTransfer = $fileTransfer;
         $this->processing = $processing;
+        $this->processing_service_location = $processing_service_location;
+        // Check to see if the processing service is available.
+        $this->processing_service = $this->processing->isServiceAccessible();
+        $this->processing_service_on = $processing_service_on;
         $this->external_file_storage_on = $external_file_storage_on;
+        $this->edan_active = $edan_active;
+
+        $this->service_down_message = '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).';
+        $this->processing_service_down_message = 'The processing service is unavailable. Could not resolve host ';
 
         // $this->logger = $logger;
         // Usage:
@@ -197,7 +235,7 @@ class ImportController extends Controller
           if (!empty($result)) {
             foreach ($result as $key => $value) {
               if (isset($value['errors'])) {
-                $this->addFlash('error', '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).');
+                $this->addFlash('error', $this->service_down_message);
                 $service_error = true;
                 foreach ($value['errors'] as $ekey => $evalue) {
                   $this->addFlash('error', $evalue);
@@ -205,6 +243,22 @@ class ImportController extends Controller
               }
             }
           }
+        }
+
+        // If the processing service is not turned on (in parameters.yml) or if it is on and not accessible,
+        // disable the interface by setting $service_error = true, and display error messages.
+        if (!$this->processing_service_on || ($this->processing_service_on && !$this->processing_service)) {
+          $service_error = true;
+          $this->addFlash('error', $this->service_down_message);
+          $this->addFlash('error', $this->processing_service_down_message . $this->processing_service_location);
+        }
+
+        // Prevent duplicate flash messages.
+        $notices = $this->get('session')->getFlashBag()->get('error', []);
+        $notices = array_unique($notices);
+        $this->get('session')->getFlashBag()->get('error');
+        foreach ($notices as $message) {
+          $this->addFlash('error', $message);
         }
 
         // Create the subject form
@@ -317,6 +371,56 @@ class ImportController extends Controller
 
         // Create the form
         $form = $this->createForm(CaptureDatasetForm::class, $dataset);
+        // Keep these fields
+        // // model_import_row_id
+        // // capture_dataset_field_id
+        // // capture_method
+        // // capture_dataset_type
+        // // capture_dataset_name
+        // // collected_by
+        // // date_of_capture
+        // // item_position_type
+        // // item_position_field_id
+        // // item_arrangement_field_id
+        // // focus_type
+        // // light_source_type
+        // // background_removal_method
+        // // cluster_type
+        // // directory_path
+        // Remove these fields.
+        $form->remove('collection_notes');
+        $form->remove('cluster_geometry_field_id');
+        $form->remove('capture_dataset_guid');
+        $form->remove('support_equipment');
+        $form->remove('resource_capture_datasets');
+        $form->remove('calibration_object_used');
+        $form->remove('positionally_matched_capture_datasets');
+
+        // Create the model form.
+        $model = new Model();
+        // Get data from lookup tables.
+        $model->unit_options = $this->modelController->getUnit();
+        // Create the form
+        $model_form = $this->createForm(ModelForm::class, $model);
+        // Keep these fields.
+        // // date_of_creation
+        // // derived_from
+        // // creation_method
+        // // units
+        // // model_purpose
+        // Remove these fields.
+        $model_form->remove('derived_from');
+        $model_form->remove('model_guid');
+        $model_form->remove('model_file_type');
+        $model_form->remove('model_modality');
+        $model_form->remove('is_watertight');
+        $model_form->remove('point_count');
+        $model_form->remove('has_normals');
+        $model_form->remove('face_count');
+        $model_form->remove('vertices_count');
+        $model_form->remove('has_vertex_color');
+        $model_form->remove('has_uv_space');
+        $model_form->remove('model_maps');
 
         $accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
 
@@ -325,9 +429,11 @@ class ImportController extends Controller
           'form' => $form->createView(),
           'subject_form' => $subject_form->createView(),
           'item_form' => $item_form->createView(),
+          'model_form' => $model_form->createView(),
           'accepted_file_types' => $accepted_file_types,
           'service_error' => $service_error,
           'dataset_data' => $dataset,
+          'edan_active' => $this->edan_active,
           'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
           'current_tab' => 'ingest'
         ));
@@ -361,7 +467,7 @@ class ImportController extends Controller
           if (!empty($result)) {
             foreach ($result as $key => $value) {
               if (isset($value['errors'])) {
-                $this->addFlash('error', '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).');
+                $this->addFlash('error', $this->service_down_message);
                 $service_error = true;
                 foreach ($value['errors'] as $ekey => $evalue) {
                   $this->addFlash('error', $evalue);
@@ -369,6 +475,22 @@ class ImportController extends Controller
               }
             }
           }
+        }
+
+        // If the processing service is not turned on (in parameters.yml) or if it is on and not accessible,
+        // disable the interface by setting $service_error = true, and display error messages.
+        if (!$this->processing_service_on || ($this->processing_service_on && !$this->processing_service)) {
+          $service_error = true;
+          $this->addFlash('error', $this->service_down_message);
+          $this->addFlash('error', $this->processing_service_down_message . $this->processing_service_location);
+        }
+
+        // Prevent duplicate flash messages.
+        $notices = $this->get('session')->getFlashBag()->get('error', []);
+        $notices = array_unique($notices);
+        $this->get('session')->getFlashBag()->get('error');
+        foreach ($notices as $message) {
+          $this->addFlash('error', $message);
         }
 
         // Create the parent record picker typeahead form.
@@ -1020,9 +1142,11 @@ class ImportController extends Controller
         foreach ($json_array as $key => $value) {
           // Replace numeric keys with field names.
           foreach ($value as $k => $v) {
-            $field_name = $target_fields[$k];
-            unset($json_array[$key][$k]);
-            $json_array[$key][$field_name] = $v;
+            if (array_key_exists($k, $target_fields)) {
+              $field_name = $target_fields[$k];
+              unset($json_array[$key][$k]);
+              $json_array[$key][$field_name] = $v;
+            }
           }
           // Convert the array to an object.
           $json_object[] = (object)$json_array[$key];
@@ -1259,4 +1383,40 @@ class ImportController extends Controller
 
       return $response;
     }
+
+
+    /**
+     * Subject Record Check
+     *
+     * @Route("/admin/subject_record_check/{subject_guid}", name="subject_record_check", methods="GET", defaults={"subject_guid" = null})
+     *
+     * @param string $subject_guid Subject GUID
+     * @return bool
+     */
+    public function subjectRecordCheck($subject_guid)
+    {
+
+      $data = false;
+
+      if (!empty($subject_guid)) {
+        
+        // Check to see if the subject already exists- DPO3DREP-546
+        $data = $this->repo_storage_controller->execute('getRecords', array(
+            'base_table' => 'subject',
+            'fields' => array(),
+            'limit' => 1,
+            'search_params' => array(
+              0 => array('field_names' => array('subject.subject_guid'), 'search_values' => array($subject_guid), 'comparison' => '='),
+            ),
+            'search_type' => 'AND',
+            'omit_active_field' => true,
+          )
+        );
+
+      }
+
+      return $this->json($data);
+    }
+
+
 }

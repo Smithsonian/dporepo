@@ -8,7 +8,6 @@ use Doctrine\DBAL\Driver\Connection;
 use Symfony\Component\Filesystem;
 use PDO;
 
-use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Finder\Finder;
 use AppBundle\Utils\AppUtilities;
 use AppBundle\Controller\RepoStorageHybridController;
@@ -27,17 +26,20 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
 
   private $fs;
 
+  private $local_uploads_directory;
+
   /**
    * @var string $project_directory
    */
   private $project_directory;
 
-  public function __construct(Connection $connection, $uploads_directory, $project_directory, FilesystemHelperController $filesystem_helper) {//, $user_id) {
+  public function __construct(Connection $connection, $uploads_directory, $project_directory, FilesystemHelperController $filesystem_helper, $local_uploads_directory) {
     $this->connection = $connection;
     $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
     $this->project_directory = $project_directory;
     //$this->user_id = $user_id;
     $this->fs = $filesystem_helper;
+    $this->local_uploads_directory = $local_uploads_directory;
   }
 
   /***
@@ -109,7 +111,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
       return array('installed' => false, 'error' => 'The database is in an awkward state. Checked for ' . count($tables) . ' tables and ' . $count_tables . ' of these exist.');
     }
   }
-        
+
   public function installDatabase() {
 
     $ret = $this->checkDatabaseExists();
@@ -133,14 +135,22 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
     if (file_exists($file)) {
 
       try {
-      $params = $this->connection->getParams();
-      $dbname = $params['dbname'];
+        // Create the user's uploads directory, if it doesn't exist.
+        $dir = $this->project_directory . $this->local_uploads_directory;
+        if(!file_exists($dir)) {
+          mkdir($dir, 0777, true);
+        }
+
+        $params = $this->connection->getParams();
+        $dbname = $params['dbname'];
 
         $sql = 'USE ' . $dbname . '; ';
-        $sql .= file_get_contents($file);
+        $sql .= file_get_contents($this->project_directory . 'web' . DIRECTORY_SEPARATOR . $file);
 
         $statement = $this->connection->prepare($sql);
         $ret = $statement->execute();
+
+        //@todo test- $ret should be = 1
 
         return array('installed' => $ret, 'error' => '');
       }
@@ -152,7 +162,7 @@ class RepoStorageStructureHybrid implements RepoStorageStructure {
     else {
       return array('installed' => false, 'error' => 'Source file not found for database creation. Missing: \\web\\' . $file);
     }
-    
+
   }
 
   public function createBackup($include_schema = true, $include_data = true) {

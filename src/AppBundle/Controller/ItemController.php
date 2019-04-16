@@ -167,6 +167,22 @@ class ItemController extends Controller
       $item_array = $this->repo_storage_controller->execute('getItem', array(
         'item_id' => $item_id,
       ));
+
+      $ret = $this->repo_storage_controller->execute('getChildModelAssets', array(
+        'item_id' => $item_id,
+      ));
+
+      if(array_key_exists('thumb_3d', $ret)) {
+        if(isset($ret['thumb_3d']) && count($ret['thumb_3d']) > 0) {
+          $item_array['thumb_3d'] = $ret['thumb_3d'][0];
+        }
+      }
+      if(array_key_exists('master', $ret)) {
+        if(isset($ret['master']) && count($ret['master']) > 0) {
+          $item_array['master_model'] = $ret['master'][0];
+        }
+      }
+
       if(is_array($item_array)) {
         $item->item_data = (object)$item_array;
       }

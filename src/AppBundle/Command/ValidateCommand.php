@@ -145,7 +145,8 @@ class ValidateCommand extends Command
       $command_model_generate = $this->getApplication()->find('app:model-generate');
       $arguments_model_generate = array(
           'command' => 'app:model-generate',
-          'uuid' => $input->getArgument('uuid')
+          'uuid' => $input->getArgument('uuid'),
+          'recipe_name' => 'web-hd'
       );
       $input_model_generate = new ArrayInput($arguments_model_generate);
       $return_model_generate = $command_model_generate->run($input_model_generate, $output);

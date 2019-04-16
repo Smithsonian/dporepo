@@ -122,7 +122,7 @@ class RepoValidateData implements RepoValidate {
     $return = array('is_valid' => false);
 
     // If no data is passed, set a message.
-    if(empty($data)) $return['messages'][] = 'Nothing to validate. Please provide an object to validate.';
+    if(empty($data)) $return['messages'][] = array('row' => 'Fatal error', 'error' => 'CSV is empty');
 
     // If data is passed, go ahead and process.
     if(!empty($data)) {
@@ -364,6 +364,71 @@ class RepoValidateData implements RepoValidate {
       }
     }
 
+  }
+
+  /**
+   * Get Holding Entitiy
+   *
+   * @param string $holding_entity_guid The holding entity GUID.
+   * @return array
+   */
+  public function getHoldingEntity($holding_entity_guid = null)
+  {
+    $data = array();
+
+    if (!empty($holding_entity_guid)) {
+
+      // Remove the 'ISN:' prefix from the ISNI ID (if present).
+      $holding_entity_guid = str_replace('ISN:', '', $holding_entity_guid);
+
+      $data = $this->repo_storage_controller->execute('getRecords', array(
+        'base_table' => 'isni_data',
+        'fields' => array(
+          array(
+            'table_name' => 'isni_data',
+            'field_name' => 'isni_id',
+          ),
+          array(
+            'table_name' => 'isni_data',
+            'field_name' => 'isni_label',
+            'field_alias' => 'holding_entity_name',
+          ),
+          array(
+            'table_name' => 'unit_stakeholder',
+            'field_name' => 'unit_stakeholder_guid',
+            'field_alias' => 'holding_entity_local_id',
+          ),
+          array(
+            'table_name' => 'unit_stakeholder',
+            'field_name' => 'isni_id',
+            'field_alias' => 'isni_id',
+          ),
+        ),
+        // Joins
+        'related_tables' => array(
+          array(
+            'table_name' => 'unit_stakeholder',
+            'table_join_field' => 'isni_id',
+            'join_type' => 'LEFT JOIN',
+            'base_join_table' => 'isni_data',
+            'base_join_field' => 'isni_id',
+          )
+        ),
+        'limit' => 1,
+        'search_params' => array(
+          0 => array('field_names' => array('isni_data.isni_id'), 'search_values' => array($holding_entity_guid), 'comparison' => '='),
+          1 => array('field_names' => array('unit_stakeholder.unit_stakeholder_label'), 'search_values' => array($holding_entity_guid), 'comparison' => '='),
+          2 => array('field_names' => array('unit_stakeholder.unit_stakeholder_label_aliases'), 'search_values' => array($holding_entity_guid), 'comparison' => 'LIKE'),
+        ),
+        'search_type' => 'OR',
+        'omit_active_field' => true,
+        )
+      );
+
+      if (!empty($data)) $data = $data[0];
+    }
+
+    return $data;
   }
 
   public function dumper($data = false, $die = true, $ip_address=false){

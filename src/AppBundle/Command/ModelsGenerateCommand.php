@@ -62,7 +62,7 @@ class ModelsGenerateCommand extends ContainerAwareCommand
 
     // Generate model/assets and transfer model metadata to metadata storage.
     // Processing recipe name. Default: web-hd.
-    $recipe_name = !empty($input->getArgument('recipe_name')) ? $input->getArgument('recipe_name') : 'web-hd';
+    $recipe_name = !empty($input->getArgument('recipe_name')) ? $input->getArgument('recipe_name') : '';
     // Set up flysystem.
     $container = $this->getContainer();
     $flysystem = $container->get('oneup_flysystem.processing_filesystem');

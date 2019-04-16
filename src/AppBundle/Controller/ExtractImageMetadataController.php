@@ -109,7 +109,7 @@ class ExtractImageMetadataController extends Controller
   {
 
     $data = array();
-    $job_status = 'model validation in progress';
+    $job_status = 'extracting image metadata';
     $localpath = !empty($params['localpath']) ? $params['localpath'] : false;
 
     // Throw an exception if the job record doesn't exist.
