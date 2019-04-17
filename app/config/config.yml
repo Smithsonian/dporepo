@@ -161,8 +161,3 @@ oneup_flysystem:
             cache: ~
             alias: ~
             mount: ~
-
-# EDAN Configuration
-dpo_edan:
-    edan_app_id: '%edan_app_id%'
-    edan_auth_token: '%edan_auth_token%'
