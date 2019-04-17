@@ -116,4 +116,19 @@ interface RepoImportInterface {
    */
   public function insertUvMaps($file_path = null, $model_id = null, $data = array());
 
+  /**
+   * @param null $data The data to validate.
+   * @return mixed array containing success/fail value, and any messages.
+   */
+  public function validateEdanRecord(&$data = null);
+
+  /**
+   * Add EDAN Data to JSON
+   *
+   * @param string $item_json_path Path to item.json.
+   * @param int $item_id The item iD.
+   * @return json
+   */
+  public function addEdanDataToJson($item_json_path = null, $item_id = null);
+
 }

@@ -9,11 +9,12 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 use Symfony\Component\HttpFoundation\Session\Session;
 use Oneup\UploaderBundle\Event\PostPersistEvent;
 use Doctrine\DBAL\Driver\Connection;
+use Symfony\Component\HttpKernel\KernelInterface;
 
 use AppBundle\Service\RepoValidateData;
 use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Controller\ImportController;
-use AppBundle\Service\RepoEdan;
+use AppBundle\Service\RepoImport;
 
 class UploadListener
 {
@@ -24,17 +25,26 @@ class UploadListener
   private $tokenStorage;
   private $import_controller;
   private $edan;
+  private $kernel;
+  private $repo_import;
 
   public function __construct(
     Connection $conn,
     TokenStorageInterface $tokenStorage,
+    KernelInterface $kernel,
     ImportController $import_controller,
-    RepoEdan $edan)
+    RepoImport $repo_import)
   {
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->tokenStorage = $tokenStorage;
     $this->import_controller = $import_controller;
-    $this->edan = $edan;
+    $this->kernel = $kernel;
+    $this->repo_import = $repo_import;
+
+    // Check for the presence of the EDAN bundle.
+    $bundles = $this->kernel->getBundles();
+    $this->edan = array_key_exists('DpoEdanBundle', $bundles);
+
     $this->connection = $conn;
   }
   
@@ -329,10 +339,11 @@ class UploadListener
         // Execute the validation against the JSON schema.
         $data->results = (object)$repoValidate->validateData($data->csv, $schema, $record_type, $blacklisted_fields);
 
-        // Validate that the EDAN record exists (subject_guid), and that the holding entity relation in metadata storage exists.
+        // If applicable, validate that the EDAN record exists (subject_guid),
+        // and that the holding entity relation in metadata storage exists.
         if (($schema === 'subject') && !empty($data->csv)) {
-          // Validate that the EDAN record exists.
-          $data->edan_results = $this->validateEdanRecord($data);
+          // If the DpoEdanBundle exists, validate that the EDAN record exists.
+          if ($this->edan) $data->edan_results = $this->repo_import->validateEdanRecord($data);
           // Validate that the holding entity exists.
           foreach($data->csv as $csv_key => $csv_value) {
             $data->holding_entity_results = $repoValidate->getHoldingEntity($csv_value->holding_entity_guid);
@@ -358,8 +369,8 @@ class UploadListener
           $data->results = (object)array_merge_recursive($data->capture_dataset_field_id_results, (array)$data->results);
         }
 
-        // Merge edan_results messages.
-        if(isset($data->edan_results['messages'])) {
+        // If the DpoEdanBundle exists, merge edan_results messages.
+        if($this->edan && isset($data->edan_results['messages'])) {
           unset($data->edan_results['is_valid']);
           $data->results = (object)array_merge_recursive($data->edan_results, (array)$data->results);
         }
@@ -373,43 +384,6 @@ class UploadListener
     }
 
     return $data;
-  }
-
-  /**
-   * @param null $data The data to validate.
-   * @return mixed array containing success/fail value, and any messages.
-   */
-  public function validateEdanRecord(&$data = NULL) {
-
-    $return = array('is_valid' => false);
-
-    // If no data is passed, set a message.
-    if(empty($data)) $return['messages'][] = 'Nothing to validate. Please provide an object to validate.';
-
-    // If data is passed, go ahead and process.
-    if(!empty($data)) {
-      // Loop through the data.
-      foreach($data->csv as $csv_key => $csv_value) {
-
-        // Check to see if the EDAN record exists.
-        if (empty($subject_exists)) {
-          // Query EDAN
-          $result = $this->edan->getRecord($csv_value->subject_guid);
-          // Catch if there is an error.
-          if (isset($result['error'])) {
-            $return['messages'][$csv_key] = array('row' => 'Row ' . ($csv_key+1), 'error' => 'EDAN record not found. subject_guid: ' . $csv_value->subject_guid);
-          }
-        }
-        
-      }
-    }
-
-    // If there are no messages, then return true for 'is_valid'.
-    if(!isset($return['messages'])) {
-      $return['is_valid'] = true;
-    }
-
-    return $return;
   }
 
   public function dumper($data = false, $die = true, $ip_address=false){

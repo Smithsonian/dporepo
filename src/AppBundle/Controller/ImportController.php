@@ -93,11 +93,6 @@ class ImportController extends Controller
     private $external_file_storage_on;
 
     /**
-     * @var bool $edan_active
-     */
-    private $edan_active;
-
-    /**
      * @var string $service_down_message
      */
     private $service_down_message;
@@ -111,7 +106,7 @@ class ImportController extends Controller
      * Constructor
      * @param object  $u  Utility functions object
      */
-    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, CaptureDatasetController $datasetsController, ItemController $itemsController, ModelController $modelController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, string $processing_service_location, bool $processing_service_on, bool $external_file_storage_on, bool $edan_active) // , LoggerInterface $logger
+    public function __construct(AppUtilities $u, Connection $conn, TokenStorageInterface $tokenStorage, CaptureDatasetController $datasetsController, ItemController $itemsController, ModelController $modelController, RepoFileTransfer $fileTransfer, RepoProcessingService $processing, string $processing_service_location, bool $processing_service_on, bool $external_file_storage_on) // , LoggerInterface $logger
     {
         // Usage: $this->u->dumper($variable);
         $this->u = $u;
@@ -128,7 +123,6 @@ class ImportController extends Controller
         $this->processing_service = $this->processing->isServiceAccessible();
         $this->processing_service_on = $processing_service_on;
         $this->external_file_storage_on = $external_file_storage_on;
-        $this->edan_active = $edan_active;
 
         $this->service_down_message = '<strong>Ingest Service Down</strong>. The interface has been disabled (see below for details).';
         $this->processing_service_down_message = 'The processing service is unavailable. Could not resolve host ';
@@ -222,6 +216,10 @@ class ImportController extends Controller
 
         $service_error = false;
         $obj = new UploadsParentPicker();
+
+        // Check to see if the DpoEdanBundle exists.
+        $bundles = $this->container->getParameter('kernel.bundles');
+        $edan_active = array_key_exists('DpoEdanBundle', $bundles);
 
         // If the external file storage service is turned on in parameters.yml,
         // check to see if the external storage service is accessible.
@@ -433,7 +431,7 @@ class ImportController extends Controller
           'accepted_file_types' => $accepted_file_types,
           'service_error' => $service_error,
           'dataset_data' => $dataset,
-          'edan_active' => $this->edan_active,
+          'edan_active' => $edan_active,
           'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
           'current_tab' => 'ingest'
         ));

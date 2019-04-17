@@ -16,7 +16,7 @@ use Symfony\Component\Process\PhpExecutableFinder;
 
 use AppBundle\Service\RepoProcessingService;
 use AppBundle\Controller\RepoStorageHybridController;
-use AppBundle\Service\RepoEdan;
+use AppBundle\Service\RepoImport;
 
 use AppBundle\Form\BatchProcessingForm;
 use AppBundle\Form\WorkflowParametersForm;
@@ -60,6 +60,11 @@ class WorkflowController extends Controller
   private $processing_service_on;
 
   /**
+   * @var object $repo_import
+   */
+  private $repo_import;
+
+  /**
    * @var object $kernel
    */
   public $kernel;
@@ -98,22 +103,26 @@ class WorkflowController extends Controller
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(AppUtilities $u, Connection $conn, RepoEdan $edan, RepoProcessingService $processing, string $processing_service_location, bool $processing_service_on, KernelInterface $kernel, string $uploads_directory)
+  public function __construct(AppUtilities $u, Connection $conn, RepoProcessingService $processing, RepoImport $repo_import, string $processing_service_location, bool $processing_service_on, KernelInterface $kernel, string $uploads_directory)
   {
     $this->u = $u;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
-    $this->edan = $edan;
     $this->processing = $processing;
     $this->processing_service_location = $processing_service_location;
     // Check to see if the processing service is available.
     $this->processing_service = $this->processing->isServiceAccessible();
     $this->processing_service_on = $processing_service_on;
+    $this->repo_import = $repo_import;
 
     $this->kernel = $kernel;
     $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
     $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_directory) : $uploads_directory;
     $this->accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
     $this->repo_user_access = new RepoUserAccess($conn);
+
+    // Check for the presence of the EDAN bundle.
+    $bundles = $this->kernel->getBundles();
+    $this->edan = array_key_exists('DpoEdanBundle', $bundles);
 
     $this->derivatives = array(
       '1024' => array(
@@ -919,8 +928,8 @@ class WorkflowController extends Controller
       $item_json_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . '-item.json';
 
       // Inject EDAN tombstone information into item.json.
-      if (is_file($item_json_path)) {
-        $edan_json = $this->edan->addEdanDataToJson($item_json_path, $w['item_id']);
+      if ($this->edan && is_file($item_json_path)) {
+        $edan_json = $this->repo_import->addEdanDataToJson($item_json_path, $w['item_id']);
         // Send errors to the front end, if present.
         if (is_array($edan_json) && array_key_exists('error', $edan_json)) $this->addFlash('error', $edan_json['error']);
       }
