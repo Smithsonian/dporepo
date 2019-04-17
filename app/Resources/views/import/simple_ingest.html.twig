@@ -94,16 +94,29 @@
        * Bootstrap Wizard
        */
       var rootwizard = $('#rootwizard');
-      rootwizard.bootstrapWizard({'tabClass': 'nav nav-tabs nav-justified'});
+      rootwizard.bootstrapWizard({
+        'tabClass': 'nav nav-tabs nav-justified',
+        'onTabShow': function(tab, navigation, index) {
+          // Display the "Previous Step" button when the 2nd or 3rd tab is clicked.
+          if (index < 2) rootwizard.find('.previous').show();
+          // Hide the "Previous Step" button when the 3rd tab is active.
+          if (index === 0) rootwizard.find('.previous').hide();
+          // Display the "Next Step" button when the 1st or 2nd tab is clicked.
+          if (index < 2) rootwizard.find('.next').show();
+          // Hide the "Next Step" button when the 3rd tab is active.
+          if (index === 2) rootwizard.find('.next').hide();
+        }
+      });
       // Initially disable all steps.
       rootwizard.bootstrapWizard('disable', '1');
       rootwizard.bootstrapWizard('disable', '2');
-      // Disable the "Next Step" button.
+      // Initially disable the "Next Step" button.
       rootwizard.find('.next').addClass('disabled');
-
-      // // Uncomment during testing to have access to the Step 2 tab.
+      
+      // // Uncomment during testing to have access to the Step 2 and 3 tabs.
       // // Enable Step 2 tab.
       // rootwizard.bootstrapWizard('enable', '1');
+      // rootwizard.bootstrapWizard('enable', '2');
       // // Enable the "Next Step" button.
       // rootwizard.find('.next').removeClass('disabled');
 
