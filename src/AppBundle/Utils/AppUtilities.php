@@ -104,14 +104,18 @@ class AppUtilities
     $overrides = array(
       'sabre' => '/http/lib/Client.php',
       'scholarslab' => '/bagit/lib/bagit_utils.php',
-      'league' => '/flysystem-webdav/src/WebDAVAdapter.php',
-      'league' => '/flysystem/src/Filesystem.php',
+      'league1' => '/flysystem-webdav/src/WebDAVAdapter.php',
+      'league2' => '/flysystem/src/Filesystem.php',
     );
 
     foreach ($overrides as $key => $value) {
+      // The original key, for the text file to be written.
+      $original_key = $key;
+      // Remove numbers from $key (to deal with league1 and league2).
+      $key = preg_replace('/[0-9]+/', '', $key);
       $source = $this->project_directory . $overrides_directory . $key . $value;
       $destination = $this->project_directory . $vendor_directory . $key . $value;
-      $text_file = $this->project_directory . $vendor_directory . $key . '/overridden.txt';
+      $text_file = $this->project_directory . $vendor_directory . $key . '/overridden_' . $original_key . '.txt';
       // Check to see if 1) the source is a file, and 2) if the overridden.txt file hasn't been written 
       // to the root of the vendor directory. (This means that the source has been updated via composer.)
       if (is_file($source) && !is_file($text_file)) {
