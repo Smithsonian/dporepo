@@ -37,7 +37,7 @@
         "sensio/framework-extra-bundle": "^5.0.0",
         "smithsonian/edan-client": "dev-master",
         "symfony/debug-bundle": "^3.4",
-        "symfony/finder": "^4.0",
+        "symfony/finder": "~3.0",
         "symfony/monolog-bundle": "^3.1.0",
         "symfony/polyfill-apcu": "^1.0",
         "symfony/swiftmailer-bundle": "^2.6.7",
