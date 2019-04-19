@@ -822,7 +822,7 @@ class RepoImport implements RepoImportInterface {
           foreach ($finder as $file) {
             $report_json = json_decode($file->getContents(), true);
             $processed_hd_assets = $report_json['steps']['delivery']['result']['files'];
-            $hd_metadata = $report_json['steps']['update-item']['parameters'];
+            $hd_metadata = $report_json['steps']['update-document']['parameters'];
           }
 
           if (!empty($processed_hd_assets)) {

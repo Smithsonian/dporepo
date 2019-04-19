@@ -127,15 +127,15 @@ class WorkflowController extends Controller
     $this->derivatives = array(
       '1024' => array(
         'derivative_file_name' => '-250k-1024-web.glb',
-        'item_json_file_name' => '-250k-1024-web-item.json',
+        'json_file_name' => '-250k-1024-web-document.json',
       ),
       '2048' => array(
         'derivative_file_name' => '-250k-2048-web.glb',
-        'item_json_file_name' => '-250k-2048-web-item.json',
+        'json_file_name' => '-250k-2048-web-document.json',
       ),
       '4096' => array(
         'derivative_file_name' => '-250k-4096-web.glb',
-        'item_json_file_name' => '-250k-4096-web-item.json',
+        'json_file_name' => '-250k-4096-web-document.json',
       )
     );
 
@@ -910,7 +910,7 @@ class WorkflowController extends Controller
   public function qcHd($w = array())
   {
     $data = array();
-    $item_json_path = null;
+    $document_json_path = null;
 
     if (!empty($w)) {
 
@@ -924,21 +924,21 @@ class WorkflowController extends Controller
       // Since we're building the WebDAV path, all slashes need to be forward slashes.
       $webdav_directory = str_replace('\\', '/', $directory);
       $project_directory = str_replace('\\', '/', $this->project_directory);
-      // Path to the item.json file.
-      $item_json_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . '-item.json';
+      // Path to the document.json file.
+      $document_json_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . '-document.json';
 
-      // Inject EDAN tombstone information into item.json.
-      if ($this->edan && is_file($item_json_path)) {
-        $edan_json = $this->repo_import->addEdanDataToJson($item_json_path, $w['item_id']);
-        // Send errors to the front end, if present.
-        if (is_array($edan_json) && array_key_exists('error', $edan_json)) $this->addFlash('error', $edan_json['error']);
-      }
+      // // Inject EDAN tombstone information into document.json.
+      // if ($this->edan && is_file($document_json_path)) {
+      //   $edan_json = $this->repo_import->addEdanDataToJson($document_json_path, $w['item_id']);
+      //   // Send errors to the front end, if present.
+      //   if (is_array($edan_json) && array_key_exists('error', $edan_json)) $this->addFlash('error', $edan_json['error']);
+      // }
 
-      // Load item.json if present.
-      if (is_file($item_json_path)) {
+      // Load document.json if present.
+      if (is_file($document_json_path) && is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done.txt')) {
         // The URL parameters.
         $url_params = array(
-          'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . '-item.json'
+          'document' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . '-document.json'
         );
       } else {
 
@@ -951,6 +951,8 @@ class WorkflowController extends Controller
 
         // The webDav-based path to the model.
         $model_path = str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . '-1000k-8192-web-hd.glb';
+
+        // $this->u->dumper(is_file($webdav_directory . '/' . $base_file_name . '-1000k-8192-web-hd.glb'));
 
         $url_params = array(
           'model' => $model_path,
@@ -1065,12 +1067,12 @@ class WorkflowController extends Controller
 
       // Thumb file name + item JSON file name.
       $thumb_file_name = '-50k-1024-web-thumb.glb';
-      $item_json_file_name = $base_file_name . '-50k-1024-web-thumb-item.json';
+      $json_file_name = $base_file_name . '-50k-1024-web-thumb-document.json';
 
-      // Load item.json if present.
-      if (is_file($directory . DIRECTORY_SEPARATOR . $item_json_file_name)) {
+      // Load document.json if present.
+      if (is_file($directory . DIRECTORY_SEPARATOR . $json_file_name)) {
         $url_params = array(
-          'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $item_json_file_name
+          'document' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $json_file_name
         );
       } else {
         // Load the raw model, using the .glb file.
@@ -1148,13 +1150,19 @@ class WorkflowController extends Controller
       // If the step_state is done, add the HD web and web thumb models.
       if ($w['step_state'] === 'done') {
 
+        // $this->u->dumper(is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . '-document.json'));
+
         // Web HD
-        // Load item.json if present.
-        if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . '-item.json')) {
+        // Load document.json if present.
+        if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . '-document.json')) {
           $url_params = array(
-            'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . '-item.json',
+            'document' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . '-document.json',
             'referrer' => '/admin/workflow/' . $w['workflow_id']
           );
+
+          // $this->u->dumper($url_params);
+
+
           // If QC is done, add a check icon.
           $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done.txt') ? $this->check_icon_markup : '';
           // Interface data.
@@ -1162,11 +1170,11 @@ class WorkflowController extends Controller
         }
 
         // Web Thumb
-        $item_json_file_name = '-50k-1024-web-thumb-item.json';
-        // Load item.json if present.
-        if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . $item_json_file_name)) {
+        $json_file_name = '-50k-1024-web-thumb-document.json';
+        // Load document.json if present.
+        if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . $json_file_name)) {
           $url_params = array(
-            'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . $item_json_file_name,
+            'document' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . $json_file_name,
             'referrer' => '/admin/workflow/' . $w['workflow_id']
           );
           // If QC is done, add a check icon.
@@ -1185,10 +1193,10 @@ class WorkflowController extends Controller
       $data['qc_done_count'] = 0;
       foreach ($this->derivatives as $key => $value) {
 
-        // Load item.json if present.
-        if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . $value['item_json_file_name'])) {
+        // Load document.json if present.
+        if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . $value['json_file_name'])) {
           $url_params = array(
-            'item' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . $value['item_json_file_name']
+            'document' => str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . $value['json_file_name']
           );
         } else {
           // Load the raw model, using the .glb file.
@@ -1201,12 +1209,12 @@ class WorkflowController extends Controller
           // The webDav-based path to the model.
           $model_path = str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/' . $base_file_name . $value['derivative_file_name'];
 
-          $web_derivative_base_file_name = pathinfo($directory . DIRECTORY_SEPARATOR . $base_file_name . $value['item_json_file_name'], PATHINFO_FILENAME);
+          $web_derivative_base_file_name = pathinfo($directory . DIRECTORY_SEPARATOR . $base_file_name . $value['json_file_name'], PATHINFO_FILENAME);
 
           $url_params = array(
             'model' => $model_path,
             'quality' => 'Highest',
-            'base' => str_replace('-item', '', $web_derivative_base_file_name),
+            'base' => str_replace('-document', '', $web_derivative_base_file_name),
           );
 
         }
@@ -1227,6 +1235,8 @@ class WorkflowController extends Controller
       }
 
     }
+
+    // $this->u->dumper($data);
 
     return $data;
   }
@@ -1304,10 +1314,10 @@ class WorkflowController extends Controller
       // Add the UV map to the parameters.
       if (!empty($directory) && is_file($directory . DIRECTORY_SEPARATOR . $base_file_name)) $params['highPolyDiffuseMapFile'] = $base_file_name;
 
-      // Add the item.json file to the parameters.
+      // Add the document.json file to the parameters.
       $model_file_name = pathinfo($path[0]['asset_path'], PATHINFO_FILENAME);
-      $item_file_name = $model_file_name . '-item.json';
-      if (!empty($directory) && is_file($directory . DIRECTORY_SEPARATOR . $item_file_name)) $params['itemFile'] = $item_file_name;
+      $document_file_name = $model_file_name . '-document.json';
+      if (!empty($directory) && is_file($directory . DIRECTORY_SEPARATOR . $document_file_name)) $params['documentFile'] = $document_file_name;
 
       // Post the job to the processing service.
       $result = $this->processing->postJob($recipe['id'], $job_name, $params);
@@ -1469,8 +1479,8 @@ class WorkflowController extends Controller
 
         // Web HD
         if (!empty($type)) {
-          // Make sure the item.json exists before writing the 'done' file.
-          if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . '-item.json')) {
+          // Make sure the document.json exists before writing the 'done' file.
+          if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . '-document.json')) {
             // Move into the target directory.
             chdir($directory);
             $handle = fopen($directory . DIRECTORY_SEPARATOR . 'qc_' . $type . '_done.txt', 'w');
@@ -1484,8 +1494,8 @@ class WorkflowController extends Controller
         foreach ($this->derivatives as $key => $value) {
           // Check for the QC status to determine what's being set to 'done'.
           if (isset($w['qc_' . $key . '_done'])) {
-            // Make sure the item.json exists before writing the 'done' file.
-            if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . $value['item_json_file_name'])) {
+            // Make sure the document.json exists before writing the 'done' file.
+            if (is_file($directory . DIRECTORY_SEPARATOR . $base_file_name . $value['json_file_name'])) {
               // Move into the target directory.
               chdir($directory);
               $handle = fopen($directory . DIRECTORY_SEPARATOR . 'qc_' . $key . '_done.txt', 'w');

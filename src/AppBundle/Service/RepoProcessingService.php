@@ -538,8 +538,6 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
     $search_param = '';
     $contents = null;
 
-    $data = array();
-
     // If a job ID is passed, add to the query.
     if (!empty($job_id)) {
       // Query the database for the next job which has the state of 'created'.
@@ -616,7 +614,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
                   // TODO: transfer to the file storage service (or leave them on the repository filesystem).
                   // Set the file path minus the protocol and host.
-                  $file_path = str_replace('http://si-3ddigip01.si.edu:8000/', '', $file_value['path']);
+                  $file_path = str_replace($this->processing_service_location, '', $file_value['path']);
                   // Set the file name
                   $file_path_array = explode('/', $file_path);
                   $file_name = array_pop($file_path_array);
@@ -678,7 +676,8 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
             }
             // Catch the error.
             catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
-              throw $this->createNotFoundException($e->getMessage() . ' - The directory, ' . $job_id . ', does not exist.');
+              $data['errors'][] = $e->getMessage() . ' - The directory, ' . $job_id . ', does not exist.';
+              return $data;
             }
 
           }
