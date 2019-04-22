@@ -498,7 +498,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           $directory = pathinfo($processing_job[0]['asset_path'], PATHINFO_DIRNAME);
           $base_model_file_name = pathinfo($processing_job[0]['asset_path'], PATHINFO_BASENAME);
           $model_file_name = pathinfo($processing_job[0]['asset_path'], PATHINFO_FILENAME);
-          $item_file_name = $model_file_name . '-item.json';
+          $document_json_file_name = $model_file_name . '-document.json';
           
           // Get the UV map.
           $uv_map = $this->processing->getUvMap($processing_job[0]['asset_path']);
@@ -528,14 +528,14 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
               if (is_resource($stream_uv)) fclose($stream_uv);
             }
 
-            // item.json file
-            if (is_file($directory . DIRECTORY_SEPARATOR . $item_file_name)) {
+            // document.json file
+            if (is_file($directory . DIRECTORY_SEPARATOR . $document_json_file_name)) {
               // The external path - on the processing service side.
-              $path_external_item_json = $processing_job[0]['processing_service_job_id'] . '/' . $item_file_name;
-              $stream_item_json = fopen($directory . DIRECTORY_SEPARATOR . $item_file_name, 'r+');
-              $filesystem->writeStream($path_external_item_json, $stream_item_json);
+              $path_external_document_json = $processing_job[0]['processing_service_job_id'] . '/' . $document_json_file_name;
+              $stream_document_json = fopen($directory . DIRECTORY_SEPARATOR . $document_json_file_name, 'r+');
+              $filesystem->writeStream($path_external_document_json, $stream_document_json);
               // Before calling fclose on the resource, check if it’s still valid using is_resource.
-              if (is_resource($stream_item_json)) fclose($stream_item_json);
+              if (is_resource($stream_document_json)) fclose($stream_document_json);
             }
 
             // die('done!!!!!');
