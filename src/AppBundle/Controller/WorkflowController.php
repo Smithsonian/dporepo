@@ -601,9 +601,7 @@ class WorkflowController extends Controller
             $data = $this->qcHdError($w);
           }
           // Success: Manual QC
-          if (empty($w['step_state'])) {
-            $data = $this->qcHd($w);
-          }
+          if (empty($w['step_state'])) $data = $this->qcModel($w);
           break;
         case 'qc-web-thumb':
           // Error: Manually upload replacement
@@ -615,9 +613,7 @@ class WorkflowController extends Controller
             // $data = $this->qcWebThumbError($w);
           }
           // Success: Manual QC
-          if (empty($w['step_state'])) {
-            $data = $this->qcWebThumb($w);
-          }
+          if (empty($w['step_state'])) $data = $this->qcModel($w);
           break;
         case 'qc-web':
           // Error: Manually upload replacement
@@ -626,12 +622,10 @@ class WorkflowController extends Controller
             // $data = $this->qcWebError($w);
           }
           // Success: Manual QC
-          if (empty($w['step_state'])) {
-            $data = $this->qcWeb($w);
-          }
+          if (empty($w['step_state'])) $data = $this->qcModel($w);
           // QC Done
           if ($w['step_state'] === 'done') {
-            $data = $this->qcWeb($w);
+            $data = $this->qcModel($w);
             $data['header'] = 'QC Completed';
             $data['message'] .= 'Web HD and derivative models have been processed and approved.';
           }
@@ -910,10 +904,10 @@ class WorkflowController extends Controller
    * @param array $w Workflow data
    * @return array
    */
-  public function qcHd($w = array())
+  public function qcModel($w = array())
   {
     $data = array();
-    $document_json_path = null;
+    $document_json_path = $edan_json = null;
 
     if (!empty($w)) {
 
@@ -932,52 +926,118 @@ class WorkflowController extends Controller
       // If the document.json file doesn't exist, throw a createNotFoundException (404).
       if (!is_file($document_json_path)) throw $this->createNotFoundException('JSON not found - ' . $base_file_name . '-document.json');
 
-      // // Inject EDAN tombstone information into document.json.
-      // if ($this->edan && is_file($document_json_path)) {
-      //   $edan_json = $this->repo_import->addEdanDataToJson($document_json_path, $w['item_id']);
-      //   // Send errors to the front end, if present.
-      //   if (is_array($edan_json) && array_key_exists('error', $edan_json)) $this->addFlash('error', $edan_json['error']);
-      // }
-
-      // Make sure the .glb file exists.
-      $glb_file_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . $this->derivatives['hd']['file_name'];
-      $glb_file_info = $this->getFileInfo($glb_file_path);
-      // If the .glb file can't be found, throw a createNotFoundException (404).
-      if (empty($glb_file_info)) throw $this->createNotFoundException('Model not found - ' . $base_file_name . $this->derivatives['hd']['file_name']);
-
       // The webDav-based path to the root.
       $root = str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/';
       // The webDav-based path to the document.json.
       $document = $root . $base_file_name . '-document.json';
 
-      // The URL parameters.
-      $url_params = array(
-        'root' => $root,
-        'document' => $document,
-        'mode' => 'QC',
-        // 'model' => $base_file_name . $this->derivatives['hd']['file_name'],
-        'referrer' => '/admin/workflow/' . $w['workflow_id'] . '?qc_hd_done',
-      );
+      // Loop through and QC web derivatives (low, medium, and high).
+      if ($w['step_id'] === 'qc-web') {
 
-      // If QC is done, add a check icon.
-      $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done.txt') ? $this->check_icon_markup : '';
+        // Interface data.
+        $data = array(
+          'action' => 'qc',
+          'header' => 'QC: Web Models',
+          'message' => '',
+        );
 
-      // Interface data.
-      $data = array(
-        'action' => 'qc',
-        'header' => 'QC: HD Model',
-        'message' => '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?' . http_build_query($url_params) . '"><strong>QC/Position HD model</strong></a>' . $check_icon . '</p>',
-      );
-
-      // If QC is done, add a link to generate web thumb.
-      if (is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done.txt')) {
-        // If the processing service turned on (in parameters.yml) and is accessible, display the link. Otherwise just display text.
-        if ($this->processing_service_on && $this->processing_service) {
-          $link = '<a href="/admin/workflow/' . $w['workflow_id'] . '/go/success"><strong>Generate web thumb</strong></a>';
-        } else {
-          $link = '<span class="text-danger">Generate web thumb (disabled)</span>';
+        // If the step_state is done, add the HD web and web thumb models.
+        if ($w['step_state'] === 'done') {
+          $data['message'] .= $this->qcDoneAdd($w);
         }
-        $data['message'] .= '<p><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> ' . $link . '</p>';
+
+        $start = '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> ';
+        $end = '</strong></a></p>';
+        $url = '/lib/javascripts/voyager-tools/voyager-story-dev.html?';
+
+        // Unset the thumb and hd derivatives since we're dealing with the low, medium, and high derivatives.
+        unset($this->derivatives['thumb'], $this->derivatives['hd']);
+
+        $data['qc_done_count'] = 0;
+        foreach ($this->derivatives as $key => $value) {
+
+          // Make sure the .glb file exists.
+          $glb_file_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . $value['file_name'];
+          $glb_file_info = $this->getFileInfo($glb_file_path);
+          // If the .glb file can't be found, throw a createNotFoundException (404).
+          if (empty($glb_file_info)) throw $this->createNotFoundException('Model not found - ' . $base_file_name . $value['file_name']);
+          // The URL parameters.
+          $url_params = array(
+            'root' => $root,
+            'document' => $document,
+            'mode' => 'QC',
+            'referrer' => '/admin/workflow/' . $w['workflow_id'] . '?qc_' . $key . '_done',
+          );
+          // If QC is done, add a check icon.
+          $check_icon_web = is_file($directory . DIRECTORY_SEPARATOR . 'qc_' . $key . '_done.txt') ? $this->check_icon_markup : '';
+          // Overwrite the $end variable.
+          $end = '</strong></a>' . $check_icon_web . '</p>';
+          // Advance the qc_done_count, so we have an indication when to display the "Complete QC Workflow" button.
+          if (!empty($check_icon_web)) $data['qc_done_count']++;
+          // Set the message for the UI interface.
+          $data['message'] .= $start . '<a href="' . $url . http_build_query($url_params) . '"><strong>QC model (' . $key . ')' . $end;
+        }
+
+      }
+      // QC HD model and web thumb
+      else {
+
+        switch($w['step_id']) {
+          case 'qc-hd':
+            $file_name = $this->derivatives['hd']['file_name'];
+            $done_file_name = 'qc_hd_done.txt';
+            $referrer_param = '?qc_hd_done';
+            $qc_title = 'QC/Position HD model';
+            $next_step_title = 'Generate web thumb';
+            // Get subject record from EDAN to inject tombstone information into document.json.
+            if ($this->edan && is_file($document_json_path)) {
+              $edan_json = $this->repo_import->addEdanDataToJson($w['item_id']);
+              // Send errors to the front end, if present.
+              if (is_array($edan_json) && array_key_exists('error', $edan_json)) $this->addFlash('error', $edan_json['error']);
+            }
+            break;
+          case 'qc-web-thumb':
+            $file_name = $this->derivatives['thumb']['file_name'];
+            $done_file_name = 'qc_thumb_done.txt';
+            $referrer_param = '?qc_thumb_done';
+            $qc_title = 'QC model (thumb)';
+            $next_step_title = 'Generate web derivatives';
+            break;
+        }
+
+        // Make sure the .glb file exists.
+        $glb_file_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . $file_name;
+        $glb_file_info = $this->getFileInfo($glb_file_path);
+        // If the .glb file can't be found, throw a createNotFoundException (404).
+        if (empty($glb_file_info)) throw $this->createNotFoundException('Model not found - ' . $base_file_name . $file_name);
+        // The URL parameters.
+        $url_params = array(
+          'root' => $root,
+          'document' => $document,
+          'mode' => 'QC',
+          'referrer' => '/admin/workflow/' . $w['workflow_id'] . $referrer_param,
+        );
+        // Send EDAN metadata to the Cook to inject into the document.json file.
+        if (!empty($edan_json)) $url_params['meta'] = $edan_json;
+        // If QC is done, add a check icon.
+        $check_icon = is_file($directory . DIRECTORY_SEPARATOR . $done_file_name) ? $this->check_icon_markup : '';
+        // Interface data.
+        $data = array(
+          'action' => 'qc',
+          'header' => $qc_title,
+          'message' => '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?' . http_build_query($url_params) . '"><strong>' . $qc_title . '</strong></a>' . $check_icon . '</p>',
+        );
+        // If QC is done, add a link to generate web thumb.
+        if (is_file($directory . DIRECTORY_SEPARATOR . $done_file_name)) {
+          // If the processing service turned on (in parameters.yml) and is accessible, display the link. Otherwise just display text.
+          if ($this->processing_service_on && $this->processing_service) {
+            $link = '<a href="/admin/workflow/' . $w['workflow_id'] . '/go/success"><strong>' . $next_step_title . '</strong></a>';
+          } else {
+            $link = '<span class="text-danger">' . $next_step_title . ' (disabled)</span>';
+          }
+          $data['message'] .= '<p><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> ' . $link . '</p>';
+        }
+
       }
 
     }
@@ -1026,95 +1086,14 @@ class WorkflowController extends Controller
   }
 
   /**
-   * QC Web Thumb
+   * QC Done Add
    *
    * @param array $w Workflow data
    * @return array
    */
-  public function qcWebThumb($w = array())
+  public function qcDoneAdd($w = array())
   {
-    $data = array();
-
-    if (!empty($w)) {
-
-      // Get the master model's path.
-      $path = $this->getPathInfo($w);
-
-      // If the model path can't be found, throw a createNotFoundException (404).
-      if (empty($path)) throw $this->createNotFoundException('Model path not found');
-
-      $directory = pathinfo($path[0]['asset_path'], PATHINFO_DIRNAME);
-      $base_file_name = pathinfo($path[0]['asset_path'], PATHINFO_FILENAME);
-      // Since we're building the WebDAV path, all slashes need to be forward slashes.
-      $webdav_directory = str_replace('\\', '/', $directory);
-      $project_directory = str_replace('\\', '/', $this->project_directory);
-      // Path to the document.json file.
-      $document_json_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . '-document.json';
-      // If the document.json file doesn't exist, throw a createNotFoundException (404).
-      if (!is_file($document_json_path)) throw $this->createNotFoundException('JSON not found - ' . $base_file_name . '-document.json');
-
-      $data = array(
-        'action' => 'qc',
-        'header' => 'QC: Web Thumb',
-        'message' => '',
-      );
-
-      $start = '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> ';
-      $end = '</strong></a></p>';
-      $url = '/lib/javascripts/voyager-tools/voyager-story-dev.html?';
-
-      // Make sure the .glb file exists.
-      $glb_file_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . $this->derivatives['thumb']['file_name'];
-      $glb_file_info = $this->getFileInfo($glb_file_path);
-      // If the .glb file can't be found, throw a createNotFoundException (404).
-      if (empty($glb_file_info)) throw $this->createNotFoundException('Model not found - ' . $base_file_name . $this->derivatives['thumb']['file_name']);
-      
-      // The webDav-based path to the root.
-      $root = str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/';
-      // The webDav-based path to the document.json.
-      $document = $root . $base_file_name . '-document.json';
-
-      // The URL parameters.
-      $url_params = array(
-        'root' => $root,
-        'document' => $document,
-        'mode' => 'QC',
-        // 'model' => $base_file_name . $this->derivatives['thumb']['file_name'],
-      );
-
-      // Pass the referrer so the QC tool can redirect back to the workflow page after performing QC.
-      $url_params['referrer'] = '/admin/workflow/' . $w['workflow_id'] . '?qc_thumb_done';
-      // If QC is done, add a check icon.
-      $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_thumb_done.txt') ? $this->check_icon_markup : '';
-      // Overwrite the $end variable.
-      $end = '</strong></a>' . $check_icon . '</p>';
-      // Set the message for the UI interface.
-      $data['message'] .= $start . '<a href="' . $url . http_build_query($url_params) . '"><strong>QC model (thumb)' . $end;
-
-      // If QC is done, add a link to generate web thumb.
-      if (is_file($directory . DIRECTORY_SEPARATOR . 'qc_thumb_done.txt')) {
-        // If the processing service is accessible, display the link. Otherwise just test.
-        if ($this->processing_service) {
-          $link = '<a href="/admin/workflow/' . $w['workflow_id'] . '/go/success"><strong>Generate web derivatives</strong></a>';
-        } else {
-          $link = '<span class="text-danger">Generate web derivatives (disabled)</span>';
-        }
-        $data['message'] .= '<p><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> ' . $link . '</p>';
-      }
-    }
-
-    return $data;
-  }
-
-  /**
-   * QC Web
-   *
-   * @param array $w Workflow data
-   * @return array
-   */
-  public function qcWeb($w = array())
-  {
-    $data = array();
+    $data = '';
     $check_icon = $check_icon_thumb = $check_icon_web = '';
 
     if (!empty($w)) {
@@ -1135,107 +1114,47 @@ class WorkflowController extends Controller
       // If the document.json file doesn't exist, throw a createNotFoundException (404).
       if (!is_file($document_json_path)) throw $this->createNotFoundException('JSON not found - ' . $base_file_name . '-document.json');
 
-      $data = array(
-        'action' => 'qc',
-        'header' => 'QC: Web Models',
-        'message' => '',
+      // The webDav-based path to the root.
+      $root = str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/';
+      // The webDav-based path to the document.json.
+      $document = $root . $base_file_name . '-document.json';
+
+      // Web HD
+      // Make sure the .glb file exists.
+      $glb_file_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . $this->derivatives['hd']['file_name'];
+      $glb_file_info = $this->getFileInfo($glb_file_path);
+      // If the .glb file can't be found, throw a createNotFoundException (404).
+      if (empty($glb_file_info)) throw $this->createNotFoundException('Model not found - ' . $base_file_name . $this->derivatives['hd']['file_name']);
+      // The URL parameters.
+      $url_params = array(
+        'root' => $root,
+        'document' => $document,
+        'mode' => 'QC',
+        'referrer' => '/admin/workflow/' . $w['workflow_id'],
       );
+      // If QC is done, add a check icon.
+      $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done.txt') ? $this->check_icon_markup : '';
+      // Interface data.
+      $data .= '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?' . http_build_query($url_params) . '"><strong>QC/Position HD model</strong></a>' . $check_icon . '</p>';
 
-      // If the step_state is done, add the HD web and web thumb models.
-      if ($w['step_state'] === 'done') {
-
-        // The webDav-based path to the root.
-        $root = str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/';
-        // The webDav-based path to the document.json.
-        $document = $root . $base_file_name . '-document.json';
-
-        // Web HD
-        // Make sure the .glb file exists.
-        $glb_file_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . $this->derivatives['hd']['file_name'];
-        $glb_file_info = $this->getFileInfo($glb_file_path);
-        // If the .glb file can't be found, throw a createNotFoundException (404).
-        if (empty($glb_file_info)) throw $this->createNotFoundException('Model not found - ' . $base_file_name . $this->derivatives['hd']['file_name']);
-        // The URL parameters.
-        $url_params = array(
-          'root' => $root,
-          'document' => $document,
-          'mode' => 'QC',
-          // 'model' => $base_file_name . $this->derivatives['hd']['file_name'],
-          // 'quality' => 'Highest',
-          'referrer' => '/admin/workflow/' . $w['workflow_id'],
-        );
-        // If QC is done, add a check icon.
-        $check_icon = is_file($directory . DIRECTORY_SEPARATOR . 'qc_hd_done.txt') ? $this->check_icon_markup : '';
-        // Interface data.
-        $data['message'] .= '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?' . http_build_query($url_params) . '"><strong>QC/Position HD model</strong></a>' . $check_icon . '</p>';
-
-        // Web Thumb
-        // Make sure the .glb file exists.
-        $glb_file_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . $this->derivatives['thumb']['file_name'];
-        $glb_file_info = $this->getFileInfo($glb_file_path);
-        // If the .glb file can't be found, throw a createNotFoundException (404).
-        if (empty($glb_file_info)) throw $this->createNotFoundException('Model not found - ' . $base_file_name . $this->derivatives['thumb']['file_name']);
-        // The URL parameters.
-        $url_params = array(
-          'root' => $root,
-          'document' => $document,
-          'mode' => 'QC',
-          // 'model' => $base_file_name . $this->derivatives['thumb']['file_name'],
-          // 'quality' => 'Thumb',
-          'referrer' => '/admin/workflow/' . $w['workflow_id'],
-        );
-        // If QC is done, add a check icon.
-        $check_icon_thumb = is_file($directory . DIRECTORY_SEPARATOR . 'qc_thumb_done.txt') ? $this->check_icon_markup : '';
-        // Interface data.
-        $data['message'] .= '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?' . http_build_query($url_params) . '"><strong>QC Web Thumb model</strong></a>' . $check_icon_thumb . '</p>';
-
-      }
-
-      // Web Multi
-      $start = '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> ';
-      $end = '</strong></a></p>';
-      $url = '/lib/javascripts/voyager-tools/voyager-story-dev.html?';
-
-      // Unset the thumb and hd derivatives since we're dealing with the low, medium, and high derivatives.
-      unset($this->derivatives['thumb'], $this->derivatives['hd']);
-
-      $data['qc_done_count'] = 0;
-      foreach ($this->derivatives as $key => $value) {
-
-        // Make sure the .glb file exists.
-        $glb_file_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . $value['file_name'];
-        $glb_file_info = $this->getFileInfo($glb_file_path);
-        // If the .glb file can't be found, throw a createNotFoundException (404).
-        if (empty($glb_file_info)) throw $this->createNotFoundException('Model not found - ' . $base_file_name . $value['file_name']);
-        // The webDav-based path to the root.
-        $root = str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/';
-        // The webDav-based path to the document.json.
-        $document = $root . $base_file_name . '-document.json';
-
-        // The URL parameters.
-        $url_params = array(
-          'root' => $root,
-          'document' => $document,
-          'mode' => 'QC',
-          // 'model' => $base_file_name . $value['file_name'],
-          'referrer' => '/admin/workflow/' . $w['workflow_id'] . '?qc_' . $key . '_done',
-        );
-
-        // If QC is done, add a check icon.
-        $check_icon_web = is_file($directory . DIRECTORY_SEPARATOR . 'qc_' . $key . '_done.txt') ? $this->check_icon_markup : '';
-        // Overwrite the $end variable.
-        $end = '</strong></a>' . $check_icon_web . '</p>';
-
-        // Advance the qc_done_count, so we have an indication when to display the "Complete QC Workflow" button.
-        if (!empty($check_icon_web)) $data['qc_done_count']++;
-
-        // Set the message for the UI interface.
-        $data['message'] .= $start . '<a href="' . $url . http_build_query($url_params) . '"><strong>QC model (' . $key . ')' . $end;
-      }
-
+      // Web Thumb
+      // Make sure the .glb file exists.
+      $glb_file_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . $this->derivatives['thumb']['file_name'];
+      $glb_file_info = $this->getFileInfo($glb_file_path);
+      // If the .glb file can't be found, throw a createNotFoundException (404).
+      if (empty($glb_file_info)) throw $this->createNotFoundException('Model not found - ' . $base_file_name . $this->derivatives['thumb']['file_name']);
+      // The URL parameters.
+      $url_params = array(
+        'root' => $root,
+        'document' => $document,
+        'mode' => 'QC',
+        'referrer' => '/admin/workflow/' . $w['workflow_id'],
+      );
+      // If QC is done, add a check icon.
+      $check_icon_thumb = is_file($directory . DIRECTORY_SEPARATOR . 'qc_thumb_done.txt') ? $this->check_icon_markup : '';
+      // Interface data.
+      $data .= '<p><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?' . http_build_query($url_params) . '"><strong>QC Web Thumb model</strong></a>' . $check_icon_thumb . '</p>';
     }
-
-    // $this->u->dumper($data);
 
     return $data;
   }
