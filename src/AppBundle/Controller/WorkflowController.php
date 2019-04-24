@@ -907,7 +907,7 @@ class WorkflowController extends Controller
   public function qcModel($w = array())
   {
     $data = array();
-    $document_json_path = $edan_json = null;
+    $document_json_path = null;
 
     if (!empty($w)) {
 
@@ -989,12 +989,6 @@ class WorkflowController extends Controller
             $referrer_param = '?qc_hd_done';
             $qc_title = 'QC/Position HD model';
             $next_step_title = 'Generate web thumb';
-            // Get subject record from EDAN to inject tombstone information into document.json.
-            if ($this->edan && is_file($document_json_path)) {
-              $edan_json = $this->repo_import->addEdanDataToJson($w['item_id']);
-              // Send errors to the front end, if present.
-              if (is_array($edan_json) && array_key_exists('error', $edan_json)) $this->addFlash('error', $edan_json['error']);
-            }
             break;
           case 'qc-web-thumb':
             $file_name = $this->derivatives['thumb']['file_name'];
@@ -1017,8 +1011,6 @@ class WorkflowController extends Controller
           'mode' => 'QC',
           'referrer' => '/admin/workflow/' . $w['workflow_id'] . $referrer_param,
         );
-        // Send EDAN metadata to the Cook to inject into the document.json file.
-        if (!empty($edan_json)) $url_params['meta'] = $edan_json;
         // If QC is done, add a check icon.
         $check_icon = is_file($directory . DIRECTORY_SEPARATOR . $done_file_name) ? $this->check_icon_markup : '';
         // Interface data.
@@ -1209,7 +1201,7 @@ class WorkflowController extends Controller
       // Get the ID of the recipe, so it can be passed to processing service's job creation endpoint (post_job).
       $recipe = $this->processing->getRecipeByName($w['step_id']);
 
-      // If the web-multi recipe can't be found, throw a createNotFoundException (404).
+      // If the web-thumb or web-multi recipe can't be found, throw a createNotFoundException (404).
       if (isset($recipe['error']) && !empty($recipe['error'])) throw $this->createNotFoundException($recipe['error']);
 
       // Get the UV map.
@@ -1236,6 +1228,21 @@ class WorkflowController extends Controller
       $model_file_name = pathinfo($path[0]['asset_path'], PATHINFO_FILENAME);
       $document_file_name = $model_file_name . '-document.json';
       if (!empty($directory) && is_file($directory . DIRECTORY_SEPARATOR . $document_file_name)) $params['documentFile'] = $document_file_name;
+
+      // Get subject record from EDAN to inject tombstone information into document.json.
+      if ($this->edan && ($w['step_id'] === 'web-thumb')) {
+        $edan_json = $this->repo_import->addEdanDataToJson($w['item_id']);
+        // Send errors to the front end, if present.
+        if (is_array($edan_json) && array_key_exists('error', $edan_json)) {
+          // If an error is returned, throw a createNotFoundException (404).
+          throw $this->createNotFoundException($edan_json['error']);
+        } else {
+          // Send EDAN metadata to the Cook to inject into the document.json file.
+          if (!empty($edan_json)) $params['metaDataFile'] = 'metaDataFile.json';
+        }
+      }
+
+      // $this->u->dumper($params);
 
       // Post the job to the processing service.
       $result = $this->processing->postJob($recipe['id'], $job_name, $params);
