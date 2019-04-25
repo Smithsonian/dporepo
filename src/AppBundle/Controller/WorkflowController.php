@@ -1237,19 +1237,16 @@ class WorkflowController extends Controller
           // If an error is returned, throw a createNotFoundException (404).
           throw $this->createNotFoundException($edan_json['error']);
         } else {
-          // Send EDAN metadata to the Cook to inject into the document.json file.
+          // Set the metaDataFile parameter and file name value for the Cook.
           if (!empty($edan_json)) $params['metaDataFile'] = 'metaDataFile.json';
         }
       }
-
-      // $this->u->dumper($params);
 
       // Post the job to the processing service.
       $result = $this->processing->postJob($recipe['id'], $job_name, $params);
 
       // If the response http code isn't a 201, throw a createNotFoundException (404).
       if ($result['httpcode'] !== 201) throw $this->createNotFoundException('Error: The processing service returned HTTP code ' . $result['httpcode']);
-
 
       // Get the job data.
       $job = $this->processing->getJobByName($job_name);

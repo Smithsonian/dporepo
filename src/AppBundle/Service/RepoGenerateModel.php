@@ -553,10 +553,6 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
               if (is_resource($stream_document_json)) fclose($stream_document_json);
             }
 
-
-
-
-
             // Get subject record from EDAN to inject tombstone information into document.json.
             if ($this->edan && ($recipe_name === 'web-thumb')) {
 
@@ -596,15 +592,6 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
               }
             }
-
-
-
-
-
-
-
-
-            // die('done!!!!!');
 
             // Now that the file has been transferred, go ahead and run the processing job.
             $result = $this->processing->runJob($processing_job[0]['processing_service_job_id']);
