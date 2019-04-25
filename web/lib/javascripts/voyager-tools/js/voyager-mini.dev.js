@@ -27691,6 +27691,8 @@ class CVAnnotationView extends CObject3D_1.default {
             ins.style.setValue(annotation ? annotation.data.style : Annotation_1.EAnnotationStyle.Default, true);
             ins.scale.setValue(annotation ? annotation.data.scale : 1, true);
             ins.offset.setValue(annotation ? annotation.data.offset : 0, true);
+            ins.tilt.setValue(annotation ? annotation.data.tilt : 0, true);
+            ins.azimuth.setValue(annotation ? annotation.data.azimuth : 0, true);
             const articles = this.articles;
             if (articles) {
                 const names = articles.items.map(article => article.data.title);
@@ -27733,11 +27735,18 @@ class CVAnnotationView extends CObject3D_1.default {
             if (ins.offset.changed) {
                 annotation.set("offset", ins.offset.value);
             }
+            if (ins.tilt.changed) {
+                annotation.set("tilt", ins.tilt.value);
+            }
+            if (ins.azimuth.changed) {
+                annotation.set("azimuth", ins.azimuth.value);
+            }
             if (ins.image.changed) {
                 annotation.set("imageUri", ins.image.value);
             }
             if (ins.article.changed) {
-                const article = this.articles.getAt(ins.article.getValidatedValue() - 1);
+                const articles = this.articles;
+                const article = articles && articles.getAt(ins.article.getValidatedValue() - 1);
                 annotation.set("articleId", article ? article.id : "");
             }
             this.updateSprite(annotation);
@@ -29976,16 +29985,19 @@ class CVReader extends Component_1.default {
         this.ins.setValues({
             enabled: !!data.enabled,
             position: setup_1.EReaderPosition[data.position] || setup_1.EReaderPosition.Overlay,
-            articleId: data.articleId,
+            articleId: data.articleId || "",
         });
     }
     toData() {
         const ins = this.ins;
-        return {
+        const data = {
             enabled: ins.enabled.value,
             position: setup_1.EReaderPosition[ins.position.value] || "Overlay",
-            articleId: ins.articleId.value
         };
+        if (ins.articleId.value) {
+            data.articleId = ins.articleId.value;
+        }
+        return data;
     }
 }
 CVReader.typeName = "CVReader";
@@ -31416,7 +31428,8 @@ class Annotation extends Document_1.default {
             title: "New Annotation",
             lead: "",
             tags: [],
-            articles: [],
+            articleId: "",
+            imageUri: "",
             style: EAnnotationStyle.Default,
             visible: true,
             expanded: false,

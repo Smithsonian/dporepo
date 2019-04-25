@@ -515,7 +515,8 @@ button, input {
 .ff-splitter-section {
   flex: 1 1 auto;
   position: relative;
-  box-sizing: border-box; }
+  box-sizing: border-box;
+  overflow: hidden; }
 
 .ff-splitter[direction="vertical"] + .ff-splitter-section {
   border-top: 2px solid #1b1b1b; }
@@ -870,60 +871,62 @@ ff-popup-button .ff-content {
     margin-left: 4px;
     color: #a0a0a0; }
 
-.ff-tree .ff-tree-node-container {
-  margin-left: -501px;
-  border-top: 1px solid #3e3e3e;
-  border-bottom: 1px solid #3e3e3e;
-  margin-bottom: -1px; }
-
-.ff-tree .ff-tree-node {
-  margin-left: 500px; }
-  .ff-tree .ff-tree-node.ff-inner {
-    background-color: #2f2f2f; }
-  .ff-tree .ff-tree-node.ff-leaf {
-    background-color: #3c3c3c; }
-  .ff-tree .ff-tree-node.ff-root {
-    background-color: #272727; }
-  .ff-tree .ff-tree-node[selected] {
-    background-color: #1f6699; }
-  .ff-tree .ff-tree-node .ff-header {
-    position: relative;
-    cursor: pointer;
-    padding-left: 14px; }
-    .ff-tree .ff-tree-node .ff-header .ff-text {
-      user-select: none; }
-  .ff-tree .ff-tree-node.ff-drop-target > .ff-header {
-    outline: 1px dashed #1f6699; }
-  .ff-tree .ff-tree-node.ff-inner[expanded] > .ff-header:before {
-    content: '';
-    position: absolute;
-    top: 0.6em;
-    left: 3px;
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-bottom: 4px solid #a0a0a0;
-    transform: rotate(180deg);
-    transition: transform 0.05s; }
-  .ff-tree .ff-tree-node.ff-inner:not([expanded]) > .ff-header:before {
-    content: '';
-    position: absolute;
-    top: 0.6em;
-    left: 3px;
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-bottom: 4px solid #a0a0a0;
-    transform: rotate(90deg);
-    transition: transform 0.05s; }
-  .ff-tree .ff-tree-node.ff-leaf .ff-header {
-    cursor: default; }
-  .ff-tree .ff-tree-node .ff-content {
-    margin-left: 10px; }
-  .ff-tree .ff-tree-node:not([expanded]) > .ff-content {
-    display: none; }
+.ff-tree {
+  position: relative;
+  overflow-y: auto; }
+  .ff-tree .ff-tree-node-container {
+    margin-left: -501px;
+    border-top: 1px solid #3e3e3e;
+    border-bottom: 1px solid #3e3e3e;
+    margin-bottom: -1px; }
+  .ff-tree .ff-tree-node {
+    margin-left: 500px; }
+    .ff-tree .ff-tree-node.ff-inner {
+      background-color: #2f2f2f; }
+    .ff-tree .ff-tree-node.ff-leaf {
+      background-color: #3c3c3c; }
+    .ff-tree .ff-tree-node.ff-root {
+      background-color: #272727; }
+    .ff-tree .ff-tree-node[selected] {
+      background-color: #1f6699; }
+    .ff-tree .ff-tree-node .ff-header {
+      position: relative;
+      cursor: pointer;
+      padding-left: 14px; }
+      .ff-tree .ff-tree-node .ff-header .ff-text {
+        user-select: none; }
+    .ff-tree .ff-tree-node.ff-drop-target > .ff-header {
+      outline: 1px dashed #1f6699; }
+    .ff-tree .ff-tree-node.ff-inner[expanded] > .ff-header:before {
+      content: '';
+      position: absolute;
+      top: 0.6em;
+      left: 3px;
+      width: 0;
+      height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-bottom: 4px solid #a0a0a0;
+      transform: rotate(180deg);
+      transition: transform 0.05s; }
+    .ff-tree .ff-tree-node.ff-inner:not([expanded]) > .ff-header:before {
+      content: '';
+      position: absolute;
+      top: 0.6em;
+      left: 3px;
+      width: 0;
+      height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-bottom: 4px solid #a0a0a0;
+      transform: rotate(90deg);
+      transition: transform 0.05s; }
+    .ff-tree .ff-tree-node.ff-leaf .ff-header {
+      cursor: default; }
+    .ff-tree .ff-tree-node .ff-content {
+      margin-left: 10px; }
+    .ff-tree .ff-tree-node:not([expanded]) > .ff-content {
+      display: none; }
 
 ff-tab-container {
   background: #343434; }

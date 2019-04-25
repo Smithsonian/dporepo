@@ -8765,6 +8765,9 @@ class CAssetManager extends Component_1.default {
         this._selection = new Set();
         this._provider = new WebDAVProvider_1.default();
     }
+    get root() {
+        return this._rootAsset;
+    }
     get rootPath() {
         return this._provider.rootPath;
     }
@@ -8773,12 +8776,19 @@ class CAssetManager extends Component_1.default {
     }
     set rootUrl(url) {
         this._provider.rootUrl = url;
-        this.refresh();
+        this.refresh().then(() => this.rootUrlChanged());
     }
     get selectedAssets() {
         return Array.from(this._selection.values());
     }
     uploadFiles(files, folder) {
+        const fileArray = Array.from(files);
+        const uploads = fileArray.map(file => {
+            const url = resolve_pathname_1.default(folder.info.path + file.name, this.rootUrl);
+            const params = { method: "PUT", credentials: "include", body: file };
+            return fetch(url, params);
+        });
+        return Promise.all(uploads).then(() => this.refresh());
     }
     createFolder(parentFolder, folderName) {
         return this._provider.create(parentFolder.info, folderName).then(() => this.refresh());
@@ -8787,7 +8797,7 @@ class CAssetManager extends Component_1.default {
         return this._provider.rename(asset.info, name).then(() => this.refresh());
     }
     exists(asset) {
-        return this._provider.exists(asset.info);
+        return this._provider.exists(typeof asset === "object" ? asset.info : asset);
     }
     open(asset) {
         this.emit({ type: "asset-open", asset });
@@ -8836,6 +8846,9 @@ class CAssetManager extends Component_1.default {
             this.emit({ type: "tree-change", root: this._rootAsset });
         });
     }
+    rootUrlChanged() {
+        return Promise.resolve();
+    }
     createAssetTree(infos) {
         infos.sort((a, b) => a.url < b.url ? -1 : (a.url > b.url ? 1 : 0));
         const root = {
@@ -8858,7 +8871,7 @@ class CAssetManager extends Component_1.default {
                 else {
                     const asset = {
                         info,
-                        expanded: false,
+                        expanded: true,
                         children: []
                     };
                     this._assetsByPath[info.path] = asset;
@@ -10461,11 +10474,11 @@ const Tree_1 = __webpack_require__(/*! @ff/ui/Tree */ "../../libs/ff-ui/source/T
 const CAssetManager_1 = __webpack_require__(/*! ../components/CAssetManager */ "../../libs/ff-scene/source/components/CAssetManager.ts");
 ////////////////////////////////////////////////////////////////////////////////
 let AssetTree = class AssetTree extends Tree_1.default {
-    ////////////////////////////////////////////////////////////////////////////////
     constructor() {
-        super(...arguments);
+        super();
         this.path = "";
         this.assetManager = null;
+        this.includeRoot = true;
     }
     firstConnected() {
         super.firstConnected();
@@ -15492,7 +15505,7 @@ let LineEdit = class LineEdit extends CustomElement_1.default {
         this.requestFocus = false;
     }
     get inputElement() {
-        return this.getElementsByTagName("input")[0];
+        return this.getElementsByTagName("input").item(0);
     }
     focus() {
         this.requestFocus = true;
@@ -16053,6 +16066,9 @@ let Notification = Notification_1 = class Notification extends CustomElement_1.d
         else {
             console.warn(`element '#${Notification_1.stackId}' not found`);
         }
+    }
+    static show(message, level, timeout) {
+        new Notification_1(message, level, timeout);
     }
     close() {
         if (this._handler > 0) {
@@ -17019,14 +17035,23 @@ let TextEdit = class TextEdit extends CustomElement_1.default {
         this.align = "left";
         this.initialValue = "";
     }
+    get textArea() {
+        return this.getElementsByTagName("textarea").item(0);
+    }
+    select() {
+        const textArea = this.textArea;
+        textArea && textArea.select();
+    }
     focus() {
-        const element = this.getElementsByTagName("textarea")[0];
-        if (element) {
-            element.focus();
-        }
+        const textArea = this.textArea;
+        textArea && textArea.focus();
+    }
+    blur() {
+        const textArea = this.textArea;
+        textArea && textArea.blur();
     }
     hasFocus() {
-        return this.getElementsByTagName("textarea")[0] === document.activeElement;
+        return this.textArea === document.activeElement;
     }
     firstConnected() {
         this.classList.add("ff-control", "ff-text-edit");
@@ -17291,7 +17316,7 @@ let Tree = Tree_1 = class Tree extends CustomElement_1.default {
         `;
     }
     onDragStart(event) {
-        const treeNode = this.getNodeFromMouseEvent(event);
+        const treeNode = this.getNodeFromEventTarget(event);
         if (treeNode && this.onNodeDragStart(event, treeNode)) {
             event.dataTransfer.setData(Tree_1.dragDropMimeType, this.getId(treeNode));
         }
@@ -17300,13 +17325,13 @@ let Tree = Tree_1 = class Tree extends CustomElement_1.default {
         }
     }
     onDragEnter(event) {
-        const treeNode = this.getNodeFromMouseEvent(event);
+        let treeNode = this.getNodeFromEventTarget(event);
         if (treeNode && this.canDrop(event, treeNode)) {
             this.onNodeDragEnter(event, treeNode);
         }
     }
     onDragOver(event) {
-        const treeNode = this.getNodeFromMouseEvent(event);
+        const treeNode = this.getNodeFromEventTarget(event);
         if (treeNode && this.canDrop(event, treeNode)) {
             if (this.onNodeDragOver(event, treeNode)) {
                 event.preventDefault();
@@ -17314,13 +17339,13 @@ let Tree = Tree_1 = class Tree extends CustomElement_1.default {
         }
     }
     onDragLeave(event) {
-        const treeNode = this.getNodeFromMouseEvent(event);
+        const treeNode = this.getNodeFromEventTarget(event);
         if (treeNode && this.canDrop(event, treeNode)) {
             this.onNodeDragLeave(event, treeNode);
         }
     }
     onDrop(event) {
-        const treeNode = this.getNodeFromMouseEvent(event);
+        const treeNode = this.getNodeFromEventTarget(event);
         if (treeNode && this.canDrop(event, treeNode)) {
             this.onNodeDrop(event, treeNode);
             event.stopPropagation();
@@ -17328,19 +17353,25 @@ let Tree = Tree_1 = class Tree extends CustomElement_1.default {
         event.preventDefault();
     }
     onClick(event) {
-        const treeNode = this.getNodeFromMouseEvent(event);
+        const treeNode = this.getNodeFromEventTarget(event);
         if (treeNode) {
             this.onNodeClick(event, treeNode);
         }
         event.stopPropagation();
     }
     onDblClick(event) {
-        const treeNode = this.getNodeFromMouseEvent(event);
+        const treeNode = this.getNodeFromEventTarget(event);
         if (treeNode) {
             this.onNodeDblClick(event, treeNode);
         }
         event.stopPropagation();
     }
+    /**
+     * Test whether the payload of the given drag event can be dropped onto the given tree node.
+     * The tree node may be null, indicating a drop onto the "empty" area below the tree.
+     * @param event
+     * @param targetTreeNode
+     */
     canDrop(event, targetTreeNode) {
         return !!event.dataTransfer.types.find(type => type === Tree_1.dragDropMimeType);
     }
@@ -17367,16 +17398,12 @@ let Tree = Tree_1 = class Tree extends CustomElement_1.default {
     }
     onNodeDblClick(event, treeNode) {
     }
-    getNodeFromMouseEvent(event) {
+    getNodeFromEventTarget(event) {
         let target = event.target;
         while (target && !target.classList.contains("ff-tree-node")) {
             target = target === this ? null : target.parentElement;
         }
         return target && this._nodeById[target.id];
-    }
-    getNodeFromDragEvent(event) {
-        const treeNodeId = event.dataTransfer.getData(Tree_1.dragDropMimeType);
-        return treeNodeId && this._nodeById[treeNodeId + this._containerId];
     }
     getElementByNode(treeNode) {
         const id = this._idByNode.get(treeNode);
@@ -60830,7 +60857,7 @@ const MainView_1 = __webpack_require__(/*! ../ui/explorer/MainView */ "./ui/expl
  */
 class ExplorerApplication {
     constructor(parent, props, embedded) {
-        this.props = props;
+        this.props = props || {};
         console.log(ExplorerApplication.splashMessage);
         // register components
         const registry = new TypeRegistry_1.default();
@@ -60952,7 +60979,7 @@ const storyTypes_1 = __webpack_require__(/*! ./storyTypes */ "./applications/sto
 const CVStoryApplication_1 = __webpack_require__(/*! ../components/CVStoryApplication */ "./components/CVStoryApplication.ts");
 const CVAssetReader_1 = __webpack_require__(/*! ../components/CVAssetReader */ "./components/CVAssetReader.ts");
 const CVAssetWriter_1 = __webpack_require__(/*! ../components/CVAssetWriter */ "./components/CVAssetWriter.ts");
-const CAssetManager_1 = __webpack_require__(/*! @ff/scene/components/CAssetManager */ "../../libs/ff-scene/source/components/CAssetManager.ts");
+const CVMediaManager_1 = __webpack_require__(/*! ../components/CVMediaManager */ "./components/CVMediaManager.ts");
 const CVDocumentProvider_1 = __webpack_require__(/*! ../components/CVDocumentProvider */ "./components/CVDocumentProvider.ts");
 const NVTasks_1 = __webpack_require__(/*! ../nodes/NVTasks */ "./nodes/NVTasks.ts");
 const NVoyagerStory_1 = __webpack_require__(/*! ../nodes/NVoyagerStory */ "./nodes/NVoyagerStory.ts");
@@ -60969,8 +60996,8 @@ class StoryApplication {
     get assetWriter() {
         return this.system.getMainComponent(CVAssetWriter_1.default);
     }
-    get assetManager() {
-        return this.system.getMainComponent(CAssetManager_1.default);
+    get mediaManager() {
+        return this.system.getMainComponent(CVMediaManager_1.default);
     }
     get documentProvider() {
         return this.system.getMainComponent(CVDocumentProvider_1.default);
@@ -61000,7 +61027,7 @@ class StoryApplication {
     }
     setRootUrl(url) {
         this.assetReader.rootUrl = url;
-        this.assetManager.rootUrl = url;
+        this.mediaManager.rootUrl = url;
     }
     loadDocument(documentPath, merge) {
         return this.assetReader.getJSON(documentPath)
@@ -61019,8 +61046,7 @@ class StoryApplication {
     evaluateProps() {
         const props = this.props;
         this.explorer.evaluateProps();
-        const url = props.root || props.document || props.model || props.geometry;
-        this.setRootUrl(new URL(url || ".", window.location).href);
+        this.mediaManager.rootUrl = this.assetReader.rootUrl;
         props.referrer = props.referrer || parseUrlParameter_1.default("referrer");
         props.mode = props.mode || parseUrlParameter_1.default("mode") || "prep";
         props.expert = props.expert !== undefined ? props.expert : parseUrlParameter_1.default("expert") !== "false";
@@ -61232,9 +61258,9 @@ exports.default = types;
  * limitations under the License.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-const CAssetManager_1 = __webpack_require__(/*! @ff/scene/components/CAssetManager */ "../../libs/ff-scene/source/components/CAssetManager.ts");
 const CVStoryApplication_1 = __webpack_require__(/*! ../components/CVStoryApplication */ "./components/CVStoryApplication.ts");
 const CVAssetWriter_1 = __webpack_require__(/*! ../components/CVAssetWriter */ "./components/CVAssetWriter.ts");
+const CVMediaManager_1 = __webpack_require__(/*! ../components/CVMediaManager */ "./components/CVMediaManager.ts");
 const CVTaskProvider_1 = __webpack_require__(/*! ../components/CVTaskProvider */ "./components/CVTaskProvider.ts");
 const CVExploreTask_1 = __webpack_require__(/*! ../components/CVExploreTask */ "./components/CVExploreTask.ts");
 const CVPoseTask_1 = __webpack_require__(/*! ../components/CVPoseTask */ "./components/CVPoseTask.ts");
@@ -61248,8 +61274,8 @@ const NVTasks_1 = __webpack_require__(/*! ../nodes/NVTasks */ "./nodes/NVTasks.t
 ////////////////////////////////////////////////////////////////////////////////
 const types = [
     CVStoryApplication_1.default,
-    CAssetManager_1.default,
     CVAssetWriter_1.default,
+    CVMediaManager_1.default,
     CVTaskProvider_1.default,
     CVExploreTask_1.default,
     CVPoseTask_1.default,
@@ -61430,6 +61456,8 @@ class CVAnnotationView extends CObject3D_1.default {
             ins.style.setValue(annotation ? annotation.data.style : Annotation_1.EAnnotationStyle.Default, true);
             ins.scale.setValue(annotation ? annotation.data.scale : 1, true);
             ins.offset.setValue(annotation ? annotation.data.offset : 0, true);
+            ins.tilt.setValue(annotation ? annotation.data.tilt : 0, true);
+            ins.azimuth.setValue(annotation ? annotation.data.azimuth : 0, true);
             const articles = this.articles;
             if (articles) {
                 const names = articles.items.map(article => article.data.title);
@@ -61472,11 +61500,18 @@ class CVAnnotationView extends CObject3D_1.default {
             if (ins.offset.changed) {
                 annotation.set("offset", ins.offset.value);
             }
+            if (ins.tilt.changed) {
+                annotation.set("tilt", ins.tilt.value);
+            }
+            if (ins.azimuth.changed) {
+                annotation.set("azimuth", ins.azimuth.value);
+            }
             if (ins.image.changed) {
                 annotation.set("imageUri", ins.image.value);
             }
             if (ins.article.changed) {
-                const article = this.articles.getAt(ins.article.getValidatedValue() - 1);
+                const articles = this.articles;
+                const article = articles && articles.getAt(ins.article.getValidatedValue() - 1);
                 annotation.set("articleId", article ? article.id : "");
             }
             this.updateSprite(annotation);
@@ -61862,12 +61897,13 @@ exports.default = CVAnnotationsTask;
 Object.defineProperty(exports, "__esModule", { value: true });
 const filenamify = __webpack_require__(/*! filenamify */ "../../node_modules/filenamify/index.js");
 const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const MessageBox_1 = __webpack_require__(/*! @ff/ui/MessageBox */ "../../libs/ff-ui/source/MessageBox.ts");
 const Article_1 = __webpack_require__(/*! ../models/Article */ "./models/Article.ts");
+const CVMeta_1 = __webpack_require__(/*! ./CVMeta */ "./components/CVMeta.ts");
 const CVTask_1 = __webpack_require__(/*! ./CVTask */ "./components/CVTask.ts");
 const ArticlesTaskView_1 = __webpack_require__(/*! ../ui/story/ArticlesTaskView */ "./ui/story/ArticlesTaskView.ts");
-const CAssetManager_1 = __webpack_require__(/*! @ff/scene/components/CAssetManager */ "../../libs/ff-scene/source/components/CAssetManager.ts");
+const CVMediaManager_1 = __webpack_require__(/*! ./CVMediaManager */ "./components/CVMediaManager.ts");
 const CVAssetWriter_1 = __webpack_require__(/*! ./CVAssetWriter */ "./components/CVAssetWriter.ts");
-const MessageBox_1 = __webpack_require__(/*! @ff/ui/MessageBox */ "../../libs/ff-ui/source/MessageBox.ts");
 ////////////////////////////////////////////////////////////////////////////////
 class CVArticlesTask extends CVTask_1.default {
     constructor(node, id) {
@@ -61886,8 +61922,8 @@ class CVArticlesTask extends CVTask_1.default {
     get activeArticle() {
         return this.outs.article.value;
     }
-    get assetManager() {
-        return this.getMainComponent(CAssetManager_1.default);
+    get mediaManager() {
+        return this.getMainComponent(CVMediaManager_1.default);
     }
     get assetWriter() {
         return this.getMainComponent(CVAssetWriter_1.default);
@@ -61897,17 +61933,18 @@ class CVArticlesTask extends CVTask_1.default {
         const outs = this.outs;
         const meta = this.meta;
         const activeArticle = this.activeArticle;
-        const activeAsset = activeArticle ? this.assetManager.getAssetByPath(activeArticle.data.uri) : null;
+        const activeAsset = activeArticle ? this.mediaManager.getAssetByPath(activeArticle.data.uri) : null;
         if (meta && ins.create.changed) {
             const article = new Article_1.default();
-            article.data.uri = `articles/new-article-${article.id}.html`;
+            const defaultFolder = CVMediaManager_1.default.articleFolder;
+            article.data.uri = `${defaultFolder}/new-article-${article.id}.html`;
             meta.articles.append(article);
             this.reader.ins.articleId.setValue(article.id);
         }
         if (activeArticle) {
             if (ins.edit.changed) {
                 if (activeAsset) {
-                    this.assetManager.open(activeAsset);
+                    this.mediaManager.open(activeAsset);
                 }
                 else if (activeArticle.data.uri) {
                     this.createEditArticle(activeArticle);
@@ -61940,19 +61977,19 @@ class CVArticlesTask extends CVTask_1.default {
     }
     deleteArticle(article) {
         this.meta.articles.removeItem(article);
-        const asset = this.assetManager.getAssetByPath(article.data.uri);
+        const asset = this.mediaManager.getAssetByPath(article.data.uri);
         if (asset) {
-            this.assetManager.delete(asset);
+            this.mediaManager.delete(asset);
         }
     }
     createEditArticle(article) {
         const uri = article.data.uri;
         this.assetWriter.putText(`<h1>${article.data.title}</h1>`, uri)
-            .then(() => this.assetManager.refresh())
+            .then(() => this.mediaManager.refresh())
             .then(() => {
-            const asset = this.assetManager.getAssetByPath(uri);
+            const asset = this.mediaManager.getAssetByPath(uri);
             if (asset) {
-                this.assetManager.open(asset);
+                this.mediaManager.open(asset);
             }
         })
             .catch(error => MessageBox_1.default.show("Error", `Failed to create article at '${uri}'`, "error"));
@@ -61961,8 +61998,9 @@ class CVArticlesTask extends CVTask_1.default {
         if (!title) {
             return "";
         }
-        const path = filenamify(title, { replacement: "-" });
-        return "articles/" + path.replace(/\s/g, "-").toLowerCase() + ".html";
+        const path = filenamify(title, { replacement: "-" }).replace(/\s/g, "-").toLowerCase();
+        const defaultFolder = CVMediaManager_1.default.articleFolder;
+        return defaultFolder + "/" + path + ".html";
     }
     onActiveDocument(previous, next) {
         if (previous) {
@@ -61979,6 +62017,9 @@ class CVArticlesTask extends CVTask_1.default {
             this.meta = null;
         }
         if (next) {
+            if (!next.meta) {
+                next.createComponent(CVMeta_1.default);
+            }
             this.meta = next.meta;
         }
         // update active article
@@ -62007,7 +62048,7 @@ class CVArticlesTask extends CVTask_1.default {
 }
 CVArticlesTask.typeName = "CVArticlesTask";
 CVArticlesTask.text = "Articles";
-CVArticlesTask.icon = "document";
+CVArticlesTask.icon = "article";
 CVArticlesTask.ins = {
     create: Component_1.types.Event("Articles.Create"),
     edit: Component_1.types.Event("Articles.Edit"),
@@ -63733,6 +63774,58 @@ exports.LightToolView = LightToolView;
 
 /***/ }),
 
+/***/ "./components/CVMediaManager.ts":
+/*!**************************************!*\
+  !*** ./components/CVMediaManager.ts ***!
+  \**************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const CAssetManager_1 = __webpack_require__(/*! @ff/scene/components/CAssetManager */ "../../libs/ff-scene/source/components/CAssetManager.ts");
+const Notification_1 = __webpack_require__(/*! @ff/ui/Notification */ "../../libs/ff-ui/source/Notification.ts");
+class CVMediaManager extends CAssetManager_1.default {
+    rootUrlChanged() {
+        return this.createArticleFolder();
+    }
+    createArticleFolder() {
+        const folderName = CVMediaManager.articleFolder;
+        return this.exists(folderName).then(result => {
+            if (!result) {
+                const root = this.root;
+                const infoText = `folder '${folderName}' in '${root.info.path}.'`;
+                return this.createFolder(root, folderName)
+                    .then(() => Notification_1.default.show(`Created ${infoText}'`))
+                    .catch(error => Notification_1.default.show(`Failed to create ${infoText}`));
+            }
+        });
+    }
+}
+CVMediaManager.typeName = "CVMediaManager";
+CVMediaManager.articleFolder = "articles";
+exports.default = CVMediaManager;
+
+
+/***/ }),
+
 /***/ "./components/CVMeta.ts":
 /*!******************************!*\
   !*** ./components/CVMeta.ts ***!
@@ -65034,16 +65127,19 @@ class CVReader extends Component_1.default {
         this.ins.setValues({
             enabled: !!data.enabled,
             position: setup_1.EReaderPosition[data.position] || setup_1.EReaderPosition.Overlay,
-            articleId: data.articleId,
+            articleId: data.articleId || "",
         });
     }
     toData() {
         const ins = this.ins;
-        return {
+        const data = {
             enabled: ins.enabled.value,
             position: setup_1.EReaderPosition[ins.position.value] || "Overlay",
-            articleId: ins.articleId.value
         };
+        if (ins.articleId.value) {
+            data.articleId = ins.articleId.value;
+        }
+        return data;
     }
 }
 CVReader.typeName = "CVReader";
@@ -67598,7 +67694,8 @@ class Annotation extends Document_1.default {
             title: "New Annotation",
             lead: "",
             tags: [],
-            articles: [],
+            articleId: "",
+            imageUri: "",
             style: EAnnotationStyle.Default,
             visible: true,
             expanded: false,
@@ -68835,13 +68932,13 @@ exports.default = NVTools;
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 const Node_1 = __webpack_require__(/*! @ff/graph/Node */ "../../libs/ff-graph/source/Node.ts");
-const CAssetManager_1 = __webpack_require__(/*! @ff/scene/components/CAssetManager */ "../../libs/ff-scene/source/components/CAssetManager.ts");
+const CVMediaManager_1 = __webpack_require__(/*! ../components/CVMediaManager */ "./components/CVMediaManager.ts");
 const CVAssetWriter_1 = __webpack_require__(/*! ../components/CVAssetWriter */ "./components/CVAssetWriter.ts");
 const CVStoryApplication_1 = __webpack_require__(/*! ../components/CVStoryApplication */ "./components/CVStoryApplication.ts");
 ////////////////////////////////////////////////////////////////////////////////
 class NVoyagerStory extends Node_1.default {
     createComponents() {
-        this.createComponent(CAssetManager_1.default);
+        this.createComponent(CVMediaManager_1.default);
         this.createComponent(CVAssetWriter_1.default);
         this.createComponent(CVStoryApplication_1.default);
     }
@@ -70241,12 +70338,14 @@ const Subscriber_1 = __webpack_require__(/*! @ff/core/Subscriber */ "../../libs/
 const CFullscreen_1 = __webpack_require__(/*! @ff/scene/components/CFullscreen */ "../../libs/ff-scene/source/components/CFullscreen.ts");
 const CVToolProvider_1 = __webpack_require__(/*! ../../components/CVToolProvider */ "./components/CVToolProvider.ts");
 const DocumentView_1 = __webpack_require__(/*! ./DocumentView */ "./ui/explorer/DocumentView.ts");
+const ShareMenu_1 = __webpack_require__(/*! ./ShareMenu */ "./ui/explorer/ShareMenu.ts");
 ////////////////////////////////////////////////////////////////////////////////
 let MainMenu = class MainMenu extends DocumentView_1.default {
     ////////////////////////////////////////////////////////////////////////////////
     constructor() {
         super(...arguments);
         this.documentProps = new Subscriber_1.default("value", this.onUpdate, this);
+        this.shareButtonSelected = false;
     }
     get fullscreen() {
         return this.system.getMainComponent(CFullscreen_1.default);
@@ -70282,13 +70381,15 @@ let MainMenu = class MainMenu extends DocumentView_1.default {
         const annotationsVisible = setup.viewer.ins.annotationsVisible.value;
         const toolsVisible = this.toolProvider.ins.visible.value;
         const showToolButton = setup.interface.ins.tools.value;
-        return DocumentView_1.html `<ff-button icon="document" title="Read more..."
+        return DocumentView_1.html `<ff-button icon="article" title="Read more..."
             ?selected=${readerVisible} @click=${this.onToggleReader}></ff-button>
         <ff-button icon="globe" title="Interactive Tours"
             ?selected=${toursVisible} @click=${this.onToggleTours}></ff-button>
-        <ff-button icon="comment" title="Toggle Annotations"
+        <ff-button icon="comment" title="Show/Hide Annotations"
             ?selected=${annotationsVisible} @click=${this.onToggleAnnotations}></ff-button>
-        ${showFullscreenButton ? DocumentView_1.html `<ff-button icon="expand" title="Toggle fullscreen mode"
+        <ff-button icon="share" title="Share Experience"
+            ?selected=${this.shareButtonSelected} @click=${this.onToggleShare}></ff-button>    
+        ${showFullscreenButton ? DocumentView_1.html `<ff-button icon="expand" title="Fullscreen"
             ?selected=${fullscreenActive} @click=${this.onToggleFullscreen}></ff-button>` : null}
         ${showToolButton ? DocumentView_1.html `<ff-button icon="tools" title="Tools and Settings"
             ?selected=${toolsVisible} @click=${this.onToggleTools}></ff-button>` : null}`;
@@ -70304,6 +70405,16 @@ let MainMenu = class MainMenu extends DocumentView_1.default {
     onToggleAnnotations() {
         const prop = this.activeDocument.setup.viewer.ins.annotationsVisible;
         prop.setValue(!prop.value);
+    }
+    onToggleShare() {
+        this.shareButtonSelected = !this.shareButtonSelected;
+        this.requestUpdate();
+        if (this.shareButtonSelected) {
+            ShareMenu_1.default.show(document.body).then(() => {
+                this.shareButtonSelected = false;
+                this.requestUpdate();
+            });
+        }
     }
     onToggleFullscreen() {
         this.fullscreen.toggle();
@@ -70375,12 +70486,14 @@ __webpack_require__(/*! ./styles.scss */ "./ui/explorer/styles.scss");
 // EXPLORER ICONS
 Icon_1.default.add("globe", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M336.5 160C322 70.7 287.8 8 248 8s-74 62.7-88.5 152h177zM152 256c0 22.2 1.2 43.5 3.3 64h185.3c2.1-20.5 3.3-41.8 3.3-64s-1.2-43.5-3.3-64H155.3c-2.1 20.5-3.3 41.8-3.3 64zm324.7-96c-28.6-67.9-86.5-120.4-158-141.6 24.4 33.8 41.2 84.7 50 141.6h108zM177.2 18.4C105.8 39.6 47.8 92.1 19.3 160h108c8.7-56.9 25.5-107.8 49.9-141.6zM487.4 192H372.7c2.1 21 3.3 42.5 3.3 64s-1.2 43-3.3 64h114.6c5.5-20.5 8.6-41.8 8.6-64s-3.1-43.5-8.5-64zM120 256c0-21.5 1.2-43 3.3-64H8.6C3.2 212.5 0 233.8 0 256s3.2 43.5 8.6 64h114.6c-2-21-3.2-42.5-3.2-64zm39.5 96c14.5 89.3 48.7 152 88.5 152s74-62.7 88.5-152h-177zm159.3 141.6c71.4-21.2 129.4-73.7 158-141.6h-108c-8.8 56.9-25.6 107.8-50 141.6zM19.3 352c28.6 67.9 86.5 120.4 158 141.6-24.4-33.8-41.2-84.7-50-141.6h-108z"/></svg>`);
 Icon_1.default.add("cog", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M444.788 291.1l42.616 24.599c4.867 2.809 7.126 8.618 5.459 13.985-11.07 35.642-29.97 67.842-54.689 94.586a12.016 12.016 0 0 1-14.832 2.254l-42.584-24.595a191.577 191.577 0 0 1-60.759 35.13v49.182a12.01 12.01 0 0 1-9.377 11.718c-34.956 7.85-72.499 8.256-109.219.007-5.49-1.233-9.403-6.096-9.403-11.723v-49.184a191.555 191.555 0 0 1-60.759-35.13l-42.584 24.595a12.016 12.016 0 0 1-14.832-2.254c-24.718-26.744-43.619-58.944-54.689-94.586-1.667-5.366.592-11.175 5.459-13.985L67.212 291.1a193.48 193.48 0 0 1 0-70.199l-42.616-24.599c-4.867-2.809-7.126-8.618-5.459-13.985 11.07-35.642 29.97-67.842 54.689-94.586a12.016 12.016 0 0 1 14.832-2.254l42.584 24.595a191.577 191.577 0 0 1 60.759-35.13V25.759a12.01 12.01 0 0 1 9.377-11.718c34.956-7.85 72.499-8.256 109.219-.007 5.49 1.233 9.403 6.096 9.403 11.723v49.184a191.555 191.555 0 0 1 60.759 35.13l42.584-24.595a12.016 12.016 0 0 1 14.832 2.254c24.718 26.744 43.619 58.944 54.689 94.586 1.667 5.366-.592 11.175-5.459 13.985L444.788 220.9a193.485 193.485 0 0 1 0 70.2zM336 256c0-44.112-35.888-80-80-80s-80 35.888-80 80 35.888 80 80 80 80-35.888 80-80z"/></svg>`);
-Icon_1.default.add("video", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M336.2 64H47.8C21.4 64 0 85.4 0 111.8v288.4C0 426.6 21.4 448 47.8 448h288.4c26.4 0 47.8-21.4 47.8-47.8V111.8c0-26.4-21.4-47.8-47.8-47.8zm189.4 37.7L416 177.3v157.4l109.6 75.5c21.2 14.6 50.4-.3 50.4-25.8V127.5c0-25.4-29.1-40.4-50.4-25.8z"/></svg>`);
+Icon_1.default.add("video", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M543.9 96c-6.2 0-12.5 1.8-18.2 5.7L416 170.1v-58.3c0-26.4-23.2-47.8-51.8-47.8H51.8C23.2 64 0 85.4 0 111.8v288.4C0 426.6 23.2 448 51.8 448h312.4c28.6 0 51.8-21.4 51.8-47.8v-58.3l109.7 68.3c5.7 4 12.1 5.7 18.2 5.7 16.6 0 32.1-13 32.1-31.5V127.5C576 109 560.5 96 543.9 96zM368 200v198.9c-.6.4-1.8 1.1-3.8 1.1H51.8c-2 0-3.2-.6-3.8-1.1V113.1c.6-.4 1.8-1.1 3.8-1.1h312.4c2 0 3.2.6 3.8 1.1V200zm160 155.2l-112-69.8v-58.7l112-69.8v198.3z"/></svg>`);
 Icon_1.default.add("eye", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M569.354 231.631C512.969 135.949 407.81 72 288 72 168.14 72 63.004 135.994 6.646 231.631a47.999 47.999 0 0 0 0 48.739C63.031 376.051 168.19 440 288 440c119.86 0 224.996-63.994 281.354-159.631a47.997 47.997 0 0 0 0-48.738zM288 392c-75.162 0-136-60.827-136-136 0-75.162 60.826-136 136-136 75.162 0 136 60.826 136 136 0 75.162-60.826 136-136 136zm104-136c0 57.438-46.562 104-104 104s-104-46.562-104-104c0-17.708 4.431-34.379 12.236-48.973l-.001.032c0 23.651 19.173 42.823 42.824 42.823s42.824-19.173 42.824-42.823c0-23.651-19.173-42.824-42.824-42.824l-.032.001C253.621 156.431 270.292 152 288 152c57.438 0 104 46.562 104 104z"/></svg>`);
 Icon_1.default.add("palette", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M128 224c-17.7 0-32 14.3-32 32s14.3 32 32 32 32-14.3 32-32-14.4-32-32-32zM418.6 58.1C359.2 9.3 281.3-10 204.6 5 104.9 24.4 24.7 104.2 5.1 203.7c-16.7 84.2 8.1 168.3 67.8 230.6 47.3 49.4 109.7 77.8 167.9 77.8 8.8 0 17.5-.6 26.1-2 24.2-3.7 44.6-18.7 56.1-41.1 12.3-24 12.3-52.7.2-76.6-6.1-12-5.5-26.2 1.8-38 7-11.8 18.7-18.4 32-18.4h72.2c46.4 0 82.8-35.7 82.8-81.3-.2-76.4-34.3-148.1-93.4-196.6zM429.2 288H357c-29.9 0-57.2 15.4-73 41.3-16 26.1-17.3 57.8-3.6 84.9 5.1 10.1 5.1 22.7-.2 32.9-2.6 5-8.7 13.7-20.6 15.6-49.3 7.7-108.9-16.6-152-61.6-48.8-50.9-69-119.4-55.4-188 15.9-80.6 80.8-145.3 161.6-161 62.6-12.3 126.1 3.5 174.3 43.1 48.1 39.5 75.7 97.6 75.9 159.6 0 18.6-15.3 33.2-34.8 33.2zM160 128c-17.7 0-32 14.3-32 32s14.3 32 32 32 32-14.3 32-32-14.4-32-32-32zm96-32.1c-17.7 0-32 14.3-32 32s14.3 32 32 32 32-14.3 32-32c0-17.6-14.3-32-32-32zm96 32.1c-17.7 0-32 14.3-32 32s14.3 32 32 32 32-14.3 32-32-14.3-32-32-32z"/></svg>`);
 Icon_1.default.add("comment", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 32C114.6 32 0 125.1 0 240c0 49.6 21.4 95 57 130.7C44.5 421.1 2.7 466 2.2 466.5c-2.2 2.3-2.8 5.7-1.5 8.7S4.8 480 8 480c66.3 0 116-31.8 140.6-51.4 32.7 12.3 69 19.4 107.4 19.4 141.4 0 256-93.1 256-208S397.4 32 256 32z"/></svg>`);
 Icon_1.default.add("information", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path d="M84.06,204.23h24.07V138.77H93.06A9.06,9.06,0,0,1,84,129.71V108.06A9.06,9.06,0,0,1,93.06,99h56.75a9.07,9.07,0,0,1,9.07,9.06v96.17h24.06a9.06,9.06,0,0,1,9.06,9.06v21.65a9.06,9.06,0,0,1-9.06,9.06H84.06A9.06,9.06,0,0,1,75,234.94V213.29A9.06,9.06,0,0,1,84.06,204.23ZM133.5,12a32.63,32.63,0,1,0,32.63,32.63A32.62,32.62,0,0,0,133.5,12Z"/></svg>`);
-Icon_1.default.add("document", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M224 136V0H24C10.7 0 0 10.7 0 24v464c0 13.3 10.7 24 24 24h336c13.3 0 24-10.7 24-24V160H248c-13.2 0-24-10.8-24-24zm64 236c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12v-8c0-6.6 5.4-12 12-12h168c6.6 0 12 5.4 12 12v8zm0-64c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12v-8c0-6.6 5.4-12 12-12h168c6.6 0 12 5.4 12 12v8zm0-72v8c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12v-8c0-6.6 5.4-12 12-12h168c6.6 0 12 5.4 12 12zm96-114.1v6.1H256V0h6.1c6.4 0 12.5 2.5 17 7l97.9 98c4.5 4.5 7 10.6 7 16.9z"/></svg>`);
+Icon_1.default.add("article", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M224 136V0H24C10.7 0 0 10.7 0 24v464c0 13.3 10.7 24 24 24h336c13.3 0 24-10.7 24-24V160H248c-13.2 0-24-10.8-24-24zm64 236c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12v-8c0-6.6 5.4-12 12-12h168c6.6 0 12 5.4 12 12v8zm0-64c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12v-8c0-6.6 5.4-12 12-12h168c6.6 0 12 5.4 12 12v8zm0-72v8c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12v-8c0-6.6 5.4-12 12-12h168c6.6 0 12 5.4 12 12zm96-114.1v6.1H256V0h6.1c6.4 0 12.5 2.5 17 7l97.9 98c4.5 4.5 7 10.6 7 16.9z"/></svg>`);
+Icon_1.default.add("document", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M288 248v28c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12v-28c0-6.6 5.4-12 12-12h168c6.6 0 12 5.4 12 12zm-12 72H108c-6.6 0-12 5.4-12 12v28c0 6.6 5.4 12 12 12h168c6.6 0 12-5.4 12-12v-28c0-6.6-5.4-12-12-12zm108-188.1V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V48C0 21.5 21.5 0 48 0h204.1C264.8 0 277 5.1 286 14.1L369.9 98c9 8.9 14.1 21.2 14.1 33.9zm-128-80V128h76.1L256 51.9zM336 464V176H232c-13.3 0-24-10.7-24-24V48H48v416h288z"/></svg>`);
+Icon_1.default.add("share", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M352 320c-22.608 0-43.387 7.819-59.79 20.895l-102.486-64.054a96.551 96.551 0 0 0 0-41.683l102.486-64.054C308.613 184.181 329.392 192 352 192c53.019 0 96-42.981 96-96S405.019 0 352 0s-96 42.981-96 96c0 7.158.79 14.13 2.276 20.841L155.79 180.895C139.387 167.819 118.608 160 96 160c-53.019 0-96 42.981-96 96s42.981 96 96 96c22.608 0 43.387-7.819 59.79-20.895l102.486 64.054A96.301 96.301 0 0 0 256 416c0 53.019 42.981 96 96 96s96-42.981 96-96-42.981-96-96-96z"/></svg>`);
 Icon_1.default.add("expand", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path d="M241,29V141.53a14,14,0,0,1-14,14h-18.7a14,14,0,0,1-14-14V61.74H114.45a14,14,0,0,1-14-14L100.3,29a14,14,0,0,1,14-14H226.89A14,14,0,0,1,241,29Z"/><path class="cls-1" d="M15,226.67V114.11a14,14,0,0,1,14-14h18.7a14,14,0,0,1,14,14V193.9h79.79a14,14,0,0,1,14,14l.12,18.74a14,14,0,0,1-14,14H29.07A14,14,0,0,1,15,226.67Z"/></svg>`);
 Icon_1.default.add("zoom", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M0 180V56c0-13.3 10.7-24 24-24h124c6.6 0 12 5.4 12 12v40c0 6.6-5.4 12-12 12H64v84c0 6.6-5.4 12-12 12H12c-6.6 0-12-5.4-12-12zM288 44v40c0 6.6 5.4 12 12 12h84v84c0 6.6 5.4 12 12 12h40c6.6 0 12-5.4 12-12V56c0-13.3-10.7-24-24-24H300c-6.6 0-12 5.4-12 12zm148 276h-40c-6.6 0-12 5.4-12 12v84h-84c-6.6 0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h124c13.3 0 24-10.7 24-24V332c0-6.6-5.4-12-12-12zM160 468v-40c0-6.6-5.4-12-12-12H64v-84c0-6.6-5.4-12-12-12H12c-6.6 0-12 5.4-12 12v124c0 13.3 10.7 24 24 24h124c6.6 0 12-5.4 12-12z"/></svg>`);
 Icon_1.default.add("tools", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M501.1 395.7L384 278.6c-23.1-23.1-57.6-27.6-85.4-13.9L192 158.1V96L64 0 0 64l96 128h62.1l106.6 106.6c-13.6 27.8-9.2 62.3 13.9 85.4l117.1 117.1c14.6 14.6 38.2 14.6 52.7 0l52.7-52.7c14.5-14.6 14.5-38.2 0-52.7zM331.7 225c28.3 0 54.9 11 74.9 31l19.4 19.4c15.8-6.9 30.8-16.5 43.8-29.5 37.1-37.1 49.7-89.3 37.9-136.7-2.2-9-13.5-12.1-20.1-5.5l-74.4 74.4-67.9-11.3L334 98.9l74.4-74.4c6.6-6.6 3.4-17.9-5.7-20.2-47.4-11.7-99.6.9-136.6 37.9-28.5 28.5-41.9 66.1-41.2 103.6l82.1 82.1c8.1-1.9 16.5-2.9 24.7-2.9zm-103.9 82l-56.7-56.7L18.7 402.8c-25 25-25 65.5 0 90.5s65.5 25 90.5 0l123.6-123.6c-7.6-19.9-9.9-41.6-5-62.7zM64 472c-13.2 0-24-10.8-24-24 0-13.3 10.7-24 24-24s24 10.7 24 24c0 13.2-10.7 24-24 24z"/></svg>`);
@@ -70394,6 +70507,12 @@ Icon_1.default.add("trash", CustomElement_1.html `<svg xmlns="http://www.w3.org/
 Icon_1.default.add("bars", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M16 132h416c8.837 0 16-7.163 16-16V76c0-8.837-7.163-16-16-16H16C7.163 60 0 67.163 0 76v40c0 8.837 7.163 16 16 16zm0 160h416c8.837 0 16-7.163 16-16v-40c0-8.837-7.163-16-16-16H16c-8.837 0-16 7.163-16 16v40c0 8.837 7.163 16 16 16zm0 160h416c8.837 0 16-7.163 16-16v-40c0-8.837-7.163-16-16-16H16c-8.837 0-16 7.163-16 16v40c0 8.837 7.163 16 16 16z"/></svg>`);
 Icon_1.default.add("triangle-left", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path d="M191.33,31.38V224.62a15,15,0,0,1-25.64,10.62L69.07,138.62a15,15,0,0,1,0-21.24l96.62-96.62A15,15,0,0,1,191.33,31.38Z"/></svg>`);
 Icon_1.default.add("triangle-right", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path d="M64.67,224.62V31.38A15,15,0,0,1,90.31,20.76l96.62,96.62a15,15,0,0,1,0,21.24L90.31,235.24A15,15,0,0,1,64.67,224.62Z"/></svg>`);
+Icon_1.default.add("twitter", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>`);
+Icon_1.default.add("facebook", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 512"><path d="M76.7 512V283H0v-91h76.7v-71.7C76.7 42.4 124.3 0 193.8 0c33.3 0 61.9 2.5 70.2 3.6V85h-48.2c-37.8 0-45.1 18-45.1 44.3V192H256l-11.7 91h-73.6v229"/></svg>`);
+Icon_1.default.add("instagram", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224.1 141c-63.6 0-114.9 51.3-114.9 114.9s51.3 114.9 114.9 114.9S339 319.5 339 255.9 287.7 141 224.1 141zm0 189.6c-41.1 0-74.7-33.5-74.7-74.7s33.5-74.7 74.7-74.7 74.7 33.5 74.7 74.7-33.6 74.7-74.7 74.7zm146.4-194.3c0 14.9-12 26.8-26.8 26.8-14.9 0-26.8-12-26.8-26.8s12-26.8 26.8-26.8 26.8 12 26.8 26.8zm76.1 27.2c-1.7-35.9-9.9-67.7-36.2-93.9-26.2-26.2-58-34.4-93.9-36.2-37-2.1-147.9-2.1-184.9 0-35.8 1.7-67.6 9.9-93.9 36.1s-34.4 58-36.2 93.9c-2.1 37-2.1 147.9 0 184.9 1.7 35.9 9.9 67.7 36.2 93.9s58 34.4 93.9 36.2c37 2.1 147.9 2.1 184.9 0 35.9-1.7 67.7-9.9 93.9-36.2 26.2-26.2 34.4-58 36.2-93.9 2.1-37 2.1-147.8 0-184.8zM398.8 388c-7.8 19.6-22.9 34.7-42.6 42.6-29.5 11.7-99.5 9-132.1 9s-102.7 2.6-132.1-9c-19.6-7.8-34.7-22.9-42.6-42.6-11.7-29.5-9-99.5-9-132.1s-2.6-102.7 9-132.1c7.8-19.6 22.9-34.7 42.6-42.6 29.5-11.7 99.5-9 132.1-9s102.7-2.6 132.1 9c19.6 7.8 34.7 22.9 42.6 42.6 11.7 29.5 9 99.5 9 132.1s2.7 102.7-9 132.1z"/></svg>`);
+Icon_1.default.add("email", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M464 64H48C21.49 64 0 85.49 0 112v288c0 26.51 21.49 48 48 48h416c26.51 0 48-21.49 48-48V112c0-26.51-21.49-48-48-48zm0 48v40.805c-22.422 18.259-58.168 46.651-134.587 106.49-16.841 13.247-50.201 45.072-73.413 44.701-23.208.375-56.579-31.459-73.413-44.701C106.18 199.465 70.425 171.067 48 152.805V112h416zM48 400V214.398c22.914 18.251 55.409 43.862 104.938 82.646 21.857 17.205 60.134 55.186 103.062 54.955 42.717.231 80.509-37.199 103.053-54.947 49.528-38.783 82.032-64.401 104.947-82.653V400H48z"/></svg>`);
+Icon_1.default.add("copy", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M433.941 65.941l-51.882-51.882A48 48 0 0 0 348.118 0H176c-26.51 0-48 21.49-48 48v48H48c-26.51 0-48 21.49-48 48v320c0 26.51 21.49 48 48 48h224c26.51 0 48-21.49 48-48v-48h80c26.51 0 48-21.49 48-48V99.882a48 48 0 0 0-14.059-33.941zM266 464H54a6 6 0 0 1-6-6V150a6 6 0 0 1 6-6h74v224c0 26.51 21.49 48 48 48h96v42a6 6 0 0 1-6 6zm128-96H182a6 6 0 0 1-6-6V54a6 6 0 0 1 6-6h106v88c0 13.255 10.745 24 24 24h88v202a6 6 0 0 1-6 6zm6-256h-64V48h9.632c1.591 0 3.117.632 4.243 1.757l48.368 48.368a6 6 0 0 1 1.757 4.243V112z"/></svg>`);
+Icon_1.default.add("cube", CustomElement_1.html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M239.1 7.5l-208 78c-18.7 7-31.1 25-31.1 45v225.1c0 18.2 10.3 34.8 26.5 42.9l208 104c13.5 6.8 29.4 6.8 42.9 0l208-104c16.3-8.1 26.5-24.8 26.5-42.9V130.5c0-20-12.4-37.9-31.1-44.9l-208-78C262 3.4 250 3.4 239.1 7.5zm16.9 45l208 78v.3l-208 84.5-208-84.5v-.3l208-78zM48 182.6l184 74.8v190.2l-184-92v-173zm232 264.9V257.4l184-74.8v172.9l-184 92z"/></svg>`);
 //Icon.add("name", html``);
 ////////////////////////////////////////////////////////////////////////////////
 /**
@@ -70407,6 +70526,7 @@ let MainView = class MainView extends CustomElement_1.default {
         }
         else {
             const props = {
+                root: this.getAttribute("root"),
                 document: this.getAttribute("document"),
                 model: this.getAttribute("model"),
                 geometry: this.getAttribute("geometry"),
@@ -70619,6 +70739,106 @@ ReaderView = __decorate([
     DocumentView_1.customElement("sv-reader-view")
 ], ReaderView);
 exports.default = ReaderView;
+
+
+/***/ }),
+
+/***/ "./ui/explorer/ShareMenu.ts":
+/*!**********************************!*\
+  !*** ./ui/explorer/ShareMenu.ts ***!
+  \**********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var ShareMenu_1;
+const Popup_1 = __webpack_require__(/*! @ff/ui/Popup */ "../../libs/ff-ui/source/Popup.ts");
+__webpack_require__(/*! @ff/ui/Button */ "../../libs/ff-ui/source/Button.ts");
+__webpack_require__(/*! @ff/ui/TextEdit */ "../../libs/ff-ui/source/TextEdit.ts");
+////////////////////////////////////////////////////////////////////////////////
+let ShareMenu = ShareMenu_1 = class ShareMenu extends Popup_1.default {
+    constructor() {
+        super();
+        this.position = "center";
+        this.modal = true;
+        this.url = window.location.href;
+    }
+    static show(parent) {
+        const menu = new ShareMenu_1();
+        parent.appendChild(menu);
+        return new Promise((resolve, reject) => {
+            menu.on("close", () => resolve());
+        });
+    }
+    close() {
+        this.dispatchEvent(new CustomEvent("close"));
+        this.remove();
+    }
+    firstConnected() {
+        super.firstConnected();
+        this.classList.add("sv-share-menu");
+    }
+    render() {
+        const url = encodeURIComponent(this.url);
+        const title = encodeURI("Smithsonian Voyager");
+        const twitterShareUrl = `http://twitter.com/share?text=${title}&url=${url}`;
+        const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+        const iFrameEmbedCode = `<iframe name="Smithsonian Voyager" src="${url}"></iframe>`;
+        const emailUrl = `mailto:?subject=${title}&body=${url}`;
+        return Popup_1.html `
+        <div class="ff-flex-row">
+            <div class="ff-flex-spacer ff-title">Share Experience</div>
+            <ff-button icon="close" transparent class="ff-close-button" title="Close" @click=${this.close}></ff-button>
+        </div>
+        <div class="ff-flex-row sv-share-buttons">
+            <a href=${twitterShareUrl} target="_blank" rel="noopener noreferrer"><ff-button class="sv-share-button-twitter" icon="twitter" title="Twitter"></ff-button></a>
+            <a href=${facebookShareUrl} target="_blank" rel="noopener noreferrer"><ff-button class="sv-share-button-facebook" icon="facebook" title="Facebook"></ff-button></a>
+            <ff-button class="sv-share-button-instagram" icon="instagram" title="Instagram" @click=${this.onClickInstagram}></ff-button>
+            <a href=${emailUrl} target="_blank"><ff-button class="sv-share-button-email" icon="email" title="Email"></ff-button></a>
+        </div>
+        <div class="ff-title">Embed Link</div>
+        <div class="ff-flex-row sv-embed-link">
+            <ff-text-edit text=${iFrameEmbedCode}></ff-text-edit>
+            <ff-button icon="copy" title="Copy to Clipboard" @click=${this.onClickCopy}></ff-button>
+        </div>
+        `;
+    }
+    onClickInstagram() {
+    }
+    onClickCopy() {
+        const textArea = this.getElementsByTagName("ff-text-edit").item(0);
+        textArea.select();
+        document.execCommand("copy");
+    }
+};
+ShareMenu = ShareMenu_1 = __decorate([
+    Popup_1.customElement("sv-share-menu")
+], ShareMenu);
+exports.default = ShareMenu;
 
 
 /***/ }),
@@ -71119,12 +71339,12 @@ const QuillEditor = __webpack_require__(/*! quill */ "quill");
 const quill_image_resize_module_1 = __webpack_require__(/*! quill-image-resize-module */ "../../node_modules/quill-image-resize-module/image-resize.min.js");
 const CustomElement_1 = __webpack_require__(/*! @ff/ui/CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
 const Notification_1 = __webpack_require__(/*! @ff/ui/Notification */ "../../libs/ff-ui/source/Notification.ts");
-const CAssetManager_1 = __webpack_require__(/*! @ff/scene/components/CAssetManager */ "../../libs/ff-scene/source/components/CAssetManager.ts");
+const MessageBox_1 = __webpack_require__(/*! @ff/ui/MessageBox */ "../../libs/ff-ui/source/MessageBox.ts");
 const SystemView_1 = __webpack_require__(/*! @ff/scene/ui/SystemView */ "../../libs/ff-scene/source/ui/SystemView.ts");
 const AssetTree_1 = __webpack_require__(/*! @ff/scene/ui/AssetTree */ "../../libs/ff-scene/source/ui/AssetTree.ts");
 const CVAssetReader_1 = __webpack_require__(/*! ../../components/CVAssetReader */ "./components/CVAssetReader.ts");
 const CVAssetWriter_1 = __webpack_require__(/*! ../../components/CVAssetWriter */ "./components/CVAssetWriter.ts");
-const MessageBox_1 = __webpack_require__(/*! @ff/ui/MessageBox */ "../../libs/ff-ui/source/MessageBox.ts");
+const CVMediaManager_1 = __webpack_require__(/*! ../../components/CVMediaManager */ "./components/CVMediaManager.ts");
 ////////////////////////////////////////////////////////////////////////////////
 let ArticleEditor = class ArticleEditor extends SystemView_1.default {
     ////////////////////////////////////////////////////////////////////////////////
@@ -71136,8 +71356,8 @@ let ArticleEditor = class ArticleEditor extends SystemView_1.default {
         this._assetPath = "";
         this._changed = false;
     }
-    get assetManager() {
-        return this.system.getMainComponent(CAssetManager_1.default);
+    get mediaManager() {
+        return this.system.getMainComponent(CVMediaManager_1.default);
     }
     get assetReader() {
         return this.system.getMainComponent(CVAssetReader_1.default);
@@ -71250,10 +71470,10 @@ let ArticleEditor = class ArticleEditor extends SystemView_1.default {
     }
     connected() {
         super.connected();
-        this.assetManager.on("asset-open", this.onOpenAsset, this);
+        this.mediaManager.on("asset-open", this.onOpenAsset, this);
     }
     disconnected() {
-        this.assetManager.off("asset-open", this.onOpenAsset, this);
+        this.mediaManager.off("asset-open", this.onOpenAsset, this);
         super.disconnected();
     }
     onOpenAsset(event) {
@@ -71263,7 +71483,7 @@ let ArticleEditor = class ArticleEditor extends SystemView_1.default {
     }
     onEditorDrop(event) {
         const assetPath = event.dataTransfer.getData(AssetTree_1.default.dragDropMimeType);
-        const asset = assetPath && this.assetManager.getAssetByPath(assetPath);
+        const asset = assetPath && this.mediaManager.getAssetByPath(assetPath);
         if (asset) {
             const mimeType = asset.info.type;
             if (mimeType === "image/jpeg" || mimeType === "image/png") {
@@ -71489,8 +71709,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const MessageBox_1 = __webpack_require__(/*! @ff/ui/MessageBox */ "../../libs/ff-ui/source/MessageBox.ts");
-const CAssetManager_1 = __webpack_require__(/*! @ff/scene/components/CAssetManager */ "../../libs/ff-scene/source/components/CAssetManager.ts");
+const Notification_1 = __webpack_require__(/*! @ff/ui/Notification */ "../../libs/ff-ui/source/Notification.ts");
 __webpack_require__(/*! @ff/scene/ui/AssetTree */ "../../libs/ff-scene/source/ui/AssetTree.ts");
+const CVMediaManager_1 = __webpack_require__(/*! ../../components/CVMediaManager */ "./components/CVMediaManager.ts");
 const CVTaskProvider_1 = __webpack_require__(/*! ../../components/CVTaskProvider */ "./components/CVTaskProvider.ts");
 const DocumentView_1 = __webpack_require__(/*! ../explorer/DocumentView */ "./ui/explorer/DocumentView.ts");
 ////////////////////////////////////////////////////////////////////////////////
@@ -71500,8 +71721,8 @@ let AssetPanel = class AssetPanel extends DocumentView_1.default {
         super(...arguments);
         this.basePath = "";
     }
-    get assetManager() {
-        return this.system.getMainComponent(CAssetManager_1.default);
+    get mediaManager() {
+        return this.system.getMainComponent(CVMediaManager_1.default);
     }
     get taskProvider() {
         return this.system.getMainComponent(CVTaskProvider_1.default);
@@ -71512,35 +71733,38 @@ let AssetPanel = class AssetPanel extends DocumentView_1.default {
     render() {
         const mode = this.taskProvider.ins.mode.value;
         this.basePath = mode === CVTaskProvider_1.ETaskMode.Expert ? "" : "articles";
-        return DocumentView_1.html `<div class="sv-panel-section">
-            <div class="sv-panel-header">
+        return DocumentView_1.html `<div class="sv-panel-header">
                 <ff-button icon="folder" title="Create Folder" @click=${this.onClickFolder}></ff-button>
                 <ff-button icon="pen" title="Rename Item" @click=${this.onClickRename}></ff-button>
                 <ff-button icon="trash" title="Delete Item" @click=${this.onClickDelete}></ff-button>
                 <ff-button icon="redo" title="Refresh View" @click=${this.onClickRefresh}></ff-button>
             </div>
-            <div class="ff-flex-item-stretch"><div class="ff-scroll-y">
-                <ff-asset-tree draggable .system=${this.system} path=${this.basePath}></ff-asset-tree>
-            </div></div>
-        </div>`;
+            <ff-asset-tree class="ff-flex-item-stretch" draggable .system=${this.system} path=${this.basePath}>
+            </ff-asset-tree>`;
     }
     onClickFolder() {
-        const assets = this.assetManager.selectedAssets;
-        if (assets.length === 1 && assets[0].info.folder) {
+        const parentAsset = this.mediaManager.selectedAssets[0] || this.mediaManager.root;
+        if (parentAsset && parentAsset.info.folder) {
             MessageBox_1.default.show("Create Folder", "Folder name:", "prompt", "ok-cancel", "New Folder").then(result => {
                 if (result.ok && result.text) {
-                    this.assetManager.createFolder(assets[0], result.text);
+                    const infoText = `folder '${result.text}' in '${parentAsset.info.path}'`;
+                    this.mediaManager.createFolder(parentAsset, result.text)
+                        .then(() => Notification_1.default.show(`Created ${infoText}`))
+                        .catch(error => Notification_1.default.show(`Failed to create ${infoText}`, "error"));
                 }
             });
         }
     }
     onClickRename() {
-        const assets = this.assetManager.selectedAssets;
+        const assets = this.mediaManager.selectedAssets;
         if (assets.length === 1) {
             const asset = assets[0];
             MessageBox_1.default.show("Rename Asset", "New name:", "prompt", "ok-cancel", asset.info.name).then(result => {
                 if (result.ok && result.text) {
-                    this.assetManager.rename(asset, result.text);
+                    const infoText = `asset '${asset.info.path}' to '${result.text}.'`;
+                    this.mediaManager.rename(asset, result.text)
+                        .then(() => Notification_1.default.show(`Renamed ${infoText}`))
+                        .catch(error => Notification_1.default.show(`Failed to rename ${infoText}`, "error"));
                 }
             });
         }
@@ -71548,12 +71772,14 @@ let AssetPanel = class AssetPanel extends DocumentView_1.default {
     onClickDelete() {
         MessageBox_1.default.show("Delete Assets", "Are you sure?", "warning", "ok-cancel").then(result => {
             if (result.ok) {
-                this.assetManager.deleteSelected();
+                this.mediaManager.deleteSelected()
+                    .then(() => Notification_1.default.show("Deleted selected assets."))
+                    .catch(() => Notification_1.default.show("Failed to delete selected assets.", "error"));
             }
         });
     }
     onClickRefresh() {
-        this.assetManager.refresh();
+        this.mediaManager.refresh();
     }
 };
 AssetPanel = __decorate([
@@ -72504,7 +72730,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 const SystemView_1 = __webpack_require__(/*! @ff/scene/ui/SystemView */ "../../libs/ff-scene/source/ui/SystemView.ts");
 __webpack_require__(/*! ./DocumentList */ "./ui/story/DocumentList.ts");
-__webpack_require__(/*! ./NodeTreeView */ "./ui/story/NodeTreeView.ts");
+__webpack_require__(/*! ./NodeTree */ "./ui/story/NodeTree.ts");
 const CVTaskProvider_1 = __webpack_require__(/*! ../../components/CVTaskProvider */ "./components/CVTaskProvider.ts");
 ////////////////////////////////////////////////////////////////////////////////
 let NavigatorPanel = class NavigatorPanel extends SystemView_1.default {
@@ -72539,9 +72765,7 @@ let NavigatorPanel = class NavigatorPanel extends SystemView_1.default {
                     <ff-icon name="hierarchy"></ff-icon>
                     <div class="ff-text">Nodes</div>
                 </div>
-                <div class="ff-flex-item-stretch"><div class="ff-scroll-y">
-                    <sv-node-tree-view .system=${system}></sv-node-tree-view>
-                </div></div>
+                <sv-node-tree class="ff-flex-item-stretch" .system=${system}></sv-node-tree>
             </div>`;
     }
 };
@@ -72553,10 +72777,10 @@ exports.default = NavigatorPanel;
 
 /***/ }),
 
-/***/ "./ui/story/NodeTreeView.ts":
-/*!**********************************!*\
-  !*** ./ui/story/NodeTreeView.ts ***!
-  \**********************************/
+/***/ "./ui/story/NodeTree.ts":
+/*!******************************!*\
+  !*** ./ui/story/NodeTree.ts ***!
+  \******************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -72585,34 +72809,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const CustomElement_1 = __webpack_require__(/*! @ff/ui/CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
 const Tree_1 = __webpack_require__(/*! @ff/ui/Tree */ "../../libs/ff-ui/source/Tree.ts");
-const SystemView_1 = __webpack_require__(/*! @ff/scene/ui/SystemView */ "../../libs/ff-scene/source/ui/SystemView.ts");
 const CVDocumentProvider_1 = __webpack_require__(/*! ../../components/CVDocumentProvider */ "./components/CVDocumentProvider.ts");
 const CVNodeProvider_1 = __webpack_require__(/*! ../../components/CVNodeProvider */ "./components/CVNodeProvider.ts");
 const NVNode_1 = __webpack_require__(/*! ../../nodes/NVNode */ "./nodes/NVNode.ts");
 const NVScene_1 = __webpack_require__(/*! ../../nodes/NVScene */ "./nodes/NVScene.ts");
 ////////////////////////////////////////////////////////////////////////////////
-let NodeTreeView = class NodeTreeView extends SystemView_1.default {
-    constructor(system) {
-        super(system);
-        this.addEventListener("click", this.onClick.bind(this));
-    }
-    firstConnected() {
-        super.firstConnected();
-        this.classList.add("ff-scroll-y", "sv-node-tree-view");
-    }
-    render() {
-        return CustomElement_1.html `<sv-node-tree .system=${this.system}></sv-node-tree>`;
-    }
-    onClick() {
-        this.system.getMainComponent(CVNodeProvider_1.default).activeNode = null;
-    }
-};
-NodeTreeView = __decorate([
-    CustomElement_1.customElement("sv-node-tree-view")
-], NodeTreeView);
 let NodeTree = class NodeTree extends Tree_1.default {
+    ////////////////////////////////////////////////////////////////////////////////
     constructor() {
         super(...arguments);
         this.documentProvider = null;
@@ -72621,6 +72825,7 @@ let NodeTree = class NodeTree extends Tree_1.default {
     firstConnected() {
         super.firstConnected();
         this.classList.add("sv-node-tree");
+        this.addEventListener("click", this.onContainerClick.bind(this));
         this.documentProvider = this.system.getMainComponent(CVDocumentProvider_1.default);
         this.nodeProvider = this.system.getMainComponent(CVNodeProvider_1.default);
     }
@@ -72650,7 +72855,23 @@ let NodeTree = class NodeTree extends Tree_1.default {
         super.update(changedProperties);
     }
     renderNodeHeader(node) {
-        return CustomElement_1.html `<div class="ff-text ff-ellipsis">${node.displayName}</div>`;
+        let icons = [];
+        if (node.scene) {
+            icons.push(Tree_1.html `<ff-icon class="sv-icon-scene" name="hierarchy"></ff-icon>`);
+        }
+        if (node.model) {
+            icons.push(Tree_1.html `<ff-icon class="sv-icon-model" name="cube"></ff-icon>`);
+        }
+        if (node.light) {
+            icons.push(Tree_1.html `<ff-icon class="sv-icon-light" name="bulb"></ff-icon>`);
+        }
+        if (node.camera) {
+            icons.push(Tree_1.html `<ff-icon class="sv-icon-camera" name="video"></ff-icon>`);
+        }
+        if (node.meta) {
+            icons.push(Tree_1.html `<ff-icon class="sv-icon-meta" name="document"></ff-icon>`);
+        }
+        return Tree_1.html `${icons}<div class="ff-text ff-ellipsis">${node.displayName}</div>`;
     }
     isNodeSelected(node) {
         return node === this.nodeProvider.activeNode;
@@ -72688,6 +72909,9 @@ let NodeTree = class NodeTree extends Tree_1.default {
             this.nodeProvider.activeNode = node;
         }
     }
+    onContainerClick() {
+        this.nodeProvider.activeNode = null;
+    }
     onActiveNode(event) {
         if (event.previous) {
             this.setSelected(event.previous, false);
@@ -72698,10 +72922,10 @@ let NodeTree = class NodeTree extends Tree_1.default {
     }
 };
 __decorate([
-    CustomElement_1.property({ attribute: false })
+    Tree_1.property({ attribute: false })
 ], NodeTree.prototype, "system", void 0);
 NodeTree = __decorate([
-    CustomElement_1.customElement("sv-node-tree")
+    Tree_1.customElement("sv-node-tree")
 ], NodeTree);
 
 
@@ -72748,6 +72972,7 @@ __webpack_require__(/*! @ff/ui/Button */ "../../libs/ff-ui/source/Button.ts");
 __webpack_require__(/*! @ff/ui/LineEdit */ "../../libs/ff-ui/source/LineEdit.ts");
 __webpack_require__(/*! @ff/ui/TextEdit */ "../../libs/ff-ui/source/TextEdit.ts");
 const NodeView_1 = __webpack_require__(/*! ../explorer/NodeView */ "./ui/explorer/NodeView.ts");
+const CVMeta_1 = __webpack_require__(/*! ../../components/CVMeta */ "./components/CVMeta.ts");
 ////////////////////////////////////////////////////////////////////////////////
 let NotesPanel = NotesPanel_1 = class NotesPanel extends NodeView_1.default {
     constructor(system) {
@@ -72832,7 +73057,11 @@ let NotesPanel = NotesPanel_1 = class NotesPanel extends NodeView_1.default {
         this.notes = null;
         this.activeNote = null;
         if (next) {
-            const process = next.meta ? next.meta.process : null;
+            // if selection is scene or model, create a meta component
+            if (!next.meta && (next.scene || next.model)) {
+                next.createComponent(CVMeta_1.default);
+            }
+            const process = next.meta && next.meta.process;
             if (process) {
                 this.notes = process.getOrCreate("notes", []);
                 this.activeNote = this.notes[0];
