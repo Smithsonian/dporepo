@@ -37,7 +37,7 @@ class UvMapController extends Controller
   /**
    * Matches /admin/uv_map/manage/*
    *
-   * @Route("/admin/uv_map/add/{parent_id}", name="uv_map_manage", methods={"GET","POST"}, defaults={"id" = null})
+   * @Route("/admin/uv_map/add/{parent_id}", name="uv_map_add", methods={"GET","POST"}, defaults={"parent_id" = null})
    * @Route("/admin/uv_map/manage/{id}", name="uv_map_manage", methods={"GET","POST"})
    *
    * @param Connection $conn
@@ -46,33 +46,44 @@ class UvMapController extends Controller
    */
   function formView(Connection $conn, Request $request)
   {
-
-    $username = $this->getUser()->getUsernameCanonical();
-    $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');
-
-    if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
-      $response = new Response();
-      $response->setStatusCode(403);
-      return $response;
-    }
-
     $data = new UvMap();
     $post = $request->request->all();
     $parent_id = !empty($request->attributes->get('parent_id')) ? $request->attributes->get('parent_id') : false;
     $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
     // If no parent_id is passed, throw a createNotFoundException (404).
-    if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
+    if(!$id && !$parent_id) throw $this->createNotFoundException('The record does not exist');
+
+    // Get the parent project ID.
+    $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
+      'base_record_id' => $parent_id ? $parent_id : $id,
+      'record_type' => $parent_id ? 'capture_dataset' : 'uv_map_with_model_id',
+    ));
+
+    // Check user's permissions.
+    // If parent records exist and there's no parent_id, the record is being edited. Otherwise, the record is being added.
+    if(is_array($parent_records) && array_key_exists('project_id', $parent_records) && !$parent_id) {
+      $permission = 'edit_project_details';
+    } else {
+      $permission = 'create_project_details';
+    }
+
+    $username = $this->getUser()->getUsernameCanonical();
+    $access = $this->repo_user_access->get_user_access($username, $permission, $parent_records['project_id']);
+    if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+      $response = new Response();
+      $response->setStatusCode(403);
+      return $response;
+    }
 
     // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
-    
     if(empty($post) && !empty($id)) {
       $data = $this->repo_storage_controller->execute('getRecordById', array(
         'record_type' => 'uv_map',
         'record_id' => (int)$id));
+      if(empty($data)) throw $this->createNotFoundException('The record does not exist');
       $data = (object)$data;
     }
-    if(!$data) throw $this->createNotFoundException('The record does not exist');
 
     // Add the parent_id to the $data object
     $data->model_id = $parent_id;

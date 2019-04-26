@@ -85,15 +85,6 @@ class CaptureDataFileController extends Controller
      */
     function formView(Connection $conn, Request $request)
     {
-      $username = $this->getUser()->getUsernameCanonical();
-      $access = $this->repo_user_access->get_user_access_any($username, 'create_edit_lookups');
-
-      if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
-        $response = new Response();
-        $response->setStatusCode(403);
-        return $response;
-      }
-
         $data = new CaptureDataFile();
         $post = $request->request->all();
         $parent_id = !empty($request->attributes->get('parent_id')) ? $request->attributes->get('parent_id') : false;
@@ -101,6 +92,28 @@ class CaptureDataFileController extends Controller
 
         // If no parent_id is passed, throw a createNotFoundException (404).
         if(!$parent_id && !$id) throw $this->createNotFoundException('The record does not exist');
+
+        // Get the parent project ID.
+        $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
+          'base_record_id' => $parent_id ? $parent_id : $id,
+          'record_type' => $parent_id ? 'capture_dataset' : 'uv_map_with_model_id',
+        ));
+
+        // Check user's permissions.
+        // If parent records exist and there's no parent_id, the record is being edited. Otherwise, the record is being added.
+        if(is_array($parent_records) && array_key_exists('project_id', $parent_records) && !$parent_id) {
+          $permission = 'edit_project_details';
+        } else {
+          $permission = 'create_project_details';
+        }
+
+        $username = $this->getUser()->getUsernameCanonical();
+        $access = $this->repo_user_access->get_user_access($username, $permission, $parent_records['project_id']);
+        if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+          $response = new Response();
+          $response->setStatusCode(403);
+          return $response;
+        }
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
         if(!empty($id) && empty($post)) {

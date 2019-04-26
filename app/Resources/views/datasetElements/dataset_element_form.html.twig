@@ -225,11 +225,14 @@
                 }
               ]
             });
-            var capture_data_file_add_button = $('<a />')
-              .addClass('btn btn-default add-record-button')
-              .attr('href', '/admin/capture_data_file/add/' + capture_data_element_id)
-              .html('<span class="glyphicon glyphicon-plus"></span> Add a Capture Data File');
-            $('#browse_capture_data_files_wrapper').find('.datatables_bulk_actions').append(capture_data_file_add_button);
+
+            {% if user_can_create %}
+              var capture_data_file_add_button = $('<a />')
+                .addClass('btn btn-default add-record-button')
+                .attr('href', '/admin/capture_data_file/add/' + capture_data_element_id)
+                .html('<span class="glyphicon glyphicon-plus"></span> Add a Capture Data File');
+              $('#browse_capture_data_files_wrapper').find('.datatables_bulk_actions').append(capture_data_file_add_button);
+            {% endif %}
 
             $('#browse_capture_devices').dataTable( {
               "columns": [
@@ -289,11 +292,14 @@
                 });
               }
             });
-            var capture_device_add_button = $('<a />')
-              .addClass('btn btn-default add-record-button')
-              .attr('href', '/admin/capture_device/add/' + capture_data_element_id)
-              .html('<span class="glyphicon glyphicon-plus"></span> Add a Capture Device');
-            $('#browse_capture_devices_wrapper').find('.datatables_bulk_actions').append(capture_device_add_button);
+
+            {% if user_can_create %}
+              var capture_device_add_button = $('<a />')
+                .addClass('btn btn-default add-record-button')
+                .attr('href', '/admin/capture_device/add/' + capture_data_element_id)
+                .html('<span class="glyphicon glyphicon-plus"></span> Add a Capture Device');
+              $('#browse_capture_devices_wrapper').find('.datatables_bulk_actions').append(capture_device_add_button);
+            {% endif %}
           });
         </script>
     {% endif %}

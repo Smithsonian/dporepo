@@ -52,6 +52,11 @@ class ModelController extends Controller
     private $external_file_storage_path;
 
     /**
+     * @var object $repo_user_access
+     */
+    private $repo_user_access;
+
+    /**
      * Constructor
      * @param object  $u  Utility functions object
      */
@@ -63,7 +68,8 @@ class ModelController extends Controller
         $this->kernel = $kernel;
         $this->project_directory = $this->kernel->getProjectDir() . DIRECTORY_SEPARATOR;
         $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('\\', '/', $uploads_directory) : $uploads_directory;
-        $this->external_file_storage_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $external_file_storage_path) : $external_file_storage_path;;
+        $this->external_file_storage_path = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $external_file_storage_path) : $external_file_storage_path;
+        $this->repo_user_access = new RepoUserAccess($conn);
     }
 
     /**
@@ -105,7 +111,7 @@ class ModelController extends Controller
     /**
      * Matches /admin/model/manage/*
      *
-     * @Route("/admin/model/add/{parent_id}", name="model_add", methods={"GET","POST"}, defaults={"id" = null})
+     * @Route("/admin/model/add/{parent_id}", name="model_add", methods={"GET","POST"}, defaults={"parent_id" = null})
      * @Route("/admin/model/manage/{id}", name="model_manage", methods={"GET","POST"})
      *
      * @param Connection $conn
@@ -120,6 +126,28 @@ class ModelController extends Controller
 
         $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
         $parent_id = !empty($request->attributes->get('parent_id')) ? $request->attributes->get('parent_id') : false;
+
+        // Get the parent project ID.
+        $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
+          'base_record_id' => $parent_id ? $parent_id : $id,
+          'record_type' => $parent_id ? 'item' : 'model_with_item_id',
+        ));
+
+        // Check user's permissions.
+        // If parent records exist and there's no parent_id, the record is being edited. Otherwise, the record is being added.
+        if(is_array($parent_records) && array_key_exists('project_id', $parent_records) && !$parent_id) {
+          $permission = 'edit_project_details';
+        } else {
+          $permission = 'create_project_details';
+        }
+
+        $username = $this->getUser()->getUsernameCanonical();
+        $access = $this->repo_user_access->get_user_access($username, $permission, $parent_records['project_id']);
+        if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+          $response = new Response();
+          $response->setStatusCode(403);
+          return $response;
+        }
 
         if(false != $parent_id) {
           $parent_type = $request->attributes->get('parent_type');
@@ -138,13 +166,11 @@ class ModelController extends Controller
 
         // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
         if(!empty($id) && empty($post)) {
-          $rec = $this->repo_storage_controller->execute('getModel', array(
-            'model_id' => $id));
-          if(isset($rec)) {
-            $data = (object)$rec;
-          }
+          $rec = $this->repo_storage_controller->execute('getModel', array('model_id' => $id));
+          // If no parent_id is passed, throw a createNotFoundException (404).
+          if(empty($rec)) throw $this->createNotFoundException('The record does not exist');
+          $data = (object)$rec;
         }
-        if(!$data) throw $this->createNotFoundException('The record does not exist');
 
         // Back link
         $back_link = $request->headers->get('referer');
@@ -309,6 +335,37 @@ class ModelController extends Controller
         throw $this->createNotFoundException('Model not found (404)');
       }
 
+      // Get the parent project ID.
+      $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
+          'base_record_id' => $id,
+          'record_type' => 'capture_data_element',
+      ));
+
+      if (!empty($id)) {
+          // Check user's permissions.
+          $user_can_create = $user_can_edit = false;
+          if(is_array($parent_records) && array_key_exists('project_id', $parent_records)) {
+              $username = $this->getUser()->getUsernameCanonical();
+              // Check if user has permission to access this page.
+              $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $parent_records['project_id']);
+              if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+                $response = new Response();
+                $response->setStatusCode(403);
+                return $response;
+              }
+              // Check if user has permission to create content.
+              $access = $this->repo_user_access->get_user_access($username, 'create_project_details', $parent_records['project_id']);
+              if(array_key_exists('project_ids', $access) && in_array($parent_records['project_id'], $access['project_ids'])) {
+                $user_can_create = true;
+              }
+              // Check if user has permission to edit content.
+              $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $parent_records['project_id']);
+              if(array_key_exists('project_ids', $access) && in_array($parent_records['project_id'], $access['project_ids'])) {
+                $user_can_edit = true;
+              }
+          }
+      }
+
       // Get the model record.
       $data = $this->repo_storage_controller->execute('getModel', array(
         'model_id' => $id));
@@ -326,6 +383,8 @@ class ModelController extends Controller
         'page_title' => 'Model Detail',
         'data' => $data,
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'user_can_create' => $user_can_create,
+        'user_can_edit' => $user_can_edit,
       ));
     }
 

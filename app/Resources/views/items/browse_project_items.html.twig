@@ -48,7 +48,9 @@
                 <div class="panel-body">
 
                     <h2>Items</h2>
-                    <a href="/admin/item/add/{{ project_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add an Item</a>
+                    {% if user_can_create %}
+                      <a href="/admin/item/add/{{ project_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add an Item</a>
+                    {% endif %}
                     <input type="hidden" id="delete-path" value="admin/item/delete/{{ project_id }}" />
                     <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
                         <thead>

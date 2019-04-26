@@ -208,7 +208,8 @@ class ProjectController extends Controller
       $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
 
       $username = $this->getUser()->getUsernameCanonical();
-      $user_can_edit = $user_can_edit_project = false;
+
+      $user_can_edit = $user_can_edit_project = $user_can_create = false;
       if(false !== $project_id) {
         $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $project_id);
         if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
@@ -226,6 +227,12 @@ class ProjectController extends Controller
         if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
           $user_can_edit = true;
         }
+
+        $access = $this->repo_user_access->get_user_access($username, 'create_project_details', $project_id);
+        if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
+          $user_can_create = true;
+        }
+
       }
 
       // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
@@ -240,6 +247,7 @@ class ProjectController extends Controller
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         'user_can_edit_project' => $user_can_edit_project,
         'user_can_edit' => $user_can_edit,
+        'user_can_create' => $user_can_create,
       ));
     }
 
