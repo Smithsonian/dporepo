@@ -59,9 +59,19 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
   private $processing;
 
   /**
+   * @var object $repo_import
+   */
+  private $repo_import;
+
+  /**
    * @var int $user_id
    */
   private $user_id;
+
+  /**
+   * @var object $edan
+   */
+  private $edan;
 
   /**
    * Constructor
@@ -70,7 +80,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
    * @param string  $processing  Repo Processing Service class.
    * @param string  $conn  The database connection
    */
-  public function __construct(TokenStorageInterface $tokenStorage, KernelInterface $kernel, string $uploads_directory, RepoProcessingService $processing, \Doctrine\DBAL\Connection $conn)
+  public function __construct(TokenStorageInterface $tokenStorage, KernelInterface $kernel, string $uploads_directory, RepoProcessingService $processing, RepoImport $repo_import, \Doctrine\DBAL\Connection $conn)
   {
     $this->u = new AppUtilities();
     $this->tokenStorage = $tokenStorage;
@@ -81,6 +91,11 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
     $this->repoValidate = new RepoValidateData($conn);
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
     $this->processing = $processing;
+    $this->repo_import = $repo_import;
+
+    // Check for the presence of the EDAN bundle.
+    $bundles = $this->kernel->getBundles();
+    $this->edan = array_key_exists('DpoEdanBundle', $bundles);
 
     // Get user data.
     if( method_exists($this->tokenStorage, 'getUser') ) {
@@ -394,7 +409,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
                 }
                 // Catch the error.
-                catch(\League\Flysystem\FileExistsException | \League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
+                catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
                   $data[$i]['errors'][] = 'Processing Service: ' . $e->getMessage();
                 }
 
@@ -437,7 +452,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
   public function runWebDerivative($path = null, $job_data = array(), $recipe_name = null, $filesystem)
   {
 
-    $data = array();
+    $data = $workflow_data = array();
     $uv_map = null;
 
     // $this->u->dumper($path,0);
@@ -498,7 +513,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           $directory = pathinfo($processing_job[0]['asset_path'], PATHINFO_DIRNAME);
           $base_model_file_name = pathinfo($processing_job[0]['asset_path'], PATHINFO_BASENAME);
           $model_file_name = pathinfo($processing_job[0]['asset_path'], PATHINFO_FILENAME);
-          $item_file_name = $model_file_name . '-item.json';
+          $document_json_file_name = $model_file_name . '-document.json';
           
           // Get the UV map.
           $uv_map = $this->processing->getUvMap($processing_job[0]['asset_path']);
@@ -528,17 +543,55 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
               if (is_resource($stream_uv)) fclose($stream_uv);
             }
 
-            // item.json file
-            if (is_file($directory . DIRECTORY_SEPARATOR . $item_file_name)) {
+            // document.json file
+            if (is_file($directory . DIRECTORY_SEPARATOR . $document_json_file_name)) {
               // The external path - on the processing service side.
-              $path_external_item_json = $processing_job[0]['processing_service_job_id'] . '/' . $item_file_name;
-              $stream_item_json = fopen($directory . DIRECTORY_SEPARATOR . $item_file_name, 'r+');
-              $filesystem->writeStream($path_external_item_json, $stream_item_json);
+              $path_external_document_json = $processing_job[0]['processing_service_job_id'] . '/' . $document_json_file_name;
+              $stream_document_json = fopen($directory . DIRECTORY_SEPARATOR . $document_json_file_name, 'r+');
+              $filesystem->writeStream($path_external_document_json, $stream_document_json);
               // Before calling fclose on the resource, check if it’s still valid using is_resource.
-              if (is_resource($stream_item_json)) fclose($stream_item_json);
+              if (is_resource($stream_document_json)) fclose($stream_document_json);
             }
 
-            // die('done!!!!!');
+            // Get subject record from EDAN to inject tombstone information into document.json.
+            if ($this->edan && ($recipe_name === 'web-thumb')) {
+
+              // Get workflow data (just for the item_id, so we can leverage to get the subject, and finally the EDAN record).
+              $query_params = array('ingest_job_uuid' => $job_data['uuid']);
+              $workflow_data = $this->repo_storage_controller->execute('getWorkflows', $query_params);
+              // If the workflow isn't found, set the error.
+              if (empty($workflow_data)) {
+                $data[0]['errors'][] = 'Workflow not found for ingest job ' . $job_data['uuid'];
+              } else {
+
+                // Query EDAN.
+                $edan_json = $this->repo_import->addEdanDataToJson($workflow_data[0]['item_id']);
+                // Error or set the metaDataFile parameter for the Cook.
+                if (is_array($edan_json) && array_key_exists('error', $edan_json)) {
+                  // If an error is returned, set the error.
+                  $data[0]['errors'][] = $edan_json['error'];
+                } else {
+                  // Send EDAN metadata to the Cook to inject into the document.json file via metaDataFile.json.
+                  if (!empty($edan_json)) {
+                    // The external path - on the processing service side.
+                    $path_external_meta = $processing_job[0]['processing_service_job_id'] . '/metaDataFile.json';
+                    // Create a temporary file.
+                    $temp = tmpfile();
+                    fwrite($temp, $edan_json);
+                    // Open the temporary file.
+                    $path = stream_get_meta_data($temp)['uri'];
+                    $stream_meta = fopen($path, 'r+');
+                    // Transfer the file.
+                    $filesystem->writeStream($path_external_meta, $stream_meta);
+                    // Before calling fclose on the resource, check if it’s still valid using is_resource.
+                    if (is_resource($stream_meta)) fclose($stream_meta);
+                    // Remove the temporary file.
+                    if (is_resource($temp)) fclose($temp);
+                  }
+                }
+
+              }
+            }
 
             // Now that the file has been transferred, go ahead and run the processing job.
             $result = $this->processing->runJob($processing_job[0]['processing_service_job_id']);

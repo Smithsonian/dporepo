@@ -822,7 +822,7 @@ class RepoImport implements RepoImportInterface {
           foreach ($finder as $file) {
             $report_json = json_decode($file->getContents(), true);
             $processed_hd_assets = $report_json['steps']['delivery']['result']['files'];
-            $hd_metadata = $report_json['steps']['update-item']['parameters'];
+            $hd_metadata = $report_json['steps']['update-document']['parameters'];
           }
 
           if (!empty($processed_hd_assets)) {
@@ -1953,25 +1953,19 @@ class RepoImport implements RepoImportInterface {
   /**
    * Add EDAN Data to JSON
    *
-   * @param string $item_json_path Path to item.json.
    * @param int $item_id The item iD.
    * @return json
    */
-  public function addEdanDataToJson($item_json_path = null, $item_id = null)
+  public function addEdanDataToJson($item_id = null)
   {
 
     $data = array();
 
     // Error handling for empty parameters.
-    if (empty($item_json_path)) $data['error'] = 'Error: $item_json_path is empty.';
     if (empty($item_id)) $data['error'] = 'Error: $item_id is empty.';
 
-    // If $item_json_path and $item_id parameters aren't empty, proceed with processing.
-    if (!empty($item_json_path) && !empty($item_id)) {
-
-      // Inject EDAN tombstone information into item.json.
-      $item_json = file_get_contents($item_json_path);
-      $item_json_array = json_decode($item_json, true);
+    // If $item_id parameter isn't empty, proceed with processing.
+    if (!empty($item_id)) {
 
       // Use the item_id to get the subject_id, the query EDAN using the subject_guid to get the EDAN record.
       $subject_data = $this->repo_storage_controller->execute('getRecords', array(
@@ -2003,14 +1997,10 @@ class RepoImport implements RepoImportInterface {
       );
 
       if (!empty($subject_data)) {
-        $result = $this->edan->getRecord($subject_data[0]['subject_guid']);
+        $data = $this->edan->getRecord($subject_data[0]['subject_guid']);
         // Catch if there is an error.
-        if (isset($result['error'])) {
+        if (isset($data['error'])) {
           $data['error'] = 'Tombstone EDAN record not found (subject_guid: ' . $subject_data[0]['subject_guid'] . ')';
-        } else {
-          // Overwrite the item.json file with the new data.
-          $item_json_array['meta'] = $result;
-          file_put_contents($item_json_path, json_encode($item_json_array));
         }
       } else {
         // Catch if the query returns nothing.
@@ -2018,7 +2008,7 @@ class RepoImport implements RepoImportInterface {
       }
 
       // If there are no errors, encode the return as JSON.
-      if (!array_key_exists('error', $data)) $data = json_encode($item_json_array);
+      if (!array_key_exists('error', $data)) $data = json_encode($data);
 
     }
 
