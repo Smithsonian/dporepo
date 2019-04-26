@@ -661,7 +661,7 @@ class RepoStorageHybrid implements RepoStorage {
    * If is_parent is set to true, compares the model_id or model_ids to parent_model_id in the model table.
    * Otherwise compares the incoming id(s) to model_id in the model table.
    * Renderable 3D models might be
-   *  - item.json
+   *  - document.json
    *  - a .glb file
    *  - an .obj file, possibly with one or more texture maps
    * @param $params
