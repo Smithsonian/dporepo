@@ -5836,7 +5836,7 @@ class RepoStorageHybrid implements RepoStorage {
         FROM workflow WHERE assigned_to_user_account_id=" . $logged_user;
 
       if ($item_id) {
-        $sql .= " WHERE workflow.item_id = :item_id ";
+        $sql .= " AND workflow.item_id = :item_id ";
       }
       if ($sort_field) {
         $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
