@@ -3953,7 +3953,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
 
     foreach($data as $k => $d) {
-      if(isset($d['metadata']) && strlen(trim($d['metadata'])) > 0) {
+      if(isset($d['metadata']) && !empty($d['metadata']) && strlen(trim($d['metadata'])) > 0) {
         $d_metadata_array = json_decode($d['metadata'], true);
         foreach($metadata_field_names as $k2 => $v2) {
           if(array_key_exists($v2, $d_metadata_array)) {
