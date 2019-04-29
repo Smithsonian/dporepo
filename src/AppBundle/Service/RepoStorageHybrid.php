@@ -4372,8 +4372,11 @@ class RepoStorageHybrid implements RepoStorage {
         'model_purpose' => 'delivery_web'
       );
       $model_assets = $this->getModelAssets($asset_params);
-      $data['aaData'][$k]['delivery_web'] = $model_assets['delivery_web'];
-      $data['aaData'][$k]['model_id_delivery_web'] = isset($model_assets['model_id_delivery_web']) ? $model_assets['model_id_delivery_web'] : '';
+
+      if (!empty($model_assets)) {
+        $data['aaData'][$k]['delivery_web'] = $model_assets['delivery_web'];
+        $data['aaData'][$k]['model_id_delivery_web'] = isset($model_assets['model_id_delivery_web']) ? $model_assets['model_id_delivery_web'] : '';
+      }
     }
 
     return $data;
