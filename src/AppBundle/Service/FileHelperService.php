@@ -30,7 +30,7 @@ class FileHelperService
   /**
    * @var string $external_file_storage_on
    */
-  private $external_file_storage_on;
+  public $external_file_storage_on;
 
   /**
    * Constructor
