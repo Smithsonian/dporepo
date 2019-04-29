@@ -145,7 +145,7 @@ class CaptureDataFileController extends Controller
           'data' => $data,
           'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
           'form' => $form->createView(),
-          'current_tab' => 'resources'
+          'current_tab' => 'workspace'
         ));
     }
 
