@@ -661,7 +661,7 @@ class RepoStorageHybrid implements RepoStorage {
    * If is_parent is set to true, compares the model_id or model_ids to parent_model_id in the model table.
    * Otherwise compares the incoming id(s) to model_id in the model table.
    * Renderable 3D models might be
-   *  - item.json
+   *  - document.json
    *  - a .glb file
    *  - an .obj file, possibly with one or more texture maps
    * @param $params
@@ -3953,7 +3953,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
 
     foreach($data as $k => $d) {
-      if(isset($d['metadata']) && strlen(trim($d['metadata'])) > 0) {
+      if(isset($d['metadata']) && !empty($d['metadata']) && strlen(trim($d['metadata'])) > 0) {
         $d_metadata_array = json_decode($d['metadata'], true);
         foreach($metadata_field_names as $k2 => $v2) {
           if(array_key_exists($v2, $d_metadata_array)) {
@@ -4372,8 +4372,11 @@ class RepoStorageHybrid implements RepoStorage {
         'model_purpose' => 'delivery_web'
       );
       $model_assets = $this->getModelAssets($asset_params);
-      $data['aaData'][$k]['delivery_web'] = $model_assets['delivery_web'];
-      $data['aaData'][$k]['model_id_delivery_web'] = isset($model_assets['model_id_delivery_web']) ? $model_assets['model_id_delivery_web'] : '';
+
+      if (!empty($model_assets)) {
+        $data['aaData'][$k]['delivery_web'] = $model_assets['delivery_web'];
+        $data['aaData'][$k]['model_id_delivery_web'] = isset($model_assets['model_id_delivery_web']) ? $model_assets['model_id_delivery_web'] : '';
+      }
     }
 
     return $data;
@@ -5751,11 +5754,92 @@ class RepoStorageHybrid implements RepoStorage {
         workflow.date_created,
         workflow.created_by_user_account_id,
         workflow.last_modified,
+        workflow.assigned_to_user_account_id,
         workflow.last_modified_user_account_id,
-        workflow.workflow_id AS DT_RowId 
-        FROM workflow ";
+        workflow.workflow_id AS DT_RowId,
+        fos_user.id, 
+        fos_user.username 
+        FROM workflow INNER JOIN fos_user ON workflow.assigned_to_user_account_id=fos_user.id ";
+
       if ($item_id) {
         $sql .= " WHERE workflow.item_id = :item_id ";
+      }
+      if ($sort_field) {
+        $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
+      } else {
+        $sql .= " ORDER BY model_id ";
+      }
+
+      if (NULL !== $stop_record) {
+        $sql .= " LIMIT {$start_record}, {$stop_record} ";
+      } else {
+        $sql .= " LIMIT {$start_record} ";
+      }
+
+      $sql = "SELECT SQL_CALC_FOUND_ROWS " . $sql;
+
+      $statement = $this->connection->prepare($sql);
+
+      if ($item_id) {
+        $statement->bindValue(":item_id", $item_id, PDO::PARAM_INT);
+      }
+      if(strlen(trim($search_value)) > 0) {
+        $statement->bindValue(":search_value", $search_value, PDO::PARAM_STR);
+      }
+
+      $statement->execute();
+
+      $data['aaData'] = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+      $statement = $this->connection->prepare("SELECT FOUND_ROWS()");
+      $statement->execute();
+      $count = $statement->fetch(PDO::FETCH_ASSOC);
+      $data["iTotalRecords"] = $count["FOUND_ROWS()"];
+      $data["iTotalDisplayRecords"] = $count["FOUND_ROWS()"];
+
+    }
+
+    return $data;
+  }
+  
+  /**
+   * Get User's Assigned Workflows Datatable
+   *
+   * @param array $params Parameters
+   * @return array
+   */
+  public function getAssignedDatatableWorkflows($params = NULL)
+  {
+    $data = array();
+
+    if(!empty($params)) {
+
+      // Proceed only if the item_id is present.
+      $item_id = array_key_exists('item_id', $params) ? $params['item_id'] : null;
+      $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
+      $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : 'asc';
+      $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : 0;
+      $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : 20;
+      $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
+    $logged_user = $params['logged_user'];
+      $sql = " workflow.workflow_id,
+        workflow.workflow_recipe_name,
+        workflow.ingest_job_uuid,
+        workflow.item_id,
+        workflow.step_id,
+        workflow.step_type,
+        workflow.step_state,
+        workflow.processing_job_id,
+        workflow.date_created,
+        workflow.created_by_user_account_id,
+        workflow.last_modified,
+        workflow.assigned_to_user_account_id,
+        workflow.last_modified_user_account_id,
+        workflow.workflow_id AS DT_RowId
+        FROM workflow WHERE assigned_to_user_account_id=" . $logged_user;
+
+      if ($item_id) {
+        $sql .= " AND workflow.item_id = :item_id ";
       }
       if ($sort_field) {
         $sql .= " ORDER BY " . $sort_field . " " . $sort_order;
@@ -5930,8 +6014,8 @@ class RepoStorageHybrid implements RepoStorage {
 
     $workflow_json = json_encode($workflow_json_array);
     $sql ="INSERT INTO workflow 
-          (workflow_recipe_name, workflow_definition, ingest_job_uuid, step_id, step_state, step_type, processing_job_id, date_created, last_modified_user_account_id, created_by_user_account_id) 
-          VALUES (:workflow_recipe_name, :workflow_definition, :ingest_job_uuid, :step_id, :step_type, :step_type, :processing_job_id, NOW(), :last_user_id, :created_user_id)";
+          (workflow_recipe_name, workflow_definition, ingest_job_uuid, step_id, step_state, step_type, processing_job_id, date_created, last_modified_user_account_id, created_by_user_account_id, assigned_to_user_account_id) 
+          VALUES (:workflow_recipe_name, :workflow_definition, :ingest_job_uuid, :step_id, :step_type, :step_type, :processing_job_id, NOW(), :last_user_id, :created_user_id, :created_user_id)";
     $statement = $this->connection->prepare($sql);
     $statement->bindValue(":workflow_recipe_name", $workflow_recipe_id, PDO::PARAM_STR);
     $statement->bindValue(":workflow_definition", $workflow_json, PDO::PARAM_STR);
@@ -6073,7 +6157,7 @@ class RepoStorageHybrid implements RepoStorage {
 
     // Update this record with new status info.
     $sql ="UPDATE workflow SET ";
-    $sql .= " last_modified=NOW(), last_modified_user_account_id=:user_id";
+    $sql .= " last_modified=NOW(), last_modified_user_account_id=:user_id, assigned_to_user_account_id=:user_id";
 
     if(NULL !== $step_id) {
       $sql .= ", step_id=:step_id";
@@ -6128,7 +6212,8 @@ class RepoStorageHybrid implements RepoStorage {
     $sql = "UPDATE workflow SET 
               item_id = :item_id,
               last_modified = NOW(),
-              last_modified_user_account_id = :user_id
+              last_modified_user_account_id = :user_id,
+              assigned_to_user_account_id = :user_id
             WHERE ingest_job_uuid = :ingest_job_uuid";
     $statement = $this->connection->prepare($sql);
     $statement->bindValue(":item_id", $item_id, PDO::PARAM_INT);

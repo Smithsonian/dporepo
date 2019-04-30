@@ -6,6 +6,7 @@ use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Utils\AppUtilities;
@@ -13,7 +14,6 @@ use AppBundle\Utils\AppUtilities;
 use AppBundle\Controller\ItemController;
 use AppBundle\Controller\CaptureDatasetController;
 use AppBundle\Controller\ModelController;
-use AppBundle\Service\RepoEdan;
 
 use Psr\Log\LoggerInterface;
 
@@ -117,7 +117,7 @@ class RepoImport implements RepoImportInterface {
    * @param string  $conn  The database connection
    * @param string  $uploads_directory  Uploads directory path
    */
-  public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemController $itemsController, CaptureDatasetController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn, LoggerInterface $logger, RepoEdan $edan)
+  public function __construct(AppUtilities $u, TokenStorageInterface $tokenStorage, ItemController $itemsController, CaptureDatasetController $datasetsController, ModelController $modelsController, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, \Doctrine\DBAL\Connection $conn, LoggerInterface $logger, ContainerInterface $container)
   {
     $this->u = new AppUtilities();
     $this->tokenStorage = $tokenStorage;
@@ -135,7 +135,10 @@ class RepoImport implements RepoImportInterface {
     $this->logger = $logger;
     // Usage:
     // $this->logger->info('Import started. Job ID: ' . $job_id);
-    $this->edan = $edan;
+
+    // Check for the presence of the EDAN bundle.
+    $bundles = $this->kernel->getBundles();
+    $this->edan = (array_key_exists('DpoEdanBundle', $bundles)) ? $container->get('dpo_edan.edan') : false;
 
     // Image extensions.
     $this->image_extensions = array(
@@ -642,15 +645,17 @@ class RepoImport implements RepoImportInterface {
               // Set the project_id
               $csv_val->project_id = (int)$data->project_id;
               // Query EDAN to populate the CSV with EDAN record info (subject_name, and subject_display_name)
-              $result = $this->edan->getRecord($csv_val->subject_guid);
-              // The EDAN record assignment has already been validated during pre-validation,
-              // so no error handling - for now.
-              if (!isset($result['error'])) {
-                $csv_val->subject_name = $result['title'];
-                $csv_val->subject_display_name = $result['title'];
-                // Add the local_subject_id.
-                if (array_key_exists('identifier', $result['content']['freetext'])) {
-                  $csv_val->local_subject_id = $result['content']['freetext']['identifier'][0]['content'];
+              if ($this->edan) {
+                $result = $this->edan->getRecord($csv_val->subject_guid);
+                // The EDAN record assignment has already been validated during pre-validation,
+                // so no error handling - for now.
+                if (!isset($result['error'])) {
+                  $csv_val->subject_name = $result['title'];
+                  $csv_val->subject_display_name = $result['title'];
+                  // Add the local_subject_id.
+                  if (array_key_exists('identifier', $result['content']['freetext'])) {
+                    $csv_val->local_subject_id = $result['content']['freetext']['identifier'][0]['content'];
+                  }
                 }
               }
             } else {
@@ -736,6 +741,7 @@ class RepoImport implements RepoImportInterface {
             }
 
             // Set the capture_dataset_id.
+            $csv_val->capture_dataset_id = null;
             if (null === $session->get('model_import_type')) {
               if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
                 $csv_val->capture_dataset_id = $new_repository_ids[$i][$csv_val->import_parent_id];
@@ -816,7 +822,7 @@ class RepoImport implements RepoImportInterface {
           foreach ($finder as $file) {
             $report_json = json_decode($file->getContents(), true);
             $processed_hd_assets = $report_json['steps']['delivery']['result']['files'];
-            $hd_metadata = $report_json['steps']['update-item']['parameters'];
+            $hd_metadata = $report_json['steps']['update-document']['parameters'];
           }
 
           if (!empty($processed_hd_assets)) {
@@ -1906,6 +1912,103 @@ class RepoImport implements RepoImportInterface {
         }
         
       }
+
+    }
+
+    return $data;
+  }
+
+  /**
+   * @param null $data The data to validate.
+   * @return mixed array containing success/fail value, and any messages.
+   */
+  public function validateEdanRecord(&$data = NULL) {
+
+    $return = array('is_valid' => false);
+
+    // If no data is passed, set a message.
+    if(empty($data)) $return['messages'][] = 'Nothing to validate. Please provide an object to validate.';
+
+    // If data is passed, go ahead and process.
+    if(!empty($data)) {
+      // Loop through the data.
+      foreach($data->csv as $csv_key => $csv_value) {
+        // Check to see if the EDAN record exists.
+        $result = $this->edan->getRecord($csv_value->subject_guid);
+        // Catch if there is an error.
+        if (isset($result['error'])) {
+          $return['messages'][$csv_key] = array('row' => 'Row ' . ($csv_key+1), 'error' => 'EDAN record not found. subject_guid: ' . $csv_value->subject_guid);
+        }
+      }
+    }
+
+    // If there are no messages, then return true for 'is_valid'.
+    if(!isset($return['messages'])) {
+      $return['is_valid'] = true;
+    }
+
+    return $return;
+  }
+
+  /**
+   * Add EDAN Data to JSON
+   *
+   * @param int $item_id The item iD.
+   * @return json
+   */
+  public function addEdanDataToJson($item_id = null)
+  {
+
+    $data = array();
+
+    // Error handling for empty parameters.
+    if (empty($item_id)) $data['error'] = 'Error: $item_id is empty.';
+
+    // If $item_id parameter isn't empty, proceed with processing.
+    if (!empty($item_id)) {
+
+      // Use the item_id to get the subject_id, the query EDAN using the subject_guid to get the EDAN record.
+      $subject_data = $this->repo_storage_controller->execute('getRecords', array(
+          'base_table' => 'item',
+          'fields' => array(
+            array(
+              'table_name' => 'subject',
+              'field_name' => 'subject_guid',
+            ),
+          ),
+          // Joins
+          'related_tables' => array(
+            array(
+              'table_name' => 'subject',
+              'table_join_field' => 'subject_id',
+              'join_type' => 'LEFT JOIN',
+              'base_join_table' => 'item',
+              'base_join_field' => 'subject_id',
+            )
+          ),
+          'limit' => 1,
+          'search_params' => array(
+            0 => array('field_names' => array('item.item_id'), 'search_values' => array($item_id), 'comparison' => '='),
+            1 => array('field_names' => array('item.active'), 'search_values' => array(1), 'comparison' => '='),
+            1 => array('field_names' => array('subject.active'), 'search_values' => array(1), 'comparison' => '='),
+          ),
+          'search_type' => 'AND',
+        )
+      );
+
+      if (!empty($subject_data)) {
+        $data = $this->edan->getRecord($subject_data[0]['subject_guid']);
+        // Catch if there is an error.
+        if (isset($data['error'])) {
+          $data['error'] = 'Tombstone EDAN record not found (subject_guid: ' . $subject_data[0]['subject_guid'] . ')';
+        }
+      } else {
+        // Catch if the query returns nothing.
+        $data['error'] = 'Item record not found (item_id: ' . $item_id . '). This is used to inject EDAN tombstone information into item.json';
+      }
+
+      // If there are no errors, encode the return as JSON.
+      if (!array_key_exists('error', $data)) $data = json_encode($data);
 
     }
 

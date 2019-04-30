@@ -253,7 +253,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
       $all_file_extensions = array();
       foreach($data as $key => $value) {
         // Exclude the 'file_name_map.csv' file, and ignore model file extensions.
-        if (($value['file_name'] !== 'file_name_map.csv') && !in_array($value['file_extension'], $exclude_model_extensions)) {
+        if (($value['file_name'] !== 'file_name_map.csv') || !in_array($value['file_extension'], $exclude_model_extensions)) {
           array_push($all_file_extensions, $value['file_extension']);
         }
       }

@@ -81,7 +81,7 @@
 /******/
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = "./mini/ui/MainView.ts");
+/******/ 	return __webpack_require__(__webpack_require__.s = "./ui/mini/MainView.ts");
 /******/ })
 /************************************************************************/
 /******/ ({
@@ -102,24 +102,34 @@
  * License: MIT
  */
 Object.defineProperty(exports, "__esModule", { value: true });
+////////////////////////////////////////////////////////////////////////////////
+const _DRAG_DISTANCE = 2;
 class ManipTarget {
     constructor() {
+        this.next = null;
+        this.activePositions = [];
+        this.activeType = "";
+        this.centerX = 0;
+        this.centerY = 0;
+        this.startX = 0;
+        this.startY = 0;
+        this.isDragging = false;
         this.onPointerDown = this.onPointerDown.bind(this);
         this.onPointerMove = this.onPointerMove.bind(this);
         this.onPointerUpOrCancel = this.onPointerUpOrCancel.bind(this);
         this.onDoubleClick = this.onDoubleClick.bind(this);
         this.onContextMenu = this.onContextMenu.bind(this);
         this.onWheel = this.onWheel.bind(this);
-        this.next = null;
-        this.activePositions = [];
-        this.activeType = "";
-        this.centerX = 0;
-        this.centerY = 0;
     }
     onPointerDown(event) {
         // only events of a single pointer type can be handled at a time
         if (this.activeType && event.pointerType !== this.activeType) {
             return;
+        }
+        if (this.activePositions.length === 0) {
+            this.startX = event.clientX;
+            this.startY = event.clientY;
+            this.isDragging = false;
         }
         this.activeType = event.pointerType;
         this.activePositions.push({
@@ -141,6 +151,12 @@ class ManipTarget {
             if (event.pointerId === position.id) {
                 position.clientX = event.clientX;
                 position.clientY = event.clientY;
+            }
+        }
+        if (activePositions.length > 0 && !this.isDragging) {
+            const delta = Math.abs(event.clientX - this.startX) + Math.abs(event.clientY - this.startY);
+            if (delta > _DRAG_DISTANCE) {
+                this.isDragging = true;
             }
         }
         const eventType = activePositions.length ? "pointer-move" : "pointer-hover";
@@ -229,6 +245,7 @@ class ManipTarget {
             type: type,
             source: event.pointerType,
             isPrimary: event.isPrimary,
+            isDragging: this.isDragging,
             activePositions: positions,
             pointerCount: count,
             centerX,
@@ -282,6 +299,189 @@ exports.default = ManipTarget;
 
 /***/ }),
 
+/***/ "../../libs/ff-browser/source/download.ts":
+/*!***********************************************!*\
+  !*** /app/libs/ff-browser/source/download.ts ***!
+  \***********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const _triggerDownload = function (dataURL, fileName) {
+    const link = document.createElement("a");
+    link.download = fileName;
+    link.href = dataURL;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+exports.default = {
+    /**
+     * Prompts the user to download the provided text content as a file.
+     * @param text text string to include.
+     * @param fileName name of the downloadable file.
+     */
+    text: function (text, fileName) {
+        const dataURL = window.URL.createObjectURL(new Blob([text], { type: "text/plain" }));
+        _triggerDownload(dataURL, fileName);
+    },
+    /**
+     * Prompts the user to download the provided JSON content as a file.
+     * @param json JSON data to include.
+     * @param fileName name of the downloadable file.
+     */
+    json: function (json, fileName) {
+        if (typeof json === "object") {
+            json = JSON.stringify(json);
+        }
+        const dataURL = window.URL.createObjectURL(new Blob([json], { type: "text/json" }));
+        _triggerDownload(dataURL, fileName);
+    },
+    /**
+     * Prompts the user to download the content from the given URL.
+     * @param url URL of the content to be downloaded.
+     * @param fileName name of the downloadable file.
+     */
+    url: function (url, fileName) {
+        _triggerDownload(url, fileName);
+    }
+};
+
+
+/***/ }),
+
+/***/ "../../libs/ff-browser/source/fetch.ts":
+/*!********************************************!*\
+  !*** /app/libs/ff-browser/source/fetch.ts ***!
+  \********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = {
+    json: function (url, method, data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (data && typeof data !== "string") {
+                data = JSON.stringify(data);
+            }
+            const params = {
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                },
+                method: method,
+                credentials: "same-origin",
+                body: data
+            };
+            return fetch(url, params).then(result => {
+                if (!result.ok) {
+                    const message = `fetch.json (${method} at '${url}'), error: ${result.status} - ${result.statusText}`;
+                    console.warn(message);
+                    throw new Error(message);
+                }
+                return result.json();
+            }).catch(error => {
+                console.warn(`fetch.json (${method} at '${url}'), error: ${error.message}`);
+                throw error;
+            });
+        });
+    },
+    text: function (url, method, data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const params = {
+                headers: {
+                    "Accept": "text/plain",
+                    "Content-Type": "text/plain",
+                },
+                method: method,
+                credentials: "include",
+                body: data
+            };
+            return fetch(url, params).then(result => {
+                if (!result.ok) {
+                    throw new Error(`status: ${result.status}`);
+                }
+                return result.text();
+            }).catch(error => {
+                console.warn(`fetch.text (${method} at '${url}'), error: ${error.message}`);
+                throw error;
+            });
+        });
+    },
+    file: function (url, method, file, detectType = true) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const params = {
+                method,
+                credentials: "include",
+                body: file
+            };
+            if (!detectType) {
+                params.headers = {
+                    "Content-Type": "application/octet-stream"
+                };
+            }
+            return fetch(url, params).then(result => {
+                if (!result.ok) {
+                    throw new Error(`status: ${result.status}`);
+                }
+                return result;
+            }).catch(error => {
+                console.warn(`fetch.file (${method} at '${url}'), error: ${error.message}`);
+                throw error;
+            });
+        });
+    },
+    buffer: function (url, method, buffer) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const params = {
+                headers: {
+                    "Accept": "application/octet-stream",
+                    "Content-Type": "application/octet-stream"
+                },
+                method,
+                credentials: "include",
+                body: buffer
+            };
+            return fetch(url, params).then(result => {
+                if (!result.ok) {
+                    throw new Error(`status: ${result.status}`);
+                }
+                return result.arrayBuffer();
+            }).catch(error => {
+                console.warn(`fetch.buffer (${method} at '${url}'), error: ${error.message}`);
+                throw error;
+            });
+        });
+    }
+};
+
+
+/***/ }),
+
 /***/ "../../libs/ff-browser/source/parseUrlParameter.ts":
 /*!********************************************************!*\
   !*** /app/libs/ff-browser/source/parseUrlParameter.ts ***!
@@ -321,81 +521,6 @@ function default_1(name, url) {
     return decodeURIComponent(results[2].replace(/\+/g, ' '));
 }
 exports.default = default_1;
-
-
-/***/ }),
-
-/***/ "../../libs/ff-core/source/ClassRegistry.ts":
-/*!*************************************************!*\
-  !*** /app/libs/ff-core/source/ClassRegistry.ts ***!
-  \*************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * FF Typescript Foundation Library
- * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
- *
- * License: MIT
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const Publisher_1 = __webpack_require__(/*! ./Publisher */ "../../libs/ff-core/source/Publisher.ts");
-class ClassRegistry extends Publisher_1.default {
-    constructor() {
-        super();
-        this._dict = {};
-        this.addEvent("class");
-    }
-    add(classType) {
-        if (Array.isArray(classType)) {
-            classType.forEach(type => this.add(type));
-            return;
-        }
-        const name = classType.name;
-        if (!name) {
-            throw new Error("missing class name");
-        }
-        if (this._dict[name]) {
-            throw new Error(`class '${name}' already registered`);
-        }
-        this._dict[name] = classType;
-        this.emit({ type: "class", add: true, remove: false, classType });
-    }
-    remove(classType) {
-        if (Array.isArray(classType)) {
-            classType.forEach(type => this.remove(type));
-            return;
-        }
-        const name = classType.name;
-        if (!name) {
-            throw new Error("missing class name");
-        }
-        if (!this._dict[name]) {
-            throw new Error(`class '${name}' not registered`);
-        }
-        delete this._dict[name];
-        this.emit({ type: "class", add: false, remove: true, classType });
-    }
-    getClass(className) {
-        if (typeof className === "function") {
-            className = className.name;
-        }
-        else if (typeof className === "object") {
-            className = className.constructor.name;
-        }
-        return this._dict[className];
-    }
-    createInstance(className, ...args) {
-        const clazz = this.getClass(className);
-        if (!clazz) {
-            throw new Error(`class '${className}' not registered`);
-        }
-        return new clazz(...args);
-    }
-}
-exports.default = ClassRegistry;
 
 
 /***/ }),
@@ -476,7 +601,7 @@ const Command_1 = __webpack_require__(/*! ./Command */ "../../libs/ff-core/sourc
 class Commander extends Publisher_1.default {
     constructor(capacity) {
         super();
-        this.addEvent("change");
+        this.addEvent("update");
         this.stack = [];
         this.pointer = -1;
         this.capacity = capacity !== undefined ? capacity : Commander.defaultCapacity;
@@ -516,7 +641,7 @@ class Commander extends Publisher_1.default {
                 this.stack.shift();
             }
             this.pointer = this.stack.length - 1;
-            this.emit("change");
+            this.emit("update");
         }
     }
     undo() {
@@ -524,7 +649,7 @@ class Commander extends Publisher_1.default {
             const command = this.stack[this.pointer];
             command.undo();
             this.pointer--;
-            this.emit("change");
+            this.emit("update");
         }
     }
     redo() {
@@ -532,14 +657,14 @@ class Commander extends Publisher_1.default {
             this.pointer++;
             const command = this.stack[this.pointer];
             command.do();
-            this.emit("change");
+            this.emit("update");
         }
     }
     clear() {
         if (this.stack.length > 0) {
             this.stack = [];
             this.pointer = -1;
-            this.emit("change");
+            this.emit("update");
         }
     }
     canUndo() {
@@ -567,6 +692,85 @@ exports.default = Commander;
 
 /***/ }),
 
+/***/ "../../libs/ff-core/source/Document.ts":
+/*!********************************************!*\
+  !*** /app/libs/ff-core/source/Document.ts ***!
+  \********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Publisher_1 = __webpack_require__(/*! @ff/core/Publisher */ "../../libs/ff-core/source/Publisher.ts");
+const uniqueId_1 = __webpack_require__(/*! ./uniqueId */ "../../libs/ff-core/source/uniqueId.ts");
+class Document extends Publisher_1.default {
+    constructor(json) {
+        super();
+        this.addEvents("update", "dispose");
+        if (json) {
+            this.fromJSON(json);
+        }
+        else {
+            this._data = this.init();
+        }
+    }
+    get id() {
+        return this._data["id"];
+    }
+    get data() {
+        return this._data;
+    }
+    set(key, value) {
+        this._data[key] = value;
+        this.update();
+    }
+    get(key) {
+        return this._data[key];
+    }
+    update() {
+        this.emit({ type: "update", document: this });
+    }
+    dispose() {
+        this.emit({ type: "dispose", document: this });
+        this._data = null;
+    }
+    fromJSON(json) {
+        this._data = {};
+        this.inflate(json, this._data);
+        this.update();
+        return this;
+    }
+    toJSON(json) {
+        json = json || {};
+        this.deflate(this._data, json);
+        return json;
+    }
+    init() {
+        return {};
+    }
+    inflate(json, data) {
+        Object.assign(data, json);
+    }
+    deflate(data, json) {
+        json = json || {};
+        Object.assign(json, this._data);
+    }
+    generateId() {
+        return uniqueId_1.default();
+    }
+}
+exports.default = Document;
+
+
+/***/ }),
+
 /***/ "../../libs/ff-core/source/ObjectRegistry.ts":
 /*!**************************************************!*\
   !*** /app/libs/ff-core/source/ObjectRegistry.ts ***!
@@ -586,23 +790,25 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const Publisher_1 = __webpack_require__(/*! ./Publisher */ "../../libs/ff-core/source/Publisher.ts");
 ////////////////////////////////////////////////////////////////////////////////
 const _EMPTY_ARRAY = [];
-exports.getClassName = function (scope) {
-    return typeof scope === "function" ? scope.name : (typeof scope === "object"
-        ? scope.constructor.name : scope);
-};
 /**
  * Registry of object instances, grouped by their classes and base classes.
  */
 class ObjectRegistry extends Publisher_1.default {
-    constructor(rootClass) {
+    constructor(rootType) {
         super({ knownEvents: false });
-        if (rootClass && !rootClass.name) {
-            throw new Error("root class must be a named constructor function");
+        const typeName = rootType.typeName;
+        if (!typeName) {
+            throw new Error("root type must have a 'typeName' member");
         }
-        this._rootClassName = rootClass ? rootClass.name : Object.name;
-        this._objLists = { [this._rootClassName]: [] };
+        this._rootTypeName = typeName;
+        this._objLists = { [this._rootTypeName]: [] };
         this._objDict = {};
     }
+    static getTypeName(scope) {
+        return typeof scope === "function" ? scope.typeName : (typeof scope === "object"
+            ? scope.constructor.typeName : scope);
+    }
+    ;
     /**
      * Adds an object to the registry. The object is registered under its actual class
      * and all base classes in its prototype chain. An [[IObjectEvent]] is emitted
@@ -619,19 +825,19 @@ class ObjectRegistry extends Publisher_1.default {
             this._objDict[id] = object;
         }
         let prototype = object;
-        let className;
-        const rootClassName = this._rootClassName;
+        let typeName;
+        const rootTypeName = this._rootTypeName;
         const event = { type: "", add: true, remove: false, object };
         // add all types in prototype chain
         do {
             prototype = Object.getPrototypeOf(prototype);
-            className = prototype.constructor.name;
-            if (className) {
-                (this._objLists[className] || (this._objLists[className] = [])).push(object);
-                event.type = className;
+            typeName = prototype.constructor.typeName;
+            if (typeName) {
+                (this._objLists[typeName] || (this._objLists[typeName] = [])).push(object);
+                event.type = typeName;
                 this.emit(event);
             }
-        } while (className !== rootClassName);
+        } while (typeName !== rootTypeName);
     }
     /**
      * Removes an object from the registry.
@@ -647,20 +853,20 @@ class ObjectRegistry extends Publisher_1.default {
             delete this._objDict[id];
         }
         let prototype = object;
-        let className;
-        const rootClassName = this._rootClassName;
+        let typeName;
+        const rootTypeName = this._rootTypeName;
         const event = { type: "", add: false, remove: true, object };
         // remove all types in prototype chain
         do {
             prototype = Object.getPrototypeOf(prototype);
-            className = prototype.constructor.name;
-            if (className) {
-                const objects = this._objLists[className];
-                objects.splice(objects.indexOf(object), 1);
-                event.type = className;
+            typeName = prototype.constructor.typeName;
+            if (typeName) {
+                event.type = typeName;
                 this.emit(event);
+                const objects = this._objLists[typeName];
+                objects.splice(objects.indexOf(object), 1);
             }
-        } while (className !== rootClassName);
+        } while (typeName !== rootTypeName);
     }
     /**
      * Removes all objects from the registry.
@@ -673,14 +879,14 @@ class ObjectRegistry extends Publisher_1.default {
      * Returns the total number of objects in the registry.
      */
     get length() {
-        return this._objLists[this._rootClassName].length;
+        return this._objLists[this._rootTypeName].length;
     }
     /**
      * Returns the number of objects (of a certain class or class name if given) in the registry.
      * @param scope Optional class or class name whose instances should be counted.
      */
     count(scope) {
-        const objects = this._objLists[this.getClassName(scope)];
+        const objects = this._objLists[this.getTypeName(scope)];
         return objects ? objects.length : 0;
     }
     /**
@@ -688,19 +894,18 @@ class ObjectRegistry extends Publisher_1.default {
      * @param scope A class, class name, or an instance of a class.
      */
     has(scope) {
+        // scope is a constructor function
         if (typeof scope === "function") {
-            const objects = this._objLists[scope.name];
+            const objects = this._objLists[scope.typeName];
             return !!objects && objects.length > 0;
         }
+        // scope is a string, i.e. a type name
         if (typeof scope === "string") {
             const objects = this._objLists[scope];
             return !!objects && objects.length > 0;
         }
-        const id = scope.id;
-        if (typeof id === "string") {
-            return !!this._objDict[id];
-        }
-        const objects = this._objLists[scope.constructor.name];
+        // scope is an object, search by its type name
+        const objects = this._objLists[scope.constructor.typeName];
         return objects && objects.indexOf(scope) >= 0;
     }
     /**
@@ -712,7 +917,7 @@ class ObjectRegistry extends Publisher_1.default {
         if (typeof id === "string") {
             return !!this._objDict[id];
         }
-        const objects = this._objLists[object.constructor.name];
+        const objects = this._objLists[object.constructor.typeName];
         return objects && objects.indexOf(object) >= 0;
     }
     /**
@@ -722,11 +927,11 @@ class ObjectRegistry extends Publisher_1.default {
      * By default, an error is thrown uf no instance is registered with the given class/class name.
      */
     get(scope, nothrow = false) {
-        const className = this.getClassName(scope);
+        const className = this.getTypeName(scope);
         const objects = this._objLists[className];
         const object = objects ? objects[0] : undefined;
         if (!nothrow && !object) {
-            throw new Error(`no instances of class '${className}' in registry`);
+            throw new Error(`no instances of class '${className}' in object registry`);
         }
         return object;
     }
@@ -737,7 +942,7 @@ class ObjectRegistry extends Publisher_1.default {
      * @param scope Class or class name of the instances to return.
      */
     getArray(scope) {
-        return this._objLists[this.getClassName(scope)] || _EMPTY_ARRAY;
+        return this._objLists[this.getTypeName(scope)] || _EMPTY_ARRAY;
     }
     /**
      * Returns a cloned array with all instances of the given class or class name.
@@ -762,41 +967,304 @@ class ObjectRegistry extends Publisher_1.default {
     }
     /**
      * Adds a listener for an object add/remove event.
-     * @param scope Class, class instance, or class name to subscribe to.
+     * @param scope Type, type instance, or type name to subscribe to.
      * @param callback Callback function, invoked when the event is emitted.
      * @param context Optional: this context for the callback invocation.
      */
     on(scope, callback, context) {
-        super.on(this.getClassName(scope), callback, context);
+        super.on(this.getTypeName(scope), callback, context);
     }
     /**
      * Adds a one-time listener for an object add/remove event.
-     * @param scope Class, class instance, or class name to subscribe to.
+     * @param scope Type, type instance, or type name to subscribe to.
      * @param callback Callback function, invoked when the event is emitted.
      * @param context Optional: this context for the callback invocation.
      */
     once(scope, callback, context) {
-        super.once(this.getClassName(scope), callback, context);
+        super.once(this.getTypeName(scope), callback, context);
     }
     /**
      * Removes a listener for an object add/remove event.
-     * @param scope Class, class instance, or class name to subscribe to.
+     * @param scope Type, type instance, or type name to subscribe to.
      * @param callback Callback function, invoked when the event is emitted.
      * @param context Optional: this context for the callback invocation.
      */
     off(scope, callback, context) {
-        super.off(this.getClassName(scope), callback, context);
+        super.off(this.getTypeName(scope), callback, context);
     }
     /**
-     * Returns the class name for the given instance, class or class name.
+     * Returns the type name for the given instance, type or name.
      * @param scope
      */
-    getClassName(scope) {
-        return typeof scope === "function" ? scope.name : (typeof scope === "object"
-            ? scope.constructor.name : (scope || this._rootClassName));
+    getTypeName(scope) {
+        return typeof scope === "function" ? scope.typeName : (typeof scope === "object"
+            ? scope.constructor.typeName : (scope || this._rootTypeName));
     }
 }
 exports.default = ObjectRegistry;
+
+
+/***/ }),
+
+/***/ "../../libs/ff-core/source/OrderedCollection.ts":
+/*!*****************************************************!*\
+  !*** /app/libs/ff-core/source/OrderedCollection.ts ***!
+  \*****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Publisher_1 = __webpack_require__(/*! ./Publisher */ "../../libs/ff-core/source/Publisher.ts");
+/**
+ * Container storing an ordered list of items. Items can be retrieved and manipulated by
+ * id or by positional index. Internally, the collection is stored in both an array and
+ * a dictionary.
+ *
+ * To make use of the dictionary functionality, items must provide an 'id' property with
+ * a unique identifier.
+ *
+ * Updates to the collection are published via [[ICollectionUpdateEvent]] events.
+ */
+class OrderedCollection extends Publisher_1.default {
+    constructor(items) {
+        super();
+        this.addEvent("update");
+        this._list = items || [];
+        this._dict = {};
+        items && items.forEach(item => {
+            if (item.id) {
+                this._dict[item.id] = item;
+            }
+        });
+    }
+    /**
+     * Returns the number of items in the collection.
+     */
+    get length() {
+        return this._list.length;
+    }
+    /**
+     * Returns an unordered array with the ids of all collection items.
+     */
+    get ids() {
+        return Object.keys(this._dict);
+    }
+    /**
+     * Returns an ordered array with all collection items.
+     */
+    get items() {
+        return this._list;
+    }
+    /**
+     * Replaces the collection items with the given list.
+     * @param items
+     */
+    set items(items) {
+        this._list = items;
+        this._dict = {};
+        items.forEach(item => {
+            if (item.id) {
+                this._dict[item.id] = item;
+            }
+        });
+        this.emit({ type: "update", item: null, what: "update" });
+    }
+    /**
+     * Adds an item at the end of the collection.
+     * @param item
+     */
+    append(item) {
+        this._list.push(item);
+        if (item.id) {
+            this._dict[item.id] = item;
+        }
+        this.emit({ type: "update", item, what: "add" });
+    }
+    /**
+     * Inserts an item in front of another one.
+     * @param item
+     * @param beforeItem
+     */
+    insertBefore(item, beforeItem) {
+        const index = this._list.indexOf(beforeItem);
+        if (index >= 0) {
+            this.insertAt(item, index);
+        }
+    }
+    /**
+     * Inserts an item at a given position index.
+     * @param item
+     * @param index
+     */
+    insertAt(item, index) {
+        this._list.splice(index, 0, item);
+        if (item.id) {
+            this._dict[item.id] = item;
+        }
+        this.emit({ type: "update", item, what: "add" });
+    }
+    /**
+     * Replaces an item with another one.
+     * @param item The new item.
+     * @param replaceItem The item to be replaced.
+     */
+    replaceItem(item, replaceItem) {
+        const index = this._list.indexOf(replaceItem);
+        if (index >= 0) {
+            this.replaceAt(item, index);
+        }
+    }
+    /**
+     * Replaces the item at the given index position with another one.
+     * @param item
+     * @param index
+     */
+    replaceAt(item, index) {
+        const existing = this._list[index];
+        if (existing.id) {
+            delete this._dict[existing.id];
+        }
+        this._list[index] = item;
+        if (item.id) {
+            this._dict[item.id] = item;
+        }
+        this.emit({ type: "update", item, what: "replace" });
+    }
+    /**
+     * Moves the item relative to its current position.
+     * @param item The item to move.
+     * @param relativeIndex The number of positions to move, positive = move towards end, negative = move towards start.
+     */
+    moveItem(item, relativeIndex) {
+        const index = this._list.indexOf(item);
+        this.moveAt(index, relativeIndex);
+    }
+    /**
+     * Moves the item at the given index position relative to its current position.
+     * @param index The index of the item to move.
+     * @param relativeIndex The number of positions to move, positive = move towards end, negative = move towards start.
+     */
+    moveAt(index, relativeIndex) {
+        const items = this._list;
+        if (index + relativeIndex < 0 || index + relativeIndex >= items.length) {
+            return;
+        }
+        const item = items[index];
+        if (relativeIndex > 0) {
+            for (let i = 0; i < relativeIndex; ++i) {
+                items[index + i] = items[index + i + 1];
+            }
+            items[index + relativeIndex] = item;
+        }
+        else if (relativeIndex < 0) {
+            for (let i = 0; i > relativeIndex; --i) {
+                items[index + i] = items[index + i - 1];
+            }
+            items[index + relativeIndex] = item;
+        }
+        else {
+            return;
+        }
+        this.emit({ type: "update", item, what: "move" });
+    }
+    /**
+     * Removes an item by its id.
+     * @param id
+     * @returns the removed item.
+     */
+    removeById(id) {
+        const item = this._dict[id];
+        if (item) {
+            this.removeItem(item);
+        }
+        return item;
+    }
+    /**
+     * Removes the given item from the collection.
+     * @param item
+     * @returns the position index of the removed item.
+     */
+    removeItem(item) {
+        const index = this._list.indexOf(item);
+        this.removeAt(index);
+        return index;
+    }
+    /**
+     * Removes the item at the given index position from the collection.
+     * @param index
+     * @returns the removed item.
+     */
+    removeAt(index) {
+        const items = this._list;
+        if (index < 0 || index >= items.length) {
+            return;
+        }
+        const item = items[index];
+        items.splice(index, 1);
+        if (item.id) {
+            delete this._dict[item.id];
+        }
+        this.emit({ type: "update", item, what: "remove" });
+        return item;
+    }
+    /**
+     * Returns the item at the given index position.
+     * @param index
+     */
+    getAt(index) {
+        return this._list[index];
+    }
+    /**
+     * Return an item by its id.
+     * @param id
+     */
+    getById(id) {
+        return this._dict[id];
+    }
+    /**
+     * Returns the index position of the given item.
+     * @param item
+     */
+    getIndexOf(item) {
+        return this._list.indexOf(item);
+    }
+    /**
+     * Replaces the collection items with a shallow copy of the given list.
+     * @param list
+     */
+    copy(list) {
+        this.items = list.slice();
+    }
+    /**
+     * Returns a shallow copy of the internal item list.
+     */
+    clone() {
+        return this._list.slice();
+    }
+}
+exports.default = OrderedCollection;
+OrderedCollection.prototype[Symbol.iterator] = function () {
+    return {
+        index: 0,
+        list: this._list,
+        next: function () {
+            if (this.index < this.list.length) {
+                return { value: this.list[this.index++], done: false };
+            }
+            else {
+                return { done: true };
+            }
+        }
+    };
+};
 
 
 /***/ }),
@@ -987,6 +1455,203 @@ class Publisher {
     }
 }
 exports.default = Publisher;
+
+
+/***/ }),
+
+/***/ "../../libs/ff-core/source/TypeRegistry.ts":
+/*!************************************************!*\
+  !*** /app/libs/ff-core/source/TypeRegistry.ts ***!
+  \************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Publisher_1 = __webpack_require__(/*! ./Publisher */ "../../libs/ff-core/source/Publisher.ts");
+class TypeRegistry extends Publisher_1.default {
+    constructor() {
+        super();
+        this._dict = {};
+        this.addEvent("type");
+    }
+    add(type) {
+        if (Array.isArray(type)) {
+            type.forEach(type => this.add(type));
+            return;
+        }
+        const typeName = type.typeName;
+        if (!typeName) {
+            throw new Error("type must have a 'typeName' member");
+        }
+        if (this._dict[typeName]) {
+            throw new Error(`type '${typeName}' already registered`);
+        }
+        this._dict[typeName] = type;
+        this.emit({ type: "type", add: true, remove: false, classType: type });
+    }
+    remove(type) {
+        if (Array.isArray(type)) {
+            type.forEach(type => this.remove(type));
+            return;
+        }
+        const typeName = type.typeName;
+        if (!typeName) {
+            throw new Error("type must have a 'typeName' member");
+        }
+        if (!this._dict[typeName]) {
+            throw new Error(`type '${typeName}' not registered`);
+        }
+        delete this._dict[typeName];
+        this.emit({ type: "type", add: false, remove: true, classType: type });
+    }
+    getType(typeHint) {
+        let typeName = typeHint;
+        if (typeof typeHint === "function") {
+            typeName = typeHint.typeName;
+        }
+        else if (typeof typeHint === "object") {
+            typeName = typeHint.constructor.typeName;
+        }
+        return this._dict[typeName];
+    }
+    createInstance(typeHint, ...args) {
+        const type = this.getType(typeHint);
+        if (!type) {
+            throw new Error(`type '${typeHint}' not registered`);
+        }
+        return new type(...args);
+    }
+}
+exports.default = TypeRegistry;
+
+
+/***/ }),
+
+/***/ "../../libs/ff-core/source/UnorderedCollection.ts":
+/*!*******************************************************!*\
+  !*** /app/libs/ff-core/source/UnorderedCollection.ts ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Publisher_1 = __webpack_require__(/*! ./Publisher */ "../../libs/ff-core/source/Publisher.ts");
+/**
+ * Container storing an unordered collection of items. Items can be retrieved and manipulated by
+ * id. Internally, the collection is stored in a key/value dictionary. Items may provide an
+ * 'id' property with a unique identifier.
+ *
+ * Updates to the collection are published via [[ICollectionUpdateEvent]] events.
+ */
+class UnorderedCollection extends Publisher_1.default {
+    constructor(items) {
+        super();
+        this.addEvent("update");
+        this._dict = {};
+        items && items.forEach(item => {
+            if (item.id) {
+                this._dict[item.id] = item;
+            }
+        });
+    }
+    /**
+     * Returns the number of items in the collection.
+     */
+    get length() {
+        return this.ids.length;
+    }
+    /**
+     * Returns an unordered array with all collection items.
+     */
+    get items() {
+        return this.ids.map(id => this._dict[id]);
+    }
+    set items(items) {
+        items.forEach(item => {
+            if (item.id) {
+                this._dict[item.id] = item;
+            }
+        });
+        this.emit({ type: "update", item: null, what: "update" });
+    }
+    /**
+     * Returns an unordered array with the ids of all collection items.
+     */
+    get ids() {
+        return Object.keys(this._dict);
+    }
+    /**
+     * Returns a shallow copy of the internal id/item dictionary.
+     */
+    get dictionary() {
+        return this._dict;
+    }
+    set dictionary(dict) {
+        this._dict = dict;
+        this.emit({ type: "update", item: null, what: "update" });
+    }
+    insert(item, id) {
+        id = id || item.id;
+        if (!id) {
+            throw new Error("can't insert, missing id");
+        }
+        if (this._dict[id] !== undefined) {
+            throw new Error(`id already exists: '${id}'`);
+        }
+        this._dict[id] = item;
+        this.emit({ type: "update", item, what: "insert" });
+    }
+    remove(itemOrId) {
+        const id = typeof itemOrId === "string" ? itemOrId : itemOrId.id;
+        const item = this._dict[id];
+        if (item === undefined) {
+            return;
+        }
+        delete this._dict[id];
+        this.emit({ type: "update", item, what: "remove" });
+    }
+    get(id) {
+        return this._dict[id];
+    }
+    getOrCreate(id, defaultItem) {
+        let item = this._dict[id];
+        if (!item) {
+            item = this._dict[id] = defaultItem;
+            this.emit({ type: "update", item, what: "insert" });
+        }
+        return item;
+    }
+    /**
+     * Replaces the internal id/item dictionary with a shallow copy of the given id/item dictionary.
+     * @param dict
+     */
+    copy(dict) {
+        this.dictionary = Object.assign({}, dict);
+    }
+    /**
+     * Returns a shallow copy of the internal id/item dictionary.
+     */
+    clone() {
+        return Object.assign({}, this._dict);
+    }
+}
+exports.default = UnorderedCollection;
 
 
 /***/ }),
@@ -1293,12 +1958,15 @@ exports.types = Property_1.types;
 const PropertyGroup_1 = __webpack_require__(/*! ./PropertyGroup */ "../../libs/ff-graph/source/PropertyGroup.ts");
 const ComponentTracker_1 = __webpack_require__(/*! ./ComponentTracker */ "../../libs/ff-graph/source/ComponentTracker.ts");
 const ComponentReference_1 = __webpack_require__(/*! ./ComponentReference */ "../../libs/ff-graph/source/ComponentReference.ts");
+const Node_1 = __webpack_require__(/*! ./Node */ "../../libs/ff-graph/source/Node.ts");
+exports.Node = Node_1.default;
 ////////////////////////////////////////////////////////////////////////////////
 /**
  * Base class for components in a node-component system.
  *
  * ### Events
- * - *"change"* - emits [[IComponentChangeEvent]] after the component's state has changed.
+ * - *"change"* - emits [[IComponentChangeEvent]] after the component's state (except changed properties) has changed.
+ * - *"update"* - emitted after the component has been updated due to changed properties.
  * - *"dispose"* - emits [[IComponentDisposeEvent]] if the component is about to be disposed.
  *
  * ### See also
@@ -1313,28 +1981,60 @@ const ComponentReference_1 = __webpack_require__(/*! ./ComponentReference */ "..
 class Component extends Publisher_1.default {
     /**
      * Protected constructor. Use [[Node.createComponent]] to create component instances.
-     * @param id Unique id for the component. A unique id is usually created automatically,
-     * do not specify except while de-serializing the component.
+     * @param node Node to attach the new component to.
+     * @param id Unique id for the component.
      *
-     * Note that during execution of the constructor, the component is not yet attached
-     * to a node/graph/system. Do not try to get access to other components,
-     * the parent node, graph, or the system here.
+     * Note that during execution of the constructor, you have access to the component's
+     * node, graph, and system. The component has not yet been advertised to other components though.
      */
-    constructor(id) {
+    constructor(node, id) {
         super({ knownEvents: false });
         this.ins = new PropertyGroup_1.default(this);
         this.outs = new PropertyGroup_1.default(this);
         this.changed = true;
         this.updated = false;
-        this._node = null;
         this._name = "";
         this._trackers = [];
-        this._firstAttached = false;
+        this.node = node;
         this.id = id;
     }
-    static getClassName(scope) {
-        return typeof scope === "function" ? scope.name : (typeof scope === "object"
-            ? scope.constructor.name : (scope || Component.name));
+    static getTypeName(scope) {
+        return typeof scope === "function" ? scope.typeName : (typeof scope === "object"
+            ? scope.constructor.typeName : (scope || Component.typeName));
+    }
+    /**
+     * Called after the component has been constructed and attached to a node.
+     * Override to perform initialization tasks where you need access to other components.
+     */
+    create() {
+        this.node._addComponent(this);
+        // if graph is active, activate component
+        if (this.graph.isActive && this.activate) {
+            this.activate();
+        }
+    }
+    /**
+     * Removes the component from its node and deletes it.
+     * Override to perform cleanup tasks (remove event listeners, etc.).
+     * Must call super implementation if overridden!
+     */
+    dispose() {
+        // deactivate component if graph is active
+        if (this.graph.isActive && this.deactivate) {
+            this.deactivate();
+        }
+        // emit dispose event
+        this.emit({ type: "dispose", component: this });
+        // remove all links and trackers
+        this.ins.dispose();
+        this.outs.dispose();
+        this._trackers.forEach(tracker => tracker.dispose());
+        // remove component from node
+        if (this.node) {
+            this.node._removeComponent(this);
+            // TODO: debug only
+            this.node = null;
+        }
     }
     /**
      * True if the component is a node singleton, i.e. can only be added once per node.
@@ -1355,15 +2055,15 @@ class Component extends Publisher_1.default {
         return this.constructor.isSystemSingleton;
     }
     /**
-     * Returns the class name of this component.
+     * Returns the type name of this component.
      * @returns {string}
      */
-    get className() {
-        return this.constructor.name;
+    get typeName() {
+        return this.constructor.typeName;
     }
-    get displayClassName() {
-        const name = this.constructor.name;
-        return name === "Component" ? name : name.substr(1);
+    get displayTypeName() {
+        const typeName = this.typeName;
+        return typeName === "Component" ? typeName : typeName.substr(1);
     }
     get text() {
         return this.constructor.text;
@@ -1378,7 +2078,7 @@ class Component extends Publisher_1.default {
         return this._name;
     }
     get displayName() {
-        return this._name || this.text || this.displayClassName;
+        return this._name || this.text || this.displayTypeName;
     }
     /**
      * Sets the name of this component.
@@ -1390,126 +2090,106 @@ class Component extends Publisher_1.default {
         this.emit({ type: "change", component: this, what: "name" });
     }
     /**
-     * Returns the node this component belongs to.
-     */
-    get node() {
-        return this._node;
-    }
-    /**
      * Returns the graph this component and its node belong to.
      */
     get graph() {
-        return this._node.graph;
+        return this.node.graph;
     }
     /**
      * Returns the system this component and its node belong to.
      */
     get system() {
-        return this._node.system;
+        return this.node.system;
     }
     /**
      * Returns the set of sibling components of this component.
      * Sibling components are components belonging to the same node.
      */
     get components() {
-        return this._node.components;
+        return this.node.components;
     }
     /**
-     * Returns the sibling hierarchy component if available.
+     * Returns true if the component's graph is active.
      */
-    get hierarchy() {
-        return this._node.components.get("CHierarchy");
+    get isActive() {
+        return this.graph.isActive;
     }
-    getComponent(componentOrClass, nothrow = false) {
-        return this._node.components.get(componentOrClass, nothrow);
+    getComponent(componentOrType, nothrow = false) {
+        return this.node.components.get(componentOrType, nothrow);
     }
-    getComponents(componentOrClass) {
-        return this._node.components.getArray(componentOrClass);
+    getComponents(componentOrType) {
+        return this.node.components.getArray(componentOrType);
     }
-    hasComponent(componentOrClass) {
-        return this._node.components.has(componentOrClass);
+    createComponent(componentOrType) {
+        return this.node.createComponent(componentOrType);
     }
-    getGraphComponent(componentOrClass, nothrow = false) {
-        return this._node.graph.components.get(componentOrClass, nothrow);
+    getOrCreateComponent(componentOrType) {
+        return this.node.components.get(componentOrType, true) || this.node.createComponent(componentOrType);
     }
-    getGraphComponents(componentOrClass) {
-        return this._node.graph.components.getArray(componentOrClass);
+    hasComponent(componentOrType) {
+        return this.node.components.has(componentOrType);
     }
-    hasGraphComponent(componentOrClass) {
-        return this._node.graph.components.has(componentOrClass);
+    getGraphComponent(componentOrType, nothrow = false) {
+        return this.node.graph.components.get(componentOrType, nothrow);
     }
-    getMainComponent(componentOrClass, nothrow = false) {
-        return this._node.system.graph.components.get(componentOrClass, nothrow);
+    getGraphComponents(componentOrType) {
+        return this.node.graph.components.getArray(componentOrType);
     }
-    getMainComponents(componentOrClass) {
-        return this._node.system.graph.components.getArray(componentOrClass);
+    hasGraphComponent(componentOrType) {
+        return this.node.graph.components.has(componentOrType);
     }
-    hasMainComponent(componentOrClass) {
-        return this._node.system.graph.components.has(componentOrClass);
+    getMainComponent(componentOrType, nothrow = false) {
+        return this.node.system.graph.components.get(componentOrType, nothrow);
     }
-    getSystemComponent(componentOrClass, nothrow = false) {
-        return this._node.system.components.get(componentOrClass, nothrow);
+    getMainComponents(componentOrType) {
+        return this.node.system.graph.components.getArray(componentOrType);
     }
-    getSystemComponents(componentOrClass) {
-        return this._node.system.components.getArray(componentOrClass);
+    hasMainComponent(componentOrType) {
+        return this.node.system.graph.components.has(componentOrType);
     }
-    hasSystemComponent(componentOrClass) {
-        return this._node.system.components.has(componentOrClass);
+    getSystemComponent(componentOrType, nothrow = false) {
+        return this.node.system.components.get(componentOrType, nothrow);
+    }
+    getSystemComponents(componentOrType) {
+        return this.node.system.components.getArray(componentOrType);
+    }
+    hasSystemComponent(componentOrType) {
+        return this.node.system.components.has(componentOrType);
     }
     getComponentById(id) {
-        return this._node.system.components.getById(id);
+        return this.node.system.components.getById(id);
     }
-    getNode(nodeOrClass, nothrow = false) {
-        return this._node.graph.nodes.get(nodeOrClass, nothrow);
+    getNode(nodeOrType, nothrow = false) {
+        return this.node.graph.nodes.get(nodeOrType, nothrow);
     }
-    getNodes(nodeOrClass) {
-        return this._node.graph.nodes.getArray(nodeOrClass);
+    getNodes(nodeOrType) {
+        return this.node.graph.nodes.getArray(nodeOrType);
     }
-    hasNode(nodeOrClass) {
-        return this._node.graph.nodes.has(nodeOrClass);
+    hasNode(nodeOrType) {
+        return this.node.graph.nodes.has(nodeOrType);
     }
-    getMainNode(nodeOrClass, nothrow = false) {
-        return this._node.system.graph.nodes.get(nodeOrClass, nothrow);
+    getMainNode(nodeOrType, nothrow = false) {
+        return this.node.system.graph.nodes.get(nodeOrType, nothrow);
     }
-    getMainNodes(nodeOrClass) {
-        return this._node.system.graph.nodes.getArray(nodeOrClass);
+    getMainNodes(nodeOrType) {
+        return this.node.system.graph.nodes.getArray(nodeOrType);
     }
-    hasMainNode(nodeOrClass) {
-        return this._node.system.graph.nodes.has(nodeOrClass);
+    hasMainNode(nodeOrType) {
+        return this.node.system.graph.nodes.has(nodeOrType);
     }
-    getSystemNode(nodeOrClass, nothrow = false) {
-        return this._node.system.nodes.get(nodeOrClass, nothrow);
+    getSystemNode(nodeOrType, nothrow = false) {
+        return this.node.system.nodes.get(nodeOrType, nothrow);
     }
-    getSystemNodes(nodeOrClass) {
-        return this._node.system.nodes.getArray(nodeOrClass);
+    getSystemNodes(nodeOrType) {
+        return this.node.system.nodes.getArray(nodeOrType);
     }
-    hasSystemNode(nodeOrClass) {
-        return this._node.system.nodes.has(nodeOrClass);
+    hasSystemNode(nodeOrType) {
+        return this.node.system.nodes.has(nodeOrType);
     }
     getNodeById(id) {
-        return this._node.system.nodes.getById(id);
+        return this.node.system.nodes.getById(id);
     }
-    /**
-     * Adds the component to the given node.
-     * @param node Node to attach the new component to.
-     */
-    attach(node) {
-        if (this._node) {
-            this.detach();
-        }
-        this._node = node;
-        if (!this._firstAttached) {
-            this._firstAttached = true;
-            this.create();
-        }
-        // note: adding the component informs subscribers, this must happen after create()
-        node._addComponent(this);
-    }
-    /**
-     * Called after the component has been constructed and attached to a node.
-     * Override to perform initialization tasks where you need access to other components.
-     */
-    create() {
+    activate() {
     }
     /**
      * Called during each cycle if the component's input properties have changed.
@@ -1534,32 +2214,10 @@ class Component extends Publisher_1.default {
      * only after all rendering is done.
      * @param context Information about the current update cycle.
      */
-    finalize(context) {
+    tock(context) {
         throw new Error("this should never be called");
     }
-    /**
-     * Removes the component from its node.
-     */
-    detach() {
-        if (this._node) {
-            this._node._removeComponent(this);
-            this._node = null;
-        }
-    }
-    /**
-     * Removes the component from its node and deletes it.
-     * Override to perform cleanup tasks (remove event listeners, etc.).
-     * Must call super implementation if overridden!
-     */
-    dispose() {
-        // remove all links and trackers
-        this.ins.dispose();
-        this.outs.dispose();
-        this._trackers.forEach(tracker => tracker.dispose());
-        // remove component from node
-        this.detach();
-        // emit dispose event
-        this.emit({ type: "dispose", component: this });
+    deactivate() {
     }
     requestSort() {
         this.graph.requestSort();
@@ -1569,14 +2227,14 @@ class Component extends Publisher_1.default {
      * @param scope
      */
     is(scope) {
-        const className = Component.getClassName(scope);
+        const typeName = Component.getTypeName(scope);
         let prototype = this;
         do {
             prototype = Object.getPrototypeOf(prototype);
-            if (prototype.constructor.name === className) {
+            if (prototype.constructor.typeName === typeName) {
                 return true;
             }
-        } while (prototype.constructor.name !== Component.name);
+        } while (prototype.constructor.typeName !== Component.typeName);
         return false;
     }
     /**
@@ -1595,125 +2253,84 @@ class Component extends Publisher_1.default {
         for (let i = 0, n = ins.length; i < n; ++i) {
             ins[i].changed = false;
         }
+        const outs = this.outs.properties;
+        for (let i = 0, n = outs.length; i < n; ++i) {
+            outs[i].changed = false;
+        }
     }
     /**
      * Tracks the given component type. If a component of this type is added
      * to or removed from the node, it will be added or removed from the tracker.
-     * @param {ComponentOrClass} componentOrClass
+     * @param {ComponentOrType} componentOrType
      * @param {(component: T) => void} didAdd
      * @param {(component: T) => void} willRemove
      */
-    trackComponent(componentOrClass, didAdd, willRemove) {
-        const tracker = new ComponentTracker_1.default(this._node.components, componentOrClass, didAdd, willRemove);
+    trackComponent(componentOrType, didAdd, willRemove) {
+        const tracker = new ComponentTracker_1.default(this.node.components, componentOrType, didAdd, willRemove);
         this._trackers.push(tracker);
         return tracker;
     }
     /**
      * Returns a weak reference to a component.
      * The reference is set to null after the linked component is removed.
-     * @param componentOrClass The type of component this reference accepts, or the component to link.
+     * @param componentOrType The type of component this reference accepts, or the component to link.
      */
-    referenceComponent(componentOrClass) {
-        return new ComponentReference_1.default(this.system, componentOrClass);
-    }
-    /**
-     * Propagates and emits an event as follows, until event.stopPropagation is set to true.
-     * 1. this component
-     * 2. sibling components of this
-     * 3. parent hierarchy component if available
-     * 4. siblings of parent hierarchy component
-     * 5. repeat 3/4 until at root
-     * 6. emits event on system
-     * @param event
-     */
-    propagateUp(event) {
-        let target = this;
-        while (target) {
-            target.emit(event);
-            if (event.stopPropagation) {
-                return;
-            }
-            const components = target.components.getArray();
-            for (let i = 0, n = components.length; i < n; ++i) {
-                const component = components[i];
-                if (component !== target) {
-                    component.emit(event);
-                    if (event.stopPropagation) {
-                        return;
-                    }
-                }
-            }
-            const hierarchy = target.components.get("CHierarchy");
-            target = hierarchy ? hierarchy.parent : null;
-            // TODO: Should event propagate to parent graph?
-            // if (!target) {
-            //     target = hierarchy.graph.parent;
-            // }
-        }
-        if (!event.stopPropagation) {
-            this.system.emit(event);
-        }
-    }
-    /**
-     * Propagates and emits an event as follows, until event.stopPropagation is set to true.
-     * 1. all children of the sibling hierarchy of this
-     * 2. for each child, repeat 1 until reaching leaf components with no children
-     * @param event
-     */
-    propagateDown(event) {
-        const hierarchy = this.components.get("CHierarchy");
-        const children = hierarchy ? hierarchy.children : null;
-        for (let i = 0, n = children.length; i < n; ++i) {
-            const components = children[i].components.getArray();
-            for (let j = 0, m = components.length; j < m; ++i) {
-                components[j].emit(event);
-                if (event.stopPropagation) {
-                    return;
-                }
-            }
-            for (let j = 0, m = components.length; j < m; ++i) {
-                components[j].propagateDown(event);
-                if (event.stopPropagation) {
-                    return;
-                }
-            }
-        }
+    referenceComponent(componentOrType) {
+        return new ComponentReference_1.default(this.system, componentOrType);
     }
     /**
      * Returns a text representation of the component.
      * @returns {string}
      */
     toString() {
-        return `${this.className}${this.name ? " (" + this.name + ")" : ""}`;
+        return `${this.typeName}${this.name ? " (" + this.name + ")" : ""}`;
     }
-    deflate() {
+    dump(indent = "") {
+        console.log(indent + `%cComponent '${this.typeName}' (${this.displayName})`, "color: green");
+        this.ins.properties.forEach(prop => prop.dump(indent + "  IN  "));
+        this.outs.properties.forEach(prop => prop.dump(indent + "  OUT "));
+    }
+    toJSON() {
         let json = {};
-        const jsonIns = this.ins.deflate();
+        const jsonIns = this.ins.toJSON();
         if (jsonIns) {
             json.ins = jsonIns;
         }
-        const jsonOuts = this.outs.deflate();
+        const jsonOuts = this.outs.toJSON();
         if (jsonOuts) {
             json.outs = jsonOuts;
         }
         return json;
     }
-    inflate(json) {
+    fromJSON(json) {
         if (json.ins) {
-            this.ins.inflate(json.ins);
+            this.ins.fromJSON(json.ins);
         }
         if (json.outs) {
-            this.outs.inflate(json.outs);
+            this.outs.fromJSON(json.outs);
         }
     }
-    inflateReferences(json) {
+    referencesFromJSON(json) {
         const dict = this.system.components.getDictionary();
         if (json.ins) {
-            this.ins.inflateLinks(json.ins, dict);
+            this.ins.linksFromJSON(json.ins, dict);
         }
         if (json.outs) {
-            this.outs.inflateLinks(json.outs, dict);
+            this.outs.linksFromJSON(json.outs, dict);
         }
+    }
+    addCustomInput(path, schema, index) {
+        this.changed = true;
+        return this.ins.createCustomProperty(path, schema, index);
+    }
+    allowCustomInput(schema) {
+        return false;
+    }
+    addCustomOutput(path, schema, index) {
+        return this.outs.createCustomProperty(path, schema, index);
+    }
+    allowCustomOutput(schema) {
+        return false;
     }
     /**
     * Adds input properties to the component, specified by the provided property templates.
@@ -1721,7 +2338,7 @@ class Component extends Publisher_1.default {
     * @param index Optional index at which to insert the new properties.
     */
     addInputs(templates, index) {
-        return this.ins.createPropertiesFromTemplates(templates, index);
+        return this.ins.createProperties(templates, index);
     }
     /**
      * Adds output properties to the component, specified by the provided property templates.
@@ -1729,19 +2346,21 @@ class Component extends Publisher_1.default {
      * @param index Optional index at which to insert the new properties.
      */
     addOutputs(templates, index) {
-        return this.outs.createPropertiesFromTemplates(templates, index);
+        return this.outs.createProperties(templates, index);
     }
 }
-Component.type = "Component";
+Component.typeName = "Component";
 Component.text = "";
 Component.icon = "";
 Component.isNodeSingleton = true;
 Component.isGraphSingleton = false;
 Component.isSystemSingleton = false;
 exports.default = Component;
+Component.prototype.activate = null;
 Component.prototype.update = null;
 Component.prototype.tick = null;
-Component.prototype.finalize = null;
+Component.prototype.tock = null;
+Component.prototype.deactivate = null;
 
 
 /***/ }),
@@ -1770,7 +2389,7 @@ const Component_1 = __webpack_require__(/*! ./Component */ "../../libs/ff-graph/
  */
 class ComponentReference {
     constructor(system, scope) {
-        this._className = scope ? Component_1.default.getClassName(scope) : null;
+        this._typeName = scope ? Component_1.default.getTypeName(scope) : null;
         this._id = scope instanceof Component_1.default ? scope.id : undefined;
         this._system = system;
     }
@@ -1778,8 +2397,8 @@ class ComponentReference {
         return this._id ? this._system.components.getById(this._id) || null : null;
     }
     set component(component) {
-        if (component && this._className && !(component instanceof this._system.registry.getClass(this._className))) {
-            throw new Error(`can't assign component of class '${component.constructor.name || "unknown"}' to link of class '${this._className}'`);
+        if (component && this._typeName && !(component instanceof this._system.registry.getType(this._typeName))) {
+            throw new Error(`can't assign component of class '${component.constructor.name || "unknown"}' to link of class '${this._typeName}'`);
         }
         this._id = component ? component.id : undefined;
     }
@@ -1805,7 +2424,7 @@ exports.default = ComponentReference;
  * License: MIT
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-const ObjectRegistry_1 = __webpack_require__(/*! @ff/core/ObjectRegistry */ "../../libs/ff-core/source/ObjectRegistry.ts");
+const Component_1 = __webpack_require__(/*! ./Component */ "../../libs/ff-graph/source/Component.ts");
 ////////////////////////////////////////////////////////////////////////////////
 /**
  * Tracks components of a specific type in the same node.
@@ -1814,18 +2433,18 @@ const ObjectRegistry_1 = __webpack_require__(/*! @ff/core/ObjectRegistry */ "../
  */
 class ComponentTracker {
     constructor(registry, scope, didAdd, willRemove) {
-        this.className = ObjectRegistry_1.getClassName(scope);
+        this.typeName = Component_1.default.getTypeName(scope);
         this.didAdd = didAdd;
         this.willRemove = willRemove;
         this._registry = registry;
-        registry.on(this.className, this.onComponent, this);
+        registry.on(this.typeName, this.onComponent, this);
         this.component = registry.get(scope, true);
         if (this.component && didAdd) {
             didAdd(this.component);
         }
     }
     dispose() {
-        this._registry.off(this.className, this.onComponent, this);
+        this._registry.off(this.typeName, this.onComponent, this);
         this.component = null;
         this.didAdd = null;
         this.willRemove = null;
@@ -1890,84 +2509,116 @@ class Graph extends Publisher_1.default {
         this.nodes = new ObjectRegistry_1.default(Node_1.default);
         /** Collection of all components in this graph. */
         this.components = new ObjectRegistry_1.default(Component_1.default);
+        /** List of root hierarchy components in this graph. */
+        this.roots = [];
         this._sorter = new LinkableSorter_1.default();
         this._sortRequested = true;
         this._sortedList = null;
-        this._finalizeList = [];
+        this._tockList = [];
+        this._isActive = false;
         this.system = system;
         this.parent = parent;
     }
-    // TODO: This should use a tracker for the root component
-    /** Sets the root hierarchy component of this graph. */
-    set root(root) {
-        this._root = root;
-        if (this.parent) {
-            this.parent.innerRoot = root;
-        }
+    get isActive() {
+        return this._isActive;
     }
-    /** Returns the root hierarchy component of this graph. */
-    get root() {
-        return this._root;
+    getComponent(componentOrType, nothrow = false) {
+        return this.components.get(componentOrType, nothrow);
     }
-    getComponent(componentOrClass, nothrow = false) {
-        return this.components.get(componentOrClass, nothrow);
+    getComponents(componentOrType) {
+        return this.components.getArray(componentOrType);
     }
-    getComponents(componentOrClass) {
-        return this.components.getArray(componentOrClass);
+    hasComponent(componentOrType) {
+        return this.components.has(componentOrType);
     }
-    hasComponent(componentOrClass) {
-        return this.components.has(componentOrClass);
+    getMainComponent(componentOrType, nothrow = false) {
+        return this.system.graph.components.get(componentOrType, nothrow);
     }
-    getMainComponent(componentOrClass, nothrow = false) {
-        return this.system.graph.components.get(componentOrClass, nothrow);
+    getMainComponents(componentOrType) {
+        return this.system.graph.components.getArray(componentOrType);
     }
-    getMainComponents(componentOrClass) {
-        return this.system.graph.components.getArray(componentOrClass);
+    hasMainComponent(componentOrType) {
+        return this.system.graph.components.has(componentOrType);
     }
-    hasMainComponent(componentOrClass) {
-        return this.system.graph.components.has(componentOrClass);
+    getSystemComponent(componentOrType, nothrow = false) {
+        return this.system.components.get(componentOrType, nothrow);
     }
-    getSystemComponent(componentOrClass, nothrow = false) {
-        return this.system.components.get(componentOrClass, nothrow);
+    getSystemComponents(componentOrType) {
+        return this.system.components.getArray(componentOrType);
     }
-    getSystemComponents(componentOrClass) {
-        return this.system.components.getArray(componentOrClass);
-    }
-    hasSystemComponent(componentOrClass) {
-        return this.system.components.has(componentOrClass);
+    hasSystemComponent(componentOrType) {
+        return this.system.components.has(componentOrType);
     }
     getComponentById(id) {
         return this.system.components.getById(id);
     }
-    getNode(nodeOrClass, nothrow = false) {
-        return this.nodes.get(nodeOrClass, nothrow);
+    getNode(nodeOrType, nothrow = false) {
+        return this.nodes.get(nodeOrType, nothrow);
     }
-    getNodes(nodeOrClass) {
-        return this.nodes.getArray(nodeOrClass);
+    getNodes(nodeOrType) {
+        return this.nodes.getArray(nodeOrType);
     }
-    hasNode(nodeOrClass) {
-        return this.nodes.has(nodeOrClass);
+    hasNode(nodeOrType) {
+        return this.nodes.has(nodeOrType);
     }
-    getMainNode(nodeOrClass, nothrow = false) {
-        return this.system.graph.nodes.get(nodeOrClass, nothrow);
+    getMainNode(nodeOrType, nothrow = false) {
+        return this.system.graph.nodes.get(nodeOrType, nothrow);
     }
-    getMainNodes(nodeOrClass) {
-        return this.system.graph.nodes.getArray(nodeOrClass);
+    getMainNodes(nodeOrType) {
+        return this.system.graph.nodes.getArray(nodeOrType);
     }
-    hasMainNode(nodeOrClass) {
-        return this.system.graph.nodes.has(nodeOrClass);
+    hasMainNode(nodeOrType) {
+        return this.system.graph.nodes.has(nodeOrType);
     }
-    getSystemNode(nodeOrClass, nothrow = false) {
-        return this.system.nodes.get(nodeOrClass, nothrow);
+    getSystemNode(nodeOrType, nothrow = false) {
+        return this.system.nodes.get(nodeOrType, nothrow);
     }
-    getSystemNodes(nodeOrClass) {
-        return this.system.nodes.getArray(nodeOrClass);
+    getSystemNodes(nodeOrType) {
+        return this.system.nodes.getArray(nodeOrType);
     }
-    hasSystemNode(nodeOrClass) {
-        return this.system.nodes.has(nodeOrClass);
+    hasSystemNode(nodeOrType) {
+        return this.system.nodes.has(nodeOrType);
     }
     getNodeById(id) {
         return this.system.nodes.getById(id);
+    }
+    /**
+     * Calls activate() on all components in the graph.
+     * This is done before any calls to update(), tick(), and tock().
+     */
+    activate() {
+        if (this._isActive) {
+            return;
+        }
+        this._isActive = true;
+        if (this._sortRequested) {
+            this._sortRequested = false;
+            this.sort();
+        }
+        const components = this._sortedList;
+        for (let i = 0, n = components.length; i < n; ++i) {
+            const component = components[i];
+            if (component.activate) {
+                component.activate();
+            }
+        }
+    }
+    /**
+     * Calls deactivate() on all components in the graph.
+     * After a call to deactivate, there are no more calls to update(), tick(), tock().
+     */
+    deactivate() {
+        if (!this._isActive) {
+            return;
+        }
+        this._isActive = false;
+        const components = this._sortedList;
+        for (let i = 0, n = components.length; i < n; ++i) {
+            const component = components[i];
+            if (component.deactivate) {
+                component.deactivate();
+            }
+        }
     }
     /**
      * Called at the begin of each frame cycle. Calls update() on all components
@@ -1977,6 +2628,9 @@ class Graph extends Publisher_1.default {
      * @returns true if at least one component was updated.
      */
     tick(context) {
+        if (!this._isActive) {
+            return;
+        }
         if (this._sortRequested) {
             this._sortRequested = false;
             this.sort();
@@ -1989,31 +2643,47 @@ class Graph extends Publisher_1.default {
             component.updated = false;
             if (component.changed) {
                 if (component.update && component.update(context)) {
-                    updated = component.updated = true;
+                    component.updated = true;
+                }
+                if (component.tick && component.tick(context)) {
+                    component.updated = true;
                 }
                 component.resetChanged();
             }
-            if (component.tick && component.tick(context)) {
+            else if (component.tick && component.tick(context)) {
+                component.updated = true;
+            }
+            if (component.updated) {
                 updated = true;
+                component.emit("update");
             }
         }
         return updated;
     }
     /**
-     * Calls finalize on all components in the graph.
-     * The finalize call happens at the end of a frame cycle.
+     * Calls tock() on all components in the graph.
+     * The tock() call happens at the end of a frame cycle.
      * @param context Context-specific information such as time, etc.
      */
-    finalize(context) {
-        const components = this._finalizeList;
+    tock(context) {
+        if (!this._isActive) {
+            return;
+        }
+        const components = this._tockList;
         for (let i = 0, n = components.length; i < n; ++i) {
-            components[i].finalize(context);
+            components[i].tock(context);
         }
     }
+    /**
+     * Removes all content, i.e. all nodes and components from the graph.
+     */
     clear() {
-        const nodes = this.nodes.cloneArray();
+        const nodes = this.nodes.cloneArray().reverse();
         for (let i = 0, n = nodes.length; i < n; ++i) {
             nodes[i].dispose();
+        }
+        if (this.nodes.length > 0) {
+            throw new Error("graph not empty");
         }
     }
     /**
@@ -2025,24 +2695,32 @@ class Graph extends Publisher_1.default {
     }
     sort() {
         this._sortedList = this._sorter.sort(this.components.getArray());
-        const name = this.parent ? this.parent.name || this.parent.className : "System";
+        const name = this.parent ? this.parent.name || this.parent.typeName : "System";
         console.log("Graph.sort - %s: sorted %s components", name, this._sortedList.length);
     }
     /**
      * Creates a new node of the given type. Adds it to the graph.
-     * @param nodeOrClass Type of the node to create.
+     * @param nodeOrType Type of the node to create.
      * @param name Optional name for the node.
      * @param id Optional unique identifier for the node (must omit unless serializing).
      */
-    createCustomNode(nodeOrClass, name, id) {
-        const classType = this.system.registry.getClass(nodeOrClass);
-        const node = new classType(id || uniqueId_1.default(12, this.system.nodes.getDictionary()));
-        node.attach(this);
+    createCustomNode(nodeOrType, name, id) {
+        const type = this.system.registry.getType(nodeOrType);
+        if (!type) {
+            throw new Error(`node type '${Node_1.default.getTypeName(nodeOrType)}' not registered`);
+        }
+        const node = new type(this, id || uniqueId_1.default(12, this.system.nodes.getDictionary()));
+        node.create();
         if (name) {
             node.name = name;
         }
         if (!id) {
+            // only if we're not serializing
             node.createComponents();
+            // TODO: Temporarily disabled
+            node.unlock();
+            // prohibit adding/removing components
+            //node.lock();
         }
         return node;
     }
@@ -2052,15 +2730,17 @@ class Graph extends Publisher_1.default {
      * @param id Optional unique identifier for the node (must omit unless serializing).
      */
     createNode(name, id) {
-        const node = new Node_1.default(id || uniqueId_1.default(12, this.system.nodes.getDictionary()));
-        node.attach(this);
+        const node = new Node_1.default(this, id || uniqueId_1.default(12, this.system.nodes.getDictionary()));
+        node.create();
         if (name) {
             node.name = name;
         }
+        // allow adding/removing components
+        node.unlock();
         return node;
     }
-    findNodeByName(name, nodeOrClass) {
-        const nodes = this.nodes.getArray(nodeOrClass);
+    findNodeByName(name, nodeOrType) {
+        const nodes = this.nodes.getArray(nodeOrType);
         for (let i = 0, n = nodes.length; i < n; ++i) {
             if (nodes[i].name === name) {
                 return nodes[i];
@@ -2092,18 +2772,23 @@ class Graph extends Publisher_1.default {
         }
         return text;
     }
+    dump(indent = "") {
+        console.log(indent + "%cGraph", "color: red");
+        const roots = this.findRootNodes();
+        roots.forEach(node => node.dump(indent + "  "));
+    }
     /**
      * Serializes the graph, its nodes and components.
      * Returns graph serialization data, which must be cloned or stringified immediately.
      */
-    deflate() {
+    toJSON() {
         const json = {};
         const jsonNodes = [];
         const nodes = this.nodes.getArray();
         for (let i = 0, n = nodes.length; i < n; ++i) {
             const node = nodes[i];
-            const jsonNode = this.deflateNode(node);
-            jsonNode.type = node.className;
+            const jsonNode = this.nodeToJSON(node);
+            jsonNode.type = node.typeName;
             jsonNode.id = node.id;
             if (node.name) {
                 jsonNode.name = node.name;
@@ -2119,23 +2804,16 @@ class Graph extends Publisher_1.default {
      * Deserializes the graph, its nodes and components.
      * @param json serialized graph data.
      */
-    inflate(json) {
+    fromJSON(json) {
         if (json.nodes) {
             json.nodes.forEach(jsonNode => {
                 const node = this.createCustomNode(jsonNode.type, jsonNode.name, jsonNode.id);
-                node.inflate(jsonNode);
+                node.fromJSON(jsonNode);
             });
-        }
-    }
-    /**
-     * Deserializes references between graphs, nodes, and components
-     * @param json serialized graph data.
-     */
-    inflateReferences(json) {
-        if (json.nodes) {
+            // deserialize references between graphs, nodes, and components
             json.nodes.forEach(jsonNode => {
                 const node = this.nodes.getById(jsonNode.id);
-                node.inflateReferences(jsonNode);
+                node.referencesFromJSON(jsonNode);
             });
         }
     }
@@ -2144,8 +2822,8 @@ class Graph extends Publisher_1.default {
      * Return serialization data or null if the node should be excluded from serialization.
      * @param node The node to be serialized.
      */
-    deflateNode(node) {
-        return node.deflate();
+    nodeToJSON(node) {
+        return node.toJSON();
     }
     /**
      * Adds a node to the graph and the system. Called by [[Node.attach]], do not call directly.
@@ -2153,8 +2831,8 @@ class Graph extends Publisher_1.default {
      * @private
      */
     _addNode(node) {
-        this.system._addNode(node);
         this.nodes.add(node);
+        this.system._addNode(node);
     }
     /**
      * Removes a node from the graph and the system. Called by [[Node.detach]], do not call directly.
@@ -2162,8 +2840,8 @@ class Graph extends Publisher_1.default {
      * @private
      */
     _removeNode(node) {
-        this.nodes.remove(node);
         this.system._removeNode(node);
+        this.nodes.remove(node);
     }
     /**
      * Adds a component to the graph and the system. Called by [[Component.attach]], do not call directly.
@@ -2172,27 +2850,39 @@ class Graph extends Publisher_1.default {
      */
     _addComponent(component) {
         if (component.isGraphSingleton && this.components.has(component)) {
-            throw new Error(`only one component of class '${component.className}' allowed per graph`);
+            throw new Error(`only one component of type '${component.typeName}' allowed per graph`);
         }
-        this.system._addComponent(component);
         this.components.add(component);
-        if (component.finalize) {
-            this._finalizeList.push(component);
+        this.system._addComponent(component);
+        if (component.tock) {
+            this._tockList.push(component);
         }
         this._sortRequested = true;
     }
     /**
-     * Removes a component from the graph and the system. Called by [[Component.detach]], do not call directly.
+     * Removes a component from the graph and the system. Called by [[Component.dispose]], do not call directly.
      * @param component
      * @private
      */
     _removeComponent(component) {
-        this.components.remove(component);
         this.system._removeComponent(component);
-        if (component.finalize) {
-            this._finalizeList.splice(this._finalizeList.indexOf(component), 1);
+        this.components.remove(component);
+        if (component.tock) {
+            this._tockList.splice(this._tockList.indexOf(component), 1);
         }
         this._sortRequested = true;
+    }
+    _addRoot(component) {
+        this.roots.push(component);
+        if (this.parent) {
+            this.parent.onAddInnerRoot(component);
+        }
+    }
+    _removeRoot(component) {
+        if (this.parent) {
+            this.parent.onRemoveInnerRoot(component);
+        }
+        this.roots.splice(this.roots.indexOf(component), 1);
     }
 }
 exports.default = Graph;
@@ -2306,33 +2996,39 @@ const Component_1 = __webpack_require__(/*! ./Component */ "../../libs/ff-graph/
 class Node extends Publisher_1.default {
     /**
      * Protected constructor. Please use [[Graph.createNode]] / [[Graph.createCustomNode]] to create node instances.
+     * @param graph
      * @param id Unique id for the node. A unique id is usually created automatically,
      * do not specify except while de-serializing the component.
      *
      * Note that during execution of the constructor, the node is not yet attached to a graph/system.
      * Do not try to get access to other nodes, components, the parent graph, or the system here.
      */
-    constructor(id) {
+    constructor(graph, id) {
         super({ knownEvents: false });
+        this.graph = null;
         /** Collection of all components in this node. */
         this.components = new ObjectRegistry_1.default(Component_1.default);
-        this._graph = null;
         this._name = "";
+        this._isLocked = undefined;
+        this.graph = graph;
         this.id = id;
     }
-    static getClassName(scope) {
-        return typeof scope === "function" ? scope.name : (typeof scope === "object"
-            ? scope.constructor.name : (scope || Node.name));
+    static getTypeName(scope) {
+        return typeof scope === "function" ? scope.typeName : (typeof scope === "object"
+            ? scope.constructor.typeName : (scope || Node.typeName));
     }
     /**
      * Returns the class name of this node.
      */
-    get className() {
-        return this.constructor.name;
+    get typeName() {
+        return this.constructor.typeName;
     }
-    get displayClassName() {
-        const name = this.constructor.name;
-        return name === "Node" ? name : name.substr(1);
+    get displayTypeName() {
+        const typeName = this.typeName;
+        return typeName === "Node" ? typeName : typeName.substr(1);
+    }
+    get isLocked() {
+        return this._isLocked;
     }
     get text() {
         return this.constructor.text;
@@ -2347,7 +3043,7 @@ class Node extends Publisher_1.default {
         return this._name;
     }
     get displayName() {
-        return this._name || this.text || this.displayClassName;
+        return this._name || this.text || this.displayTypeName;
     }
     /**
      * Sets the name of this node.
@@ -2359,112 +3055,107 @@ class Node extends Publisher_1.default {
         this.emit({ type: "change", what: "name", node: this });
     }
     /**
-     * Returns the graph this node is part of.
-     */
-    get graph() {
-        return this._graph;
-    }
-    /**
      * Returns the system this node and its graph belong to.
      */
     get system() {
-        return this._graph.system;
+        return this.graph.system;
     }
-    getComponent(componentOrClass, nothrow = false) {
-        return this.components.get(componentOrClass, nothrow);
+    getComponent(componentOrType, nothrow = false) {
+        return this.components.get(componentOrType, nothrow);
     }
-    getComponents(componentOrClass) {
-        return this.components.getArray(componentOrClass);
+    getComponents(componentOrType) {
+        return this.components.getArray(componentOrType);
     }
-    hasComponent(componentOrClass) {
-        return this.components.has(componentOrClass);
+    getOrCreateComponent(componentOrType) {
+        return this.components.get(componentOrType, true) || this.createComponent(componentOrType);
     }
-    getGraphComponent(componentOrClass, nothrow = false) {
-        return this.graph.components.get(componentOrClass, nothrow);
+    hasComponent(componentOrType) {
+        return this.components.has(componentOrType);
     }
-    getGraphComponents(componentOrClass) {
-        return this.graph.components.getArray(componentOrClass);
+    getGraphComponent(componentOrType, nothrow = false) {
+        return this.graph.components.get(componentOrType, nothrow);
     }
-    hasGraphComponent(componentOrClass) {
-        return this.graph.components.has(componentOrClass);
+    getGraphComponents(componentOrType) {
+        return this.graph.components.getArray(componentOrType);
     }
-    getMainComponent(componentOrClass, nothrow = false) {
-        return this._graph.system.graph.components.get(componentOrClass, nothrow);
+    hasGraphComponent(componentOrType) {
+        return this.graph.components.has(componentOrType);
     }
-    getMainComponents(componentOrClass) {
-        return this._graph.system.graph.components.getArray(componentOrClass);
+    getMainComponent(componentOrType, nothrow = false) {
+        return this.graph.system.graph.components.get(componentOrType, nothrow);
     }
-    hasMainComponent(componentOrClass) {
-        return this._graph.system.graph.components.has(componentOrClass);
+    getMainComponents(componentOrType) {
+        return this.graph.system.graph.components.getArray(componentOrType);
     }
-    getSystemComponent(componentOrClass, nothrow = false) {
-        return this._graph.system.components.get(componentOrClass, nothrow);
+    hasMainComponent(componentOrType) {
+        return this.graph.system.graph.components.has(componentOrType);
     }
-    getSystemComponents(componentOrClass) {
-        return this._graph.system.components.getArray(componentOrClass);
+    getSystemComponent(componentOrType, nothrow = false) {
+        return this.graph.system.components.get(componentOrType, nothrow);
     }
-    hasSystemComponent(componentOrClass) {
-        return this._graph.system.components.has(componentOrClass);
+    getSystemComponents(componentOrType) {
+        return this.graph.system.components.getArray(componentOrType);
+    }
+    hasSystemComponent(componentOrType) {
+        return this.graph.system.components.has(componentOrType);
     }
     getComponentById(id) {
-        return this._graph.system.components.getById(id);
+        return this.graph.system.components.getById(id);
     }
-    getNode(nodeOrClass, nothrow = false) {
-        return this._graph.nodes.get(nodeOrClass, nothrow);
+    getNode(nodeOrType, nothrow = false) {
+        return this.graph.nodes.get(nodeOrType, nothrow);
     }
-    getNodes(nodeOrClass) {
-        return this._graph.nodes.getArray(nodeOrClass);
+    getNodes(nodeOrType) {
+        return this.graph.nodes.getArray(nodeOrType);
     }
-    hasNode(nodeOrClass) {
-        return this._graph.nodes.has(nodeOrClass);
+    hasNode(nodeOrType) {
+        return this.graph.nodes.has(nodeOrType);
     }
-    getMainNode(nodeOrClass, nothrow = false) {
-        return this._graph.system.graph.nodes.get(nodeOrClass, nothrow);
+    getMainNode(nodeOrType, nothrow = false) {
+        return this.graph.system.graph.nodes.get(nodeOrType, nothrow);
     }
-    getMainNodes(nodeOrClass) {
-        return this._graph.system.graph.nodes.getArray(nodeOrClass);
+    getMainNodes(nodeOrType) {
+        return this.graph.system.graph.nodes.getArray(nodeOrType);
     }
-    hasMainNode(nodeOrClass) {
-        return this._graph.system.graph.nodes.has(nodeOrClass);
+    hasMainNode(nodeOrType) {
+        return this.graph.system.graph.nodes.has(nodeOrType);
     }
-    getSystemNode(nodeOrClass, nothrow = false) {
-        return this._graph.system.nodes.get(nodeOrClass, nothrow);
+    getSystemNode(nodeOrType, nothrow = false) {
+        return this.graph.system.nodes.get(nodeOrType, nothrow);
     }
-    getSystemNodes(nodeOrClass) {
-        return this._graph.system.nodes.getArray(nodeOrClass);
+    getSystemNodes(nodeOrType) {
+        return this.graph.system.nodes.getArray(nodeOrType);
     }
-    hasSystemNode(nodeOrClass) {
-        return this._graph.system.nodes.has(nodeOrClass);
+    hasSystemNode(nodeOrType) {
+        return this.graph.system.nodes.has(nodeOrType);
     }
     getNodeById(id) {
-        return this._graph.system.nodes.getById(id);
+        return this.graph.system.nodes.getById(id);
+    }
+    lock() {
+        if (this._isLocked === false) {
+            throw new Error("can't lock an unlocked node again");
+        }
+        this._isLocked = true;
+    }
+    unlock() {
+        this._isLocked = false;
     }
     /**
      * Adds this node to the given graph and the system.
-     * @param graph
      */
-    attach(graph) {
-        if (this._graph) {
-            this.detach();
-        }
-        this._graph = graph;
-        graph._addNode(this);
+    create() {
+        this.graph._addNode(this);
     }
     /**
-     * Removes this node from its graph and system.
-     */
-    detach() {
-        if (this._graph) {
-            this._graph._removeNode(this);
-            this._graph = null;
-        }
-    }
-    /**
-     * Override to create an initial set of components for the node.
+     * Override in custom node types to create a predefined set of components.
      * Note that this function is not called if a node is restored from serialization data.
      */
     createComponents() {
     }
+    /**
+     * Removes all components from this node.
+     */
     clear() {
         // dispose components
         const componentList = this.components.getArray().slice();
@@ -2476,12 +3167,16 @@ class Node extends Publisher_1.default {
      */
     dispose() {
         // dispose components
-        const componentList = this.components.getArray().slice();
+        const componentList = this.components.cloneArray().reverse();
         componentList.forEach(component => component.dispose());
-        // remove node from system and graph
-        this.detach();
         // emit dispose event
         this.emit({ type: "dispose", node: this });
+        // remove node from system and graph
+        if (this.graph) {
+            this.graph._removeNode(this);
+            // TODO: debug only
+            this.graph = null;
+        }
     }
     /**
      * Creates a new component of the given type. Adds it to this node.
@@ -2490,9 +3185,15 @@ class Node extends Publisher_1.default {
      * @param id Optional unique identifier for the component (must omit unless serializing).
      */
     createComponent(componentOrType, name, id) {
-        const classType = this.system.registry.getClass(componentOrType);
-        const component = new classType(id || uniqueId_1.default(12, this.system.components.getDictionary()));
-        component.attach(this);
+        if (this._isLocked === true) {
+            throw new Error("node is locked, can't create component");
+        }
+        const type = this.system.registry.getType(componentOrType);
+        if (!type) {
+            throw new Error(`component type '${Component_1.default.getTypeName(componentOrType)}' not registered`);
+        }
+        const component = new type(this, id || uniqueId_1.default(12, this.system.components.getDictionary()));
+        component.create();
         if (name) {
             component.name = name;
         }
@@ -2503,14 +3204,14 @@ class Node extends Publisher_1.default {
      * @param scope Node constructor, type name, or instance.
      */
     is(scope) {
-        const className = Node.getClassName(scope);
+        const typeName = Node.getTypeName(scope);
         let prototype = this;
         do {
             prototype = Object.getPrototypeOf(prototype);
-            if (prototype.constructor.name === className) {
+            if (prototype.constructor.typeName === typeName) {
                 return true;
             }
-        } while (prototype.constructor.name !== Node.type);
+        } while (prototype.constructor.typeName !== Node.typeName);
         return false;
     }
     /**
@@ -2525,23 +3226,32 @@ class Node extends Publisher_1.default {
         }
         return text;
     }
+    dump(indent = "") {
+        console.log(indent + `%cNode '${this.typeName}' (${this.displayName})`, "color: blue");
+        this.components.getArray().forEach(comp => comp.dump(indent + "  "));
+    }
     /**
      * Serializes the node and its components.
      * Return node serialization data, or null if the node should be excluded from serialization.
      */
-    deflate() {
+    toJSON() {
         const json = {};
         const jsonComponents = [];
+        if (this._isLocked) {
+            json.locked = true;
+        }
         const components = this.components.getArray();
         for (let i = 0, n = components.length; i < n; ++i) {
             const component = components[i];
-            const jsonComp = this.deflateComponent(component);
-            jsonComp.type = component.className;
-            jsonComp.id = component.id;
-            if (component.name) {
-                jsonComp.name = component.name;
+            const jsonComp = this.componentToJSON(component);
+            if (jsonComp) {
+                jsonComp.type = component.typeName;
+                jsonComp.id = component.id;
+                if (component.name) {
+                    jsonComp.name = component.name;
+                }
+                jsonComponents.push(jsonComp);
             }
-            jsonComponents.push(jsonComp);
         }
         if (jsonComponents.length > 0) {
             json.components = jsonComponents;
@@ -2551,25 +3261,30 @@ class Node extends Publisher_1.default {
     /**
      * Deserializes the node and its components.
      * @param json serialized node data.
-     * @param linkableDict dictionary mapping component ids to components.
      */
-    inflate(json, linkableDict) {
+    fromJSON(json) {
+        this._isLocked = !!json.locked;
         if (json.components) {
-            json.forEach(jsonComp => {
-                const component = this.createComponent(jsonComp.type, jsonComp.name, jsonComp.id);
-                component.inflate(jsonComp);
-            });
+            json.components.forEach(jsonComp => this.componentFromJSON(jsonComp));
         }
+    }
+    /**
+     * Override to control how components are deserialized.
+     * @param jsonComp The JSON data for the component to be deserialized.
+     */
+    componentFromJSON(jsonComp) {
+        const component = this.createComponent(jsonComp.type, jsonComp.name, jsonComp.id);
+        component.fromJSON(jsonComp);
     }
     /**
      * Deserializes the links of all components.
      * @param json serialized component data.
      */
-    inflateReferences(json) {
+    referencesFromJSON(json) {
         if (json.components) {
             json.components.forEach(jsonComp => {
                 const component = this.components.getById(jsonComp.id);
-                component.inflateReferences(jsonComp);
+                component.referencesFromJSON(jsonComp);
             });
         }
     }
@@ -2578,8 +3293,8 @@ class Node extends Publisher_1.default {
      * Return serialization data or null if the component should be excluded from serialization.
      * @param component The component to be serialized.
      */
-    deflateComponent(component) {
-        return component.deflate();
+    componentToJSON(component) {
+        return component.toJSON();
     }
     /**
      * Adds a component to the node, the node's graph and the system. Called by [[Component.attach]],
@@ -2589,10 +3304,10 @@ class Node extends Publisher_1.default {
      */
     _addComponent(component) {
         if (component.isNodeSingleton && this.components.has(component)) {
-            throw new Error(`only one component of class '${component.className}' allowed per node`);
+            throw new Error(`only one component of type '${component.typeName}' allowed per node`);
         }
-        this.graph._addComponent(component);
         this.components.add(component);
+        this.graph._addComponent(component);
     }
     /**
      * Removes a component from the node, the node's graph and the system. Called by [[Component.detach]],
@@ -2601,11 +3316,11 @@ class Node extends Publisher_1.default {
      * @private
      */
     _removeComponent(component) {
-        this.components.remove(component);
         this.graph._removeComponent(component);
+        this.components.remove(component);
     }
 }
-Node.type = "Node";
+Node.typeName = "Node";
 Node.text = "";
 Node.icon = "";
 exports.default = Node;
@@ -2644,9 +3359,9 @@ class Property extends Publisher_1.default {
      * Creates a new linkable property.
      * @param path Name and group(s) the property is displayed under.
      * @param schema Property schema definition.
-     * @param user Marks the property as user-defined if set to true.
+     * @param custom Marks the property as user-defined if set to true.
      */
-    constructor(path, schema, user) {
+    constructor(path, schema, custom) {
         super();
         this.addEvents("value", "link", "change", "dispose");
         if (!schema || schema.preset === undefined) {
@@ -2656,7 +3371,7 @@ class Property extends Publisher_1.default {
         const isArray = Array.isArray(preset);
         this.type = typeof (isArray ? preset[0] : preset);
         this.schema = schema;
-        this.user = user || false;
+        this.custom = custom || false;
         this.elementCount = isArray ? preset.length : 1;
         this.inLinks = [];
         this.outLinks = [];
@@ -2680,31 +3395,39 @@ class Property extends Publisher_1.default {
         this._path = path;
         this.emit({ type: "change", what: "path", property: this });
     }
-    /**
-     * Adds the property to the given group.
-     * @param group The property group this property should be added to.
-     * @param key An optional key under which the property is accessible in the property group.
-     * @param index An optional index position where the property should be inserted in the group.
-     */
-    attach(group, key, index) {
-        group._addProperty(this, key, index);
+    get name() {
+        return this._path.split(".").pop();
     }
-    /**
-     * Removes the property from the group it was previously added to.
-     * Does nothing if the property is not member of a group.
-     */
-    detach() {
-        if (this._group) {
-            this._group._removeProperty(this);
-        }
-    }
+    // /**
+    //  * Adds the property to the given group.
+    //  * @param group The property group this property should be added to.
+    //  * @param key An optional key under which the property is accessible in the property group.
+    //  * @param index An optional index position where the property should be inserted in the group.
+    //  */
+    // attach(group: PropertyGroup, key?: string, index?: number)
+    // {
+    //     group._addProperty(this, key, index);
+    // }
+    //
+    // /**
+    //  * Removes the property from the group it was previously added to.
+    //  * Does nothing if the property is not member of a group.
+    //  */
+    // detach()
+    // {
+    //     if (this._group) {
+    //         this._group._removeProperty(this);
+    //     }
+    // }
     /**
      * Removes the property from its group, removes all links.
      * Emits a [[IPropertyDisposeEvent]] event.
      */
     dispose() {
         this.unlink();
-        this.detach();
+        if (this._group) {
+            this._group.removeProperty(this);
+        }
         this.emit({ type: "dispose", property: this });
     }
     setValue(value, silent) {
@@ -2764,7 +3487,7 @@ class Property extends Publisher_1.default {
     }
     linkFrom(source, sourceIndex, destinationIndex) {
         if (!this.canLinkFrom(source, sourceIndex, destinationIndex)) {
-            throw new Error("can't link");
+            throw new Error(`can't link from '${source.path}' to '${this.path}'`);
         }
         const link = new PropertyLink_1.default(source, this, sourceIndex, destinationIndex);
         source.addOutLink(link);
@@ -2951,6 +3674,9 @@ class Property extends Publisher_1.default {
         }
         return value === preset;
     }
+    hasLinks() {
+        return this.inLinks.length > 0 || this.outLinks.length > 0;
+    }
     hasInLinks(index) {
         const links = this.inLinks;
         if (!(index >= 0)) {
@@ -2990,8 +3716,8 @@ class Property extends Publisher_1.default {
     outLinkCount() {
         return this.outLinks.length;
     }
-    deflate() {
-        let json = this.user ? {
+    toJSON() {
+        let json = this.custom ? {
             path: this.path,
             schema: Object.assign({}, this.schema)
         } : null;
@@ -3017,7 +3743,7 @@ class Property extends Publisher_1.default {
         }
         return json;
     }
-    inflate(json, linkableDict) {
+    fromJSON(json, linkableDict) {
         if (json.value !== undefined) {
             this.value = json.value;
         }
@@ -3036,6 +3762,9 @@ class Property extends Publisher_1.default {
         const schema = this.schema;
         const typeName = schema.event ? "event" : (schema.options ? "enum" : this.type);
         return `${this.path} [${typeName}]`;
+    }
+    dump(indent = "") {
+        console.log(indent + `Property '${this.path}', key: ${this.key}, value: ${this.value}`);
     }
     /**
      * Validates the given value against the property schema.
@@ -3086,6 +3815,7 @@ exports.default = Property;
 Object.defineProperty(exports, "__esModule", { value: true });
 const Publisher_1 = __webpack_require__(/*! @ff/core/Publisher */ "../../libs/ff-core/source/Publisher.ts");
 const Property_1 = __webpack_require__(/*! ./Property */ "../../libs/ff-graph/source/Property.ts");
+const uniqueId_1 = __webpack_require__(/*! @ff/core/uniqueId */ "../../libs/ff-core/source/uniqueId.ts");
 /**
  * A set of properties. Properties can be linked, such that one property updates another.
  * After adding properties to the set, they are available on the set using their key.
@@ -3101,6 +3831,9 @@ class PropertyGroup extends Publisher_1.default {
         this.linkable = linkable;
         this.properties = [];
     }
+    get customProperties() {
+        return this.properties.filter(property => property.custom);
+    }
     dispose() {
         this.unlinkAllProperties();
     }
@@ -3115,16 +3848,69 @@ class PropertyGroup extends Publisher_1.default {
      * @param templates plain object with property templates.
      * @param index Optional index at which to insert the properties.
      */
-    createPropertiesFromTemplates(templates, index) {
+    createProperties(templates, index) {
         Object.keys(templates).forEach((key, i) => {
             const ii = index === undefined ? undefined : index + i;
-            this.createPropertyFromTemplate(templates[key], key, ii);
+            const template = templates[key];
+            this.createProperty(template.path, template.schema, key, ii);
         });
         return this;
     }
-    createPropertyFromTemplate(template, key, index) {
-        const property = new Property_1.default(template.path, template.schema);
-        this._addProperty(property, key, index);
+    createProperty(path, schema, key, index) {
+        const property = new Property_1.default(path, schema);
+        this.addProperty(property, key, index);
+        return property;
+    }
+    createCustomProperty(path, schema, index) {
+        const property = new Property_1.default(path, schema, /* custom */ true);
+        this.addCustomProperty(property, index);
+        return property;
+    }
+    addCustomProperty(property, index) {
+        const key = uniqueId_1.default(5);
+        this.addProperty(property, key, index);
+    }
+    addProperty(property, key, index) {
+        if (property.group) {
+            throw new Error("can't add, property already part of a group");
+        }
+        if (this[key]) {
+            throw new Error(`key '${key}' already exists in group`);
+        }
+        property._group = this;
+        property._key = key;
+        if (index === undefined) {
+            this.properties.push(property);
+        }
+        else {
+            this.properties.splice(index, 0, property);
+        }
+        this[key] = property;
+        this.emit({
+            type: "property", add: true, remove: false, property
+        });
+    }
+    /**
+     * Removes the given property from the set.
+     * @param {Property} property The property to be removed.
+     */
+    removeProperty(property) {
+        if (property.group !== this) {
+            throw new Error("can't remove, property not in this group");
+        }
+        if (property.hasLinks()) {
+            throw new Error("can't remove, property has links");
+        }
+        if (this[property.key] !== property) {
+            throw new Error(`property key '${property.key}' not found in group`);
+        }
+        this.properties.slice(this.properties.indexOf(property), 1);
+        delete this[property.key];
+        property._group = null;
+        property._key = "";
+        this.emit({
+            type: "property", add: false, remove: true, property
+        });
     }
     /**
      * Returns a property by key.
@@ -3178,10 +3964,10 @@ class PropertyGroup extends Publisher_1.default {
     unlinkAllProperties() {
         this.properties.forEach(property => property.unlink());
     }
-    deflate() {
+    toJSON() {
         let json = null;
         this.properties.forEach(property => {
-            const jsonProp = property.deflate();
+            const jsonProp = property.toJSON();
             if (jsonProp) {
                 json = json || {};
                 json[property.key] = jsonProp;
@@ -3189,61 +3975,19 @@ class PropertyGroup extends Publisher_1.default {
         });
         return json;
     }
-    inflate(json) {
+    fromJSON(json) {
         Object.keys(json).forEach(key => {
             const jsonProp = json[key];
             if (jsonProp.schema) {
-                const property = new Property_1.default(jsonProp.path, jsonProp.schema, true);
-                property.attach(this, key);
+                const property = new Property_1.default(jsonProp.path, jsonProp.schema, /* custom */ true);
+                this.addProperty(property, key);
             }
         });
     }
-    inflateLinks(json, linkableDict) {
+    linksFromJSON(json, linkableDict) {
         Object.keys(json).forEach(key => {
-            this[key].inflate(json[key], linkableDict);
+            this[key].fromJSON(json[key], linkableDict);
         });
-    }
-    _addProperty(property, key, index) {
-        if (property.group) {
-            property.detach();
-        }
-        if (key && this[key]) {
-            throw new Error(`key '${key}' already exists in group`);
-        }
-        property._group = this;
-        property._key = key;
-        if (index === undefined) {
-            this.properties.push(property);
-        }
-        else {
-            this.properties.splice(index, 0, property);
-        }
-        if (key) {
-            this[key] = property;
-        }
-        this.emit({
-            type: "property", add: true, remove: false, property
-        });
-    }
-    /**
-     * Removes the given property from the set.
-     * @param {Property} property The property to be removed.
-     */
-    _removeProperty(property) {
-        if (property.group === this) {
-            if (this[property.key] !== property) {
-                throw new Error(`property not found in group: ${property.key}`);
-            }
-            this.properties.slice(this.properties.indexOf(property), 1);
-            if (property.key) {
-                delete this[property.key];
-            }
-            property._group = null;
-            property._key = "";
-            this.emit({
-                type: "property", add: false, remove: true, property
-            });
-        }
     }
 }
 exports.default = PropertyGroup;
@@ -3314,7 +4058,7 @@ exports.default = PropertyLink;
 Object.defineProperty(exports, "__esModule", { value: true });
 const Publisher_1 = __webpack_require__(/*! @ff/core/Publisher */ "../../libs/ff-core/source/Publisher.ts");
 const ObjectRegistry_1 = __webpack_require__(/*! @ff/core/ObjectRegistry */ "../../libs/ff-core/source/ObjectRegistry.ts");
-const ClassRegistry_1 = __webpack_require__(/*! @ff/core/ClassRegistry */ "../../libs/ff-core/source/ClassRegistry.ts");
+const TypeRegistry_1 = __webpack_require__(/*! @ff/core/TypeRegistry */ "../../libs/ff-core/source/TypeRegistry.ts");
 const Component_1 = __webpack_require__(/*! ./Component */ "../../libs/ff-graph/source/Component.ts");
 const Node_1 = __webpack_require__(/*! ./Node */ "../../libs/ff-graph/source/Node.ts");
 const Graph_1 = __webpack_require__(/*! ./Graph */ "../../libs/ff-graph/source/Graph.ts");
@@ -3323,47 +4067,49 @@ class System extends Publisher_1.default {
         super({ knownEvents: false });
         this.nodes = new ObjectRegistry_1.default(Node_1.default);
         this.components = new ObjectRegistry_1.default(Component_1.default);
-        this.registry = registry || new ClassRegistry_1.default();
+        this.registry = registry || new TypeRegistry_1.default();
+        // create the main graph and activate it by default
         this.graph = new Graph_1.default(this, null);
+        this.graph.activate();
     }
-    getComponent(componentOrClass, nothrow = false) {
-        return this.components.get(componentOrClass, nothrow);
+    getComponent(componentOrType, nothrow = false) {
+        return this.components.get(componentOrType, nothrow);
     }
-    getComponents(componentOrClass) {
-        return this.components.getArray(componentOrClass);
+    getComponents(componentOrType) {
+        return this.components.getArray(componentOrType);
     }
-    hasComponents(componentOrClass) {
-        return this.components.has(componentOrClass);
+    hasComponents(componentOrType) {
+        return this.components.has(componentOrType);
     }
-    getMainComponent(componentOrClass, nothrow = false) {
-        return this.graph.components.get(componentOrClass, nothrow);
+    getMainComponent(componentOrType, nothrow = false) {
+        return this.graph.components.get(componentOrType, nothrow);
     }
-    getMainComponents(componentOrClass) {
-        return this.graph.components.getArray(componentOrClass);
+    getMainComponents(componentOrType) {
+        return this.graph.components.getArray(componentOrType);
     }
-    hasMainComponents(componentOrClass) {
-        return this.graph.components.has(componentOrClass);
+    hasMainComponents(componentOrType) {
+        return this.graph.components.has(componentOrType);
     }
-    getNode(nodeOrClass, nothrow = false) {
-        return this.nodes.get(nodeOrClass, nothrow);
+    getNode(nodeOrType, nothrow = false) {
+        return this.nodes.get(nodeOrType, nothrow);
     }
-    getNodes(nodeOrClass) {
-        return this.nodes.getArray(nodeOrClass);
+    getNodes(nodeOrType) {
+        return this.nodes.getArray(nodeOrType);
     }
-    hasNodes(nodeOrClass) {
-        return this.nodes.has(nodeOrClass);
+    hasNodes(nodeOrType) {
+        return this.nodes.has(nodeOrType);
     }
-    getMainNode(nodeOrClass, nothrow = false) {
-        return this.graph.nodes.get(nodeOrClass, nothrow);
+    getMainNode(nodeOrType, nothrow = false) {
+        return this.graph.nodes.get(nodeOrType, nothrow);
     }
-    getMainNodes(nodeOrClass) {
-        return this.graph.nodes.getArray(nodeOrClass);
+    getMainNodes(nodeOrType) {
+        return this.graph.nodes.getArray(nodeOrType);
     }
-    hasMainNodes(nodeOrClass) {
-        return this.graph.nodes.has(nodeOrClass);
+    hasMainNodes(nodeOrType) {
+        return this.graph.nodes.has(nodeOrType);
     }
-    findNodeByName(name, nodeOrClass) {
-        const nodes = this.nodes.getArray(nodeOrClass);
+    findNodeByName(name, nodeOrType) {
+        const nodes = this.nodes.getArray(nodeOrType);
         for (let i = 0, n = nodes.length; i < n; ++i) {
             if (nodes[i].name === name) {
                 return nodes[i];
@@ -3374,15 +4120,16 @@ class System extends Publisher_1.default {
     /**
      * Serializes the content of the system, ready to be stringified.
      */
-    deflate() {
-        return this.graph.deflate();
+    toJSON() {
+        return this.graph.toJSON();
     }
     /**
      * Deserializes the given JSON object.
      * @param json
      */
-    inflate(json) {
-        this.graph.inflate(json);
+    fromJSON(json) {
+        this.graph.clear();
+        this.graph.fromJSON(json);
     }
     toString(verbose = false) {
         const nodes = this.nodes.getArray();
@@ -3401,7 +4148,7 @@ class System extends Publisher_1.default {
     }
     _addComponent(component) {
         if (component.isSystemSingleton && this.components.has(component)) {
-            throw new Error(`only one component of class '${component.className}' allowed per system`);
+            throw new Error(`only one component of type '${component.typeName}' allowed per system`);
         }
         this.components.add(component);
     }
@@ -3410,6 +4157,245 @@ class System extends Publisher_1.default {
     }
 }
 exports.default = System;
+
+
+/***/ }),
+
+/***/ "../../libs/ff-graph/source/components/CComponentProvider.ts":
+/*!******************************************************************!*\
+  !*** /app/libs/ff-graph/source/components/CComponentProvider.ts ***!
+  \******************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Component_1 = __webpack_require__(/*! ../Component */ "../../libs/ff-graph/source/Component.ts");
+const Node_1 = __webpack_require__(/*! ../Node */ "../../libs/ff-graph/source/Node.ts");
+const CSelection_1 = __webpack_require__(/*! ./CSelection */ "../../libs/ff-graph/source/components/CSelection.ts");
+////////////////////////////////////////////////////////////////////////////////
+var EComponentScope;
+(function (EComponentScope) {
+    // Components in the given scoped node.
+    EComponentScope[EComponentScope["Node"] = 0] = "Node";
+    // Components in the given scoped graph.
+    EComponentScope[EComponentScope["Graph"] = 1] = "Graph";
+    // Components in the main graph.
+    EComponentScope[EComponentScope["Main"] = 2] = "Main";
+    // All components in the system.
+    EComponentScope[EComponentScope["System"] = 3] = "System";
+})(EComponentScope = exports.EComponentScope || (exports.EComponentScope = {}));
+/**
+ * Defines a scope of components. Exactly one component can be the active component. The scope
+ * of candidate components is definable. The active component can be driven by the current selection.
+ *
+ * ### Events
+ * - *"active-component"* - Emits [[IActiveComponentEvent]] if the active component changes.
+ */
+class CComponentProvider extends Component_1.default {
+    constructor() {
+        super(...arguments);
+        this._scope = EComponentScope.Node;
+        this._scopedNode = null;
+        this._scopedGraph = null;
+        this._activeComponent = null;
+    }
+    get componentType() {
+        return this.constructor.componentType;
+    }
+    /** If a component in scope is selected, it becomes the active component. */
+    get followComponentSelection() {
+        return this.constructor.followComponentSelection;
+    }
+    /** If a node is selected containing a component in scope, the component becomes the active component. */
+    get followNodeSelection() {
+        return this.constructor.followNodeSelection;
+    }
+    /** If the active component is unselected, keep it active anyway. */
+    get retainSelection() {
+        return this.constructor.retainSelection;
+    }
+    get scope() {
+        return this._scope;
+    }
+    set scope(scope) {
+        this._scope = scope;
+        if (this._activeComponent && !this.isComponentInScope(this._activeComponent)) {
+            this.activeComponent = null;
+        }
+    }
+    get scopedNode() {
+        return this._scopedNode;
+    }
+    set scopedNode(node) {
+        if (node !== this._scopedNode) {
+            this._scopedNode = node;
+            if (this._activeComponent && !this.isComponentInScope(this._activeComponent)) {
+                this.activeComponent = null;
+            }
+            this.onScopedComponents();
+            this.emit({ type: "scoped-components" });
+        }
+    }
+    get scopedGraph() {
+        return this._scopedGraph;
+    }
+    set scopedGraph(graphComponent) {
+        if (graphComponent !== this._scopedGraph) {
+            this._scopedGraph = graphComponent;
+            if (this._activeComponent && !this.isComponentInScope(this._activeComponent)) {
+                this.activeComponent = null;
+            }
+            this.onScopedComponents();
+            this.emit({ type: "scoped-components" });
+        }
+    }
+    get scopedComponents() {
+        switch (this._scope) {
+            case EComponentScope.Node:
+                const node = this._scopedNode || this.node;
+                return node.getComponents(this.componentType);
+            case EComponentScope.Graph:
+                const graph = this._scopedGraph ? this._scopedGraph.innerGraph : this.graph;
+                return graph.getComponents(this.componentType);
+            case EComponentScope.Main:
+                return this.getMainComponents(this.componentType);
+            case EComponentScope.System:
+                return this.getSystemComponents(this.componentType);
+        }
+    }
+    get activeComponent() {
+        return this._activeComponent;
+    }
+    set activeComponent(component) {
+        const activeComponent = this.activeComponent;
+        if (component !== activeComponent) {
+            if (activeComponent) {
+                this.deactivateComponent(activeComponent);
+            }
+            if (component) {
+                if (!this.isComponentInScope(component)) {
+                    throw new Error("can't activate, component out of scope");
+                }
+                this.activateComponent(component);
+            }
+            this._activeComponent = component;
+            this.onActiveComponent(activeComponent, component);
+            this.emit({ type: "active-component", previous: activeComponent, next: component });
+        }
+    }
+    get selection() {
+        return this.getSystemComponent(CSelection_1.default);
+    }
+    create() {
+        super.create();
+        this.system.components.on(Component_1.default, this.onComponent, this);
+        if (this.followComponentSelection) {
+            this.selection.selectedComponents.on(this.componentType, this.onSelectComponent, this);
+        }
+        if (this.followNodeSelection) {
+            this.selection.selectedNodes.on(Node_1.default, this.onSelectNode, this);
+        }
+    }
+    dispose() {
+        if (this.activeComponent) {
+            this.activeComponent = null;
+        }
+        this.system.components.off(Component_1.default, this.onComponent, this);
+        if (this.followComponentSelection) {
+            this.selection.selectedComponents.off(this.componentType, this.onSelectComponent, this);
+        }
+        if (this.followNodeSelection) {
+            this.selection.selectedNodes.off(Node_1.default, this.onSelectNode, this);
+        }
+        super.dispose();
+    }
+    activateComponent(component) {
+    }
+    deactivateComponent(component) {
+    }
+    onActiveComponent(previous, next) {
+    }
+    onScopedComponents() {
+    }
+    onComponent(event) {
+        // in case the active component is removed
+        if (event.remove && event.object === this.activeComponent) {
+            this.activeComponent = null;
+        }
+        if (this.isComponentInScope(event.object)) {
+            this.onScopedComponents();
+            this.emit({ type: "scoped-components" });
+        }
+    }
+    onSelectComponent(event) {
+        const component = event.object;
+        if (this.isComponentInScope(component)) {
+            if (event.add) {
+                this.activeComponent = component;
+            }
+            else if (event.remove && !this.retainSelection && component === this.activeComponent) {
+                this.activeComponent = null;
+            }
+        }
+    }
+    onSelectNode(event) {
+        const node = event.object;
+        if (this.isNodeInScope(node)) {
+            const component = node.getComponent(this.componentType);
+            if (component) {
+                this.onSelectComponent({
+                    type: component.typeName, object: component, add: event.add, remove: event.remove
+                });
+            }
+        }
+    }
+    isComponentInScope(component) {
+        if (!component.is(this.componentType)) {
+            return false;
+        }
+        switch (this._scope) {
+            case EComponentScope.Node:
+                const node = this._scopedNode || this.node;
+                return component.node === node;
+            case EComponentScope.Graph:
+                const graph = this._scopedGraph ? this._scopedGraph.innerGraph : this.graph;
+                return component.graph === graph;
+            case EComponentScope.Main:
+                return component.graph === this.system.graph;
+            case EComponentScope.System:
+                return true;
+        }
+        return false;
+    }
+    isNodeInScope(node) {
+        switch (this._scope) {
+            case EComponentScope.Node:
+                const scopedNode = this._scopedNode || this.node;
+                return node === scopedNode;
+            case EComponentScope.Graph:
+                const graph = this._scopedGraph ? this._scopedGraph.innerGraph : this.graph;
+                return node.graph === graph;
+            case EComponentScope.Main:
+                return node.graph === this.system.graph;
+            case EComponentScope.System:
+                return true;
+        }
+    }
+}
+CComponentProvider.typeName = "CComponentProvider";
+CComponentProvider.componentType = Component_1.default;
+CComponentProvider.followComponentSelection = true;
+CComponentProvider.followNodeSelection = false;
+CComponentProvider.retainSelection = true;
+exports.default = CComponentProvider;
 
 
 /***/ }),
@@ -3439,7 +4425,7 @@ class CController extends Component_1.default {
         return {};
     }
 }
-CController.type = "CController";
+CController.typeName = "CController";
 CController.isSystemSingleton = true;
 exports.default = CController;
 
@@ -3463,22 +4449,29 @@ exports.default = CController;
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 const Component_1 = __webpack_require__(/*! ../Component */ "../../libs/ff-graph/source/Component.ts");
+exports.types = Component_1.types;
 const Graph_1 = __webpack_require__(/*! ../Graph */ "../../libs/ff-graph/source/Graph.ts");
-////////////////////////////////////////////////////////////////////////////////
+const Node_1 = __webpack_require__(/*! ../Node */ "../../libs/ff-graph/source/Node.ts");
+exports.Node = Node_1.default;
 class CGraph extends Component_1.default {
-    constructor() {
-        super(...arguments);
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(CGraph.graphIns);
         this._innerGraph = null;
         this._innerRoot = null;
+        this._innerGraph = new Graph_1.default(this.system, this);
     }
     get innerGraph() {
         return this._innerGraph;
     }
-    get innerRoot() {
-        return this._innerRoot;
+    get innerNodes() {
+        return this._innerGraph.nodes;
     }
-    set innerRoot(root) {
-        this._innerRoot = root;
+    get innerComponents() {
+        return this._innerGraph.components;
+    }
+    get innerRoots() {
+        return this._innerGraph.roots;
     }
     getInnerComponent(componentOrClass, nothrow = false) {
         return this._innerGraph.components.get(componentOrClass, nothrow);
@@ -3498,18 +4491,31 @@ class CGraph extends Component_1.default {
     hasInnerNode(nodeOrClass) {
         return this._innerGraph.nodes.has(nodeOrClass);
     }
-    create() {
-        this._innerGraph = new Graph_1.default(this.system, this);
+    isEmpty() {
+        return this._innerGraph.nodes.count() === 0;
     }
     update(context) {
+        const ins = this.ins;
+        if (ins.active.changed) {
+            const isActive = ins.active.value;
+            const graph = this._innerGraph;
+            if (isActive !== graph.isActive) {
+                if (isActive) {
+                    this.activateInnerGraph();
+                }
+                else {
+                    this.deactivateInnerGraph();
+                }
+            }
+        }
         // TODO: Evaluate interface ins/outs
-        return false;
+        return true;
     }
     tick(context) {
         return this._innerGraph.tick(context);
     }
-    finalize(context) {
-        return this._innerGraph.finalize(context);
+    tock(context) {
+        return this._innerGraph.tock(context);
     }
     dispose() {
         this._innerGraph.clear();
@@ -3517,17 +4523,41 @@ class CGraph extends Component_1.default {
         this._innerRoot = null;
         super.dispose();
     }
-    inflate(json) {
-        super.inflate(json);
-        this._innerGraph.inflate(json.graph);
+    /**
+     * Removes all components and nodes from the inner graph.
+     */
+    clearInnerGraph() {
+        this._innerGraph.clear();
     }
-    deflate() {
-        const json = super.deflate();
-        json.graph = this._innerGraph.deflate();
+    fromJSON(json) {
+        super.fromJSON(json);
+        this._innerGraph.clear();
+        this._innerGraph.fromJSON(json.graph);
+    }
+    toJSON() {
+        const json = super.toJSON();
+        json.graph = this._innerGraph.toJSON();
         return json;
     }
+    dump(indent = "") {
+        super.dump(indent);
+        this.innerGraph.dump(indent + "  ");
+    }
+    onAddInnerRoot(component) {
+    }
+    onRemoveInnerRoot(component) {
+    }
+    activateInnerGraph() {
+        this._innerGraph.activate();
+    }
+    deactivateInnerGraph() {
+        this._innerGraph.deactivate();
+    }
 }
-CGraph.type = "CGraph";
+CGraph.typeName = "CGraph";
+CGraph.graphIns = {
+    active: Component_1.types.Boolean("Graph.Active", true),
+};
 exports.default = CGraph;
 
 
@@ -3552,6 +4582,26 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const Component_1 = __webpack_require__(/*! ../Component */ "../../libs/ff-graph/source/Component.ts");
 const Node_1 = __webpack_require__(/*! ../Node */ "../../libs/ff-graph/source/Node.ts");
 exports.Node = Node_1.default;
+const CGraph_1 = __webpack_require__(/*! ./CGraph */ "../../libs/ff-graph/source/components/CGraph.ts");
+const _hasChildComponents = (hierarchy, componentOrType, recursive) => {
+    let hasComponent;
+    const children = hierarchy.children;
+    for (let i = 0, n = children.length; i < n; ++i) {
+        hasComponent = children[i].components.has(componentOrType);
+        if (hasComponent) {
+            return true;
+        }
+    }
+    if (recursive) {
+        for (let i = 0, n = children.length; i < n; ++i) {
+            hasComponent = _hasChildComponents(children[i], componentOrType, true);
+            if (hasComponent) {
+                return true;
+            }
+        }
+    }
+    return false;
+};
 const _getChildComponent = (hierarchy, componentOrType, recursive) => {
     let component;
     const children = hierarchy.children;
@@ -3584,19 +4634,16 @@ const _getChildComponents = (hierarchy, componentOrType, recursive) => {
     }
     return components;
 };
-const _inputs = {
-    blocked: Component_1.types.Boolean("Hierarchy.Blocked"),
-};
 /**
  * Allows arranging components in a hierarchical structure.
  *
  * ### Events
- * - *"change"* - emits [[IHierarchyChangeEvent]] after the instance's state has changed.
+ * - *"hierarchy"* - emits [[IHierarchyEvent]] if a hierarchy relation has changed in the component's tree line.
+ * - *"child-component"* - emits [[IChildComponentEvent]] if a child component has been added or removed.
  */
 class CHierarchy extends Component_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(_inputs);
         this._parent = null;
         this._children = [];
     }
@@ -3614,20 +4661,27 @@ class CHierarchy extends Component_1.default {
     get children() {
         return this._children || [];
     }
+    create() {
+        super.create();
+        this.graph._addRoot(this);
+        this.node.components.on(Component_1.default, this.onComponent, this);
+    }
     dispose() {
+        this.node.components.off(Component_1.default, this.onComponent, this);
+        // dispose of all child nodes
+        this._children.slice().forEach(child => child.node.dispose());
         // detach this from its parent
         if (this._parent) {
             this._parent.removeChild(this);
         }
-        // dispose of children
-        this._children.slice().forEach(child => child.node.dispose());
+        this.graph._removeRoot(this);
         super.dispose();
     }
     /**
      * Returns a component at the root of the hierarchy.
      * @returns A component of the given type that is a sibling of the root hierarchy component.
      */
-    getRoot(componentOrType) {
+    getRootComponent(componentOrType) {
         let root = this;
         while (root._parent) {
             root = root._parent;
@@ -3640,37 +4694,68 @@ class CHierarchy extends Component_1.default {
      * @param recursive If true, extends search to entire chain of ancestors,
      * including parent graphs.
      */
-    getParent(componentOrType, recursive) {
-        let parent = this._parent;
-        if (!parent) {
-            return null;
-        }
-        let component = parent.node.components.get(componentOrType);
-        if (component) {
-            return component;
-        }
-        if (recursive) {
+    getParentComponent(componentOrType, recursive) {
+        let parent = this;
+        while (true) {
             parent = parent._parent;
             // if at root, continue search at parent graph
             if (!parent) {
                 const parentGraphComponent = this.graph.parent;
-                parent = parentGraphComponent ? parentGraphComponent.hierarchy : null;
+                parent = parentGraphComponent ? parentGraphComponent.components.get(CHierarchy) : undefined;
             }
-            while (parent) {
-                component = parent.node.components.get(componentOrType);
-                if (component) {
-                    return component;
-                }
+            if (!parent) {
+                return undefined;
+            }
+            const component = parent.node.components.get(componentOrType, true);
+            if (component) {
+                return component;
+            }
+            if (!recursive) {
+                return undefined;
             }
         }
-        return null;
+    }
+    getParentNode(nodeOrType, recursive) {
+        let parent = this;
+        while (true) {
+            parent = parent._parent;
+            // if at root, continue search at parent graph
+            if (!parent) {
+                const parentGraphComponent = this.graph.parent;
+                parent = parentGraphComponent ? parentGraphComponent.components.get(CHierarchy) : undefined;
+            }
+            if (!parent) {
+                return undefined;
+            }
+            const node = parent.node;
+            if (node.is(nodeOrType)) {
+                return node;
+            }
+            if (!recursive) {
+                return undefined;
+            }
+        }
+    }
+    getSiblingNode(nodeOrType) {
+        return this.getSiblingNodes(nodeOrType)[0];
+    }
+    getSiblingNodes(nodeOrType) {
+        const thisParent = this._parent;
+        return this.graph.nodes.getArray(nodeOrType).filter(node => {
+            const hierarchy = node.components.get(CHierarchy);
+            const parent = hierarchy ? hierarchy._parent : null;
+            return parent == thisParent;
+        });
+    }
+    hasChildComponents(componentOrType, recursive) {
+        return _hasChildComponents(this, componentOrType, recursive);
     }
     /**
      * Returns the child component of the given type.
      * @param componentOrType
      * @param recursive If true, extends search to entire subtree (breadth-first).
      */
-    getChild(componentOrType, recursive) {
+    getChildComponent(componentOrType, recursive) {
         return _getChildComponent(this, componentOrType, recursive);
     }
     /**
@@ -3678,16 +4763,101 @@ class CHierarchy extends Component_1.default {
      * @param componentOrType
      * @param recursive If true, extends search to entire subtree (breadth-first).
      */
-    getChildren(componentOrType, recursive) {
+    getChildComponents(componentOrType, recursive) {
         return _getChildComponents(this, componentOrType, recursive);
     }
     /**
-     * Returns true if there is a child component of the given type.
-     * @param componentOrType
-     * @param recursive If true, extends search to entire subtree (breadth-first).
+     * Traverses the hierarchy up starting from this component. Executes the given callback function
+     * for each visited component.
+     * @param includeThis Includes this component in traversal.
+     * @param includeSiblings For each hierarchy component, executes callback for all sibling components in the same node.
+     * @param acrossGraphs When arriving at the root hierarchy component, continues traversal at the parent graph.
+     * @param callback The callback function to execute for each visited component.
      */
-    hasChildren(componentOrType, recursive) {
-        return !!_getChildComponent(this, componentOrType, recursive);
+    traverseUp(includeThis, includeSiblings, acrossGraphs, callback) {
+        if (includeThis) {
+            if (includeSiblings) {
+                const siblings = this.node.components.getArray();
+                for (let i = 0, n = siblings.length; i < n; ++i) {
+                    if (callback(siblings[i])) {
+                        return;
+                    }
+                }
+            }
+            else if (callback(this)) {
+                return;
+            }
+        }
+        let parent = this._parent;
+        if (!parent && acrossGraphs) {
+            const graphComponent = this.node.graph.parent;
+            parent = graphComponent ? graphComponent.getComponent(CHierarchy, true) : null;
+        }
+        if (parent) {
+            parent.traverseUp(true, includeSiblings, acrossGraphs, callback);
+        }
+    }
+    /**
+     * Traverses the hierarchy down starting from this component. Executes the given callback function
+     * for each visited component.
+     * @param includeThis Includes this component in traversal.
+     * @param includeSiblings For each hierarchy component, executes callback for all sibling components in the same node.
+     * @param acrossGraphs Includes subgraphs in traversal.
+     * @param callback The callback function to execute for each visited component.
+     */
+    traverseDown(includeThis, includeSiblings, acrossGraphs, callback) {
+        if (includeThis) {
+            if (includeSiblings) {
+                const siblings = this.node.components.getArray();
+                for (let i = 0, n = siblings.length; i < n; ++i) {
+                    if (callback(siblings[i])) {
+                        return;
+                    }
+                }
+            }
+            else if (callback(this)) {
+                return;
+            }
+        }
+        if (acrossGraphs) {
+            const graphs = this.node.components.getArray(CGraph_1.default);
+            for (let i = 0, n = graphs.length; i < n; ++i) {
+                const innerRoots = graphs[i].innerRoots;
+                for (let j = 0, m = innerRoots.length; j < m; ++j) {
+                    innerRoots[j].traverseDown(true, includeSiblings, acrossGraphs, callback);
+                }
+            }
+        }
+        const children = this._children;
+        for (let i = 0, n = children.length; i < n; ++i) {
+            children[i].traverseDown(true, includeSiblings, acrossGraphs, callback);
+        }
+    }
+    /**
+     * Emits the given event on this component and on all parent components.
+     * Stops propagation as soon as `stopPropagation` is set to true on the event.
+     * @param includeSiblings Also emits the event on all sibling components in the same node.
+     * @param acrossGraphs When arriving at the root hierarchy component, continues traversal at the parent graph.
+     * @param event The event to be emitted.
+     */
+    propagateUp(includeSiblings, acrossGraphs, event) {
+        this.traverseUp(true, includeSiblings, acrossGraphs, component => {
+            component.emit(event);
+            return event.stopPropagation;
+        });
+    }
+    /**
+     * Emits the given event on this component and on all child components.
+     * Stops propagation as soon as `stopPropagation` is set to true on the event.
+     * @param includeSiblings Also emits the event on all sibling components in the same node.
+     * @param acrossGraphs Includes subgraphs in traversal.
+     * @param event The event to be emitted.
+     */
+    propagateDown(includeSiblings, acrossGraphs, event) {
+        this.traverseDown(true, includeSiblings, acrossGraphs, component => {
+            component.emit(event);
+            return event.stopPropagation;
+        });
     }
     /**
      * Adds another hierarchy component as a child to this component.
@@ -3695,57 +4865,66 @@ class CHierarchy extends Component_1.default {
      * @param {CHierarchy} component
      */
     addChild(component) {
-        if (component._parent) {
-            throw new Error("can't add as child: component already has a parent");
+        if (component === this) {
+            throw new Error("can't add self as child");
         }
-        if (component === this.graph.root) {
-            throw new Error("can't add as child: component is root of graph");
+        if (component._parent) {
+            throw new Error("can't add child, component has a parent");
+        }
+        if (component.graph !== this.graph) {
+            throw new Error("can't add child, component in different graph");
         }
         component._parent = this;
         this._children.push(component);
+        this.graph._removeRoot(component);
         const event = {
             type: "hierarchy", add: true, remove: false, parent: this, child: component
         };
-        while (component) {
-            component.emit(event);
-            component.node.emit(event);
-            component = component._parent;
-        }
-        this.graph.emit(event);
+        this.traverseUp(true, false, true, component => component.emit(event));
+        this.traverseDown(false, false, true, component => component.emit(event));
         this.system.emit(event);
     }
     /**
      * Removes a child component from this hierarchy component.
      * Emits a hierarchy event at this component, its node and all their parents.
-     * @param {CHierarchy} component
+     * @param component
      */
     removeChild(component) {
         if (component._parent !== this) {
             throw new Error("component not a child of this");
         }
-        const index = this._children.indexOf(component);
-        this._children.splice(index, 1);
-        component._parent = null;
         const event = {
             type: "hierarchy", add: false, remove: true, parent: this, child: component
         };
-        while (component) {
-            component.emit(event);
-            component.node.emit(event);
-            component = component._parent;
-        }
-        this.graph.emit(event);
+        this.traverseUp(true, false, true, component => component.emit(event));
+        this.traverseDown(false, false, true, component => component.emit(event));
         this.system.emit(event);
+        const index = this._children.indexOf(component);
+        this._children.splice(index, 1);
+        component._parent = null;
+        this.graph._addRoot(component);
     }
-    deflate() {
-        const json = super.deflate();
+    onComponent(event) {
+        if (event.object === this) {
+            return;
+        }
+        const childEvent = {
+            type: "child",
+            add: event.add,
+            remove: event.remove,
+            component: event.object
+        };
+        this.traverseUp(true, false, true, component => component.emit(childEvent));
+    }
+    toJSON() {
+        const json = super.toJSON();
         if (this._children.length > 0) {
             json.children = this._children.map(child => child.id);
         }
         return json;
     }
-    inflateReferences(json) {
-        super.inflateReferences(json);
+    referencesFromJSON(json) {
+        super.referencesFromJSON(json);
         const dict = this.system.components.getDictionary();
         if (json.children) {
             json.children.forEach(childId => {
@@ -3761,16 +4940,24 @@ class CHierarchy extends Component_1.default {
     toString() {
         return super.toString() + ` - children: ${this.children.length}`;
     }
+    dump(indent) {
+        super.dump(indent);
+        if (this.children.length > 0) {
+            console.log(indent + "%cChildren", "color: purple");
+            this.children.forEach(child => child.node.dump(indent + "  "));
+        }
+    }
 }
+CHierarchy.typeName = "CHierarchy";
 exports.default = CHierarchy;
 
 
 /***/ }),
 
-/***/ "../../libs/ff-graph/source/components/COscillator.ts":
-/*!***********************************************************!*\
-  !*** /app/libs/ff-graph/source/components/COscillator.ts ***!
-  \***********************************************************/
+/***/ "../../libs/ff-graph/source/components/CNodeProvider.ts":
+/*!*************************************************************!*\
+  !*** /app/libs/ff-graph/source/components/CNodeProvider.ts ***!
+  \*************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -3783,134 +4970,186 @@ exports.default = CHierarchy;
  * License: MIT
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-const easing_1 = __webpack_require__(/*! @ff/core/easing */ "../../libs/ff-core/source/easing.ts");
-const propertyTypes_1 = __webpack_require__(/*! ../propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
 const Component_1 = __webpack_require__(/*! ../Component */ "../../libs/ff-graph/source/Component.ts");
+const Node_1 = __webpack_require__(/*! ../Node */ "../../libs/ff-graph/source/Node.ts");
+const CSelection_1 = __webpack_require__(/*! ./CSelection */ "../../libs/ff-graph/source/components/CSelection.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const offsetSchema = { preset: 0, min: 0, max: 1, bar: true };
-var ETimeBase;
-(function (ETimeBase) {
-    ETimeBase[ETimeBase["Relative"] = 0] = "Relative";
-    ETimeBase[ETimeBase["Absolute"] = 1] = "Absolute";
-})(ETimeBase = exports.ETimeBase || (exports.ETimeBase = {}));
-var EInterpolationMode;
-(function (EInterpolationMode) {
-    EInterpolationMode[EInterpolationMode["Forward"] = 0] = "Forward";
-    EInterpolationMode[EInterpolationMode["Backward"] = 1] = "Backward";
-    EInterpolationMode[EInterpolationMode["Alternate"] = 2] = "Alternate";
-})(EInterpolationMode = exports.EInterpolationMode || (exports.EInterpolationMode = {}));
-const ins = {
-    run: propertyTypes_1.types.Boolean("Control.Run"),
-    start: propertyTypes_1.types.Event("Control.Start"),
-    pause: propertyTypes_1.types.Event("Control.Pause"),
-    stop: propertyTypes_1.types.Event("Control.Stop"),
-    min: propertyTypes_1.types.Number("Value.Min"),
-    max: propertyTypes_1.types.Number("Value.Max", 1),
-    curve: propertyTypes_1.types.Enum("Interpolation.Curve", easing_1.EEasingCurve),
-    mode: propertyTypes_1.types.Enum("Interpolation.Mode", EInterpolationMode),
-    duration: propertyTypes_1.types.Number("Time.Duration", 1),
-    base: propertyTypes_1.types.Enum("Time.Base", ETimeBase),
-    offset: propertyTypes_1.types.Number("Time.Offset", offsetSchema),
-    repetitions: propertyTypes_1.types.Natural("Time.Repetitions")
-};
-const outs = {
-    value: propertyTypes_1.types.Number("Value"),
-    repetition: propertyTypes_1.types.Natural("Repetition"),
-    repeat: propertyTypes_1.types.Event("Repeat")
-};
-class COscillator extends Component_1.default {
+var ENodeScope;
+(function (ENodeScope) {
+    // Components in the given scoped graph.
+    ENodeScope[ENodeScope["Graph"] = 0] = "Graph";
+    // Nodes in the main graph.
+    ENodeScope[ENodeScope["Main"] = 1] = "Main";
+    // All nodes in the system.
+    ENodeScope[ENodeScope["System"] = 2] = "System";
+})(ENodeScope = exports.ENodeScope || (exports.ENodeScope = {}));
+/**
+ * Defines a scope of nodes. Exactly one node can be the active node. The scope
+ * of candidate nodes is definable. The active node can be driven by the current selection.
+ *
+ * ### Events
+ * - *"active-node"* - Emits [[IActiveNodeEvent]] if the active node changes.
+ */
+class CNodeProvider extends Component_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
-        this.outs = this.addOutputs(outs);
-        this.lastTime = 0;
-        this.lastT = 0;
-        this.easingFunction = null;
-        this.isAbsolute = false;
-        this.isBackward = false;
-        this.isAlternate = false;
+        this._scope = ENodeScope.Graph;
+        this._scopedGraph = null;
+        this._activeNode = null;
     }
-    update(pulse) {
-        const { ins, outs } = this;
-        if (ins.curve.changed) {
-            this.easingFunction = easing_1.getEasingFunction(ins.curve.getValidatedValue());
-        }
-        if (ins.mode.changed) {
-            this.isBackward = ins.mode.value === EInterpolationMode.Backward;
-            this.isAlternate = ins.mode.value === EInterpolationMode.Alternate;
-        }
-        if (ins.base.changed) {
-            this.isAbsolute = ins.base.value === ETimeBase.Absolute;
-        }
-        if (ins.start.changed) {
-            this.lastTime = 0;
-            ins.run.setValue(true);
-            outs.repetition.setValue(0);
-        }
-        else if (ins.pause.changed) {
-            if (ins.run.value) {
-                ins.run.setValue(false);
-            }
-            else if (ins.repetitions.value <= 0 || outs.repetition.value < ins.repetitions.value) {
-                ins.run.setValue(true);
-            }
-        }
-        else if (ins.stop.changed) {
-            this.lastTime = 0;
-            ins.run.setValue(false);
-            outs.value.setValue(this.isBackward ? ins.max.value : ins.min.value);
-            outs.repetition.setValue(0);
-        }
-        if (ins.run.changed && ins.run.value) {
-            this.lastT = 0;
-            if (ins.repetitions.value > 0 && outs.repetition.value >= ins.repetitions.value) {
-                outs.repetition.setValue(0);
-            }
-        }
-        return false;
+    get nodeType() {
+        return this.constructor.nodeType;
     }
-    tick(pulse) {
-        const { ins, outs } = this;
-        if (ins.run.value) {
-            const duration = ins.duration.value;
-            if (duration === 0) {
-                return false;
+    /** If a node in scope is selected, it becomes the active node. */
+    get followNodeSelection() {
+        return this.constructor.followNodeSelection;
+    }
+    /** If a component is selected whose parent node is in scope, the node becomes the active node. */
+    get followComponentSelection() {
+        return this.constructor.followComponentSelection;
+    }
+    /** If the active node is unselected, keep it active anyway. */
+    get retainSelection() {
+        return this.constructor.retainSelection;
+    }
+    get scope() {
+        return this._scope;
+    }
+    set scope(scope) {
+        this._scope = scope;
+        if (this._activeNode && !this.isNodeInScope(this._activeNode)) {
+            this.activeNode = null;
+        }
+    }
+    get scopedGraph() {
+        return this._scopedGraph;
+    }
+    set scopedGraph(graphComponent) {
+        if (graphComponent !== this._scopedGraph) {
+            this._scopedGraph = graphComponent;
+            if (this._activeNode && !this.isNodeInScope(this._activeNode)) {
+                this.activeNode = null;
             }
-            // absolute/relative base
-            let t;
-            if (this.isAbsolute) {
-                t = pulse.secondsElapsed / duration;
+            this.onScopedNodes();
+            this.emit({ type: "scoped-nodes" });
+        }
+    }
+    get scopedNodes() {
+        switch (this._scope) {
+            case ENodeScope.Graph:
+                const graph = this._scopedGraph ? this._scopedGraph.innerGraph : this.graph;
+                return graph.getNodes(this.nodeType);
+            case ENodeScope.Main:
+                return this.getMainNodes(this.nodeType);
+            case ENodeScope.System:
+                return this.getSystemNodes(this.nodeType);
+        }
+    }
+    get activeNode() {
+        return this._activeNode;
+    }
+    set activeNode(node) {
+        const activeNode = this.activeNode;
+        if (node !== activeNode) {
+            if (activeNode) {
+                this.deactivateNode(activeNode);
             }
-            else {
-                t = this.lastTime = this.lastTime + pulse.secondsDelta / duration;
-            }
-            // modulo cycle
-            t = t < 0 ? 1 - (-t % 1) : t % 1;
-            // repetitions
-            if (t < this.lastT) {
-                const repetition = outs.repetition.value + 1;
-                outs.repetition.setValue(repetition);
-                outs.repeat.set();
-                if (ins.repetitions.value > 0 && repetition >= ins.repetitions.value) {
-                    ins.run.setValue(false);
-                    t = 1;
+            if (node) {
+                if (!this.isNodeInScope(node)) {
+                    throw new Error("can't activate, node out of scope");
                 }
+                this.activateNode(node);
             }
-            this.lastT = t;
-            // offset
-            t = t + ins.offset.value;
-            t = t > 1 ? t % 1 : t;
-            // alternate, easing curve
-            t = this.isAlternate ? (t > 0.5 ? 1 - t : t) * 2 : (this.isBackward ? 1 - t : t);
-            const v = ins.min.value + this.easingFunction(t) * (ins.max.value - ins.min.value);
-            outs.value.setValue(v);
-            return true;
+            this._activeNode = node;
+            this.onActiveNode(activeNode, node);
+            this.emit({ type: "active-node", previous: activeNode, next: node });
+        }
+    }
+    get selection() {
+        return this.getSystemComponent(CSelection_1.default);
+    }
+    create() {
+        super.create();
+        this.system.nodes.on(Node_1.default, this.onNode, this);
+        if (this.followNodeSelection) {
+            this.selection.selectedNodes.on(this.nodeType, this.onSelectNode, this);
+        }
+        if (this.followComponentSelection) {
+            this.selection.selectedComponents.on(Component_1.default, this.onSelectComponent, this);
+        }
+    }
+    dispose() {
+        if (this.activeNode) {
+            this.activeNode = null;
+        }
+        this.system.nodes.off(Node_1.default, this.onNode, this);
+        if (this.followNodeSelection) {
+            this.selection.selectedNodes.off(this.nodeType, this.onSelectNode, this);
+        }
+        if (this.followComponentSelection) {
+            this.selection.selectedComponents.off(Component_1.default, this.onSelectComponent, this);
+        }
+        super.dispose();
+    }
+    activateNode(node) {
+    }
+    deactivateNode(node) {
+    }
+    onActiveNode(previous, next) {
+    }
+    onScopedNodes() {
+    }
+    onNode(event) {
+        // in case the active node is removed
+        if (event.remove && event.object === this.activeNode) {
+            this.activeNode = null;
+        }
+        if (this.isNodeInScope(event.object)) {
+            this.onScopedNodes();
+            this.emit({ type: "scoped-nodes" });
+        }
+    }
+    onSelectNode(event) {
+        const node = event.object;
+        if (this.isNodeInScope(node)) {
+            if (event.add) {
+                this.activeNode = node;
+            }
+            else if (event.remove && !this.retainSelection && node === this.activeNode) {
+                this.activeNode = null;
+            }
+        }
+    }
+    onSelectComponent(event) {
+        const node = event.object.node;
+        if (node.is(this.nodeType)) {
+            this.onSelectNode({
+                type: node.typeName, object: node, add: event.add, remove: event.remove
+            });
+        }
+    }
+    isNodeInScope(node) {
+        if (!node.is(this.nodeType)) {
+            return false;
+        }
+        switch (this._scope) {
+            case ENodeScope.Graph:
+                const graph = this._scopedGraph ? this._scopedGraph.innerGraph : this.graph;
+                return node.graph === graph;
+            case ENodeScope.Main:
+                return node.graph === this.system.graph;
+            case ENodeScope.System:
+                return true;
         }
         return false;
     }
 }
-COscillator.type = "COscillator";
-exports.default = COscillator;
+CNodeProvider.typeName = "CNodeProvider";
+CNodeProvider.nodeType = Node_1.default;
+CNodeProvider.followNodeSelection = true;
+CNodeProvider.followComponentSelection = false;
+CNodeProvider.retainSelection = true;
+exports.default = CNodeProvider;
 
 
 /***/ }),
@@ -3932,9 +5171,13 @@ exports.default = COscillator;
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 const Component_1 = __webpack_require__(/*! ../Component */ "../../libs/ff-graph/source/Component.ts");
+/**
+ * Generates a steady stream of events based on `window.requestAnimationFrame`.
+ */
 class CPulse extends Component_1.default {
-    constructor(id) {
-        super(id);
+    constructor(node, id) {
+        super(node, id);
+        this.outs = this.addOutputs(CPulse.pulseOuts);
         this.addEvent("pulse");
         this.onAnimationFrame = this.onAnimationFrame.bind(this);
         this.context = {
@@ -3946,7 +5189,7 @@ class CPulse extends Component_1.default {
         this._secondsStarted = Date.now() * 0.001;
         this._secondsStopped = this._secondsStarted;
         this._animHandler = 0;
-        this._pulseEvent = { type: "pulse", context: this.context };
+        this._pulseEvent = { type: "pulse", context: this.context, systemUpdated: false };
     }
     start() {
         if (this._animHandler === 0) {
@@ -3979,22 +5222,29 @@ class CPulse extends Component_1.default {
     // }
     pulse(milliseconds) {
         const context = this.context;
+        const outs = this.outs;
         context.time.setTime(milliseconds);
         const elapsed = milliseconds * 0.001 - this._secondsStarted;
         context.secondsDelta = elapsed - context.secondsElapsed;
         context.secondsElapsed = elapsed;
         context.frameNumber++;
-        this.system.graph.tick(this.context);
+        outs.time.setValue(context.secondsElapsed);
+        outs.frame.setValue(context.frameNumber);
+        this._pulseEvent.systemUpdated = this.system.graph.tick(this.context);
         this.emit(this._pulseEvent);
-        this.system.graph.finalize(this.context);
+        this.system.graph.tock(this.context);
     }
     onAnimationFrame() {
         this.pulse(Date.now());
         this._animHandler = window.requestAnimationFrame(this.onAnimationFrame);
     }
 }
-CPulse.type = "CPulse";
+CPulse.typeName = "CPulse";
 CPulse.isSystemSingleton = true;
+CPulse.pulseOuts = {
+    time: Component_1.types.Number("Pulse.Time"),
+    frame: Component_1.types.Integer("Pulse.Frame")
+};
 exports.default = CPulse;
 
 
@@ -4022,14 +5272,21 @@ const Component_1 = __webpack_require__(/*! ../Component */ "../../libs/ff-graph
 const Node_1 = __webpack_require__(/*! ../Node */ "../../libs/ff-graph/source/Node.ts");
 const CGraph_1 = __webpack_require__(/*! ./CGraph */ "../../libs/ff-graph/source/components/CGraph.ts");
 const CController_1 = __webpack_require__(/*! ./CController */ "../../libs/ff-graph/source/components/CController.ts");
-const outs = {
-    selNodeCount: propertyTypes_1.types.Integer("Selection.Nodes"),
-    selComponentCount: propertyTypes_1.types.Integer("Selection.Components")
-};
+/**
+ * Manages selection state for nodes and components.
+ * Use [[CSelection.exclusiveSelect]] to decide whether node and component selection is mutually exclusive.
+ * A selection always encompasses only items in one graph, the *active graph*. When the active graph changes,
+ * an [[IActiveGraphEvent]] is fired.
+ *
+ * ### Events
+ * - *"active-graph"* - emits an [[IActiveGraphEvent]] after the active graph has changed.
+ * - *<ComponentType>* - [[CSelection.selectedComponents]] emits an [[IComponentEvent]] if a component is selected/unselected.
+ * - *<NodeType>* - [[CSelection.selectedNodes]] emits an [[INodeEvent]] if a node is selected/unselected.
+ */
 class CSelection extends CController_1.default {
-    constructor(id) {
-        super(id);
-        this.outs = this.addOutputs(outs);
+    constructor(node, id) {
+        super(node, id);
+        this.outs = this.addOutputs(CSelection.selOuts);
         this.multiSelect = false;
         this.exclusiveSelect = true;
         this.selectedNodes = new ObjectRegistry_1.default(Node_1.default);
@@ -4038,6 +5295,7 @@ class CSelection extends CController_1.default {
         this.addEvents("select-node", "select-component", "active-graph", "update");
         this.selectedNodes.on(Node_1.default, e => this.onSelectNode(e.object, e.add));
         this.selectedComponents.on(Component_1.default, e => this.onSelectComponent(e.object, e.add));
+        this._activeGraph = this.system.graph;
     }
     getSelectedNode(nodeOrClass) {
         return this.selectedNodes.get(nodeOrClass, true);
@@ -4082,7 +5340,6 @@ class CSelection extends CController_1.default {
     }
     create() {
         super.create();
-        this._activeGraph = this.system.graph;
         this.system.nodes.on(Node_1.default, this.onSystemNode, this);
         this.system.components.on(Component_1.default, this.onSystemComponent, this);
     }
@@ -4171,11 +5428,13 @@ class CSelection extends CController_1.default {
     onSystemNode(event) {
         if (event.remove && this.selectedNodes.contains(event.object)) {
             this.selectedNodes.remove(event.object);
+            this.updateStats();
         }
     }
     onSystemComponent(event) {
         if (event.remove && this.selectedComponents.contains(event.object)) {
             this.selectedComponents.remove(event.object);
+            this.updateStats();
         }
     }
     updateStats() {
@@ -4184,47 +5443,355 @@ class CSelection extends CController_1.default {
         outs.selComponentCount.setValue(this.selectedComponents.length);
     }
 }
-CSelection.type = "CSelection";
+CSelection.typeName = "CSelection";
+CSelection.selOuts = {
+    selNodeCount: propertyTypes_1.types.Integer("Selection.Nodes"),
+    selComponentCount: propertyTypes_1.types.Integer("Selection.Components")
+};
 exports.default = CSelection;
 
 
 /***/ }),
 
-/***/ "../../libs/ff-graph/source/components/index.ts":
-/*!*****************************************************!*\
-  !*** /app/libs/ff-graph/source/components/index.ts ***!
-  \*****************************************************/
+/***/ "../../libs/ff-graph/source/components/CTweenMachine.ts":
+/*!*************************************************************!*\
+  !*** /app/libs/ff-graph/source/components/CTweenMachine.ts ***!
+  \*************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 /**
- * FF Typescript Foundation Library
- * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
  *
- * License: MIT
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-const CController_1 = __webpack_require__(/*! ./CController */ "../../libs/ff-graph/source/components/CController.ts");
-exports.CController = CController_1.default;
-const CGraph_1 = __webpack_require__(/*! ./CGraph */ "../../libs/ff-graph/source/components/CGraph.ts");
-exports.CGraph = CGraph_1.default;
-const CHierarchy_1 = __webpack_require__(/*! ./CHierarchy */ "../../libs/ff-graph/source/components/CHierarchy.ts");
-exports.CHierarchy = CHierarchy_1.default;
-const COscillator_1 = __webpack_require__(/*! ./COscillator */ "../../libs/ff-graph/source/components/COscillator.ts");
-exports.COscillator = COscillator_1.default;
-const CPulse_1 = __webpack_require__(/*! ./CPulse */ "../../libs/ff-graph/source/components/CPulse.ts");
-exports.CPulse = CPulse_1.default;
-const CSelection_1 = __webpack_require__(/*! ./CSelection */ "../../libs/ff-graph/source/components/CSelection.ts");
-exports.CSelection = CSelection_1.default;
-exports.componentTypes = [
-    CGraph_1.default,
-    CHierarchy_1.default,
-    COscillator_1.default,
-    CPulse_1.default,
-    CSelection_1.default
-];
+const easing_1 = __webpack_require__(/*! @ff/core/easing */ "../../libs/ff-core/source/easing.ts");
+exports.EEasingCurve = easing_1.EEasingCurve;
+const Component_1 = __webpack_require__(/*! ../Component */ "../../libs/ff-graph/source/Component.ts");
+const uniqueId_1 = __webpack_require__(/*! @ff/core/uniqueId */ "../../libs/ff-core/source/uniqueId.ts");
+class CTweenMachine extends Component_1.default {
+    constructor() {
+        super(...arguments);
+        this.ins = this.addInputs(CTweenMachine.ins);
+        this.outs = this.addOutputs(CTweenMachine.outs);
+        this.targets = [];
+        this.states = {};
+        this._currentValues = null;
+        this._targetState = null;
+        this._startTime = 0;
+        this._easingFunction = null;
+    }
+    getState(id) {
+        return this.states[id];
+    }
+    setState(state) {
+        state.id = state.id || uniqueId_1.default(6);
+        this.states[state.id] = state;
+        return state.id;
+    }
+    deleteState(id) {
+        delete this.states[id];
+    }
+    clear() {
+        this.targets.forEach(target => target.property.off("dispose", this.onPropertyDispose, this));
+        this.targets.length = 0;
+        this.states = {};
+        this._currentValues = null;
+        this._targetState = null;
+        this._startTime = 0;
+        this._easingFunction = null;
+    }
+    dispose() {
+        this.clear();
+        super.dispose();
+    }
+    update(context) {
+        const ins = this.ins;
+        const outs = this.outs;
+        const states = this.states;
+        const id = ins.id.value;
+        const state = states[id];
+        if (state) {
+            if (ins.tween.changed || ins.recall.changed) {
+                ins.curve.setValue(state.curve);
+                ins.duration.setValue(state.duration);
+                ins.threshold.setValue(state.threshold);
+            }
+            if (ins.tween.changed) {
+                this._targetState = state;
+                this._currentValues = this.getCurrentValues();
+                this._startTime = context.secondsElapsed;
+                this._easingFunction = easing_1.getEasingFunction(state.curve);
+                outs.switched.setValue(false);
+                outs.tweening.setValue(true);
+                outs.start.set();
+                return true;
+            }
+            if (ins.recall.changed) {
+                this.setValues(state.values);
+                return true;
+            }
+            if (ins.curve.changed || ins.duration.changed || ins.threshold.changed) {
+                state.curve = ins.curve.value;
+                state.duration = ins.duration.value;
+                state.threshold = ins.threshold.value;
+            }
+            if (ins.store.changed) {
+                state.values = this.getCurrentValues();
+            }
+            if (ins.delete.changed) {
+                delete states[id];
+            }
+        }
+        else if (id && ins.store.changed) {
+            const state = {
+                id: this.ins.id.value,
+                curve: this.ins.curve.getValidatedValue(),
+                duration: this.ins.duration.value,
+                threshold: this.ins.threshold.value,
+                values: this.getCurrentValues(),
+            };
+            states[state.id] = state;
+        }
+        return true;
+    }
+    tick(context) {
+        const targetState = this._targetState;
+        if (!targetState) {
+            return false;
+        }
+        const outs = this.outs;
+        const currentValues = this._currentValues;
+        const startTime = this._startTime;
+        const tweenTime = context.secondsElapsed - startTime;
+        const tweenFactor = tweenTime / targetState.duration;
+        if (tweenFactor < 1) {
+            const easeFactor = this._easingFunction(tweenFactor);
+            const shouldSwitch = tweenFactor >= targetState.threshold && !outs.switched.value;
+            this.setValues(currentValues, targetState.values, easeFactor, shouldSwitch);
+            outs.time.setValue(tweenTime);
+            outs.completed.setValue(tweenFactor);
+            if (shouldSwitch) {
+                outs.switched.setValue(true);
+                outs.switch.set();
+            }
+        }
+        else {
+            this.setValues(currentValues, targetState.values, 1, !outs.switched.value);
+            outs.tweening.setValue(false);
+            outs.time.setValue(targetState.duration);
+            outs.completed.setValue(1);
+            outs.end.set();
+            if (!outs.switched.value) {
+                outs.switched.setValue(true);
+            }
+            this._currentValues = null;
+            this._targetState = null;
+            this._startTime = 0;
+            this._easingFunction = null;
+        }
+        return true;
+    }
+    addTargetProperty(property) {
+        if (property.type === "object" || property.schema.event) {
+            throw new Error("can't add object or event properties");
+        }
+        if (this.getTarget(property)) {
+            throw new Error("can't add, target already exists");
+        }
+        property.on("dispose", this.onPropertyDispose, this);
+        const isNumber = property.type === "number";
+        const isArray = property.isArray();
+        this.targets.push({ property, isNumber, isArray });
+        const states = this.states;
+        const keys = Object.keys(states);
+        for (let i = 0, n = keys.length; i < n; ++i) {
+            states[keys[i]].values.push(property.cloneValue());
+        }
+        if (this._currentValues) {
+            this._currentValues.push(property.cloneValue());
+        }
+        console.log("CTweenMachine.addTargetProperty - component: %s, property: %s", property.group.linkable.displayName, property.path);
+    }
+    removeTargetProperty(property) {
+        const target = this.getTarget(property);
+        if (!target) {
+            throw new Error("can't remove, target doesn't exist");
+        }
+        this.removeTarget(target);
+        console.log("CTweenMachine.removeTargetProperty - component: %s, property: %s", property.group.linkable.displayName, property.path);
+    }
+    hasTargetProperty(property) {
+        return !!this.getTarget(property);
+    }
+    fromJSON(json) {
+        super.fromJSON(json);
+        if (json.state) {
+            this.stateFromJSON(json.state);
+        }
+    }
+    stateFromJSON(json) {
+        if (json.targets) {
+            this.targets = json.targets.map(jsonTarget => {
+                const property = this.getProperty(jsonTarget.id, jsonTarget.key);
+                return {
+                    property,
+                    isNumber: !!property && property.type === "number",
+                    isArray: !!property && property.isArray(),
+                };
+            });
+        }
+        if (json.states) {
+            json.states.forEach(state => this.states[state.id] = state);
+        }
+        this._startTime = 0;
+    }
+    toJSON() {
+        const json = super.toJSON();
+        const state = this.stateToJSON();
+        if (state) {
+            json.state = state;
+        }
+        return json;
+    }
+    stateToJSON() {
+        const json = {};
+        const targets = this.targets;
+        if (targets.length > 0) {
+            json.targets = targets.map(target => ({
+                id: target.property.group.linkable.id,
+                key: target.property.key
+            }));
+        }
+        const keys = Object.keys(this.states);
+        if (keys.length > 0) {
+            json.states = keys.map(key => this.states[key]);
+        }
+        return json;
+    }
+    getTargetProperties() {
+        return this.targets.map(target => target.property);
+    }
+    onPropertyDispose(event) {
+        event.property.off("dispose", this.onPropertyDispose, this);
+        const target = this.getTarget(event.property);
+        this.removeTarget(target);
+    }
+    removeTarget(target) {
+        const index = this.targets.indexOf(target);
+        this.targets.splice(index, 1);
+        this.removeChannel(index);
+    }
+    removeChannel(index) {
+        const states = this.states;
+        const keys = Object.keys(states);
+        for (let i = 0, n = keys.length; i < n; ++i) {
+            states[keys[i]].values.splice(index, 1);
+        }
+        if (this._currentValues) {
+            this._currentValues.splice(index, 1);
+        }
+    }
+    getTarget(property) {
+        return this.targets.find(target => target.property === property);
+    }
+    getProperty(componentId, propertyKey) {
+        const component = this.system.components.getById(componentId);
+        if (!component) {
+            return null;
+        }
+        return component.ins[propertyKey];
+    }
+    setValues(valuesA, valuesB, factor, doSwitch) {
+        const targets = this.targets;
+        for (let i = 0, n = targets.length; i < n; ++i) {
+            const target = targets[i];
+            const property = target.property;
+            if (target.isNumber && valuesB) {
+                const vA = valuesA[i];
+                const vB = valuesB[i];
+                if (target.isArray) {
+                    let changed = false;
+                    for (let i = 0, n = vA.length; i < n; ++i) {
+                        const v = vA[i] + factor * (vB[i] - vA[i]);
+                        changed = property.value[i] !== v || changed;
+                        property.value[i] = v;
+                    }
+                    if (changed) {
+                        property.set();
+                    }
+                }
+                else {
+                    const v = vA + factor * (vB - vA);
+                    if (v !== property.value) {
+                        property.setValue(v);
+                    }
+                }
+            }
+            else if (!valuesB || doSwitch) {
+                const value = valuesB ? valuesB[i] : valuesA[i];
+                if (target.isArray) {
+                    let changed = false;
+                    for (let i = 0, n = value.length; i < n; ++i) {
+                        changed = property.value[i] !== value[i] || changed;
+                        property.value[i] = value[i];
+                    }
+                    if (changed) {
+                        property.set();
+                    }
+                }
+                else if (value !== property.value) {
+                    property.setValue(value);
+                }
+            }
+        }
+    }
+    getCurrentValues() {
+        const values = [];
+        const targets = this.targets;
+        for (let i = 0, n = targets.length; i < n; ++i) {
+            values.push(targets[i].property.cloneValue());
+        }
+        return values;
+    }
+}
+CTweenMachine.typeName = "CTweenMachine";
+CTweenMachine.ins = {
+    id: Component_1.types.String("Snapshot.Id"),
+    curve: Component_1.types.Enum("Tween.Curve", easing_1.EEasingCurve),
+    duration: Component_1.types.Number("Tween.Duration", 2),
+    threshold: Component_1.types.Percent("Tween.Threshold", 0.5),
+    tween: Component_1.types.Event("Control.Tween"),
+    recall: Component_1.types.Event("Control.Recall"),
+    store: Component_1.types.Event("Control.Store"),
+    delete: Component_1.types.Event("Control.Delete"),
+    clear: Component_1.types.Event("Control.Clear"),
+};
+CTweenMachine.outs = {
+    count: Component_1.types.Integer("Snapshots.Count"),
+    tweening: Component_1.types.Boolean("Tween.IsTweening"),
+    time: Component_1.types.Number("Tween.Time"),
+    completed: Component_1.types.Percent("Tween.Completed"),
+    switched: Component_1.types.Boolean("Tween.Switched"),
+    start: Component_1.types.Event("Tween.Start"),
+    switch: Component_1.types.Event("Tween.Switch"),
+    end: Component_1.types.Event("Tween.End"),
+};
+exports.default = CTweenMachine;
 
 
 /***/ }),
@@ -4581,12 +6148,15 @@ exports.schemas = {
     Number: { preset: 0 },
     Integer: { preset: 0, step: 1, speed: 0.34, precision: 0 },
     Natural: { preset: 0, step: 1, speed: 0.34, precision: 0, min: 0 },
+    Unit: { preset: 0, min: 0, max: 1, bar: true },
+    Percent: { preset: 0, min: 0, max: 1, bar: true, percent: true },
     Vector2: { preset: [0, 0] },
     Vector3: { preset: [0, 0, 0] },
     Vector4: { preset: [0, 0, 0, 0] },
     Matrix2: { preset: [1, 0, 0, 1] },
     Matrix3: { preset: [1, 0, 0, 0, 1, 0, 0, 0, 1] },
     Matrix4: { preset: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] },
+    Scale: { preset: 1 },
     Scale2: { preset: [1, 1] },
     Scale3: { preset: [1, 1, 1] },
     IntVec2: { preset: [0, 0], step: 1, speed: 0.34, precision: 0 },
@@ -4595,6 +6165,7 @@ exports.schemas = {
     ColorRGBA: { preset: [1, 1, 1, 1], semantic: "color", labels: exports.labels.rgba, min: 0, max: 1, bar: true },
     Boolean: { preset: false },
     String: { preset: "" },
+    AssetPath: { preset: "", semantic: "asset-path" },
     Object: { preset: null, objectType: Object },
     Event: { preset: 0, event: true }
 };
@@ -4603,6 +6174,8 @@ exports.types = {
     Number: (path, props) => exports.makeType(exports.schemas.Number, path, props),
     Integer: (path, props) => exports.makeType(exports.schemas.Integer, path, props),
     Natural: (path, props) => exports.makeType(exports.schemas.Natural, path, props),
+    Unit: (path, props) => exports.makeType(exports.schemas.Unit, path, props),
+    Percent: (path, props) => exports.makeType(exports.schemas.Percent, path, props),
     Vector2: (path, props) => exports.makeType(exports.schemas.Vector2, path, props),
     Vector3: (path, props) => exports.makeType(exports.schemas.Vector3, path, props),
     Vector4: (path, props) => exports.makeType(exports.schemas.Vector4, path, props),
@@ -4611,12 +6184,14 @@ exports.types = {
     Matrix2: (path, props) => exports.makeType(exports.schemas.Matrix2, path, props),
     Matrix3: (path, props) => exports.makeType(exports.schemas.Matrix3, path, props),
     Matrix4: (path, props) => exports.makeType(exports.schemas.Matrix4, path, props),
+    Scale: (path, props) => exports.makeType(exports.schemas.Scale, path, props),
     Scale2: (path, props) => exports.makeType(exports.schemas.Scale2, path, props),
     Scale3: (path, props) => exports.makeType(exports.schemas.Scale3, path, props),
     ColorRGB: (path, props) => exports.makeType(exports.schemas.ColorRGB, path, props),
     ColorRGBA: (path, props) => exports.makeType(exports.schemas.ColorRGBA, path, props),
     Boolean: (path, props) => exports.makeType(exports.schemas.Boolean, path, props),
     String: (path, props) => exports.makeType(exports.schemas.String, path, props),
+    AssetPath: (path, props) => exports.makeType(exports.schemas.AssetPath, path, props),
     Enum: (path, enumeration, props) => exports.makeEnumType(enumeration, path, props),
     Option: (path, options, props) => exports.makeOptionType(options, path, props),
     Object: (path, type, props) => exports.makeObjectType(type, path, props),
@@ -4681,15 +6256,15 @@ class RenderQuadView extends RenderView_1.default {
         this.updateSplitPositions();
         if (viewports[1]) {
             viewports[1].setBuiltInCamera(UniversalCamera_1.EProjection.Orthographic, UniversalCamera_1.EViewPreset.Top);
-            viewports[1].enableCameraManip(true).orientationEnabled = false;
+            viewports[1].enableCameraControl(true).orientationEnabled = false;
         }
         if (viewports[2]) {
             viewports[2].setBuiltInCamera(UniversalCamera_1.EProjection.Orthographic, UniversalCamera_1.EViewPreset.Left);
-            viewports[2].enableCameraManip(true).orientationEnabled = false;
+            viewports[2].enableCameraControl(true).orientationEnabled = false;
         }
         if (viewports[3]) {
             viewports[3].setBuiltInCamera(UniversalCamera_1.EProjection.Orthographic, UniversalCamera_1.EViewPreset.Front);
-            viewports[3].enableCameraManip(true).orientationEnabled = false;
+            viewports[3].enableCameraControl(true).orientationEnabled = false;
         }
         this.emit({ type: "layout", layout });
     }
@@ -4722,14 +6297,14 @@ class RenderQuadView extends RenderView_1.default {
                 this.viewports[1].setSize(h, 0, 1 - h, 1);
                 break;
             case EQuadViewLayout.VerticalSplit:
-                this.viewports[0].setSize(0, 0, 1, v);
-                this.viewports[1].setSize(0, v, 1, 1 - v);
+                this.viewports[0].setSize(0, 1 - v, 1, v);
+                this.viewports[1].setSize(0, 0, 1, 1 - v);
                 break;
             case EQuadViewLayout.Quad:
-                this.viewports[0].setSize(0, 0, h, v);
-                this.viewports[1].setSize(h, 0, 1 - h, v);
-                this.viewports[2].setSize(0, v, h, 1 - v);
-                this.viewports[3].setSize(h, v, 1 - h, 1 - v);
+                this.viewports[0].setSize(0, 1 - v, h, v);
+                this.viewports[1].setSize(h, 1 - v, 1 - h, v);
+                this.viewports[2].setSize(0, 0, h, 1 - v);
+                this.viewports[3].setSize(h, 0, 1 - h, 1 - v);
                 break;
         }
     }
@@ -4757,18 +6332,25 @@ exports.default = RenderQuadView;
 Object.defineProperty(exports, "__esModule", { value: true });
 const THREE = __webpack_require__(/*! three */ "three");
 const Publisher_1 = __webpack_require__(/*! @ff/core/Publisher */ "../../libs/ff-core/source/Publisher.ts");
-const GPUPicker_1 = __webpack_require__(/*! @ff/three/GPUPicker */ "../../libs/ff-three/source/GPUPicker.ts");
+const CHierarchy_1 = __webpack_require__(/*! @ff/graph/components/CHierarchy */ "../../libs/ff-graph/source/components/CHierarchy.ts");
 const Viewport_1 = __webpack_require__(/*! @ff/three/Viewport */ "../../libs/ff-three/source/Viewport.ts");
 exports.Viewport = Viewport_1.default;
+const ViewportOverlay_1 = __webpack_require__(/*! @ff/three/ui/ViewportOverlay */ "../../libs/ff-three/source/ui/ViewportOverlay.ts");
+const GPUPicker_1 = __webpack_require__(/*! @ff/three/GPUPicker */ "../../libs/ff-three/source/GPUPicker.ts");
 const CRenderer_1 = __webpack_require__(/*! ./components/CRenderer */ "../../libs/ff-scene/source/components/CRenderer.ts");
+const UniversalCamera_1 = __webpack_require__(/*! @ff/three/UniversalCamera */ "../../libs/ff-three/source/UniversalCamera.ts");
 class RenderView extends Publisher_1.default {
     constructor(system, canvas, overlay) {
         super();
         this.viewports = [];
         this.rendererComponent = null;
-        this.activeViewport = null;
-        this.activeObject3D = null;
-        this.activeComponent = null;
+        this.targetViewport = null;
+        this.targetObject3D = null;
+        this.targetComponent = null;
+        this.targetScene = null;
+        this.targetCamera = null;
+        this.defaultScene = new THREE.Scene();
+        this.defaultCamera = new UniversalCamera_1.default();
         this.shouldResize = false;
         this.system = system;
         this.canvas = canvas;
@@ -4778,7 +6360,7 @@ class RenderView extends Publisher_1.default {
             antialias: true
         });
         this.renderer.autoClear = false;
-        this.renderer.setClearColor("#0090c0");
+        //this.renderer.setClearColor("#0090c0");
         this.picker = new GPUPicker_1.default(this.renderer);
     }
     dispose() {
@@ -4819,16 +6401,14 @@ class RenderView extends Publisher_1.default {
         if (!sceneComponent) {
             return;
         }
-        const scene = sceneComponent.scene;
-        const camera = sceneComponent.activeCamera;
+        let scene = sceneComponent.scene;
+        let camera = sceneComponent.activeCamera;
         if (!scene || !camera) {
-            return;
+            console.warn(!scene ? !camera ? "no scene/camera" : "no scene" : "no camera");
+            scene = this.defaultScene;
+            camera = this.defaultCamera;
         }
         const renderer = this.renderer;
-        if (this.shouldResize) {
-            this.shouldResize = false;
-            this.setRenderSize(this.canvas.clientWidth, this.canvas.clientHeight);
-        }
         renderer.clear();
         renderer["__view"] = this;
         const viewports = this.viewports;
@@ -4847,7 +6427,8 @@ class RenderView extends Publisher_1.default {
         this.renderer.setSize(width, height, false);
     }
     resize() {
-        this.shouldResize = true;
+        this.setRenderSize(this.canvas.clientWidth, this.canvas.clientHeight);
+        this.render();
     }
     setViewportCount(count) {
         const viewports = this.viewports;
@@ -4855,8 +6436,10 @@ class RenderView extends Publisher_1.default {
             viewports[i].dispose();
         }
         for (let i = viewports.length; i < count; ++i) {
+            const overlay = new ViewportOverlay_1.default().appendTo(this.overlay);
             viewports[i] = new Viewport_1.default();
             viewports[i].setCanvasSize(this.canvasWidth, this.canvasHeight);
+            viewports[i].overlay = overlay;
         }
         viewports.length = count;
     }
@@ -4879,14 +6462,22 @@ class RenderView extends Publisher_1.default {
         }
         const viewEvent = this.routeEvent(event, doHitTest, doPick);
         if (viewEvent) {
-            if (viewEvent.component) {
-                viewEvent.component.propagateUp(viewEvent);
+            const component = viewEvent.component;
+            if (component) {
+                component.emit(viewEvent);
+                const hierarchy = component.getComponent(CHierarchy_1.default);
+                if (!viewEvent.stopPropagation && hierarchy) {
+                    hierarchy.propagateUp(false, true, viewEvent);
+                }
             }
-            else {
+            if (!viewEvent.stopPropagation) {
                 this.system.emit(viewEvent);
             }
             if (!viewEvent.stopPropagation) {
-                viewEvent.viewport.onPointer(viewEvent);
+                const updated = viewEvent.viewport.onPointer(viewEvent);
+                if (updated) {
+                    this.system.getMainComponent(CRenderer_1.default).forceRender();
+                }
             }
             return true;
         }
@@ -4899,30 +6490,44 @@ class RenderView extends Publisher_1.default {
         }
         const viewEvent = this.routeEvent(event, true, true);
         if (viewEvent) {
-            if (viewEvent.component) {
-                viewEvent.component.propagateUp(viewEvent);
+            const component = viewEvent.component;
+            if (component) {
+                component.emit(viewEvent);
+                const hierarchy = component.getComponent(CHierarchy_1.default);
+                if (!viewEvent.stopPropagation && hierarchy) {
+                    hierarchy.propagateUp(false, true, viewEvent);
+                }
             }
-            else {
+            if (!viewEvent.stopPropagation) {
                 this.system.emit(viewEvent);
             }
             if (!viewEvent.stopPropagation) {
-                viewEvent.viewport.onTrigger(viewEvent);
+                const updated = viewEvent.viewport.onTrigger(viewEvent);
+                if (updated) {
+                    this.system.getMainComponent(CRenderer_1.default).forceRender();
+                }
             }
             return true;
         }
         return false;
     }
+    pickPosition(event, range, result) {
+        return this.picker.pickPosition(this.targetScene, this.targetCamera, event, range, result);
+    }
+    pickNormal(event, result) {
+        return this.picker.pickNormal(this.targetScene, this.targetCamera, event, result);
+    }
     routeEvent(event, doHitTest, doPick) {
-        let viewport = this.activeViewport;
-        let object3D = this.activeObject3D;
-        let component = this.activeComponent;
+        let viewport = this.targetViewport;
+        let object3D = this.targetObject3D;
+        let component = this.targetComponent;
         // if no active viewport, perform a hit test against all viewports
         if (doHitTest) {
             viewport = null;
             const viewports = this.viewports;
             for (let i = 0, n = viewports.length; i < n; ++i) {
                 const vp = viewports[i];
-                if (vp.isPointInside(event.localX, event.localY)) {
+                if (vp.isInside(event)) {
                     viewport = vp;
                     break;
                 }
@@ -4942,24 +6547,25 @@ class RenderView extends Publisher_1.default {
         // perform 3D pick
         if (doPick) {
             const sceneComponent = this.rendererComponent.activeSceneComponent;
-            const scene = sceneComponent && sceneComponent.scene;
-            const camera = sceneComponent && sceneComponent.activeCamera;
+            const scene = this.targetScene = sceneComponent && sceneComponent.scene;
+            const camera = this.targetCamera = sceneComponent && sceneComponent.activeCamera;
             object3D = null;
             component = null;
             if (scene && camera) {
-                let object3D = this.picker.pickObject(scene, camera, event);
+                object3D = this.picker.pickObject(scene, camera, event);
                 if (object3D === undefined) {
                     console.log("Pick Index - Background");
                 }
                 else {
-                    while (object3D && !component) {
-                        component = object3D.userData["component"];
+                    let componentObject3D = object3D;
+                    while (componentObject3D && !component) {
+                        component = componentObject3D.userData["component"];
                         if (!component) {
-                            object3D = object3D.parent;
+                            componentObject3D = componentObject3D.parent;
                         }
                     }
                     if (component) {
-                        console.log("Pick Index - Component: %s", component.className);
+                        console.log("Pick Index - Component: %s", component.typeName);
                     }
                     else {
                         console.warn("Pick Index - Object without component");
@@ -4969,9 +6575,9 @@ class RenderView extends Publisher_1.default {
         }
         viewEvent.object3D = object3D;
         viewEvent.component = component;
-        this.activeViewport = viewport;
-        this.activeObject3D = object3D;
-        this.activeComponent = component;
+        this.targetViewport = viewport;
+        this.targetObject3D = object3D;
+        this.targetComponent = component;
         return viewEvent;
     }
 }
@@ -4980,10 +6586,10 @@ exports.default = RenderView;
 
 /***/ }),
 
-/***/ "../../libs/ff-scene/source/components/CBasicMaterial.ts":
-/*!**************************************************************!*\
-  !*** /app/libs/ff-scene/source/components/CBasicMaterial.ts ***!
-  \**************************************************************/
+/***/ "../../libs/ff-scene/source/components/CBackground.ts":
+/*!***********************************************************!*\
+  !*** /app/libs/ff-scene/source/components/CBackground.ts ***!
+  \***********************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -4996,77 +6602,49 @@ exports.default = RenderView;
  * License: MIT
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-const THREE = __webpack_require__(/*! three */ "three");
-const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
-const CMaterial_1 = __webpack_require__(/*! ./CMaterial */ "../../libs/ff-scene/source/components/CMaterial.ts");
-////////////////////////////////////////////////////////////////////////////////
-const _inputs = {
-    color: propertyTypes_1.types.ColorRGB("Color")
-};
-class CBasicMaterial extends CMaterial_1.default {
-    constructor() {
-        super(...arguments);
-        this.ins = this.addInputs(_inputs);
+const CObject3D_1 = __webpack_require__(/*! ./CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
+const Background_1 = __webpack_require__(/*! @ff/three/Background */ "../../libs/ff-three/source/Background.ts");
+exports.EBackgroundStyle = Background_1.EBackgroundStyle;
+class CBackground extends CObject3D_1.default {
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(CBackground.backgroundIns);
+        this.object3D = new Background_1.default();
     }
-    create() {
-        this.material = new THREE.MeshBasicMaterial();
+    get background() {
+        return this.object3D;
     }
-    update() {
-        const material = this.material;
-        const { color } = this.ins;
-        material.color.setRGB(color.value[0], color.value[1], color.value[2]);
-        return true;
-    }
-}
-exports.default = CBasicMaterial;
-
-
-/***/ }),
-
-/***/ "../../libs/ff-scene/source/components/CBox.ts":
-/*!****************************************************!*\
-  !*** /app/libs/ff-scene/source/components/CBox.ts ***!
-  \****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * FF Typescript Foundation Library
- * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
- *
- * License: MIT
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const THREE = __webpack_require__(/*! three */ "three");
-const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
-const CGeometry_1 = __webpack_require__(/*! ./CGeometry */ "../../libs/ff-scene/source/components/CGeometry.ts");
-////////////////////////////////////////////////////////////////////////////////
-const _inputs = {
-    size: propertyTypes_1.types.Vector3("Size", [10, 10, 10]),
-    segments: propertyTypes_1.types.Vector3("Segments", [1, 1, 1])
-};
-class CBox extends CGeometry_1.default {
-    constructor() {
-        super(...arguments);
-        this.ins = this.addInputs(_inputs);
-    }
-    create() {
-        super.create();
-        this.on("pointer", this.onPointer, this);
-    }
-    update() {
-        const { size, segments } = this.ins;
-        if (size.changed || segments.changed) {
-            this.geometry = new THREE.BoxBufferGeometry(size.value[0], size.value[1], size.value[2], segments.value[0], segments.value[1], segments.value[2]);
+    update(context) {
+        super.update(context);
+        const ins = this.ins;
+        const material = this.background.material;
+        if (ins.style.changed) {
+            material.style = ins.style.getValidatedValue();
+        }
+        if (ins.color0.changed) {
+            material.color0.fromArray(ins.color0.value);
+        }
+        if (ins.color1.changed) {
+            material.color1.fromArray(ins.color1.value);
+        }
+        if (ins.noise.changed) {
+            material.noise = ins.noise.value;
         }
         return true;
     }
-    onPointer(event) {
+    dispose() {
+        this.background.dispose();
+        super.dispose();
     }
 }
-exports.default = CBox;
+CBackground.typeName = "CBackground";
+CBackground.backgroundIns = {
+    style: CObject3D_1.types.Enum("Background.Style", Background_1.EBackgroundStyle, Background_1.EBackgroundStyle.RadialGradient),
+    color0: CObject3D_1.types.ColorRGB("Background.Color0", [0.2, 0.25, 0.3]),
+    color1: CObject3D_1.types.ColorRGB("Background.Color1", [0.01, 0.03, 0.05]),
+    noise: CObject3D_1.types.Number("Background.Noise", { min: 0, max: 1, bar: true, preset: 0.02 }),
+};
+exports.default = CBackground;
 
 
 /***/ }),
@@ -5087,50 +6665,36 @@ exports.default = CBox;
  * License: MIT
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
+const THREE = __webpack_require__(/*! three */ "three");
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
 const UniversalCamera_1 = __webpack_require__(/*! @ff/three/UniversalCamera */ "../../libs/ff-three/source/UniversalCamera.ts");
 exports.EProjection = UniversalCamera_1.EProjection;
 const CObject3D_1 = __webpack_require__(/*! ./CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
-const CScene_1 = __webpack_require__(/*! ./CScene */ "../../libs/ff-scene/source/components/CScene.ts");
-const _inputs = {
-    activate: propertyTypes_1.types.Event("Camera.Activate"),
-    position: propertyTypes_1.types.Vector3("Transform.Position"),
-    rotation: propertyTypes_1.types.Vector3("Transform.Rotation"),
-    projection: propertyTypes_1.types.Enum("Projection.Type", UniversalCamera_1.EProjection, UniversalCamera_1.EProjection.Perspective),
-    fov: propertyTypes_1.types.Number("Projection.FovY", 52),
-    size: propertyTypes_1.types.Number("Projection.Size", 20),
-    zoom: propertyTypes_1.types.Number("Projection.Zoom", 1),
-    near: propertyTypes_1.types.Number("Frustum.ZNear", 0.01),
-    far: propertyTypes_1.types.Number("Frustum.ZFar", 10000)
-};
+const math_1 = __webpack_require__(/*! @ff/core/math */ "../../libs/ff-core/source/math.ts");
+////////////////////////////////////////////////////////////////////////////////
+const _vec3a = new THREE.Vector3();
+const _vec3b = new THREE.Vector3();
+const _euler = new THREE.Euler();
+const _quat = new THREE.Quaternion();
 class CCamera extends CObject3D_1.default {
-    constructor() {
-        super(...arguments);
-        this.ins = this.addInputs(_inputs);
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(CCamera.camIns);
+        this.object3D = new UniversalCamera_1.default();
     }
     get camera() {
         return this.object3D;
     }
-    get scene() {
-        return this.graph.components.get(CScene_1.default);
-    }
-    create() {
-        super.create();
-        this.object3D = new UniversalCamera_1.default();
-        const scene = this.scene;
-        if (scene && !scene.activeCameraComponent) {
-            scene.activeCameraComponent = this;
-        }
-    }
     update() {
-        const { activate, position, rotation, projection, fov, size, zoom, near, far } = this.ins;
-        if (activate.changed) {
+        const { autoActivate, activate } = this.ins;
+        if (activate.changed || autoActivate.changed && autoActivate.value) {
             const scene = this.scene;
             if (scene) {
                 scene.activeCameraComponent = this;
             }
         }
         const camera = this.camera;
+        const { position, rotation, projection, fov, size, zoom, near, far } = this.ins;
         if (position.changed || rotation.changed) {
             camera.position.fromArray(position.value);
             camera.rotation.fromArray(rotation.value);
@@ -5154,7 +6718,34 @@ class CCamera extends CObject3D_1.default {
         }
         super.dispose();
     }
+    setPropertiesFromMatrix(matrix) {
+        const silent = !matrix;
+        matrix = matrix || this.object3D.matrix;
+        const { position, rotation, order } = this.ins;
+        matrix.decompose(_vec3a, _quat, _vec3b);
+        _vec3a.toArray(position.value);
+        const orderName = order.getOptionText();
+        _euler.setFromQuaternion(_quat, orderName);
+        _euler.toVector3(_vec3a);
+        _vec3a.multiplyScalar(math_1.default.RAD2DEG).toArray(rotation.value);
+        position.set(silent);
+        rotation.set(silent);
+    }
 }
+CCamera.typeName = "CCamera";
+CCamera.camIns = {
+    autoActivate: Component_1.types.Boolean("Camera.AutoActivate", true),
+    activate: Component_1.types.Event("Camera.Activate"),
+    position: Component_1.types.Vector3("Transform.Position"),
+    rotation: Component_1.types.Vector3("Transform.Rotation"),
+    order: Component_1.types.Enum("Transform.Order", CObject3D_1.ERotationOrder, CObject3D_1.ERotationOrder.ZYX),
+    projection: Component_1.types.Enum("Projection.Type", UniversalCamera_1.EProjection, UniversalCamera_1.EProjection.Perspective),
+    fov: Component_1.types.Number("Projection.FovY", 52),
+    size: Component_1.types.Number("Projection.Size", 20),
+    zoom: Component_1.types.Number("Projection.Zoom", 1),
+    near: Component_1.types.Number("Frustum.ZNear", 0.01),
+    far: Component_1.types.Number("Frustum.ZFar", 10000),
+};
 exports.default = CCamera;
 
 
@@ -5177,45 +6768,116 @@ exports.default = CCamera;
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 const THREE = __webpack_require__(/*! three */ "three");
-const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
 const CLight_1 = __webpack_require__(/*! ./CLight */ "../../libs/ff-scene/source/components/CLight.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const _inputs = {
-    position: propertyTypes_1.types.Vector3("Light.Position", [0, 1, 0]),
-    target: propertyTypes_1.types.Vector3("Light.Target")
-};
 class CDirectionalLight extends CLight_1.default {
-    constructor() {
-        super(...arguments);
-        this.ins = this.addInputs(_inputs);
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(CDirectionalLight.dirLightIns);
+        this.object3D = new THREE.DirectionalLight();
     }
     get light() {
         return this.object3D;
     }
-    create() {
-        super.create();
-        this.object3D = new THREE.DirectionalLight();
-    }
-    update() {
+    update(context) {
+        super.update(context);
         const light = this.light;
-        const { color, intensity, position, target } = this.ins;
-        light.color.fromArray(color.value);
-        light.intensity = intensity.value;
-        light.position.fromArray(position.value);
-        light.target.position.fromArray(target.value);
-        light.updateMatrix();
+        const ins = this.ins;
+        if (ins.position.changed || ins.target.changed) {
+            light.position.fromArray(ins.position.value);
+            light.target.position.fromArray(ins.target.value);
+            light.updateMatrix();
+        }
+        if (ins.shadowSize.changed) {
+            const camera = light.shadow.camera;
+            const halfSize = ins.shadowSize.value * 0.5;
+            camera.left = camera.bottom = -halfSize;
+            camera.right = camera.top = halfSize;
+            camera.updateProjectionMatrix();
+        }
         return true;
     }
 }
+CDirectionalLight.typeName = "CDirectionalLight";
+CDirectionalLight.dirLightIns = {
+    position: Component_1.types.Vector3("Light.Position", [0, 1, 0]),
+    target: Component_1.types.Vector3("Light.Target"),
+    shadowSize: Component_1.types.Number("Shadow.Size", 100),
+};
 exports.default = CDirectionalLight;
 
 
 /***/ }),
 
-/***/ "../../libs/ff-scene/source/components/CGeometry.ts":
-/*!*********************************************************!*\
-  !*** /app/libs/ff-scene/source/components/CGeometry.ts ***!
-  \*********************************************************/
+/***/ "../../libs/ff-scene/source/components/CFloor.ts":
+/*!******************************************************!*\
+  !*** /app/libs/ff-scene/source/components/CFloor.ts ***!
+  \******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const CObject3D_1 = __webpack_require__(/*! ./CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
+const Floor_1 = __webpack_require__(/*! @ff/three/Floor */ "../../libs/ff-three/source/Floor.ts");
+////////////////////////////////////////////////////////////////////////////////
+class CFloor extends CObject3D_1.default {
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(CFloor.floorIns);
+        this.object3D = new Floor_1.default();
+    }
+    get floor() {
+        return this.object3D;
+    }
+    update(context) {
+        super.update(context);
+        const ins = this.ins;
+        const floor = this.floor;
+        if (ins.position.changed || ins.radius.changed) {
+            floor.position.fromArray(ins.position.value);
+            floor.scale.setScalar(ins.radius.value);
+            floor.updateMatrix();
+        }
+        if (ins.color.changed) {
+            floor.material.color.fromArray(ins.color.value);
+        }
+        if (ins.opacity.changed) {
+            floor.material.opacity = ins.opacity.value;
+        }
+        return true;
+    }
+    dispose() {
+        this.floor.dispose();
+        super.dispose();
+    }
+}
+CFloor.typeName = "CFloor";
+CFloor.floorIns = {
+    position: CObject3D_1.types.Vector3("Floor.Position", [0, -25, 0]),
+    radius: CObject3D_1.types.Number("Floor.Radius", 50),
+    color: CObject3D_1.types.ColorRGB("Floor.Color", [0.6, 0.75, 0.8]),
+    opacity: CObject3D_1.types.Percent("Floor.Opacity", 0.5),
+    castShadow: CObject3D_1.types.Boolean("Shadow.Cast"),
+    receiveShadow: CObject3D_1.types.Boolean("Shadow.Receive"),
+};
+exports.default = CFloor;
+
+
+/***/ }),
+
+/***/ "../../libs/ff-scene/source/components/CFullscreen.ts":
+/*!***********************************************************!*\
+  !*** /app/libs/ff-scene/source/components/CFullscreen.ts ***!
+  \***********************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -5230,94 +6892,83 @@ exports.default = CDirectionalLight;
 Object.defineProperty(exports, "__esModule", { value: true });
 const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
 ////////////////////////////////////////////////////////////////////////////////
-class CGeometry extends Component_1.default {
-    constructor(id) {
-        super(id);
-        this._geometry = null;
-        this.addEvent("geometry");
+class CFullscreen extends Component_1.default {
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(CFullscreen.ins);
+        this.outs = this.addOutputs(CFullscreen.outs);
+        this._fullscreenElement = null;
+        this.onFullscreenChange = this.onFullscreenChange.bind(this);
+        const e = document.documentElement;
+        const fullscreenAvailable = e.requestFullscreen || e.mozRequestFullScreen || e.webkitRequestFullscreen;
+        this.outs.fullscreenAvailable.setValue(!!fullscreenAvailable);
+        this.ins.toggle.on("value", this.toggle, this);
     }
-    get geometry() {
-        return this._geometry;
+    get fullscreenElement() {
+        return this._fullscreenElement;
     }
-    set geometry(value) {
-        this._geometry = value;
-        this.emit("geometry", value);
-    }
-}
-exports.default = CGeometry;
-
-
-/***/ }),
-
-/***/ "../../libs/ff-scene/source/components/CGrid.ts":
-/*!*****************************************************!*\
-  !*** /app/libs/ff-scene/source/components/CGrid.ts ***!
-  \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * FF Typescript Foundation Library
- * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
- *
- * License: MIT
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const THREE = __webpack_require__(/*! three */ "three");
-const math_1 = __webpack_require__(/*! @ff/core/math */ "../../libs/ff-core/source/math.ts");
-const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
-const CObject3D_1 = __webpack_require__(/*! ./CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
-const Grid_1 = __webpack_require__(/*! @ff/three/Grid */ "../../libs/ff-three/source/Grid.ts");
-////////////////////////////////////////////////////////////////////////////////
-const _vec3a = new THREE.Vector3();
-const _vec3b = new THREE.Vector3();
-const _inputs = {
-    position: propertyTypes_1.types.Vector3("Transform.Position"),
-    rotation: propertyTypes_1.types.Vector3("Transform.Rotation"),
-    scale: propertyTypes_1.types.Scale3("Transform.Scale"),
-    size: propertyTypes_1.types.Number("Grid.Size", 20),
-    mainDivs: propertyTypes_1.types.Number("Grid.Main.Divisions", 2),
-    mainColor: propertyTypes_1.types.ColorRGB("Grid.Main.Color", [1, 1, 1]),
-    subDivs: propertyTypes_1.types.Number("Grid.Sub.Divisions", 10),
-    subColor: propertyTypes_1.types.ColorRGB("Grid.Sub.Color", [0.5, 0.5, 0.5])
-};
-class CGrid extends CObject3D_1.default {
-    constructor() {
-        super(...arguments);
-        this.ins = this.addInputs(_inputs);
-    }
-    update() {
-        let grid = this.object3D;
-        const { size, mainDivs, mainColor, subDivs, subColor } = this.ins;
-        if (size.changed || mainDivs.changed || mainColor.changed || subDivs.changed || subColor.changed) {
-            const props = {
-                size: size.value,
-                mainDivisions: mainDivs.value,
-                mainColor: new THREE.Color().fromArray(mainColor.value),
-                subDivisions: subDivs.value,
-                subColor: new THREE.Color().fromArray(subColor.value)
-            };
-            const newGrid = this.object3D = new Grid_1.default(props);
-            if (grid) {
-                newGrid.matrix.copy(grid.matrix);
-                newGrid.matrixWorldNeedsUpdate = true;
+    set fullscreenElement(element) {
+        if (element !== this._fullscreenElement) {
+            if (this._fullscreenElement) {
+                this._fullscreenElement.removeEventListener("fullscreenchange", this.onFullscreenChange);
             }
-            grid = newGrid;
+            this._fullscreenElement = element;
+            if (element) {
+                element.addEventListener("fullscreenchange", this.onFullscreenChange);
+            }
         }
-        const { position, rotation, scale } = this.ins;
-        if (position.changed || rotation.changed || scale.changed) {
-            grid.position.fromArray(position.value);
-            _vec3a.fromArray(rotation.value).multiplyScalar(math_1.default.DEG2RAD);
-            grid.rotation.setFromVector3(_vec3a, "XYZ");
-            grid.scale.fromArray(scale.value);
-            grid.updateMatrix();
-        }
+    }
+    update(context) {
         return true;
     }
+    toggle() {
+        const outs = this.outs;
+        const e = this._fullscreenElement;
+        if (e) {
+            const state = outs.fullscreenActive.value;
+            if (!state && outs.fullscreenAvailable.value) {
+                if (e.requestFullscreen) {
+                    e.requestFullscreen();
+                }
+                else if (e.mozRequestFullScreen) {
+                    e.mozRequestFullScreen();
+                }
+                else if (e.webkitRequestFullscreen) {
+                    e.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+                }
+            }
+            else if (state) {
+                const d = document;
+                if (d.exitFullscreen) {
+                    d.exitFullscreen();
+                }
+                else if (d.cancelFullScreen) {
+                    d.cancelFullScreen();
+                }
+                else if (d.mozCancelFullScreen) {
+                    d.mozCancelFullScreen();
+                }
+                else if (d.webkitCancelFullScreen) {
+                    d.webkitCancelFullScreen();
+                }
+            }
+        }
+    }
+    onFullscreenChange(event) {
+        const d = document;
+        const element = d.fullscreenElement || d.mozFullScreenElement || d.webkitFullscreenElement;
+        this.outs.fullscreenActive.setValue(!!element);
+    }
 }
-exports.default = CGrid;
+CFullscreen.typeName = "CFullscreen";
+CFullscreen.ins = {
+    toggle: Component_1.types.Event("Fullscreen.Toggle"),
+};
+CFullscreen.outs = {
+    fullscreenAvailable: Component_1.types.Boolean("Fullscreen.Available", false),
+    fullscreenActive: Component_1.types.Boolean("Fullscreen.Active", false),
+};
+exports.default = CFullscreen;
 
 
 /***/ }),
@@ -5341,241 +6992,51 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
 const CObject3D_1 = __webpack_require__(/*! ./CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const _inputs = {
-    color: propertyTypes_1.types.ColorRGB("Light.Color"),
-    intensity: propertyTypes_1.types.Number("Light.Intensity", 1)
+var EShadowMapResolution;
+(function (EShadowMapResolution) {
+    EShadowMapResolution[EShadowMapResolution["Low"] = 0] = "Low";
+    EShadowMapResolution[EShadowMapResolution["Medium"] = 1] = "Medium";
+    EShadowMapResolution[EShadowMapResolution["High"] = 2] = "High";
+})(EShadowMapResolution = exports.EShadowMapResolution || (exports.EShadowMapResolution = {}));
+const _mapResolution = {
+    [EShadowMapResolution.Low]: 512,
+    [EShadowMapResolution.Medium]: 1024,
+    [EShadowMapResolution.High]: 2048,
 };
 class CLight extends CObject3D_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(_inputs);
+        this.ins = this.addInputs(CLight.lightIns);
     }
     get light() {
         return this.object3D;
     }
-}
-exports.default = CLight;
-
-
-/***/ }),
-
-/***/ "../../libs/ff-scene/source/components/CMain.ts":
-/*!*****************************************************!*\
-  !*** /app/libs/ff-scene/source/components/CMain.ts ***!
-  \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * FF Typescript Foundation Library
- * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
- *
- * License: MIT
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
-const CScene_1 = __webpack_require__(/*! ./CScene */ "../../libs/ff-scene/source/components/CScene.ts");
-const CCamera_1 = __webpack_require__(/*! ./CCamera */ "../../libs/ff-scene/source/components/CCamera.ts");
-////////////////////////////////////////////////////////////////////////////////
-const ins = {
-    scene: Component_1.types.Option("Scene", []),
-    camera: Component_1.types.Option("Camera", [])
-};
-class CMain extends Component_1.default {
-    constructor() {
-        super(...arguments);
-        this.scenes = [];
-        this.cameras = [];
-        this.selectedScene = null;
-        this.selectedCamera = null;
-        this.ins = this.addInputs(ins);
-    }
-    get sceneComponent() {
-        return this.selectedScene;
-    }
-    get cameraComponent() {
-        return this.selectedCamera;
-    }
-    get scene() {
-        return this.selectedScene ? this.selectedScene.scene : null;
-    }
-    get camera() {
-        return this.selectedCamera ? this.selectedCamera.camera : null;
-    }
-    create() {
-        this.scenes = this.system.components.cloneArray(CScene_1.default);
-        this.system.components.on(CScene_1.default, this.onSceneComponent, this);
-        this.cameras = this.system.components.cloneArray(CCamera_1.default);
-        this.system.components.on(CCamera_1.default, this.onCameraComponent, this);
-        this.updateOptions();
-    }
-    update() {
+    update(context) {
+        super.update(context);
+        const light = this.light;
         const ins = this.ins;
-        if (ins.scene.changed) {
-            const index = ins.scene.getValidatedValue();
-            this.selectedScene = index >= 0 ? this.scenes[index] : null;
+        if (ins.color.changed || ins.intensity.changed) {
+            light.color.fromArray(ins.color.value);
+            light.intensity = ins.intensity.value;
         }
-        if (ins.camera.changed) {
-            const index = ins.camera.getValidatedValue();
-            this.selectedCamera = index >= 0 ? this.cameras[index] : null;
+        if (ins.shadowEnabled.changed || (ins.shadowEnabled.value && (ins.shadowMap.changed || ins.shadowBlur.changed))) {
+            light.castShadow = ins.shadowEnabled.value;
+            const mapResolution = _mapResolution[ins.shadowMap.getValidatedValue()];
+            light.shadow.mapSize.set(mapResolution, mapResolution);
+            light.shadow.radius = ins.shadowBlur.value;
         }
         return true;
     }
-    dispose() {
-        this.system.components.off(CScene_1.default, this.onSceneComponent, this);
-        this.system.components.off(CCamera_1.default, this.onCameraComponent, this);
-    }
-    onSceneComponent(event) {
-        const inScene = this.ins.scene;
-        if (event.add) {
-            this.scenes.push(event.object);
-            this.updateOptions();
-        }
-        else {
-            const index = this.scenes.indexOf(event.object);
-            this.scenes.splice(index, 1);
-            this.updateOptions();
-            if (!inScene.hasInLinks() && index <= inScene.value) {
-                inScene.setValue(Math.max(0, inScene.value - 1));
-            }
-        }
-        inScene.set();
-    }
-    onCameraComponent(event) {
-        const inCamera = this.ins.camera;
-        if (event.add) {
-            this.cameras.push(event.object);
-            this.updateOptions();
-        }
-        else {
-            const index = this.cameras.indexOf(event.object);
-            this.cameras.splice(index, 1);
-            this.updateOptions();
-            if (!inCamera.hasInLinks() && index <= inCamera.value) {
-                inCamera.setValue(Math.max(0, inCamera.value - 1));
-            }
-        }
-        inCamera.set();
-    }
-    updateOptions() {
-        const { scene, camera } = this.ins;
-        if (this.scenes.length > 0) {
-            scene.setOptions(this.scenes.map(scene => scene.name || scene.className));
-        }
-        else {
-            scene.setOptions(["N/A"]);
-        }
-        if (this.cameras.length > 0) {
-            camera.setOptions(this.cameras.map(camera => camera.name || camera.className));
-        }
-        else {
-            camera.setOptions(["N/A"]);
-        }
-    }
 }
-exports.default = CMain;
-
-
-/***/ }),
-
-/***/ "../../libs/ff-scene/source/components/CMaterial.ts":
-/*!*********************************************************!*\
-  !*** /app/libs/ff-scene/source/components/CMaterial.ts ***!
-  \*********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * FF Typescript Foundation Library
- * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
- *
- * License: MIT
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
-////////////////////////////////////////////////////////////////////////////////
-class CMaterial extends Component_1.default {
-    constructor(id) {
-        super(id);
-        this._material = null;
-        this.addEvent("material");
-    }
-    get material() {
-        return this._material;
-    }
-    set material(value) {
-        this._material = value;
-        this.emit("material", value);
-    }
-}
-exports.default = CMaterial;
-
-
-/***/ }),
-
-/***/ "../../libs/ff-scene/source/components/CMesh.ts":
-/*!*****************************************************!*\
-  !*** /app/libs/ff-scene/source/components/CMesh.ts ***!
-  \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * FF Typescript Foundation Library
- * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
- *
- * License: MIT
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const THREE = __webpack_require__(/*! three */ "three");
-const CGeometry_1 = __webpack_require__(/*! ./CGeometry */ "../../libs/ff-scene/source/components/CGeometry.ts");
-const CMaterial_1 = __webpack_require__(/*! ./CMaterial */ "../../libs/ff-scene/source/components/CMaterial.ts");
-const CObject3D_1 = __webpack_require__(/*! ./CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
-////////////////////////////////////////////////////////////////////////////////
-class CMesh extends CObject3D_1.default {
-    get mesh() {
-        return this.object3D;
-    }
-    create() {
-        super.create();
-        this.object3D = new THREE.Mesh();
-        this.object3D.visible = false;
-        this.geometryTracker = this.trackComponent(CGeometry_1.default, component => {
-            this.mesh.geometry = component.geometry;
-            component.on("geometry", this.updateGeometry, this);
-        }, component => {
-            this.mesh.geometry = null;
-            component.off("geometry", this.updateGeometry, this);
-        });
-        this.materialTracker = this.trackComponent(CMaterial_1.default, component => {
-            this.mesh.material = component.material;
-            component.on("material", this.updateMaterial, this);
-        }, component => {
-            this.mesh.material = null;
-            component.off("material", this.updateMaterial, this);
-        });
-    }
-    toString() {
-        const geo = this.mesh.geometry;
-        const mat = this.mesh.material;
-        return `${this.className} - Geometry: '${geo ? geo.type : "N/A"}', Material: '${mat ? mat.type : "N/A"}'`;
-    }
-    updateGeometry(geometry) {
-        this.mesh.geometry = geometry;
-        this.mesh.visible = !!(geometry && this.mesh.material);
-    }
-    updateMaterial(material) {
-        this.mesh.material = material;
-        this.mesh.visible = !!(this.mesh.geometry && material);
-    }
-}
-exports.default = CMesh;
+CLight.typeName = "CLight";
+CLight.lightIns = {
+    color: propertyTypes_1.types.ColorRGB("Light.Color"),
+    intensity: propertyTypes_1.types.Number("Light.Intensity", 1),
+    shadowEnabled: propertyTypes_1.types.Boolean("Shadow.Enabled"),
+    shadowMap: propertyTypes_1.types.Enum("Shadow.Resolution", EShadowMapResolution),
+    shadowBlur: propertyTypes_1.types.Number("Shadow.Blur", 1),
+};
+exports.default = CLight;
 
 
 /***/ }),
@@ -5596,55 +7057,30 @@ exports.default = CMesh;
  * License: MIT
  */
 Object.defineProperty(exports, "__esModule", { value: true });
+const THREE = __webpack_require__(/*! three */ "three");
 const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+exports.Node = Component_1.Node;
+exports.types = Component_1.types;
+const GPUPicker_1 = __webpack_require__(/*! @ff/three/GPUPicker */ "../../libs/ff-three/source/GPUPicker.ts");
+const CScene_1 = __webpack_require__(/*! ./CScene */ "../../libs/ff-scene/source/components/CScene.ts");
 const CTransform_1 = __webpack_require__(/*! ./CTransform */ "../../libs/ff-scene/source/components/CTransform.ts");
+exports.ERotationOrder = CTransform_1.ERotationOrder;
 ////////////////////////////////////////////////////////////////////////////////
-const _context = {
-    view: null,
-    viewport: null,
-    renderer: null,
-    scene: null,
-    camera: null,
-    geometry: null,
-    material: null,
-    group: null
-};
-const _hookObject3D = function (object) {
-    if (object.material) {
-        object.onBeforeRender = function (r, s, c, g, material) {
-            if (material.isIndexShader) {
-                //console.log("setIndex #%s for %s", object.id, object);
-                material.setIndex(object.id);
-            }
-        };
-    }
-};
-const _unhookObject3D = function (object) {
-    if (object.material) {
-        object.onBeforeRender = null;
-    }
-};
-const _inputs = {
-    visible: Component_1.types.Boolean("Object.Visible", true),
-    pickable: Component_1.types.Boolean("Object.Pickable", true),
-};
-const _outputs = {
-    pointerDown: Component_1.types.Event("Picking.PointerDown"),
-    pointerUp: Component_1.types.Event("Picking.PointerUp"),
-    pointerActive: Component_1.types.Event("Picking.PointerActive")
-};
+const _vec3 = new THREE.Vector3();
 /**
- * Base component for Three.js renderable objects.
+ * Base class for drawable components. Wraps a THREE.Object3D based instance.
  * If component is added to a node together with a [[Transform]] component,
  * it is automatically added as a child to the transform.
  */
 class CObject3D extends Component_1.default {
-    constructor(id) {
-        super(id);
-        this.ins = this.addInputs(_inputs);
-        this.outs = this.addOutputs(_outputs);
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(CObject3D.object3DIns);
+        this.outs = this.addOutputs(CObject3D.object3DOuts);
         this._object3D = null;
+        this._isPickable = false;
         this.addEvent("object");
+        this.node.components.on(this.parentComponentClass, this._onParent, this);
     }
     /** The class of a component in the same node this component uses as parent transform. */
     get parentComponentClass() {
@@ -5652,7 +7088,16 @@ class CObject3D extends Component_1.default {
     }
     /** The transform parent of this object. */
     get parentComponent() {
-        return this.node.components.get(this.parentComponentClass);
+        return this.node.components.get(this.parentComponentClass, true);
+    }
+    /** The component node's transform component. */
+    get transform() {
+        return this.node.components.get(CTransform_1.default, true);
+    }
+    /** The scene this renderable object is part of. */
+    get scene() {
+        const transform = this.transform;
+        return transform ? transform.getParentComponent(CScene_1.default, true) : undefined;
     }
     /** The underlying [[THREE.Object3D]] of this component. */
     get object3D() {
@@ -5667,12 +7112,10 @@ class CObject3D extends Component_1.default {
         const currentObject = this._object3D;
         const parentComponent = this.parentComponent;
         if (currentObject) {
-            object.userData["component"] = null;
-            currentObject.onBeforeRender = null;
-            currentObject.onAfterRender = null;
+            currentObject.userData["component"] = null;
             this.unregisterPickableObject3D(currentObject, true);
-            if (parentComponent) {
-                parentComponent.object3D.remove(currentObject);
+            if (currentObject.parent) {
+                currentObject.parent.remove(currentObject);
             }
         }
         this.emit({ type: "object", current: currentObject, next: object });
@@ -5681,56 +7124,100 @@ class CObject3D extends Component_1.default {
             object.userData["component"] = this;
             object.matrixAutoUpdate = false;
             object.visible = this.ins.visible.value;
-            object.onBeforeRender = this._onBeforeRender.bind(this);
-            if (this.afterRender) {
-                object.onAfterRender = this._onAfterRender.bind(this);
-            }
             this.registerPickableObject3D(object, true);
             if (parentComponent) {
                 parentComponent.object3D.add(object);
             }
         }
     }
-    create() {
-        this.trackComponent(this.parentComponentClass, component => {
-            if (this._object3D) {
-                component.object3D.add(this._object3D);
-            }
-        }, component => {
-            if (this._object3D) {
-                component.object3D.remove(this._object3D);
-            }
-        });
-    }
     update(context) {
-        const ins = this.ins;
-        if (ins.visible.changed && this._object3D) {
-            this._object3D.visible = ins.visible.value;
+        const { visible, pickable } = this.ins;
+        if (visible.changed && this._object3D) {
+            this._object3D.visible = visible.value;
+        }
+        if (pickable.changed && pickable.value !== this._isPickable) {
+            this._isPickable = pickable.value;
+            if (pickable.value) {
+                this.enablePointerEvents();
+            }
+            else {
+                this.disablePointerEvents();
+            }
         }
         return true;
     }
     dispose() {
-        if (this._object3D) {
-            const component = this.parentComponent;
-            if (component) {
-                component.object3D.remove(this._object3D);
-            }
+        this.object3D = null;
+        if (this.ins.pickable.value) {
+            this.disablePointerEvents();
         }
+        this.node.components.off(this.parentComponentClass, this._onParent, this);
         super.dispose();
     }
     /**
-     * This is called right before the component's 3D object is rendered.
+     * This is called right before the graph's scene is rendered to a specific viewport/view.
      * Override to make adjustments specific to the renderer, view or viewport.
      * @param context
      */
-    beforeRender(context) {
+    preRender(context) {
     }
     /**
-     * This is called right after the component's 3D object has been rendered.
+     * This is called right after the graph's scene has been rendered to a specific viewport/view.
      * Override to make adjustments specific to the renderer, view or viewport.
      * @param context
      */
-    afterRender(context) {
+    postRender(context) {
+    }
+    /**
+     * Returns a text representation.
+     */
+    toString() {
+        return super.toString() + (this._object3D ? ` - type: ${this._object3D.type}` : " - (null)");
+    }
+    onPointer(event) {
+        const outs = this.outs;
+        if (event.type === "pointer-down") {
+            outs.pointerDown.set();
+            outs.pointerActive.setValue(true);
+        }
+        else if (event.type === "pointer-up") {
+            outs.pointerUp.set();
+            outs.pointerActive.setValue(false);
+        }
+        event.stopPropagation = true;
+    }
+    enablePointerEvents() {
+        this.on("pointer-down", this.onPointer, this);
+        this.on("pointer-up", this.onPointer, this);
+    }
+    disablePointerEvents() {
+        this.off("pointer-down", this.onPointer, this);
+        this.off("pointer-up", this.onPointer, this);
+        const outs = this.outs;
+        if (outs.pointerActive.value) {
+            outs.pointerUp.set();
+            outs.pointerActive.setValue(false);
+        }
+    }
+    updateTransform() {
+        const object3D = this._object3D;
+        if (!object3D) {
+            return;
+        }
+        const { position, rotation, order, scale } = this.ins;
+        if (position.changed || rotation.changed || order.changed || scale.changed) {
+            // update position
+            object3D.position.fromArray(position.value);
+            // update rotation angles, rotation order
+            _vec3.fromArray(rotation.value).multiplyScalar(THREE.Math.DEG2RAD);
+            const orderName = order.getOptionText();
+            object3D.rotation.setFromVector3(_vec3, orderName);
+            // update scale
+            object3D.scale.fromArray(scale.value);
+            // compose matrix
+            object3D.updateMatrix();
+        }
+        return true;
     }
     /**
      * Adds a [[THREE.Object3D]] as a child to this component's object.
@@ -5756,16 +7243,8 @@ class CObject3D extends Component_1.default {
      * @param object
      * @param recursive
      */
-    registerPickableObject3D(object, recursive = false) {
-        if (recursive && object === this._object3D) {
-            object.children.forEach(child => child.traverse(object => _hookObject3D(object)));
-        }
-        else if (recursive) {
-            object.traverse(object => _hookObject3D(object));
-        }
-        else if (object !== this._object3D) {
-            _hookObject3D(object);
-        }
+    registerPickableObject3D(object, recursive) {
+        GPUPicker_1.default.add(object, recursive);
     }
     /**
      * This should be called before an external change to this component's Object3D subtree.
@@ -5773,237 +7252,32 @@ class CObject3D extends Component_1.default {
      * @param object
      * @param recursive
      */
-    unregisterPickableObject3D(object, recursive = false) {
-        if (recursive && object === this._object3D) {
-            object.children.forEach(child => child.traverse(object => _unhookObject3D(object)));
-        }
-        else if (recursive) {
-            object.traverse(object => _unhookObject3D(object));
-        }
-        else if (object !== this._object3D) {
-            _unhookObject3D(object);
-        }
+    unregisterPickableObject3D(object, recursive) {
+        GPUPicker_1.default.remove(object, recursive);
     }
-    /**
-     * Returns a text representation.
-     */
-    toString() {
-        return super.toString() + (this._object3D ? ` - type: ${this._object3D.type}` : " - (null)");
-    }
-    /**
-     * Three.js event handler called before the object is rendered.
-     * @private
-     */
-    _onBeforeRender(renderer, scene, camera, geometry, material, group) {
-        // index rendering for picking: set shader index uniform to the object's id
-        if (material.isIndexShader && this.ins.pickable.value) {
-            material.setIndex(this.object3D.id);
+    _onParent(event) {
+        // add this THREE.Object3D to the parent THREE.Object3D
+        if (this._object3D && !this._object3D.parent && event.add) {
+            event.object.object3D.add(this._object3D);
         }
-        if (this.beforeRender) {
-            _context.view = renderer["__view"];
-            _context.viewport = renderer["__viewport"];
-            _context.renderer = renderer;
-            _context.scene = scene;
-            _context.camera = camera;
-            _context.geometry = geometry;
-            _context.material = material;
-            _context.group = group;
-            this.beforeRender(_context);
-        }
-    }
-    /**
-     * Three.js event handler called after the object has been rendered.
-     * @private
-     */
-    _onAfterRender(renderer, scene, camera, geometry, material, group) {
-        _context.view = renderer["__view"];
-        _context.viewport = renderer["__viewport"];
-        _context.renderer = renderer;
-        _context.scene = scene;
-        _context.camera = camera;
-        _context.geometry = geometry;
-        _context.material = material;
-        _context.group = group;
-        this.afterRender(_context);
     }
 }
+CObject3D.typeName = "CObject3D";
 /** The component type whose object3D is the parent of this component's object3D. */
 CObject3D.parentComponentClass = CTransform_1.default;
+CObject3D.object3DIns = {
+    visible: Component_1.types.Boolean("Object.Visible", true),
+    pickable: Component_1.types.Boolean("Object.Pickable"),
+};
+CObject3D.object3DOuts = {
+    pointerDown: Component_1.types.Event("Pointer.Down"),
+    pointerUp: Component_1.types.Event("Pointer.Up"),
+    pointerActive: Component_1.types.Boolean("Pointer.Active")
+};
+CObject3D.transformIns = CTransform_1.default.transformIns;
 exports.default = CObject3D;
-CObject3D.prototype.beforeRender = null;
-CObject3D.prototype.afterRender = null;
-
-
-/***/ }),
-
-/***/ "../../libs/ff-scene/source/components/COrbitManipulator.ts":
-/*!*****************************************************************!*\
-  !*** /app/libs/ff-scene/source/components/COrbitManipulator.ts ***!
-  \*****************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * FF Typescript Foundation Library
- * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
- *
- * License: MIT
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
-const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
-const OrbitManipulator_1 = __webpack_require__(/*! @ff/three/OrbitManipulator */ "../../libs/ff-three/source/OrbitManipulator.ts");
-const CScene_1 = __webpack_require__(/*! ./CScene */ "../../libs/ff-scene/source/components/CScene.ts");
-////////////////////////////////////////////////////////////////////////////////
-const _inputs = {
-    enabled: propertyTypes_1.types.Boolean("Enabled", true),
-    orbit: propertyTypes_1.types.Vector3("Orbit", [0, 0, 0]),
-    offset: propertyTypes_1.types.Vector3("Offset", [0, 0, 50]),
-    minOrbit: propertyTypes_1.types.Vector3("Min.Orbit", [-90, NaN, NaN]),
-    minOffset: propertyTypes_1.types.Vector3("Min.Offset", [NaN, NaN, 0.1]),
-    maxOrbit: propertyTypes_1.types.Vector3("Max.Orbit", [90, NaN, NaN]),
-    maxOffset: propertyTypes_1.types.Vector3("Max.Offset", [NaN, NaN, 100])
-};
-const _outputs = {
-    orbit: propertyTypes_1.types.Vector3("Orbit"),
-    offset: propertyTypes_1.types.Vector3("Offset"),
-    size: propertyTypes_1.types.Number("Size")
-};
-class COrbitManipulator extends Component_1.default {
-    constructor() {
-        super(...arguments);
-        this.ins = this.addInputs(_inputs);
-        this.outs = this.addOutputs(_outputs);
-        this._manip = new OrbitManipulator_1.default();
-    }
-    create() {
-        super.create();
-        this._manip.cameraMode = true;
-        this.system.on(["pointer-down", "pointer-up", "pointer-move"], this.onPointer, this);
-        this.system.on("wheel", this.onTrigger, this);
-        this.trackComponent(CScene_1.default, component => {
-            component.on("active-camera", this.onActiveCamera, this);
-        }, component => {
-            component.off("active-camera", this.onActiveCamera, this);
-        });
-    }
-    dispose() {
-        super.dispose();
-        this.system.off(["pointer-down", "pointer-up", "pointer-move"], this.onPointer, this);
-        this.system.off("wheel", this.onTrigger, this);
-    }
-    update() {
-        const manip = this._manip;
-        const ins = this.ins;
-        const { minOrbit, minOffset, maxOrbit, maxOffset } = ins;
-        if (minOrbit.changed || minOffset.changed || maxOrbit.changed || maxOffset.changed) {
-            manip.minOrbit.fromArray(minOrbit.value);
-            manip.minOffset.fromArray(minOffset.value);
-            manip.maxOrbit.fromArray(maxOrbit.value);
-            manip.maxOffset.fromArray(maxOffset.value);
-        }
-        if (ins.orbit.changed) {
-            manip.orbit.fromArray(ins.orbit.value);
-        }
-        if (ins.offset.changed) {
-            manip.offset.fromArray(ins.offset.value);
-        }
-        return true;
-    }
-    tick() {
-        const manip = this._manip;
-        const { enabled } = this.ins;
-        const { orbit, offset, size } = this.outs;
-        if (enabled.value) {
-            manip.update();
-            manip.orbit.toArray(orbit.value);
-            orbit.set();
-            manip.offset.toArray(offset.value);
-            offset.set();
-            size.setValue(manip.size);
-            const cameraComponent = this._activeCameraComponent;
-            if (cameraComponent) {
-                const parent = cameraComponent.parentComponent;
-                if (parent) {
-                    this._manip.toObject(parent.object3D);
-                }
-                else {
-                    this._manip.toObject(cameraComponent.object3D);
-                }
-                if (cameraComponent.camera.isOrthographicCamera) {
-                    cameraComponent.camera.size = this._manip.size;
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-    onPointer(event) {
-        if (this.ins.enabled.value && this._activeCameraComponent) {
-            const viewport = event.viewport;
-            this._manip.setViewportSize(viewport.width, viewport.height);
-            this._manip.onPointer(event);
-            event.stopPropagation = true;
-        }
-    }
-    onTrigger(event) {
-        if (this.ins.enabled.value && this._activeCameraComponent) {
-            const viewport = event.viewport;
-            this._manip.setViewportSize(viewport.width, viewport.height);
-            this._manip.onTrigger(event);
-            event.stopPropagation = true;
-        }
-    }
-    onActiveCamera(event) {
-        this._activeCameraComponent = event.next;
-    }
-}
-exports.default = COrbitManipulator;
-
-
-/***/ }),
-
-/***/ "../../libs/ff-scene/source/components/CPhongMaterial.ts":
-/*!**************************************************************!*\
-  !*** /app/libs/ff-scene/source/components/CPhongMaterial.ts ***!
-  \**************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * FF Typescript Foundation Library
- * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
- *
- * License: MIT
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const THREE = __webpack_require__(/*! three */ "three");
-const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
-const CMaterial_1 = __webpack_require__(/*! ./CMaterial */ "../../libs/ff-scene/source/components/CMaterial.ts");
-////////////////////////////////////////////////////////////////////////////////
-const _inputs = {
-    color: propertyTypes_1.types.ColorRGB("Color")
-};
-class CPhongMaterial extends CMaterial_1.default {
-    constructor() {
-        super(...arguments);
-        this.ins = this.addInputs(_inputs);
-    }
-    create() {
-        this.material = new THREE.MeshPhongMaterial();
-    }
-    update() {
-        const material = this.material;
-        const { color } = this.ins;
-        material.color.setRGB(color.value[0], color.value[1], color.value[2]);
-        return true;
-    }
-}
-exports.default = CPhongMaterial;
+CObject3D.prototype.preRender = null;
+CObject3D.prototype.postRender = null;
 
 
 /***/ }),
@@ -6033,24 +7307,27 @@ const CTransform_1 = __webpack_require__(/*! ./CTransform */ "../../libs/ff-scen
 const CScene_1 = __webpack_require__(/*! ./CScene */ "../../libs/ff-scene/source/components/CScene.ts");
 ////////////////////////////////////////////////////////////////////////////////
 const _inputs = {
-    bracketsVisible: Component_1.types.Boolean("Brackets.Visible", true)
+    viewportPicking: Component_1.types.Boolean("Viewport.Picking", true),
+    viewportBrackets: Component_1.types.Boolean("Viewport.Brackets", true),
 };
 class CPickSelection extends CSelection_1.default {
     constructor() {
         super(...arguments);
         this.ins = this.addInputs(_inputs);
-        this.startX = 0;
-        this.startY = 0;
         this._brackets = new Map();
         this._sceneTracker = null;
     }
     create() {
         super.create();
-        this.system.on("pointer-down", this.onPointerDown, this);
         this.system.on("pointer-up", this.onPointerUp, this);
+        this._sceneTracker = new ComponentTracker_1.default(this.system.components, CScene_1.default, component => {
+            component.on("after-render", this.onSceneAfterRender, this);
+        }, component => {
+            component.off("after-render", this.onSceneAfterRender, this);
+        });
     }
     dispose() {
-        this.system.off("pointer-down", this.onPointerDown, this);
+        this._sceneTracker.dispose();
         this.system.off("pointer-up", this.onPointerUp, this);
         this._sceneTracker.dispose();
         super.dispose();
@@ -6060,7 +7337,7 @@ class CPickSelection extends CSelection_1.default {
     }
     onSelectNode(node, selected) {
         super.onSelectNode(node, selected);
-        const transform = node.components.get(CTransform_1.default);
+        const transform = node.getComponent(CTransform_1.default, true);
         if (transform) {
             this.updateBracket(transform, selected);
         }
@@ -6071,44 +7348,39 @@ class CPickSelection extends CSelection_1.default {
             this.updateBracket(component, selected);
         }
     }
-    onActiveGraph(graph) {
-        if (this._sceneTracker) {
-            this._sceneTracker.dispose();
-        }
-        if (graph) {
-            this._sceneTracker = new ComponentTracker_1.default(graph.components, CScene_1.default, component => {
-                component.on("after-render", this.onSceneAfterRender, this);
-            }, component => {
-                component.off("after-render", this.onSceneAfterRender, this);
-            });
-        }
-    }
-    onPointerDown(event) {
-        if (event.isPrimary) {
-            this.startX = event.centerX;
-            this.startY = event.centerY;
-        }
-    }
+    // protected onActiveGraph(graph: Graph)
+    // {
+    //     if (this._sceneTracker) {
+    //         this._sceneTracker.dispose();
+    //     }
+    //
+    //     if (graph) {
+    //         this._sceneTracker = new ComponentTracker(graph.components, CScene, component => {
+    //             component.on<ISceneAfterRenderEvent>("after-render", this.onSceneAfterRender, this);
+    //         }, component => {
+    //             component.off<ISceneAfterRenderEvent>("after-render", this.onSceneAfterRender, this);
+    //         });
+    //     }
+    // }
     onPointerUp(event) {
-        if (event.isPrimary) {
-            const distance = Math.abs(this.startX - event.centerX) + Math.abs(this.startY - event.centerY);
-            if (distance < 2) {
-                if (event.component) {
-                    this.selectComponent(event.component, event.ctrlKey);
-                }
-                else if (!event.ctrlKey) {
-                    this.clearSelection();
-                }
-            }
+        if (!this.ins.viewportPicking.value || !event.isPrimary || event.isDragging) {
+            return;
+        }
+        if (event.component) {
+            this.selectComponent(event.component, event.ctrlKey);
+        }
+        else if (!event.ctrlKey) {
+            this.clearSelection();
         }
     }
     onSceneAfterRender(event) {
+        if (!this.ins.viewportBrackets.value) {
+            return;
+        }
         const renderer = event.context.renderer;
         const camera = event.context.camera;
-        if (this.ins.bracketsVisible.value) {
-            for (let entry of this._brackets) {
-                renderer.render(entry[1], camera);
-            }
+        for (let entry of this._brackets) {
+            renderer.render(entry[1], camera);
         }
     }
     updateBracket(component, selected) {
@@ -6129,8 +7401,10 @@ class CPickSelection extends CSelection_1.default {
                 bracket.dispose();
             }
         }
+        this.changed = true;
     }
 }
+CPickSelection.typeName = "CPickSelection";
 exports.default = CPickSelection;
 
 
@@ -6153,36 +7427,41 @@ exports.default = CPickSelection;
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 const THREE = __webpack_require__(/*! three */ "three");
-const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
 const CLight_1 = __webpack_require__(/*! ./CLight */ "../../libs/ff-scene/source/components/CLight.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const _inputs = {
-    distance: propertyTypes_1.types.Number("Light.Distance"),
-    decay: propertyTypes_1.types.Number("Light.Decay", 1)
-};
+const _vec3 = new THREE.Vector3();
 class CPointLight extends CLight_1.default {
-    constructor() {
-        super(...arguments);
-        this.ins = this.addInputs(_inputs);
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(CPointLight.pointLightIns);
+        this.object3D = new THREE.PointLight();
     }
     get light() {
         return this.object3D;
     }
-    create() {
-        super.create();
-        this.object3D = new THREE.PointLight();
-    }
-    update() {
+    update(context) {
+        super.update(context);
         const light = this.light;
-        const { color, intensity, distance, decay } = this.ins;
-        light.color.fromArray(color.value);
-        light.intensity = intensity.value;
-        light.distance = distance.value;
-        light.decay = decay.value;
+        const ins = this.ins;
+        if (ins.position.changed) {
+            light.position.fromArray(ins.position.value);
+            light.updateMatrix();
+        }
+        if (ins.distance.changed || ins.decay.changed) {
+            light.distance = ins.distance.value;
+            light.decay = ins.decay.value;
+        }
         light.updateMatrix();
         return true;
     }
 }
+CPointLight.typeName = "CPointLight";
+CPointLight.pointLightIns = {
+    position: Component_1.types.Vector3("Light.Position", [0, 1, 0]),
+    distance: Component_1.types.Number("Light.Distance"),
+    decay: Component_1.types.Number("Light.Decay", 1),
+};
 exports.default = CPointLight;
 
 
@@ -6204,26 +7483,142 @@ exports.default = CPointLight;
  * License: MIT
  */
 Object.defineProperty(exports, "__esModule", { value: true });
+const THREE = __webpack_require__(/*! three */ "three");
 const CGraph_1 = __webpack_require__(/*! @ff/graph/components/CGraph */ "../../libs/ff-graph/source/components/CGraph.ts");
+exports.Node = CGraph_1.Node;
+exports.types = CGraph_1.types;
 const CTransform_1 = __webpack_require__(/*! ./CTransform */ "../../libs/ff-scene/source/components/CTransform.ts");
-////////////////////////////////////////////////////////////////////////////////
+const CScene_1 = __webpack_require__(/*! ./CScene */ "../../libs/ff-scene/source/components/CScene.ts");
 class CRenderGraph extends CGraph_1.default {
-    set innerRoot(root) {
-        if (root.is(CTransform_1.default)) {
-            const parent = this.components.get(CTransform_1.default);
-            const previous = this.innerRoot;
-            const next = root;
-            if (parent && previous) {
-                parent.object3D.remove(previous.object3D);
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(CRenderGraph.rgIns);
+        this._object3D = null;
+        this._isAttached = false;
+        this._object3D = new THREE.Object3D();
+        this._object3D.matrixAutoUpdate = false;
+    }
+    /** The component node's transform component. */
+    get transform() {
+        return this.node.components.get(CTransform_1.default, true);
+    }
+    /** The scene this renderable object is part of. */
+    get scene() {
+        const transform = this.transform;
+        return transform ? transform.getParentComponent(CScene_1.default, true) : undefined;
+    }
+    /** The underlying [[THREE.Object3D]] of this component. */
+    get object3D() {
+        return this._object3D;
+    }
+    create() {
+        super.create();
+        // add existing inner root transforms
+        this.innerRoots
+            .filter(root => root.is(CTransform_1.default))
+            .forEach((root) => this._object3D.add(root.object3D));
+        // track transform component
+        this.trackComponent(CTransform_1.default, component => this.ins.visible.value && this.attachObject3D(component), component => this.detachObject3D(component));
+    }
+    dispose() {
+        this.detachObject3D(this.transform);
+        // remove all inner root transforms
+        this.innerRoots
+            .filter(root => root.is(CTransform_1.default))
+            .forEach((root) => this._object3D.remove(root.object3D));
+        super.dispose();
+    }
+    update(context) {
+        super.update(context);
+        const ins = this.ins;
+        if (ins.visible.changed) {
+            const parent = this.transform;
+            if (ins.visible.value) {
+                this.attachObject3D(parent);
             }
-            super.innerRoot = next;
-            if (parent && next) {
-                parent.object3D.add(next.object3D);
+            else {
+                this.detachObject3D(parent);
             }
+        }
+        return true;
+    }
+    onAddInnerRoot(component) {
+        if (component.is(CTransform_1.default)) {
+            this._object3D.add(component.object3D);
+        }
+    }
+    onRemoveInnerRoot(component) {
+        if (component.is(CTransform_1.default)) {
+            this._object3D.remove(component.object3D);
+        }
+    }
+    attachObject3D(parent) {
+        if (this._isAttached) {
+            return;
+        }
+        if (parent) {
+            parent.object3D.add(this._object3D);
+            this._isAttached = true;
+        }
+    }
+    detachObject3D(parent) {
+        if (!this._isAttached) {
+            return;
+        }
+        if (parent) {
+            parent.object3D.remove(this._object3D);
+            this._isAttached = false;
         }
     }
 }
+CRenderGraph.typeName = "CRenderGraph";
+CRenderGraph.rgIns = {
+    visible: CGraph_1.types.Boolean("Graph.Visible", true),
+};
 exports.default = CRenderGraph;
+
+
+/***/ }),
+
+/***/ "../../libs/ff-scene/source/components/CRenderable.ts":
+/*!***********************************************************!*\
+  !*** /app/libs/ff-scene/source/components/CRenderable.ts ***!
+  \***********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+exports.Node = Component_1.Node;
+exports.types = Component_1.types;
+class CRenderable extends Component_1.default {
+    /**
+     * This is called right before the graph's scene is rendered to a specific viewport/view.
+     * Override to make adjustments specific to the renderer, view or viewport.
+     * @param context
+     */
+    preRender(context) {
+    }
+    /**
+     * This is called right after the graph's scene has been rendered to a specific viewport/view.
+     * Override to make adjustments specific to the renderer, view or viewport.
+     * @param context
+     */
+    postRender(context) {
+    }
+}
+CRenderable.typeName = "CRenderable";
+exports.default = CRenderable;
+CRenderable.prototype.preRender = null;
+CRenderable.prototype.postRender = null;
 
 
 /***/ }),
@@ -6246,11 +7641,35 @@ exports.default = CRenderGraph;
 Object.defineProperty(exports, "__esModule", { value: true });
 const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
 const CPulse_1 = __webpack_require__(/*! @ff/graph/components/CPulse */ "../../libs/ff-graph/source/components/CPulse.ts");
+const _inputs = {
+    shadowsEnabled: Component_1.types.Boolean("Shadows.Enabled", true),
+};
+const _outputs = {
+    maxTextureSize: Component_1.types.Integer("Caps.MaxTextureSize"),
+    maxCubemapSize: Component_1.types.Integer("Caps.MaxCubemapSize"),
+};
+/**
+ * Manages 3D rendering. Keeps track of one "active" scene/camera pair,
+ * and of a number of render views. During each render cycle, the active scene
+ * and camera are rendered to each render view.
+ *
+ * ### Events
+ * - *"active-scene"* - emits [[IActiveSceneEvent]] when the active scene changes.
+ * - *"active-camera"* - emits [[IActiveCameraEvent]] when the active camera changes.
+ *
+ * ### See also
+ * - [[CScene]]
+ * - [[CCamera]]
+ * - [[RenderView]]
+ */
 class CRenderer extends Component_1.default {
-    constructor(id) {
-        super(id);
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(_inputs);
+        this.outs = this.addOutputs(_outputs);
         this.views = [];
         this._activeSceneComponent = null;
+        this._forceRender = false;
         this.addEvents("active-scene", "active-camera");
     }
     get activeSceneComponent() {
@@ -6287,14 +7706,31 @@ class CRenderer extends Component_1.default {
         const component = this._activeSceneComponent ? this._activeSceneComponent.activeCameraComponent : null;
         return component ? component.camera : null;
     }
+    forceRender() {
+        this._forceRender = true;
+    }
     create() {
+        super.create();
         this.trackComponent(CPulse_1.default, component => {
             component.on("pulse", this.onPulse, this);
         }, component => {
             component.off("pulse", this.onPulse, this);
         });
     }
+    update() {
+        const ins = this.ins;
+        if (ins.shadowsEnabled.changed) {
+            this.views.forEach(view => view.renderer.shadowMap.enabled = ins.shadowsEnabled.value);
+        }
+        return true;
+    }
     attachView(view) {
+        // set WebGL caps if it's the first view attached
+        if (!this.views.length) {
+            const renderer = view.renderer;
+            this.outs.maxTextureSize.setValue(renderer.capabilities.maxTextureSize);
+            this.outs.maxCubemapSize.setValue(renderer.capabilities.maxCubemapSize);
+        }
         this.views.push(view);
         //console.log("RenderSystem.attachView - total views: %s", this.views.length);
     }
@@ -6306,15 +7742,20 @@ class CRenderer extends Component_1.default {
         this.views.splice(index, 1);
         //console.log("RenderSystem.detachView - total views: %s", this.views.length);
     }
-    onPulse() {
-        this.views.forEach(view => {
-            view.render();
-        });
+    onPulse(event) {
+        if (event.systemUpdated || this._forceRender) {
+            //console.log("CRenderer.onPulse - render views...");
+            this.views.forEach(view => {
+                view.render();
+            });
+            this._forceRender = false;
+        }
     }
     onActiveCamera(event) {
         this.emit(event);
     }
 }
+CRenderer.typeName = "CRenderer";
 CRenderer.isSystemSingleton = true;
 exports.default = CRenderer;
 
@@ -6338,7 +7779,7 @@ exports.default = CRenderer;
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 const THREE = __webpack_require__(/*! three */ "three");
-const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
 const CRenderer_1 = __webpack_require__(/*! ./CRenderer */ "../../libs/ff-scene/source/components/CRenderer.ts");
 const CTransform_1 = __webpack_require__(/*! ./CTransform */ "../../libs/ff-scene/source/components/CTransform.ts");
 const _context = {
@@ -6359,12 +7800,20 @@ const _afterRenderEvent = {
     context: _context
 };
 const _inputs = {
-    activate: propertyTypes_1.types.Event("Scene.Activate")
+    activate: Component_1.types.Event("Scene.Activate")
 };
+/**
+ * Represents a 3D scene. Root of a hierarchy of a number of 3D renderable objects and one
+ * or multiple cameras. Only one camera at a time can be the "active" camera which is
+ * used during each render cycle to render the currently active scene to one or multiple render views.
+ */
 class CScene extends CTransform_1.default {
-    constructor(id) {
-        super(id);
+    constructor(node, id) {
+        super(node, id);
         this._activeCameraComponent = null;
+        this._preRenderList = [];
+        this._postRenderList = [];
+        this._renderListsNeedUpdate = true;
         this.ins = this.addInputs(_inputs, 0);
         this.addEvents("before-render", "after-render", "active-camera");
     }
@@ -6380,45 +7829,60 @@ class CScene extends CTransform_1.default {
             this._activeCameraComponent = component;
             const event = { type: "active-camera", previous, next: component };
             this.emit(event);
-            const renderer = this.renderer;
-            if (renderer) {
-                this.renderer.emit(event);
-            }
         }
     }
     get activeCamera() {
         return this._activeCameraComponent ? this._activeCameraComponent.camera : null;
     }
     get renderer() {
-        return this.system.graph.components.get(CRenderer_1.default);
+        return this.getMainComponent(CRenderer_1.default);
     }
     create() {
         super.create();
+        this.on("hierarchy", this.shouldUpdateRenderLists, this);
+        this.on("child", this.shouldUpdateRenderLists, this);
         const renderer = this.renderer;
         if (renderer && !renderer.activeSceneComponent) {
             renderer.activeSceneComponent = this;
         }
     }
     update(context) {
-        const updated = super.update(context);
+        super.update(context);
         if (this.ins.activate.changed) {
             const renderer = this.renderer;
             if (renderer) {
                 renderer.activeSceneComponent = this;
             }
         }
-        return updated;
+        return true;
+    }
+    tick(context) {
+        if (this._renderListsNeedUpdate) {
+            this.updateRenderLists();
+            this._renderListsNeedUpdate = false;
+        }
+        return false;
     }
     dispose() {
         const renderer = this.renderer;
         if (renderer && renderer.activeSceneComponent === this) {
             renderer.activeSceneComponent = null;
         }
+        this.off("hierarchy", this.shouldUpdateRenderLists, this);
+        this.off("child", this.shouldUpdateRenderLists, this);
         super.dispose();
     }
-    beforeRender(context) {
+    preRender(context) {
+        const preRenderList = this._preRenderList;
+        for (let i = 0, n = preRenderList.length; i < n; ++i) {
+            preRenderList[i].preRender(context);
+        }
     }
-    afterRender(context) {
+    postRender(context) {
+        const postRenderList = this._postRenderList;
+        for (let i = 0, n = postRenderList.length; i < n; ++i) {
+            postRenderList[i].postRender(context);
+        }
     }
     createObject3D() {
         const scene = new THREE.Scene();
@@ -6426,13 +7890,30 @@ class CScene extends CTransform_1.default {
         scene.onAfterRender = this._onAfterRender.bind(this);
         return scene;
     }
+    shouldUpdateRenderLists() {
+        this._renderListsNeedUpdate = true;
+    }
+    updateRenderLists() {
+        this._preRenderList = [];
+        this._postRenderList = [];
+        this.traverseDown(false, true, true, (component) => {
+            if (component.preRender) {
+                this._preRenderList.push(component);
+            }
+            if (component.postRender) {
+                this._postRenderList.push(component);
+            }
+            return false;
+        });
+        this.changed = true;
+    }
     _onBeforeRender(renderer, scene, camera) {
         _context.view = renderer["__view"];
         _context.viewport = renderer["__viewport"];
         _context.renderer = renderer;
         _context.scene = scene;
         _context.camera = camera;
-        this.beforeRender && this.beforeRender(_context);
+        this.preRender(_context);
         _beforeRenderEvent.component = this;
         this.emit(_beforeRenderEvent);
     }
@@ -6442,15 +7923,14 @@ class CScene extends CTransform_1.default {
         _context.renderer = renderer;
         _context.scene = scene;
         _context.camera = camera;
-        this.afterRender && this.afterRender(_context);
+        this.postRender(_context);
         _afterRenderEvent.component = this;
         this.emit(_afterRenderEvent);
     }
 }
+CScene.typeName = "CScene";
 CScene.isGraphSingleton = true;
 exports.default = CScene;
-CScene.prototype.beforeRender = null;
-CScene.prototype.afterRender = null;
 
 
 /***/ }),
@@ -6472,83 +7952,51 @@ CScene.prototype.afterRender = null;
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 const THREE = __webpack_require__(/*! three */ "three");
-const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
 const CLight_1 = __webpack_require__(/*! ./CLight */ "../../libs/ff-scene/source/components/CLight.ts");
+const CTransform_1 = __webpack_require__(/*! ./CTransform */ "../../libs/ff-scene/source/components/CTransform.ts");
 ////////////////////////////////////////////////////////////////////////////////
-const _inputs = {
-    distance: propertyTypes_1.types.Number("Light.Distance"),
-    decay: propertyTypes_1.types.Number("Light.Decay", 1),
-    angle: propertyTypes_1.types.Number("Light.Angle", 45),
-    penumbra: propertyTypes_1.types.Number("Light.Penumbra", 0.5)
-};
+const _vec3 = new THREE.Vector3();
 class CSpotLight extends CLight_1.default {
-    constructor() {
-        super(...arguments);
-        this.ins = this.addInputs(_inputs);
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(CSpotLight.spotLightIns);
+        this.object3D = new THREE.SpotLight();
     }
     get light() {
         return this.object3D;
     }
-    create() {
-        super.create();
-        this.object3D = new THREE.SpotLight();
-    }
-    update() {
+    update(context) {
+        super.update(context);
         const light = this.light;
-        const { color, intensity, distance, decay, angle, penumbra } = this.ins;
-        light.color.fromArray(color.value);
-        light.intensity = intensity.value;
-        light.distance = distance.value;
-        light.decay = decay.value;
-        light.angle = angle.value;
-        light.penumbra = penumbra.value;
-        light.updateMatrix();
+        const ins = this.ins;
+        if (ins.position.changed || ins.rotation.changed || ins.order.changed) {
+            light.position.fromArray(ins.position.value);
+            _vec3.fromArray(ins.rotation.value).multiplyScalar(THREE.Math.DEG2RAD);
+            const orderName = ins.order.getOptionText();
+            light.rotation.setFromVector3(_vec3, orderName);
+            light.updateMatrix();
+        }
+        if (ins.distance.changed || ins.decay.changed || ins.angle.changed || ins.penumbra.changed) {
+            light.distance = ins.distance.value;
+            light.decay = ins.decay.value;
+            light.angle = ins.angle.value * THREE.Math.DEG2RAD;
+            light.penumbra = ins.penumbra.value;
+        }
         return true;
     }
 }
-exports.default = CSpotLight;
-
-
-/***/ }),
-
-/***/ "../../libs/ff-scene/source/components/CTorus.ts":
-/*!******************************************************!*\
-  !*** /app/libs/ff-scene/source/components/CTorus.ts ***!
-  \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * FF Typescript Foundation Library
- * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
- *
- * License: MIT
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const THREE = __webpack_require__(/*! three */ "three");
-const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
-const CGeometry_1 = __webpack_require__(/*! ./CGeometry */ "../../libs/ff-scene/source/components/CGeometry.ts");
-////////////////////////////////////////////////////////////////////////////////
-const _inputs = {
-    radius: propertyTypes_1.types.Number("Radius", 10),
-    tube: propertyTypes_1.types.Number("Tube", 3),
-    angle: propertyTypes_1.types.Number("Angle", 360),
-    segments: propertyTypes_1.types.Vector2("Segments", [24, 12])
+CSpotLight.typeName = "CSpotLight";
+CSpotLight.spotLightIns = {
+    position: Component_1.types.Vector3("Light.Position", [0, 1, 0]),
+    rotation: Component_1.types.Vector3("Light.Rotation", [0, 0, 0]),
+    order: Component_1.types.Enum("Light.RotationOrder", CTransform_1.ERotationOrder),
+    distance: Component_1.types.Number("Light.Distance"),
+    decay: Component_1.types.Number("Light.Decay", 1),
+    angle: Component_1.types.Number("Light.Angle", 45),
+    penumbra: Component_1.types.Number("Light.Penumbra", 0.5),
 };
-class CTorus extends CGeometry_1.default {
-    constructor() {
-        super(...arguments);
-        this.ins = this.addInputs(_inputs);
-    }
-    update() {
-        const { radius, tube, angle, segments } = this.ins;
-        this.geometry = new THREE.TorusBufferGeometry(radius.value, tube.value, segments.value[0], segments.value[1], angle.value);
-        return true;
-    }
-}
-exports.default = CTorus;
+exports.default = CSpotLight;
 
 
 /***/ }),
@@ -6571,7 +8019,8 @@ exports.default = CTorus;
 Object.defineProperty(exports, "__esModule", { value: true });
 const THREE = __webpack_require__(/*! three */ "three");
 const math_1 = __webpack_require__(/*! @ff/core/math */ "../../libs/ff-core/source/math.ts");
-const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+exports.types = Component_1.types;
 const CHierarchy_1 = __webpack_require__(/*! @ff/graph/components/CHierarchy */ "../../libs/ff-graph/source/components/CHierarchy.ts");
 ////////////////////////////////////////////////////////////////////////////////
 const _vec3a = new THREE.Vector3();
@@ -6587,25 +8036,16 @@ var ERotationOrder;
     ERotationOrder[ERotationOrder["YXZ"] = 4] = "YXZ";
     ERotationOrder[ERotationOrder["ZYX"] = 5] = "ZYX";
 })(ERotationOrder = exports.ERotationOrder || (exports.ERotationOrder = {}));
-const _inputs = {
-    position: propertyTypes_1.types.Vector3("Transform.Position"),
-    rotation: propertyTypes_1.types.Vector3("Transform.Rotation"),
-    order: propertyTypes_1.types.Enum("Transform.Order", ERotationOrder),
-    scale: propertyTypes_1.types.Vector3("Transform.Scale", [1, 1, 1])
-};
-const _outputs = {
-    matrix: propertyTypes_1.types.Matrix4("Transform.Matrix")
-};
 /**
  * Allows arranging components in a hierarchical structure. Each [[TransformComponent]]
  * contains a transformation which affects its children as well as other components which
  * are part of the same entity.
  */
 class CTransform extends CHierarchy_1.default {
-    constructor(id) {
-        super(id);
-        this.ins = this.addInputs(_inputs);
-        this.outs = this.addOutputs(_outputs);
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(CTransform.transformIns);
+        this.outs = this.addOutputs(CTransform.transformOuts);
         this._object3D = this.createObject3D();
         this._object3D.matrixAutoUpdate = false;
     }
@@ -6645,17 +8085,19 @@ class CTransform extends CHierarchy_1.default {
         return true;
     }
     dispose() {
-        if (!this._object3D) {
-            return;
+        if (this._object3D) {
+            // detach all children
+            this._object3D.children.slice().forEach(child => this._object3D.remove(child));
+            // detach from parent
+            if (this._object3D.parent) {
+                this._object3D.parent.remove(this._object3D);
+            }
         }
-        // detach the three.js object from its parent and children
-        if (this._object3D.parent) {
-            this._object3D.parent.remove(this._object3D);
-        }
-        this._object3D.children.slice().forEach(child => this._object3D.remove(child));
         super.dispose();
     }
-    setFromMatrix(matrix) {
+    setPropertiesFromMatrix(matrix) {
+        const silent = !matrix;
+        matrix = matrix || this._object3D.matrix;
         const { position, rotation, order, scale } = this.ins;
         matrix.decompose(_vec3a, _quat, _vec3b);
         _vec3a.toArray(position.value);
@@ -6664,9 +8106,9 @@ class CTransform extends CHierarchy_1.default {
         _euler.toVector3(_vec3a);
         _vec3a.multiplyScalar(math_1.default.RAD2DEG).toArray(rotation.value);
         _vec3b.toArray(scale.value);
-        position.set();
-        rotation.set();
-        scale.set();
+        position.set(silent);
+        rotation.set(silent);
+        scale.set(silent);
     }
     /**
      * Adds the given transform component as a children to this.
@@ -6684,38 +8126,72 @@ class CTransform extends CHierarchy_1.default {
         this._object3D.remove(component._object3D);
         super.removeChild(component);
     }
-    // /**
-    //  * Called by [[CObject3D]] to attach its three.js renderable object to the transform component.
-    //  * Do not call this directly.
-    //  * @param object
-    //  */
-    // addObject3D(object: THREE.Object3D)
-    // {
-    //     this._object3D.add(object);
-    // }
-    //
-    // /**
-    //  * Called by [[CObject3D]] to detach its three.js renderable object from the transform component.
-    //  * Do not call this directly.
-    //  * @param object
-    //  */
-    // removeObject3D(object: THREE.Object3D)
-    // {
-    //     this._object3D.remove(object);
-    // }
     createObject3D() {
         return new THREE.Object3D();
     }
 }
+CTransform.typeName = "CTransform";
+CTransform.transformIns = {
+    position: Component_1.types.Vector3("Transform.Position"),
+    rotation: Component_1.types.Vector3("Transform.Rotation"),
+    order: Component_1.types.Enum("Transform.Order", ERotationOrder),
+    scale: Component_1.types.Scale3("Transform.Scale")
+};
+CTransform.transformOuts = {
+    matrix: Component_1.types.Matrix4("Transform.Matrix")
+};
 exports.default = CTransform;
 
 
 /***/ }),
 
-/***/ "../../libs/ff-scene/source/components/index.ts":
-/*!*****************************************************!*\
-  !*** /app/libs/ff-scene/source/components/index.ts ***!
-  \*****************************************************/
+/***/ "../../libs/ff-scene/source/ui/SystemView.ts":
+/*!**************************************************!*\
+  !*** /app/libs/ff-scene/source/ui/SystemView.ts ***!
+  \**************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const System_1 = __webpack_require__(/*! @ff/graph/System */ "../../libs/ff-graph/source/System.ts");
+exports.System = System_1.default;
+const CustomElement_1 = __webpack_require__(/*! @ff/ui/CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
+exports.customElement = CustomElement_1.customElement;
+exports.property = CustomElement_1.property;
+exports.html = CustomElement_1.html;
+exports.TemplateResult = CustomElement_1.TemplateResult;
+class SystemView extends CustomElement_1.default {
+    constructor(system) {
+        super();
+        this.system = system;
+    }
+}
+__decorate([
+    CustomElement_1.property({ attribute: false })
+], SystemView.prototype, "system", void 0);
+exports.default = SystemView;
+
+
+/***/ }),
+
+/***/ "../../libs/ff-three/source/Background.ts":
+/*!***********************************************!*\
+  !*** /app/libs/ff-three/source/Background.ts ***!
+  \***********************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -6728,67 +8204,129 @@ exports.default = CTransform;
  * License: MIT
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-const CBasicMaterial_1 = __webpack_require__(/*! ./CBasicMaterial */ "../../libs/ff-scene/source/components/CBasicMaterial.ts");
-exports.CBasicMaterial = CBasicMaterial_1.default;
-const CBox_1 = __webpack_require__(/*! ./CBox */ "../../libs/ff-scene/source/components/CBox.ts");
-exports.CBox = CBox_1.default;
-const CCamera_1 = __webpack_require__(/*! ./CCamera */ "../../libs/ff-scene/source/components/CCamera.ts");
-exports.CCamera = CCamera_1.default;
-const CDirectionalLight_1 = __webpack_require__(/*! ./CDirectionalLight */ "../../libs/ff-scene/source/components/CDirectionalLight.ts");
-exports.CDirectionalLight = CDirectionalLight_1.default;
-const CGeometry_1 = __webpack_require__(/*! ./CGeometry */ "../../libs/ff-scene/source/components/CGeometry.ts");
-exports.CGeometry = CGeometry_1.default;
-const CGrid_1 = __webpack_require__(/*! ./CGrid */ "../../libs/ff-scene/source/components/CGrid.ts");
-exports.CGrid = CGrid_1.default;
-const CLight_1 = __webpack_require__(/*! ./CLight */ "../../libs/ff-scene/source/components/CLight.ts");
-exports.CLight = CLight_1.default;
-const CMain_1 = __webpack_require__(/*! ./CMain */ "../../libs/ff-scene/source/components/CMain.ts");
-exports.CMain = CMain_1.default;
-const CMaterial_1 = __webpack_require__(/*! ./CMaterial */ "../../libs/ff-scene/source/components/CMaterial.ts");
-exports.CMaterial = CMaterial_1.default;
-const CMesh_1 = __webpack_require__(/*! ./CMesh */ "../../libs/ff-scene/source/components/CMesh.ts");
-exports.CMesh = CMesh_1.default;
-const CObject3D_1 = __webpack_require__(/*! ./CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
-exports.CObject3D = CObject3D_1.default;
-const COrbitManipulator_1 = __webpack_require__(/*! ./COrbitManipulator */ "../../libs/ff-scene/source/components/COrbitManipulator.ts");
-exports.COrbitManipulator = COrbitManipulator_1.default;
-const CPhongMaterial_1 = __webpack_require__(/*! ./CPhongMaterial */ "../../libs/ff-scene/source/components/CPhongMaterial.ts");
-exports.CPhongMaterial = CPhongMaterial_1.default;
-const CPickSelection_1 = __webpack_require__(/*! ./CPickSelection */ "../../libs/ff-scene/source/components/CPickSelection.ts");
-exports.CPickSelection = CPickSelection_1.default;
-const CPointLight_1 = __webpack_require__(/*! ./CPointLight */ "../../libs/ff-scene/source/components/CPointLight.ts");
-exports.CPointLight = CPointLight_1.default;
-const CRenderer_1 = __webpack_require__(/*! ./CRenderer */ "../../libs/ff-scene/source/components/CRenderer.ts");
-exports.CRenderer = CRenderer_1.default;
-const CRenderGraph_1 = __webpack_require__(/*! ./CRenderGraph */ "../../libs/ff-scene/source/components/CRenderGraph.ts");
-exports.CRenderGraph = CRenderGraph_1.default;
-const CScene_1 = __webpack_require__(/*! ./CScene */ "../../libs/ff-scene/source/components/CScene.ts");
-exports.CScene = CScene_1.default;
-const CSpotLight_1 = __webpack_require__(/*! ./CSpotLight */ "../../libs/ff-scene/source/components/CSpotLight.ts");
-exports.CSpotLight = CSpotLight_1.default;
-const CTorus_1 = __webpack_require__(/*! ./CTorus */ "../../libs/ff-scene/source/components/CTorus.ts");
-exports.CTorus = CTorus_1.default;
-const CTransform_1 = __webpack_require__(/*! ./CTransform */ "../../libs/ff-scene/source/components/CTransform.ts");
-exports.CTransform = CTransform_1.default;
-exports.componentTypes = [
-    CBasicMaterial_1.default,
-    CBox_1.default,
-    CCamera_1.default,
-    CPickSelection_1.default,
-    CDirectionalLight_1.default,
-    CGrid_1.default,
-    CMain_1.default,
-    CMesh_1.default,
-    COrbitManipulator_1.default,
-    CPhongMaterial_1.default,
-    CPointLight_1.default,
-    CRenderer_1.default,
-    CRenderGraph_1.default,
-    CScene_1.default,
-    CSpotLight_1.default,
-    CTorus_1.default,
-    CTransform_1.default
-];
+const THREE = __webpack_require__(/*! three */ "three");
+////////////////////////////////////////////////////////////////////////////////
+var EBackgroundStyle;
+(function (EBackgroundStyle) {
+    EBackgroundStyle[EBackgroundStyle["Solid"] = 0] = "Solid";
+    EBackgroundStyle[EBackgroundStyle["LinearGradient"] = 1] = "LinearGradient";
+    EBackgroundStyle[EBackgroundStyle["RadialGradient"] = 2] = "RadialGradient";
+})(EBackgroundStyle = exports.EBackgroundStyle || (exports.EBackgroundStyle = {}));
+class Background extends THREE.Mesh {
+    constructor() {
+        super(new BackgroundGeometry(), new BackgroundMaterial());
+        this.frustumCulled = false;
+        this.renderOrder = -Infinity;
+        this.matrixAutoUpdate = false;
+    }
+    dispose() {
+        this.geometry.dispose();
+        this.material.dispose();
+    }
+    updateMatrixWorld(force) {
+    }
+}
+exports.default = Background;
+class BackgroundGeometry extends THREE.BufferGeometry {
+    constructor() {
+        super();
+        const vertices = new Float32Array([
+            -1, -1, 0, 0, 0,
+            1, -1, 0, 1, 0,
+            1, 1, 0, 1, 1,
+            -1, 1, 0, 0, 1
+        ]);
+        const buffer = new THREE.InterleavedBuffer(vertices, 5);
+        this.setIndex([0, 1, 2, 0, 2, 3]);
+        this.addAttribute('position', new THREE.InterleavedBufferAttribute(buffer, 3, 0, false));
+        this.addAttribute('uv', new THREE.InterleavedBufferAttribute(buffer, 2, 3, false));
+    }
+}
+exports.BackgroundGeometry = BackgroundGeometry;
+class BackgroundMaterial extends THREE.RawShaderMaterial {
+    constructor() {
+        super(...arguments);
+        this.depthTest = false;
+        this.depthWrite = false;
+        this.transparent = false;
+        this.uniforms = {
+            style: { value: EBackgroundStyle.LinearGradient },
+            color0: { value: new THREE.Vector3(0.15, 0.2, 0.25) },
+            color1: { value: new THREE.Vector3(0, 0, 0) },
+            noise: { value: 0.02 }
+        };
+        this.vertexShader = [
+            "precision highp float;",
+            "attribute vec3 position;",
+            "attribute vec2 uv;",
+            "varying vec2 ndc;",
+            "void main() {",
+            "  ndc = position.xy;",
+            "  gl_Position = vec4(position, 1.0);",
+            "}",
+        ].join("\n");
+        // NOTE: Source of random function:
+        // http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/
+        this.fragmentShader = [
+            "precision highp float;",
+            "uniform vec3 color0;",
+            "uniform vec3 color1;",
+            "uniform float noise;",
+            "uniform int style;",
+            "varying vec2 ndc;",
+            "float rand(vec2 co) {",
+            "float dt = dot(co.xy ,vec2(12.9898, 78.233));",
+            "float sn = mod(dt, 3.14);",
+            "return fract(sin(sn) * 43758.5453);",
+            "}",
+            "void main() {",
+            "  float f = style == 0 ? 0.0 : (style == 1 ? ndc.y * 0.5 + 0.5 : length(ndc) * 0.707);",
+            "  gl_FragColor = vec4(mix(color0, color1, f) + noise * rand(ndc), 1.0);",
+            "}"
+        ].join("\n");
+    }
+    set style(style) {
+        this.uniforms.style.value = style;
+    }
+    get style() {
+        return this.uniforms.style.value;
+    }
+    set color0(color) {
+        if (color instanceof THREE.Color) {
+            const value = this.uniforms.color0.value;
+            value.x = color.r;
+            value.y = color.g;
+            value.z = color.b;
+        }
+        else {
+            this.uniforms.color0.value.copy(color);
+        }
+    }
+    get color0() {
+        return this.uniforms.color0.value;
+    }
+    set color1(color) {
+        if (color instanceof THREE.Color) {
+            const value = this.uniforms.color1.value;
+            value.x = color.r;
+            value.y = color.g;
+            value.z = color.b;
+        }
+        else {
+            this.uniforms.color1.value.copy(color);
+        }
+    }
+    get color1() {
+        return this.uniforms.color1.value;
+    }
+    set noise(noise) {
+        this.uniforms.noise.value = noise;
+    }
+    get noise() {
+        return this.uniforms.noise.value;
+    }
+}
+exports.BackgroundMaterial = BackgroundMaterial;
 
 
 /***/ }),
@@ -6923,6 +8461,355 @@ exports.default = Bracket;
 
 /***/ }),
 
+/***/ "../../libs/ff-three/source/CameraController.ts":
+/*!*****************************************************!*\
+  !*** /app/libs/ff-three/source/CameraController.ts ***!
+  \*****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const THREE = __webpack_require__(/*! three */ "three");
+const math_1 = __webpack_require__(/*! @ff/core/math */ "../../libs/ff-core/source/math.ts");
+const math_2 = __webpack_require__(/*! ./math */ "../../libs/ff-three/source/math.ts");
+////////////////////////////////////////////////////////////////////////////////
+const _mat4 = new THREE.Matrix4();
+const _box3 = new THREE.Box3();
+const _vec3a = new THREE.Vector3();
+const _vec3b = new THREE.Vector3();
+var EControllerMode;
+(function (EControllerMode) {
+    EControllerMode[EControllerMode["Orbit"] = 0] = "Orbit";
+    EControllerMode[EControllerMode["FirstPerson"] = 1] = "FirstPerson";
+})(EControllerMode || (EControllerMode = {}));
+var EManipMode;
+(function (EManipMode) {
+    EManipMode[EManipMode["Off"] = 0] = "Off";
+    EManipMode[EManipMode["Pan"] = 1] = "Pan";
+    EManipMode[EManipMode["Orbit"] = 2] = "Orbit";
+    EManipMode[EManipMode["Dolly"] = 3] = "Dolly";
+    EManipMode[EManipMode["Zoom"] = 4] = "Zoom";
+    EManipMode[EManipMode["PanDolly"] = 5] = "PanDolly";
+    EManipMode[EManipMode["Roll"] = 6] = "Roll";
+})(EManipMode || (EManipMode = {}));
+var EManipPhase;
+(function (EManipPhase) {
+    EManipPhase[EManipPhase["Off"] = 0] = "Off";
+    EManipPhase[EManipPhase["Active"] = 1] = "Active";
+    EManipPhase[EManipPhase["Release"] = 2] = "Release";
+})(EManipPhase || (EManipPhase = {}));
+class CameraController {
+    constructor(camera) {
+        this.orbit = new THREE.Vector3(0, 0, 0);
+        this.offset = new THREE.Vector3(0, 0, 50);
+        this.minOrbit = new THREE.Vector3(-90, -Infinity, -Infinity);
+        this.maxOrbit = new THREE.Vector3(90, Infinity, Infinity);
+        this.minOffset = new THREE.Vector3(-Infinity, -Infinity, 0.1);
+        this.maxOffset = new THREE.Vector3(Infinity, Infinity, 1000);
+        this.orientationEnabled = true;
+        this.offsetEnabled = true;
+        this.mode = EManipMode.Off;
+        this.phase = EManipPhase.Off;
+        this.prevPinchDist = 0;
+        this.deltaX = 0;
+        this.deltaY = 0;
+        this.deltaPinch = 0;
+        this.deltaWheel = 0;
+        this.viewportWidth = 100;
+        this.viewportHeight = 100;
+        this.camera = camera;
+    }
+    onPointer(event) {
+        if (event.isPrimary) {
+            if (event.type === "pointer-down") {
+                this.phase = EManipPhase.Active;
+            }
+            else if (event.type === "pointer-up") {
+                this.phase = EManipPhase.Release;
+                return true;
+            }
+        }
+        if (event.type === "pointer-down") {
+            this.mode = this.getModeFromEvent(event);
+        }
+        const keyMultiplier = 1;
+        this.deltaX += event.movementX * keyMultiplier;
+        this.deltaY += event.movementY * keyMultiplier;
+        // calculate pinch
+        if (event.pointerCount === 2) {
+            const positions = event.activePositions;
+            const dx = positions[1].clientX - positions[0].clientX;
+            const dy = positions[1].clientY - positions[0].clientY;
+            const pinchDist = Math.sqrt(dx * dx + dy * dy);
+            const prevPinchDist = this.prevPinchDist || pinchDist;
+            this.deltaPinch *= prevPinchDist > 0 ? (pinchDist / prevPinchDist) : 1;
+            this.prevPinchDist = pinchDist;
+        }
+        else {
+            this.deltaPinch = 1;
+            this.prevPinchDist = 0;
+        }
+        return true;
+    }
+    onTrigger(event) {
+        if (event.type === "wheel") {
+            this.deltaWheel += math_1.default.limit(event.wheel, -1, 1);
+            return true;
+        }
+        return false;
+    }
+    setViewportSize(width, height) {
+        this.viewportWidth = width;
+        this.viewportHeight = height;
+    }
+    updateController(object, adaptLimits) {
+        const camera = this.camera;
+        object = object || camera;
+        const orbit = this.orbit;
+        const offset = this.offset;
+        math_2.default.decomposeOrbitMatrix(object.matrix, orbit, offset);
+        this.orbit.multiplyScalar(math_2.default.RAD2DEG);
+        if (adaptLimits) {
+            this.minOffset.min(offset);
+            this.maxOffset.max(offset);
+        }
+    }
+    zoomExtents(box) {
+        const camera = this.camera;
+        const offset = this.offset;
+        if (!camera) {
+            console.warn("CameraController.zoomExtents - camera not set");
+            return;
+        }
+        const padding = 1.1;
+        // rotate box to camera space
+        _vec3a.copy(this.orbit).multiplyScalar(math_1.default.DEG2RAD);
+        _vec3b.setScalar(0);
+        math_2.default.composeOrbitMatrix(_vec3a, _vec3b, _mat4);
+        _box3.copy(box).applyMatrix4(_mat4.transpose());
+        _box3.getSize(_vec3a);
+        _box3.getCenter(_vec3b);
+        //console.log("size", _vec3a);
+        //console.log("center", _vec3b);
+        offset.x = _vec3b.x;
+        offset.y = _vec3b.y;
+        const size = Math.max(_vec3a.x / camera.aspect, _vec3a.y);
+        if (camera.isOrthographicCamera) {
+            offset.z = size * padding;
+        }
+        else {
+            const fovFactor = 1 / (2 * Math.tan(camera.fov * math_1.default.DEG2RAD * 0.5));
+            offset.z = (size * fovFactor + _vec3b.z + _vec3a.z * 0.5) * padding;
+        }
+        this.maxOffset.z = Math.max(this.maxOffset.z, offset.z + _vec3a.z * 4);
+    }
+    /**
+     * Updates the matrix of the given camera. If the camera's projection is orthographic,
+     * updates the camera's size parameter as well.
+     */
+    updateCamera(object, force) {
+        const camera = this.camera;
+        object = object || camera;
+        if (!this.update() && !force) {
+            return false;
+        }
+        _vec3a.copy(this.orbit).multiplyScalar(math_1.default.DEG2RAD);
+        _vec3b.copy(this.offset);
+        if (camera.isOrthographicCamera) {
+            _vec3b.z = this.maxOffset.z;
+        }
+        math_2.default.composeOrbitMatrix(_vec3a, _vec3b, object.matrix);
+        object.matrixWorldNeedsUpdate = true;
+        if (camera.isOrthographicCamera) {
+            camera.size = this.offset.z;
+            camera.updateProjectionMatrix();
+        }
+        return true;
+    }
+    /**
+     * Updates the manipulator.
+     * @returns true if the state has changed during the update.
+     */
+    update() {
+        if (this.phase === EManipPhase.Off && this.deltaWheel === 0) {
+            return false;
+        }
+        if (this.deltaWheel !== 0) {
+            this.updatePose(0, 0, this.deltaWheel * 0.07 + 1, 0, 0, 0);
+            this.deltaWheel = 0;
+            return true;
+        }
+        if (this.phase === EManipPhase.Active) {
+            if (this.deltaX === 0 && this.deltaY === 0 && this.deltaPinch === 1) {
+                return false;
+            }
+            this.updateByMode();
+            this.deltaX = 0;
+            this.deltaY = 0;
+            this.deltaPinch = 1;
+            return true;
+        }
+        else if (this.phase === EManipPhase.Release) {
+            this.deltaX *= 0.85;
+            this.deltaY *= 0.85;
+            this.deltaPinch = 1;
+            this.updateByMode();
+            const delta = Math.abs(this.deltaX) + Math.abs(this.deltaY);
+            if (delta < 0.1) {
+                this.mode = EManipMode.Off;
+                this.phase = EManipPhase.Off;
+            }
+            return true;
+        }
+        return false;
+    }
+    updateByMode() {
+        switch (this.mode) {
+            case EManipMode.Orbit:
+                this.updatePose(0, 0, 1, this.deltaY, this.deltaX, 0);
+                break;
+            case EManipMode.Pan:
+                this.updatePose(this.deltaX, this.deltaY, 1, 0, 0, 0);
+                break;
+            case EManipMode.Roll:
+                this.updatePose(0, 0, 1, 0, 0, this.deltaX);
+                break;
+            case EManipMode.Dolly:
+                this.updatePose(0, 0, this.deltaY * 0.0075 + 1, 0, 0, 0);
+                break;
+            case EManipMode.PanDolly:
+                const pinchScale = (this.deltaPinch - 1) * 0.5 + 1;
+                this.updatePose(this.deltaX, this.deltaY, 1 / pinchScale, 0, 0, 0);
+                break;
+        }
+    }
+    updatePose(dX, dY, dScale, dPitch, dHead, dRoll) {
+        const { orbit, minOrbit, maxOrbit, offset, minOffset, maxOffset } = this;
+        let inverse = -1;
+        if (this.orientationEnabled) {
+            orbit.x += inverse * dPitch * 300 / this.viewportHeight;
+            orbit.y += inverse * dHead * 300 / this.viewportHeight;
+            orbit.z += inverse * dRoll * 300 / this.viewportHeight;
+            // check limits
+            orbit.x = math_1.default.limit(orbit.x, minOrbit.x, maxOrbit.x);
+            orbit.y = math_1.default.limit(orbit.y, minOrbit.y, maxOrbit.y);
+            orbit.z = math_1.default.limit(orbit.z, minOrbit.z, maxOrbit.z);
+        }
+        if (this.offsetEnabled) {
+            const factor = offset.z = dScale * offset.z;
+            offset.x += dX * factor * inverse / this.viewportHeight;
+            offset.y -= dY * factor * inverse / this.viewportHeight;
+            // check limits
+            offset.x = math_1.default.limit(offset.x, minOffset.x, maxOffset.x);
+            offset.y = math_1.default.limit(offset.y, minOffset.y, maxOffset.y);
+            offset.z = math_1.default.limit(offset.z, minOffset.z, maxOffset.z);
+        }
+    }
+    getModeFromEvent(event) {
+        if (event.source === "mouse") {
+            const button = event.originalEvent.button;
+            // left button
+            if (button === 0) {
+                if (event.ctrlKey) {
+                    return EManipMode.Pan;
+                }
+                if (event.altKey) {
+                    return EManipMode.Dolly;
+                }
+                return EManipMode.Orbit;
+            }
+            // right button
+            if (button === 2) {
+                if (event.altKey) {
+                    return EManipMode.Roll;
+                }
+                else {
+                    return EManipMode.Pan;
+                }
+            }
+            // middle button
+            if (button === 1) {
+                return EManipMode.Dolly;
+            }
+        }
+        else if (event.source === "touch") {
+            const count = event.pointerCount;
+            if (count === 1) {
+                return EManipMode.Orbit;
+            }
+            if (count === 2) {
+                return EManipMode.PanDolly;
+            }
+            return EManipMode.Pan;
+        }
+    }
+}
+exports.default = CameraController;
+
+
+/***/ }),
+
+/***/ "../../libs/ff-three/source/Floor.ts":
+/*!******************************************!*\
+  !*** /app/libs/ff-three/source/Floor.ts ***!
+  \******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const THREE = __webpack_require__(/*! three */ "three");
+const fragmentShader = __webpack_require__(/*! ./shaders/floorPhongShader.frag */ "../../libs/ff-three/source/shaders/floorPhongShader.frag");
+const vertexShader = __webpack_require__(/*! ./shaders/floorPhongShader.vert */ "../../libs/ff-three/source/shaders/floorPhongShader.vert");
+////////////////////////////////////////////////////////////////////////////////
+class Floor extends THREE.Mesh {
+    constructor() {
+        super(new THREE.PlaneBufferGeometry(2, 2, 1, 1), new FloorMaterial());
+        this.geometry.rotateX(-90 * THREE.Math.DEG2RAD);
+        this.receiveShadow = true;
+    }
+    dispose() {
+        this.geometry.dispose();
+        this.material.dispose();
+    }
+}
+exports.default = Floor;
+class FloorMaterial extends THREE.MeshPhongMaterial {
+    constructor(params) {
+        super(params);
+        this.defines = {};
+        this.type = "FloorMaterial";
+        this.isMeshPhongMaterial = true;
+        this.isFloorMaterial = true;
+        this.defines = {};
+        this.uniforms = THREE.UniformsUtils.merge([
+            THREE.ShaderLib.phong.uniforms
+        ]);
+        this.vertexShader = vertexShader;
+        this.fragmentShader = fragmentShader;
+        this.transparent = true;
+    }
+}
+exports.FloorMaterial = FloorMaterial;
+
+
+/***/ }),
+
 /***/ "../../libs/ff-three/source/GPUPicker.ts":
 /*!**********************************************!*\
   !*** /app/libs/ff-three/source/GPUPicker.ts ***!
@@ -6945,7 +8832,40 @@ const PositionShader_1 = __webpack_require__(/*! ./shaders/PositionShader */ "..
 const NormalShader_1 = __webpack_require__(/*! ./shaders/NormalShader */ "../../libs/ff-three/source/shaders/NormalShader.ts");
 ////////////////////////////////////////////////////////////////////////////////
 const _vec3 = new THREE.Vector3();
+const _range = 100000;
+const _pickPositionRange = new THREE.Box3(new THREE.Vector3(-_range, -_range, -_range), new THREE.Vector3(_range, _range, _range));
 class GPUPicker {
+    static add(object, recursive) {
+        const hookObject3D = object => {
+            if (object.material) {
+                object.onBeforeRender = function (r, s, c, g, material) {
+                    if (material.isIndexShader) {
+                        //console.log("setIndex #%s for %s", object.id, object);
+                        material.setIndex(object.id);
+                    }
+                };
+            }
+        };
+        if (recursive) {
+            object.traverse(object => hookObject3D(object));
+        }
+        else {
+            hookObject3D(object);
+        }
+    }
+    static remove(object, recursive) {
+        const unhookObject3D = object => {
+            if (object.material) {
+                object.onBeforeRender = null;
+            }
+        };
+        if (recursive) {
+            object.traverse(object => unhookObject3D(object));
+        }
+        else {
+            unhookObject3D(object);
+        }
+    }
     constructor(renderer) {
         this.renderer = renderer;
         this.pickTextures = [];
@@ -6972,17 +8892,21 @@ class GPUPicker {
         const renderer = this.renderer;
         const pickTexture = this.pickTextures[0];
         const color = renderer.getClearColor().clone();
-        renderer.setClearColor(0);
         viewport.applyPickViewport(pickTexture, event);
-        renderer.render(scene, camera, pickTexture, true);
-        renderer.setRenderTarget();
+        renderer.setRenderTarget(pickTexture);
+        renderer.setClearColor(0);
+        renderer.clear();
+        renderer.render(scene, camera);
+        renderer.setRenderTarget(null);
         renderer.setClearColor(color);
         scene.overrideMaterial = overrideMaterial;
         const buffer = this.pickBuffer;
         renderer.readRenderTargetPixels(pickTexture, 0, 0, 1, 1, buffer);
         return buffer[0] + buffer[1] * 256 + buffer[2] * 65536;
     }
-    pickPosition(scene, camera, boundingBox, event) {
+    pickPosition(scene, camera, event, range, result) {
+        range = range || _pickPositionRange;
+        result = result || new THREE.Vector3();
         const viewport = event.viewport;
         camera = viewport.updateCamera(camera);
         const overrideMaterial = scene.overrideMaterial;
@@ -6993,27 +8917,29 @@ class GPUPicker {
         renderer.setClearColor(0);
         for (let i = 0; i < 3; ++i) {
             shader.uniforms.index.value = i;
-            shader.uniforms.range.value[0] = boundingBox.min.getComponent(i);
-            shader.uniforms.range.value[1] = boundingBox.max.getComponent(i);
+            shader.uniforms.range.value[0] = range.min.getComponent(i);
+            shader.uniforms.range.value[1] = range.max.getComponent(i);
             viewport.applyPickViewport(pickTextures[i], event);
-            renderer.render(scene, camera, pickTextures[i], true);
+            renderer.setRenderTarget(pickTextures[i]);
+            renderer.clear();
+            renderer.render(scene, camera);
         }
-        renderer.setRenderTarget();
+        renderer.setRenderTarget(null);
         renderer.setClearColor(color);
         scene.overrideMaterial = overrideMaterial;
         const buffer = this.pickBuffer;
-        const position = new THREE.Vector3();
         for (let i = 0; i < 3; ++i) {
             renderer.readRenderTargetPixels(pickTextures[i], 0, 0, 1, 1, buffer);
-            position[i] = buffer[0] / 255
+            result.setComponent(i, buffer[0] / 255
                 + buffer[1] / 255 / 256
                 + buffer[2] / 255 / 65536
-                + buffer[3] / 255 / 16777216;
+                + buffer[3] / 255 / 16777216);
         }
-        boundingBox.getSize(_vec3);
-        return position.multiply(_vec3).add(boundingBox.min);
+        range.getSize(_vec3);
+        return result.multiply(_vec3).add(range.min);
     }
-    pickNormal(scene, camera, event) {
+    pickNormal(scene, camera, event, result) {
+        result = result || new THREE.Vector3();
         const viewport = event.viewport;
         camera = viewport.updateCamera(camera);
         const overrideMaterial = scene.overrideMaterial;
@@ -7021,15 +8947,17 @@ class GPUPicker {
         const renderer = this.renderer;
         const pickTexture = this.pickTextures[0];
         const color = renderer.getClearColor().clone();
-        renderer.setClearColor(0);
         viewport.applyPickViewport(pickTexture, event);
-        renderer.render(scene, camera, pickTexture, true);
-        renderer.setRenderTarget();
+        renderer.setRenderTarget(pickTexture);
+        renderer.setClearColor(0);
+        renderer.clear();
+        renderer.render(scene, camera);
+        renderer.setRenderTarget(null);
         renderer.setClearColor(color);
         scene.overrideMaterial = overrideMaterial;
         const buffer = this.pickBuffer;
         renderer.readRenderTargetPixels(pickTexture, 0, 0, 1, 1, buffer);
-        return new THREE.Vector3(buffer[0] / 255 * 2 - 1, buffer[1] / 255 * 2 - 1, buffer[2] / 255 * 2 - 1).normalize();
+        return result.set(buffer[0] / 255 * 2 - 1, buffer[1] / 255 * 2 - 1, buffer[2] / 255 * 2 - 1).normalize();
     }
 }
 exports.default = GPUPicker;
@@ -7100,10 +9028,10 @@ exports.default = Grid;
 
 /***/ }),
 
-/***/ "../../libs/ff-three/source/OrbitManipulator.ts":
-/*!*****************************************************!*\
-  !*** /app/libs/ff-three/source/OrbitManipulator.ts ***!
-  \*****************************************************/
+/***/ "../../libs/ff-three/source/HTMLSprite.ts":
+/*!***********************************************!*\
+  !*** /app/libs/ff-three/source/HTMLSprite.ts ***!
+  \***********************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -7117,302 +9045,209 @@ exports.default = Grid;
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 const THREE = __webpack_require__(/*! three */ "three");
-const math_1 = __webpack_require__(/*! @ff/core/math */ "../../libs/ff-core/source/math.ts");
-const math_2 = __webpack_require__(/*! ./math */ "../../libs/ff-three/source/math.ts");
-const UniversalCamera_1 = __webpack_require__(/*! ./UniversalCamera */ "../../libs/ff-three/source/UniversalCamera.ts");
-exports.EProjection = UniversalCamera_1.EProjection;
 ////////////////////////////////////////////////////////////////////////////////
 const _vec3a = new THREE.Vector3();
 const _vec3b = new THREE.Vector3();
-var EViewPreset;
-(function (EViewPreset) {
-    EViewPreset[EViewPreset["Left"] = 0] = "Left";
-    EViewPreset[EViewPreset["Right"] = 1] = "Right";
-    EViewPreset[EViewPreset["Top"] = 2] = "Top";
-    EViewPreset[EViewPreset["Bottom"] = 3] = "Bottom";
-    EViewPreset[EViewPreset["Front"] = 4] = "Front";
-    EViewPreset[EViewPreset["Back"] = 5] = "Back";
-    EViewPreset[EViewPreset["None"] = 6] = "None";
-})(EViewPreset = exports.EViewPreset || (exports.EViewPreset = {}));
-var EManipMode;
-(function (EManipMode) {
-    EManipMode[EManipMode["Off"] = 0] = "Off";
-    EManipMode[EManipMode["Pan"] = 1] = "Pan";
-    EManipMode[EManipMode["Orbit"] = 2] = "Orbit";
-    EManipMode[EManipMode["Dolly"] = 3] = "Dolly";
-    EManipMode[EManipMode["Zoom"] = 4] = "Zoom";
-    EManipMode[EManipMode["PanDolly"] = 5] = "PanDolly";
-    EManipMode[EManipMode["Roll"] = 6] = "Roll";
-})(EManipMode || (EManipMode = {}));
-var EManipPhase;
-(function (EManipPhase) {
-    EManipPhase[EManipPhase["Off"] = 0] = "Off";
-    EManipPhase[EManipPhase["Active"] = 1] = "Active";
-    EManipPhase[EManipPhase["Release"] = 2] = "Release";
-})(EManipPhase || (EManipPhase = {}));
-class OrbitManipulator {
+const _vec3c = new THREE.Vector3();
+const _vec3d = new THREE.Vector3();
+const _vec2a = new THREE.Vector2();
+const _vec2b = new THREE.Vector2();
+var EQuadrant;
+(function (EQuadrant) {
+    EQuadrant[EQuadrant["TopRight"] = 0] = "TopRight";
+    EQuadrant[EQuadrant["TopLeft"] = 1] = "TopLeft";
+    EQuadrant[EQuadrant["BottomLeft"] = 2] = "BottomLeft";
+    EQuadrant[EQuadrant["BottomRight"] = 3] = "BottomRight";
+})(EQuadrant = exports.EQuadrant || (exports.EQuadrant = {}));
+/**
+ * A Three.js Object representing a 3D renderable part and a 2D (HTML) part.
+ * HTML sprites should have a [[HTMLSpriteGroup]] as their parent.
+ */
+class HTMLSprite extends THREE.Object3D {
     constructor() {
-        this.orbit = new THREE.Vector3(0, 0, 0);
-        this.offset = new THREE.Vector3(0, 0, 50);
-        this.size = 50;
-        this.zoom = 1;
-        this.minOrbit = new THREE.Vector3(-90, -Infinity, -Infinity);
-        this.maxOrbit = new THREE.Vector3(90, Infinity, Infinity);
-        this.minOffset = new THREE.Vector3(-Infinity, -Infinity, 0.1);
-        this.maxOffset = new THREE.Vector3(Infinity, Infinity, 1000);
-        this.orientationEnabled = true;
-        this.offsetEnabled = true;
-        this.cameraMode = true;
-        this.orthographicMode = false;
-        this.mode = EManipMode.Off;
-        this.phase = EManipPhase.Off;
-        this.prevPinchDist = 0;
-        this.deltaX = 0;
-        this.deltaY = 0;
-        this.deltaPinch = 0;
-        this.deltaWheel = 0;
-        this.viewportWidth = 100;
-        this.viewportHeight = 100;
+        super();
+        this.isHTMLSprite = true;
+        this.viewAngle = 0;
+        this.orientationAngle = 0;
+        this.orientationQuadrant = EQuadrant.TopLeft;
+        this._elements = new Map();
+        this._visible = true;
+        this.frustumCulled = false;
     }
-    onPointer(event) {
-        if (event.isPrimary) {
-            if (event.type === "pointer-down") {
-                this.phase = EManipPhase.Active;
+    get visible() {
+        return this._visible;
+    }
+    set visible(visible) {
+        if (visible !== this._visible && this._elements) {
+            this._visible = visible;
+            this._elements.forEach(element => {
+                if (element) {
+                    this.setHTMLElementVisible(element, visible);
+                }
+            });
+        }
+    }
+    dispose() {
+        this._elements.forEach((element, container) => {
+            if (element) {
+                container.removeChild(element);
             }
-            else if (event.type === "pointer-up") {
-                this.phase = EManipPhase.Release;
-                return true;
-            }
-        }
-        if (event.type === "pointer-down") {
-            this.mode = this.getModeFromEvent(event);
-        }
-        this.deltaX += event.movementX;
-        this.deltaY += event.movementY;
-        // calculate pinch
-        if (event.pointerCount === 2) {
-            const positions = event.activePositions;
-            const dx = positions[1].clientX - positions[0].clientX;
-            const dy = positions[1].clientY - positions[0].clientY;
-            const pinchDist = Math.sqrt(dx * dx + dy * dy);
-            const prevPinchDist = this.prevPinchDist || pinchDist;
-            this.deltaPinch *= prevPinchDist > 0 ? (pinchDist / prevPinchDist) : 1;
-            this.prevPinchDist = pinchDist;
-        }
-        else {
-            this.deltaPinch = 1;
-            this.prevPinchDist = 0;
-        }
-        return true;
+        });
+        this._elements.clear();
     }
-    onTrigger(event) {
-        if (event.type === "wheel") {
-            this.deltaWheel += math_1.default.limit(event.wheel, -1, 1);
-            return true;
-        }
-        return false;
-    }
-    setViewportSize(width, height) {
-        this.viewportWidth = width;
-        this.viewportHeight = height;
-    }
-    setFromCamera(camera, adaptLimits = false) {
-        const orbit = this.orbit;
-        const offset = this.offset;
-        math_2.default.decomposeOrbitMatrix(camera.matrix, orbit, offset);
-        this.orbit.multiplyScalar(math_2.default.RAD2DEG);
-        const cam = camera;
-        if ((this.orthographicMode = cam.isOrthographicCamera)) {
-            this.size = cam.isUniversalCamera ? cam.size : cam.top - cam.bottom;
-        }
-        if (adaptLimits) {
-            this.minOffset.min(offset);
-            this.maxOffset.max(offset);
-        }
-    }
-    setFromObject(object) {
-        math_2.default.decomposeOrbitMatrix(object.matrix, this.orbit, this.offset);
-        this.orbit.multiplyScalar(math_2.default.RAD2DEG);
-        this.orthographicMode = false;
-    }
-    setFromMatrix(matrix, invert = false) {
-        math_2.default.decomposeOrbitMatrix(matrix, this.orbit, this.offset);
-        this.orbit.multiplyScalar(math_2.default.RAD2DEG);
-        this.orthographicMode = false;
-    }
-    /**
-     * Updates the matrix of the given camera. If the camera's projection is orthographic,
-     * updates the camera's size parameter as well.
-     * @param camera
-     */
-    toCamera(camera) {
-        _vec3a.copy(this.orbit).multiplyScalar(math_1.default.DEG2RAD);
-        _vec3b.copy(this.offset);
-        if (this.orthographicMode) {
-            _vec3b.z = this.maxOffset.z;
-        }
-        math_2.default.composeOrbitMatrix(_vec3a, _vec3b, camera.matrix);
-        camera.matrixWorldNeedsUpdate = true;
-        const cam = camera;
-        if (cam.isOrthographicCamera) {
-            if (cam.isUniversalCamera) {
-                cam.size = this.offset.z;
-            }
-            else {
-                const aspect = camera.userData["aspect"] || 1;
-                const halfSize = this.offset.z * 0.5;
-                cam.left = -halfSize * aspect;
-                cam.right = halfSize * aspect;
-                cam.bottom = -halfSize;
-                cam.top = halfSize;
-            }
-            cam.updateProjectionMatrix();
+    disposeHTMLElement(container) {
+        const element = this._elements.get(container);
+        if (element) {
+            this._elements.delete(container);
+            container.removeChild(element);
         }
     }
     /**
-     * Sets the given object's matrix from the manipulator's current orbit and offset.
-     * @param object
-     */
-    toObject(object) {
-        _vec3a.copy(this.orbit).multiplyScalar(math_1.default.DEG2RAD);
-        _vec3b.copy(this.offset);
-        if (this.orthographicMode) {
-            _vec3b.z = this.maxOffset.z;
-        }
-        math_2.default.composeOrbitMatrix(_vec3a, _vec3b, object.matrix);
-        object.matrixWorldNeedsUpdate = true;
-    }
-    /**
-     * Sets the given matrix from the manipulator's current orbit and offset.
-     * @param matrix
-     */
-    toMatrix(matrix) {
-        _vec3a.copy(this.orbit).multiplyScalar(math_1.default.DEG2RAD);
-        _vec3b.copy(this.offset);
-        if (this.orthographicMode) {
-            _vec3b.z = this.maxOffset.z;
-        }
-        math_2.default.composeOrbitMatrix(_vec3a, _vec3b, matrix);
-    }
-    /**
-     * Updates the manipulator.
-     * @returns true if the state has changed during the update.
+     * Called when the 3D parts of the sprite should be updated because
+     * the underlying data has been changed.
      */
     update() {
-        if (this.phase === EManipPhase.Off && this.deltaWheel === 0) {
-            return false;
-        }
-        if (this.deltaWheel !== 0) {
-            this.updatePose(0, 0, this.deltaWheel * 0.07 + 1, 0, 0, 0);
-            this.deltaWheel = 0;
-            return true;
-        }
-        if (this.phase === EManipPhase.Active) {
-            if (this.deltaX === 0 && this.deltaY === 0 && this.deltaPinch === 1) {
-                return false;
+        this._elements.forEach(element => {
+            if (element) {
+                this.updateHTMLElement(element);
             }
-            this.updateByMode();
-            this.deltaX = 0;
-            this.deltaY = 0;
-            this.deltaPinch = 1;
-            return true;
-        }
-        else if (this.phase === EManipPhase.Release) {
-            this.deltaX *= 0.85;
-            this.deltaY *= 0.85;
-            this.deltaPinch = 1;
-            this.updateByMode();
-            const delta = Math.abs(this.deltaX) + Math.abs(this.deltaY);
-            if (delta < 0.1) {
-                this.mode = EManipMode.Off;
-                this.phase = EManipPhase.Off;
-            }
-            return true;
-        }
-        return false;
+        });
     }
-    updateByMode() {
-        switch (this.mode) {
-            case EManipMode.Orbit:
-                this.updatePose(0, 0, 1, this.deltaY, this.deltaX, 0);
-                break;
-            case EManipMode.Pan:
-                this.updatePose(this.deltaX, this.deltaY, 1, 0, 0, 0);
-                break;
-            case EManipMode.Roll:
-                this.updatePose(0, 0, 1, 0, 0, this.deltaX);
-                break;
-            case EManipMode.Dolly:
-                this.updatePose(0, 0, this.deltaY * 0.0075 + 1, 0, 0, 0);
-                break;
-            case EManipMode.PanDolly:
-                const pinchScale = (this.deltaPinch - 1) * 0.5 + 1;
-                this.updatePose(this.deltaX, this.deltaY, 1 / pinchScale, 0, 0, 0);
-                break;
+    /**
+     * Called when the model-view of the sprite has changed.
+     * This updates the position and orientation of the HTML element.
+     * @param container
+     * @param anchor
+     * @param camera
+     */
+    renderHTMLElement(container, camera, anchor) {
+        anchor = anchor || this;
+        let element = this._elements.get(container);
+        if (!element) {
+            element = this.createHTMLElement();
+            if (element) {
+                container.appendChild(element);
+                this._elements.set(container, element);
+            }
+        }
+        if (!element) {
+            return null;
+        }
+        _vec3a.set(0, 0, 0);
+        _vec3a.applyMatrix4(anchor.modelViewMatrix);
+        _vec3b.set(0, 1, 0);
+        _vec3b.applyMatrix4(anchor.modelViewMatrix);
+        _vec3c.copy(_vec3b).sub(_vec3a).normalize();
+        _vec3d.set(0, 0, 1);
+        this.viewAngle = _vec3c.angleTo(_vec3d);
+        _vec3a.applyMatrix4(camera.projectionMatrix);
+        _vec3b.applyMatrix4(camera.projectionMatrix);
+        _vec2b.set(_vec3b.x, _vec3b.y);
+        _vec2a.set(_vec3a.x, _vec3a.y);
+        _vec2b.sub(_vec2a);
+        const x = (_vec3b.x + 1) * 0.5 * container.clientWidth;
+        const y = (1 - _vec3b.y) * 0.5 * container.clientHeight;
+        element.style.left = x.toString() + "px";
+        element.style.top = y.toString() + "px";
+        const angle = this.orientationAngle = _vec2b.angle();
+        this.orientationQuadrant = Math.floor(2 * angle / Math.PI);
+        return element;
+    }
+    /**
+     * Called when the sprite becomes visible in a viewport.
+     * Returns a HTML element to visualize the 2D part of the sprite in the viewport.
+     */
+    createHTMLElement() {
+        return null;
+    }
+    /**
+     * Called when the HTML parts of the sprite should be updated because
+     * the underlying data has been changed. This is called once for each viewport
+     * the sprite is represented in with a HTML element.
+     * @param element The HTML element that should be updated.
+     */
+    updateHTMLElement(element) {
+    }
+    /**
+     * Called when the visibility of the sprite changes.
+     * @param element The HTML element whose visibility should be changed.
+     * @param visible true if the sprite is currently visible.
+     */
+    setHTMLElementVisible(element, visible) {
+        element.style.display = visible ? "block" : "none";
+    }
+}
+exports.default = HTMLSprite;
+
+
+/***/ }),
+
+/***/ "../../libs/ff-three/source/HTMLSpriteGroup.ts":
+/*!****************************************************!*\
+  !*** /app/libs/ff-three/source/HTMLSpriteGroup.ts ***!
+  \****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const THREE = __webpack_require__(/*! three */ "three");
+const HTMLSprite_1 = __webpack_require__(/*! ./HTMLSprite */ "../../libs/ff-three/source/HTMLSprite.ts");
+exports.HTMLSprite = HTMLSprite_1.default;
+class HTMLSpriteGroup extends THREE.Object3D {
+    constructor() {
+        super(...arguments);
+        this.isHTMLSpriteGroup = true;
+        this._visible = true;
+    }
+    get visible() {
+        return this._visible;
+    }
+    set visible(visible) {
+        if (visible !== this._visible) {
+            this._visible = visible;
+            const children = this.children;
+            for (let i = 0, n = children.length; i < n; ++i) {
+                children[i].visible = visible;
+            }
         }
     }
-    updatePose(dX, dY, dScale, dPitch, dHead, dRoll) {
-        const { orbit, minOrbit, maxOrbit, offset, minOffset, maxOffset } = this;
-        let inverse = this.cameraMode ? -1 : 1;
-        if (this.orientationEnabled) {
-            orbit.x += inverse * dPitch * 300 / this.viewportHeight;
-            orbit.y += inverse * dHead * 300 / this.viewportHeight;
-            orbit.z += inverse * dRoll * 300 / this.viewportHeight;
-            // check limits
-            orbit.x = math_1.default.limit(orbit.x, minOrbit.x, maxOrbit.x);
-            orbit.y = math_1.default.limit(orbit.y, minOrbit.y, maxOrbit.y);
-            orbit.z = math_1.default.limit(orbit.z, minOrbit.z, maxOrbit.z);
-        }
-        if (this.offsetEnabled) {
-            const factor = offset.z = dScale * offset.z;
-            offset.x += dX * factor * inverse * 2 / this.viewportHeight;
-            offset.y -= dY * factor * inverse * 2 / this.viewportHeight;
-            // check limits
-            offset.x = math_1.default.limit(offset.x, minOffset.x, maxOffset.x);
-            offset.y = math_1.default.limit(offset.y, minOffset.y, maxOffset.y);
-            offset.z = math_1.default.limit(offset.z, minOffset.z, maxOffset.z);
+    dispose() {
+        const children = this.children;
+        for (let i = 0, n = children.length; i < n; ++i) {
+            children[i].dispose();
         }
     }
-    getModeFromEvent(event) {
-        if (event.source === "mouse") {
-            const button = event.originalEvent.button;
-            // left button
-            if (button === 0) {
-                if (event.ctrlKey) {
-                    return EManipMode.Pan;
-                }
-                if (event.altKey) {
-                    return EManipMode.Dolly;
-                }
-                return EManipMode.Orbit;
-            }
-            // right button
-            if (button === 2) {
-                if (event.altKey) {
-                    return EManipMode.Roll;
-                }
-                else {
-                    return EManipMode.Pan;
-                }
-            }
-            // middle button
-            if (button === 1) {
-                return EManipMode.Dolly;
-            }
+    disposeHTMLContainer(container) {
+        const children = this.children;
+        for (let i = 0, n = children.length; i < n; ++i) {
+            children[i].disposeHTMLElement(container);
         }
-        else if (event.source === "touch") {
-            const count = event.pointerCount;
-            if (count === 1) {
-                return EManipMode.Orbit;
-            }
-            if (count === 2) {
-                return EManipMode.PanDolly;
-            }
-            return EManipMode.Pan;
+    }
+    render(container, camera) {
+        if (!this.visible) {
+            return;
+        }
+        const children = this.children;
+        for (let i = 0, n = children.length; i < n; ++i) {
+            children[i].renderHTMLElement(container, camera);
+        }
+    }
+    update() {
+        const children = this.children;
+        for (let i = 0, n = children.length; i < n; ++i) {
+            children[i].update();
         }
     }
 }
-exports.default = OrbitManipulator;
+exports.default = HTMLSpriteGroup;
 
 
 /***/ }),
@@ -7676,145 +9511,214 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const THREE = __webpack_require__(/*! three */ "three");
 const Publisher_1 = __webpack_require__(/*! @ff/core/Publisher */ "../../libs/ff-core/source/Publisher.ts");
 const UniversalCamera_1 = __webpack_require__(/*! ./UniversalCamera */ "../../libs/ff-three/source/UniversalCamera.ts");
-const OrbitManipulator_1 = __webpack_require__(/*! ./OrbitManipulator */ "../../libs/ff-three/source/OrbitManipulator.ts");
+const ViewportOverlay_1 = __webpack_require__(/*! ./ui/ViewportOverlay */ "../../libs/ff-three/source/ui/ViewportOverlay.ts");
+const CameraController_1 = __webpack_require__(/*! ./CameraController */ "../../libs/ff-three/source/CameraController.ts");
 class Viewport extends Publisher_1.default {
-    constructor(left, top, width, height) {
+    constructor(props) {
         super();
         this.next = null;
+        this._canvasWidth = 1;
+        this._canvasHeight = 1;
+        this._overlay = null;
+        this._camera = null;
+        this._controller = null;
         this.addEvent("dispose");
         this.next = null;
+        props = props || {};
         this._relRect = {
-            left: left || 0,
-            top: top || 0,
-            width: width || 1,
-            height: height || 1
+            x: props.x || 0,
+            y: props.y || 0,
+            width: props.width || 1,
+            height: props.height || 1
         };
         this._absRect = {
-            left: 0,
-            top: 0,
+            x: 0,
+            y: 0,
             width: 1,
             height: 1
         };
-        this._canvasWidth = 1;
-        this._canvasHeight = 1;
-        this._sceneCamera = null;
-        this._vpCamera = null;
-        this._manip = null;
+        if (props.overlay) {
+            this._overlay = props.overlay;
+        }
     }
-    get left() {
-        return this._absRect.left;
+    /**
+     * The x-coordinate of the viewport's bottom-left corner in canvas pixels. The origin is at the bottom left.
+     */
+    get x() {
+        return this._absRect.x;
     }
-    get top() {
-        return this._absRect.top;
+    /**
+     * The y-coordinate of the viewport's bottom-left corner in canvas pixels. The origin is at the bottom left.
+     */
+    get y() {
+        return this._absRect.y;
     }
+    /**
+     * The viewport's width in canvas pixels.
+     */
     get width() {
         return this._absRect.width;
     }
+    /**
+     * The viewport's height in canvas pixels.
+     */
     get height() {
         return this._absRect.height;
     }
+    /** The width of the canvas in pixels. */
     get canvasWidth() {
         return this._canvasWidth;
     }
+    /**
+     * The height of the canvas in pixels.
+     */
     get canvasHeight() {
         return this._canvasHeight;
     }
+    /** The viewport's built-in camera. */
     get camera() {
-        return this._vpCamera || this._sceneCamera;
+        return this._camera;
     }
-    get sceneCamera() {
-        return this._sceneCamera;
+    /**
+     * The controller of the build-in camera.
+     */
+    get controller() {
+        return this._controller;
     }
-    get viewportCamera() {
-        return this._vpCamera;
+    /**
+     * The viewport's overlay HTML element.
+     */
+    get overlay() {
+        return this._overlay;
     }
-    get manip() {
-        return this._manip;
+    set overlay(overlay) {
+        this._overlay = overlay;
+        this.updateGeometry();
     }
+    /**
+     * Frees all resources the viewport object may have claimed.
+     */
     dispose() {
         console.log("Viewport.dispose - " + this.toString());
         this.emit({ type: "dispose", viewport: this });
+        if (this._overlay) {
+            this._overlay.remove();
+            this._overlay = null;
+        }
     }
-    setSize(left, top, width, height) {
+    /**
+     * Sets the size of the viewport in relative coordinates (origin at the bottom left, canvas width and height are 1).
+     */
+    setSize(x, y, width, height) {
         const relRect = this._relRect;
-        relRect.left = left;
-        relRect.top = top;
+        relRect.x = x;
+        relRect.y = y;
         relRect.width = width;
         relRect.height = height;
-        this.updateViewport();
+        this.updateGeometry();
     }
+    /**
+     *  Sets the size of the rendering canvas in pixels.
+     */
     setCanvasSize(width, height) {
         this._canvasWidth = width;
         this._canvasHeight = height;
-        this.updateViewport();
-        if (this._manip) {
-            this._manip.setViewportSize(width, height);
+        this.updateGeometry();
+        if (this._controller) {
+            this._controller.setViewportSize(width, height);
         }
     }
+    /** Creates or updates a built-in camera for the viewport. This camera will be used for rendering
+     * instead of the scene camera.
+     * @param type The camera's projection type (perspective or orthographic).
+     * @param preset The camera's preset view (one of six principal directions).
+     */
     setBuiltInCamera(type, preset) {
-        if (!this._vpCamera) {
-            this._vpCamera = new UniversalCamera_1.default(type);
-            this._vpCamera.matrixAutoUpdate = false;
+        if (!this._camera) {
+            this._camera = new UniversalCamera_1.default(type);
+            this._camera.matrixAutoUpdate = false;
         }
         else {
-            this._vpCamera.setProjection(type);
+            this._camera.setProjection(type);
         }
         if (preset !== undefined) {
-            this._vpCamera.setPreset(preset);
+            this._camera.setPreset(preset);
+            this.overlay.setLabel(ViewportOverlay_1.ELocation.TopRight, "view", UniversalCamera_1.EViewPreset[preset], "ff-label-box");
         }
     }
+    /**
+     * Removes a previously set built-in camera. The scene camera will be used for rendering.
+     */
     unsetBuiltInCamera() {
-        this._vpCamera = null;
+        this._camera = null;
+        this._controller = null;
+        this.overlay.unsetLabel(ViewportOverlay_1.ELocation.TopRight, "view");
     }
-    enableCameraManip(state) {
-        if (!state && this._manip) {
-            this._manip = null;
+    enableCameraControl(state) {
+        if (!state && this._controller) {
+            this._controller = null;
         }
-        else if (state && this._vpCamera) {
-            if (!this._manip) {
-                this._manip = new OrbitManipulator_1.default();
-                this._manip.setViewportSize(this.width, this.height);
-                this._manip.setFromCamera(this._vpCamera);
+        else if (state && this._camera) {
+            if (!this._controller) {
+                this._controller = new CameraController_1.default(this._camera);
+                this._controller.setViewportSize(this.width, this.height);
+                this._controller.updateController();
             }
         }
-        return this._manip;
+        return this._controller;
     }
-    moveCameraToView(box) {
-        const camera = this.viewportCamera;
-        const manip = this._manip;
-        if (camera) {
-            camera.moveToView(box);
-            if (manip) {
-                manip.setFromCamera(camera, true);
-            }
+    /**
+     * Centers and positions the built-in camera such that the given box is entirely visible.
+     * Does nothing if the viewport doesn't have a built-in camera and controller.
+     * @param box
+     */
+    zoomExtents(box) {
+        const camera = this._camera;
+        const controller = this._controller;
+        if (camera && controller) {
+            controller.zoomExtents(box);
+            controller.updateCamera(null, true);
         }
+    }
+    /**
+     * Tests whether the pointer coordinates of the given UI event lie inside the viewport.
+     * @param event
+     */
+    isInside(event) {
+        return this.isPointInside(event.localX, event.localY);
     }
     isPointInside(x, y) {
         const absRect = this._absRect;
-        return x >= absRect.left && x < absRect.left + absRect.width
-            && y >= absRect.top && y < absRect.top + absRect.height;
+        y = this.canvasHeight - y;
+        return x >= absRect.x && x < absRect.x + absRect.width
+            && y >= absRect.y && y < absRect.y + absRect.height;
     }
-    getDevicePoint(x, y, result) {
+    /**
+     * Transforms the given local screen coordinates to normalized device coordinates.
+     * @param localX canvas-local x coordinate.
+     * @param localY canvas-local y coordinate.
+     * @param result An optional 2-vector receiving the transformed coordinates.
+     */
+    getDevicePoint(localX, localY, result) {
         const absRect = this._absRect;
-        const ndx = ((x - absRect.left) / absRect.width) * 2 - 1;
-        const ndy = 1 - ((y - absRect.top) / absRect.height) * 2;
+        const ndx = ((localX - absRect.x) / absRect.width) * 2 - 1;
+        const ndy = ((this.canvasHeight - localY - absRect.y) / absRect.height) * 2 - 1;
         return result ? result.set(ndx, ndy) : new THREE.Vector2(ndx, ndy);
     }
     getDeviceX(x) {
         const absRect = this._absRect;
-        return ((x - absRect.left) / absRect.width) * 2 - 1;
+        return ((x - absRect.x) / absRect.width) * 2 - 1;
     }
     getDeviceY(y) {
         const absRect = this._absRect;
-        return 1 - ((y - absRect.top) / absRect.height) * 2;
+        return ((this.canvasHeight - y - absRect.y) / absRect.height) * 2 - 1;
     }
     updateCamera(sceneCamera) {
         let currentCamera = sceneCamera;
-        if (this._vpCamera) {
-            currentCamera = this._vpCamera;
-            if (this._manip) {
-                this._manip.update();
-                this._manip.toCamera(currentCamera);
+        if (this._camera) {
+            currentCamera = this._camera;
+            if (this._controller) {
+                this._controller.updateCamera();
             }
         }
         if (!currentCamera) {
@@ -7839,14 +9743,14 @@ class Viewport extends Publisher_1.default {
     }
     applyViewport(renderer) {
         const absRect = this._absRect;
-        renderer.setViewport(absRect.left, absRect.top, absRect.width, absRect.height);
+        renderer.setViewport(absRect.x, absRect.y, absRect.width, absRect.height);
         renderer["viewport"] = this;
     }
     applyPickViewport(target, event) {
         const absRect = this._absRect;
-        const left = event.localX - absRect.left;
-        const top = event.localY - absRect.top;
-        target.viewport.set(-left, -absRect.height + top, absRect.width, absRect.height);
+        const x = event.localX - absRect.x;
+        const y = this.canvasHeight - event.localY - absRect.y;
+        target.viewport.set(-x, -y, absRect.width, absRect.height);
         //console.log("Viewport.applyPickViewport - offset: ", -left, -top);
     }
     toViewportEvent(event) {
@@ -7856,33 +9760,38 @@ class Viewport extends Publisher_1.default {
         vpEvent.deviceY = this.getDeviceY(event.localY);
         return vpEvent;
     }
-    isInside(event) {
-        return this.isPointInside(event.localX, event.localY);
-    }
     onPointer(event) {
-        if (this._manip) {
-            return this._manip.onPointer(event);
+        if (this._controller) {
+            return this._controller.onPointer(event);
         }
         return false;
     }
     onTrigger(event) {
-        if (this._manip) {
-            return this._manip.onTrigger(event);
+        if (this._controller) {
+            return this._controller.onTrigger(event);
         }
         return false;
     }
     toString() {
-        return `Viewport (left: ${this.left}, top: ${this.top}, width: ${this.width}, height: ${this.height})`;
+        return `Viewport (x: ${this.x}, y: ${this.y}, width: ${this.width}, height: ${this.height})`;
     }
-    updateViewport() {
+    updateGeometry() {
         const relRect = this._relRect;
         const absRect = this._absRect;
         const canvasWidth = this._canvasWidth;
         const canvasHeight = this._canvasHeight;
-        absRect.left = Math.round(relRect.left * canvasWidth);
-        absRect.top = Math.round(relRect.top * canvasHeight);
+        absRect.x = Math.round(relRect.x * canvasWidth);
+        absRect.y = Math.round(relRect.y * canvasHeight);
         absRect.width = Math.round(relRect.width * canvasWidth);
         absRect.height = Math.round(relRect.height * canvasHeight);
+        const overlay = this._overlay;
+        if (overlay) {
+            const top = this.canvasHeight - absRect.y - absRect.height;
+            overlay.style.left = (absRect.x ? absRect.x.toFixed() + "px" : "0");
+            overlay.style.top = (top ? top.toFixed() + "px" : "0");
+            overlay.style.width = absRect.width.toFixed() + "px";
+            overlay.style.height = absRect.height.toFixed() + "px";
+        }
     }
 }
 exports.default = Viewport;
@@ -8247,6 +10156,9 @@ exports.default = NormalShader;
 Object.defineProperty(exports, "__esModule", { value: true });
 const THREE = __webpack_require__(/*! three */ "three");
 ////////////////////////////////////////////////////////////////////////////////
+/**
+ * Renders the local position, requires one pass per component (x, y, z).
+ */
 class PositionShader extends THREE.ShaderMaterial {
     constructor() {
         super(...arguments);
@@ -8265,7 +10177,7 @@ class PositionShader extends THREE.ShaderMaterial {
         ].join("\n");
         this.fragmentShader = [
             "uniform float index;",
-            "uniform float range;",
+            "uniform vec2 range;",
             "varying vec3 vLocalPosition;",
             "vec4 toVec4(float v) {",
             "  float vn = (v - range.x) / (range.y - range.x);",
@@ -8278,11 +10190,129 @@ class PositionShader extends THREE.ShaderMaterial {
             "void main() {",
             "  gl_FragColor = (index == 0.0 ? toVec4(vLocalPosition.x)",
             "    : (index == 1.0 ? toVec4(vLocalPosition.y) : toVec4(vLocalPosition.z)));",
-            "  }"
+            "}"
         ].join("\n");
     }
 }
 exports.default = PositionShader;
+
+
+/***/ }),
+
+/***/ "../../libs/ff-three/source/shaders/floorPhongShader.frag":
+/*!***************************************************************!*\
+  !*** /app/libs/ff-three/source/shaders/floorPhongShader.frag ***!
+  \***************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "\n#define PHONG\n\nuniform vec3 diffuse;\nuniform vec3 emissive;\nuniform vec3 specular;\nuniform float shininess;\nuniform float opacity;\n\n#include <common>\n#include <packing>\n#include <dithering_pars_fragment>\n#include <color_pars_fragment>\n\n// #include <uv_pars_fragment>\n// replaced with\nvarying vec2 vUv;\n\n#include <uv2_pars_fragment>\n#include <map_pars_fragment>\n#include <alphamap_pars_fragment>\n#include <aomap_pars_fragment>\n#include <lightmap_pars_fragment>\n#include <emissivemap_pars_fragment>\n#include <envmap_pars_fragment>\n#include <gradientmap_pars_fragment>\n#include <fog_pars_fragment>\n#include <bsdfs>\n#include <lights_pars_begin>\n#include <lights_phong_pars_fragment>\n#include <shadowmap_pars_fragment>\n#include <bumpmap_pars_fragment>\n#include <normalmap_pars_fragment>\n#include <specularmap_pars_fragment>\n#include <logdepthbuf_pars_fragment>\n#include <clipping_planes_pars_fragment>\n\nvoid main() {\n\n\t#include <clipping_planes_fragment>\n\n\tvec4 diffuseColor = vec4( diffuse, opacity );\n\tReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );\n\tvec3 totalEmissiveRadiance = emissive;\n\n\t#include <logdepthbuf_fragment>\n\t#include <map_fragment>\n\t#include <color_fragment>\n\t#include <alphamap_fragment>\n\t#include <alphatest_fragment>\n\t#include <specularmap_fragment>\n\t#include <normal_fragment_begin>\n\t#include <normal_fragment_maps>\n\t#include <emissivemap_fragment>\n\n\t// accumulation\n\t#include <lights_phong_fragment>\n\t#include <lights_fragment_begin>\n\t#include <lights_fragment_maps>\n\t#include <lights_fragment_end>\n\n\t// modulation\n\t#include <aomap_fragment>\n\n\tvec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + reflectedLight.directSpecular + reflectedLight.indirectSpecular + totalEmissiveRadiance;\n\n\t#include <envmap_fragment>\n\n    vec2 coords = vUv * 2.0 - 1.0;\n    float f = dot(coords, coords);\n\tgl_FragColor = vec4(outgoingLight, mix(diffuseColor.a, 0.0, f));\n\n\t#include <tonemapping_fragment>\n\t#include <encodings_fragment>\n\t#include <fog_fragment>\n\t#include <premultiplied_alpha_fragment>\n\t#include <dithering_fragment>\n}\n\n"
+
+/***/ }),
+
+/***/ "../../libs/ff-three/source/shaders/floorPhongShader.vert":
+/*!***************************************************************!*\
+  !*** /app/libs/ff-three/source/shaders/floorPhongShader.vert ***!
+  \***************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "\n#define PHONG\n\nvarying vec3 vViewPosition;\n\n#ifndef FLAT_SHADED\n\n\tvarying vec3 vNormal;\n\n#endif\n\n#include <common>\n\n// #include <uv_pars_vertex>\n// replaced with\nvarying vec2 vUv;\nuniform mat3 uvTransform;\n\n#include <uv2_pars_vertex>\n#include <displacementmap_pars_vertex>\n#include <envmap_pars_vertex>\n#include <color_pars_vertex>\n#include <fog_pars_vertex>\n#include <morphtarget_pars_vertex>\n#include <skinning_pars_vertex>\n#include <shadowmap_pars_vertex>\n#include <logdepthbuf_pars_vertex>\n#include <clipping_planes_pars_vertex>\n\nvoid main() {\n\n\t// #include <uv_vertex>\n\t// replaced with\n\tvUv = ( uvTransform * vec3( uv, 1 ) ).xy;\n\n\t#include <uv2_vertex>\n\t#include <color_vertex>\n\n\t#include <beginnormal_vertex>\n\t#include <morphnormal_vertex>\n\t#include <skinbase_vertex>\n\t#include <skinnormal_vertex>\n\t#include <defaultnormal_vertex>\n\n#ifndef FLAT_SHADED // Normal computed with derivatives when FLAT_SHADED\n\n\tvNormal = normalize( transformedNormal );\n\n#endif\n\n\t#include <begin_vertex>\n\t#include <morphtarget_vertex>\n\t#include <skinning_vertex>\n\t#include <displacementmap_vertex>\n\t#include <project_vertex>\n\t#include <logdepthbuf_vertex>\n\t#include <clipping_planes_vertex>\n\n\tvViewPosition = - mvPosition.xyz;\n\n\t#include <worldpos_vertex>\n\t#include <envmap_vertex>\n\t#include <shadowmap_vertex>\n\t#include <fog_vertex>\n\n}\n\n"
+
+/***/ }),
+
+/***/ "../../libs/ff-three/source/ui/ViewportOverlay.ts":
+/*!*******************************************************!*\
+  !*** /app/libs/ff-three/source/ui/ViewportOverlay.ts ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const CustomElement_1 = __webpack_require__(/*! @ff/ui/CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
+////////////////////////////////////////////////////////////////////////////////
+/** Location enumeration for [[ViewportOverlay]]. */
+var ELocation;
+(function (ELocation) {
+    ELocation[ELocation["TopLeft"] = 0] = "TopLeft";
+    ELocation[ELocation["TopCenter"] = 1] = "TopCenter";
+    ELocation[ELocation["TopRight"] = 2] = "TopRight";
+    ELocation[ELocation["BottomLeft"] = 3] = "BottomLeft";
+    ELocation[ELocation["BottomCenter"] = 4] = "BottomCenter";
+    ELocation[ELocation["BottomRight"] = 5] = "BottomRight";
+})(ELocation = exports.ELocation || (exports.ELocation = {}));
+/**
+ * Custom HTML Element to be used as an overlay on top of a viewport.
+ * Labels can be added to the overlay in six different locations. Each label is associated
+ * with a key. Use the key to change or remove the label. Each label can be styled differently
+ * using custom CSS classes.
+ */
+let ViewportOverlay = class ViewportOverlay extends CustomElement_1.default {
+    constructor() {
+        super();
+        this.labels = [];
+        this.labels.push({}, {}, {}, {}, {}, {});
+    }
+    setLabel(location, key, text, className) {
+        this.labels[location][key] = { text, className };
+        this.performUpdate();
+    }
+    unsetLabel(location, key) {
+        delete this.labels[location][key];
+        this.performUpdate();
+    }
+    firstConnected() {
+        this.classList.add("ff-container", "ff-viewport-overlay");
+    }
+    render() {
+        const labels = this.labels;
+        return CustomElement_1.html `<div class="ff-row">
+            <div class="ff-labels ff-top-left">${Object.keys(labels[ELocation.TopLeft]).map(key => {
+            const label = labels[ELocation.TopLeft][key];
+            return CustomElement_1.html `<div class=${"ff-label " + label.className || false}>${label.text}</div>`;
+        })}</div>
+            <div class="ff-labels ff-top-center">${Object.keys(labels[ELocation.TopCenter]).map(key => {
+            const label = labels[ELocation.TopCenter][key];
+            return CustomElement_1.html `<div class=${"ff-label " + label.className || false}>${label.text}</div>`;
+        })}</div>
+            <div class="ff-labels ff-top-right">${Object.keys(labels[ELocation.TopRight]).map(key => {
+            const label = labels[ELocation.TopRight][key];
+            return CustomElement_1.html `<div class=${"ff-label " + label.className || false}>${label.text}</div>`;
+        })}</div>
+        </div><div class="ff-row">
+            <div class="ff-labels ff-bottom-left">${Object.keys(labels[ELocation.BottomLeft]).map(key => {
+            const label = labels[ELocation.BottomLeft][key];
+            return CustomElement_1.html `<div class=${"ff-label " + label.className || false}>${label.text}</div>`;
+        })}</div>
+            <div class="ff-labels ff-bottom-center">${Object.keys(labels[ELocation.BottomCenter]).map(key => {
+            const label = labels[ELocation.BottomCenter][key];
+            return CustomElement_1.html `<div class=${"ff-label " + label.className || false}>${label.text}</div>`;
+        })}</div>
+            <div class="ff-labels ff-bottom-right">${Object.keys(labels[ELocation.BottomRight]).map(key => {
+            const label = labels[ELocation.BottomRight][key];
+            return CustomElement_1.html `<div class=${"ff-label " + label.className || false}>${label.text}</div>`;
+        })}</div>
+        </div>`;
+    }
+};
+ViewportOverlay = __decorate([
+    CustomElement_1.customElement("ff-viewport-overlay")
+], ViewportOverlay);
+exports.default = ViewportOverlay;
 
 
 /***/ }),
@@ -8432,6 +10462,9 @@ let CustomElement = CustomElement_1 = class CustomElement extends lit_element_1.
     }
     disconnected() {
     }
+    onUpdate() {
+        this.requestUpdate();
+    }
 };
 CustomElement.tagName = "ff-custom-element";
 CustomElement.shady = false;
@@ -8499,6 +10532,9 @@ let QuadSplitter = class QuadSplitter extends CustomElement_1.default {
         this.layout = EQuadViewLayout.Single;
         this.horizontalPosition = 0.5;
         this.verticalPosition = 0.5;
+    }
+    firstConnected() {
+        this.classList.add("ff-quad-splitter");
     }
     render() {
         const layout = this.layout;
@@ -8616,6 +10652,7 @@ let Splitter = Splitter_1 = class Splitter extends CustomElement_1.default {
         });
     }
     firstUpdated() {
+        this.classList.add("ff-splitter");
         this.setAttribute("touch-action", "none");
         this.setStyle({
             position: "relative",
@@ -8770,6 +10807,7 @@ var customKeyword = __webpack_require__(/*! ./keyword */ "../../node_modules/ajv
 Ajv.prototype.addKeyword = customKeyword.add;
 Ajv.prototype.getKeyword = customKeyword.get;
 Ajv.prototype.removeKeyword = customKeyword.remove;
+Ajv.prototype.validateKeyword = customKeyword.validate;
 
 var errorClasses = __webpack_require__(/*! ./compile/error_classes */ "../../node_modules/ajv/lib/compile/error_classes.js");
 Ajv.ValidationError = errorClasses.Validation;
@@ -8778,7 +10816,7 @@ Ajv.$dataMetaSchema = $dataMetaSchema;
 
 var META_SCHEMA_ID = 'http://json-schema.org/draft-07/schema';
 
-var META_IGNORE_OPTIONS = [ 'removeAdditional', 'useDefaults', 'coerceTypes' ];
+var META_IGNORE_OPTIONS = [ 'removeAdditional', 'useDefaults', 'coerceTypes', 'strictDefaults' ];
 var META_SUPPORT_DATA = ['/properties'];
 
 /**
@@ -8810,7 +10848,7 @@ function Ajv(opts) {
   if (opts.formats) addInitialFormats(this);
   addDefaultMetaSchema(this);
   if (typeof opts.meta == 'object') this.addMetaSchema(opts.meta);
-  if (opts.nullable) this.addKeyword('nullable', {metaSchema: {const: true}});
+  if (opts.nullable) this.addKeyword('nullable', {metaSchema: {type: 'boolean'}});
   addInitialSchemas(this);
 }
 
@@ -9850,13 +11888,21 @@ function compile(schema, root, localRefs, baseId) {
   }
 
   function useCustomRule(rule, schema, parentSchema, it) {
-    var validateSchema = rule.definition.validateSchema;
-    if (validateSchema && self._opts.validateSchema !== false) {
-      var valid = validateSchema(schema);
-      if (!valid) {
-        var message = 'keyword schema is invalid: ' + self.errorsText(validateSchema.errors);
-        if (self._opts.validateSchema == 'log') self.logger.error(message);
-        else throw new Error(message);
+    if (self._opts.validateSchema !== false) {
+      var deps = rule.definition.dependencies;
+      if (deps && !deps.every(function(keyword) {
+        return Object.prototype.hasOwnProperty.call(parentSchema, keyword);
+      }))
+        throw new Error('parent schema must have all required keywords: ' + deps.join(','));
+
+      var validateSchema = rule.definition.validateSchema;
+      if (validateSchema) {
+        var valid = validateSchema(schema);
+        if (!valid) {
+          var message = 'keyword schema is invalid: ' + self.errorsText(validateSchema.errors);
+          if (self._opts.validateSchema == 'log') self.logger.error(message);
+          else throw new Error(message);
+        }
       }
     }
 
@@ -10288,7 +12334,7 @@ module.exports = function rules() {
 
   var ALL = [ 'type', '$comment' ];
   var KEYWORDS = [
-    '$schema', '$id', 'id', '$data', 'title',
+    '$schema', '$id', 'id', '$data', '$async', 'title',
     'description', 'default', 'definitions',
     'examples', 'readOnly', 'writeOnly',
     'contentMediaType', 'contentEncoding',
@@ -10416,6 +12462,7 @@ module.exports = {
   finalCleanUpCode: finalCleanUpCode,
   schemaHasRules: schemaHasRules,
   schemaHasRulesExcept: schemaHasRulesExcept,
+  schemaUnknownRules: schemaUnknownRules,
   toQuotedString: toQuotedString,
   getPathExpr: getPathExpr,
   getPath: getPath,
@@ -10579,6 +12626,12 @@ function schemaHasRules(schema, rules) {
 function schemaHasRulesExcept(schema, rules, exceptKeyword) {
   if (typeof schema == 'boolean') return !schema && exceptKeyword != 'not';
   for (var key in schema) if (key != exceptKeyword && rules[key]) return true;
+}
+
+
+function schemaUnknownRules(schema, rules) {
+  if (typeof schema == 'boolean') return;
+  for (var key in schema) if (!rules[key]) return key;
 }
 
 
@@ -13796,6 +15849,14 @@ module.exports = function generate_validate(it, $keyword, $ruleType) {
   var $async = it.schema.$async === true,
     $refKeywords = it.util.schemaHasRulesExcept(it.schema, it.RULES.all, '$ref'),
     $id = it.self._getId(it.schema);
+  if (it.opts.strictKeywords) {
+    var $unknownKwd = it.util.schemaUnknownRules(it.schema, it.RULES.keywords);
+    if ($unknownKwd) {
+      var $keywordsMsg = 'unknown keyword: ' + $unknownKwd;
+      if (it.opts.strictKeywords === 'log') it.logger.warn($keywordsMsg);
+      else throw new Error($keywordsMsg);
+    }
+  }
   if (it.isTop) {
     out += ' var validate = ';
     if ($async) {
@@ -13876,6 +15937,11 @@ module.exports = function generate_validate(it, $keyword, $ruleType) {
     it.baseId = it.baseId || it.rootId;
     delete it.isTop;
     it.dataPathArr = [undefined];
+    if (it.schema.default !== undefined && it.opts.useDefaults && it.opts.strictDefaults) {
+      var $defaultMsg = 'default is ignored in the schema root';
+      if (it.opts.strictDefaults === 'log') it.logger.warn($defaultMsg);
+      else throw new Error($defaultMsg);
+    }
     out += ' var vErrors = null; ';
     out += ' var errors = 0;     ';
     out += ' if (rootData === undefined) rootData = data; ';
@@ -14083,7 +16149,7 @@ module.exports = function generate_validate(it, $keyword, $ruleType) {
           if ($rulesGroup.type) {
             out += ' if (' + (it.util.checkDataType($rulesGroup.type, $data)) + ') { ';
           }
-          if (it.opts.useDefaults && !it.compositeRule) {
+          if (it.opts.useDefaults) {
             if ($rulesGroup.type == 'object' && it.schema.properties) {
               var $schema = it.schema.properties,
                 $schemaKeys = Object.keys($schema);
@@ -14096,17 +16162,25 @@ module.exports = function generate_validate(it, $keyword, $ruleType) {
                   var $sch = $schema[$propertyKey];
                   if ($sch.default !== undefined) {
                     var $passData = $data + it.util.getProperty($propertyKey);
-                    out += '  if (' + ($passData) + ' === undefined ';
-                    if (it.opts.useDefaults == 'empty') {
-                      out += ' || ' + ($passData) + ' === null || ' + ($passData) + ' === \'\' ';
-                    }
-                    out += ' ) ' + ($passData) + ' = ';
-                    if (it.opts.useDefaults == 'shared') {
-                      out += ' ' + (it.useDefault($sch.default)) + ' ';
+                    if (it.compositeRule) {
+                      if (it.opts.strictDefaults) {
+                        var $defaultMsg = 'default is ignored for: ' + $passData;
+                        if (it.opts.strictDefaults === 'log') it.logger.warn($defaultMsg);
+                        else throw new Error($defaultMsg);
+                      }
                     } else {
-                      out += ' ' + (JSON.stringify($sch.default)) + ' ';
+                      out += ' if (' + ($passData) + ' === undefined ';
+                      if (it.opts.useDefaults == 'empty') {
+                        out += ' || ' + ($passData) + ' === null || ' + ($passData) + ' === \'\' ';
+                      }
+                      out += ' ) ' + ($passData) + ' = ';
+                      if (it.opts.useDefaults == 'shared') {
+                        out += ' ' + (it.useDefault($sch.default)) + ' ';
+                      } else {
+                        out += ' ' + (JSON.stringify($sch.default)) + ' ';
+                      }
+                      out += '; ';
                     }
-                    out += '; ';
                   }
                 }
               }
@@ -14119,17 +16193,25 @@ module.exports = function generate_validate(it, $keyword, $ruleType) {
                   $sch = arr4[$i += 1];
                   if ($sch.default !== undefined) {
                     var $passData = $data + '[' + $i + ']';
-                    out += '  if (' + ($passData) + ' === undefined ';
-                    if (it.opts.useDefaults == 'empty') {
-                      out += ' || ' + ($passData) + ' === null || ' + ($passData) + ' === \'\' ';
-                    }
-                    out += ' ) ' + ($passData) + ' = ';
-                    if (it.opts.useDefaults == 'shared') {
-                      out += ' ' + (it.useDefault($sch.default)) + ' ';
+                    if (it.compositeRule) {
+                      if (it.opts.strictDefaults) {
+                        var $defaultMsg = 'default is ignored for: ' + $passData;
+                        if (it.opts.strictDefaults === 'log') it.logger.warn($defaultMsg);
+                        else throw new Error($defaultMsg);
+                      }
                     } else {
-                      out += ' ' + (JSON.stringify($sch.default)) + ' ';
+                      out += ' if (' + ($passData) + ' === undefined ';
+                      if (it.opts.useDefaults == 'empty') {
+                        out += ' || ' + ($passData) + ' === null || ' + ($passData) + ' === \'\' ';
+                      }
+                      out += ' ) ' + ($passData) + ' = ';
+                      if (it.opts.useDefaults == 'shared') {
+                        out += ' ' + (it.useDefault($sch.default)) + ' ';
+                      } else {
+                        out += ' ' + (JSON.stringify($sch.default)) + ' ';
+                      }
+                      out += '; ';
                     }
-                    out += '; ';
                   }
                 }
               }
@@ -14271,11 +16353,46 @@ module.exports = function generate_validate(it, $keyword, $ruleType) {
 
 var IDENTIFIER = /^[a-z_$][a-z0-9_$-]*$/i;
 var customRuleCode = __webpack_require__(/*! ./dotjs/custom */ "../../node_modules/ajv/lib/dotjs/custom.js");
+var metaSchema = __webpack_require__(/*! ./refs/json-schema-draft-07.json */ "../../node_modules/ajv/lib/refs/json-schema-draft-07.json");
 
 module.exports = {
   add: addKeyword,
   get: getKeyword,
-  remove: removeKeyword
+  remove: removeKeyword,
+  validate: validateKeyword
+};
+
+var definitionSchema = {
+  definitions: {
+    simpleTypes: metaSchema.definitions.simpleTypes
+  },
+  type: 'object',
+  dependencies: {
+    schema: ['validate'],
+    $data: ['validate'],
+    statements: ['inline'],
+    valid: {not: {required: ['macro']}}
+  },
+  properties: {
+    type: metaSchema.properties.type,
+    schema: {type: 'boolean'},
+    statements: {type: 'boolean'},
+    dependencies: {
+      type: 'array',
+      items: {type: 'string'}
+    },
+    metaSchema: {type: 'object'},
+    modifying: {type: 'boolean'},
+    valid: {type: 'boolean'},
+    $data: {type: 'boolean'},
+    async: {type: 'boolean'},
+    errors: {
+      anyOf: [
+        {type: 'boolean'},
+        {const: 'full'}
+      ]
+    }
+  }
 };
 
 /**
@@ -14289,7 +16406,6 @@ function addKeyword(keyword, definition) {
   /* jshint validthis: true */
   /* eslint no-shadow: 0 */
   var RULES = this.RULES;
-
   if (RULES.keywords[keyword])
     throw new Error('Keyword ' + keyword + ' is already defined');
 
@@ -14297,26 +16413,19 @@ function addKeyword(keyword, definition) {
     throw new Error('Keyword ' + keyword + ' is not a valid identifier');
 
   if (definition) {
-    if (definition.macro && definition.valid !== undefined)
-      throw new Error('"valid" option cannot be used with macro keywords');
+    this.validateKeyword(definition, true);
 
     var dataType = definition.type;
     if (Array.isArray(dataType)) {
-      var i, len = dataType.length;
-      for (i=0; i<len; i++) checkDataType(dataType[i]);
-      for (i=0; i<len; i++) _addRule(keyword, dataType[i], definition);
+      for (var i=0; i<dataType.length; i++)
+        _addRule(keyword, dataType[i], definition);
     } else {
-      if (dataType) checkDataType(dataType);
       _addRule(keyword, dataType, definition);
     }
 
-    var $data = definition.$data === true && this._opts.$data;
-    if ($data && !definition.validate)
-      throw new Error('$data support: "validate" function is not defined');
-
     var metaSchema = definition.metaSchema;
     if (metaSchema) {
-      if ($data) {
+      if (definition.$data && this._opts.$data) {
         metaSchema = {
           anyOf: [
             metaSchema,
@@ -14355,11 +16464,6 @@ function addKeyword(keyword, definition) {
     };
     ruleGroup.rules.push(rule);
     RULES.custom[keyword] = rule;
-  }
-
-
-  function checkDataType(dataType) {
-    if (!RULES.types[dataType]) throw new Error('Unknown type ' + dataType);
   }
 
   return this;
@@ -14401,6 +16505,27 @@ function removeKeyword(keyword) {
     }
   }
   return this;
+}
+
+
+/**
+ * Validate keyword definition
+ * @this  Ajv
+ * @param {Object} definition keyword definition object.
+ * @param {Boolean} throwError true to throw exception if definition is invalid
+ * @return {boolean} validation result
+ */
+function validateKeyword(definition, throwError) {
+  validateKeyword.errors = null;
+  var v = this._validateKeyword = this._validateKeyword
+                                  || this.compile(definitionSchema, true);
+
+  if (v(definition)) return true;
+  validateKeyword.errors = v.errors;
+  if (throwError)
+    throw new Error('custom keyword definition is invalid: '  + this.errorsText(v.errors));
+  else
+    return false;
 }
 
 
@@ -14671,13 +16796,14 @@ function escapeJsonPtr(str) {
 /*!****************************************************!*\
   !*** /app/node_modules/lit-element/lib/css-tag.js ***!
   \****************************************************/
-/*! exports provided: supportsAdoptingStyleSheets, CSSResult, css */
+/*! exports provided: supportsAdoptingStyleSheets, CSSResult, unsafeCSS, css */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "supportsAdoptingStyleSheets", function() { return supportsAdoptingStyleSheets; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "CSSResult", function() { return CSSResult; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "unsafeCSS", function() { return unsafeCSS; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "css", function() { return css; });
 /**
 @license
@@ -14689,9 +16815,16 @@ found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
 part of the polymer project is also subject to an additional IP rights grant
 found at http://polymer.github.io/PATENTS.txt
 */
-const supportsAdoptingStyleSheets = ('adoptedStyleSheets' in Document.prototype);
+const supportsAdoptingStyleSheets = ('adoptedStyleSheets' in Document.prototype) &&
+    ('replace' in CSSStyleSheet.prototype);
+const constructionToken = Symbol();
 class CSSResult {
-    constructor(cssText) { this.cssText = cssText; }
+    constructor(cssText, safeToken) {
+        if (safeToken !== constructionToken) {
+            throw new Error('CSSResult is not constructable. Use `unsafeCSS` or `css` instead.');
+        }
+        this.cssText = cssText;
+    }
     // Note, this is a getter so that it's lazy. In practice, this means
     // stylesheets are not created until the first element instance is made.
     get styleSheet() {
@@ -14708,18 +16841,38 @@ class CSSResult {
         }
         return this._styleSheet;
     }
+    toString() {
+        return this.cssText;
+    }
 }
+/**
+ * Wrap a value for interpolation in a css tagged template literal.
+ *
+ * This is unsafe because untrusted CSS text can be used to phone home
+ * or exfiltrate data to an attacker controlled site. Take care to only use
+ * this with trusted input.
+ */
+const unsafeCSS = (value) => {
+    return new CSSResult(String(value), constructionToken);
+};
 const textFromCSSResult = (value) => {
     if (value instanceof CSSResult) {
         return value.cssText;
     }
     else {
-        throw new Error(`Value passed to 'css' function must be a 'css' function result: ${value}.`);
+        throw new Error(`Value passed to 'css' function must be a 'css' function result: ${value}. Use 'unsafeCSS' to pass non-literal values, but
+            take care to ensure page security.`);
     }
 };
+/**
+ * Template tag which which can be used with LitElement's `style` property to
+ * set element styles. For security reasons, only literal string values may be
+ * used. To incorporate non-literal values `unsafeCSS` may be used inside a
+ * template string part.
+ */
 const css = (strings, ...values) => {
     const cssText = values.reduce((acc, v, idx) => acc + textFromCSSResult(v) + strings[idx + 1], strings[0]);
-    return new CSSResult(cssText);
+    return new CSSResult(cssText, constructionToken);
 };
 
 
@@ -14759,6 +16912,7 @@ const legacyCustomElement = (tagName, clazz) => {
     // `Constructor<HTMLElement>` for some reason.
     // `Constructor<HTMLElement>` is helpful to make sure the decorator is
     // applied to elements however.
+    // tslint:disable-next-line:no-any
     return clazz;
 };
 const standardCustomElement = (tagName, descriptor) => {
@@ -14776,24 +16930,10 @@ const standardCustomElement = (tagName, descriptor) => {
  * Class decorator factory that defines the decorated class as a custom element.
  *
  * @param tagName the name of the custom element to define
- *
- * In TypeScript, the `tagName` passed to `customElement` should be a key of the
- * `HTMLElementTagNameMap` interface. To add your element to the interface,
- * declare the interface in this module:
- *
- *     @customElement('my-element')
- *     export class MyElement extends LitElement {}
- *
- *     declare global {
- *       interface HTMLElementTagNameMap {
- *         'my-element': MyElement;
- *       }
- *     }
- *
  */
-const customElement = (tagName) => (classOrDescriptor) => (typeof classOrDescriptor === 'function')
-    ? legacyCustomElement(tagName, classOrDescriptor)
-    : standardCustomElement(tagName, classOrDescriptor);
+const customElement = (tagName) => (classOrDescriptor) => (typeof classOrDescriptor === 'function') ?
+    legacyCustomElement(tagName, classOrDescriptor) :
+    standardCustomElement(tagName, classOrDescriptor);
 const standardProperty = (options, element) => {
     // When decorating an accessor, pass it through and add property metadata.
     // Note, the `hasOwnProperty` check in `createProperty` ensures we don't
@@ -14822,6 +16962,7 @@ const standardProperty = (options, element) => {
             //     initializer: descriptor.initializer,
             //   }
             // ],
+            // tslint:disable-next-line:no-any decorator
             initializer() {
                 if (typeof element.initializer === 'function') {
                     this[element.key] = element.initializer.call(this);
@@ -14834,7 +16975,8 @@ const standardProperty = (options, element) => {
     }
 };
 const legacyProperty = (options, proto, name) => {
-    proto.constructor.createProperty(name, options);
+    proto.constructor
+        .createProperty(name, options);
 };
 /**
  * A property decorator which creates a LitElement property which reflects a
@@ -14844,53 +16986,74 @@ const legacyProperty = (options, proto, name) => {
  * @ExportDecoratedItems
  */
 function property(options) {
-    return (protoOrDescriptor, name) => (name !== undefined)
-        ? legacyProperty(options, protoOrDescriptor, name)
-        : standardProperty(options, protoOrDescriptor);
+    // tslint:disable-next-line:no-any decorator
+    return (protoOrDescriptor, name) => (name !== undefined) ?
+        legacyProperty(options, protoOrDescriptor, name) :
+        standardProperty(options, protoOrDescriptor);
 }
 /**
  * A property decorator that converts a class property into a getter that
  * executes a querySelector on the element's renderRoot.
+ *
+ * @ExportDecoratedItems
  */
-const query = _query((target, selector) => target.querySelector(selector));
+function query(selector) {
+    return (protoOrDescriptor, 
+    // tslint:disable-next-line:no-any decorator
+    name) => {
+        const descriptor = {
+            get() {
+                return this.renderRoot.querySelector(selector);
+            },
+            enumerable: true,
+            configurable: true,
+        };
+        return (name !== undefined) ?
+            legacyQuery(descriptor, protoOrDescriptor, name) :
+            standardQuery(descriptor, protoOrDescriptor);
+    };
+}
 /**
  * A property decorator that converts a class property into a getter
  * that executes a querySelectorAll on the element's renderRoot.
+ *
+ * @ExportDecoratedItems
  */
-const queryAll = _query((target, selector) => target.querySelectorAll(selector));
-const legacyQuery = (descriptor, proto, name) => { Object.defineProperty(proto, name, descriptor); };
+function queryAll(selector) {
+    return (protoOrDescriptor, 
+    // tslint:disable-next-line:no-any decorator
+    name) => {
+        const descriptor = {
+            get() {
+                return this.renderRoot.querySelectorAll(selector);
+            },
+            enumerable: true,
+            configurable: true,
+        };
+        return (name !== undefined) ?
+            legacyQuery(descriptor, protoOrDescriptor, name) :
+            standardQuery(descriptor, protoOrDescriptor);
+    };
+}
+const legacyQuery = (descriptor, proto, name) => {
+    Object.defineProperty(proto, name, descriptor);
+};
 const standardQuery = (descriptor, element) => ({
     kind: 'method',
     placement: 'prototype',
     key: element.key,
     descriptor,
 });
-/**
- * Base-implementation of `@query` and `@queryAll` decorators.
- *
- * @param queryFn exectute a `selector` (ie, querySelector or querySelectorAll)
- * against `target`.
- * @suppress {visibility} The descriptor accesses an internal field on the
- * element.
- */
-function _query(queryFn) {
-    return (selector) => (protoOrDescriptor, name) => {
-        const descriptor = {
-            get() { return queryFn(this.renderRoot, selector); },
-            enumerable: true,
-            configurable: true,
-        };
-        return (name !== undefined)
-            ? legacyQuery(descriptor, protoOrDescriptor, name)
-            : standardQuery(descriptor, protoOrDescriptor);
-    };
-}
 const standardEventOptions = (options, element) => {
     return Object.assign({}, element, { finisher(clazz) {
             Object.assign(clazz.prototype[element.key], options);
         } });
 };
-const legacyEventOptions = (options, proto, name) => { Object.assign(proto[name], options); };
+const legacyEventOptions = 
+// tslint:disable-next-line:no-any legacy decorator
+(options, proto, name) => {
+    Object.assign(proto[name], options);
+};
 /**
  * Adds event listener options to a method used as an event listener in a
  * lit-html template.
@@ -14923,9 +17086,9 @@ const eventOptions = (options) =>
 // signature
 // TODO(kschaaf): unclear why it was only failing on this decorator and not
 // the others
-((protoOrDescriptor, name) => (name !== undefined)
-    ? legacyEventOptions(options, protoOrDescriptor, name)
-    : standardEventOptions(options, protoOrDescriptor));
+((protoOrDescriptor, name) => (name !== undefined) ?
+    legacyEventOptions(options, protoOrDescriptor, name) :
+    standardEventOptions(options, protoOrDescriptor));
 
 
 /***/ }),
@@ -14934,12 +17097,11 @@ const eventOptions = (options) =>
 /*!*************************************************************!*\
   !*** /app/node_modules/lit-element/lib/updating-element.js ***!
   \*************************************************************/
-/*! exports provided: JSCompiler_renameProperty, defaultConverter, notEqual, UpdatingElement */
+/*! exports provided: defaultConverter, notEqual, UpdatingElement */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "JSCompiler_renameProperty", function() { return JSCompiler_renameProperty; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "defaultConverter", function() { return defaultConverter; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "notEqual", function() { return notEqual; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "UpdatingElement", function() { return UpdatingElement; });
@@ -14962,7 +17124,8 @@ __webpack_require__.r(__webpack_exports__);
  * alias this function, so we have to use a small shim that has the same
  * behavior when not compiling.
  */
-const JSCompiler_renameProperty = (prop, _obj) => prop;
+window.JSCompiler_renameProperty =
+    (prop, _obj) => prop;
 const defaultConverter = {
     toAttribute(value, type) {
         switch (type) {
@@ -15038,8 +17201,8 @@ class UpdatingElement extends HTMLElement {
      * @nocollapse
      */
     static get observedAttributes() {
-        // note: piggy backing on this to ensure we're _finalized.
-        this._finalize();
+        // note: piggy backing on this to ensure we're finalized.
+        this.finalize();
         const attributes = [];
         // Use forEach so this works even if for/of loops are compiled to for loops
         // expecting arrays
@@ -15054,7 +17217,7 @@ class UpdatingElement extends HTMLElement {
     }
     /**
      * Ensures the private `_classProperties` property metadata is created.
-     * In addition to `_finalize` this is also called in `createProperty` to
+     * In addition to `finalize` this is also called in `createProperty` to
      * ensure the `@property` decorator can add property metadata.
      */
     /** @nocollapse */
@@ -15078,7 +17241,7 @@ class UpdatingElement extends HTMLElement {
      */
     static createProperty(name, options = defaultPropertyDeclaration) {
         // Note, since this can be called by the `@property` decorator which
-        // is called before `_finalize`, we ensure storage exists for property
+        // is called before `finalize`, we ensure storage exists for property
         // metadata.
         this._ensureClassProperties();
         this._classProperties.set(name, options);
@@ -15092,11 +17255,16 @@ class UpdatingElement extends HTMLElement {
         }
         const key = typeof name === 'symbol' ? Symbol() : `__${name}`;
         Object.defineProperty(this.prototype, name, {
-            get() { return this[key]; },
+            // tslint:disable-next-line:no-any no symbol in index
+            get() {
+                return this[key];
+            },
             set(value) {
+                // tslint:disable-next-line:no-any no symbol in index
                 const oldValue = this[name];
+                // tslint:disable-next-line:no-any no symbol in index
                 this[key] = value;
-                this.requestUpdate(name, oldValue);
+                this._requestUpdate(name, oldValue);
             },
             configurable: true,
             enumerable: true
@@ -15107,15 +17275,15 @@ class UpdatingElement extends HTMLElement {
      * any superclasses are also finalized.
      * @nocollapse
      */
-    static _finalize() {
+    static finalize() {
         if (this.hasOwnProperty(JSCompiler_renameProperty('finalized', this)) &&
             this.finalized) {
             return;
         }
         // finalize any superclasses
         const superCtor = Object.getPrototypeOf(this);
-        if (typeof superCtor._finalize === 'function') {
-            superCtor._finalize();
+        if (typeof superCtor.finalize === 'function') {
+            superCtor.finalize();
         }
         this.finalized = true;
         this._ensureClassProperties();
@@ -15130,14 +17298,15 @@ class UpdatingElement extends HTMLElement {
             // support symbols in properties (IE11 does not support this)
             const propKeys = [
                 ...Object.getOwnPropertyNames(props),
-                ...(typeof Object.getOwnPropertySymbols === 'function')
-                    ? Object.getOwnPropertySymbols(props)
-                    : []
+                ...(typeof Object.getOwnPropertySymbols === 'function') ?
+                    Object.getOwnPropertySymbols(props) :
+                    []
             ];
             // This for/of is ok because propKeys is an array
             for (const p of propKeys) {
                 // note, use of `any` is due to TypeSript lack of support for symbol in
                 // index types
+                // tslint:disable-next-line:no-any no symbol in index
                 this.createProperty(p, props[p]);
             }
         }
@@ -15148,12 +17317,11 @@ class UpdatingElement extends HTMLElement {
      */
     static _attributeNameForProperty(name, options) {
         const attribute = options.attribute;
-        return attribute === false
-            ? undefined
-            : (typeof attribute === 'string'
-                ? attribute
-                : (typeof name === 'string' ? name.toLowerCase()
-                    : undefined));
+        return attribute === false ?
+            undefined :
+            (typeof attribute === 'string' ?
+                attribute :
+                (typeof name === 'string' ? name.toLowerCase() : undefined));
     }
     /**
      * Returns true if a property should request an update.
@@ -15198,7 +17366,11 @@ class UpdatingElement extends HTMLElement {
      * Performs element initialization. By default captures any pre-set values for
      * registered properties.
      */
-    initialize() { this._saveInstanceProperties(); }
+    initialize() {
+        this._saveInstanceProperties();
+        // ensures first update will be caught by an early access of `updateComplete`
+        this._requestUpdate();
+    }
     /**
      * Fixes any properties set on the instance before upgrade time.
      * Otherwise these would shadow the accessor and break these properties.
@@ -15232,12 +17404,13 @@ class UpdatingElement extends HTMLElement {
     _applyInstanceProperties() {
         // Use forEach so this works even if for/of loops are compiled to for loops
         // expecting arrays
+        // tslint:disable-next-line:no-any
         this._instanceProperties.forEach((v, p) => this[p] = v);
         this._instanceProperties = undefined;
     }
     connectedCallback() {
         this._updateState = this._updateState | STATE_HAS_CONNECTED;
-        // Ensure connection triggers an update. Updates cannot complete before
+        // Ensure first connection completes an update. Updates cannot complete before
         // connection and if one is pending connection the `_hasConnectionResolver`
         // will exist. If so, resolve it to complete the update, otherwise
         // requestUpdate.
@@ -15245,16 +17418,14 @@ class UpdatingElement extends HTMLElement {
             this._hasConnectedResolver();
             this._hasConnectedResolver = undefined;
         }
-        else {
-            this.requestUpdate();
-        }
     }
     /**
      * Allows for `super.disconnectedCallback()` in extensions while
      * reserving the possibility of making non-breaking feature additions
      * when disconnecting at some point in the future.
      */
-    disconnectedCallback() { }
+    disconnectedCallback() {
+    }
     /**
      * Synchronizes property values when attributes change.
      */
@@ -15304,9 +17475,46 @@ class UpdatingElement extends HTMLElement {
             // mark state reflecting
             this._updateState = this._updateState | STATE_IS_REFLECTING_TO_PROPERTY;
             this[propName] =
+                // tslint:disable-next-line:no-any
                 ctor._propertyValueFromAttribute(value, options);
             // mark state not reflecting
             this._updateState = this._updateState & ~STATE_IS_REFLECTING_TO_PROPERTY;
+        }
+    }
+    /**
+     * This private version of `requestUpdate` does not access or return the
+     * `updateComplete` promise. This promise can be overridden and is therefore
+     * not free to access.
+     */
+    _requestUpdate(name, oldValue) {
+        let shouldRequestUpdate = true;
+        // If we have a property key, perform property update steps.
+        if (name !== undefined) {
+            const ctor = this.constructor;
+            const options = ctor._classProperties.get(name) || defaultPropertyDeclaration;
+            if (ctor._valueHasChanged(this[name], oldValue, options.hasChanged)) {
+                if (!this._changedProperties.has(name)) {
+                    this._changedProperties.set(name, oldValue);
+                }
+                // Add to reflecting properties set.
+                // Note, it's important that every change has a chance to add the
+                // property to `_reflectingProperties`. This ensures setting
+                // attribute + property reflects correctly.
+                if (options.reflect === true &&
+                    !(this._updateState & STATE_IS_REFLECTING_TO_PROPERTY)) {
+                    if (this._reflectingProperties === undefined) {
+                        this._reflectingProperties = new Map();
+                    }
+                    this._reflectingProperties.set(name, options);
+                }
+            }
+            else {
+                // Abort the request if the property should not be considered changed.
+                shouldRequestUpdate = false;
+            }
+        }
+        if (!this._hasRequestedUpdate && shouldRequestUpdate) {
+            this._enqueueUpdate();
         }
     }
     /**
@@ -15323,31 +17531,7 @@ class UpdatingElement extends HTMLElement {
      * @returns {Promise} A Promise that is resolved when the update completes.
      */
     requestUpdate(name, oldValue) {
-        let shouldRequestUpdate = true;
-        // if we have a property key, perform property update steps.
-        if (name !== undefined && !this._changedProperties.has(name)) {
-            const ctor = this.constructor;
-            const options = ctor._classProperties.get(name) || defaultPropertyDeclaration;
-            if (ctor._valueHasChanged(this[name], oldValue, options.hasChanged)) {
-                // track old value when changing.
-                this._changedProperties.set(name, oldValue);
-                // add to reflecting properties set
-                if (options.reflect === true &&
-                    !(this._updateState & STATE_IS_REFLECTING_TO_PROPERTY)) {
-                    if (this._reflectingProperties === undefined) {
-                        this._reflectingProperties = new Map();
-                    }
-                    this._reflectingProperties.set(name, options);
-                }
-                // abort the request if the property should not be considered changed.
-            }
-            else {
-                shouldRequestUpdate = false;
-            }
-        }
-        if (!this._hasRequestedUpdate && shouldRequestUpdate) {
-            this._enqueueUpdate();
-        }
+        this._requestUpdate(name, oldValue);
         return this.updateComplete;
     }
     /**
@@ -15357,22 +17541,36 @@ class UpdatingElement extends HTMLElement {
         // Mark state updating...
         this._updateState = this._updateState | STATE_UPDATE_REQUESTED;
         let resolve;
+        let reject;
         const previousUpdatePromise = this._updatePromise;
-        this._updatePromise = new Promise((res) => resolve = res);
-        // Ensure any previous update has resolved before updating.
-        // This `await` also ensures that property changes are batched.
-        await previousUpdatePromise;
+        this._updatePromise = new Promise((res, rej) => {
+            resolve = res;
+            reject = rej;
+        });
+        try {
+            // Ensure any previous update has resolved before updating.
+            // This `await` also ensures that property changes are batched.
+            await previousUpdatePromise;
+        }
+        catch (e) {
+            // Ignore any previous errors. We only care that the previous cycle is
+            // done. Any error should have been handled in the previous update.
+        }
         // Make sure the element has connected before updating.
         if (!this._hasConnected) {
             await new Promise((res) => this._hasConnectedResolver = res);
         }
-        // Allow `performUpdate` to be asynchronous to enable scheduling of updates.
-        const result = this.performUpdate();
-        // Note, this is to avoid delaying an additional microtask unless we need
-        // to.
-        if (result != null &&
-            typeof result.then === 'function') {
-            await result;
+        try {
+            const result = this.performUpdate();
+            // If `performUpdate` returns a Promise, we await it. This is done to
+            // enable coordinating updates with a scheduler. Note, the result is
+            // checked to avoid delaying an additional microtask unless we need to.
+            if (result != null) {
+                await result;
+            }
+        }
+        catch (e) {
+            reject(e);
         }
         resolve(!this._hasRequestedUpdate);
     }
@@ -15382,12 +17580,17 @@ class UpdatingElement extends HTMLElement {
     get _hasRequestedUpdate() {
         return (this._updateState & STATE_UPDATE_REQUESTED);
     }
-    get hasUpdated() { return (this._updateState & STATE_HAS_UPDATED); }
+    get hasUpdated() {
+        return (this._updateState & STATE_HAS_UPDATED);
+    }
     /**
-     * Performs an element update.
+     * Performs an element update. Note, if an exception is thrown during the
+     * update, `firstUpdated` and `updated` will not be called.
      *
-     * You can override this method to change the timing of updates. For instance,
-     * to schedule updates to occur just before the next frame:
+     * You can override this method to change the timing of updates. If this
+     * method is overridden, `super.performUpdate()` must be called.
+     *
+     * For instance, to schedule updates to occur just before the next frame:
      *
      * ```
      * protected async performUpdate(): Promise<unknown> {
@@ -15401,18 +17604,30 @@ class UpdatingElement extends HTMLElement {
         if (this._instanceProperties) {
             this._applyInstanceProperties();
         }
-        if (this.shouldUpdate(this._changedProperties)) {
-            const changedProperties = this._changedProperties;
-            this.update(changedProperties);
+        let shouldUpdate = false;
+        const changedProperties = this._changedProperties;
+        try {
+            shouldUpdate = this.shouldUpdate(changedProperties);
+            if (shouldUpdate) {
+                this.update(changedProperties);
+            }
+        }
+        catch (e) {
+            // Prevent `firstUpdated` and `updated` from running when there's an
+            // update exception.
+            shouldUpdate = false;
+            throw e;
+        }
+        finally {
+            // Ensure element can accept additional updates after an exception.
             this._markUpdated();
+        }
+        if (shouldUpdate) {
             if (!(this._updateState & STATE_HAS_UPDATED)) {
                 this._updateState = this._updateState | STATE_HAS_UPDATED;
                 this.firstUpdated(changedProperties);
             }
             this.updated(changedProperties);
-        }
-        else {
-            this._markUpdated();
         }
     }
     _markUpdated() {
@@ -15423,7 +17638,8 @@ class UpdatingElement extends HTMLElement {
      * Returns a Promise that resolves when the element has completed updating.
      * The Promise value is a boolean that is `true` if the element completed the
      * update without triggering another update. The Promise result is `false` if
-     * a property was set inside `updated()`. This getter can be implemented to
+     * a property was set inside `updated()`. If the Promise is rejected, an
+     * exception was thrown during the update. This getter can be implemented to
      * await additional state. For example, it is sometimes useful to await a
      * rendered element before fulfilling this Promise. To do this, first await
      * `super.updateComplete` then any subsequent state.
@@ -15431,7 +17647,9 @@ class UpdatingElement extends HTMLElement {
      * @returns {Promise} The Promise returns a boolean that indicates if the
      * update resolved without triggering another update.
      */
-    get updateComplete() { return this._updatePromise; }
+    get updateComplete() {
+        return this._updatePromise;
+    }
     /**
      * Controls whether or not `update` should be called when the element requests
      * an update. By default, this method always returns `true`, but this can be
@@ -15468,7 +17686,8 @@ class UpdatingElement extends HTMLElement {
      *
      * * @param _changedProperties Map of changed properties with old values
      */
-    updated(_changedProperties) { }
+    updated(_changedProperties) {
+    }
     /**
      * Invoked when the element is first updated. Implement to perform one time
      * work on the element after update.
@@ -15478,7 +17697,8 @@ class UpdatingElement extends HTMLElement {
      *
      * * @param _changedProperties Map of changed properties with old values
      */
-    firstUpdated(_changedProperties) { }
+    firstUpdated(_changedProperties) {
+    }
 }
 /**
  * Marks class as having finished creating properties.
@@ -15492,17 +17712,15 @@ UpdatingElement.finalized = true;
 /*!****************************************************!*\
   !*** /app/node_modules/lit-element/lit-element.js ***!
   \****************************************************/
-/*! exports provided: html, svg, TemplateResult, SVGTemplateResult, LitElement, JSCompiler_renameProperty, defaultConverter, notEqual, UpdatingElement, customElement, property, query, queryAll, eventOptions, supportsAdoptingStyleSheets, CSSResult, css */
+/*! exports provided: html, svg, TemplateResult, SVGTemplateResult, LitElement, defaultConverter, notEqual, UpdatingElement, customElement, property, query, queryAll, eventOptions, supportsAdoptingStyleSheets, CSSResult, unsafeCSS, css */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "LitElement", function() { return LitElement; });
 /* harmony import */ var lit_html__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! lit-html */ "../../node_modules/lit-html/lit-html.js");
-/* harmony import */ var lit_html_lib_shady_render__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lit-html/lib/shady-render */ "../../node_modules/lit-html/lib/shady-render.js");
+/* harmony import */ var lit_html_lib_shady_render_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lit-html/lib/shady-render.js */ "../../node_modules/lit-html/lib/shady-render.js");
 /* harmony import */ var _lib_updating_element_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./lib/updating-element.js */ "../../node_modules/lit-element/lib/updating-element.js");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "JSCompiler_renameProperty", function() { return _lib_updating_element_js__WEBPACK_IMPORTED_MODULE_2__["JSCompiler_renameProperty"]; });
-
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "defaultConverter", function() { return _lib_updating_element_js__WEBPACK_IMPORTED_MODULE_2__["defaultConverter"]; });
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "notEqual", function() { return _lib_updating_element_js__WEBPACK_IMPORTED_MODULE_2__["notEqual"]; });
@@ -15533,6 +17751,8 @@ __webpack_require__.r(__webpack_exports__);
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "CSSResult", function() { return _lib_css_tag_js__WEBPACK_IMPORTED_MODULE_4__["CSSResult"]; });
 
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "unsafeCSS", function() { return _lib_css_tag_js__WEBPACK_IMPORTED_MODULE_4__["unsafeCSS"]; });
+
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "css", function() { return _lib_css_tag_js__WEBPACK_IMPORTED_MODULE_4__["css"]; });
 
 /**
@@ -15556,6 +17776,11 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+// IMPORTANT: do not change the property name or the assignment expression.
+// This line will be used in regexes to search for LitElement usage.
+// TODO(justinfagnani): inject version number at build time
+(window['litElementVersions'] || (window['litElementVersions'] = []))
+    .push('2.0.1');
 /**
  * Minimal implementation of Array.prototype.flat
  * @param arr the array to flatten
@@ -15576,42 +17801,45 @@ function arrayFlat(styles, result = []) {
 /** Deeply flattens styles array. Uses native flat if available. */
 const flattenStyles = (styles) => styles.flat ? styles.flat(Infinity) : arrayFlat(styles);
 class LitElement extends _lib_updating_element_js__WEBPACK_IMPORTED_MODULE_2__["UpdatingElement"] {
-    static get _uniqueStyles() {
-        if (!this.hasOwnProperty(Object(_lib_updating_element_js__WEBPACK_IMPORTED_MODULE_2__["JSCompiler_renameProperty"])('_styles', this))) {
-            // Inherit styles from superclass if none have been set.
-            if (!this.hasOwnProperty(Object(_lib_updating_element_js__WEBPACK_IMPORTED_MODULE_2__["JSCompiler_renameProperty"])('styles', this))) {
-                this._styles = this._styles !== undefined ? this._styles : [];
-            }
-            else {
-                // Take care not to call `this.styles` multiple times since this generates
-                // new CSSResults each time.
-                // TODO(sorvell): Since we do not cache CSSResults by input, any
-                // shared styles will generate new stylesheet objects, which is wasteful.
-                // This should be addressed when a browser ships constructable
-                // stylesheets.
-                const userStyles = this.styles;
-                if (Array.isArray(userStyles)) {
-                    const styles = flattenStyles(userStyles);
-                    // As a performance optimization to avoid duplicated styling that can
-                    // occur especially when composing via subclassing, de-duplicate styles
-                    // preserving the last item in the list. The last item is kept to
-                    // try to preserve cascade order with the assumption that it's most
-                    // important that last added styles override previous styles.
-                    const styleSet = styles.reduceRight((set, s) => {
-                        set.add(s);
-                        // on IE set.add does not return the set.
-                        return set;
-                    }, new Set());
-                    // Array.from does not work on Set in IE
-                    this._styles = [];
-                    styleSet.forEach((v) => this._styles.unshift(v));
-                }
-                else {
-                    this._styles = userStyles ? [userStyles] : [];
-                }
-            }
+    /** @nocollapse */
+    static finalize() {
+        super.finalize();
+        // Prepare styling that is stamped at first render time. Styling
+        // is built from user provided `styles` or is inherited from the superclass.
+        this._styles =
+            this.hasOwnProperty(JSCompiler_renameProperty('styles', this)) ?
+                this._getUniqueStyles() :
+                this._styles || [];
+    }
+    /** @nocollapse */
+    static _getUniqueStyles() {
+        // Take care not to call `this.styles` multiple times since this generates
+        // new CSSResults each time.
+        // TODO(sorvell): Since we do not cache CSSResults by input, any
+        // shared styles will generate new stylesheet objects, which is wasteful.
+        // This should be addressed when a browser ships constructable
+        // stylesheets.
+        const userStyles = this.styles;
+        const styles = [];
+        if (Array.isArray(userStyles)) {
+            const flatStyles = flattenStyles(userStyles);
+            // As a performance optimization to avoid duplicated styling that can
+            // occur especially when composing via subclassing, de-duplicate styles
+            // preserving the last item in the list. The last item is kept to
+            // try to preserve cascade order with the assumption that it's most
+            // important that last added styles override previous styles.
+            const styleSet = flatStyles.reduceRight((set, s) => {
+                set.add(s);
+                // on IE set.add does not return the set.
+                return set;
+            }, new Set());
+            // Array.from does not work on Set in IE
+            styleSet.forEach((v) => styles.unshift(v));
         }
-        return this._styles;
+        else if (userStyles) {
+            styles.push(userStyles);
+        }
+        return styles;
     }
     /**
      * Performs element initialization. By default this calls `createRenderRoot`
@@ -15620,7 +17848,8 @@ class LitElement extends _lib_updating_element_js__WEBPACK_IMPORTED_MODULE_2__["
      */
     initialize() {
         super.initialize();
-        this.renderRoot = this.createRenderRoot();
+        this.renderRoot =
+            this.createRenderRoot();
         // Note, if renderRoot is not a shadowRoot, styles would/could apply to the
         // element's getRootNode(). While this could be done, we're choosing not to
         // support this now since it would require different logic around de-duping.
@@ -15648,7 +17877,7 @@ class LitElement extends _lib_updating_element_js__WEBPACK_IMPORTED_MODULE_2__["
      * behavior](https://wicg.github.io/construct-stylesheets/#using-constructed-stylesheets).
      */
     adoptStyles() {
-        const styles = this.constructor._uniqueStyles;
+        const styles = this.constructor._styles;
         if (styles.length === 0) {
             return;
         }
@@ -15696,7 +17925,7 @@ class LitElement extends _lib_updating_element_js__WEBPACK_IMPORTED_MODULE_2__["
         // priority.
         if (this._needsShimAdoptedStyleSheets) {
             this._needsShimAdoptedStyleSheets = false;
-            this.constructor._uniqueStyles.forEach((s) => {
+            this.constructor._styles.forEach((s) => {
                 const style = document.createElement('style');
                 style.textContent = s.cssText;
                 this.renderRoot.appendChild(style);
@@ -15708,7 +17937,8 @@ class LitElement extends _lib_updating_element_js__WEBPACK_IMPORTED_MODULE_2__["
      * a lit-html TemplateResult. Setting properties inside this method will *not*
      * trigger the element to update.
      */
-    render() { }
+    render() {
+    }
 }
 /**
  * Ensure this class is marked as `finalized` as an optimization ensuring
@@ -15723,7 +17953,7 @@ LitElement.finalized = true;
  * @param {String} Element name.
  * @nocollapse
  */
-LitElement.render = lit_html_lib_shady_render__WEBPACK_IMPORTED_MODULE_1__["render"];
+LitElement.render = lit_html_lib_shady_render_js__WEBPACK_IMPORTED_MODULE_1__["render"];
 
 
 /***/ }),
@@ -15825,16 +18055,16 @@ const repeat = Object(_lit_html_js__WEBPACK_IMPORTED_MODULE_0__["directive"])((i
         if (!(containerPart instanceof _lit_html_js__WEBPACK_IMPORTED_MODULE_0__["NodePart"])) {
             throw new Error('repeat can only be used in text bindings');
         }
-        // Old part & key lists are retrieved from the last update (associated
-        // with the part for this instance of the directive)
+        // Old part & key lists are retrieved from the last update
+        // (associated with the part for this instance of the directive)
         const oldParts = partListCache.get(containerPart) || [];
         const oldKeys = keyListCache.get(containerPart) || [];
-        // New part list will be built up as we go (either reused from old parts
-        // or created for new keys in this update). This is saved in the above
-        // cache at the end of the update.
+        // New part list will be built up as we go (either reused from
+        // old parts or created for new keys in this update). This is
+        // saved in the above cache at the end of the update.
         const newParts = [];
-        // New value list is eagerly generated from items along with a parallel
-        // array indicating its key.
+        // New value list is eagerly generated from items along with a
+        // parallel array indicating its key.
         const newValues = [];
         const newKeys = [];
         let index = 0;
@@ -15843,10 +18073,10 @@ const repeat = Object(_lit_html_js__WEBPACK_IMPORTED_MODULE_0__["directive"])((i
             newValues[index] = template(item, index);
             index++;
         }
-        // Maps from key to index for current and previous update; these are
-        // generated lazily only when needed as a performance optimization,
-        // since they are only required for multiple non-contiguous changes in
-        // the list, which are less common.
+        // Maps from key to index for current and previous update; these
+        // are generated lazily only when needed as a performance
+        // optimization, since they are only required for multiple
+        // non-contiguous changes in the list, which are less common.
         let newKeyToIndexMap;
         let oldKeyToIndexMap;
         // Head and tail pointers to old parts and new values
@@ -15854,167 +18084,190 @@ const repeat = Object(_lit_html_js__WEBPACK_IMPORTED_MODULE_0__["directive"])((i
         let oldTail = oldParts.length - 1;
         let newHead = 0;
         let newTail = newValues.length - 1;
-        // Overview of O(n) reconciliation algorithm (general approach based on
-        // ideas found in ivi, vue, snabbdom, etc.):
+        // Overview of O(n) reconciliation algorithm (general approach
+        // based on ideas found in ivi, vue, snabbdom, etc.):
         //
-        // * We start with the list of old parts and new values (and arrays of
-        //   their respective keys), head/tail pointers into each, and we build
-        //   up the new list of parts by updating (and when needed, moving) old
-        //   parts or creating new ones. The initial scenario might look like
-        //   this (for brevity of the diagrams, the numbers in the array reflect
-        //   keys associated with the old parts or new values, although keys and
-        //   parts/values are actually stored in parallel arrays indexed using
-        //   the same head/tail pointers):
+        // * We start with the list of old parts and new values (and
+        // arrays of
+        //   their respective keys), head/tail pointers into each, and
+        //   we build up the new list of parts by updating (and when
+        //   needed, moving) old parts or creating new ones. The initial
+        //   scenario might look like this (for brevity of the diagrams,
+        //   the numbers in the array reflect keys associated with the
+        //   old parts or new values, although keys and parts/values are
+        //   actually stored in parallel arrays indexed using the same
+        //   head/tail pointers):
         //
         //      oldHead v                 v oldTail
         //   oldKeys:  [0, 1, 2, 3, 4, 5, 6]
         //   newParts: [ ,  ,  ,  ,  ,  ,  ]
-        //   newKeys:  [0, 2, 1, 4, 3, 7, 6] <- reflects the user's new item
-        //   order
+        //   newKeys:  [0, 2, 1, 4, 3, 7, 6] <- reflects the user's new
+        //   item order
         //      newHead ^                 ^ newTail
         //
-        // * Iterate old & new lists from both sides, updating, swapping, or
-        //   removing parts at the head/tail locations until neither head nor
-        //   tail can move.
+        // * Iterate old & new lists from both sides, updating,
+        // swapping, or
+        //   removing parts at the head/tail locations until neither
+        //   head nor tail can move.
         //
-        // * Example below: keys at head pointers match, so update old part 0
-        // in-
-        //   place (no need to move it) and record part 0 in the `newParts`
-        //   list. The last thing we do is advance the `oldHead` and `newHead`
-        //   pointers (will be reflected in the next diagram).
+        // * Example below: keys at head pointers match, so update old
+        // part 0 in-
+        //   place (no need to move it) and record part 0 in the
+        //   `newParts` list. The last thing we do is advance the
+        //   `oldHead` and `newHead` pointers (will be reflected in the
+        //   next diagram).
         //
         //      oldHead v                 v oldTail
         //   oldKeys:  [0, 1, 2, 3, 4, 5, 6]
-        //   newParts: [0,  ,  ,  ,  ,  ,  ] <- heads matched: update 0 and
-        //   newKeys:  [0, 2, 1, 4, 3, 7, 6]    advance both oldHead & newHead
+        //   newParts: [0,  ,  ,  ,  ,  ,  ] <- heads matched: update 0
+        //   and newKeys:  [0, 2, 1, 4, 3, 7, 6]    advance both oldHead
+        //   & newHead
         //      newHead ^                 ^ newTail
         //
-        // * Example below: head pointers don't match, but tail pointers do, so
-        //   update part 6 in place (no need to move it), and record part 6 in
-        //   the `newParts` list. Last, advance the `oldTail` and `oldHead`
-        //   pointers.
+        // * Example below: head pointers don't match, but tail pointers
+        // do, so
+        //   update part 6 in place (no need to move it), and record
+        //   part 6 in the `newParts` list. Last, advance the `oldTail`
+        //   and `oldHead` pointers.
         //
         //         oldHead v              v oldTail
         //   oldKeys:  [0, 1, 2, 3, 4, 5, 6]
-        //   newParts: [0,  ,  ,  ,  ,  , 6] <- tails matched: update 6 and
-        //   newKeys:  [0, 2, 1, 4, 3, 7, 6]    advance both oldTail & newTail
+        //   newParts: [0,  ,  ,  ,  ,  , 6] <- tails matched: update 6
+        //   and newKeys:  [0, 2, 1, 4, 3, 7, 6]    advance both oldTail
+        //   & newTail
         //         newHead ^              ^ newTail
         //
-        // * If neither head nor tail match; next check if one of the old
-        // head/tail
-        //   items was removed. We first need to generate the reverse map of new
-        //   keys to index (`newKeyToIndexMap`), which is done once lazily as a
-        //   performance optimization, since we only hit this case if multiple
-        //   non-contiguous changes were made. Note that for contiguous removal
-        //   anywhere in the list, the head and tails would advance from either
-        //   end and pass each other before we get to this case and removals
+        // * If neither head nor tail match; next check if one of the
+        // old head/tail
+        //   items was removed. We first need to generate the reverse
+        //   map of new keys to index (`newKeyToIndexMap`), which is
+        //   done once lazily as a performance optimization, since we
+        //   only hit this case if multiple non-contiguous changes were
+        //   made. Note that for contiguous removal anywhere in the
+        //   list, the head and tails would advance from either end and
+        //   pass each other before we get to this case and removals
         //   would be handled in the final while loop without needing to
         //   generate the map.
         //
-        // * Example below: The key at `oldTail` was removed (no longer in the
-        //   `newKeyToIndexMap`), so remove that part from the DOM and advance
-        //   just the `oldTail` pointer.
+        // * Example below: The key at `oldTail` was removed (no longer
+        // in the
+        //   `newKeyToIndexMap`), so remove that part from the DOM and
+        //   advance just the `oldTail` pointer.
         //
         //         oldHead v           v oldTail
         //   oldKeys:  [0, 1, 2, 3, 4, 5, 6]
-        //   newParts: [0,  ,  ,  ,  ,  , 6] <- 5 not in new map; remove 5 and
-        //   newKeys:  [0, 2, 1, 4, 3, 7, 6]    advance oldTail
+        //   newParts: [0,  ,  ,  ,  ,  , 6] <- 5 not in new map; remove
+        //   5 and newKeys:  [0, 2, 1, 4, 3, 7, 6]    advance oldTail
         //         newHead ^           ^ newTail
         //
-        // * Once head and tail cannot move, any mismatches are due to either
-        // new or
-        //   moved items; if a new key is in the previous "old key to old index"
-        //   map, move the old part to the new location, otherwise create and
-        //   insert a new part. Note that when moving an old part we null its
-        //   position in the oldParts array if it lies between the head and tail
-        //   so we know to skip it when the pointers get there.
+        // * Once head and tail cannot move, any mismatches are due to
+        // either new or
+        //   moved items; if a new key is in the previous "old key to
+        //   old index" map, move the old part to the new location,
+        //   otherwise create and insert a new part. Note that when
+        //   moving an old part we null its position in the oldParts
+        //   array if it lies between the head and tail so we know to
+        //   skip it when the pointers get there.
         //
-        // * Example below: neither head nor tail match, and neither were
-        // removed;
-        //   so find the `newHead` key in the `oldKeyToIndexMap`, and move that
-        //   old part's DOM into the next head position (before
-        //   `oldParts[oldHead]`). Last, null the part in the `oldPart` array
-        //   since it was somewhere in the remaining oldParts still to be
-        //   scanned (between the head and tail pointers) so that we know to
-        //   skip that old part on future iterations.
+        // * Example below: neither head nor tail match, and neither
+        // were removed;
+        //   so find the `newHead` key in the `oldKeyToIndexMap`, and
+        //   move that old part's DOM into the next head position
+        //   (before `oldParts[oldHead]`). Last, null the part in the
+        //   `oldPart` array since it was somewhere in the remaining
+        //   oldParts still to be scanned (between the head and tail
+        //   pointers) so that we know to skip that old part on future
+        //   iterations.
         //
         //         oldHead v        v oldTail
         //   oldKeys:  [0, 1, -, 3, 4, 5, 6]
-        //   newParts: [0, 2,  ,  ,  ,  , 6] <- stuck; update & move 2 into
-        //   place newKeys:  [0, 2, 1, 4, 3, 7, 6]    and advance newHead
+        //   newParts: [0, 2,  ,  ,  ,  , 6] <- stuck; update & move 2
+        //   into place newKeys:  [0, 2, 1, 4, 3, 7, 6]    and advance
+        //   newHead
         //         newHead ^           ^ newTail
         //
-        // * Note that for moves/insertions like the one above, a part inserted
-        // at
+        // * Note that for moves/insertions like the one above, a part
+        // inserted at
         //   the head pointer is inserted before the current
-        //   `oldParts[oldHead]`, and a part inserted at the tail pointer is
-        //   inserted before `newParts[newTail+1]`. The seeming asymmetry lies
-        //   in the fact that new parts are moved into place outside in, so to
-        //   the right of the head pointer are old parts, and to the right of
-        //   the tail pointer are new parts.
+        //   `oldParts[oldHead]`, and a part inserted at the tail
+        //   pointer is inserted before `newParts[newTail+1]`. The
+        //   seeming asymmetry lies in the fact that new parts are moved
+        //   into place outside in, so to the right of the head pointer
+        //   are old parts, and to the right of the tail pointer are new
+        //   parts.
         //
-        // * We always restart back from the top of the algorithm, allowing
-        // matching
+        // * We always restart back from the top of the algorithm,
+        // allowing matching
         //   and simple updates in place to continue...
         //
-        // * Example below: the head pointers once again match, so simply update
-        //   part 1 and record it in the `newParts` array.  Last, advance both
-        //   head pointers.
+        // * Example below: the head pointers once again match, so
+        // simply update
+        //   part 1 and record it in the `newParts` array.  Last,
+        //   advance both head pointers.
         //
         //         oldHead v        v oldTail
         //   oldKeys:  [0, 1, -, 3, 4, 5, 6]
-        //   newParts: [0, 2, 1,  ,  ,  , 6] <- heads matched; update 1 and
-        //   newKeys:  [0, 2, 1, 4, 3, 7, 6]    advance both oldHead & newHead
+        //   newParts: [0, 2, 1,  ,  ,  , 6] <- heads matched; update 1
+        //   and newKeys:  [0, 2, 1, 4, 3, 7, 6]    advance both oldHead
+        //   & newHead
         //            newHead ^        ^ newTail
         //
-        // * As mentioned above, items that were moved as a result of being
-        // stuck
-        //   (the final else clause in the code below) are marked with null, so
-        //   we always advance old pointers over these so we're comparing the
-        //   next actual old value on either end.
+        // * As mentioned above, items that were moved as a result of
+        // being stuck
+        //   (the final else clause in the code below) are marked with
+        //   null, so we always advance old pointers over these so we're
+        //   comparing the next actual old value on either end.
         //
-        // * Example below: `oldHead` is null (already placed in newParts), so
+        // * Example below: `oldHead` is null (already placed in
+        // newParts), so
         //   advance `oldHead`.
         //
         //            oldHead v     v oldTail
-        //   oldKeys:  [0, 1, -, 3, 4, 5, 6] // old head already used; advance
-        //   newParts: [0, 2, 1,  ,  ,  , 6] // oldHead
-        //   newKeys:  [0, 2, 1, 4, 3, 7, 6]
+        //   oldKeys:  [0, 1, -, 3, 4, 5, 6] // old head already used;
+        //   advance newParts: [0, 2, 1,  ,  ,  , 6] // oldHead newKeys:
+        //   [0, 2, 1, 4, 3, 7, 6]
         //               newHead ^     ^ newTail
         //
-        // * Note it's not critical to mark old parts as null when they are
-        // moved
-        //   from head to tail or tail to head, since they will be outside the
-        //   pointer range and never visited again.
+        // * Note it's not critical to mark old parts as null when they
+        // are moved
+        //   from head to tail or tail to head, since they will be
+        //   outside the pointer range and never visited again.
         //
-        // * Example below: Here the old tail key matches the new head key, so
-        //   the part at the `oldTail` position and move its DOM to the new
-        //   head position (before `oldParts[oldHead]`). Last, advance `oldTail`
-        //   and `newHead` pointers.
+        // * Example below: Here the old tail key matches the new head
+        // key, so
+        //   the part at the `oldTail` position and move its DOM to the
+        //   new head position (before `oldParts[oldHead]`). Last,
+        //   advance `oldTail` and `newHead` pointers.
         //
         //               oldHead v  v oldTail
         //   oldKeys:  [0, 1, -, 3, 4, 5, 6]
-        //   newParts: [0, 2, 1, 4,  ,  , 6] <- old tail matches new head:
-        //   update newKeys:  [0, 2, 1, 4, 3, 7, 6]   & move 4, advance oldTail
-        //   & newHead
+        //   newParts: [0, 2, 1, 4,  ,  , 6] <- old tail matches new
+        //   head: update newKeys:  [0, 2, 1, 4, 3, 7, 6]   & move 4,
+        //   advance oldTail & newHead
         //               newHead ^     ^ newTail
         //
-        // * Example below: Old and new head keys match, so update the old head
-        //   part in place, and advance the `oldHead` and `newHead` pointers.
+        // * Example below: Old and new head keys match, so update the
+        // old head
+        //   part in place, and advance the `oldHead` and `newHead`
+        //   pointers.
         //
         //               oldHead v oldTail
         //   oldKeys:  [0, 1, -, 3, 4, 5, 6]
-        //   newParts: [0, 2, 1, 4, 3,   ,6] <- heads match: update 3 and
-        //   advance newKeys:  [0, 2, 1, 4, 3, 7, 6]    oldHead & newHead
+        //   newParts: [0, 2, 1, 4, 3,   ,6] <- heads match: update 3
+        //   and advance newKeys:  [0, 2, 1, 4, 3, 7, 6]    oldHead &
+        //   newHead
         //                  newHead ^  ^ newTail
         //
-        // * Once the new or old pointers move past each other then all we have
-        //   left is additions (if old list exhausted) or removals (if new list
-        //   exhausted). Those are handled in the final while loops at the end.
+        // * Once the new or old pointers move past each other then all
+        // we have
+        //   left is additions (if old list exhausted) or removals (if
+        //   new list exhausted). Those are handled in the final while
+        //   loops at the end.
         //
-        // * Example below: `oldHead` exceeded `oldTail`, so we're done with the
-        //   main loop.  Create the remaining part and insert it at the new head
-        //   position, and the update is complete.
+        // * Example below: `oldHead` exceeded `oldTail`, so we're done
+        // with the
+        //   main loop.  Create the remaining part and insert it at the
+        //   new head position, and the update is complete.
         //
         //                   (oldHead > oldTail)
         //   oldKeys:  [0, 1, -, 3, 4, 5, 6]
@@ -16022,30 +18275,35 @@ const repeat = Object(_lit_html_js__WEBPACK_IMPORTED_MODULE_0__["directive"])((i
         //   newKeys:  [0, 2, 1, 4, 3, 7, 6]
         //                     newHead ^ newTail
         //
-        // * Note that the order of the if/else clauses is not important to the
-        //   algorithm, as long as the null checks come first (to ensure we're
-        //   always working on valid old parts) and that the final else clause
-        //   comes last (since that's where the expensive moves occur). The
-        //   order of remaining clauses is is just a simple guess at which cases
-        //   will be most common.
+        // * Note that the order of the if/else clauses is not important
+        // to the
+        //   algorithm, as long as the null checks come first (to ensure
+        //   we're always working on valid old parts) and that the final
+        //   else clause comes last (since that's where the expensive
+        //   moves occur). The order of remaining clauses is is just a
+        //   simple guess at which cases will be most common.
         //
-        // * TODO(kschaaf) Note, we could calculate the longest increasing
-        //   subsequence (LIS) of old items in new position, and only move those
-        //   not in the LIS set. However that costs O(nlogn) time and adds a bit
-        //   more code, and only helps make rare types of mutations require
-        //   fewer moves. The above handles removes, adds, reversal, swaps, and
-        //   single moves of contiguous items in linear time, in the minimum
-        //   number of moves. As the number of multiple moves where LIS might
-        //   help approaches a random shuffle, the LIS optimization becomes less
-        //   helpful, so it seems not worth the code at this point. Could
-        //   reconsider if a compelling case arises.
+        // * TODO(kschaaf) Note, we could calculate the longest
+        // increasing
+        //   subsequence (LIS) of old items in new position, and only
+        //   move those not in the LIS set. However that costs O(nlogn)
+        //   time and adds a bit more code, and only helps make rare
+        //   types of mutations require fewer moves. The above handles
+        //   removes, adds, reversal, swaps, and single moves of
+        //   contiguous items in linear time, in the minimum number of
+        //   moves. As the number of multiple moves where LIS might help
+        //   approaches a random shuffle, the LIS optimization becomes
+        //   less helpful, so it seems not worth the code at this point.
+        //   Could reconsider if a compelling case arises.
         while (oldHead <= oldTail && newHead <= newTail) {
             if (oldParts[oldHead] === null) {
-                // `null` means old part at head has already been used below; skip
+                // `null` means old part at head has already been used
+                // below; skip
                 oldHead++;
             }
             else if (oldParts[oldTail] === null) {
-                // `null` means old part at tail has already been used below; skip
+                // `null` means old part at tail has already been used
+                // below; skip
                 oldTail--;
             }
             else if (oldKeys[oldHead] === newKeys[newHead]) {
@@ -16080,8 +18338,8 @@ const repeat = Object(_lit_html_js__WEBPACK_IMPORTED_MODULE_0__["directive"])((i
             }
             else {
                 if (newKeyToIndexMap === undefined) {
-                    // Lazily generate key-to-index maps, used for removals & moves
-                    // below
+                    // Lazily generate key-to-index maps, used for removals &
+                    // moves below
                     newKeyToIndexMap = generateMap(newKeys, newHead, newTail);
                     oldKeyToIndexMap = generateMap(oldKeys, oldHead, oldTail);
                 }
@@ -16096,22 +18354,25 @@ const repeat = Object(_lit_html_js__WEBPACK_IMPORTED_MODULE_0__["directive"])((i
                     oldTail--;
                 }
                 else {
-                    // Any mismatches at this point are due to additions or moves; see
-                    // if we have an old part we can reuse and move into place
+                    // Any mismatches at this point are due to additions or
+                    // moves; see if we have an old part we can reuse and move
+                    // into place
                     const oldIndex = oldKeyToIndexMap.get(newKeys[newHead]);
                     const oldPart = oldIndex !== undefined ? oldParts[oldIndex] : null;
                     if (oldPart === null) {
-                        // No old part for this value; create a new one and insert it
+                        // No old part for this value; create a new one and
+                        // insert it
                         const newPart = createAndInsertPart(containerPart, oldParts[oldHead]);
                         updatePart(newPart, newValues[newHead]);
                         newParts[newHead] = newPart;
                     }
                     else {
                         // Reuse old part
-                        newParts[newHead] = updatePart(oldPart, newValues[newHead]);
+                        newParts[newHead] =
+                            updatePart(oldPart, newValues[newHead]);
                         insertPartBefore(containerPart, oldPart, oldParts[oldHead]);
-                        // This marks the old part as having been used, so that it will
-                        // be skipped in the first two checks above
+                        // This marks the old part as having been used, so that
+                        // it will be skipped in the first two checks above
                         oldParts[oldIndex] = null;
                     }
                     newHead++;
@@ -16120,8 +18381,8 @@ const repeat = Object(_lit_html_js__WEBPACK_IMPORTED_MODULE_0__["directive"])((i
         }
         // Add parts for any remaining new values
         while (newHead <= newTail) {
-            // For all remaining additions, we insert before last new tail,
-            // since old pointers are no longer valid
+            // For all remaining additions, we insert before last new
+            // tail, since old pointers are no longer valid
             const newPart = createAndInsertPart(containerPart, newParts[newTail + 1]);
             updatePart(newPart, newValues[newHead]);
             newParts[newHead++] = newPart;
@@ -16254,12 +18515,15 @@ const directives = new WeakMap();
  * });
  * ```
  */
+// tslint:disable-next-line:no-any
 const directive = (f) => ((...args) => {
     const d = f(...args);
     directives.set(d, true);
     return d;
 });
-const isDirective = (o) => typeof o === 'function' && directives.has(o);
+const isDirective = (o) => {
+    return typeof o === 'function' && directives.has(o);
+};
 
 
 /***/ }),
@@ -16290,13 +18554,11 @@ __webpack_require__.r(__webpack_exports__);
  * http://polymer.github.io/PATENTS.txt
  */
 /**
- * @module lit-html
- */
-/**
  * True if the custom elements polyfill is in use.
  */
 const isCEPolyfill = window.customElements !== undefined &&
-    window.customElements.polyfillWrapFlushCallback !== undefined;
+    window.customElements.polyfillWrapFlushCallback !==
+        undefined;
 /**
  * Reparents nodes, starting from `startNode` (inclusive) to `endNode`
  * (exclusive), into another container (could be the same container), before
@@ -16552,8 +18814,10 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const isPrimitive = (value) => (value === null ||
-    !(typeof value === 'object' || typeof value === 'function'));
+const isPrimitive = (value) => {
+    return (value === null ||
+        !(typeof value === 'object' || typeof value === 'function'));
+};
 /**
  * Sets attribute values for AttributeParts, so that the value is only set once
  * even if there are multiple parts for an attribute.
@@ -16585,7 +18849,9 @@ class AttributeCommitter {
             if (part !== undefined) {
                 const v = part.value;
                 if (v != null &&
-                    (Array.isArray(v) || typeof v !== 'string' && v[Symbol.iterator])) {
+                    (Array.isArray(v) ||
+                        // tslint:disable-next-line:no-any
+                        typeof v !== 'string' && v[Symbol.iterator])) {
                     for (const t of v) {
                         text += typeof t === 'string' ? t : String(t);
                     }
@@ -16702,7 +18968,9 @@ class NodePart {
         else if (value instanceof Node) {
             this._commitNode(value);
         }
-        else if (Array.isArray(value) || value[Symbol.iterator]) {
+        else if (Array.isArray(value) ||
+            // tslint:disable-next-line:no-any
+            value[Symbol.iterator]) {
             this._commitIterable(value);
         }
         else if (value === _part_js__WEBPACK_IMPORTED_MODULE_2__["nothing"]) {
@@ -16742,7 +19010,8 @@ class NodePart {
     }
     _commitTemplateResult(value) {
         const template = this.options.templateFactory(value);
-        if (this.value && this.value.template === template) {
+        if (this.value instanceof _template_instance_js__WEBPACK_IMPORTED_MODULE_3__["TemplateInstance"] &&
+            this.value.template === template) {
             this.value.update(value.values);
         }
         else {
@@ -16874,6 +19143,7 @@ class PropertyCommitter extends AttributeCommitter {
     commit() {
         if (this.dirty) {
             this.dirty = false;
+            // tslint:disable-next-line:no-any
             this.element[this.name] = this._getValue();
         }
     }
@@ -16892,7 +19162,9 @@ try {
             return false;
         }
     };
+    // tslint:disable-next-line:no-any
     window.addEventListener('test', options, options);
+    // tslint:disable-next-line:no-any
     window.removeEventListener('test', options, options);
 }
 catch (_e) {
@@ -17914,6 +20186,10 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+// IMPORTANT: do not change the property name or the assignment expression.
+// This line will be used in regexes to search for lit-html usage.
+// TODO(justinfagnani): inject version number at build time
+(window['litHtmlVersions'] || (window['litHtmlVersions'] = [])).push('1.0.0');
 /**
  * Interprets a template literal as an HTML template that can efficiently
  * render to and update a container.
@@ -17928,21 +20204,21 @@ const svg = (strings, ...values) => new _lib_template_result_js__WEBPACK_IMPORTE
 
 /***/ }),
 
-/***/ "../../node_modules/raw-loader/index.js!./core/shaders/uberPBRShader.frag":
-/*!**********************************************************************!*\
-  !*** /app/node_modules/raw-loader!./core/shaders/uberPBRShader.frag ***!
-  \**********************************************************************/
+/***/ "../../node_modules/raw-loader/index.js!./shaders/uberPBRShader.frag":
+/*!*****************************************************************!*\
+  !*** /app/node_modules/raw-loader!./shaders/uberPBRShader.frag ***!
+  \*****************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "//#define PHYSICAL\n\nuniform vec3 diffuse;\nuniform vec3 emissive;\nuniform float roughness;\nuniform float metalness;\nuniform float opacity;\n\n#ifndef STANDARD\n\tuniform float clearCoat;\n\tuniform float clearCoatRoughness;\n#endif\n\nvarying vec3 vViewPosition;\n\n#ifndef FLAT_SHADED\n\tvarying vec3 vNormal;\n#endif\n\n#include <common>\n#include <packing>\n#include <dithering_pars_fragment>\n#include <color_pars_fragment>\n\n//#include <uv_pars_fragment>\n//#include <uv2_pars_fragment>\n// REPLACED WITH\n#if defined(USE_MAP) || defined(USE_BUMPMAP) || defined(USE_NORMALMAP) || defined(USE_SPECULARMAP) || defined(USE_ALPHAMAP) || defined(USE_EMISSIVEMAP) || defined(USE_ROUGHNESSMAP) || defined(USE_METALNESSMAP) || defined(USE_LIGHTMAP) || defined(USE_AOMAP)\n\tvarying vec2 vUv;\n#endif\n\n#include <map_pars_fragment>\n#include <alphamap_pars_fragment>\n#include <aomap_pars_fragment>\n#include <lightmap_pars_fragment>\n#include <emissivemap_pars_fragment>\n#include <bsdfs>\n#include <cube_uv_reflection_fragment>\n#include <envmap_pars_fragment>\n#include <envmap_physical_pars_fragment>\n#include <fog_pars_fragment>\n#include <lights_pars_begin>\n#include <lights_physical_pars_fragment>\n#include <shadowmap_pars_fragment>\n#include <bumpmap_pars_fragment>\n#include <normalmap_pars_fragment>\n#include <roughnessmap_pars_fragment>\n#include <metalnessmap_pars_fragment>\n#include <logdepthbuf_pars_fragment>\n#include <clipping_planes_pars_fragment>\n\n#ifdef USE_AOMAP\n    uniform vec3 aoMapMix;\n#endif\n\n#ifdef MODE_XRAY\n    varying float vIntensity;\n#endif\n\n#ifdef CUT_PLANE\n    varying vec3 vWorldPosition;\n    uniform vec4 cutPlaneDirection;\n    uniform vec3 cutPlaneColor;\n#endif\n\nvoid main() {\n    #ifdef CUT_PLANE\n        if (dot(vWorldPosition, cutPlaneDirection.xyz) < cutPlaneDirection.w) {\n            discard;\n        }\n    #endif\n\n\t#include <clipping_planes_fragment>\n\n\tvec4 diffuseColor = vec4( diffuse, opacity );\n\tReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );\n\tvec3 totalEmissiveRadiance = emissive;\n\n\t#include <logdepthbuf_fragment>\n\t#include <map_fragment>\n\t#include <color_fragment>\n\t#include <alphamap_fragment>\n\t#include <alphatest_fragment>\n\t#include <roughnessmap_fragment>\n\t#include <metalnessmap_fragment>\n\t#include <normal_fragment_begin>\n    #include <normal_fragment_maps>\n\n\t#ifdef CUT_PLANE\n\t    // on the cut surface (back facing fragments revealed), replace normal with cut plane direction\n        if (!gl_FrontFacing) {\n            normal = -cutPlaneDirection.xyz;\n            diffuseColor.rgb = cutPlaneColor.rgb;\n        }\n\t#endif\n\n\t#include <emissivemap_fragment>\n\n\t// accumulation\n    #if defined(USE_LIGHTMAP) || defined(USE_AOMAP)\n        vec2 vUv2 = vUv;\n    #endif\n\n\t#include <lights_physical_fragment>\n\t#include <lights_fragment_begin>\n\t#include <lights_fragment_maps>\n\t#include <lights_fragment_end>\n\n\t// modulation\n\t//#include <aomap_fragment>\n\t// REPLACED WITH\n\t#ifdef USE_AOMAP\n\t    // if cut plane is enabled, disable ambient occlusion on back facing fragments\n\t    #ifdef CUT_PLANE\n            if (gl_FrontFacing) {\n\t    #endif\n\n    \t// reads channel R, compatible with a combined OcclusionRoughnessMetallic (RGB) texture\n    \tvec3 aoSample = texture2D(aoMap, vUv).rgb;\n    \tvec3 aoFactors = mix(vec3(1.0), aoSample, clamp(aoMapMix * aoMapIntensity, 0.0, 1.0));\n    \tfloat ambientOcclusion = aoFactors.x * aoFactors.y * aoFactors.z;\n    \tfloat ambientOcclusion2 = ambientOcclusion * ambientOcclusion;\n    \treflectedLight.directDiffuse *= ambientOcclusion2;\n    \treflectedLight.directSpecular *= ambientOcclusion;\n    \t//reflectedLight.indirectDiffuse *= ambientOcclusion;\n\n    \t#if defined(USE_ENVMAP) && defined(PHYSICAL)\n    \t\tfloat dotNV = saturate(dot(geometry.normal, geometry.viewDir));\n    \t\treflectedLight.indirectSpecular *= computeSpecularOcclusion(dotNV, ambientOcclusion, material.specularRoughness);\n    \t#endif\n\n    \t#ifdef CUT_PLANE\n    \t    }\n    \t#endif\n    #endif\n\n\tvec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + reflectedLight.directSpecular + reflectedLight.indirectSpecular + totalEmissiveRadiance;\n\n\tgl_FragColor = vec4(outgoingLight, diffuseColor.a);\n\n\t#include <tonemapping_fragment>\n\t#include <encodings_fragment>\n\t#include <fog_fragment>\n\t#include <premultiplied_alpha_fragment>\n\t#include <dithering_fragment>\n\n    #ifdef MODE_NORMALS\n        gl_FragColor = vec4(vec3(normal * 0.5 + 0.5), 1.0);\n    #endif\n\n    #ifdef MODE_XRAY\n        gl_FragColor = vec4(vec3(0.4, 0.7, 1.0) * vIntensity, 1.0);\n    #endif\n}\n"
+module.exports = "//#define PHYSICAL\n\nuniform vec3 diffuse;\nuniform vec3 emissive;\nuniform float roughness;\nuniform float metalness;\nuniform float opacity;\n\n#ifndef STANDARD\n\tuniform float clearCoat;\n\tuniform float clearCoatRoughness;\n#endif\n\nvarying vec3 vViewPosition;\n\n#ifndef FLAT_SHADED\n\tvarying vec3 vNormal;\n#endif\n\n#include <common>\n#include <packing>\n#include <dithering_pars_fragment>\n#include <color_pars_fragment>\n\n//#include <uv_pars_fragment>\n//#include <uv2_pars_fragment>\n// REPLACED WITH\n#if defined(USE_MAP) || defined(USE_BUMPMAP) || defined(USE_NORMALMAP) || defined(USE_SPECULARMAP) || defined(USE_ALPHAMAP) || defined(USE_EMISSIVEMAP) || defined(USE_ROUGHNESSMAP) || defined(USE_METALNESSMAP) || defined(USE_LIGHTMAP) || defined(USE_AOMAP)\n\tvarying vec2 vUv;\n#endif\n\n#include <map_pars_fragment>\n#include <alphamap_pars_fragment>\n#include <aomap_pars_fragment>\n#include <lightmap_pars_fragment>\n#include <emissivemap_pars_fragment>\n#include <bsdfs>\n#include <cube_uv_reflection_fragment>\n#include <envmap_pars_fragment>\n#include <envmap_physical_pars_fragment>\n#include <fog_pars_fragment>\n#include <lights_pars_begin>\n#include <lights_physical_pars_fragment>\n#include <shadowmap_pars_fragment>\n#include <bumpmap_pars_fragment>\n#include <normalmap_pars_fragment>\n#include <roughnessmap_pars_fragment>\n#include <metalnessmap_pars_fragment>\n#include <logdepthbuf_pars_fragment>\n#include <clipping_planes_pars_fragment>\n\n#ifdef USE_AOMAP\n    uniform vec3 aoMapMix;\n#endif\n\n#ifdef MODE_XRAY\n    varying float vIntensity;\n#endif\n\n#ifdef CUT_PLANE\n    varying vec3 vWorldPosition;\n    uniform vec4 cutPlaneDirection;\n    uniform vec3 cutPlaneColor;\n#endif\n\nvoid main() {\n    #ifdef CUT_PLANE\n        if (dot(vWorldPosition, cutPlaneDirection.xyz) < -cutPlaneDirection.w) {\n            discard;\n        }\n    #endif\n\n\t#include <clipping_planes_fragment>\n\n\tvec4 diffuseColor = vec4( diffuse, opacity );\n\tReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );\n\tvec3 totalEmissiveRadiance = emissive;\n\n\t#include <logdepthbuf_fragment>\n\t#include <map_fragment>\n\t#include <color_fragment>\n\t#include <alphamap_fragment>\n\t#include <alphatest_fragment>\n\t#include <roughnessmap_fragment>\n\t#include <metalnessmap_fragment>\n\t#include <normal_fragment_begin>\n    #include <normal_fragment_maps>\n\n\t#ifdef CUT_PLANE\n\t    // on the cut surface (back facing fragments revealed), replace normal with cut plane direction\n        if (!gl_FrontFacing) {\n            normal = -cutPlaneDirection.xyz;\n            diffuseColor.rgb = cutPlaneColor.rgb;\n        }\n\t#endif\n\n\t#include <emissivemap_fragment>\n\n\t// accumulation\n    #if defined(USE_LIGHTMAP) || defined(USE_AOMAP)\n        vec2 vUv2 = vUv;\n    #endif\n\n\t#include <lights_physical_fragment>\n\t#include <lights_fragment_begin>\n\t#include <lights_fragment_maps>\n\t#include <lights_fragment_end>\n\n\t// modulation\n\t//#include <aomap_fragment>\n\t// REPLACED WITH\n\t#ifdef USE_AOMAP\n\t    // if cut plane is enabled, disable ambient occlusion on back facing fragments\n\t    #ifdef CUT_PLANE\n            if (gl_FrontFacing) {\n\t    #endif\n\n    \t// reads channel R, compatible with a combined OcclusionRoughnessMetallic (RGB) texture\n    \tvec3 aoSample = texture2D(aoMap, vUv).rgb;\n    \tvec3 aoFactors = mix(vec3(1.0), aoSample, clamp(aoMapMix * aoMapIntensity, 0.0, 1.0));\n    \tfloat ambientOcclusion = aoFactors.x * aoFactors.y * aoFactors.z;\n    \tfloat ambientOcclusion2 = ambientOcclusion * ambientOcclusion;\n    \treflectedLight.directDiffuse *= ambientOcclusion2;\n    \treflectedLight.directSpecular *= ambientOcclusion;\n    \t//reflectedLight.indirectDiffuse *= ambientOcclusion;\n\n    \t#if defined(USE_ENVMAP) && defined(PHYSICAL)\n    \t\tfloat dotNV = saturate(dot(geometry.normal, geometry.viewDir));\n    \t\treflectedLight.indirectSpecular *= computeSpecularOcclusion(dotNV, ambientOcclusion, material.specularRoughness);\n    \t#endif\n\n    \t#ifdef CUT_PLANE\n    \t    }\n    \t#endif\n    #endif\n\n\tvec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + reflectedLight.directSpecular + reflectedLight.indirectSpecular + totalEmissiveRadiance;\n\n\tgl_FragColor = vec4(outgoingLight, diffuseColor.a);\n\n\t#include <tonemapping_fragment>\n\t#include <encodings_fragment>\n\t#include <fog_fragment>\n\t#include <premultiplied_alpha_fragment>\n\t#include <dithering_fragment>\n\n    #ifdef MODE_NORMALS\n        gl_FragColor = vec4(vec3(normal * 0.5 + 0.5), 1.0);\n    #endif\n\n    #ifdef MODE_XRAY\n        gl_FragColor = vec4(vec3(0.4, 0.7, 1.0) * vIntensity, 1.0);\n    #endif\n}\n"
 
 /***/ }),
 
-/***/ "../../node_modules/raw-loader/index.js!./core/shaders/uberPBRShader.vert":
-/*!**********************************************************************!*\
-  !*** /app/node_modules/raw-loader!./core/shaders/uberPBRShader.vert ***!
-  \**********************************************************************/
+/***/ "../../node_modules/raw-loader/index.js!./shaders/uberPBRShader.vert":
+/*!*****************************************************************!*\
+  !*** /app/node_modules/raw-loader!./shaders/uberPBRShader.vert ***!
+  \*****************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -18769,7 +21045,7 @@ THREE.GLTFLoader = ( function () {
 							break;
 
 						case EXTENSIONS.MSFT_TEXTURE_DDS:
-							extensions[ EXTENSIONS.MSFT_TEXTURE_DDS ] = new GLTFTextureDDSExtension( json );
+							extensions[ EXTENSIONS.MSFT_TEXTURE_DDS ] = new GLTFTextureDDSExtension();
 							break;
 
 						case EXTENSIONS.KHR_TEXTURE_TRANSFORM:
@@ -18798,23 +21074,7 @@ THREE.GLTFLoader = ( function () {
 
 			} );
 
-			parser.parse( function ( scene, scenes, cameras, animations, json ) {
-
-				var glTF = {
-					scene: scene,
-					scenes: scenes,
-					cameras: cameras,
-					animations: animations,
-					asset: json.asset,
-					parser: parser,
-					userData: {}
-				};
-
-				addUnknownExtensionsToUserData( extensions, glTF, json );
-
-				onLoad( glTF );
-
-			}, onError );
+			parser.parse( onLoad, onError );
 
 		}
 
@@ -18918,7 +21178,7 @@ THREE.GLTFLoader = ( function () {
 
 			case 'directional':
 				lightNode = new THREE.DirectionalLight( color );
-				lightNode.target.position.set( 0, 0, -1 );
+				lightNode.target.position.set( 0, 0, - 1 );
 				lightNode.add( lightNode.target );
 				break;
 
@@ -18936,7 +21196,7 @@ THREE.GLTFLoader = ( function () {
 				lightDef.spot.outerConeAngle = lightDef.spot.outerConeAngle !== undefined ? lightDef.spot.outerConeAngle : Math.PI / 4.0;
 				lightNode.angle = lightDef.spot.outerConeAngle;
 				lightNode.penumbra = 1.0 - lightDef.spot.innerConeAngle / lightDef.spot.outerConeAngle;
-				lightNode.target.position.set( 0, 0, -1 );
+				lightNode.target.position.set( 0, 0, - 1 );
 				lightNode.add( lightNode.target );
 				break;
 
@@ -18944,6 +21204,10 @@ THREE.GLTFLoader = ( function () {
 				throw new Error( 'THREE.GLTFLoader: Unexpected light type, "' + lightDef.type + '".' );
 
 		}
+
+		// Some lights (e.g. spot) default to a position other than the origin. Reset the position
+		// here, because node-level parsing will only override position if explicitly specified.
+		lightNode.position.set( 0, 0, 0 );
 
 		lightNode.decay = 2;
 
@@ -19088,7 +21352,6 @@ THREE.GLTFLoader = ( function () {
 		this.name = EXTENSIONS.KHR_DRACO_MESH_COMPRESSION;
 		this.json = json;
 		this.dracoLoader = dracoLoader;
-		THREE.DRACOLoader.getDecoderModule();
 
 	}
 
@@ -19104,21 +21367,23 @@ THREE.GLTFLoader = ( function () {
 
 		for ( var attributeName in gltfAttributeMap ) {
 
-			if ( ! ( attributeName in ATTRIBUTES ) ) continue;
+			var threeAttributeName = ATTRIBUTES[ attributeName ] || attributeName.toLowerCase();
 
-			threeAttributeMap[ ATTRIBUTES[ attributeName ] ] = gltfAttributeMap[ attributeName ];
+			threeAttributeMap[ threeAttributeName ] = gltfAttributeMap[ attributeName ];
 
 		}
 
 		for ( attributeName in primitive.attributes ) {
 
-			if ( ATTRIBUTES[ attributeName ] !== undefined && gltfAttributeMap[ attributeName ] !== undefined ) {
+			var threeAttributeName = ATTRIBUTES[ attributeName ] || attributeName.toLowerCase();
+
+			if ( gltfAttributeMap[ attributeName ] !== undefined ) {
 
 				var accessorDef = json.accessors[ primitive.attributes[ attributeName ] ];
 				var componentType = WEBGL_COMPONENT_TYPES[ accessorDef.componentType ];
 
-				attributeTypeMap[ ATTRIBUTES[ attributeName ] ] = componentType;
-				attributeNormalizedMap[ ATTRIBUTES[ attributeName ] ] = accessorDef.normalized === true;
+				attributeTypeMap[ threeAttributeName ] = componentType;
+				attributeNormalizedMap[ threeAttributeName ] = accessorDef.normalized === true;
 
 			}
 
@@ -19544,6 +21809,7 @@ THREE.GLTFLoader = ( function () {
 					uniforms.refractionRatio.value = material.refractionRatio;
 
 					uniforms.maxMipLevel.value = renderer.properties.get( material.envMap ).__maxMipLevel;
+
 				}
 
 				uniforms.specular.value.copy( material.specular );
@@ -19777,6 +22043,7 @@ THREE.GLTFLoader = ( function () {
 	var ATTRIBUTES = {
 		POSITION: 'position',
 		NORMAL: 'normal',
+		TANGENT: 'tangent',
 		TEXCOORD_0: 'uv',
 		TEXCOORD_1: 'uv2',
 		COLOR_0: 'color',
@@ -19792,10 +22059,8 @@ THREE.GLTFLoader = ( function () {
 	};
 
 	var INTERPOLATION = {
-		CUBICSPLINE: THREE.InterpolateSmooth, // We use custom interpolation GLTFCubicSplineInterpolation for CUBICSPLINE.
-		                                      // KeyframeTrack.optimize() can't handle glTF Cubic Spline output values layout,
-		                                      // using THREE.InterpolateSmooth for KeyframeTrack instantiation to prevent optimization.
-		                                      // See KeyframeTrack.optimize() for the detail.
+		CUBICSPLINE: undefined, // We use a custom interpolant (GLTFCubicSplineInterpolation) for CUBICSPLINE tracks. Each
+		                        // keyframe track will be initialized with a default interpolation type, then modified.
 		LINEAR: THREE.InterpolateLinear,
 		STEP: THREE.InterpolateDiscrete
 	};
@@ -19841,12 +22106,14 @@ THREE.GLTFLoader = ( function () {
 
 	}
 
+	var defaultMaterial;
+
 	/**
 	 * Specification: https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#default-material
 	 */
 	function createDefaultMaterial() {
 
-		return new THREE.MeshStandardMaterial( {
+		defaultMaterial = defaultMaterial || new THREE.MeshStandardMaterial( {
 			color: 0xFFFFFF,
 			emissive: 0x000000,
 			metalness: 1,
@@ -19855,6 +22122,8 @@ THREE.GLTFLoader = ( function () {
 			depthTest: true,
 			side: THREE.FrontSide
 		} );
+
+		return defaultMaterial;
 
 	}
 
@@ -19932,30 +22201,21 @@ THREE.GLTFLoader = ( function () {
 
 			if ( hasMorphPosition ) {
 
-				// TODO: Error-prone use of a callback inside a loop.
-				var accessor = target.POSITION !== undefined
+				var pendingAccessor = target.POSITION !== undefined
 					? parser.getDependency( 'accessor', target.POSITION )
-						.then( function ( accessor ) {
-							// Cloning not to pollute original accessor below
-							return cloneBufferAttribute( accessor );
-						} )
 					: geometry.attributes.position;
 
-				pendingPositionAccessors.push( accessor );
+				pendingPositionAccessors.push( pendingAccessor );
 
 			}
 
 			if ( hasMorphNormal ) {
 
-				// TODO: Error-prone use of a callback inside a loop.
-				var accessor = target.NORMAL !== undefined
+				var pendingAccessor = target.NORMAL !== undefined
 					? parser.getDependency( 'accessor', target.NORMAL )
-						.then( function ( accessor ) {
-							return cloneBufferAttribute( accessor );
-						} )
 					: geometry.attributes.normal;
 
-				pendingNormalAccessors.push( accessor );
+				pendingNormalAccessors.push( pendingAccessor );
 
 			}
 
@@ -19968,6 +22228,24 @@ THREE.GLTFLoader = ( function () {
 
 			var morphPositions = accessors[ 0 ];
 			var morphNormals = accessors[ 1 ];
+
+			// Clone morph target accessors before modifying them.
+
+			for ( var i = 0, il = morphPositions.length; i < il; i ++ ) {
+
+				if ( geometry.attributes.position === morphPositions[ i ] ) continue;
+
+				morphPositions[ i ] = cloneBufferAttribute( morphPositions[ i ] );
+
+			}
+
+			for ( var i = 0, il = morphNormals.length; i < il; i ++ ) {
+
+				if ( geometry.attributes.normal === morphNormals[ i ] ) continue;
+
+				morphNormals[ i ] = cloneBufferAttribute( morphNormals[ i ] );
+
+			}
 
 			for ( var i = 0, il = targets.length; i < il; i ++ ) {
 
@@ -20089,30 +22367,6 @@ THREE.GLTFLoader = ( function () {
 		}
 
 	}
-
-	function isPrimitiveEqual( a, b ) {
-
-		var dracoExtA = a.extensions ? a.extensions[ EXTENSIONS.KHR_DRACO_MESH_COMPRESSION ] : undefined;
-		var dracoExtB = b.extensions ? b.extensions[ EXTENSIONS.KHR_DRACO_MESH_COMPRESSION ] : undefined;
-
-		if ( dracoExtA && dracoExtB ) {
-
-			if ( dracoExtA.bufferView !== dracoExtB.bufferView ) return false;
-
-			return isObjectEqual( dracoExtA.attributes, dracoExtB.attributes );
-
-		}
-
-		if ( a.indices !== b.indices ) {
-
-			return false;
-
-		}
-
-		return isObjectEqual( a.attributes, b.attributes );
-
-	}
-
 	function isObjectEqual( a, b ) {
 
 		if ( Object.keys( a ).length !== Object.keys( b ).length ) return false;
@@ -20127,59 +22381,40 @@ THREE.GLTFLoader = ( function () {
 
 	}
 
-	function isArrayEqual( a, b ) {
+	function createPrimitiveKey( primitiveDef ) {
 
-		if ( a.length !== b.length ) return false;
+		var dracoExtension = primitiveDef.extensions && primitiveDef.extensions[ EXTENSIONS.KHR_DRACO_MESH_COMPRESSION ];
+		var geometryKey;
 
-		for ( var i = 0, il = a.length; i < il; i ++ ) {
+		if ( dracoExtension ) {
 
-			if ( a[ i ] !== b[ i ] ) return false;
+			geometryKey = 'draco:' + dracoExtension.bufferView
+				+ ':' + dracoExtension.indices
+				+ ':' + createAttributesKey( dracoExtension.attributes );
+
+		} else {
+
+			geometryKey = primitiveDef.indices + ':' + createAttributesKey( primitiveDef.attributes ) + ':' + primitiveDef.mode;
 
 		}
 
-		return true;
+		return geometryKey;
 
 	}
 
-	function getCachedGeometry( cache, newPrimitive ) {
+	function createAttributesKey( attributes ) {
 
-		for ( var i = 0, il = cache.length; i < il; i ++ ) {
+		var attributesKey = '';
 
-			var cached = cache[ i ];
+		var keys = Object.keys( attributes ).sort();
 
-			if ( isPrimitiveEqual( cached.primitive, newPrimitive ) ) return cached.promise;
+		for ( var i = 0, il = keys.length; i < il; i ++ ) {
 
-		}
-
-		return null;
-
-	}
-
-	function getCachedCombinedGeometry( cache, geometries ) {
-
-		for ( var i = 0, il = cache.length; i < il; i ++ ) {
-
-			var cached = cache[ i ];
-
-			if ( isArrayEqual( geometries, cached.baseGeometries ) ) return cached.geometry;
+			attributesKey += keys[ i ] + ':' + attributes[ keys[ i ] ] + ';';
 
 		}
 
-		return null;
-
-	}
-
-	function getCachedMultiPassGeometry( cache, geometry, primitives ) {
-
-		for ( var i = 0, il = cache.length; i < il; i ++ ) {
-
-			var cached = cache[ i ];
-
-			if ( geometry === cached.baseGeometry && isArrayEqual( primitives, cached.primitives ) ) return cached.geometry;
-
-		}
-
-		return null;
+		return attributesKey;
 
 	}
 
@@ -20208,48 +22443,6 @@ THREE.GLTFLoader = ( function () {
 
 	}
 
-	/**
-	 * Checks if we can build a single Mesh with MultiMaterial from multiple primitives.
-	 * Returns true if all primitives use the same attributes/morphAttributes/mode
-	 * and also have index. Otherwise returns false.
-	 *
-	 * @param {Array<GLTF.Primitive>} primitives
-	 * @return {Boolean}
-	 */
-	function isMultiPassGeometry( primitives ) {
-
-		if ( primitives.length < 2 ) return false;
-
-		var primitive0 = primitives[ 0 ];
-		var targets0 = primitive0.targets || [];
-
-		if ( primitive0.indices === undefined ) return false;
-
-		for ( var i = 1, il = primitives.length; i < il; i ++ ) {
-
-			var primitive = primitives[ i ];
-
-			if ( primitive0.mode !== primitive.mode ) return false;
-			if ( primitive.indices === undefined ) return false;
-			if ( primitive.extensions && primitive.extensions[ EXTENSIONS.KHR_DRACO_MESH_COMPRESSION ] ) return false;
-			if ( ! isObjectEqual( primitive0.attributes, primitive.attributes ) ) return false;
-
-			var targets = primitive.targets || [];
-
-			if ( targets0.length !== targets.length ) return false;
-
-			for ( var j = 0, jl = targets0.length; j < jl; j ++ ) {
-
-				if ( ! isObjectEqual( targets0[ j ], targets[ j ] ) ) return false;
-
-			}
-
-		}
-
-		return true;
-
-	}
-
 	/* GLTF PARSER */
 
 	function GLTFParser( json, extensions, options ) {
@@ -20262,9 +22455,7 @@ THREE.GLTFLoader = ( function () {
 		this.cache = new GLTFRegistry();
 
 		// BufferGeometry caching
-		this.primitiveCache = [];
-		this.multiplePrimitivesCache = [];
-		this.multiPassGeometryCache = [];
+		this.primitiveCache = {};
 
 		this.textureLoader = new THREE.TextureLoader( this.options.manager );
 		this.textureLoader.setCrossOrigin( this.options.crossOrigin );
@@ -20276,7 +22467,9 @@ THREE.GLTFLoader = ( function () {
 
 	GLTFParser.prototype.parse = function ( onLoad, onError ) {
 
+		var parser = this;
 		var json = this.json;
+		var extensions = this.extensions;
 
 		// Clear the loader cache
 		this.cache.removeAll();
@@ -20284,21 +22477,27 @@ THREE.GLTFLoader = ( function () {
 		// Mark the special nodes/meshes in json for efficient parse
 		this.markDefs();
 
-		// Fire the callback on complete
-		this.getMultiDependencies( [
+		Promise.all( [
 
-			'scene',
-			'animation',
-			'camera'
+			this.getDependencies( 'scene' ),
+			this.getDependencies( 'animation' ),
+			this.getDependencies( 'camera' ),
 
 		] ).then( function ( dependencies ) {
 
-			var scenes = dependencies.scenes || [];
-			var scene = scenes[ json.scene || 0 ];
-			var animations = dependencies.animations || [];
-			var cameras = dependencies.cameras || [];
+			var result = {
+				scene: dependencies[ 0 ][ json.scene || 0 ],
+				scenes: dependencies[ 0 ],
+				animations: dependencies[ 1 ],
+				cameras: dependencies[ 2 ],
+				asset: json.asset,
+				parser: parser,
+				userData: {}
+			};
 
-			onLoad( scene, scenes, cameras, animations, json );
+			addUnknownExtensionsToUserData( extensions, result, json );
+
+			onLoad( result );
 
 		} ).catch( onError );
 
@@ -20428,7 +22627,7 @@ THREE.GLTFLoader = ( function () {
 
 				case 'light':
 					dependency = this.extensions[ EXTENSIONS.KHR_LIGHTS_PUNCTUAL ].loadLight( index );
-					break
+					break;
 
 				default:
 					throw new Error( 'Unknown type: ' + type );
@@ -20468,40 +22667,6 @@ THREE.GLTFLoader = ( function () {
 		}
 
 		return dependencies;
-
-	};
-
-	/**
-	 * Requests all multiple dependencies of the specified types asynchronously, with caching.
-	 * @param {Array<string>} types
-	 * @return {Promise<Object<Array<Object>>>}
-	 */
-	GLTFParser.prototype.getMultiDependencies = function ( types ) {
-
-		var results = {};
-		var pending = [];
-
-		for ( var i = 0, il = types.length; i < il; i ++ ) {
-
-			var type = types[ i ];
-			var value = this.getDependencies( type );
-
-			// TODO: Error-prone use of a callback inside a loop.
-			value = value.then( function ( key, value ) {
-
-				results[ key ] = value;
-
-			}.bind( this, type + ( type === 'mesh' ? 'es' : 's' ) ) );
-
-			pending.push( value );
-
-		}
-
-		return Promise.all( pending ).then( function () {
-
-			return results;
-
-		} );
 
 	};
 
@@ -20807,6 +22972,18 @@ THREE.GLTFLoader = ( function () {
 
 		return this.getDependency( 'texture', mapDef.index ).then( function ( texture ) {
 
+			switch ( mapName ) {
+
+				case 'aoMap':
+				case 'emissiveMap':
+				case 'metalnessMap':
+				case 'normalMap':
+				case 'roughnessMap':
+					texture.format = THREE.RGBFormat;
+					break;
+
+			}
+
 			if ( parser.extensions[ EXTENSIONS.KHR_TEXTURE_TRANSFORM ] ) {
 
 				var transform = mapDef.extensions !== undefined ? mapDef.extensions[ EXTENSIONS.KHR_TEXTURE_TRANSFORM ] : undefined;
@@ -20822,6 +22999,124 @@ THREE.GLTFLoader = ( function () {
 			materialParams[ mapName ] = texture;
 
 		} );
+
+	};
+
+	/**
+	 * Assigns final material to a Mesh, Line, or Points instance. The instance
+	 * already has a material (generated from the glTF material options alone)
+	 * but reuse of the same glTF material may require multiple threejs materials
+	 * to accomodate different primitive types, defines, etc. New materials will
+	 * be created if necessary, and reused from a cache.
+	 * @param  {THREE.Object3D} mesh Mesh, Line, or Points instance.
+	 */
+	GLTFParser.prototype.assignFinalMaterial = function ( mesh ) {
+
+		var geometry = mesh.geometry;
+		var material = mesh.material;
+		var extensions = this.extensions;
+
+		var useVertexTangents = geometry.attributes.tangent !== undefined;
+		var useVertexColors = geometry.attributes.color !== undefined;
+		var useFlatShading = geometry.attributes.normal === undefined;
+		var useSkinning = mesh.isSkinnedMesh === true;
+		var useMorphTargets = Object.keys( geometry.morphAttributes ).length > 0;
+		var useMorphNormals = useMorphTargets && geometry.morphAttributes.normal !== undefined;
+
+		if ( mesh.isPoints ) {
+
+			var cacheKey = 'PointsMaterial:' + material.uuid;
+
+			var pointsMaterial = this.cache.get( cacheKey );
+
+			if ( ! pointsMaterial ) {
+
+				pointsMaterial = new THREE.PointsMaterial();
+				THREE.Material.prototype.copy.call( pointsMaterial, material );
+				pointsMaterial.color.copy( material.color );
+				pointsMaterial.map = material.map;
+				pointsMaterial.lights = false; // PointsMaterial doesn't support lights yet
+
+				this.cache.add( cacheKey, pointsMaterial );
+
+			}
+
+			material = pointsMaterial;
+
+		} else if ( mesh.isLine ) {
+
+			var cacheKey = 'LineBasicMaterial:' + material.uuid;
+
+			var lineMaterial = this.cache.get( cacheKey );
+
+			if ( ! lineMaterial ) {
+
+				lineMaterial = new THREE.LineBasicMaterial();
+				THREE.Material.prototype.copy.call( lineMaterial, material );
+				lineMaterial.color.copy( material.color );
+				lineMaterial.lights = false; // LineBasicMaterial doesn't support lights yet
+
+				this.cache.add( cacheKey, lineMaterial );
+
+			}
+
+			material = lineMaterial;
+
+		}
+
+		// Clone the material if it will be modified
+		if ( useVertexTangents || useVertexColors || useFlatShading || useSkinning || useMorphTargets ) {
+
+			var cacheKey = 'ClonedMaterial:' + material.uuid + ':';
+
+			if ( material.isGLTFSpecularGlossinessMaterial ) cacheKey += 'specular-glossiness:';
+			if ( useSkinning ) cacheKey += 'skinning:';
+			if ( useVertexTangents ) cacheKey += 'vertex-tangents:';
+			if ( useVertexColors ) cacheKey += 'vertex-colors:';
+			if ( useFlatShading ) cacheKey += 'flat-shading:';
+			if ( useMorphTargets ) cacheKey += 'morph-targets:';
+			if ( useMorphNormals ) cacheKey += 'morph-normals:';
+
+			var cachedMaterial = this.cache.get( cacheKey );
+
+			if ( ! cachedMaterial ) {
+
+				cachedMaterial = material.isGLTFSpecularGlossinessMaterial
+					? extensions[ EXTENSIONS.KHR_MATERIALS_PBR_SPECULAR_GLOSSINESS ].cloneMaterial( material )
+					: material.clone();
+
+				if ( useSkinning ) cachedMaterial.skinning = true;
+				if ( useVertexTangents ) cachedMaterial.vertexTangents = true;
+				if ( useVertexColors ) cachedMaterial.vertexColors = THREE.VertexColors;
+				if ( useFlatShading ) cachedMaterial.flatShading = true;
+				if ( useMorphTargets ) cachedMaterial.morphTargets = true;
+				if ( useMorphNormals ) cachedMaterial.morphNormals = true;
+
+				this.cache.add( cacheKey, cachedMaterial );
+
+			}
+
+			material = cachedMaterial;
+
+		}
+
+		// workarounds for mesh and geometry
+
+		if ( material.aoMap && geometry.attributes.uv2 === undefined && geometry.attributes.uv !== undefined ) {
+
+			console.log( 'THREE.GLTFLoader: Duplicating UVs to support aoMap.' );
+			geometry.addAttribute( 'uv2', new THREE.BufferAttribute( geometry.attributes.uv.array, 2 ) );
+
+		}
+
+		if ( material.isGLTFSpecularGlossinessMaterial ) {
+
+			// for GLTFSpecularGlossinessMaterial(ShaderMaterial) uniforms runtime update
+			mesh.onBeforeRender = extensions[ EXTENSIONS.KHR_MATERIALS_PBR_SPECULAR_GLOSSINESS ].refreshUniforms;
+
+		}
+
+		mesh.material = material;
 
 	};
 
@@ -20972,14 +23267,6 @@ THREE.GLTFLoader = ( function () {
 
 			if ( materialDef.name !== undefined ) material.name = materialDef.name;
 
-			// Normal map textures use OpenGL conventions:
-			// https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#materialnormaltexture
-			if ( material.normalScale ) {
-
-				material.normalScale.y = - material.normalScale.y;
-
-			}
-
 			// baseColorTexture, emissiveTexture, and specularGlossinessTexture use sRGB encoding.
 			if ( material.map ) material.map.encoding = THREE.sRGBEncoding;
 			if ( material.emissiveMap ) material.emissiveMap.encoding = THREE.sRGBEncoding;
@@ -21020,9 +23307,7 @@ THREE.GLTFLoader = ( function () {
 
 		for ( var gltfAttributeName in attributes ) {
 
-			var threeAttributeName = ATTRIBUTES[ gltfAttributeName ];
-
-			if ( ! threeAttributeName ) continue;
+			var threeAttributeName = ATTRIBUTES[ gltfAttributeName ] || gltfAttributeName.toLowerCase();
 
 			// Skip attributes already provided by e.g. Draco extension.
 			if ( threeAttributeName in geometry.attributes ) continue;
@@ -21059,8 +23344,6 @@ THREE.GLTFLoader = ( function () {
 	 * Specification: https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#geometry
 	 *
 	 * Creates BufferGeometries from primitives.
-	 * If we can build a single BufferGeometry with .groups from multiple primitives, returns one BufferGeometry.
-	 * Otherwise, returns BufferGeometries without .groups as many as primitives.
 	 *
 	 * @param {Array<GLTF.Primitive>} primitives
 	 * @return {Promise<Array<THREE.BufferGeometry>>}
@@ -21070,22 +23353,6 @@ THREE.GLTFLoader = ( function () {
 		var parser = this;
 		var extensions = this.extensions;
 		var cache = this.primitiveCache;
-
-		var isMultiPass = isMultiPassGeometry( primitives );
-		var originalPrimitives;
-
-		if ( isMultiPass ) {
-
-			originalPrimitives = primitives; // save original primitives and use later
-
-			// We build a single BufferGeometry with .groups from multiple primitives
-			// because all primitives share the same attributes/morph/mode and have indices.
-
-			primitives = [ primitives[ 0 ] ];
-
-			// Sets .groups and combined indices to a geometry later in this method.
-
-		}
 
 		function createDracoPrimitive( primitive ) {
 
@@ -21104,14 +23371,15 @@ THREE.GLTFLoader = ( function () {
 		for ( var i = 0, il = primitives.length; i < il; i ++ ) {
 
 			var primitive = primitives[ i ];
+			var cacheKey = createPrimitiveKey( primitive );
 
 			// See if we've already created this geometry
-			var cached = getCachedGeometry( cache, primitive );
+			var cached = cache[ cacheKey ];
 
 			if ( cached ) {
 
 				// Use the cached geometry if it exists
-				pending.push( cached );
+				pending.push( cached.promise );
 
 			} else {
 
@@ -21130,7 +23398,7 @@ THREE.GLTFLoader = ( function () {
 				}
 
 				// Cache this geometry
-				cache.push( { primitive: primitive, promise: geometryPromise } );
+				cache[ cacheKey ] = { primitive: primitive, promise: geometryPromise };
 
 				pending.push( geometryPromise );
 
@@ -21138,95 +23406,7 @@ THREE.GLTFLoader = ( function () {
 
 		}
 
-		return Promise.all( pending ).then( function ( geometries ) {
-
-			if ( isMultiPass ) {
-
-				var baseGeometry = geometries[ 0 ];
-
-				// See if we've already created this combined geometry
-				var cache = parser.multiPassGeometryCache;
-				var cached = getCachedMultiPassGeometry( cache, baseGeometry, originalPrimitives );
-
-				if ( cached !== null ) return [ cached.geometry ];
-
-				// Cloning geometry because of index override.
-				// Attributes can be reused so cloning by myself here.
-				var geometry = new THREE.BufferGeometry();
-
-				geometry.name = baseGeometry.name;
-				geometry.userData = baseGeometry.userData;
-
-				for ( var key in baseGeometry.attributes ) geometry.addAttribute( key, baseGeometry.attributes[ key ] );
-				for ( var key in baseGeometry.morphAttributes ) geometry.morphAttributes[ key ] = baseGeometry.morphAttributes[ key ];
-
-				var pendingIndices = [];
-
-				for ( var i = 0, il = originalPrimitives.length; i < il; i ++ ) {
-
-					pendingIndices.push( parser.getDependency( 'accessor', originalPrimitives[ i ].indices ) );
-
-				}
-
-				return Promise.all( pendingIndices ).then( function ( accessors ) {
-
-					var indices = [];
-					var offset = 0;
-
-					for ( var i = 0, il = originalPrimitives.length; i < il; i ++ ) {
-
-						var accessor = accessors[ i ];
-
-						for ( var j = 0, jl = accessor.count; j < jl; j ++ ) indices.push( accessor.array[ j ] );
-
-						geometry.addGroup( offset, accessor.count, i );
-
-						offset += accessor.count;
-
-					}
-
-					geometry.setIndex( indices );
-
-					cache.push( { geometry: geometry, baseGeometry: baseGeometry, primitives: originalPrimitives } );
-
-					return [ geometry ];
-
-				} );
-
-			} else if ( geometries.length > 1 && THREE.BufferGeometryUtils !== undefined ) {
-
-				// Tries to merge geometries with BufferGeometryUtils if possible
-
-				for ( var i = 1, il = primitives.length; i < il; i ++ ) {
-
-					// can't merge if draw mode is different
-					if ( primitives[ 0 ].mode !== primitives[ i ].mode ) return geometries;
-
-				}
-
-				// See if we've already created this combined geometry
-				var cache = parser.multiplePrimitivesCache;
-				var cached = getCachedCombinedGeometry( cache, geometries );
-
-				if ( cached ) {
-
-					if ( cached.geometry !== null ) return [ cached.geometry ];
-
-				} else {
-
-					var geometry = THREE.BufferGeometryUtils.mergeBufferGeometries( geometries, true );
-
-					cache.push( { geometry: geometry, baseGeometries: geometries } );
-
-					if ( geometry !== null ) return [ geometry ];
-
-				}
-
-			}
-
-			return geometries;
-
-		} );
+		return Promise.all( pending );
 
 	};
 
@@ -21260,8 +23440,6 @@ THREE.GLTFLoader = ( function () {
 
 			return parser.loadGeometries( primitives ).then( function ( geometries ) {
 
-				var isMultiMaterial = geometries.length === 1 && geometries[ 0 ].groups.length > 0;
-
 				var meshes = [];
 
 				for ( var i = 0, il = geometries.length; i < il; i ++ ) {
@@ -21273,7 +23451,7 @@ THREE.GLTFLoader = ( function () {
 
 					var mesh;
 
-					var material = isMultiMaterial ? originalMaterials : originalMaterials[ i ];
+					var material = originalMaterials[ i ];
 
 					if ( primitive.mode === WEBGL_CONSTANTS.TRIANGLES ||
 						primitive.mode === WEBGL_CONSTANTS.TRIANGLE_STRIP ||
@@ -21331,118 +23509,9 @@ THREE.GLTFLoader = ( function () {
 
 					assignExtrasToUserData( mesh, meshDef );
 
+					parser.assignFinalMaterial( mesh );
+
 					meshes.push( mesh );
-
-					// 2. update Material depending on Mesh and BufferGeometry
-
-					var materials = isMultiMaterial ? mesh.material : [ mesh.material ];
-
-					var useVertexColors = geometry.attributes.color !== undefined;
-					var useFlatShading = geometry.attributes.normal === undefined;
-					var useSkinning = mesh.isSkinnedMesh === true;
-					var useMorphTargets = Object.keys( geometry.morphAttributes ).length > 0;
-					var useMorphNormals = useMorphTargets && geometry.morphAttributes.normal !== undefined;
-
-					for ( var j = 0, jl = materials.length; j < jl; j ++ ) {
-
-						var material = materials[ j ];
-
-						if ( mesh.isPoints ) {
-
-							var cacheKey = 'PointsMaterial:' + material.uuid;
-
-							var pointsMaterial = parser.cache.get( cacheKey );
-
-							if ( ! pointsMaterial ) {
-
-								pointsMaterial = new THREE.PointsMaterial();
-								THREE.Material.prototype.copy.call( pointsMaterial, material );
-								pointsMaterial.color.copy( material.color );
-								pointsMaterial.map = material.map;
-								pointsMaterial.lights = false; // PointsMaterial doesn't support lights yet
-
-								parser.cache.add( cacheKey, pointsMaterial );
-
-							}
-
-							material = pointsMaterial;
-
-						} else if ( mesh.isLine ) {
-
-							var cacheKey = 'LineBasicMaterial:' + material.uuid;
-
-							var lineMaterial = parser.cache.get( cacheKey );
-
-							if ( ! lineMaterial ) {
-
-								lineMaterial = new THREE.LineBasicMaterial();
-								THREE.Material.prototype.copy.call( lineMaterial, material );
-								lineMaterial.color.copy( material.color );
-								lineMaterial.lights = false; // LineBasicMaterial doesn't support lights yet
-
-								parser.cache.add( cacheKey, lineMaterial );
-
-							}
-
-							material = lineMaterial;
-
-						}
-
-						// Clone the material if it will be modified
-						if ( useVertexColors || useFlatShading || useSkinning || useMorphTargets ) {
-
-							var cacheKey = 'ClonedMaterial:' + material.uuid + ':';
-
-							if ( material.isGLTFSpecularGlossinessMaterial ) cacheKey += 'specular-glossiness:';
-							if ( useSkinning ) cacheKey += 'skinning:';
-							if ( useVertexColors ) cacheKey += 'vertex-colors:';
-							if ( useFlatShading ) cacheKey += 'flat-shading:';
-							if ( useMorphTargets ) cacheKey += 'morph-targets:';
-							if ( useMorphNormals ) cacheKey += 'morph-normals:';
-
-							var cachedMaterial = parser.cache.get( cacheKey );
-
-							if ( ! cachedMaterial ) {
-
-								cachedMaterial = material.isGLTFSpecularGlossinessMaterial
-									? extensions[ EXTENSIONS.KHR_MATERIALS_PBR_SPECULAR_GLOSSINESS ].cloneMaterial( material )
-									: material.clone();
-
-								if ( useSkinning ) cachedMaterial.skinning = true;
-								if ( useVertexColors ) cachedMaterial.vertexColors = THREE.VertexColors;
-								if ( useFlatShading ) cachedMaterial.flatShading = true;
-								if ( useMorphTargets ) cachedMaterial.morphTargets = true;
-								if ( useMorphNormals ) cachedMaterial.morphNormals = true;
-
-								parser.cache.add( cacheKey, cachedMaterial );
-
-							}
-
-							material = cachedMaterial;
-
-						}
-
-						materials[ j ] = material;
-
-						// workarounds for mesh and geometry
-
-						if ( material.aoMap && geometry.attributes.uv2 === undefined && geometry.attributes.uv !== undefined ) {
-
-							console.log( 'THREE.GLTFLoader: Duplicating UVs to support aoMap.' );
-							geometry.addAttribute( 'uv2', new THREE.BufferAttribute( geometry.attributes.uv.array, 2 ) );
-
-						}
-
-						if ( material.isGLTFSpecularGlossinessMaterial ) {
-
-							// for GLTFSpecularGlossinessMaterial(ShaderMaterial) uniforms runtime update
-							mesh.onBeforeRender = extensions[ EXTENSIONS.KHR_MATERIALS_PBR_SPECULAR_GLOSSINESS ].refreshUniforms;
-
-						}
-
-					}
-
-					mesh.material = isMultiMaterial ? materials : materials[ 0 ];
 
 				}
 
@@ -21627,10 +23696,7 @@ THREE.GLTFLoader = ( function () {
 
 				if ( PATH_PROPERTIES[ target.path ] === PATH_PROPERTIES.weights ) {
 
-					// node can be THREE.Group here but
-					// PATH_PROPERTIES.weights(morphTargetInfluences) should be
-					// the property of a mesh object under group.
-
+					// Node may be a THREE.Group (glTF mesh with several primitives) or a THREE.Mesh.
 					node.traverse( function ( object ) {
 
 						if ( object.isMesh === true && object.morphTargetInfluences ) {
@@ -21647,20 +23713,16 @@ THREE.GLTFLoader = ( function () {
 
 				}
 
-				// KeyframeTrack.optimize() will modify given 'times' and 'values'
-				// buffers before creating a truncated copy to keep. Because buffers may
-				// be reused by other tracks, make copies here.
 				for ( var j = 0, jl = targetNames.length; j < jl; j ++ ) {
 
 					var track = new TypedKeyframeTrack(
 						targetNames[ j ] + '.' + PATH_PROPERTIES[ target.path ],
-						THREE.AnimationUtils.arraySlice( inputAccessor.array, 0 ),
-						THREE.AnimationUtils.arraySlice( outputAccessor.array, 0 ),
+						inputAccessor.array,
+						outputAccessor.array,
 						interpolation
 					);
 
-					// Here is the trick to enable custom interpolation.
-					// Overrides .createInterpolant in a factory method which creates custom interpolation.
+					// Override interpolation with custom factory method.
 					if ( sampler.interpolation === 'CUBICSPLINE' ) {
 
 						track.createInterpolant = function InterpolantFactoryMethodGLTFCubicSpline( result ) {
@@ -21673,8 +23735,7 @@ THREE.GLTFLoader = ( function () {
 
 						};
 
-						// Workaround, provide an alternate way to know if the interpolant type is cubis spline to track.
-						// track.getInterpolation() doesn't return valid value for custom interpolant.
+						// Mark as CUBICSPLINE. `track.getInterpolation()` doesn't support custom interpolants.
 						track.createInterpolant.isInterpolantFactoryMethodGLTFCubicSpline = true;
 
 					}
@@ -21709,7 +23770,7 @@ THREE.GLTFLoader = ( function () {
 
 		var nodeDef = json.nodes[ nodeIndex ];
 
-		return ( function() {
+		return ( function () {
 
 			// .isBone isn't in glTF spec. See .markDefs
 			if ( nodeDef.isBone === true ) {
@@ -21902,7 +23963,7 @@ THREE.GLTFLoader = ( function () {
 
 						mesh.bind( new THREE.Skeleton( bones, boneInverses ), mesh.matrixWorld );
 
-					};
+					}
 
 					return node;
 
@@ -24698,58 +26759,25 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 /***/ }),
 
-/***/ "../common/schema/annotations.schema.json":
-/*!************************************************!*\
-  !*** ../common/schema/annotations.schema.json ***!
-  \************************************************/
-/*! exports provided: $id, $schema, title, description, definitions, type, properties, additionalProperties, default */
-/***/ (function(module) {
-
-module.exports = {"$id":"https://schemas.3d.si.edu/public_api/annotations.schema.json","$schema":"http://json-schema.org/draft-07/schema#","title":"Annotations","description":"Spatial annotations (hot spots, hot zones) on a 3D item. Annotations can reference documents.","definitions":{"annotation":{"$id":"#annotation","type":"object","properties":{"id":{"type":"string","minLength":1},"title":{"type":"string"},"description":{"type":"string"},"style":{"type":"string"},"expanded":{"description":"Flag indicating whether this annotation is displayed in expanded state.","type":"boolean","default":false},"documents":{"description":"Array of document indices, listing documents related to this annotation.","type":"array","items":{"type":"integer","minimum":0}},"groups":{"description":"Array of group indices, listing all groups this annotation belongs to.","type":"array","items":{"type":"integer","minimum":0}},"position":{"description":"Position where the annotation is anchored, in local item coordinates.","$ref":"math.schema.json#/definitions/vector3"},"direction":{"description":"Direction of the stem of this annotation, usually corresponds to the surface normal.","$ref":"math.schema.json#/definitions/vector3"},"zoneIndex":{"description":"Index of the zone on the zone texture.","type":"integer","minimum":0}},"required":["id"],"additionalProperties":false},"group":{"$id":"#group","type":"object","properties":{"id":{"type":"string"},"title":{"type":"string"},"description":{"type":"string"},"visible":{"type":"boolean"}},"required":["id"],"additionalProperties":false}},"type":"object","properties":{"annotations":{"type":"array","items":{"$ref":"#annotation"}},"groups":{"type":"array","items":{"$ref":"#group"}}},"additionalProperties":false};
-
-/***/ }),
-
-/***/ "../common/schema/config.schema.json":
+/***/ "../common/schema/common.schema.json":
 /*!*******************************************!*\
-  !*** ../common/schema/config.schema.json ***!
+  !*** ../common/schema/common.schema.json ***!
   \*******************************************/
-/*! exports provided: $id, $schema, title, description, type, properties, default */
-/***/ (function(module) {
-
-module.exports = {"$id":"https://schemas.3d.si.edu/public_api/config.schema.json","$schema":"http://json-schema.org/draft-07/schema#","title":"Smithsonian 3D Presentation - Voyager Explorer Configuration","description":"contains information about Voyager explorer configuration (scene environment, UI, tools, etc.)","type":"object","properties":{"scene":{"type":"object","properties":{"units":{"type":"string","enum":["mm","cm","m","in","ft","yd"]},"shader":{"type":"string"},"exposure":{"type":"number"},"gamma":{"type":"number"}},"required":["units","shader","exposure","gamma"]},"reader":{"type":"object","properties":{"visible":{"type":"boolean"},"position":{"type":"string"},"documentUri":{"description":"URI of the document currently displayed in the reader","type":"string","minLength":1}}},"interface":{"type":"object","properties":{"visible":{"type":"boolean"},"logo":{"type":"boolean"}}},"navigation":{"type":"object","properties":{"type":{"type":"string","enum":["orbit","walk"]},"enabled":{"type":"boolean"},"orbit":{"$comment":"TODO: Implement","type":"object","properties":{}},"walk":{"$comment":"TODO: Implement","type":"object","properties":{}}}},"background":{"type":"object","properties":{"type":{"type":"string","enum":["Solid","LinearGradient","RadialGradient"]},"color0":{"$ref":"math.schema.json#/definitions/vector3"},"color1":{"$ref":"math.schema.json#/definitions/vector3"}}},"groundPlane":{"type":"object","properties":{"visible":{"type":"boolean"},"offset":{"type":"number"},"color":{"$ref":"math.schema.json#/definitions/vector3"},"shadowVisible":{"type":"boolean"},"shadowColor":{"$ref":"math.schema.json#/definitions/vector3"}}},"grid":{"type":"object","properties":{"visible":{"type":"boolean"},"color":{"$ref":"math.schema.json#/definitions/vector3"}}},"tapeTool":{"type":"object","properties":{"active":{"type":"boolean"},"startPosition":{"$ref":"math.schema.json#/definitions/vector3"},"startDirection":{"$ref":"math.schema.json#/definitions/vector3"},"endPosition":{"$ref":"math.schema.json#/definitions/vector3"},"endDirection":{"$ref":"math.schema.json#/definitions/vector3"}}},"sectionTool":{"type":"object","properties":{"active":{"type":"boolean"},"plane":{"$ref":"math.schema.json#/definitions/vector4"}}}}};
-
-/***/ }),
-
-/***/ "../common/schema/documents.schema.json":
-/*!**********************************************!*\
-  !*** ../common/schema/documents.schema.json ***!
-  \**********************************************/
-/*! exports provided: $id, $schema, title, description, definitions, type, properties, additionalProperties, default */
-/***/ (function(module) {
-
-module.exports = {"$id":"https://schemas.3d.si.edu/public_api/documents.schema.json","$schema":"http://json-schema.org/draft-07/schema#","title":"Documents","description":"References to external documents, articles or media files.","definitions":{"document":{"$id":"#document","type":"object","properties":{"id":{"type":"string","minLength":1},"title":{"type":"string"},"description":{"type":"string"},"uri":{"type":"string"},"mimeType":{"type":"string"},"thumbnailUri":{"type":"string"}},"required":["id"]}},"type":"object","properties":{"mainDocumentId":{"description":"Id of the main document. This is the default document displayed with the item.","type":"string"},"documents":{"type":"array","items":{"$ref":"#document"}}},"additionalProperties":false};
-
-/***/ }),
-
-/***/ "../common/schema/item.schema.json":
-/*!*****************************************!*\
-  !*** ../common/schema/item.schema.json ***!
-  \*****************************************/
-/*! exports provided: $id, $schema, title, description, definitions, type, properties, required, additionalProperties, default */
-/***/ (function(module) {
-
-module.exports = {"$id":"https://schemas.3d.si.edu/public_api/item.schema.json","$schema":"http://json-schema.org/draft-07/schema#","title":"3D Item","description":"Describes a Smithsonian DPO 3D repository item.","definitions":{"info":{"$id":"#info","type":"object","properties":{"type":{"type":"string"},"copyright":{"type":"string"},"generator":{"type":"string"},"version":{"type":"string"}},"required":["type","version"],"additionalProperties":false}},"type":"object","properties":{"info":{"description":"Information about the type, generator, and version of this data structure.","$ref":"#info"},"meta":{"description":"Meta data about this item, including title, record info, collection, etc.","$ref":"meta.schema.json"},"process":{"description":"Information about how this item was digitized and processed.","$ref":"process.schema.json"},"model":{"description":"Describes the visual representations (models, derivatives).","$ref":"model.schema.json"},"documents":{"description":"References to external documents (articles, media files) containing additional information.","$ref":"documents.schema.json"},"annotations":{"description":"Spatial annotations (hot spots, hot zones). Annotations can reference documents.","$ref":"annotations.schema.json"}},"required":["info"],"additionalProperties":false};
-
-/***/ }),
-
-/***/ "../common/schema/math.schema.json":
-/*!*****************************************!*\
-  !*** ../common/schema/math.schema.json ***!
-  \*****************************************/
 /*! exports provided: $id, $schema, title, description, definitions, default */
 /***/ (function(module) {
 
-module.exports = {"$id":"https://schemas.3d.si.edu/public_api/math.schema.json","$schema":"http://json-schema.org/draft-07/schema#","title":"Math","description":"Definitions for mathematical compound objects such as vectors and matrices.","definitions":{"vector2":{"description":"2-component vector.","$id":"#vector2","type":"array","items":{"type":"number"},"minItems":2,"maxItems":2,"default":[0,0]},"vector3":{"description":"3-component vector.","$id":"#vector3","type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"default":[0,0,0]},"vector4":{"description":"4-component vector.","$id":"#vector4","type":"array","items":{"type":"number"},"minItems":4,"maxItems":4,"default":[0,0,0,0]},"matrix3":{"description":"3 by 3, matrix, storage: column-major.","$id":"#matrix3","type":"array","items":{"type":"number"},"minItems":9,"maxItems":9,"default":[1,0,0,0,1,0,0,0,1]},"matrix4":{"description":"4 by 4 matrix, storage: column-major.","$id":"#matrix4","type":"array","items":{"type":"number"},"minItems":16,"maxItems":16,"default":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]},"boundingBox":{"description":"Axis-aligned 3D bounding box.","$id":"#boundingBox","type":"object","properties":{"min":{"$ref":"#vector3"},"max":{"$ref":"#vector3"}},"required":["min","max"]}}};
+module.exports = {"$id":"https://schemas.3d.si.edu/voyager/common.schema.json","$schema":"http://json-schema.org/draft-07/schema#","title":"Math","description":"Definitions for mathematical compound objects such as vectors and matrices.","definitions":{"units":{"$id":"#units","type":"string","enum":["inherit","mm","cm","m","km","in","ft","yd","mi"]},"vector2":{"description":"2-component vector.","$id":"#vector2","type":"array","items":{"type":"number"},"minItems":2,"maxItems":2,"default":[0,0]},"vector3":{"description":"3-component vector.","$id":"#vector3","type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"default":[0,0,0]},"vector4":{"description":"4-component vector.","$id":"#vector4","type":"array","items":{"type":"number"},"minItems":4,"maxItems":4,"default":[0,0,0,0]},"matrix3":{"description":"3 by 3, matrix, storage: column-major.","$id":"#matrix3","type":"array","items":{"type":"number"},"minItems":9,"maxItems":9,"default":[1,0,0,0,1,0,0,0,1]},"matrix4":{"description":"4 by 4 matrix, storage: column-major.","$id":"#matrix4","type":"array","items":{"type":"number"},"minItems":16,"maxItems":16,"default":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]},"boundingBox":{"description":"Axis-aligned 3D bounding box.","$id":"#boundingBox","type":"object","properties":{"min":{"$ref":"#/definitions/vector3"},"max":{"$ref":"#/definitions/vector3"}},"required":["min","max"]}}};
+
+/***/ }),
+
+/***/ "../common/schema/document.schema.json":
+/*!*********************************************!*\
+  !*** ../common/schema/document.schema.json ***!
+  \*********************************************/
+/*! exports provided: $id, $schema, title, description, definitions, type, properties, required, additionalProperties, default */
+/***/ (function(module) {
+
+module.exports = {"$id":"https://schemas.3d.si.edu/voyager/document.schema.json","$schema":"http://json-schema.org/draft-07/schema#","title":"Smithsonian 3D Document","description":"Describes a 3D document containing a scene with 3D models.","definitions":{"scene":{"$id":"#scene","type":"object","properties":{"nodes":{"type":"array","description":"The indices of the scene's root nodes.","items":{"type":"integer","minimum":0},"uniqueItems":true,"minItems":1},"setup":{"description":"The index of the scene's setup.","type":"integer","minimum":0}}},"node":{"$id":"#node","type":"object","properties":{"name":{"type":"string"},"children":{"type":"array","description":"The indices of this node's children.","items":{"type":"integer","minimum":0},"uniqueItems":true,"minItems":1},"matrix":{"description":"A floating-point 4x4 transformation matrix stored in column-major order.","type":"array","items":{"type":"number"},"minItems":16,"maxItems":16,"default":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]},"translation":{"description":"The node's translation along the x, y, and z axes.","type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"default":[0,0,0]},"rotation":{"description":"The node's unit quaternion rotation in the order (x, y, z, w), where w is the scalar.","type":"array","items":{"type":"number","minimum":-1,"maximum":1},"minItems":4,"maxItems":4,"default":[0,0,0,1]},"scale":{"description":"The node's non-uniform scale, given as the scaling factors along the x, y, and z axes.","type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"default":[1,1,1]},"camera":{"description":"The index of the camera component of this node.","type":"integer","minimum":0},"light":{"description":"The index of the light component of this node.","type":"integer","minimum":0},"meta":{"description":"The index of the meta data component of this node.","type":"integer","minimum":0},"model":{"description":"The index of the model component of this node.","type":"integer","minimum":0}},"not":{"anyOf":[{"required":["matrix","translation"]},{"required":["matrix","rotation"]},{"required":["matrix","scale"]}]}},"camera":{"$id":"#camera","type":"object","properties":{"type":{"description":"Specifies if the camera uses a perspective or orthographic projection.","type":"string","enum":["perspective","orthographic"]},"perspective":{"description":"A perspective camera containing properties to create a perspective projection matrix.","type":"object","properties":{"yfov":{"type":"number","description":"The floating-point vertical field of view in radians.","exclusiveMinimum":0},"aspectRatio":{"type":"number","description":"The floating-point aspect ratio of the field of view.","exclusiveMinimum":0},"znear":{"type":"number","description":"The floating-point distance to the near clipping plane.","exclusiveMinimum":0},"zfar":{"type":"number","description":"The floating-point distance to the far clipping plane.","exclusiveMinimum":0}},"required":["yfov","znear"]},"orthographic":{"description":"An orthographic camera containing properties to create an orthographic projection matrix.","type":"object","properties":{"xmag":{"type":"number","description":"The floating-point horizontal magnification of the view. Must not be zero."},"ymag":{"type":"number","description":"The floating-point vertical magnification of the view. Must not be zero."},"znear":{"type":"number","description":"The floating-point distance to the near clipping plane.","exclusiveMinimum":0},"zfar":{"type":"number","description":"The floating-point distance to the far clipping plane. `zfar` must be greater than `znear`.","exclusiveMinimum":0}},"required":["xmag","ymag","znear","zfar"]}},"required":["type"],"not":{"required":["perspective","orthographic"]}},"light":{"$id":"#light","type":"object","properties":{"type":{"description":"Specifies the type of the light source.","type":"string","enum":["ambient","directional","point","spot","hemisphere"]},"color":{"$ref":"#/definitions/colorRGB"},"intensity":{"type":"number","minimum":0,"default":1},"castShadow":{"type":"boolean","default":false},"point":{"type":"object","properties":{"distance":{"type":"number","minimum":0},"decay":{"type":"number","minimum":0}}},"spot":{"type":"object","properties":{"distance":{"type":"number","minimum":0},"decay":{"type":"number","minimum":0},"angle":{"type":"number","minimum":0},"penumbra":{"type":"number","minimum":0}}},"hemisphere":{"type":"object","properties":{"groundColor":{"$ref":"#/definitions/colorRGB"}}}},"required":["type"],"not":{"required":["point","spot","hemisphere"]}},"colorRGB":{"$id":"#colorRGB","type":"array","items":{"type":"number","minimum":0,"maximum":1},"minItems":3,"maxItems":3,"default":[1,1,1]}},"type":"object","properties":{"asset":{"type":"object","properties":{"type":{"type":"string","const":"application/si-dpo-3d.document+json"},"version":{"description":"Version of this presentation description.","type":"string","minLength":1},"copyright":{"description":"A copyright message to credit the content creator.","type":"string","minLength":1},"generator":{"description":"Tool that generated this presentation description.","type":"string","minLength":1}},"required":["type","version"]},"scene":{"description":"Index of the root scene of the document.","type":"integer","minimum":0},"scenes":{"description":"An array of scenes.","type":"array","items":{"$ref":"#/definitions/scene"}},"nodes":{"description":"An array of nodes.","type":"array","items":{"$ref":"#/definitions/node"},"minItems":1},"metas":{"description":"An array of meta data components.","type":"array","items":{"$ref":"./meta.schema.json"}},"setups":{"description":"An array of setup components.","type":"array","items":{"$ref":"./setup.schema.json"},"minItems":1},"cameras":{"description":"An array of camera components.","type":"array","items":{"$ref":"#/definitions/camera"},"minItems":1},"lights":{"description":"An array of light components.","type":"array","items":{"$ref":"#/definitions/light"},"minItems":1},"models":{"description":"An array of model components.","type":"array","items":{"$ref":"./model.schema.json"},"minItems":1}},"required":["asset","scene","scenes"],"additionalProperties":false};
 
 /***/ }),
 
@@ -24757,10 +26785,10 @@ module.exports = {"$id":"https://schemas.3d.si.edu/public_api/math.schema.json",
 /*!*****************************************!*\
   !*** ../common/schema/meta.schema.json ***!
   \*****************************************/
-/*! exports provided: $id, $schema, title, description, type, properties, required, default */
+/*! exports provided: $id, $schema, title, description, definitions, type, properties, additionalProperties, default */
 /***/ (function(module) {
 
-module.exports = {"$id":"https://schemas.3d.si.edu/public_api/meta.schema.json","$schema":"http://json-schema.org/draft-07/schema#","title":"Meta","description":"Meta data about a 3D item, including title, record info, collection, etc.","type":"object","properties":{},"required":[]};
+module.exports = {"$id":"https://schemas.3d.si.edu/voyager/meta.schema.json","$schema":"http://json-schema.org/draft-07/schema#","title":"Meta","description":"Meta data for a scene or model item.","definitions":{"image":{"$id":"image","description":"Reference to a preview image","type":"object","properties":{"uri":{"description":"Location of the image resource, absolute URL or path relative to this document","type":"string","minLength":1},"quality":{"type":"string","enum":["Thumb","Low","Medium","High"]},"byteSize":{"type":"integer","minimum":1},"width":{"type":"integer","minimum":1},"height":{"type":"integer","minimum":1}},"required":["uri","quality"]},"article":{"$id":"#article","description":"Reference to an external document (HTML)","type":"object","properties":{"id":{"type":"string","minLength":1},"title":{"description":"Short title.","type":"string"},"lead":{"description":"Short lead text.","type":"string"},"tags":{"description":"Array of tags, categorizing the article.","type":"array","items":{"type":"string"}},"uri":{"description":"Location of the article resource, absolute URL or path relative to this document","type":"string","minLength":1},"mimeType":{"description":"MIME type of the resource.","type":"string"},"thumbnailUri":{"description":"Location of a thumbnail/preview image of the resource.","type":"string"}},"required":["id","uri"],"additionalProperties":false}},"type":"object","properties":{"collection":{"description":"Information retrieved from the collection record for the item.","type":"object"},"process":{"description":"Information about how the item was processed.","type":"object"},"images":{"type":"array","items":{"$ref":"#/definitions/image"},"minLength":1},"articles":{"type":"array","items":{"$ref":"#/definitions/article"},"minLength":1},"leadArticle":{"description":"Index of the main article. This is the default article displayed with the item.","type":"integer","minimum":0}},"additionalProperties":false};
 
 /***/ }),
 
@@ -24771,104 +26799,36 @@ module.exports = {"$id":"https://schemas.3d.si.edu/public_api/meta.schema.json",
 /*! exports provided: $id, $schema, title, description, definitions, type, properties, required, additionalProperties, default */
 /***/ (function(module) {
 
-module.exports = {"$id":"https://schemas.3d.si.edu/public_api/model.schema.json","$schema":"http://json-schema.org/draft-07/schema#","title":"Model","description":"Describes the visual representations (models, derivatives) of a 3D item.","definitions":{"material":{"$id":"#material","type":"object","properties":{}},"asset":{"description":"an individual resource for a 3D model.","$id":"#asset","type":"object","properties":{"uri":{"type":"string","minLength":1},"type":{"type":"string","enum":["Model","Geometry","Image","Points","Volume"]},"mimeType":{"type":"string","minLength":1},"byteSize":{"type":"integer","minimum":1},"numFaces":{"type":"integer","minimum":1},"imageSize":{"type":"integer","minimum":1},"mapType":{"type":"string","enum":["Color","Normal","Occlusion","Emissive","MetallicRoughness","Zone"]}},"required":["uri","type"]}},"type":"object","properties":{"units":{"type":"string","enum":["mm","cm","m","in","ft","yd"]},"translation":{"description":"Translation vector. Apply to bring model into a 'neutral' pose.","$ref":"math.schema.json#/definitions/vector3"},"rotation":{"description":"Rotation quaternion. Apply to bring model into a 'neutral' pose.","$ref":"math.schema.json#/definitions/vector4"},"boundingBox":{"description":"Bounding box for this model, shared by all derivatives.","$ref":"math.schema.json#/definitions/boundingBox"},"material":{"description":"Surface properties for this model, shared by all derivatives.","$ref":"#material"},"derivatives":{"description":"List of visual representations derived from the master model.","type":"array","items":{"type":"object","properties":{"usage":{"description":"usage categories for a derivative.","type":"string","enum":["Web2D","Web3D","Print","Editorial"]},"quality":{"type":"string","enum":["Thumb","Low","Medium","High","Highest","LOD","Stream"]},"assets":{"description":"List of individual resources this derivative is composed of.","type":"array","items":{"$ref":"#asset"}}}}}},"required":["units","derivatives"],"additionalProperties":false};
+module.exports = {"$id":"https://schemas.3d.si.edu/voyager/model.schema.json","$schema":"http://json-schema.org/draft-07/schema#","title":"Model","description":"Describes the visual representations (models, derivatives) of a 3D item.","definitions":{"annotation":{"description":"Spatial annotation (hot spot, hot zone) on a model. Annotations can reference articles.","type":"object","properties":{"id":{"type":"string","minLength":1},"title":{"type":"string"},"lead":{"type":"string"},"tags":{"description":"Array of tags, categorizing the annotation.","type":"array","items":{"type":"string"}},"articleId":{"description":"Id of an article related to this annotation.","type":"string","minLength":1},"imageUri":{"description":"URI of an image resource for this annotation.","type":"string","minLength":1},"style":{"type":"string"},"visible":{"description":"Flag indicating whether the annotation is visible.","type":"boolean","default":true},"expanded":{"description":"Flag indicating whether the annotation is displayed in expanded state.","type":"boolean","default":false},"scale":{"description":"Scales the annotation relative to its default size.","type":"number","default":1},"offset":{"description":"Offsets the annotation along its direction.","type":"number","default":0},"tilt":{"description":"Tilt angle of the annotation relative to the direction vector in degrees.","type":"number","default":0},"azimuth":{"description":"Azimuth angle of a tilted annotation.","type":"number","default":0},"position":{"description":"Position where the annotation is anchored, in local item coordinates.","$ref":"./common.schema.json#/definitions/vector3"},"direction":{"description":"Direction of the stem of this annotation, usually corresponds to the surface normal.","$ref":"./common.schema.json#/definitions/vector3"},"zoneIndex":{"description":"Index of the zone on the zone texture.","type":"integer","minimum":0}},"required":["id"],"additionalProperties":false},"derivative":{"description":"Visual representation derived from the master model.","type":"object","properties":{"usage":{"description":"usage categories for a derivative.","type":"string","enum":["Image2D","Web3D","Print3D","Editorial3D"]},"quality":{"type":"string","enum":["Thumb","Low","Medium","High","Highest","LOD","Stream"]},"assets":{"description":"List of individual resources this derivative is composed of.","type":"array","items":{"$ref":"#/definitions/asset"}}}},"asset":{"description":"an individual resource for a 3D model.","type":"object","properties":{"uri":{"type":"string","minLength":1},"type":{"type":"string","enum":["Model","Geometry","Image","Points","Volume"]},"part":{"type":"string","minLength":1},"mimeType":{"type":"string","minLength":1},"byteSize":{"type":"integer","minimum":1},"numFaces":{"type":"integer","minimum":1},"imageSize":{"type":"integer","minimum":1},"mapType":{"type":"string","enum":["Color","Normal","Occlusion","Emissive","MetallicRoughness","Zone"]}},"required":["uri","type"]},"material":{"description":"Surface properties for this model, shared by all derivatives.","type":"object","properties":{}}},"type":"object","properties":{"units":{"$ref":"./common.schema.json#/definitions/units"},"derivatives":{"type":"array","items":{"$ref":"#/definitions/derivative"}},"translation":{"description":"Translation vector. Must be applied to bring model into its 'neutral' pose.","$ref":"./common.schema.json#/definitions/vector3"},"rotation":{"description":"Rotation quaternion. Must be applied to bring model into its 'neutral' pose.","$ref":"./common.schema.json#/definitions/vector4"},"boundingBox":{"description":"Bounding box for this model, shared by all derivatives.","$ref":"./common.schema.json#/definitions/boundingBox"},"material":{"$ref":"#/definitions/material"},"annotations":{"description":"List of annotations to be displayed with the model","type":"array","items":{"$ref":"#/definitions/annotation"}}},"required":["units","derivatives"],"additionalProperties":false};
 
 /***/ }),
 
-/***/ "../common/schema/presentation.schema.json":
-/*!*************************************************!*\
-  !*** ../common/schema/presentation.schema.json ***!
-  \*************************************************/
-/*! exports provided: $id, $schema, title, description, definitions, type, properties, required, default */
-/***/ (function(module) {
-
-module.exports = {"$id":"https://schemas.3d.si.edu/public_api/presentation.schema.json","$schema":"http://json-schema.org/draft-07/schema#","title":"Smithsonian 3D Presentation","description":"Describes a 3D scene containing one or multiple 3D items.","definitions":{"node":{"$id":"#node","type":"object","properties":{"children":{"type":"array","description":"The indices of this node's children.","items":{"type":"integer","minimum":0},"uniqueItems":true,"minItems":1},"matrix":{"description":"A floating-point 4x4 transformation matrix stored in column-major order.","type":"array","items":{"type":"number"},"minItems":16,"maxItems":16,"default":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]},"translation":{"description":"The node's translation along the x, y, and z axes.","type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"default":[0,0,0]},"rotation":{"description":"The node's unit quaternion rotation in the order (x, y, z, w), where w is the scalar.","type":"array","items":{"type":"number","minimum":-1,"maximum":1},"minItems":4,"maxItems":4,"default":[0,0,0,1]},"scale":{"description":"The node's non-uniform scale, given as the scaling factors along the x, y, and z axes.","type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"default":[1,1,1]},"item":{"description":"The index of the item in this node.","type":"integer","minimum":0},"reference":{"description":"The index of the reference in this node.","type":"integer","minimum":0},"camera":{"description":"The index of the camera in this node.","type":"integer","minimum":0},"light":{"description":"The index of the light in this node.","type":"integer","minimum":0}},"not":{"anyOf":[{"required":["matrix","translation"]},{"required":["matrix","rotation"]},{"required":["matrix","scale"]}]}},"reference":{"$id":"#reference","type":"object","properties":{"mimeType":{"type":"string"},"uri":{"type":"string"}},"required":["uri"]},"camera":{"$id":"#camera","type":"object","properties":{"type":{"description":"Specifies if the camera uses a perspective or orthographic projection.","type":"string","enum":["perspective","orthographic"]},"perspective":{"description":"A perspective camera containing properties to create a perspective projection matrix.","type":"object","properties":{"yfov":{"type":"number","description":"The floating-point vertical field of view in radians.","exclusiveMinimum":0},"aspectRatio":{"type":"number","description":"The floating-point aspect ratio of the field of view.","exclusiveMinimum":0},"znear":{"type":"number","description":"The floating-point distance to the near clipping plane.","exclusiveMinimum":0},"zfar":{"type":"number","description":"The floating-point distance to the far clipping plane.","exclusiveMinimum":0}},"required":["yfov","znear"]},"orthographic":{"description":"An orthographic camera containing properties to create an orthographic projection matrix.","type":"object","properties":{"xmag":{"type":"number","description":"The floating-point horizontal magnification of the view. Must not be zero."},"ymag":{"type":"number","description":"The floating-point vertical magnification of the view. Must not be zero."},"znear":{"type":"number","description":"The floating-point distance to the near clipping plane.","exclusiveMinimum":0},"zfar":{"type":"number","description":"The floating-point distance to the far clipping plane. `zfar` must be greater than `znear`.","exclusiveMinimum":0}},"required":["xmag","ymag","znear","zfar"]}},"required":["type"],"not":{"required":["perspective","orthographic"]}},"light":{"$id":"#light","type":"object","properties":{"type":{"description":"Specifies the type of the light source.","type":"string","enum":["ambient","directional","point","spot","hemisphere"]},"color":{"$ref":"#colorRGB"},"intensity":{"type":"number","minimum":0,"default":1},"castShadow":{"type":"boolean","default":false},"point":{"type":"object","properties":{"distance":{"type":"number","minimum":0},"decay":{"type":"number","minimum":0}}},"spot":{"type":"object","properties":{"distance":{"type":"number","minimum":0},"decay":{"type":"number","minimum":0},"angle":{"type":"number","minimum":0},"penumbra":{"type":"number","minimum":0}}},"hemisphere":{"type":"object","properties":{"groundColor":{"$ref":"#colorRGB"}}}},"required":["type"],"not":{"required":["point","spot","hemisphere"]}},"colorRGB":{"$id":"#colorRGB","type":"array","items":{"type":"number","minimum":0,"maximum":1},"minItems":3,"maxItems":3,"default":[1,1,1]}},"type":"object","properties":{"asset":{"type":"object","properties":{"copyright":{"type":"string","description":"A copyright message to credit the content creator."},"generator":{"type":"string","description":"Tool that generated this presentation description."},"version":{"type":"string","description":"Version of this presentation description."}}},"scene":{"description":"The root nodes of the scene.","type":"object","properties":{"nodes":{"description":"The indices of each root node.","type":"array","items":{"type":"integer","minimum":0},"uniqueItems":true,"minItems":1}},"minItems":1},"nodes":{"description":"An array of nodes.","type":"array","items":{"$ref":"#node"},"minItems":1},"items":{"description":"An array if items.","type":"array","items":{"$ref":"item.schema.json"},"minItems":1},"references":{"description":"An array of references.","type":"array","items":{"$ref":"#reference"},"minItems":1},"cameras":{"description":"An array of cameras.","type":"array","items":{"$ref":"#camera"},"minItems":1},"lights":{"description":"An array of lights.","type":"array","items":{"$ref":"#light"},"minItems":1},"story":{"description":"Presentation-level tours and snapshots","$ref":"story.schema.json"},"config":{"description":"Voyager explorer global settings.","$ref":"config.schema.json"}},"required":["scene","nodes"]};
-
-/***/ }),
-
-/***/ "../common/schema/process.schema.json":
-/*!********************************************!*\
-  !*** ../common/schema/process.schema.json ***!
-  \********************************************/
-/*! exports provided: $id, $schema, title, description, type, properties, required, default */
-/***/ (function(module) {
-
-module.exports = {"$id":"https://schemas.3d.si.edu/public_api/process.schema.json","$schema":"http://json-schema.org/draft-07/schema#","title":"Process","description":"Information about how a 3D item was digitized and processed.","type":"object","properties":{},"required":[]};
-
-/***/ }),
-
-/***/ "../common/schema/story.schema.json":
+/***/ "../common/schema/setup.schema.json":
 /*!******************************************!*\
-  !*** ../common/schema/story.schema.json ***!
+  !*** ../common/schema/setup.schema.json ***!
   \******************************************/
-/*! exports provided: $id, $schema, title, description, definitions, type, properties, required, default */
+/*! exports provided: $id, $schema, title, description, definitions, type, properties, default */
 /***/ (function(module) {
 
-module.exports = {"$id":"https://schemas.3d.si.edu/public_api/story.schema.json","$schema":"http://json-schema.org/draft-07/schema#","title":"Story","description":"Animated tours and snapshots for a 3D item.","definitions":{"snapshot":{"$id":"#snapshot","type":"object","properties":{"title":{"type":"string"},"description":{"type":"string"},"properties":{"type":"array","items":{"properties":{"path":{"type":"string","minLength":1}},"required":["path","value"]}}}},"tourstep":{"$id":"#tourstep","type":"object","properties":{"snapshot":{"type":"integer","minimum":0},"transitionTime":{"type":"number","minimum":0},"transitionCurve":{"type":"string"},"transitionCutPoint":{"type":"number","minimum":0,"maximum":1}},"required":["snapshot"]}},"type":"object","properties":{"snapshots":{"type":"array","items":{"$ref":"#snapshot"}},"tours":{"type":"array","items":{"type":"object","properties":{"title":{"type":"string"},"description":{"type":"string"},"steps":{"type":"array","items":{"$ref":"#tourstep"}}}}}},"required":[]};
+module.exports = {"$id":"https://schemas.3d.si.edu/voyager/setup.schema.json","$schema":"http://json-schema.org/draft-07/schema#","title":"Setup","description":"Tours and settings for explorer documents (background, interface, etc.)","definitions":{"viewer":{"type":"object","properties":{"shader":{"type":"string"},"exposure":{"type":"number"},"gamma":{"type":"number"},"annotationsVisible":{"type":"boolean"}},"required":["shader","exposure","gamma"]},"reader":{"type":"object","properties":{"enabled":{"type":"boolean"},"position":{"type":"string"},"articleId":{"description":"Id of the article currently displayed in the reader.","type":"string","minLength":1}}},"interface":{"type":"object","properties":{"visible":{"type":"boolean"},"logo":{"type":"boolean"},"menu":{"type":"boolean"},"tools":{"type":"boolean"}}},"navigation":{"type":"object","properties":{"type":{"type":"string","enum":["Orbit","Walk"]},"enabled":{"type":"boolean"},"autoZoom":{"type":"boolean"},"orbit":{"$comment":"TODO: Implement","type":"object","properties":{}},"walk":{"$comment":"TODO: Implement","type":"object","properties":{}}}},"background":{"type":"object","properties":{"style":{"type":"string","enum":["Solid","LinearGradient","RadialGradient"]},"color0":{"$ref":"./common.schema.json#/definitions/vector3"},"color1":{"$ref":"./common.schema.json#/definitions/vector3"}}},"floor":{"type":"object","properties":{"visible":{"type":"boolean"},"position":{"$ref":"./common.schema.json#/definitions/vector3"},"size":{"type":"number"},"color":{"$ref":"./common.schema.json#/definitions/vector3"},"opacity":{"type":"number"},"receiveShadow":{"type":"boolean"}}},"grid":{"type":"object","properties":{"visible":{"type":"boolean"},"color":{"$ref":"./common.schema.json#/definitions/vector3"}}},"tape":{"type":"object","properties":{"enabled":{"type":"boolean"},"startPosition":{"$ref":"./common.schema.json#/definitions/vector3"},"startDirection":{"$ref":"./common.schema.json#/definitions/vector3"},"endPosition":{"$ref":"./common.schema.json#/definitions/vector3"},"endDirection":{"$ref":"./common.schema.json#/definitions/vector3"}}},"slicer":{"type":"object","properties":{"enabled":{"type":"boolean"},"axis":{"type":"string","enum":["X","Y","Z"]},"inverted":{"type":"boolean"},"position":{"type":"number"}}},"tours":{"description":"Animated tours.","type":"array","items":{"type":"object","properties":{"title":{"type":"string"},"lead":{"type":"string"},"tags":{"description":"Array of tags, categorizing the tour.","type":"array","items":{"type":"string"}},"steps":{"type":"array","items":{"type":"object","properties":{"title":{"type":"string"},"id":{"type":"string"}}}}}}},"snapshots":{"description":"Snapshots are animatable scene states.","type":"object","properties":{"features":{"type":"array","items":{"type":"string"}},"targets":{"type":"array","items":{"type":"string"}},"states":{"type":"array","items":{"type":"object"}}}}},"type":"object","properties":{"units":{"$ref":"./common.schema.json#/definitions/units"},"interface":{"$ref":"#/definitions/interface"},"viewer":{"$ref":"#/definitions/viewer"},"reader":{"$ref":"#/definitions/reader"},"navigation":{"$ref":"#/definitions/navigation"},"background":{"$ref":"#/definitions/background"},"floor":{"$ref":"#/definitions/floor"},"grid":{"$ref":"#/definitions/grid"},"tape":{"$ref":"#/definitions/tape"},"slicer":{"$ref":"#/definitions/slicer"},"tours":{"$ref":"#/definitions/tours"}}};
 
 /***/ }),
 
-/***/ "../common/types/config.ts":
+/***/ "../common/templates/document.json":
+/*!*****************************************!*\
+  !*** ../common/templates/document.json ***!
+  \*****************************************/
+/*! exports provided: asset, scene, scenes, nodes, setups, cameras, lights, default */
+/***/ (function(module) {
+
+module.exports = {"asset":{"type":"application/si-dpo-3d.document+json","version":"1.0","copyright":"(c) Smithsonian Institution, all rights reserved","generator":"Voyager"},"scene":0,"scenes":[{"nodes":[0,1],"setup":0}],"nodes":[{"translation":[0,0,15],"camera":0},{"name":"Lights","children":[2,3,4,5]},{"name":"Key","translation":[-1.5,2,2],"light":0},{"name":"Fill #1","translation":[3,1,2],"light":1},{"name":"Fill #2","translation":[1,-2,1],"light":3},{"name":"Rim","translation":[1,0,-1],"light":2}],"setups":[{"units":"cm","interface":{"visible":true,"logo":true,"menu":true,"tools":true},"viewer":{"shader":"Default","exposure":1,"gamma":1,"annotationsVisible":false},"reader":{"enabled":false,"position":"Overlay"},"navigation":{"type":"Orbit","enabled":true,"autoZoom":true,"orbit":{"orbit":[-24,-26,0],"offset":[0,0,150],"minOrbit":[-90,null,null],"maxOrbit":[90,null,null],"minOffset":[null,null,0.1],"maxOffset":[null,null,10000]}},"background":{"style":"RadialGradient","color0":[0.2,0.25,0.3],"color1":[0.01,0.03,0.05]},"floor":{"visible":false,"position":[0,-25,0],"size":50,"color":[0.6,0.75,0.8],"opacity":0.5,"receiveShadow":false},"grid":{"visible":false,"color":[0.5,0.7,0.8]},"tape":{"enabled":false,"startPosition":[0,0,0],"startDirection":[0,0,0],"endPosition":[0,0,0],"endDirection":[0,0,0]},"slicer":{"enabled":false,"axis":"X","inverted":false,"position":0.5}}],"cameras":[{"type":"perspective","perspective":{"yfov":52,"znear":0.1,"zfar":100000}}],"lights":[{"type":"directional","color":[1,0.95,0.9],"intensity":0.9},{"type":"directional","color":[0.9,0.95,1],"intensity":0.6},{"type":"directional","color":[1,1,1],"intensity":0.8},{"type":"directional","color":[0.8,0.85,1],"intensity":0.8}]};
+
+/***/ }),
+
+/***/ "../common/types/common.ts":
 /*!*********************************!*\
-  !*** ../common/types/config.ts ***!
+  !*** ../common/types/common.ts ***!
   \*********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * 3D Foundation Project
- * Copyright 2018 Smithsonian Institution
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const item_1 = __webpack_require__(/*! ./item */ "../common/types/item.ts");
-exports.EUnitType = item_1.EUnitType;
-var EShaderMode;
-(function (EShaderMode) {
-    EShaderMode[EShaderMode["Default"] = 0] = "Default";
-    EShaderMode[EShaderMode["Clay"] = 1] = "Clay";
-    EShaderMode[EShaderMode["XRay"] = 2] = "XRay";
-    EShaderMode[EShaderMode["Normals"] = 3] = "Normals";
-    EShaderMode[EShaderMode["Wireframe"] = 4] = "Wireframe";
-})(EShaderMode = exports.EShaderMode || (exports.EShaderMode = {}));
-var EBackgroundType;
-(function (EBackgroundType) {
-    EBackgroundType[EBackgroundType["Solid"] = 0] = "Solid";
-    EBackgroundType[EBackgroundType["LinearGradient"] = 1] = "LinearGradient";
-    EBackgroundType[EBackgroundType["RadialGradient"] = 2] = "RadialGradient";
-})(EBackgroundType = exports.EBackgroundType || (exports.EBackgroundType = {}));
-var ENavigationType;
-(function (ENavigationType) {
-    ENavigationType[ENavigationType["Orbit"] = 0] = "Orbit";
-    ENavigationType[ENavigationType["Walk"] = 1] = "Walk";
-})(ENavigationType = exports.ENavigationType || (exports.ENavigationType = {}));
-var EReaderPosition;
-(function (EReaderPosition) {
-    EReaderPosition[EReaderPosition["Overlay"] = 0] = "Overlay";
-    EReaderPosition[EReaderPosition["Left"] = 1] = "Left";
-    EReaderPosition[EReaderPosition["Right"] = 2] = "Right";
-})(EReaderPosition = exports.EReaderPosition || (exports.EReaderPosition = {}));
-
-
-/***/ }),
-
-/***/ "../common/types/item.ts":
-/*!*******************************!*\
-  !*** ../common/types/item.ts ***!
-  \*******************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -24896,18 +26856,20 @@ var EUnitType;
     EUnitType[EUnitType["mm"] = 0] = "mm";
     EUnitType[EUnitType["cm"] = 1] = "cm";
     EUnitType[EUnitType["m"] = 2] = "m";
-    EUnitType[EUnitType["in"] = 3] = "in";
-    EUnitType[EUnitType["ft"] = 4] = "ft";
-    EUnitType[EUnitType["yd"] = 5] = "yd";
+    EUnitType[EUnitType["km"] = 3] = "km";
+    EUnitType[EUnitType["in"] = 4] = "in";
+    EUnitType[EUnitType["ft"] = 5] = "ft";
+    EUnitType[EUnitType["yd"] = 6] = "yd";
+    EUnitType[EUnitType["mi"] = 7] = "mi";
 })(EUnitType = exports.EUnitType || (exports.EUnitType = {}));
 
 
 /***/ }),
 
-/***/ "./core/components/CVLoaders.ts":
-/*!**************************************!*\
-  !*** ./core/components/CVLoaders.ts ***!
-  \**************************************/
+/***/ "../common/types/model.ts":
+/*!********************************!*\
+  !*** ../common/types/model.ts ***!
+  \********************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -24930,66 +26892,1176 @@ var EUnitType;
  * limitations under the License.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-const resolve_pathname_1 = __webpack_require__(/*! resolve-pathname */ "../../node_modules/resolve-pathname/esm/resolve-pathname.js");
+const common_1 = __webpack_require__(/*! ./common */ "../common/types/common.ts");
+exports.EUnitType = common_1.EUnitType;
+var EDerivativeUsage;
+(function (EDerivativeUsage) {
+    EDerivativeUsage[EDerivativeUsage["Image2D"] = 0] = "Image2D";
+    EDerivativeUsage[EDerivativeUsage["Web3D"] = 1] = "Web3D";
+    EDerivativeUsage[EDerivativeUsage["Print3D"] = 2] = "Print3D";
+    EDerivativeUsage[EDerivativeUsage["Editorial3D"] = 3] = "Editorial3D";
+})(EDerivativeUsage = exports.EDerivativeUsage || (exports.EDerivativeUsage = {}));
+var EDerivativeQuality;
+(function (EDerivativeQuality) {
+    EDerivativeQuality[EDerivativeQuality["Thumb"] = 0] = "Thumb";
+    EDerivativeQuality[EDerivativeQuality["Low"] = 1] = "Low";
+    EDerivativeQuality[EDerivativeQuality["Medium"] = 2] = "Medium";
+    EDerivativeQuality[EDerivativeQuality["High"] = 3] = "High";
+    EDerivativeQuality[EDerivativeQuality["Highest"] = 4] = "Highest";
+    EDerivativeQuality[EDerivativeQuality["LOD"] = 5] = "LOD";
+    EDerivativeQuality[EDerivativeQuality["Stream"] = 6] = "Stream";
+})(EDerivativeQuality = exports.EDerivativeQuality || (exports.EDerivativeQuality = {}));
+var EAssetType;
+(function (EAssetType) {
+    EAssetType[EAssetType["Model"] = 0] = "Model";
+    EAssetType[EAssetType["Geometry"] = 1] = "Geometry";
+    EAssetType[EAssetType["Image"] = 2] = "Image";
+    EAssetType[EAssetType["Texture"] = 3] = "Texture";
+    EAssetType[EAssetType["Points"] = 4] = "Points";
+    EAssetType[EAssetType["Volume"] = 5] = "Volume";
+})(EAssetType = exports.EAssetType || (exports.EAssetType = {}));
+var EMapType;
+(function (EMapType) {
+    EMapType[EMapType["Color"] = 0] = "Color";
+    EMapType[EMapType["Emissive"] = 1] = "Emissive";
+    EMapType[EMapType["Occlusion"] = 2] = "Occlusion";
+    EMapType[EMapType["Normal"] = 3] = "Normal";
+    EMapType[EMapType["MetallicRoughness"] = 4] = "MetallicRoughness";
+    EMapType[EMapType["Zone"] = 5] = "Zone";
+})(EMapType = exports.EMapType || (exports.EMapType = {}));
+
+
+/***/ }),
+
+/***/ "../common/types/setup.ts":
+/*!********************************!*\
+  !*** ../common/types/setup.ts ***!
+  \********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+var EShaderMode;
+(function (EShaderMode) {
+    EShaderMode[EShaderMode["Default"] = 0] = "Default";
+    EShaderMode[EShaderMode["Clay"] = 1] = "Clay";
+    EShaderMode[EShaderMode["XRay"] = 2] = "XRay";
+    EShaderMode[EShaderMode["Normals"] = 3] = "Normals";
+    EShaderMode[EShaderMode["Wireframe"] = 4] = "Wireframe";
+})(EShaderMode = exports.EShaderMode || (exports.EShaderMode = {}));
+var EBackgroundStyle;
+(function (EBackgroundStyle) {
+    EBackgroundStyle[EBackgroundStyle["Solid"] = 0] = "Solid";
+    EBackgroundStyle[EBackgroundStyle["LinearGradient"] = 1] = "LinearGradient";
+    EBackgroundStyle[EBackgroundStyle["RadialGradient"] = 2] = "RadialGradient";
+})(EBackgroundStyle = exports.EBackgroundStyle || (exports.EBackgroundStyle = {}));
+var ENavigationType;
+(function (ENavigationType) {
+    ENavigationType[ENavigationType["Orbit"] = 0] = "Orbit";
+    ENavigationType[ENavigationType["Walk"] = 1] = "Walk";
+})(ENavigationType = exports.ENavigationType || (exports.ENavigationType = {}));
+var EReaderPosition;
+(function (EReaderPosition) {
+    EReaderPosition[EReaderPosition["Overlay"] = 0] = "Overlay";
+    EReaderPosition[EReaderPosition["Left"] = 1] = "Left";
+    EReaderPosition[EReaderPosition["Right"] = 2] = "Right";
+})(EReaderPosition = exports.EReaderPosition || (exports.EReaderPosition = {}));
+var ESliceAxis;
+(function (ESliceAxis) {
+    ESliceAxis[ESliceAxis["X"] = 0] = "X";
+    ESliceAxis[ESliceAxis["Y"] = 1] = "Y";
+    ESliceAxis[ESliceAxis["Z"] = 2] = "Z";
+})(ESliceAxis = exports.ESliceAxis || (exports.ESliceAxis = {}));
+
+
+/***/ }),
+
+/***/ "./annotations/AnnotationSprite.ts":
+/*!*****************************************!*\
+  !*** ./annotations/AnnotationSprite.ts ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
 const THREE = __webpack_require__(/*! three */ "three");
-const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
-const JSONLoader_1 = __webpack_require__(/*! ../loaders/JSONLoader */ "./core/loaders/JSONLoader.ts");
-const JSONValidator_1 = __webpack_require__(/*! ../loaders/JSONValidator */ "./core/loaders/JSONValidator.ts");
-const ModelLoader_1 = __webpack_require__(/*! ../loaders/ModelLoader */ "./core/loaders/ModelLoader.ts");
-const GeometryLoader_1 = __webpack_require__(/*! ../loaders/GeometryLoader */ "./core/loaders/GeometryLoader.ts");
-const TextureLoader_1 = __webpack_require__(/*! ../loaders/TextureLoader */ "./core/loaders/TextureLoader.ts");
+const CustomElement_1 = __webpack_require__(/*! @ff/ui/CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
+const HTMLSprite_1 = __webpack_require__(/*! @ff/three/HTMLSprite */ "../../libs/ff-three/source/HTMLSprite.ts");
+const Annotation_1 = __webpack_require__(/*! ../models/Annotation */ "./models/Annotation.ts");
+exports.Annotation = Annotation_1.default;
 ////////////////////////////////////////////////////////////////////////////////
-const _VERBOSE = false;
-class CVLoaders extends Component_1.default {
-    constructor(id) {
-        super(id);
-        const loadingManager = this._loadingManager = new PrivateLoadingManager();
-        this.jsonLoader = new JSONLoader_1.default(loadingManager);
-        this.validator = new JSONValidator_1.default();
-        this.modelLoader = new ModelLoader_1.default(loadingManager);
-        this.geometryLoader = new GeometryLoader_1.default(loadingManager);
-        this.textureLoader = new TextureLoader_1.default(loadingManager);
+const _vec3up = new THREE.Vector3(0, 1, 0);
+const _vec3dir = new THREE.Vector3();
+/**
+ * Defines the visual appearance of an annotation.
+ * A sprite consists of a 3D (WebGL) part and a 2D (HTML) part.
+ *
+ * ### Events
+ * - *"click"* Emitted if the user clicks on the annotation.
+ * - *"link"* Emitted if the user activates a link on the annotation.
+ */
+class AnnotationSprite extends HTMLSprite_1.default {
+    constructor(annotation) {
+        super();
+        this.annotation = annotation;
+        this.matrixAutoUpdate = false;
     }
-    loadJSON(url, path) {
-        url = resolve_pathname_1.default(url, path);
-        return this.jsonLoader.load(url);
+    update() {
+        super.update();
+        const annotation = this.annotation;
+        this.position.fromArray(annotation.data.position);
+        _vec3dir.fromArray(annotation.data.direction).normalize();
+        this.quaternion.setFromUnitVectors(_vec3up, _vec3dir);
+        this.updateMatrix();
     }
-    loadModel(asset, path) {
-        const url = resolve_pathname_1.default(asset.uri, path);
-        return this.modelLoader.load(url);
+    updateHTMLElement(element) {
+        element.performUpdate();
     }
-    loadGeometry(asset, path) {
-        const url = resolve_pathname_1.default(asset.uri, path);
-        return this.geometryLoader.load(url);
+    emitClickEvent() {
+        const event = { type: "click", annotation: this.annotation, sprite: this };
+        this.dispatchEvent(event);
     }
-    loadTexture(asset, path) {
-        const url = resolve_pathname_1.default(asset.uri, path);
-        return this.textureLoader.load(url);
-    }
-    validatePresentation(json) {
-        return new Promise((resolve, reject) => {
-            if (!this.validator.validatePresentation(json)) {
-                return reject(new Error("invalid presentation data, validation failed"));
-            }
-            return resolve(json);
-        });
-    }
-    validateItem(json) {
-        return new Promise((resolve, reject) => {
-            if (!this.validator.validateItem(json)) {
-                return reject(new Error("invalid item data, validation failed"));
-            }
-            return resolve(json);
-        });
+    emitLinkEvent(link) {
+        const event = { type: "link", annotation: this.annotation, sprite: this, link };
+        this.dispatchEvent(event);
     }
 }
-exports.default = CVLoaders;
+exports.default = AnnotationSprite;
 ////////////////////////////////////////////////////////////////////////////////
-class PrivateLoadingManager extends THREE.LoadingManager {
+class AnnotationElement extends CustomElement_1.default {
+    constructor(sprite) {
+        super();
+        this.sprite = sprite;
+        this.onClick = this.onClick.bind(this);
+        this.onEvent = this.onEvent.bind(this);
+        this.addEventListener("pointerdown", this.onEvent);
+        this.addEventListener("pointermove", this.onEvent);
+        this.addEventListener("pointerup", this.onEvent);
+        this.addEventListener("pointercancel", this.onEvent);
+        this.addEventListener("click", this.onClick);
+    }
+    performUpdate() {
+        super.performUpdate();
+    }
+    firstConnected() {
+        super.firstConnected();
+        this.classList.add("sv-annotation");
+    }
+    onClick(event) {
+        event.stopPropagation();
+        this.sprite.emitClickEvent();
+    }
+    onEvent(event) {
+        event.stopPropagation();
+    }
+}
+exports.AnnotationElement = AnnotationElement;
+
+
+/***/ }),
+
+/***/ "./annotations/BeamSprite.ts":
+/*!***********************************!*\
+  !*** ./annotations/BeamSprite.ts ***!
+  \***********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const THREE = __webpack_require__(/*! three */ "three");
+const math_1 = __webpack_require__(/*! @ff/core/math */ "../../libs/ff-core/source/math.ts");
+const CustomElement_1 = __webpack_require__(/*! @ff/ui/CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
+const AnnotationSprite_1 = __webpack_require__(/*! ./AnnotationSprite */ "./annotations/AnnotationSprite.ts");
+////////////////////////////////////////////////////////////////////////////////
+const _quadrantClasses = ["sv-q0", "sv-q1", "sv-q2", "sv-q3"];
+class BeamSprite extends AnnotationSprite_1.default {
+    constructor(annotation) {
+        super(annotation);
+        this.quadrant = -1;
+        const geo = new THREE.Geometry();
+        geo.vertices.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1, 0));
+        const mat = new THREE.LineBasicMaterial({ color: "#009cde" });
+        mat.transparent = true;
+        this.beam = new THREE.Line(geo, mat);
+        this.beam.frustumCulled = false;
+        this.beam.matrixAutoUpdate = false;
+        this.add(this.beam);
+        this.update();
+    }
+    update() {
+        const annotation = this.annotation.data;
+        this.beam.scale.setScalar(5 * annotation.scale);
+        this.beam.position.y = annotation.offset;
+        this.beam.updateMatrix();
+        super.update();
+    }
+    renderHTMLElement(container, camera) {
+        const element = super.renderHTMLElement(container, camera, this.beam);
+        const angleOpacity = math_1.default.scaleLimit(this.viewAngle * math_1.default.RAD2DEG, 90, 100, 1, 0);
+        const opacity = angleOpacity * element.getOpacity();
+        element.style.opacity = opacity.toString();
+        this.beam.material["opacity"] = opacity;
+        element.style.visibility = opacity ? "visible" : "hidden";
+        // update quadrant/orientation
+        if (this.orientationQuadrant !== this.quadrant) {
+            element.classList.remove(_quadrantClasses[this.quadrant]);
+            element.classList.add(_quadrantClasses[this.orientationQuadrant]);
+            this.quadrant = this.orientationQuadrant;
+        }
+        return element;
+    }
+    updateHTMLElement(element) {
+        element.performUpdate();
+    }
+    createHTMLElement() {
+        return new BeamAnnotation(this);
+    }
+}
+exports.default = BeamSprite;
+////////////////////////////////////////////////////////////////////////////////
+let BeamAnnotation = class BeamAnnotation extends AnnotationSprite_1.AnnotationElement {
+    constructor(sprite) {
+        super(sprite);
+        this.handler = 0;
+        this.isExpanded = true;
+        this.currentOpacity = 0;
+        this.targetOpacity = 0;
+        this.onClickArticle = this.onClickArticle.bind(this);
+        this.titleElement = this.appendElement("div");
+        this.titleElement.classList.add("sv-content", "sv-title");
+        this.wrapperElement = this.appendElement("div");
+        this.contentElement = this.createElement("div", null, this.wrapperElement);
+        this.contentElement.classList.add("sv-content", "sv-description");
+    }
+    getOpacity() {
+        // if (this.currentOpacity > this.targetOpacity) {
+        //     this.currentOpacity = Math.max(this.currentOpacity - 0.05, 0);
+        // }
+        // else if (this.currentOpacity < this.targetOpacity) {
+        //     this.currentOpacity = Math.min(this.currentOpacity + 0.05, 1);
+        // }
+        this.currentOpacity = this.targetOpacity;
+        return this.currentOpacity;
+    }
+    firstConnected() {
+        super.firstConnected();
+        this.classList.add("sv-beam-annotation");
+    }
+    update(changedProperties) {
+        super.update(changedProperties);
+        const annotation = this.sprite.annotation.data;
+        this.titleElement.innerText = annotation.title;
+        const contentTemplate = CustomElement_1.html `<p>${annotation.lead}</p>
+            ${annotation.articleId ? CustomElement_1.html `<ff-button inline text="Read more..." icon="document" @click=${this.onClickArticle}></ff-button>` : null}`;
+        CustomElement_1.render(contentTemplate, this.contentElement);
+        this.targetOpacity = annotation.visible ? 1 : 0;
+        if (this.isExpanded !== annotation.expanded) {
+            this.isExpanded = annotation.expanded;
+            window.clearTimeout(this.handler);
+            if (this.isExpanded) {
+                this.classList.add("sv-expanded");
+                this.contentElement.style.display = "inherit";
+                this.contentElement.style.height = this.contentElement.scrollHeight + "px";
+            }
+            else {
+                this.classList.remove("sv-expanded");
+                this.contentElement.style.height = "0";
+                this.handler = window.setTimeout(() => this.contentElement.style.display = "none", 300);
+            }
+        }
+    }
+    onClickArticle(event) {
+        event.stopPropagation();
+        this.sprite.emitLinkEvent(this.sprite.annotation.data.articleId);
+    }
+};
+BeamAnnotation = __decorate([
+    CustomElement_1.customElement("sv-beam-annotation")
+], BeamAnnotation);
+
+
+/***/ }),
+
+/***/ "./annotations/PinSprite.ts":
+/*!**********************************!*\
+  !*** ./annotations/PinSprite.ts ***!
+  \**********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const THREE = __webpack_require__(/*! three */ "three");
+const CustomElement_1 = __webpack_require__(/*! @ff/ui/CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
+const AnnotationSprite_1 = __webpack_require__(/*! ./AnnotationSprite */ "./annotations/AnnotationSprite.ts");
+////////////////////////////////////////////////////////////////////////////////
+class PinSprite extends AnnotationSprite_1.default {
+    constructor(annotation) {
+        super(annotation);
+        this.pin = new THREE.Mesh(new THREE.CylinderBufferGeometry(0.5, 0.02, 3, 16, 1), new THREE.MeshPhongMaterial({ color: "#f21818" }));
+        this.pin.geometry.translate(0, 1.5, 0);
+        this.pin.frustumCulled = false;
+        this.pin.matrixAutoUpdate = false;
+        this.add(this.pin);
+        this.update();
+    }
+    update() {
+        const annotation = this.annotation.data;
+        this.pin.scale.setScalar(annotation.scale);
+        this.pin.position.y = annotation.offset;
+        this.pin.updateMatrix();
+        super.update();
+    }
+    renderHTMLElement(container, camera) {
+        return null; //super.renderHTMLElement(container, camera, this.pin);
+    }
+    updateHTMLElement(element) {
+        //element.performUpdate();
+    }
+    createHTMLElement() {
+        return null; //new PinAnnotation(this);
+    }
+}
+exports.default = PinSprite;
+let PinAnnotation = class PinAnnotation extends AnnotationSprite_1.AnnotationElement {
+    firstConnected() {
+        super.firstConnected();
+        this.classList.add("sv-pin-annotation");
+    }
+    render() {
+        const annotation = this.sprite.annotation.data;
+        return CustomElement_1.html `<div>${annotation.title}</div>`;
+    }
+};
+PinAnnotation = __decorate([
+    CustomElement_1.customElement("sv-pin-annotation")
+], PinAnnotation);
+
+
+/***/ }),
+
+/***/ "./applications/MiniApplication.ts":
+/*!*****************************************!*\
+  !*** ./applications/MiniApplication.ts ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const parseUrlParameter_1 = __webpack_require__(/*! @ff/browser/parseUrlParameter */ "../../libs/ff-browser/source/parseUrlParameter.ts");
+const TypeRegistry_1 = __webpack_require__(/*! @ff/core/TypeRegistry */ "../../libs/ff-core/source/TypeRegistry.ts");
+const System_1 = __webpack_require__(/*! @ff/graph/System */ "../../libs/ff-graph/source/System.ts");
+const coreTypes_1 = __webpack_require__(/*! ./coreTypes */ "./applications/coreTypes.ts");
+const miniTypes_1 = __webpack_require__(/*! ./miniTypes */ "./applications/miniTypes.ts");
+const documentTemplate = __webpack_require__(/*! common/templates/document.json */ "../common/templates/document.json");
+const CVDocumentProvider_1 = __webpack_require__(/*! ../components/CVDocumentProvider */ "./components/CVDocumentProvider.ts");
+const CVAssetReader_1 = __webpack_require__(/*! ../components/CVAssetReader */ "./components/CVAssetReader.ts");
+const NVEngine_1 = __webpack_require__(/*! ../nodes/NVEngine */ "./nodes/NVEngine.ts");
+const NVDocuments_1 = __webpack_require__(/*! ../nodes/NVDocuments */ "./nodes/NVDocuments.ts");
+const MainView_1 = __webpack_require__(/*! ../ui/mini/MainView */ "./ui/mini/MainView.ts");
+class MiniApplication {
+    constructor(parent, props) {
+        this.props = props;
+        console.log(MiniApplication.splashMessage);
+        // register components
+        const registry = new TypeRegistry_1.default();
+        registry.add(coreTypes_1.default);
+        registry.add(miniTypes_1.default);
+        const system = this.system = new System_1.default(registry);
+        const engine = system.graph.createCustomNode(NVEngine_1.default);
+        system.graph.createCustomNode(NVDocuments_1.default);
+        if (parent) {
+            // create a view and attach to parent
+            new MainView_1.default(this).appendTo(parent);
+        }
+        this.documentProvider.createDocument(documentTemplate);
+        this.evaluateProps();
+        // start rendering
+        engine.pulse.start();
+    }
+    get assetReader() {
+        return this.system.getMainComponent(CVAssetReader_1.default);
+    }
+    get documentProvider() {
+        return this.system.getMainComponent(CVDocumentProvider_1.default);
+    }
+    setRootUrl(url) {
+        this.assetReader.rootUrl = url;
+    }
+    loadDocument(documentPath, merge) {
+        return this.assetReader.getJSON(documentPath)
+            .then(data => {
+            merge = merge === undefined ? !data.lights && !data.cameras : merge;
+            return this.documentProvider.amendDocument(data, documentPath, merge);
+        })
+            .catch(error => {
+            console.warn(`error while loading document: ${error.message}`);
+            throw error;
+        });
+    }
+    loadModel(modelPath, quality) {
+        return this.documentProvider.appendModel(modelPath, quality);
+    }
+    loadGeometry(geoPath, colorMapPath, occlusionMapPath, normalMapPath, quality) {
+        return this.documentProvider.appendGeometry(geoPath, colorMapPath, occlusionMapPath, normalMapPath, quality);
+    }
+    evaluateProps() {
+        const props = this.props;
+        const reader = this.assetReader;
+        props.root = props.root || parseUrlParameter_1.default("root") || parseUrlParameter_1.default("r");
+        props.document = props.document || parseUrlParameter_1.default("document") || parseUrlParameter_1.default("d");
+        props.model = props.model || parseUrlParameter_1.default("model") || parseUrlParameter_1.default("m");
+        props.geometry = props.geometry || parseUrlParameter_1.default("geometry") || parseUrlParameter_1.default("g");
+        props.texture = props.texture || parseUrlParameter_1.default("texture") || parseUrlParameter_1.default("t");
+        this.setRootUrl(props.root || props.document || props.model || props.geometry || "");
+        if (props.document) {
+            props.document = props.root ? props.document : reader.getAssetName(props.document);
+            this.loadDocument(props.document);
+        }
+        if (props.model) {
+            props.model = props.root ? props.model : reader.getAssetName(props.model);
+            this.loadModel(props.model, "Medium");
+        }
+        else if (props.geometry) {
+            props.geometry = props.root ? props.geometry : reader.getAssetName(props.geometry);
+            props.texture = props.root ? props.texture : reader.getAssetName(props.texture);
+            this.loadGeometry(props.geometry, props.texture, null, null, "Medium");
+        }
+    }
+}
+MiniApplication.splashMessage = [
+    "Voyager - 3D Explorer and Tool Suite",
+    "3D Foundation Project",
+    "(c) 2018 Smithsonian Institution",
+    "https://3d.si.edu"
+].join("\n");
+exports.default = MiniApplication;
+window["VoyagerMini"] = MiniApplication;
+
+
+/***/ }),
+
+/***/ "./applications/coreTypes.ts":
+/*!***********************************!*\
+  !*** ./applications/coreTypes.ts ***!
+  \***********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+// LIBRARY COMPONENTS //////////////////////////////////////////////////////////
+const CGraph_1 = __webpack_require__(/*! @ff/graph/components/CGraph */ "../../libs/ff-graph/source/components/CGraph.ts");
+const CPulse_1 = __webpack_require__(/*! @ff/graph/components/CPulse */ "../../libs/ff-graph/source/components/CPulse.ts");
+const CComponentProvider_1 = __webpack_require__(/*! @ff/graph/components/CComponentProvider */ "../../libs/ff-graph/source/components/CComponentProvider.ts");
+const CNodeProvider_1 = __webpack_require__(/*! @ff/graph/components/CNodeProvider */ "../../libs/ff-graph/source/components/CNodeProvider.ts");
+const CTweenMachine_1 = __webpack_require__(/*! @ff/graph/components/CTweenMachine */ "../../libs/ff-graph/source/components/CTweenMachine.ts");
+const CRenderer_1 = __webpack_require__(/*! @ff/scene/components/CRenderer */ "../../libs/ff-scene/source/components/CRenderer.ts");
+const CFullscreen_1 = __webpack_require__(/*! @ff/scene/components/CFullscreen */ "../../libs/ff-scene/source/components/CFullscreen.ts");
+const CPickSelection_1 = __webpack_require__(/*! @ff/scene/components/CPickSelection */ "../../libs/ff-scene/source/components/CPickSelection.ts");
+const CScene_1 = __webpack_require__(/*! @ff/scene/components/CScene */ "../../libs/ff-scene/source/components/CScene.ts");
+// LIBRARY NODES ///////////////////////////////////////////////////////////////
+const Node_1 = __webpack_require__(/*! @ff/graph/Node */ "../../libs/ff-graph/source/Node.ts");
+// PROJECT COMPONENTS //////////////////////////////////////////////////////////
+const CVAssetReader_1 = __webpack_require__(/*! ../components/CVAssetReader */ "./components/CVAssetReader.ts");
+const CVDocument_1 = __webpack_require__(/*! ../components/CVDocument */ "./components/CVDocument.ts");
+const CVDocumentProvider_1 = __webpack_require__(/*! ../components/CVDocumentProvider */ "./components/CVDocumentProvider.ts");
+const CVScene_1 = __webpack_require__(/*! ../components/CVScene */ "./components/CVScene.ts");
+const CVSetup_1 = __webpack_require__(/*! ../components/CVSetup */ "./components/CVSetup.ts");
+const CVNode_1 = __webpack_require__(/*! ../components/CVNode */ "./components/CVNode.ts");
+const CVMeta_1 = __webpack_require__(/*! ../components/CVMeta */ "./components/CVMeta.ts");
+const CVModel2_1 = __webpack_require__(/*! ../components/CVModel2 */ "./components/CVModel2.ts");
+const CVAnnotations_1 = __webpack_require__(/*! ../components/CVAnnotations */ "./components/CVAnnotations.ts");
+const CVAnnotationView_1 = __webpack_require__(/*! ../components/CVAnnotationView */ "./components/CVAnnotationView.ts");
+const CVCamera_1 = __webpack_require__(/*! ../components/CVCamera */ "./components/CVCamera.ts");
+const CVDirectionalLight_1 = __webpack_require__(/*! ../components/CVDirectionalLight */ "./components/CVDirectionalLight.ts");
+const CVPointLight_1 = __webpack_require__(/*! ../components/CVPointLight */ "./components/CVPointLight.ts");
+const CVSpotLight_1 = __webpack_require__(/*! ../components/CVSpotLight */ "./components/CVSpotLight.ts");
+const CVInterface_1 = __webpack_require__(/*! ../components/CVInterface */ "./components/CVInterface.ts");
+const CVViewer_1 = __webpack_require__(/*! ../components/CVViewer */ "./components/CVViewer.ts");
+const CVReader_1 = __webpack_require__(/*! ../components/CVReader */ "./components/CVReader.ts");
+const CVOrbitNavigation_1 = __webpack_require__(/*! ../components/CVOrbitNavigation */ "./components/CVOrbitNavigation.ts");
+const CVBackground_1 = __webpack_require__(/*! ../components/CVBackground */ "./components/CVBackground.ts");
+const CVFloor_1 = __webpack_require__(/*! ../components/CVFloor */ "./components/CVFloor.ts");
+const CVGrid_1 = __webpack_require__(/*! ../components/CVGrid */ "./components/CVGrid.ts");
+const CVTape_1 = __webpack_require__(/*! ../components/CVTape */ "./components/CVTape.ts");
+const CVSlicer_1 = __webpack_require__(/*! ../components/CVSlicer */ "./components/CVSlicer.ts");
+const CVTours_1 = __webpack_require__(/*! ../components/CVTours */ "./components/CVTours.ts");
+const CVSnapshots_1 = __webpack_require__(/*! ../components/CVSnapshots */ "./components/CVSnapshots.ts");
+// PROJECT NODES ///////////////////////////////////////////////////////////////
+const NVEngine_1 = __webpack_require__(/*! ../nodes/NVEngine */ "./nodes/NVEngine.ts");
+const NVDocuments_1 = __webpack_require__(/*! ../nodes/NVDocuments */ "./nodes/NVDocuments.ts");
+const NVScene_1 = __webpack_require__(/*! ../nodes/NVScene */ "./nodes/NVScene.ts");
+const NVNode_1 = __webpack_require__(/*! ../nodes/NVNode */ "./nodes/NVNode.ts");
+////////////////////////////////////////////////////////////////////////////////
+const types = [
+    CGraph_1.default,
+    CPulse_1.default,
+    CComponentProvider_1.default,
+    CNodeProvider_1.default,
+    CTweenMachine_1.default,
+    CRenderer_1.default,
+    CFullscreen_1.default,
+    CPickSelection_1.default,
+    CScene_1.default,
+    Node_1.default,
+    CVAssetReader_1.default,
+    CVDocument_1.default,
+    CVDocumentProvider_1.default,
+    CVScene_1.default,
+    CVSetup_1.default,
+    CVNode_1.default,
+    CVMeta_1.default,
+    CVModel2_1.default,
+    CVAnnotations_1.default,
+    CVAnnotationView_1.default,
+    CVCamera_1.default,
+    CVDirectionalLight_1.default,
+    CVPointLight_1.default,
+    CVSpotLight_1.default,
+    CVInterface_1.default,
+    CVViewer_1.default,
+    CVReader_1.default,
+    CVOrbitNavigation_1.default,
+    CVBackground_1.default,
+    CVFloor_1.default,
+    CVGrid_1.default,
+    CVTape_1.default,
+    CVSlicer_1.default,
+    CVTours_1.default,
+    CVSnapshots_1.default,
+    NVEngine_1.default,
+    NVDocuments_1.default,
+    NVScene_1.default,
+    NVNode_1.default,
+];
+exports.default = types;
+
+
+/***/ }),
+
+/***/ "./applications/miniTypes.ts":
+/*!***********************************!*\
+  !*** ./applications/miniTypes.ts ***!
+  \***********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const CVNodeProvider_1 = __webpack_require__(/*! ../components/CVNodeProvider */ "./components/CVNodeProvider.ts");
+////////////////////////////////////////////////////////////////////////////////
+const types = [
+    CVNodeProvider_1.default,
+];
+exports.default = types;
+
+
+/***/ }),
+
+/***/ "./components/CVAnnotationView.ts":
+/*!****************************************!*\
+  !*** ./components/CVAnnotationView.ts ***!
+  \****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const HTMLSpriteGroup_1 = __webpack_require__(/*! @ff/three/HTMLSpriteGroup */ "../../libs/ff-three/source/HTMLSpriteGroup.ts");
+const CObject3D_1 = __webpack_require__(/*! @ff/scene/components/CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
+const CVModel2_1 = __webpack_require__(/*! ./CVModel2 */ "./components/CVModel2.ts");
+const Annotation_1 = __webpack_require__(/*! ../models/Annotation */ "./models/Annotation.ts");
+exports.Annotation = Annotation_1.default;
+const PinSprite_1 = __webpack_require__(/*! ../annotations/PinSprite */ "./annotations/PinSprite.ts");
+const BeamSprite_1 = __webpack_require__(/*! ../annotations/BeamSprite */ "./annotations/BeamSprite.ts");
+const CVMeta_1 = __webpack_require__(/*! ./CVMeta */ "./components/CVMeta.ts");
+const CVReader_1 = __webpack_require__(/*! ./CVReader */ "./components/CVReader.ts");
+const _inputs = {
+    unitScale: Component_1.types.Number("Transform.UnitScale", { preset: 1, precision: 5 }),
+    title: Component_1.types.String("Annotation.Title"),
+    lead: Component_1.types.String("Annotation.Lead"),
+    style: Component_1.types.Enum("Annotation.Style", Annotation_1.EAnnotationStyle, Annotation_1.EAnnotationStyle.Default),
+    scale: Component_1.types.Scale("Annotation.Scale", 1),
+    offset: Component_1.types.Number("Annotation.Offset"),
+    article: Component_1.types.Option("Annotation.Article", []),
+    image: Component_1.types.String("Annotation.Image"),
+    tilt: Component_1.types.Number("Annotation.Tilt"),
+    azimuth: Component_1.types.Number("Annotation.Azimuth"),
+};
+class CVAnnotationView extends CObject3D_1.default {
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(_inputs);
+        this._activeAnnotation = null;
+        this._annotations = {};
+        this._viewports = new Set();
+        this._sprites = {};
+        this.addEvents("active-annotation", "group");
+        this.onSpriteClick = this.onSpriteClick.bind(this);
+        this.onSpriteLink = this.onSpriteLink.bind(this);
+        this.on("pointer-up", this.onPointerUp, this);
+        this.system.on("pointer-up", this.onPointerUp, this);
+        this.object3D = new HTMLSpriteGroup_1.default();
+    }
+    get model() {
+        return this.getComponent(CVModel2_1.default);
+    }
+    get meta() {
+        return this.getComponent(CVMeta_1.default, true);
+    }
+    get reader() {
+        return this.getGraphComponent(CVReader_1.default);
+    }
+    get articles() {
+        const meta = this.meta;
+        return meta ? meta.articles : null;
+    }
+    get activeAnnotation() {
+        return this._activeAnnotation;
+    }
+    set activeAnnotation(annotation) {
+        if (annotation !== this._activeAnnotation) {
+            const previous = this._activeAnnotation;
+            if (previous) {
+                previous.set("expanded", false);
+                this.updateSprite(previous);
+            }
+            this._activeAnnotation = annotation;
+            if (annotation) {
+                annotation.set("expanded", true);
+                this.updateSprite(annotation);
+            }
+            const ins = this.ins;
+            ins.title.setValue(annotation ? annotation.data.title : "", true);
+            ins.lead.setValue(annotation ? annotation.data.lead : "", true);
+            ins.style.setValue(annotation ? annotation.data.style : Annotation_1.EAnnotationStyle.Default, true);
+            ins.scale.setValue(annotation ? annotation.data.scale : 1, true);
+            ins.offset.setValue(annotation ? annotation.data.offset : 0, true);
+            ins.tilt.setValue(annotation ? annotation.data.tilt : 0, true);
+            ins.azimuth.setValue(annotation ? annotation.data.azimuth : 0, true);
+            const articles = this.articles;
+            if (articles) {
+                const names = articles.items.map(article => article.data.title);
+                names.unshift("(none)");
+                ins.article.setOptions(names);
+                const article = annotation ? articles.getById(annotation.data.articleId) : null;
+                ins.article.setValue(article ? articles.getIndexOf(article) + 1 : 0, true);
+            }
+            else {
+                ins.article.setOptions(["(none)"]);
+                ins.article.setValue(0);
+            }
+            ins.image.setValue(annotation ? annotation.data.imageUri : "", true);
+            this.emit({ type: "update", annotation });
+        }
+    }
+    update(context) {
+        super.update(context);
+        const ins = this.ins;
+        const object3D = this.object3D;
+        const annotation = this.activeAnnotation;
+        if (ins.unitScale.changed) {
+            object3D.scale.setScalar(ins.unitScale.value);
+            object3D.updateMatrix();
+        }
+        if (annotation) {
+            if (ins.title.changed) {
+                annotation.set("title", ins.title.value);
+            }
+            if (ins.lead.changed) {
+                annotation.set("lead", ins.lead.value);
+            }
+            if (ins.style.changed) {
+                annotation.set("style", ins.style.getValidatedValue());
+                this.createSprite(annotation);
+            }
+            if (ins.scale.changed) {
+                annotation.set("scale", ins.scale.value);
+            }
+            if (ins.offset.changed) {
+                annotation.set("offset", ins.offset.value);
+            }
+            if (ins.tilt.changed) {
+                annotation.set("tilt", ins.tilt.value);
+            }
+            if (ins.azimuth.changed) {
+                annotation.set("azimuth", ins.azimuth.value);
+            }
+            if (ins.image.changed) {
+                annotation.set("imageUri", ins.image.value);
+            }
+            if (ins.article.changed) {
+                const articles = this.articles;
+                const article = articles && articles.getAt(ins.article.getValidatedValue() - 1);
+                annotation.set("articleId", article ? article.id : "");
+            }
+            this.updateSprite(annotation);
+            this.emit({ type: "update", annotation });
+        }
+        return true;
+    }
+    postRender(context) {
+        const viewport = context.viewport;
+        if (!this._viewports.has(viewport)) {
+            viewport.on("dispose", this.onViewportDispose, this);
+            this._viewports.add(viewport);
+        }
+        const spriteGroup = this.object3D;
+        spriteGroup.render(viewport.overlay, context.camera);
+    }
+    dispose() {
+        this.object3D.dispose();
+        this.off("pointer-up", this.onPointerUp, this);
+        this.system.off("pointer-up", this.onPointerUp, this);
+        this._viewports.forEach(viewport => viewport.off("dispose", this.onViewportDispose, this));
+        this._viewports.clear();
+        super.dispose();
+    }
+    getAnnotations() {
+        return Object.keys(this._annotations).map(key => this._annotations[key]);
+    }
+    getAnnotationById(id) {
+        return this._annotations[id];
+    }
+    addAnnotation(annotation) {
+        this._annotations[annotation.id] = annotation;
+        this.createSprite(annotation);
+        this.changed = true;
+    }
+    removeAnnotation(annotation) {
+        const keys = Object.keys(this._annotations);
+        delete this._annotations[annotation.id];
+        this.removeSprite(annotation);
+        if (annotation === this.activeAnnotation) {
+            // select next annotation as active annotation
+            const index = Math.min(keys.indexOf(annotation.id) + 1, keys.length - 1);
+            this.activeAnnotation = index < 0 ? null : this._annotations[keys[index]];
+        }
+        this.changed = true;
+    }
+    updateAnnotation(annotation) {
+        //this.updateSprite(annotation);
+        this.changed = true;
+    }
+    toJSON() {
+        const json = super.toJSON();
+        const data = this.toData();
+        if (data) {
+            json.data = data;
+        }
+        return json;
+    }
+    fromJSON(json) {
+        if (json.data) {
+            this.fromData(json.data);
+        }
+    }
+    toData() {
+        const keys = Object.keys(this._annotations);
+        if (keys.length === 0) {
+            return null;
+        }
+        return keys.map(key => this._annotations[key].toJSON());
+    }
+    fromData(data) {
+        data.forEach(annotationJson => this.addAnnotation(new Annotation_1.default(annotationJson)));
+    }
+    onPointerUp(event) {
+        if (event.isDragging) {
+            return;
+        }
+        let target = event.object3D;
+        while (target && !target.isHTMLSprite) {
+            target = target.parent;
+        }
+        this.activeAnnotation = target && target.annotation;
+    }
+    onViewportDispose(event) {
+        const group = this.object3D;
+        group.disposeHTMLContainer(event.viewport.overlay);
+    }
+    onSpriteClick(event) {
+        this.activeAnnotation = event.annotation;
+    }
+    onSpriteLink(event) {
+        this.reader.ins.articleId.setValue(event.annotation.data.articleId);
+        this.reader.ins.enabled.setValue(true);
+    }
+    createSprite(annotation) {
+        this.removeSprite(annotation);
+        let sprite;
+        switch (annotation.data.style) {
+            case Annotation_1.EAnnotationStyle.Balloon:
+                sprite = new PinSprite_1.default(annotation);
+                break;
+            case Annotation_1.EAnnotationStyle.Line:
+            default:
+                sprite = new BeamSprite_1.default(annotation);
+                break;
+        }
+        sprite.addEventListener("click", this.onSpriteClick);
+        sprite.addEventListener("link", this.onSpriteLink);
+        this._sprites[annotation.id] = sprite;
+        this.object3D.add(sprite);
+        this.registerPickableObject3D(sprite, true);
+    }
+    removeSprite(annotation) {
+        const sprite = this._sprites[annotation.id];
+        if (sprite) {
+            sprite.removeEventListener("click", this.onSpriteClick);
+            sprite.removeEventListener("link", this.onSpriteLink);
+            sprite.dispose();
+            this._sprites[annotation.id] = undefined;
+            this.object3D.remove(sprite);
+            this.unregisterPickableObject3D(sprite, true);
+        }
+    }
+    updateSprite(annotation) {
+        const sprite = this._sprites[annotation.id];
+        if (sprite) {
+            sprite.update();
+        }
+    }
+}
+CVAnnotationView.typeName = "CVAnnotationView";
+exports.default = CVAnnotationView;
+
+
+/***/ }),
+
+/***/ "./components/CVAnnotations.ts":
+/*!*************************************!*\
+  !*** ./components/CVAnnotations.ts ***!
+  \*************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const CVModel2_1 = __webpack_require__(/*! ./CVModel2 */ "./components/CVModel2.ts");
+////////////////////////////////////////////////////////////////////////////////
+class CVAnnotations extends Component_1.default {
+    constructor() {
+        super(...arguments);
+        this.ins = this.addInputs(CVAnnotations.ins);
+    }
+    get model() {
+        return this.getComponent(CVModel2_1.default);
+    }
+    update(context) {
+        return true;
+    }
+}
+CVAnnotations.typeName = "CVAnnotations";
+CVAnnotations.ins = {};
+exports.default = CVAnnotations;
+
+
+/***/ }),
+
+/***/ "./components/CVAssetReader.ts":
+/*!*************************************!*\
+  !*** ./components/CVAssetReader.ts ***!
+  \*************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const THREE = __webpack_require__(/*! three */ "three");
+const fetch_1 = __webpack_require__(/*! @ff/browser/fetch */ "../../libs/ff-browser/source/fetch.ts");
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const JSONReader_1 = __webpack_require__(/*! ../io/JSONReader */ "./io/JSONReader.ts");
+const ModelReader_1 = __webpack_require__(/*! ../io/ModelReader */ "./io/ModelReader.ts");
+const GeometryReader_1 = __webpack_require__(/*! ../io/GeometryReader */ "./io/GeometryReader.ts");
+const TextureReader_1 = __webpack_require__(/*! ../io/TextureReader */ "./io/TextureReader.ts");
+////////////////////////////////////////////////////////////////////////////////
+const _VERBOSE = true;
+class CVAssetReader extends Component_1.default {
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(CVAssetReader.ins);
+        this.outs = this.addOutputs(CVAssetReader.outs);
+        this._isBusy = false;
+        const loadingManager = this._loadingManager = new AssetLoadingManager(this);
+        this.jsonLoader = new JSONReader_1.default(loadingManager);
+        this.modelLoader = new ModelReader_1.default(loadingManager);
+        this.geometryLoader = new GeometryReader_1.default(loadingManager);
+        this.textureLoader = new TextureReader_1.default(loadingManager);
+        this.rootUrl = window.location.href;
+    }
+    get rootUrl() {
+        return this._rootUrl;
+    }
+    set rootUrl(url) {
+        const urlObj = new URL(".", new URL(url, window.location).href);
+        this._rootUrl = urlObj.href;
+        this._rootPath = urlObj.pathname;
+        console.log("CVAssetReader - rootUrl: %s, rootPath: %s", this._rootUrl, this._rootPath);
+    }
+    update(context) {
+        const ins = this.ins;
+        if (ins.setBusy.changed) {
+            this.outs.busy.setValue(ins.setBusy.value || this._isBusy);
+        }
+        return true;
+    }
+    setBusy(isBusy) {
+        const outs = this.outs;
+        this._isBusy = isBusy;
+        outs.busy.setValue(this.ins.setBusy.value || this._isBusy);
+        if (!isBusy) {
+            outs.completed.set();
+        }
+    }
+    getAssetName(pathOrUrl) {
+        return pathOrUrl.split("/").pop();
+    }
+    getAssetPath(url) {
+        const index = url.indexOf(this._rootPath);
+        if (index >= 0) {
+            return url.substr(index + this._rootPath.length);
+        }
+        return url;
+    }
+    getAssetURL(assetPath) {
+        return new URL(assetPath, this._rootUrl).href;
+    }
+    getJSON(assetPath) {
+        const url = this.getAssetURL(assetPath);
+        return this.jsonLoader.get(url);
+    }
+    getText(assetPath) {
+        const url = this.getAssetURL(assetPath);
+        return fetch_1.default.text(url, "GET");
+    }
+    getModel(assetPath) {
+        const url = this.getAssetURL(assetPath);
+        return this.modelLoader.get(url);
+    }
+    getGeometry(assetPath) {
+        const url = this.getAssetURL(assetPath);
+        return this.geometryLoader.get(url);
+    }
+    getTexture(assetPath) {
+        const url = this.getAssetURL(assetPath);
+        return this.textureLoader.get(url);
+    }
+}
+CVAssetReader.typeName = "CVAssetReader";
+CVAssetReader.ins = {
+    setBusy: Component_1.types.Boolean("Reader.SetBusy"),
+};
+CVAssetReader.outs = {
+    busy: Component_1.types.Boolean("Reader.IsBusy"),
+    //initialCompleted: types.Event("Reader.InitialCompleted"),
+    completed: Component_1.types.Event("Reader.Completed"),
+};
+exports.default = CVAssetReader;
+////////////////////////////////////////////////////////////////////////////////
+class AssetLoadingManager extends THREE.LoadingManager {
+    constructor(assetService) {
+        super();
+        this.assetService = assetService;
+        this.onStart = this.onLoadingStart.bind(this);
+        this.onProgress = this.onLoadingProgress.bind(this);
+        this.onLoad = this.onLoadingCompleted.bind(this);
+        this.onError = this.onLoadingError.bind(this);
+    }
     onLoadingStart() {
         if (_VERBOSE) {
             console.log("Loading files...");
         }
+        this.assetService.setBusy(true);
     }
     onLoadingProgress(url, itemsLoaded, itemsTotal) {
         if (_VERBOSE) {
@@ -25000,20 +28072,23 @@ class PrivateLoadingManager extends THREE.LoadingManager {
         if (_VERBOSE) {
             console.log("Loading completed");
         }
+        this.assetService.setBusy(false);
     }
     onLoadingError() {
         if (_VERBOSE) {
             console.error(`Loading error`);
         }
+        this.assetService.setBusy(false);
     }
 }
+exports.AssetLoadingManager = AssetLoadingManager;
 
 
 /***/ }),
 
-/***/ "./core/components/CVModel.ts":
+/***/ "./components/CVBackground.ts":
 /*!************************************!*\
-  !*** ./core/components/CVModel.ts ***!
+  !*** ./components/CVBackground.ts ***!
   \************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
@@ -25037,56 +28112,959 @@ class PrivateLoadingManager extends THREE.LoadingManager {
  * limitations under the License.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
+const CBackground_1 = __webpack_require__(/*! @ff/scene/components/CBackground */ "../../libs/ff-scene/source/components/CBackground.ts");
+////////////////////////////////////////////////////////////////////////////////
+class CVBackground extends CBackground_1.default {
+    get snapshotKeys() {
+        return ["color0", "color1"];
+    }
+    fromData(data) {
+        this.ins.copyValues({
+            style: CBackground_1.EBackgroundStyle[data.style] || CBackground_1.EBackgroundStyle.Solid,
+            color0: data.color0 || [0.2, 0.25, 0.3],
+            color1: data.color1 || [0.01, 0.03, 0.05],
+        });
+    }
+    toData() {
+        const ins = this.ins;
+        return {
+            style: CBackground_1.EBackgroundStyle[ins.style.value],
+            color0: ins.color0.cloneValue(),
+            color1: ins.color1.cloneValue(),
+        };
+    }
+}
+CVBackground.typeName = "CVBackground";
+exports.default = CVBackground;
+
+
+/***/ }),
+
+/***/ "./components/CVCamera.ts":
+/*!********************************!*\
+  !*** ./components/CVCamera.ts ***!
+  \********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const CCamera_1 = __webpack_require__(/*! @ff/scene/components/CCamera */ "../../libs/ff-scene/source/components/CCamera.ts");
+////////////////////////////////////////////////////////////////////////////////
+class CVCamera extends CCamera_1.default {
+    fromDocument(document, node) {
+        if (!isFinite(node.camera)) {
+            throw new Error("camera property missing in node");
+        }
+        const data = document.cameras[node.camera];
+        if (data.type === "perspective") {
+            this.ins.copyValues({
+                projection: CCamera_1.EProjection.Perspective,
+                fov: data.perspective.yfov,
+                near: data.perspective.znear,
+                far: data.perspective.zfar
+            });
+        }
+        else {
+            this.ins.copyValues({
+                projection: CCamera_1.EProjection.Orthographic,
+                size: data.orthographic.ymag,
+                near: data.orthographic.znear,
+                far: data.orthographic.zfar
+            });
+        }
+        return node.camera;
+    }
+    toDocument(document, node) {
+        const ins = this.ins;
+        const data = {};
+        if (ins.projection.getValidatedValue() === CCamera_1.EProjection.Perspective) {
+            data.type = "perspective";
+            data.perspective = {
+                yfov: ins.fov.value,
+                znear: ins.near.value,
+                zfar: ins.far.value
+            };
+        }
+        else {
+            data.type = "orthographic";
+            data.orthographic = {
+                ymag: ins.size.value,
+                znear: ins.near.value,
+                zfar: ins.far.value
+            };
+        }
+        document.cameras = document.cameras || [];
+        const cameraIndex = document.cameras.length;
+        document.cameras.push(data);
+        return cameraIndex;
+    }
+}
+CVCamera.typeName = "CVCamera";
+exports.default = CVCamera;
+
+
+/***/ }),
+
+/***/ "./components/CVDirectionalLight.ts":
+/*!******************************************!*\
+  !*** ./components/CVDirectionalLight.ts ***!
+  \******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const CDirectionalLight_1 = __webpack_require__(/*! @ff/scene/components/CDirectionalLight */ "../../libs/ff-scene/source/components/CDirectionalLight.ts");
+////////////////////////////////////////////////////////////////////////////////
+class CVDirectionalLight extends CDirectionalLight_1.default {
+    get snapshotKeys() {
+        return ["color", "intensity"];
+    }
+    fromDocument(document, node) {
+        if (!isFinite(node.light)) {
+            throw new Error("light property missing in node");
+        }
+        const data = document.lights[node.light];
+        if (data.type !== "directional") {
+            throw new Error("light type mismatch: not a directional light");
+        }
+        this.ins.copyValues({
+            color: data.color !== undefined ? data.color : [1, 1, 1],
+            intensity: data.intensity !== undefined ? data.intensity : 1,
+            position: [0, 0, 0],
+            target: [0, 0, 0],
+        });
+        return node.light;
+    }
+    toDocument(document, node) {
+        const ins = this.ins;
+        const data = {
+            color: ins.color.cloneValue(),
+            intensity: ins.intensity.value,
+        };
+        data.type = "directional";
+        document.lights = document.lights || [];
+        const lightIndex = document.lights.length;
+        document.lights.push(data);
+        return lightIndex;
+    }
+}
+CVDirectionalLight.typeName = "CVDirectionalLight";
+exports.default = CVDirectionalLight;
+
+
+/***/ }),
+
+/***/ "./components/CVDocument.ts":
+/*!**********************************!*\
+  !*** ./components/CVDocument.ts ***!
+  \**********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const download_1 = __webpack_require__(/*! @ff/browser/download */ "../../libs/ff-browser/source/download.ts");
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const CRenderGraph_1 = __webpack_require__(/*! @ff/scene/components/CRenderGraph */ "../../libs/ff-scene/source/components/CRenderGraph.ts");
+const DocumentValidator_1 = __webpack_require__(/*! ../io/DocumentValidator */ "./io/DocumentValidator.ts");
+const NVNode_1 = __webpack_require__(/*! ../nodes/NVNode */ "./nodes/NVNode.ts");
+const NVScene_1 = __webpack_require__(/*! ../nodes/NVScene */ "./nodes/NVScene.ts");
+const CVSetup_1 = __webpack_require__(/*! ./CVSetup */ "./components/CVSetup.ts");
+const CVAssetReader_1 = __webpack_require__(/*! ./CVAssetReader */ "./components/CVAssetReader.ts");
+/**
+ * A Voyager document is a special kind of graph. Its inner graph has a standard structure, and it can
+ * be serialized to and from an IDocument structure which is compatible with a glTF document.
+ */
+class CVDocument extends CRenderGraph_1.default {
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(CVDocument.ins);
+        this.outs = this.addOutputs(CVDocument.outs);
+        // create root scene node with features component
+        this.innerGraph.createCustomNode(NVScene_1.default);
+        // document is inactive and hidden, unless it becomes the active document
+        this.ins.active.setValue(false);
+        this.ins.visible.setValue(false);
+    }
+    get root() {
+        return this.innerNodes.get(NVScene_1.default);
+    }
+    get setup() {
+        return this.innerComponents.get(CVSetup_1.default);
+    }
+    get assetPath() {
+        return this.outs.assetPath.value;
+    }
+    get assetBaseName() {
+        let name = this.assetPath;
+        const index = name.indexOf("document.json");
+        if (index >= 0) {
+            name = name.substr(0, index);
+        }
+        return name;
+    }
+    update(context) {
+        super.update(context);
+        const { ins, outs } = this;
+        if (ins.dumpJson.changed) {
+            const json = this.deflateDocument();
+            console.log("-------------------- VOYAGER DOCUMENT --------------------");
+            console.log(JSON.stringify(json, (key, value) => typeof value === "number" ? parseFloat(value.toFixed(5)) : value, 2));
+        }
+        if (ins.dumpTree.changed) {
+            console.log("-------------------- VOYAGER DOCUMENT --------------------");
+            this.dump();
+        }
+        if (ins.download.changed) {
+            const fileName = outs.assetPath.value.split("/").pop() || "voyager-document.json";
+            download_1.default.json(this.deflateDocument(), fileName);
+        }
+        return true;
+    }
+    clearNodeTree() {
+        const children = this.root.transform.children.slice();
+        children.forEach(child => child.node.dispose());
+        //console.clear();
+        //console.log("----------------- CLEAR ---------------------");
+        //this.dump();
+        //this.object3D.traverse(obj => console.log(obj.type));
+    }
+    openDocument(documentData, assetPath, mergeParent) {
+        console.log("CVDocument.openDocument - assetPath: %s, mergeParent: %s", assetPath, mergeParent);
+        if (!CVDocument.validator.validate(documentData)) {
+            throw new Error("document schema validation failed");
+        }
+        if (!mergeParent) {
+            this.clearNodeTree();
+        }
+        let parent = (typeof mergeParent === "object" ? mergeParent : this.root);
+        if (parent.graph !== this.innerGraph) {
+            throw new Error("invalid parent node");
+        }
+        const pathMap = new Map();
+        if (parent instanceof NVScene_1.default) {
+            parent.fromDocument(documentData, documentData.scene, pathMap);
+        }
+        else {
+            // if we append to a node, skip the document's root scene and append the scene's child nodes
+            const rootIndices = documentData.scenes[documentData.scene].nodes;
+            rootIndices.forEach(rootIndex => {
+                const rootNode = this.innerGraph.createCustomNode(NVNode_1.default);
+                parent.transform.addChild(rootNode.transform);
+                rootNode.fromDocument(documentData, rootIndex, pathMap);
+            });
+        }
+        //pathMap.forEach((comp, path) => console.log("CVDocument - pathMap: %s - '%s'", path, comp.displayName));
+        if (assetPath) {
+            this.outs.assetPath.setValue(assetPath);
+            this.name = this.getMainComponent(CVAssetReader_1.default).getAssetName(assetPath);
+        }
+    }
+    appendModel(assetPath, quality, parent) {
+        if (parent && parent.graph !== this.innerGraph) {
+            throw new Error("invalid parent node");
+        }
+        if (this.isEmpty()) {
+            throw new Error("empty document, can't append model");
+        }
+        parent = parent || this.root;
+        const modelNode = this.innerGraph.createCustomNode(NVNode_1.default);
+        parent.transform.addChild(modelNode.transform);
+        modelNode.createModel();
+        const model = modelNode.model;
+        model.derivatives.createModelAsset(assetPath, quality);
+    }
+    appendGeometry(geoPath, colorMapPath, occlusionMapPath, normalMapPath, quality, parent) {
+        if (parent && parent.graph !== this.innerGraph) {
+            throw new Error("invalid parent node");
+        }
+        if (this.isEmpty()) {
+            throw new Error("empty document, can't append geometry");
+        }
+        parent = parent || this.root;
+        const modelNode = this.innerGraph.createCustomNode(NVNode_1.default);
+        parent.transform.addChild(modelNode.transform);
+        modelNode.createModel();
+        const model = modelNode.model;
+        model.derivatives.createMeshAsset(geoPath, colorMapPath, occlusionMapPath, normalMapPath, quality);
+    }
+    deflateDocument(components) {
+        if (this.isEmpty()) {
+            throw new Error("empty document, can't serialize");
+        }
+        const document = {
+            asset: {
+                type: CVDocument.mimeType,
+                version: CVDocument.version,
+                generator: "Voyager",
+                copyright: "(c) Smithsonian Institution. All rights reserved."
+            },
+            scene: 0,
+            scenes: [],
+        };
+        const pathMap = new Map();
+        document.scene = this.root.toDocument(document, pathMap, components);
+        //pathMap.forEach((path, comp) => console.log("CVDocument - pathMap: %s - '%s'", path, comp.displayName));
+        return document;
+    }
+}
+CVDocument.typeName = "CVDocument";
+CVDocument.mimeType = "application/si-dpo-3d.document+json";
+CVDocument.version = "1.0";
+CVDocument.validator = new DocumentValidator_1.default();
+CVDocument.ins = {
+    dumpJson: Component_1.types.Event("Document.DumpJSON"),
+    dumpTree: Component_1.types.Event("Document.DumpTree"),
+    download: Component_1.types.Event("Document.Download"),
+};
+CVDocument.outs = {
+    assetPath: Component_1.types.AssetPath("Asset.Path"),
+};
+exports.default = CVDocument;
+
+
+/***/ }),
+
+/***/ "./components/CVDocumentProvider.ts":
+/*!******************************************!*\
+  !*** ./components/CVDocumentProvider.ts ***!
+  \******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const CComponentProvider_1 = __webpack_require__(/*! @ff/graph/components/CComponentProvider */ "../../libs/ff-graph/source/components/CComponentProvider.ts");
+const CVDocument_1 = __webpack_require__(/*! ./CVDocument */ "./components/CVDocument.ts");
+class CVDocumentProvider extends CComponentProvider_1.default {
+    constructor(node, id) {
+        super(node, id);
+        this.outs = this.addOutputs(CVDocumentProvider.outs);
+        this.scope = CComponentProvider_1.EComponentScope.Node;
+    }
+    createDocument(data, path) {
+        const document = this.node.createComponent(CVDocument_1.default);
+        this.activeComponent = document;
+        if (data) {
+            document.openDocument(data, path);
+        }
+        return document;
+    }
+    amendDocument(data, path, merge) {
+        const document = this.activeComponent;
+        if (!document) {
+            throw new Error("no active document, can't amend");
+        }
+        document.openDocument(data, path, merge);
+        return document;
+    }
+    appendModel(modelPath, quality) {
+        const document = this.activeComponent;
+        if (!document) {
+            throw new Error("no active document, can't append model");
+        }
+        document.appendModel(modelPath, quality);
+        return document;
+    }
+    appendGeometry(geoPath, colorMapPath, occlusionMapPath, normalMapPath, quality) {
+        const document = this.activeComponent;
+        if (!document) {
+            throw new Error("no active document, can't append geometry");
+        }
+        document.appendGeometry(geoPath, colorMapPath, occlusionMapPath, normalMapPath, quality);
+        return document;
+    }
+    removeActiveDocument() {
+        const document = this.activeComponent;
+        if (document) {
+            document.dispose();
+        }
+    }
+    activateComponent(document) {
+        document.ins.visible.setValue(true);
+        document.ins.active.setValue(true);
+    }
+    deactivateComponent(document) {
+        document.ins.visible.setValue(false);
+        document.ins.active.setValue(false);
+    }
+    onActiveComponent(previous, next) {
+        this.outs.activeDocument.setValue(next);
+    }
+    onScopedComponents() {
+        this.outs.changedDocuments.set();
+    }
+}
+CVDocumentProvider.typeName = "CVDocumentProvider";
+CVDocumentProvider.componentType = CVDocument_1.default;
+CVDocumentProvider.outs = {
+    activeDocument: Component_1.types.Object("Documents.Active", CVDocument_1.default),
+    changedDocuments: Component_1.types.Event("Documents.Changed"),
+};
+exports.default = CVDocumentProvider;
+
+
+/***/ }),
+
+/***/ "./components/CVFloor.ts":
+/*!*******************************!*\
+  !*** ./components/CVFloor.ts ***!
+  \*******************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const CFloor_1 = __webpack_require__(/*! @ff/scene/components/CFloor */ "../../libs/ff-scene/source/components/CFloor.ts");
+////////////////////////////////////////////////////////////////////////////////
+class CVFloor extends CFloor_1.default {
+    constructor(node, id) {
+        super(node, id);
+        this.ins.visible.setValue(false);
+        this.ins.receiveShadow.setValue(true);
+    }
+    get snapshotKeys() {
+        return ["opacity"];
+    }
+    fromData(data) {
+        data = data || {};
+        this.ins.copyValues({
+            visible: !!data.visible,
+            position: data.position || [0, -25, 0],
+            radius: data.size !== undefined ? data.size : 50,
+            color: data.color || [0.6, 0.75, 0.8],
+            opacity: data.opacity !== undefined ? data.opacity : 0.5,
+            receiveShadow: !!data.receiveShadow,
+        });
+    }
+    toData() {
+        const ins = this.ins;
+        return {
+            visible: ins.visible.value,
+            position: ins.position.cloneValue(),
+            size: ins.radius.value,
+            color: ins.color.cloneValue(),
+            opacity: ins.opacity.value,
+            receiveShadow: ins.receiveShadow.value,
+        };
+    }
+}
+CVFloor.typeName = "CVFloor";
+exports.default = CVFloor;
+
+
+/***/ }),
+
+/***/ "./components/CVGrid.ts":
+/*!******************************!*\
+  !*** ./components/CVGrid.ts ***!
+  \******************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
 const THREE = __webpack_require__(/*! three */ "three");
-const helpers = __webpack_require__(/*! @ff/three/helpers */ "../../libs/ff-three/source/helpers.ts");
-const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
+const Grid_1 = __webpack_require__(/*! @ff/three/Grid */ "../../libs/ff-three/source/Grid.ts");
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
 const CObject3D_1 = __webpack_require__(/*! @ff/scene/components/CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
-const item_1 = __webpack_require__(/*! common/types/item */ "../common/types/item.ts");
-const UberPBRMaterial_1 = __webpack_require__(/*! ../shaders/UberPBRMaterial */ "./core/shaders/UberPBRMaterial.ts");
-exports.EShaderMode = UberPBRMaterial_1.EShaderMode;
-const Derivative_1 = __webpack_require__(/*! ../models/Derivative */ "./core/models/Derivative.ts");
-const DerivativeList_1 = __webpack_require__(/*! ../models/DerivativeList */ "./core/models/DerivativeList.ts");
-const CVLoaders_1 = __webpack_require__(/*! ./CVLoaders */ "./core/components/CVLoaders.ts");
+const common_1 = __webpack_require__(/*! common/types/common */ "../common/types/common.ts");
+const CVScene_1 = __webpack_require__(/*! ./CVScene */ "./components/CVScene.ts");
+////////////////////////////////////////////////////////////////////////////////
+const _vec3a = new THREE.Vector3();
+const _matRotationOffset = new THREE.Matrix4().makeRotationX(Math.PI * 0.5);
+const _matIdentity = new THREE.Matrix4();
+class CVGrid extends CObject3D_1.default {
+    constructor() {
+        super(...arguments);
+        this.ins = this.addInputs(CVGrid.gridIns);
+        this.outs = this.addOutputs(CVGrid.gridOuts);
+        this._lastViewport = null;
+        this._gridProps = {
+            size: 20,
+            mainDivisions: 2,
+            subDivisions: 10,
+            mainColor: new THREE.Color(0.5, 0.7, 0.8),
+            subColor: new THREE.Color(0.25, 0.35, 0.4)
+        };
+    }
+    get snapshotKeys() {
+        return ["opacity"];
+    }
+    get grid() {
+        return this.object3D;
+    }
+    get rootScene() {
+        return this.getGraphComponent(CVScene_1.default);
+    }
+    create() {
+        this.ins.pickable.setValue(false);
+        this.ins.visible.setValue(false);
+        super.create();
+    }
+    activate() {
+        this.rootScene.on("bounding-box", this.onModelBoundingBox, this);
+    }
+    deactivate() {
+        this.rootScene.off("bounding-box", this.onModelBoundingBox, this);
+    }
+    update() {
+        const ins = this.ins;
+        if (ins.color.changed || ins.update.changed) {
+            const props = this._gridProps;
+            if (ins.color.changed) {
+                const mainColor = props.mainColor;
+                const subColor = props.subColor;
+                mainColor.fromArray(ins.color.value);
+                subColor.r = mainColor.r * 0.5;
+                subColor.g = mainColor.g * 0.5;
+                subColor.b = mainColor.b * 0.5;
+            }
+            if (ins.update.changed) {
+                const box = this.rootScene.modelBoundingBox;
+                const units = this.rootScene.ins.units.value;
+                box.getSize(_vec3a);
+                let size = Math.max(_vec3a.x, _vec3a.y, _vec3a.z);
+                size = Math.ceil(size) * 2;
+                props.size = size;
+                this.outs.size.setValue(size);
+                this.outs.units.setValue(units);
+                while (size > 100) {
+                    size = size * 0.1;
+                }
+                props.mainDivisions = size;
+                props.subDivisions = 10;
+            }
+            if (!this.object3D) {
+                this.object3D = new Grid_1.default(props);
+            }
+            else {
+                this.grid.update(props);
+            }
+        }
+        if (ins.visible.changed) {
+            this.grid.visible = ins.visible.value;
+        }
+        return true;
+    }
+    preRender(context) {
+        const viewport = context.viewport;
+        const gridObject = this.object3D;
+        if (viewport !== this._lastViewport) {
+            this._lastViewport = viewport;
+            const vpCamera = context.viewport.camera;
+            if (vpCamera) {
+                gridObject.matrix.extractRotation(vpCamera.matrixWorld).multiply(_matRotationOffset);
+            }
+            else {
+                gridObject.matrix.extractRotation(_matIdentity);
+            }
+            gridObject.updateMatrixWorld(true);
+        }
+    }
+    postRender(context) {
+        this.object3D.matrix.extractRotation(_matIdentity);
+    }
+    fromData(data) {
+        data = data || {};
+        this.ins.copyValues({
+            visible: !!data.visible,
+            color: data.color || [0.5, 0.7, 0.8],
+        });
+    }
+    toData() {
+        const ins = this.ins;
+        return {
+            visible: ins.visible.cloneValue(),
+            color: ins.color.cloneValue(),
+        };
+    }
+    onModelBoundingBox() {
+        this.ins.update.set();
+    }
+}
+CVGrid.typeName = "CVGrid";
+CVGrid.gridIns = {
+    color: Component_1.types.ColorRGB("Grid.Color", [0.5, 0.7, 0.8]),
+    opacity: Component_1.types.Percent("Grid.Opacity", 1.0),
+    update: Component_1.types.Event("Grid.Update"),
+};
+CVGrid.gridOuts = {
+    size: Component_1.types.Number("Size"),
+    units: Component_1.types.Enum("Units", common_1.EUnitType),
+};
+exports.default = CVGrid;
+
+
+/***/ }),
+
+/***/ "./components/CVInterface.ts":
+/*!***********************************!*\
+  !*** ./components/CVInterface.ts ***!
+  \***********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+////////////////////////////////////////////////////////////////////////////////
+class CVInterface extends Component_1.default {
+    constructor() {
+        super(...arguments);
+        this.ins = this.addInputs(CVInterface.ins);
+        this.outs = this.addOutputs(CVInterface.outs);
+    }
+    update(context) {
+        return true;
+    }
+    fromData(data) {
+        data = data || {};
+        this.ins.setValues({
+            visible: data.visible !== undefined ? data.visible : true,
+            logo: data.logo !== undefined ? data.logo : true,
+            menu: data.menu !== undefined ? data.menu : true,
+            tools: data.tools !== undefined ? data.tools : true
+        });
+    }
+    toData() {
+        const ins = this.ins;
+        return {
+            visible: ins.visible.value,
+            logo: ins.logo.value,
+            menu: ins.menu.value,
+            tools: ins.tools.value
+        };
+    }
+}
+CVInterface.typeName = "CVInterface";
+CVInterface.ins = {
+    visible: Component_1.types.Boolean("Interface.Visible", true),
+    logo: Component_1.types.Boolean("Interface.Logo", true),
+    menu: Component_1.types.Boolean("Interface.Menu", true),
+    tools: Component_1.types.Boolean("Interface.Tools", true),
+};
+CVInterface.outs = {
+    documentTitle: Component_1.types.String("Document.Title"),
+};
+exports.default = CVInterface;
+
+
+/***/ }),
+
+/***/ "./components/CVLight.ts":
+/*!*******************************!*\
+  !*** ./components/CVLight.ts ***!
+  \*******************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const CLight_1 = __webpack_require__(/*! @ff/scene/components/CLight */ "../../libs/ff-scene/source/components/CLight.ts");
+exports.CLight = CLight_1.default;
+
+
+/***/ }),
+
+/***/ "./components/CVMeta.ts":
+/*!******************************!*\
+  !*** ./components/CVMeta.ts ***!
+  \******************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const OrderedCollection_1 = __webpack_require__(/*! @ff/core/OrderedCollection */ "../../libs/ff-core/source/OrderedCollection.ts");
+const UnorderedCollection_1 = __webpack_require__(/*! @ff/core/UnorderedCollection */ "../../libs/ff-core/source/UnorderedCollection.ts");
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const Article_1 = __webpack_require__(/*! ../models/Article */ "./models/Article.ts");
+class CVMeta extends Component_1.default {
+    constructor() {
+        super(...arguments);
+        this.collection = new UnorderedCollection_1.default();
+        this.process = new UnorderedCollection_1.default();
+        this.images = new UnorderedCollection_1.default();
+        this.articles = new OrderedCollection_1.default();
+        this.leadArticle = null;
+        this.notes = [];
+    }
+    fromDocument(document, node) {
+        if (!isFinite(node.meta)) {
+            throw new Error("info property missing in node");
+        }
+        const data = document.metas[node.meta];
+        if (data.collection) {
+            this.collection.dictionary = data.collection;
+        }
+        if (data.process) {
+            this.process.dictionary = data.process;
+        }
+        if (data.images) {
+            const imageDict = {};
+            data.images.forEach(image => imageDict[image.quality] = image);
+            this.images.dictionary = imageDict;
+        }
+        if (data.articles) {
+            this.articles.items = data.articles.map(article => Article_1.default.fromJSON(article));
+            if (data.leadArticle !== undefined) {
+                this.leadArticle = this.articles.getAt(data.leadArticle);
+            }
+        }
+        return node.meta;
+    }
+    toDocument(document, node) {
+        let data = null;
+        if (this.collection.length > 0) {
+            data = {
+                collection: this.collection.dictionary,
+            };
+        }
+        if (this.process.length > 0) {
+            data = data || {};
+            data.process = this.process.dictionary;
+        }
+        if (this.images.length > 0) {
+            data = data || {};
+            data.images = this.images.items;
+        }
+        if (this.articles.length > 0) {
+            data = data || {};
+            const articles = this.articles.items;
+            data.articles = articles.map(article => article.toJSON());
+            if (this.leadArticle) {
+                data.leadArticle = articles.indexOf(this.leadArticle);
+            }
+        }
+        if (data) {
+            document.metas = document.metas || [];
+            const metaIndex = document.metas.length;
+            document.metas.push(data);
+            return metaIndex;
+        }
+    }
+}
+CVMeta.typeName = "CVMeta";
+exports.default = CVMeta;
+
+
+/***/ }),
+
+/***/ "./components/CVModel2.ts":
+/*!********************************!*\
+  !*** ./components/CVModel2.ts ***!
+  \********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const THREE = __webpack_require__(/*! three */ "three");
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const CObject3D_1 = __webpack_require__(/*! @ff/scene/components/CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
+const helpers = __webpack_require__(/*! @ff/three/helpers */ "../../libs/ff-three/source/helpers.ts");
+const model_1 = __webpack_require__(/*! common/types/model */ "../common/types/model.ts");
+const unitScaleFactor_1 = __webpack_require__(/*! ../utils/unitScaleFactor */ "./utils/unitScaleFactor.ts");
+const UberPBRMaterial_1 = __webpack_require__(/*! ../shaders/UberPBRMaterial */ "./shaders/UberPBRMaterial.ts");
+const DerivativeList_1 = __webpack_require__(/*! ../models/DerivativeList */ "./models/DerivativeList.ts");
+const CVAnnotationView_1 = __webpack_require__(/*! ./CVAnnotationView */ "./components/CVAnnotationView.ts");
+const CVAssetReader_1 = __webpack_require__(/*! ./CVAssetReader */ "./components/CVAssetReader.ts");
 ////////////////////////////////////////////////////////////////////////////////
 const _vec3a = new THREE.Vector3();
 const _vec3b = new THREE.Vector3();
+const _vec3c = new THREE.Vector3();
 const _quat = new THREE.Quaternion();
 const _box = new THREE.Box3();
-const _unitConversionFactor = {
-    "mm": { "mm": 1, "cm": 0.1, "m": 0.001, "in": 0.0393701, "ft": 0.00328084, "yd": 0.00109361 },
-    "cm": { "mm": 10, "cm": 1, "m": 0.01, "in": 0.393701, "ft": 0.0328084, "yd": 0.0109361 },
-    "m": { "mm": 1000, "cm": 100, "m": 1, "in": 39.3701, "ft": 3.28084, "yd": 1.09361 },
-    "in": { "mm": 25.4, "cm": 2.54, "m": 0.0254, "in": 1, "ft": 0.0833333, "yd": 0.0277778 },
-    "ft": { "mm": 304.8, "cm": 30.48, "m": 0.3048, "in": 12, "ft": 1, "yd": 0.333334 },
-    "yd": { "mm": 914.4, "cm": 91.44, "m": 0.9144, "in": 36, "ft": 3, "yd": 1 },
-};
-const _inputs = {
-    units: propertyTypes_1.types.Enum("Model.Units", item_1.EUnitType, item_1.EUnitType.cm),
-    quality: propertyTypes_1.types.Enum("Model.Quality", Derivative_1.EDerivativeQuality, Derivative_1.EDerivativeQuality.High),
-    autoLoad: propertyTypes_1.types.Boolean("Model.AutoLoad", true),
-    position: propertyTypes_1.types.Vector3("Model.Position"),
-    rotation: propertyTypes_1.types.Vector3("Model.Rotation"),
-    center: propertyTypes_1.types.Event("Model.Center"),
-    dumpDerivatives: propertyTypes_1.types.Event("Derivatives.Dump"),
-};
-const _outputs = {
-    globalUnits: propertyTypes_1.types.Enum("GlobalUnits", item_1.EUnitType, item_1.EUnitType.cm),
-    unitScale: propertyTypes_1.types.Number("UnitScale", { preset: 1, precision: 5 }),
-};
 /**
- * Renderable component representing a Voyager explorer model.
+ * Graph component rendering a model or model part.
+ *
+ * ### Events
+ * - *"bounding-box"* - emitted after the model's bounding box changed
  */
-class CVModel extends CObject3D_1.default {
-    constructor() {
-        super(...arguments);
-        this.ins = this.addInputs(_inputs);
-        this.outs = this.addOutputs(_outputs);
-        this.assetPath = "";
-        this.assetBaseName = "";
+class CVModel2 extends CObject3D_1.default {
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(CVModel2.ins);
+        this.outs = this.addOutputs(CVModel2.outs);
         this._derivatives = new DerivativeList_1.default();
         this._activeDerivative = null;
-        this._boundingBox = new THREE.Box3();
         this._boxFrame = null;
+        this.object3D = new THREE.Group();
+        this._boundingBox = new THREE.Box3().makeEmpty();
     }
     get derivatives() {
         return this._derivatives;
@@ -25097,9 +29075,13 @@ class CVModel extends CObject3D_1.default {
     get activeDerivative() {
         return this._activeDerivative;
     }
+    get assetReader() {
+        return this.system.getMainComponent(CVAssetReader_1.default);
+    }
     create() {
         super.create();
-        this.object3D = new THREE.Group();
+        const av = this.node.createComponent(CVAnnotationView_1.default);
+        av.ins.unitScale.linkFrom(this.outs.unitScale);
     }
     update() {
         const ins = this.ins;
@@ -25107,7 +29089,7 @@ class CVModel extends CObject3D_1.default {
             this.autoLoad(ins.quality.value);
         }
         else if (ins.quality.changed) {
-            const derivative = this.derivatives.select(Derivative_1.EDerivativeUsage.Web3D, ins.quality.value);
+            const derivative = this.derivatives.select(model_1.EDerivativeUsage.Web3D, ins.quality.value);
             if (derivative && derivative !== this.activeDerivative) {
                 this.loadDerivative(derivative)
                     .catch(error => {
@@ -25119,9 +29101,18 @@ class CVModel extends CObject3D_1.default {
         if (ins.visible.changed) {
             this.object3D.visible = ins.visible.value;
         }
-        if (ins.units.changed) {
+        if (ins.localUnits.changed || ins.globalUnits.changed) {
             this.updateUnitScale();
-            this.emit({ type: "change", what: "boundingBox", component: this });
+            this.emit("bounding-box");
+        }
+        if (ins.shader.changed) {
+            const shader = ins.shader.getValidatedValue();
+            this.object3D.traverse(object => {
+                const material = object["material"];
+                if (material && material.isUberPBRMaterial) {
+                    material.setShaderMode(shader);
+                }
+            });
         }
         if (ins.center.changed) {
             this.center();
@@ -25150,105 +29141,93 @@ class CVModel extends CObject3D_1.default {
         _vec3a.multiplyScalar(-1).toArray(position.value);
         position.set();
     }
-    setGlobalUnits(units) {
-        this.outs.globalUnits.setValue(units);
-        this.updateUnitScale();
-    }
     setFromMatrix(matrix) {
-        const { position, rotation } = this.ins;
-        matrix.decompose(_vec3a, _quat, _vec3b);
-        _vec3a.multiplyScalar(1 / this.outs.unitScale.value).toArray(position.value);
-        helpers.quaternionToDegrees(_quat, CVModel.rotationOrder, rotation.value);
-        position.set();
-        rotation.set();
-    }
-    setShaderMode(shaderMode) {
-        this.object3D.traverse(object => {
-            const material = object["material"];
-            if (material && material.isUberPBRMaterial) {
-                material.setShaderMode(shaderMode);
-            }
-        });
-    }
-    deflate() {
-        const data = this.toData();
-        return data ? { data } : null;
-    }
-    inflate(json) {
-        if (json.data) {
-            this.fromData(json);
-        }
-    }
-    toData() {
         const ins = this.ins;
-        const data = {
-            units: item_1.EUnitType[ins.units.value],
-            derivatives: this.derivatives.toData()
-        };
-        data.boundingBox = {
-            min: this._boundingBox.min.toArray(),
-            max: this._boundingBox.max.toArray()
-        };
-        const position = ins.position.value;
-        if (position[0] !== 0 || position[1] !== 0 || position[2] !== 0) {
-            data.translation = _vec3a.toArray();
-        }
-        const rotation = ins.rotation.value;
-        if (rotation[0] !== 0 || rotation[1] !== 0 || rotation[2] !== 0) {
-            helpers.degreesToQuaternion(rotation, CVModel.rotationOrder, _quat);
-            data.rotation = _quat.toArray();
-        }
-        //if (this.material) {
-        // TODO: Implement
-        //}
-        return data;
+        matrix.decompose(_vec3a, _quat, _vec3b);
+        _vec3a.multiplyScalar(1 / this.outs.unitScale.value).toArray(ins.position.value);
+        ins.position.set();
+        helpers.quaternionToDegrees(_quat, CVModel2.rotationOrder, ins.rotation.value);
+        ins.rotation.set();
     }
-    fromData(data) {
-        const { units, position, rotation } = this.ins;
-        units.setValue(item_1.EUnitType[data.units] || 0);
-        if (data.derivatives) {
-            this.derivatives.fromData(data.derivatives);
+    fromDocument(document, node) {
+        const ins = this.ins;
+        if (!isFinite(node.model)) {
+            throw new Error("model property missing in node");
         }
-        if (data.translation || data.rotation) {
-            position.setValue(data.translation ? data.translation.slice() : [0, 0, 0]);
-            if (data.rotation) {
-                _quat.fromArray(data.rotation);
-                rotation.setValue(helpers.quaternionToDegrees(_quat, CVModel.rotationOrder));
-            }
-            else {
-                rotation.setValue([0, 0, 0]);
-            }
-            this.updateMatrixFromProps();
+        const data = document.models[node.model];
+        ins.localUnits.setValue(model_1.EUnitType[data.units || "cm"] || model_1.EUnitType.cm);
+        ins.position.reset();
+        ins.rotation.reset();
+        if (data.translation) {
+            ins.position.copyValue(data.translation);
+        }
+        if (data.rotation) {
+            _quat.fromArray(data.rotation);
+            helpers.quaternionToDegrees(_quat, CVModel2.rotationOrder, ins.rotation.value);
+            ins.rotation.set();
         }
         if (data.boundingBox) {
             this._boundingBox.min.fromArray(data.boundingBox.min);
             this._boundingBox.max.fromArray(data.boundingBox.max);
-            this._boxFrame = new THREE["Box3Helper"](this._boundingBox, "#ffffff");
+            this._boxFrame = new THREE.Box3Helper(this._boundingBox, "#ffffff");
             this.addObject3D(this._boxFrame);
-            this.emit({ type: "change", what: "derivative", component: this });
+            this.emit("bounding-box");
         }
-        //if (data.material) {
-        // TODO: Implement
-        //}
+        if (data.derivatives) {
+            this.derivatives.fromJSON(data.derivatives);
+        }
+        if (data.material) {
+            // TODO: Implement
+        }
+        if (data.annotations) {
+            this.getComponent(CVAnnotationView_1.default).fromData(data.annotations);
+        }
         // automatically display new derivatives if available
         this.ins.autoLoad.set();
+        return node.model;
     }
-    inflateReferences() {
+    toDocument(document, node) {
+        const data = {
+            units: model_1.EUnitType[this.ins.localUnits.getValidatedValue()]
+        };
+        const ins = this.ins;
+        const position = ins.position.value;
+        if (position[0] !== 0 || position[1] !== 0 || position[2] !== 0) {
+            data.translation = ins.position.value;
+        }
+        const rotation = ins.rotation.value;
+        if (rotation[0] !== 0 || rotation[1] !== 0 || rotation[2] !== 0) {
+            helpers.degreesToQuaternion(rotation, CVModel2.rotationOrder, _quat);
+            data.rotation = _quat.toArray();
+        }
+        data.boundingBox = {
+            min: this._boundingBox.min.toArray(),
+            max: this._boundingBox.max.toArray()
+        };
+        data.derivatives = this.derivatives.toJSON();
+        const annotations = this.getComponent(CVAnnotationView_1.default).toData();
+        if (annotations && annotations.length > 0) {
+            data.annotations = annotations;
+        }
+        document.models = document.models || [];
+        const modelIndex = document.models.length;
+        document.models.push(data);
+        return modelIndex;
     }
     updateUnitScale() {
-        const fromUnits = item_1.EUnitType[this.ins.units.getValidatedValue()];
-        const toUnits = item_1.EUnitType[this.outs.globalUnits.value];
-        this.outs.unitScale.setValue(_unitConversionFactor[fromUnits][toUnits]);
+        const fromUnits = this.ins.localUnits.getValidatedValue();
+        const toUnits = this.ins.globalUnits.getValidatedValue();
+        this.outs.unitScale.setValue(unitScaleFactor_1.default(fromUnits, toUnits));
         //console.log("Model.updateUnitScale, from: %s, to: %s", fromUnits, toUnits);
         this.updateMatrixFromProps();
     }
     updateMatrixFromProps() {
         const ins = this.ins;
         const unitScale = this.outs.unitScale.value;
-        _vec3a.fromArray(ins.position.value).multiplyScalar(unitScale);
-        helpers.degreesToQuaternion(ins.rotation.value, CVModel.rotationOrder, _quat);
-        _vec3b.setScalar(unitScale);
         const object3D = this.object3D;
+        _vec3a.fromArray(ins.position.value).multiplyScalar(unitScale);
+        helpers.degreesToQuaternion(ins.rotation.value, CVModel2.rotationOrder, _quat);
+        _vec3b.setScalar(unitScale);
         object3D.matrix.compose(_vec3a, _quat, _vec3b);
         object3D.matrixWorldNeedsUpdate = true;
     }
@@ -25260,11 +29239,11 @@ class CVModel extends CObject3D_1.default {
      */
     autoLoad(quality) {
         const sequence = [];
-        const lowestQualityDerivative = this.derivatives.select(Derivative_1.EDerivativeUsage.Web3D, Derivative_1.EDerivativeQuality.Thumb);
+        const lowestQualityDerivative = this.derivatives.select(model_1.EDerivativeUsage.Web3D, model_1.EDerivativeQuality.Thumb);
         if (lowestQualityDerivative) {
             sequence.push(lowestQualityDerivative);
         }
-        const targetQualityDerivative = this.derivatives.select(Derivative_1.EDerivativeUsage.Web3D, quality);
+        const targetQualityDerivative = this.derivatives.select(model_1.EDerivativeUsage.Web3D, quality);
         if (targetQualityDerivative && targetQualityDerivative !== lowestQualityDerivative) {
             sequence.push(targetQualityDerivative);
         }
@@ -25281,8 +29260,7 @@ class CVModel extends CObject3D_1.default {
      * @param derivative
      */
     loadDerivative(derivative) {
-        const loaders = this.system.getMainComponent(CVLoaders_1.default);
-        return derivative.load(loaders, this.assetPath)
+        return derivative.load(this.assetReader)
             .then(() => {
             if (!derivative.model) {
                 return;
@@ -25290,15 +29268,16 @@ class CVModel extends CObject3D_1.default {
             if (this._boxFrame) {
                 this.removeObject3D(this._boxFrame);
                 this._boxFrame.geometry.dispose();
+                this._boxFrame = null;
             }
             if (this._activeDerivative) {
                 this.removeObject3D(this._activeDerivative.model);
-                this._activeDerivative.dispose();
+                this._activeDerivative.unload();
             }
-            helpers.computeLocalBoundingBox(derivative.model, this._boundingBox);
             this._activeDerivative = derivative;
             this.addObject3D(derivative.model);
-            this.emit({ type: "change", what: "derivative", component: this });
+            helpers.computeLocalBoundingBox(derivative.model, this._boundingBox);
+            this.emit("bounding-box");
             // TODO: Test
             //const bb = derivative.boundingBox;
             //const box = { min: bb.min.toArray(), max: bb.max.toArray() };
@@ -25306,298 +29285,30 @@ class CVModel extends CObject3D_1.default {
         });
     }
 }
-CVModel.rotationOrder = "ZYX";
-exports.default = CVModel;
+CVModel2.typeName = "CVModel2";
+CVModel2.rotationOrder = "ZYX";
+CVModel2.ins = {
+    globalUnits: Component_1.types.Enum("Model.GlobalUnits", model_1.EUnitType, model_1.EUnitType.cm),
+    localUnits: Component_1.types.Enum("Model.LocalUnits", model_1.EUnitType, model_1.EUnitType.cm),
+    shader: Component_1.types.Enum("Model.Shader", UberPBRMaterial_1.EShaderMode, UberPBRMaterial_1.EShaderMode.Default),
+    quality: Component_1.types.Enum("Model.Quality", model_1.EDerivativeQuality, model_1.EDerivativeQuality.High),
+    autoLoad: Component_1.types.Boolean("Model.AutoLoad", true),
+    position: Component_1.types.Vector3("Model.Position"),
+    rotation: Component_1.types.Vector3("Model.Rotation"),
+    center: Component_1.types.Event("Model.Center"),
+    dumpDerivatives: Component_1.types.Event("Derivatives.Dump"),
+};
+CVModel2.outs = {
+    unitScale: Component_1.types.Number("UnitScale", { preset: 1, precision: 5 }),
+};
+exports.default = CVModel2;
 
 
 /***/ }),
 
-/***/ "./core/components/CVNavigation.ts":
-/*!*****************************************!*\
-  !*** ./core/components/CVNavigation.ts ***!
-  \*****************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * 3D Foundation Project
- * Copyright 2018 Smithsonian Institution
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
-exports.types = Component_1.types;
-const _inputs = {
-    enabled: Component_1.types.Boolean("Manip.Enabled", true),
-};
-class CVNavigation extends Component_1.default {
-    constructor() {
-        super(...arguments);
-        this.ins = this.addInputs(_inputs);
-    }
-    fromData(data) {
-        this.ins.enabled.setValue(data.enabled);
-    }
-    toData() {
-        return {
-            enabled: this.ins.enabled.value,
-        };
-    }
-}
-exports.default = CVNavigation;
-
-
-/***/ }),
-
-/***/ "./core/components/CVOrbitNavigation.ts":
-/*!**********************************************!*\
-  !*** ./core/components/CVOrbitNavigation.ts ***!
-  \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * 3D Foundation Project
- * Copyright 2018 Smithsonian Institution
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const THREE = __webpack_require__(/*! three */ "three");
-const math_1 = __webpack_require__(/*! @ff/core/math */ "../../libs/ff-core/source/math.ts");
-const CVNavigation_1 = __webpack_require__(/*! ./CVNavigation */ "./core/components/CVNavigation.ts");
-const OrbitManipulator_1 = __webpack_require__(/*! @ff/three/OrbitManipulator */ "../../libs/ff-three/source/OrbitManipulator.ts");
-const CRenderer_1 = __webpack_require__(/*! @ff/scene/components/CRenderer */ "../../libs/ff-scene/source/components/CRenderer.ts");
-const CCamera_1 = __webpack_require__(/*! @ff/scene/components/CCamera */ "../../libs/ff-scene/source/components/CCamera.ts");
-exports.EProjection = CCamera_1.EProjection;
-const CVScene_1 = __webpack_require__(/*! ./CVScene */ "./core/components/CVScene.ts");
-////////////////////////////////////////////////////////////////////////////////
-const _box = new THREE.Box3();
-const _size = new THREE.Vector3();
-const _center = new THREE.Vector3();
-const _translation = new THREE.Vector3();
-const _orientationPreset = [
-    [0, -90, 0],
-    [0, 90, 0],
-    [-90, 0, 0],
-    [90, 0, 0],
-    [0, 0, 0],
-    [0, 180, 0],
-];
-const _replaceNull = function (vector, replacement) {
-    for (let i = 0, n = vector.length; i < n; ++i) {
-        vector[i] = vector[i] === null ? replacement : vector[i];
-    }
-    return vector;
-};
-var EViewPreset;
-(function (EViewPreset) {
-    EViewPreset[EViewPreset["Left"] = 0] = "Left";
-    EViewPreset[EViewPreset["Right"] = 1] = "Right";
-    EViewPreset[EViewPreset["Top"] = 2] = "Top";
-    EViewPreset[EViewPreset["Bottom"] = 3] = "Bottom";
-    EViewPreset[EViewPreset["Front"] = 4] = "Front";
-    EViewPreset[EViewPreset["Back"] = 5] = "Back";
-    EViewPreset[EViewPreset["None"] = 6] = "None";
-})(EViewPreset = exports.EViewPreset || (exports.EViewPreset = {}));
-const _inputs = {
-    preset: CVNavigation_1.types.Enum("View.Preset", EViewPreset, EViewPreset.None),
-    projection: CVNavigation_1.types.Enum("View.Projection", CCamera_1.EProjection, CCamera_1.EProjection.Perspective),
-    zoomExtents: CVNavigation_1.types.Event("Manip.ZoomExtents"),
-    orbit: CVNavigation_1.types.Vector3("Manip.Orbit", [-25, -25, 0]),
-    offset: CVNavigation_1.types.Vector3("Manip.Offset", [0, 0, 100]),
-    minOrbit: CVNavigation_1.types.Vector3("Manip.Min.Orbit", [-90, -Infinity, -Infinity]),
-    minOffset: CVNavigation_1.types.Vector3("Manip.Min.Offset", [-Infinity, -Infinity, 0.1]),
-    maxOrbit: CVNavigation_1.types.Vector3("Manip.Max.Orbit", [90, Infinity, Infinity]),
-    maxOffset: CVNavigation_1.types.Vector3("Manip.Max.Offset", [Infinity, Infinity, Infinity])
-};
-/**
- * Voyager explorer orbit navigation.
- * Controls manipulation and parameters of the camera.
- */
-class CVOrbitNavigation extends CVNavigation_1.default {
-    constructor() {
-        super(...arguments);
-        this.ins = this.addInputs(_inputs);
-        this._manip = new OrbitManipulator_1.default();
-        this._activeScene = null;
-    }
-    get renderer() {
-        return this.system.getMainComponent(CRenderer_1.default);
-    }
-    create() {
-        super.create();
-        this._manip.cameraMode = true;
-        this.system.on(["pointer-down", "pointer-up", "pointer-move"], this.onPointer, this);
-        this.system.on("wheel", this.onTrigger, this);
-        this._activeScene = this.renderer.activeSceneComponent;
-        this.renderer.on("active-scene", this.onActiveScene, this);
-    }
-    dispose() {
-        super.dispose();
-        this.system.off(["pointer-down", "pointer-up", "pointer-move"], this.onPointer, this);
-        this.system.off("wheel", this.onTrigger, this);
-        this.renderer.off("active-scene", this.onActiveScene, this);
-        this._activeScene = null;
-    }
-    update() {
-        const manip = this._manip;
-        const component = this._activeScene ? this._activeScene.activeCameraComponent : null;
-        const camera = component ? component.camera : null;
-        const { projection, preset, zoomExtents, orbit, offset, minOrbit, minOffset, maxOrbit, maxOffset } = this.ins;
-        if (camera && projection.changed) {
-            camera.setProjection(projection.value);
-            manip.orthographicMode = projection.value === CCamera_1.EProjection.Orthographic;
-        }
-        if (preset.changed && preset.value !== EViewPreset.None) {
-            orbit.setValue(_orientationPreset[preset.getValidatedValue()].slice());
-        }
-        if (camera && zoomExtents.changed) {
-            camera.updateMatrixWorld(false);
-            _box.copy(this._activeScene.boundingBox);
-            _box.applyMatrix4(camera.matrixWorldInverse);
-            _box.getSize(_size);
-            _box.getCenter(_center);
-            const sizeXY = 0.75 * Math.max(_size.x, _size.y, _size.z);
-            if (camera.isPerspectiveCamera) {
-                offset.value[2] = sizeXY + sizeXY / (2 * Math.tan(camera.fov * math_1.default.DEG2RAD * 0.5));
-            }
-            else {
-                offset.value[2] = _size.z * 2;
-            }
-            offset.set();
-        }
-        if (orbit.changed || offset.changed) {
-            manip.orbit.fromArray(orbit.value);
-            manip.offset.fromArray(offset.value);
-        }
-        if (minOrbit.changed || minOffset.changed || maxOrbit.changed || maxOffset.changed) {
-            manip.minOrbit.fromArray(minOrbit.value);
-            manip.minOffset.fromArray(minOffset.value);
-            manip.maxOrbit.fromArray(maxOrbit.value);
-            manip.maxOffset.fromArray(maxOffset.value);
-        }
-        return true;
-    }
-    tick() {
-        const manip = this._manip;
-        const component = this._activeScene && this._activeScene.activeCameraComponent;
-        const ins = this.ins;
-        if (ins.enabled.value) {
-            const manipUpdated = manip.update();
-            if (manipUpdated) {
-                manip.orbit.toArray(ins.orbit.value);
-                ins.orbit.set(true);
-                manip.offset.toArray(ins.offset.value);
-                ins.offset.set(true);
-                ins.preset.setValue(EViewPreset.None, true);
-            }
-            if (component && (manipUpdated || this.updated)) {
-                const camera = component.camera;
-                const parentComponent = component.parentComponent;
-                if (parentComponent) {
-                    this._manip.toObject(parentComponent.object3D);
-                }
-                else {
-                    this._manip.toObject(camera);
-                }
-                if (camera.isOrthographicCamera) {
-                    camera.size = this._manip.offset.z;
-                    camera.updateProjectionMatrix();
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-    fromData(data) {
-        super.fromData(data);
-        const orbit = data.orbit;
-        this.ins.copyValues({
-            orbit: orbit.orbit.slice(),
-            offset: orbit.offset.slice(),
-            minOrbit: _replaceNull(orbit.minOrbit.slice(), -Infinity),
-            maxOrbit: _replaceNull(orbit.maxOrbit.slice(), Infinity),
-            minOffset: _replaceNull(orbit.minOffset.slice(), -Infinity),
-            maxOffset: _replaceNull(orbit.maxOffset.slice(), Infinity),
-        });
-    }
-    toData() {
-        const ins = this.ins;
-        const data = super.toData();
-        data.type = "Orbit";
-        data.orbit = {
-            orbit: ins.orbit.cloneValue(),
-            offset: ins.offset.cloneValue(),
-            minOrbit: ins.minOrbit.cloneValue(),
-            maxOrbit: ins.maxOrbit.cloneValue(),
-            minOffset: ins.minOffset.cloneValue(),
-            maxOffset: ins.maxOffset.cloneValue(),
-        };
-        return data;
-    }
-    onPointer(event) {
-        const viewport = event.viewport;
-        if (viewport.viewportCamera) {
-            return;
-        }
-        if (this.ins.enabled.value && this._activeScene && this._activeScene.activeCameraComponent) {
-            this._manip.setViewportSize(viewport.width, viewport.height);
-            this._manip.onPointer(event);
-            event.stopPropagation = true;
-        }
-    }
-    onTrigger(event) {
-        const viewport = event.viewport;
-        if (viewport.viewportCamera) {
-            return;
-        }
-        if (this.ins.enabled.value && this._activeScene && this._activeScene.activeCameraComponent) {
-            this._manip.setViewportSize(viewport.width, viewport.height);
-            this._manip.onTrigger(event);
-            event.stopPropagation = true;
-        }
-    }
-    onActiveScene(event) {
-        if (event.next instanceof CVScene_1.default) {
-            this._activeScene = event.next;
-            this.ins.zoomExtents.set();
-        }
-    }
-}
-exports.default = CVOrbitNavigation;
-
-
-/***/ }),
-
-/***/ "./core/components/CVScene.ts":
+/***/ "./components/CVNavigation.ts":
 /*!************************************!*\
-  !*** ./core/components/CVScene.ts ***!
+  !*** ./components/CVNavigation.ts ***!
   \************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
@@ -25621,112 +29332,78 @@ exports.default = CVOrbitNavigation;
  * limitations under the License.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-const THREE = __webpack_require__(/*! three */ "three");
-const propertyTypes_1 = __webpack_require__(/*! @ff/graph/propertyTypes */ "../../libs/ff-graph/source/propertyTypes.ts");
-const CScene_1 = __webpack_require__(/*! @ff/scene/components/CScene */ "../../libs/ff-scene/source/components/CScene.ts");
-const config_1 = __webpack_require__(/*! common/types/config */ "../common/types/config.ts");
-exports.EShaderMode = config_1.EShaderMode;
-exports.EUnitType = config_1.EUnitType;
-const CVModel_1 = __webpack_require__(/*! ./CVModel */ "./core/components/CVModel.ts");
-const CVOrbitNavigation_1 = __webpack_require__(/*! ./CVOrbitNavigation */ "./core/components/CVOrbitNavigation.ts");
-const ins = {
-    units: propertyTypes_1.types.Enum("Scene.Units", config_1.EUnitType, config_1.EUnitType.cm),
-    shader: propertyTypes_1.types.Enum("Renderer.Shader", config_1.EShaderMode),
-    exposure: propertyTypes_1.types.Number("Renderer.Exposure", 1),
-    gamma: propertyTypes_1.types.Number("Renderer.Gamma", 1),
-    zoomExtents: propertyTypes_1.types.Event("ZoomExtents")
-};
-class CVScene extends CScene_1.default {
+const CObject3D_1 = __webpack_require__(/*! @ff/scene/components/CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
+const UniversalCamera_1 = __webpack_require__(/*! @ff/three/UniversalCamera */ "../../libs/ff-three/source/UniversalCamera.ts");
+exports.EProjection = UniversalCamera_1.EProjection;
+const CVAssetReader_1 = __webpack_require__(/*! ./CVAssetReader */ "./components/CVAssetReader.ts");
+var EViewPreset;
+(function (EViewPreset) {
+    EViewPreset[EViewPreset["Left"] = 0] = "Left";
+    EViewPreset[EViewPreset["Right"] = 1] = "Right";
+    EViewPreset[EViewPreset["Top"] = 2] = "Top";
+    EViewPreset[EViewPreset["Bottom"] = 3] = "Bottom";
+    EViewPreset[EViewPreset["Front"] = 4] = "Front";
+    EViewPreset[EViewPreset["Back"] = 5] = "Back";
+    EViewPreset[EViewPreset["None"] = 6] = "None";
+})(EViewPreset = exports.EViewPreset || (exports.EViewPreset = {}));
+class CVNavigation extends CObject3D_1.default {
     constructor() {
         super(...arguments);
-        this.ins = this.addInputs(ins);
-        this.boundingBox = new THREE.Box3();
-        this._zoomViews = false;
+        this.ins = this.addInputs(CVNavigation.navIns);
+    }
+    get assetReader() {
+        return this.getMainComponent(CVAssetReader_1.default);
     }
     create() {
-        this.scene.background = new THREE.TextureLoader().load("images/bg-gradient-blue.jpg");
-        this.graph.components.on(CVModel_1.default, this.onModelComponent, this);
+        super.create();
+        this.system.on(["pointer-down", "pointer-up", "pointer-move"], this.onPointer, this);
+        this.system.on("wheel", this.onTrigger, this);
+        this.assetReader.outs.completed.on("value", this.onLoadingCompleted, this);
     }
-    update(context) {
-        super.update(context);
-        const ins = this.ins;
-        if (ins.units.changed) {
-            this.updateModels();
-        }
-        if (ins.shader.changed) {
-            const index = ins.shader.getValidatedValue();
-            this.graph.components.getArray(CVModel_1.default).forEach(model => model.setShaderMode(index));
-        }
-        if (ins.zoomExtents.changed) {
-            this._zoomViews = true;
-            const manip = this.system.components.get(CVOrbitNavigation_1.default);
-            if (manip) {
-                manip.ins.zoomExtents.set();
-            }
-        }
-        return true;
-    }
-    beforeRender(context) {
-        if (this.updated) {
-            context.renderer.toneMappingExposure = this.ins.exposure.value;
-        }
-        if (this._zoomViews) {
-            context.viewport.moveCameraToView(this.boundingBox);
-        }
-    }
-    finalize() {
-        this._zoomViews = false;
+    dispose() {
+        this.assetReader.outs.completed.off("value", this.onLoadingCompleted, this);
+        this.system.off(["pointer-down", "pointer-up", "pointer-move"], this.onPointer, this);
+        this.system.off("wheel", this.onTrigger, this);
+        super.dispose();
     }
     fromData(data) {
         this.ins.copyValues({
-            units: config_1.EUnitType[data.units] || config_1.EUnitType.mm,
-            shader: config_1.EShaderMode[data.shader] || config_1.EShaderMode.Default,
-            exposure: data.exposure !== undefined ? data.exposure : 1,
-            gamma: data.gamma !== undefined ? data.gamma : 1
+            enabled: !!data.enabled,
+            autoZoom: !!data.autoZoom,
         });
     }
     toData() {
-        const ins = this.ins;
         return {
-            units: config_1.EUnitType[ins.units.value],
-            shader: config_1.EShaderMode[ins.shader.value],
-            exposure: ins.exposure.value,
-            gamma: ins.gamma.value
+            enabled: this.ins.enabled.value,
+            autoZoom: this.ins.autoZoom.value,
         };
     }
-    onModelComponent(event) {
-        if (event.add) {
-            event.object.setGlobalUnits(this.ins.units.value);
-            event.object.on("change", this.updateModels, this);
-        }
-        else if (event.remove) {
-            event.object.off("change", this.updateModels, this);
-        }
+    onPointer(event) {
     }
-    updateModels() {
-        // get bounding box of all models
-        const box = this.boundingBox.makeEmpty();
-        const models = this.transform.getChildren(CVModel_1.default, true);
-        const units = this.ins.units.getValidatedValue();
-        models.forEach(model => {
-            model.setGlobalUnits(units);
-            box.expandByObject(model.object3D);
-        });
-        this.emit({
-            type: "change", what: "boundingBox", component: this
-        });
+    onTrigger(event) {
+    }
+    onLoadingCompleted(isLoading) {
+        this.ins.zoomExtents.set();
     }
 }
-CVScene.type = "CVScene";
-exports.default = CVScene;
+CVNavigation.typeName = "CVNavigation";
+CVNavigation.navIns = {
+    enabled: CObject3D_1.types.Boolean("Navigation.Enabled", true),
+    includeLights: CObject3D_1.types.Boolean("Navigation.IncludeLights", true),
+    autoZoom: CObject3D_1.types.Boolean("Navigation.AutoZoom", true),
+    zoomExtents: CObject3D_1.types.Event("Navigation.ZoomExtents"),
+    preset: CObject3D_1.types.Enum("Camera.ViewPreset", EViewPreset, EViewPreset.None),
+    projection: CObject3D_1.types.Enum("Camera.Projection", UniversalCamera_1.EProjection, UniversalCamera_1.EProjection.Perspective),
+};
+exports.default = CVNavigation;
 
 
 /***/ }),
 
-/***/ "./core/components/index.ts":
-/*!**********************************!*\
-  !*** ./core/components/index.ts ***!
-  \**********************************/
+/***/ "./components/CVNode.ts":
+/*!******************************!*\
+  !*** ./components/CVNode.ts ***!
+  \******************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -25749,28 +29426,1681 @@ exports.default = CVScene;
  * limitations under the License.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-const CVLoaders_1 = __webpack_require__(/*! ./CVLoaders */ "./core/components/CVLoaders.ts");
-exports.CVLoaders = CVLoaders_1.default;
-const CVModel_1 = __webpack_require__(/*! ./CVModel */ "./core/components/CVModel.ts");
-exports.CVModel = CVModel_1.default;
-const CVScene_1 = __webpack_require__(/*! ./CVScene */ "./core/components/CVScene.ts");
-exports.CVScene = CVScene_1.default;
-const CVOrbitNavigation_1 = __webpack_require__(/*! ./CVOrbitNavigation */ "./core/components/CVOrbitNavigation.ts");
-exports.CVOrbitNavigation = CVOrbitNavigation_1.default;
-exports.componentTypes = [
-    CVLoaders_1.default,
-    CVModel_1.default,
-    CVScene_1.default,
-    CVOrbitNavigation_1.default
-];
+const THREE = __webpack_require__(/*! three */ "three");
+const CTransform_1 = __webpack_require__(/*! @ff/scene/components/CTransform */ "../../libs/ff-scene/source/components/CTransform.ts");
+////////////////////////////////////////////////////////////////////////////////
+const _vec3a = new THREE.Vector3();
+const _vec3b = new THREE.Vector3();
+const _mat4 = new THREE.Matrix4();
+const _quat = new THREE.Quaternion();
+const _euler = new THREE.Euler();
+class CVNode extends CTransform_1.default {
+    get snapshotKeys() {
+        return ["position", "rotation", "scale"];
+    }
+    fromData(data) {
+        const { position, rotation, order, scale } = this.ins;
+        order.setValue(0);
+        if (data.matrix) {
+            _mat4.fromArray(data.matrix);
+            _mat4.decompose(_vec3a, _quat, _vec3b);
+            _vec3a.toArray(position.value);
+            _euler.setFromQuaternion(_quat, "XYZ");
+            _euler.toVector3(_vec3a).multiplyScalar(THREE.Math.RAD2DEG).toArray(rotation.value);
+            _vec3b.toArray(scale.value);
+            position.set();
+            rotation.set();
+            scale.set();
+        }
+        else {
+            if (data.translation) {
+                position.setValue(data.translation.slice());
+            }
+            if (data.rotation) {
+                _quat.fromArray(data.rotation);
+                _euler.setFromQuaternion(_quat, "XYZ");
+                _euler.toVector3(_vec3a).multiplyScalar(THREE.Math.RAD2DEG).toArray(rotation.value);
+                rotation.set();
+            }
+            if (data.scale) {
+                scale.setValue(data.scale.slice());
+            }
+            // this updates the matrix from the PRS properties
+            this.transform.changed = true;
+        }
+    }
+    toData() {
+        this.object3D.matrix.decompose(_vec3a, _quat, _vec3b);
+        const data = {};
+        if (_vec3a.x !== 0 || _vec3a.y !== 0 || _vec3a.z !== 0) {
+            data.translation = _vec3a.toArray();
+        }
+        if (_quat.x !== 0 || _quat.y !== 0 || _quat.z !== 0 || _quat.w !== 1) {
+            data.rotation = _quat.toArray();
+        }
+        if (_vec3b.x !== 1 || _vec3b.y !== 1 || _vec3b.z !== 1) {
+            data.scale = _vec3b.toArray();
+        }
+        return data;
+    }
+}
+CVNode.typeName = "CVNode";
+exports.default = CVNode;
 
 
 /***/ }),
 
-/***/ "./core/loaders/GeometryLoader.ts":
-/*!****************************************!*\
-  !*** ./core/loaders/GeometryLoader.ts ***!
-  \****************************************/
+/***/ "./components/CVNodeProvider.ts":
+/*!**************************************!*\
+  !*** ./components/CVNodeProvider.ts ***!
+  \**************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const CNodeProvider_1 = __webpack_require__(/*! @ff/graph/components/CNodeProvider */ "../../libs/ff-graph/source/components/CNodeProvider.ts");
+const NVNode_1 = __webpack_require__(/*! ../nodes/NVNode */ "./nodes/NVNode.ts");
+const CVDocumentProvider_1 = __webpack_require__(/*! ./CVDocumentProvider */ "./components/CVDocumentProvider.ts");
+class CVNodeProvider extends CNodeProvider_1.default {
+    constructor(node, id) {
+        super(node, id);
+        this.outs = this.addOutputs(CVNodeProvider.outs);
+        this.scope = CNodeProvider_1.ENodeScope.Graph;
+    }
+    get documentProvider() {
+        return this.getComponent(CVDocumentProvider_1.default);
+    }
+    create() {
+        super.create();
+        this.documentProvider.on("active-component", this.onActiveDocument, this);
+    }
+    dispose() {
+        this.documentProvider.off("active-component", this.onActiveDocument, this);
+        super.dispose();
+    }
+    onActiveDocument(event) {
+        this.scopedGraph = event.next;
+    }
+    onActiveNode(previous, next) {
+        this.outs.activeNode.setValue(next);
+        const selection = this.selection;
+        if (next) {
+            if (!selection.nodeContainsSelectedComponent(next)) {
+                selection.selectNode(next);
+            }
+        }
+        else if (previous) {
+            selection.clearSelection();
+        }
+    }
+    onScopedNodes() {
+        this.outs.changedNodes.set();
+    }
+}
+CVNodeProvider.typeName = "CVNodeProvider";
+CVNodeProvider.nodeType = NVNode_1.default;
+CVNodeProvider.followComponentSelection = true;
+CVNodeProvider.outs = {
+    activeNode: Component_1.types.Object("Nodes.Active", NVNode_1.default),
+    changedNodes: Component_1.types.Event("Nodes.Changed"),
+};
+exports.default = CVNodeProvider;
+
+
+/***/ }),
+
+/***/ "./components/CVOrbitNavigation.ts":
+/*!*****************************************!*\
+  !*** ./components/CVOrbitNavigation.ts ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const THREE = __webpack_require__(/*! three */ "three");
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const CameraController_1 = __webpack_require__(/*! @ff/three/CameraController */ "../../libs/ff-three/source/CameraController.ts");
+const CTransform_1 = __webpack_require__(/*! @ff/scene/components/CTransform */ "../../libs/ff-scene/source/components/CTransform.ts");
+const CVScene_1 = __webpack_require__(/*! ./CVScene */ "./components/CVScene.ts");
+const CVNavigation_1 = __webpack_require__(/*! ./CVNavigation */ "./components/CVNavigation.ts");
+////////////////////////////////////////////////////////////////////////////////
+const _vec3 = new THREE.Vector3();
+const _orientationPresets = [];
+_orientationPresets[CVNavigation_1.EViewPreset.Left] = [0, -90, 0];
+_orientationPresets[CVNavigation_1.EViewPreset.Right] = [0, 90, 0];
+_orientationPresets[CVNavigation_1.EViewPreset.Front] = [0, 0, 0];
+_orientationPresets[CVNavigation_1.EViewPreset.Back] = [0, 180, 0];
+_orientationPresets[CVNavigation_1.EViewPreset.Top] = [-90, 0, 0];
+_orientationPresets[CVNavigation_1.EViewPreset.Bottom] = [90, 0, 0];
+const _replaceNull = function (vector, replacement) {
+    for (let i = 0, n = vector.length; i < n; ++i) {
+        vector[i] = vector[i] === null ? replacement : vector[i];
+    }
+    return vector;
+};
+/**
+ * Voyager explorer orbit navigation.
+ * Controls manipulation and parameters of the camera.
+ */
+class CVOrbitNavigation extends CVNavigation_1.default {
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(CVOrbitNavigation.ins);
+        this._controller = new CameraController_1.default();
+        this._scene = null;
+        this._modelBoundingBox = null;
+        this._scene = this.scene;
+    }
+    get snapshotKeys() {
+        return ["orbit", "offset"];
+    }
+    update() {
+        const ins = this.ins;
+        const controller = this._controller;
+        const cameraComponent = this._scene.activeCameraComponent;
+        const camera = cameraComponent ? cameraComponent.camera : null;
+        const { projection, preset, orbit, offset } = ins;
+        // camera projection
+        if (cameraComponent && projection.changed) {
+            camera.setProjection(projection.getValidatedValue());
+            cameraComponent.ins.projection.setValue(projection.value, true);
+        }
+        // camera preset
+        if (preset.changed && preset.value !== CVNavigation_1.EViewPreset.None) {
+            orbit.setValue(_orientationPresets[preset.getValidatedValue()].slice());
+        }
+        // zoom extents
+        if (camera && ins.zoomExtents.changed) {
+            this._modelBoundingBox = this.getComponent(CVScene_1.default).modelBoundingBox;
+            controller.zoomExtents(this._modelBoundingBox);
+        }
+        // include lights
+        if (ins.includeLights.changed) {
+            const lightTransform = this.getLightTransform();
+            if (lightTransform) {
+                lightTransform.ins.rotation.reset();
+            }
+        }
+        const { minOrbit, minOffset, maxOrbit, maxOffset } = ins;
+        // orbit, offset and limits
+        if (orbit.changed || offset.changed) {
+            controller.orbit.fromArray(orbit.value);
+            controller.offset.fromArray(offset.value);
+        }
+        if (minOrbit.changed || minOffset.changed || maxOrbit.changed || maxOffset.changed) {
+            controller.minOrbit.fromArray(minOrbit.value);
+            controller.minOffset.fromArray(minOffset.value);
+            controller.maxOrbit.fromArray(maxOrbit.value);
+            controller.maxOffset.fromArray(maxOffset.value);
+        }
+        return true;
+    }
+    tick() {
+        const ins = this.ins;
+        const cameraComponent = this._scene.activeCameraComponent;
+        if (!ins.enabled.value || !cameraComponent) {
+            return;
+        }
+        const controller = this._controller;
+        controller.camera = cameraComponent.camera;
+        const transform = cameraComponent.transform;
+        const forceUpdate = this.changed;
+        if (controller.updateCamera(transform.object3D, forceUpdate)) {
+            controller.orbit.toArray(ins.orbit.value);
+            ins.orbit.set(true);
+            controller.offset.toArray(ins.offset.value);
+            ins.offset.set(true);
+            // if camera has moved, set preset to "None"
+            if (ins.preset.value !== CVNavigation_1.EViewPreset.None && !ins.preset.changed) {
+                ins.preset.setValue(CVNavigation_1.EViewPreset.None, true);
+            }
+            if (transform) {
+                transform.setPropertiesFromMatrix();
+            }
+            else {
+                cameraComponent.setPropertiesFromMatrix();
+            }
+            if (ins.includeLights.value) {
+                const lightTransform = this.getLightTransform();
+                if (lightTransform) {
+                    lightTransform.ins.order.setValue(CTransform_1.ERotationOrder.YXZ);
+                    const rotation = lightTransform.ins.rotation;
+                    rotation.value[1] = controller.orbit.y;
+                    rotation.set();
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+    preRender(context) {
+        if (this._modelBoundingBox) {
+            context.viewport.zoomExtents(this._modelBoundingBox);
+        }
+    }
+    tock() {
+        this._modelBoundingBox = null;
+    }
+    fromData(data) {
+        data = data || {};
+        super.fromData(data);
+        const orbit = data.orbit || {
+            orbit: [-25, -25, 0],
+            offset: [0, 0, 100],
+            minOrbit: [-90, -Infinity, -Infinity],
+            minOffset: [-Infinity, -Infinity, 0.1],
+            maxOrbit: [90, Infinity, Infinity],
+            maxOffset: [Infinity, Infinity, Infinity],
+        };
+        this.ins.copyValues({
+            orbit: orbit.orbit,
+            offset: orbit.offset,
+            minOrbit: _replaceNull(orbit.minOrbit, -Infinity),
+            maxOrbit: _replaceNull(orbit.maxOrbit, Infinity),
+            minOffset: _replaceNull(orbit.minOffset, -Infinity),
+            maxOffset: _replaceNull(orbit.maxOffset, Infinity),
+        });
+    }
+    toData() {
+        const ins = this.ins;
+        const data = super.toData();
+        data.type = "Orbit";
+        data.orbit = {
+            orbit: ins.orbit.cloneValue(),
+            offset: ins.offset.cloneValue(),
+            minOrbit: ins.minOrbit.cloneValue(),
+            maxOrbit: ins.maxOrbit.cloneValue(),
+            minOffset: ins.minOffset.cloneValue(),
+            maxOffset: ins.maxOffset.cloneValue(),
+        };
+        return data;
+    }
+    getLightTransform() {
+        const lights = this.graph.findNodeByName("Lights");
+        return lights && lights.getComponent(CTransform_1.default, true);
+    }
+    onPointer(event) {
+        const viewport = event.viewport;
+        // if viewport has it's own camera, don't handle event here
+        if (viewport.camera) {
+            return;
+        }
+        if (this.ins.enabled.value && this._scene.activeCameraComponent) {
+            this._controller.setViewportSize(viewport.width, viewport.height);
+            this._controller.onPointer(event);
+            event.stopPropagation = true;
+        }
+    }
+    onTrigger(event) {
+        const viewport = event.viewport;
+        // if viewport has it's own camera, don't handle event here
+        if (viewport.camera) {
+            return;
+        }
+        if (this.ins.enabled.value && this._scene.activeCameraComponent) {
+            this._controller.setViewportSize(viewport.width, viewport.height);
+            this._controller.onTrigger(event);
+            event.stopPropagation = true;
+        }
+    }
+}
+CVOrbitNavigation.typeName = "CVOrbitNavigation";
+CVOrbitNavigation.ins = {
+    orbit: Component_1.types.Vector3("Manip.Orbit", [-25, -25, 0]),
+    offset: Component_1.types.Vector3("Manip.Offset", [0, 0, 100]),
+    minOrbit: Component_1.types.Vector3("Manip.Min.Orbit", [-90, -Infinity, -Infinity]),
+    minOffset: Component_1.types.Vector3("Manip.Min.Offset", [-Infinity, -Infinity, 0.1]),
+    maxOrbit: Component_1.types.Vector3("Manip.Max.Orbit", [90, Infinity, Infinity]),
+    maxOffset: Component_1.types.Vector3("Manip.Max.Offset", [Infinity, Infinity, Infinity]),
+};
+exports.default = CVOrbitNavigation;
+
+
+/***/ }),
+
+/***/ "./components/CVPointLight.ts":
+/*!************************************!*\
+  !*** ./components/CVPointLight.ts ***!
+  \************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const CPointLight_1 = __webpack_require__(/*! @ff/scene/components/CPointLight */ "../../libs/ff-scene/source/components/CPointLight.ts");
+////////////////////////////////////////////////////////////////////////////////
+class CVPointLight extends CPointLight_1.default {
+    get snapshotKeys() {
+        return ["color", "intensity"];
+    }
+    fromDocument(document, node) {
+        if (!isFinite(node.light)) {
+            throw new Error("light property missing in node");
+        }
+        const data = document.lights[node.light];
+        if (data.type !== "point") {
+            throw new Error("light type mismatch: not a point light");
+        }
+        this.ins.copyValues({
+            color: data.color !== undefined ? data.color : [1, 1, 1],
+            intensity: data.intensity !== undefined ? data.intensity : 1,
+            distance: data.point.distance || 0,
+            decay: data.point.decay !== undefined ? data.point.decay : 1,
+        });
+        return node.light;
+    }
+    toDocument(document, node) {
+        const ins = this.ins;
+        const data = {
+            color: ins.color.cloneValue(),
+            intensity: ins.intensity.value,
+            point: {
+                distance: ins.distance.value,
+                decay: ins.decay.value,
+            },
+        };
+        data.type = "point";
+        document.lights = document.lights || [];
+        const lightIndex = document.lights.length;
+        document.lights.push(data);
+        return lightIndex;
+    }
+}
+CVPointLight.typeName = "CVPointLight";
+exports.default = CVPointLight;
+
+
+/***/ }),
+
+/***/ "./components/CVReader.ts":
+/*!********************************!*\
+  !*** ./components/CVReader.ts ***!
+  \********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const setup_1 = __webpack_require__(/*! common/types/setup */ "../common/types/setup.ts");
+exports.EReaderPosition = setup_1.EReaderPosition;
+const Article_1 = __webpack_require__(/*! ../models/Article */ "./models/Article.ts");
+exports.Article = Article_1.default;
+const CVMeta_1 = __webpack_require__(/*! ./CVMeta */ "./components/CVMeta.ts");
+const NVNode_1 = __webpack_require__(/*! ../nodes/NVNode */ "./nodes/NVNode.ts");
+const CVAssetReader_1 = __webpack_require__(/*! ./CVAssetReader */ "./components/CVAssetReader.ts");
+class CVReader extends Component_1.default {
+    constructor() {
+        super(...arguments);
+        this.ins = this.addInputs(CVReader.ins);
+        this.outs = this.addOutputs(CVReader.outs);
+    }
+    get snapshotKeys() {
+        return ["enabled", "articleId"];
+    }
+    get articles() {
+        return Object.keys(this._articles).map(key => this._articles[key]);
+    }
+    get activeArticle() {
+        return this.outs.article.value;
+    }
+    get assetReader() {
+        return this.getMainComponent(CVAssetReader_1.default);
+    }
+    create() {
+        super.create();
+        this.graph.components.on(CVMeta_1.default, this.onMetaComponent, this);
+        this.updateArticles();
+    }
+    dispose() {
+        this.graph.components.off(CVMeta_1.default, this.onMetaComponent, this);
+        super.dispose();
+    }
+    update(context) {
+        const ins = this.ins;
+        const outs = this.outs;
+        if (ins.articleId.changed) {
+            const entry = this._articles[ins.articleId.value] || null;
+            const article = entry && entry.article;
+            outs.node.setValue(entry && entry.node);
+            outs.article.setValue(article);
+            outs.content.setValue("");
+            if (article) {
+                this.readArticle(article);
+            }
+        }
+        return true;
+    }
+    readArticle(article) {
+        const outs = this.outs;
+        const uri = article.data.uri;
+        if (!uri) {
+            outs.content.setValue(`<h2>Can't display article: no URI.</h2>`);
+            return;
+        }
+        return this.assetReader.getText(uri)
+            .then(content => outs.content.setValue(content.replace(/[\n\r]/g, "")))
+            .catch(error => outs.content.setValue(`<h2>Article not found at ${uri}</h2>`));
+    }
+    onMetaComponent(event) {
+        if (event.add) {
+            event.object.articles.on("update", this.updateArticles, this);
+        }
+        if (event.remove) {
+            event.object.articles.off("update", this.updateArticles, this);
+        }
+        this.updateArticles();
+    }
+    updateArticles() {
+        const metas = this.getGraphComponents(CVMeta_1.default);
+        const masterList = this._articles = {};
+        metas.forEach(meta => {
+            const articles = meta.articles;
+            const node = meta.node;
+            articles.items.forEach(article => {
+                masterList[article.id] = { article, node };
+            });
+        });
+        const firstMeta = metas[0];
+        if (firstMeta && firstMeta.leadArticle) {
+            this.ins.articleId.setValue(firstMeta.leadArticle.id);
+        }
+        else {
+            this.ins.articleId.setValue("");
+        }
+    }
+    fromData(data) {
+        data = data || {};
+        this.ins.setValues({
+            enabled: !!data.enabled,
+            position: setup_1.EReaderPosition[data.position] || setup_1.EReaderPosition.Overlay,
+            articleId: data.articleId || "",
+        });
+    }
+    toData() {
+        const ins = this.ins;
+        const data = {
+            enabled: ins.enabled.value,
+            position: setup_1.EReaderPosition[ins.position.value] || "Overlay",
+        };
+        if (ins.articleId.value) {
+            data.articleId = ins.articleId.value;
+        }
+        return data;
+    }
+}
+CVReader.typeName = "CVReader";
+CVReader.ins = {
+    enabled: Component_1.types.Boolean("Reader.Enabled"),
+    position: Component_1.types.Enum("Reader.Position", setup_1.EReaderPosition),
+    articleId: Component_1.types.String("Article.ID"),
+};
+CVReader.outs = {
+    article: Component_1.types.Object("Article.Active", Article_1.default),
+    content: Component_1.types.String("Article.Content"),
+    node: Component_1.types.Object("Article.Node", NVNode_1.default),
+};
+exports.default = CVReader;
+
+
+/***/ }),
+
+/***/ "./components/CVScene.ts":
+/*!*******************************!*\
+  !*** ./components/CVScene.ts ***!
+  \*******************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const THREE = __webpack_require__(/*! three */ "three");
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const common_1 = __webpack_require__(/*! common/types/common */ "../common/types/common.ts");
+const CVNode_1 = __webpack_require__(/*! ./CVNode */ "./components/CVNode.ts");
+const CVModel2_1 = __webpack_require__(/*! ./CVModel2 */ "./components/CVModel2.ts");
+////////////////////////////////////////////////////////////////////////////////
+/**
+ * Manages the scene and the nodes in the scene tree.
+ *
+ *  * ### Events
+ * - *"bounding-box*" - emitted after the scene's model bounding box changed.
+ */
+class CVScene extends CVNode_1.default {
+    constructor() {
+        super(...arguments);
+        this.ins = this.addInputs(CVScene.ins);
+        this._modelBoundingBox = new THREE.Box3();
+    }
+    get modelBoundingBox() {
+        return this._modelBoundingBox;
+    }
+    get models() {
+        return this.getGraphComponents(CVModel2_1.default);
+    }
+    create() {
+        super.create();
+        this.graph.components.on(CVModel2_1.default, this.onModelComponent, this);
+        this.models.forEach(model => model.ins.globalUnits.linkFrom(this.ins.units));
+    }
+    update(context) {
+        const ins = this.ins;
+        if (ins.units.changed) {
+            this.updateModelBoundingBox();
+        }
+        return true;
+    }
+    dispose() {
+        this.graph.components.off(CVModel2_1.default, this.onModelComponent, this);
+        super.dispose();
+    }
+    fromDocument(document, scene) {
+        this.ins.units.setValue(common_1.EUnitType[scene.units] || 0);
+    }
+    toDocument(document, scene) {
+        scene.units = common_1.EUnitType[this.ins.units.getValidatedValue()];
+    }
+    onModelComponent(event) {
+        const model = event.object;
+        if (event.add) {
+            model.on("bounding-box", this.updateModelBoundingBox, this);
+            model.ins.globalUnits.linkFrom(this.ins.units);
+        }
+        if (event.remove) {
+            model.off("bounding-box", this.updateModelBoundingBox, this);
+        }
+        this.updateModelBoundingBox();
+    }
+    updateModelBoundingBox() {
+        const box = this._modelBoundingBox;
+        box.makeEmpty();
+        this.models.forEach(model => box.expandByObject(model.object3D));
+        this.emit("bounding-box");
+    }
+}
+CVScene.typeName = "CVScene";
+CVScene.ins = {
+    units: Component_1.types.Enum("Scene.Units", common_1.EUnitType, common_1.EUnitType.cm),
+};
+exports.default = CVScene;
+
+
+/***/ }),
+
+/***/ "./components/CVSetup.ts":
+/*!*******************************!*\
+  !*** ./components/CVSetup.ts ***!
+  \*******************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const CTransform_1 = __webpack_require__(/*! @ff/scene/components/CTransform */ "../../libs/ff-scene/source/components/CTransform.ts");
+const CVInterface_1 = __webpack_require__(/*! ./CVInterface */ "./components/CVInterface.ts");
+const CVViewer_1 = __webpack_require__(/*! ./CVViewer */ "./components/CVViewer.ts");
+const CVReader_1 = __webpack_require__(/*! ./CVReader */ "./components/CVReader.ts");
+const CVOrbitNavigation_1 = __webpack_require__(/*! ./CVOrbitNavigation */ "./components/CVOrbitNavigation.ts");
+const CVBackground_1 = __webpack_require__(/*! ./CVBackground */ "./components/CVBackground.ts");
+const CVFloor_1 = __webpack_require__(/*! ./CVFloor */ "./components/CVFloor.ts");
+const CVGrid_1 = __webpack_require__(/*! ./CVGrid */ "./components/CVGrid.ts");
+const CVTape_1 = __webpack_require__(/*! ./CVTape */ "./components/CVTape.ts");
+const CVSlicer_1 = __webpack_require__(/*! ./CVSlicer */ "./components/CVSlicer.ts");
+const CVTours_1 = __webpack_require__(/*! ./CVTours */ "./components/CVTours.ts");
+const CVSnapshots_1 = __webpack_require__(/*! ./CVSnapshots */ "./components/CVSnapshots.ts");
+////////////////////////////////////////////////////////////////////////////////
+/**
+ * At the root of a Voyager scene, this component manages scene features,
+ * including tours.
+ */
+class CVSetup extends Component_1.default {
+    get featureMap() {
+        return this.constructor.featureMap;
+    }
+    get transform() {
+        return this.getComponent(CTransform_1.default);
+    }
+    create() {
+        super.create();
+        const node = this.node;
+        const features = CVSetup.featureMap;
+        for (const name in features) {
+            this[name] = node.createComponent(features[name]);
+        }
+        this.snapshots = node.createComponent(CVSnapshots_1.default);
+    }
+    fromDocument(document, sceneIndex, pathMap) {
+        const scene = document.scenes[sceneIndex];
+        if (!isFinite(scene.setup)) {
+            throw new Error("setup property missing in node");
+        }
+        const setupData = document.setups[scene.setup];
+        const features = CVSetup.featureMap;
+        for (const name in features) {
+            pathMap.set(`scenes/${sceneIndex}/setup/${name}`, this[name]);
+            const featureData = setupData[name];
+            if (featureData) {
+                this[name].fromData(featureData);
+            }
+        }
+        if (setupData.snapshots) {
+            this.snapshots.fromData(setupData.snapshots, pathMap);
+        }
+    }
+    toDocument(document, sceneIndex, pathMap) {
+        let setupData = null;
+        const features = CVSetup.featureMap;
+        for (const name in features) {
+            pathMap.set(this[name], `scenes/${sceneIndex}/setup/${name}`);
+            const featureData = this[name].toData();
+            if (featureData) {
+                setupData = setupData || {};
+                setupData[name] = featureData;
+            }
+        }
+        const snapshotData = this.snapshots.toData(pathMap);
+        if (snapshotData) {
+            setupData = setupData || {};
+            setupData.snapshots = snapshotData;
+        }
+        if (setupData) {
+            document.setups = document.setups || [];
+            const index = document.setups.length;
+            document.setups.push(setupData);
+            document.scenes[sceneIndex].setup = index;
+        }
+    }
+}
+CVSetup.typeName = "CVSetup";
+CVSetup.featureMap = {
+    "interface": CVInterface_1.default,
+    "reader": CVReader_1.default,
+    "viewer": CVViewer_1.default,
+    "navigation": CVOrbitNavigation_1.default,
+    "background": CVBackground_1.default,
+    "floor": CVFloor_1.default,
+    "grid": CVGrid_1.default,
+    "tape": CVTape_1.default,
+    "slicer": CVSlicer_1.default,
+    "tours": CVTours_1.default,
+};
+exports.default = CVSetup;
+
+
+/***/ }),
+
+/***/ "./components/CVSlicer.ts":
+/*!********************************!*\
+  !*** ./components/CVSlicer.ts ***!
+  \********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const setup_1 = __webpack_require__(/*! common/types/setup */ "../common/types/setup.ts");
+const CVScene_1 = __webpack_require__(/*! ./CVScene */ "./components/CVScene.ts");
+const CVModel2_1 = __webpack_require__(/*! ./CVModel2 */ "./components/CVModel2.ts");
+////////////////////////////////////////////////////////////////////////////////
+const _planes = [
+    [-1, 0, 0, 0],
+    [0, -1, 0, 0],
+    [0, 0, -1, 0],
+    [1, 0, 0, 0],
+    [0, 1, 0, 0],
+    [0, 0, 1, 0],
+];
+class CVSlicer extends Component_1.default {
+    constructor() {
+        super(...arguments);
+        this.ins = this.addInputs(CVSlicer.ins);
+        this.plane = null;
+        this.axisIndex = -1;
+    }
+    get snapshotKeys() {
+        return ["enabled", "axis", "position", "inverted"];
+    }
+    update(context) {
+        const ins = this.ins;
+        if (ins.axis.changed) {
+            const axisIndex = ins.axis.getValidatedValue();
+            if (axisIndex === this.axisIndex) {
+                ins.inverted.setValue(!ins.inverted.value);
+            }
+            else {
+                ins.inverted.setValue(false);
+                this.axisIndex = axisIndex;
+            }
+        }
+        if (!ins.enabled.value && !ins.enabled.changed) {
+            return false;
+        }
+        const axisIndex = ins.axis.getValidatedValue();
+        const axisInverted = ins.inverted.value;
+        const planeIndex = axisIndex + (axisInverted ? 3 : 0);
+        const boundingBox = this.getComponent(CVScene_1.default).modelBoundingBox;
+        if (!boundingBox) {
+            return true;
+        }
+        this.plane = _planes[planeIndex];
+        const min = boundingBox.min.getComponent(axisIndex);
+        const max = boundingBox.max.getComponent(axisIndex);
+        const value = 1 - ins.position.value;
+        this.plane[3] = axisInverted ? value * (max - min) - max : max - value * (max - min);
+        const models = this.getGraphComponents(CVModel2_1.default);
+        models.forEach(model => {
+            const object = model.object3D;
+            object.traverse((mesh) => {
+                if (mesh.isMesh) {
+                    const material = mesh.material;
+                    if (material.isUberPBRMaterial) {
+                        this.updateMaterial(material);
+                    }
+                }
+            });
+        });
+        return true;
+    }
+    fromData(data) {
+        data = data || {};
+        this.ins.setValues({
+            enabled: data.enabled || false,
+            axis: setup_1.ESliceAxis[data.axis] || setup_1.ESliceAxis.X,
+            position: data.position || 0,
+            inverted: data.inverted || false
+        });
+    }
+    toData() {
+        const ins = this.ins;
+        return {
+            enabled: ins.enabled.value,
+            axis: setup_1.ESliceAxis[ins.axis.getValidatedValue()],
+            position: ins.position.value,
+            inverted: ins.inverted.value,
+        };
+    }
+    updateMaterial(material) {
+        const ins = this.ins;
+        if (ins.enabled.changed) {
+            material.enableCutPlane(ins.enabled.value);
+            material.needsUpdate = true;
+        }
+        material.cutPlaneDirection.fromArray(this.plane);
+        material.cutPlaneColor.fromArray(ins.color.value);
+    }
+}
+CVSlicer.typeName = "CVSlicer";
+CVSlicer.ins = {
+    enabled: Component_1.types.Boolean("Slice.Enabled"),
+    axis: Component_1.types.Enum("Slice.Axis", setup_1.ESliceAxis),
+    position: Component_1.types.Number("Slice.Position", { min: 0, max: 1, preset: 0.5 }),
+    inverted: Component_1.types.Boolean("Slice.Inverted"),
+    color: Component_1.types.ColorRGB("Slice.Color", [0, 0.61, 0.87]),
+};
+exports.default = CVSlicer;
+
+
+/***/ }),
+
+/***/ "./components/CVSnapshots.ts":
+/*!***********************************!*\
+  !*** ./components/CVSnapshots.ts ***!
+  \***********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const CTweenMachine_1 = __webpack_require__(/*! @ff/graph/components/CTweenMachine */ "../../libs/ff-graph/source/components/CTweenMachine.ts");
+const CLight_1 = __webpack_require__(/*! @ff/scene/components/CLight */ "../../libs/ff-scene/source/components/CLight.ts");
+const CVSetup_1 = __webpack_require__(/*! ./CVSetup */ "./components/CVSetup.ts");
+const CVModel2_1 = __webpack_require__(/*! ./CVModel2 */ "./components/CVModel2.ts");
+////////////////////////////////////////////////////////////////////////////////
+class CVSnapshots extends CTweenMachine_1.default {
+    constructor() {
+        super(...arguments);
+        this.targetFeatures = {};
+    }
+    create() {
+        super.create();
+        const setup = this.getGraphComponent(CVSetup_1.default);
+        Object.keys(setup.featureMap).forEach(name => {
+            this.targetFeatures[name] = false;
+        });
+        this.targetFeatures["models"] = false;
+        this.targetFeatures["lights"] = false;
+        this.initializeTargetFeatures();
+    }
+    initializeTargetFeatures() {
+        const features = this.targetFeatures;
+        Object.keys(features).forEach(key => features[key] = false);
+        features["navigation"] = true;
+        features["reader"] = true;
+        this.updateTargets();
+    }
+    updateTargets() {
+        const features = this.targetFeatures;
+        const setup = this.getGraphComponent(CVSetup_1.default);
+        Object.keys(features).forEach(name => {
+            const component = setup[name];
+            const shouldInclude = features[name];
+            if (component) {
+                this.updateComponentTarget(component, shouldInclude);
+            }
+        });
+        const models = this.getGraphComponents(CVModel2_1.default);
+        models.forEach(model => this.updateComponentTarget(model.transform, !!features["models"]));
+        const lights = this.getGraphComponents(CLight_1.default);
+        lights.forEach(light => this.updateComponentTarget(light, !!features["lights"]));
+        this.targets.forEach((target, index) => {
+            const component = target.property.group.linkable;
+            console.log("CVSnapshot.updateTargets - target #%s, component: %s, property: %s", index, component.displayName, target.property.path);
+        });
+    }
+    updateComponentTarget(component, include) {
+        const snapshotKeys = component["snapshotKeys"];
+        if (!snapshotKeys) {
+            return;
+        }
+        snapshotKeys.forEach(key => {
+            const property = component.ins[key];
+            if (!property) {
+                throw new Error(`property '${key}' not found in component '${component.displayName}'`);
+            }
+            const schema = property.schema;
+            if (!schema.event && property.type !== "object") {
+                const isIncluded = this.hasTargetProperty(property);
+                if (include && !isIncluded) {
+                    this.addTargetProperty(property);
+                }
+                else if (!include && isIncluded) {
+                    this.removeTargetProperty(property);
+                }
+            }
+        });
+    }
+    fromData(data, pathMap) {
+        this.clear();
+        const features = this.targetFeatures;
+        const keys = Object.keys(features);
+        if (data.features) {
+            keys.forEach(key => features[key] = data.features.indexOf(key) >= 0);
+        }
+        else {
+            this.initializeTargetFeatures();
+        }
+        const missingTargets = new Set();
+        data.targets.forEach((target, index) => {
+            const slashIndex = target.lastIndexOf("/");
+            const componentPath = target.substr(0, slashIndex);
+            const propertyKey = target.substr(slashIndex + 1);
+            const component = pathMap.get(componentPath);
+            const property = component ? component.ins[propertyKey] : null;
+            if (!property) {
+                console.warn(`missing snapshot target property for '${target}'`);
+                missingTargets.add(index);
+            }
+            else {
+                this.addTargetProperty(property);
+            }
+        });
+        data.states.forEach(state => {
+            this.setState({
+                id: state.id,
+                curve: state.curve !== undefined ? CTweenMachine_1.EEasingCurve[state.curve] : CTweenMachine_1.EEasingCurve.EaseQuad,
+                duration: state.duration !== undefined ? state.duration : 2,
+                threshold: state.threshold !== undefined ? state.threshold : 0.5,
+                values: state.values.filter((value, index) => !missingTargets.has(index)),
+            });
+        });
+    }
+    toData(pathMap) {
+        const features = this.targetFeatures;
+        const data = {
+            features: Object.keys(features).filter(key => features[key]),
+            targets: this.targets.map(target => {
+                const component = target.property.group.linkable;
+                const key = target.property.key;
+                return pathMap.get(component) + "/" + key;
+            }),
+            states: Object.keys(this.states).map(key => {
+                const state = this.states[key];
+                const data = { id: state.id, values: state.values };
+                if (state.curve !== CTweenMachine_1.EEasingCurve.EaseQuad) {
+                    data.curve = CTweenMachine_1.EEasingCurve[state.curve];
+                }
+                if (state.duration !== 2) {
+                    data.duration = state.duration;
+                }
+                if (state.threshold !== 0.5) {
+                    data.threshold = state.threshold;
+                }
+                return data;
+            }),
+        };
+        if (data.targets.length > 0 && data.states.length > 0) {
+            return data;
+        }
+        return null;
+    }
+}
+CVSnapshots.typeName = "CVSnapshots";
+exports.default = CVSnapshots;
+
+
+/***/ }),
+
+/***/ "./components/CVSpotLight.ts":
+/*!***********************************!*\
+  !*** ./components/CVSpotLight.ts ***!
+  \***********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const CSpotLight_1 = __webpack_require__(/*! @ff/scene/components/CSpotLight */ "../../libs/ff-scene/source/components/CSpotLight.ts");
+////////////////////////////////////////////////////////////////////////////////
+class CVSpotLight extends CSpotLight_1.default {
+    get snapshotKeys() {
+        return ["color", "intensity"];
+    }
+    fromDocument(document, node) {
+        if (!isFinite(node.light)) {
+            throw new Error("light property missing in node");
+        }
+        const data = document.lights[node.light];
+        if (data.type !== "point") {
+            throw new Error("light type mismatch: not a point light");
+        }
+        this.ins.copyValues({
+            color: data.color !== undefined ? data.color : [1, 1, 1],
+            intensity: data.intensity !== undefined ? data.intensity : 1,
+            distance: data.spot.distance || 0,
+            decay: data.spot.decay !== undefined ? data.spot.decay : 1,
+            angle: data.spot.angle !== undefined ? data.spot.angle : Math.PI / 4,
+            penumbra: data.spot.penumbra || 0,
+        });
+        return node.light;
+    }
+    toDocument(document, node) {
+        const ins = this.ins;
+        const data = {
+            color: ins.color.cloneValue(),
+            intensity: ins.intensity.value,
+            spot: {
+                distance: ins.distance.value,
+                decay: ins.decay.value,
+                angle: ins.angle.value,
+                penumbra: ins.penumbra.value,
+            },
+        };
+        data.type = "spot";
+        document.lights = document.lights || [];
+        const lightIndex = document.lights.length;
+        document.lights.push(data);
+        return lightIndex;
+    }
+}
+CVSpotLight.typeName = "CVSpotLight";
+exports.default = CVSpotLight;
+
+
+/***/ }),
+
+/***/ "./components/CVTape.ts":
+/*!******************************!*\
+  !*** ./components/CVTape.ts ***!
+  \******************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const THREE = __webpack_require__(/*! three */ "three");
+const CObject3D_1 = __webpack_require__(/*! @ff/scene/components/CObject3D */ "../../libs/ff-scene/source/components/CObject3D.ts");
+const Pin_1 = __webpack_require__(/*! ../utils/Pin */ "./utils/Pin.ts");
+const CVModel2_1 = __webpack_require__(/*! ./CVModel2 */ "./components/CVModel2.ts");
+////////////////////////////////////////////////////////////////////////////////
+const _mat3 = new THREE.Matrix3();
+const _vec3a = new THREE.Vector3();
+const _vec3b = new THREE.Vector3();
+const _vec3up = new THREE.Vector3(0, 1, 0);
+var ETapeState;
+(function (ETapeState) {
+    ETapeState[ETapeState["SetStart"] = 0] = "SetStart";
+    ETapeState[ETapeState["SetEnd"] = 1] = "SetEnd";
+})(ETapeState = exports.ETapeState || (exports.ETapeState = {}));
+class CVTape extends CObject3D_1.default {
+    constructor(node, id) {
+        super(node, id);
+        this.ins = this.addInputs(CVTape.tapeIns);
+        this.outs = this.addOutputs(CVTape.tapeOuts);
+        this.startPin = null;
+        this.endPin = null;
+        this.line = null;
+        this.object3D = new THREE.Group();
+        this.startPin = new Pin_1.default();
+        this.startPin.visible = false;
+        this.endPin = new Pin_1.default();
+        this.endPin.visible = false;
+        const lineGeometry = new THREE.Geometry();
+        lineGeometry.vertices.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 0));
+        const lineMaterial = new THREE.LineBasicMaterial();
+        lineMaterial.depthTest = false;
+        lineMaterial.transparent = true;
+        this.line = new THREE.Line(lineGeometry, lineMaterial);
+        this.line.visible = false;
+        this.object3D.add(this.startPin, this.endPin, this.line);
+    }
+    get snapshotKeys() {
+        return ["startPosition", "startDirection", "endPosition", "endDirection"];
+    }
+    update(context) {
+        super.update(context);
+        const ins = this.ins;
+        const lineGeometry = this.line.geometry;
+        // if tape is visible, listen for pointer events to set tape start/end
+        if (ins.visible.changed) {
+            if (ins.visible.value) {
+                this.system.on("pointer-up", this.onPointerUp, this);
+            }
+            else {
+                this.system.off("pointer-up", this.onPointerUp, this);
+            }
+        }
+        // update tape start point
+        if (ins.startPosition.changed || ins.startDirection.changed) {
+            const startPin = this.startPin;
+            startPin.position.fromArray(ins.startPosition.value);
+            _vec3a.fromArray(ins.startDirection.value);
+            startPin.quaternion.setFromUnitVectors(_vec3up, _vec3a);
+            startPin.updateMatrix();
+            lineGeometry.vertices[0].copy(startPin.position);
+            lineGeometry.verticesNeedUpdate = true;
+        }
+        // update tape end point
+        if (ins.endPosition.changed || ins.endDirection.changed) {
+            const endPin = this.endPin;
+            endPin.position.fromArray(ins.endPosition.value);
+            _vec3a.fromArray(ins.endDirection.value);
+            endPin.quaternion.setFromUnitVectors(_vec3up, _vec3a);
+            endPin.updateMatrix();
+            lineGeometry.vertices[1].copy(endPin.position);
+            lineGeometry.verticesNeedUpdate = true;
+        }
+        // update distance between measured points
+        _vec3a.fromArray(ins.startPosition.value);
+        _vec3b.fromArray(ins.endPosition.value);
+        this.outs.distance.setValue(_vec3a.distanceTo(_vec3b));
+        return true;
+    }
+    fromData(data) {
+        this.ins.copyValues({
+            visible: data.enabled,
+            startPosition: data.startPosition,
+            startDirection: data.startDirection,
+            endPosition: data.endPosition,
+            endDirection: data.endDirection
+        });
+    }
+    toData() {
+        const ins = this.ins;
+        return {
+            enabled: ins.visible.cloneValue(),
+            startPosition: ins.startPosition.cloneValue(),
+            startDirection: ins.startDirection.cloneValue(),
+            endPosition: ins.endPosition.cloneValue(),
+            endDirection: ins.endDirection.cloneValue()
+        };
+    }
+    onPointerUp(event) {
+        if (event.isDragging || !event.component || !event.component.is(CVModel2_1.default)) {
+            return;
+        }
+        // get click position and normal
+        const model = event.component;
+        const worldMatrix = model.object3D.matrixWorld;
+        _mat3.getNormalMatrix(worldMatrix);
+        const position = event.view.pickPosition(event).applyMatrix4(worldMatrix);
+        const normal = event.view.pickNormal(event).applyMatrix3(_mat3).normalize();
+        // update pins and measurement line
+        const { startPin, endPin, line, ins, outs } = this;
+        if (outs.state.value === ETapeState.SetStart) {
+            position.toArray(ins.startPosition.value);
+            normal.toArray(ins.startDirection.value);
+            ins.startPosition.set();
+            ins.startDirection.set();
+            startPin.visible = true;
+            endPin.visible = false;
+            line.visible = false;
+            outs.state.setValue(ETapeState.SetEnd);
+        }
+        else {
+            position.toArray(ins.endPosition.value);
+            normal.toArray(ins.endDirection.value);
+            ins.endPosition.set();
+            ins.endDirection.set();
+            // set end position of tape
+            startPin.visible = true;
+            endPin.visible = true;
+            line.visible = true;
+            outs.state.setValue(ETapeState.SetStart);
+        }
+    }
+}
+CVTape.typeName = "CVTape";
+CVTape.tapeIns = {
+    startPosition: CObject3D_1.types.Vector3("Start.Position"),
+    startDirection: CObject3D_1.types.Vector3("Start.Direction"),
+    endPosition: CObject3D_1.types.Vector3("End.Position"),
+    endDirection: CObject3D_1.types.Vector3("End.Direction"),
+};
+CVTape.tapeOuts = {
+    state: CObject3D_1.types.Enum("Tape.State", ETapeState),
+    distance: CObject3D_1.types.Number("Tape.Distance"),
+};
+exports.default = CVTape;
+
+
+/***/ }),
+
+/***/ "./components/CVTours.ts":
+/*!*******************************!*\
+  !*** ./components/CVTours.ts ***!
+  \*******************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Component_1 = __webpack_require__(/*! @ff/graph/Component */ "../../libs/ff-graph/source/Component.ts");
+const CTweenMachine_1 = __webpack_require__(/*! @ff/graph/components/CTweenMachine */ "../../libs/ff-graph/source/components/CTweenMachine.ts");
+////////////////////////////////////////////////////////////////////////////////
+class CVTours extends Component_1.default {
+    constructor() {
+        super(...arguments);
+        this.ins = this.addInputs(CVTours.ins);
+        this.outs = this.addOutputs(CVTours.outs);
+        this._tours = [];
+    }
+    get tours() {
+        return this._tours;
+    }
+    get activeSteps() {
+        const tour = this.activeTour;
+        return tour ? tour.steps : null;
+    }
+    get activeTour() {
+        return this._tours[this.outs.tourIndex.value];
+    }
+    get activeStep() {
+        const tour = this.activeTour;
+        return tour ? tour.steps[this.outs.stepIndex.value] : null;
+    }
+    get tweenMachine() {
+        return this.getComponent(CTweenMachine_1.default);
+    }
+    dispose() {
+        super.dispose();
+    }
+    update() {
+        const { ins, outs } = this;
+        const tours = this._tours;
+        if (!ins.enabled.value) {
+            if (ins.enabled.changed) {
+                outs.tourIndex.set();
+            }
+            return false;
+        }
+        const machine = this.tweenMachine;
+        const tourIndex = Math.min(tours.length - 1, Math.max(-1, ins.tourIndex.value));
+        const tour = tours[tourIndex];
+        const stepCount = tour ? tour.steps.length : 0;
+        let nextStepIndex = -1;
+        if (ins.tourIndex.changed || ins.enabled.changed) {
+            if (tourIndex !== outs.tourIndex.value) {
+                nextStepIndex = 0;
+            }
+            outs.tourIndex.setValue(tourIndex);
+            outs.tourTitle.setValue(tour ? tour.title : "");
+            outs.tourLead.setValue(tour ? tour.lead : "");
+        }
+        if (stepCount === 0) {
+            outs.stepIndex.setValue(-1);
+            outs.stepTitle.setValue("");
+            return true;
+        }
+        let tween = true;
+        if (ins.stepIndex.changed) {
+            nextStepIndex = Math.min(tour.steps.length - 1, Math.max(0, ins.stepIndex.value));
+            tween = false;
+        }
+        if (ins.first.changed) {
+            nextStepIndex = 0;
+        }
+        if (ins.next.changed) {
+            nextStepIndex = (outs.stepIndex.value + 1) % stepCount;
+        }
+        if (ins.previous.changed) {
+            nextStepIndex = (outs.stepIndex.value - 1) % stepCount;
+        }
+        if (nextStepIndex >= 0) {
+            const step = tour.steps[nextStepIndex];
+            outs.stepIndex.setValue(nextStepIndex);
+            outs.stepCount.setValue(stepCount);
+            outs.stepTitle.setValue(step.title);
+            machine.ins.id.setValue(step.id);
+            tween ? machine.ins.tween.set() : machine.ins.recall.set();
+        }
+        return true;
+    }
+    fromData(data) {
+        this._tours = data.map(tour => ({
+            title: tour.title,
+            steps: tour.steps,
+            lead: tour.lead || "",
+            tags: tour.tags || [],
+        }));
+        this.ins.tourIndex.setValue(-1);
+    }
+    toData() {
+        if (this._tours.length === 0) {
+            return null;
+        }
+        return this._tours.map(tour => {
+            const data = {
+                title: tour.title,
+                steps: tour.steps,
+            };
+            if (tour.lead) {
+                data.lead = tour.lead;
+            }
+            if (tour.tags.length > 0) {
+                data.tags = tour.tags;
+            }
+            return data;
+        });
+    }
+}
+CVTours.typeName = "CVTours";
+CVTours.ins = {
+    enabled: Component_1.types.Boolean("Tours.Enabled"),
+    tourIndex: Component_1.types.Integer("Tours.Index", -1),
+    stepIndex: Component_1.types.Integer("Step.Index"),
+    next: Component_1.types.Event("Step.Next"),
+    previous: Component_1.types.Event("Step.Previous"),
+    first: Component_1.types.Event("Step.First"),
+};
+CVTours.outs = {
+    tourIndex: Component_1.types.Integer("Tour.Index", -1),
+    tourTitle: Component_1.types.String("Tour.Title"),
+    tourLead: Component_1.types.String("Tour.Lead"),
+    stepCount: Component_1.types.Integer("Tour.Steps"),
+    stepIndex: Component_1.types.Integer("Step.Index"),
+    stepTitle: Component_1.types.String("Step.Title"),
+};
+exports.default = CVTours;
+
+
+/***/ }),
+
+/***/ "./components/CVViewer.ts":
+/*!********************************!*\
+  !*** ./components/CVViewer.ts ***!
+  \********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const CRenderable_1 = __webpack_require__(/*! @ff/scene/components/CRenderable */ "../../libs/ff-scene/source/components/CRenderable.ts");
+const setup_1 = __webpack_require__(/*! common/types/setup */ "../common/types/setup.ts");
+const CVModel2_1 = __webpack_require__(/*! ./CVModel2 */ "./components/CVModel2.ts");
+const CVAnnotationView_1 = __webpack_require__(/*! ./CVAnnotationView */ "./components/CVAnnotationView.ts");
+////////////////////////////////////////////////////////////////////////////////
+class CVViewer extends CRenderable_1.default {
+    constructor() {
+        super(...arguments);
+        this.ins = this.addInputs(CVViewer.ins);
+    }
+    get snapshotKeys() {
+        return ["shader", "exposure", "annotationsVisible"];
+    }
+    create() {
+        super.create();
+        this.graph.components.on(CVAnnotationView_1.default, this.onAnnotationsComponent, this);
+    }
+    dispose() {
+        this.graph.components.off(CVAnnotationView_1.default, this.onAnnotationsComponent, this);
+        super.dispose();
+    }
+    update(context) {
+        const ins = this.ins;
+        if (ins.shader.changed) {
+            const shader = ins.shader.getValidatedValue();
+            this.getGraphComponents(CVModel2_1.default).forEach(model => model.ins.shader.setValue(shader));
+        }
+        if (ins.annotationsVisible.changed) {
+            const visible = ins.annotationsVisible.value;
+            this.getGraphComponents(CVAnnotationView_1.default).forEach(view => view.ins.visible.setValue(visible));
+        }
+        return true;
+    }
+    preRender(context) {
+        if (this.updated) {
+            context.renderer.toneMappingExposure = this.ins.exposure.value;
+        }
+    }
+    fromData(data) {
+        this.ins.copyValues({
+            shader: setup_1.EShaderMode[data.shader] || setup_1.EShaderMode.Default,
+            exposure: data.exposure !== undefined ? data.exposure : 1,
+            gamma: data.gamma !== undefined ? data.gamma : 1,
+            annotationsVisible: !!data.annotationsVisible,
+        });
+    }
+    toData() {
+        const ins = this.ins;
+        return {
+            shader: setup_1.EShaderMode[ins.shader.value],
+            exposure: ins.exposure.value,
+            gamma: ins.gamma.value,
+            annotationsVisible: ins.annotationsVisible.value,
+        };
+    }
+    onAnnotationsComponent(event) {
+        if (event.add) {
+            event.object.ins.visible.setValue(this.ins.annotationsVisible.value);
+        }
+    }
+}
+CVViewer.typeName = "CVViewer";
+CVViewer.ins = {
+    shader: CRenderable_1.types.Enum("Renderer.Shader", setup_1.EShaderMode),
+    exposure: CRenderable_1.types.Number("Renderer.Exposure", 1),
+    gamma: CRenderable_1.types.Number("Renderer.Gamma", 1),
+    annotationsVisible: CRenderable_1.types.Boolean("Annotations.Visible"),
+};
+exports.default = CVViewer;
+
+
+/***/ }),
+
+/***/ "./io/DocumentValidator.ts":
+/*!*********************************!*\
+  !*** ./io/DocumentValidator.ts ***!
+  \*********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Ajv = __webpack_require__(/*! ajv */ "../../node_modules/ajv/lib/ajv.js");
+const documentSchema = __webpack_require__(/*! common/schema/document.schema.json */ "../common/schema/document.schema.json");
+const commonSchema = __webpack_require__(/*! common/schema/common.schema.json */ "../common/schema/common.schema.json");
+const metaSchema = __webpack_require__(/*! common/schema/meta.schema.json */ "../common/schema/meta.schema.json");
+const modelSchema = __webpack_require__(/*! common/schema/model.schema.json */ "../common/schema/model.schema.json");
+const setupSchema = __webpack_require__(/*! common/schema/setup.schema.json */ "../common/schema/setup.schema.json");
+////////////////////////////////////////////////////////////////////////////////
+class DocumentValidator {
+    constructor() {
+        this._schemaValidator = new Ajv({
+            schemas: [
+                documentSchema,
+                commonSchema,
+                metaSchema,
+                modelSchema,
+                setupSchema,
+            ],
+            allErrors: true
+        });
+        this._validateDocument = this._schemaValidator.getSchema("https://schemas.3d.si.edu/voyager/document.schema.json");
+    }
+    validate(document) {
+        if (!this._validateDocument(document)) {
+            console.warn(this._schemaValidator.errorsText(this._validateDocument.errors, { separator: ", ", dataVar: "document" }));
+            return false;
+        }
+        console.log("JSONValidator.validateDocument - OK");
+        return true;
+    }
+}
+exports.default = DocumentValidator;
+
+
+/***/ }),
+
+/***/ "./io/GeometryReader.ts":
+/*!******************************!*\
+  !*** ./io/GeometryReader.ts ***!
+  \******************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -25799,22 +31129,21 @@ const OBJLoader = THREE.OBJLoader;
 __webpack_require__(/*! three/examples/js/loaders/PLYLoader */ "../../node_modules/three/examples/js/loaders/PLYLoader.js");
 const PLYLoader = THREE.PLYLoader;
 ////////////////////////////////////////////////////////////////////////////////
-class GeometryLoader {
+class GeometryReader {
     constructor(loadingManager) {
         this.objLoader = new OBJLoader(loadingManager);
         this.plyLoader = new PLYLoader(loadingManager);
     }
-    canLoad(url) {
+    isValid(url) {
         const extension = url.split(".").pop().toLowerCase();
-        return GeometryLoader.extensions.indexOf(extension) >= 0;
+        return GeometryReader.extensions.indexOf(extension) >= 0;
     }
-    load(url) {
+    get(url) {
         const extension = url.split(".").pop().toLowerCase();
         return new Promise((resolve, reject) => {
             if (extension === "obj") {
                 this.objLoader.load(url, result => {
                     const geometry = result.children[0].geometry;
-                    console.log(geometry);
                     if (geometry && geometry.type === "Geometry" || geometry.type === "BufferGeometry") {
                         return resolve(geometry);
                     }
@@ -25835,16 +31164,16 @@ class GeometryLoader {
         });
     }
 }
-GeometryLoader.extensions = ["obj", "ply"];
-exports.default = GeometryLoader;
+GeometryReader.extensions = ["obj", "ply"];
+exports.default = GeometryReader;
 
 
 /***/ }),
 
-/***/ "./core/loaders/JSONLoader.ts":
-/*!************************************!*\
-  !*** ./core/loaders/JSONLoader.ts ***!
-  \************************************/
+/***/ "./io/JSONReader.ts":
+/*!**************************!*\
+  !*** ./io/JSONReader.ts ***!
+  \**************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -25868,115 +31197,35 @@ exports.default = GeometryLoader;
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 ////////////////////////////////////////////////////////////////////////////////
-class JSONLoader {
+class JSONReader {
     constructor(loadingManager) {
-        this.loadingManager = loadingManager;
+        this._loadingManager = loadingManager;
     }
-    load(url) {
-        this.loadingManager.itemStart(url);
+    get(url) {
+        this._loadingManager.itemStart(url);
         return fetch(url, {
             headers: {
                 "Accept": "application/json"
             }
         }).then(result => {
             if (!result.ok) {
-                this.loadingManager.itemError(url);
+                this._loadingManager.itemError(url);
                 throw new Error(`failed to fetch from '${url}', status: ${result.status} ${result.statusText}`);
             }
-            this.loadingManager.itemEnd(url);
+            this._loadingManager.itemEnd(url);
             return result.json();
         });
     }
 }
-exports.default = JSONLoader;
+exports.default = JSONReader;
 
 
 /***/ }),
 
-/***/ "./core/loaders/JSONValidator.ts":
-/*!***************************************!*\
-  !*** ./core/loaders/JSONValidator.ts ***!
-  \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * 3D Foundation Project
- * Copyright 2018 Smithsonian Institution
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const Ajv = __webpack_require__(/*! ajv */ "../../node_modules/ajv/lib/ajv.js");
-const mathSchema = __webpack_require__(/*! common/schema/math.schema.json */ "../common/schema/math.schema.json");
-const presentationSchema = __webpack_require__(/*! common/schema/presentation.schema.json */ "../common/schema/presentation.schema.json");
-const configSchema = __webpack_require__(/*! common/schema/config.schema.json */ "../common/schema/config.schema.json");
-const itemSchema = __webpack_require__(/*! common/schema/item.schema.json */ "../common/schema/item.schema.json");
-const metaSchema = __webpack_require__(/*! common/schema/meta.schema.json */ "../common/schema/meta.schema.json");
-const processSchema = __webpack_require__(/*! common/schema/process.schema.json */ "../common/schema/process.schema.json");
-const modelSchema = __webpack_require__(/*! common/schema/model.schema.json */ "../common/schema/model.schema.json");
-const annotationsSchema = __webpack_require__(/*! common/schema/annotations.schema.json */ "../common/schema/annotations.schema.json");
-const storySchema = __webpack_require__(/*! common/schema/story.schema.json */ "../common/schema/story.schema.json");
-const documentsSchema = __webpack_require__(/*! common/schema/documents.schema.json */ "../common/schema/documents.schema.json");
-////////////////////////////////////////////////////////////////////////////////
-class JSONValidator {
-    constructor() {
-        this._schemaValidator = new Ajv({
-            schemas: [
-                mathSchema,
-                presentationSchema,
-                configSchema,
-                itemSchema,
-                metaSchema,
-                processSchema,
-                modelSchema,
-                documentsSchema,
-                annotationsSchema,
-                storySchema
-            ],
-            allErrors: true
-        });
-        this._validatePresentation = this._schemaValidator.getSchema("https://schemas.3d.si.edu/public_api/presentation.schema.json");
-        this._validateItem = this._schemaValidator.getSchema("https://schemas.3d.si.edu/public_api/item.schema.json");
-    }
-    validatePresentation(presentation) {
-        if (!this._validatePresentation(presentation)) {
-            console.warn(this._schemaValidator.errorsText(this._validatePresentation.errors, { separator: ", ", dataVar: "presentation" }));
-            return false;
-        }
-        console.log("JSONValidator.validatePresentation - OK");
-        return true;
-    }
-    validateItem(item) {
-        if (!this._validateItem(item)) {
-            console.warn(this._schemaValidator.errorsText(this._validateItem.errors, { separator: ", ", dataVar: "item" }));
-            return false;
-        }
-        console.log("JSONValidator.validateItem - OK");
-        return true;
-    }
-}
-exports.default = JSONValidator;
-
-
-/***/ }),
-
-/***/ "./core/loaders/ModelLoader.ts":
-/*!*************************************!*\
-  !*** ./core/loaders/ModelLoader.ts ***!
-  \*************************************/
+/***/ "./io/ModelReader.ts":
+/*!***************************!*\
+  !*** ./io/ModelReader.ts ***!
+  \***************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -26008,22 +31257,22 @@ const DRACOLoader = THREE.DRACOLoader;
 const dracoPath = resolve_pathname_1.default("js/draco/", window.location.origin + window.location.pathname);
 DRACOLoader.setDecoderPath(dracoPath);
 console.log("DRACOLoader.setDracoPath - %s", dracoPath);
-const UberPBRMaterial_1 = __webpack_require__(/*! ../shaders/UberPBRMaterial */ "./core/shaders/UberPBRMaterial.ts");
+const UberPBRMaterial_1 = __webpack_require__(/*! ../shaders/UberPBRMaterial */ "./shaders/UberPBRMaterial.ts");
 ////////////////////////////////////////////////////////////////////////////////
-class ModelLoader {
+class ModelReader {
     constructor(loadingManager) {
         this.loadingManager = loadingManager;
         this.gltfLoader = new GLTFLoader(loadingManager);
         this.gltfLoader.setDRACOLoader(new DRACOLoader());
     }
-    canLoad(url) {
+    isValid(url) {
         const extension = url.split(".").pop().toLowerCase();
-        return ModelLoader.extensions.indexOf(extension) >= 0;
+        return ModelReader.extensions.indexOf(extension) >= 0;
     }
-    canLoadMimeType(mimeType) {
-        return ModelLoader.mimeTypes.indexOf(mimeType) >= 0;
+    isValidMimeType(mimeType) {
+        return ModelReader.mimeTypes.indexOf(mimeType) >= 0;
     }
-    load(url) {
+    get(url) {
         return new Promise((resolve, reject) => {
             this.gltfLoader.load(url, gltf => {
                 resolve(this.createModelGroup(gltf));
@@ -26043,6 +31292,7 @@ class ModelLoader {
         model.traverse((object) => {
             if (object.type === "Mesh") {
                 const mesh = object;
+                mesh.castShadow = true;
                 const material = mesh.material;
                 if (material.map) {
                     material.map.encoding = THREE.LinearEncoding;
@@ -26053,8 +31303,9 @@ class ModelLoader {
                     uberMat.copyStandardMaterial(material);
                 }
                 // TODO: Temp to correct test assets
-                uberMat.roughness = 0.6;
-                uberMat.metalness = 0;
+                uberMat.color.set("#ffffff");
+                uberMat.roughness = 0.8;
+                uberMat.metalness = 0.1;
                 uberMat.enableObjectSpaceNormalMap(false);
                 if (!uberMat.map) {
                     uberMat.color.set("#c0c0c0");
@@ -26065,17 +31316,17 @@ class ModelLoader {
         return model;
     }
 }
-ModelLoader.extensions = ["gltf", "glb"];
-ModelLoader.mimeTypes = ["model/gltf+json", "model/gltf-binary"];
-exports.default = ModelLoader;
+ModelReader.extensions = ["gltf", "glb"];
+ModelReader.mimeTypes = ["model/gltf+json", "model/gltf-binary"];
+exports.default = ModelReader;
 
 
 /***/ }),
 
-/***/ "./core/loaders/TextureLoader.ts":
-/*!***************************************!*\
-  !*** ./core/loaders/TextureLoader.ts ***!
-  \***************************************/
+/***/ "./io/TextureReader.ts":
+/*!*****************************!*\
+  !*** ./io/TextureReader.ts ***!
+  \*****************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -26100,18 +31351,18 @@ exports.default = ModelLoader;
 Object.defineProperty(exports, "__esModule", { value: true });
 const THREE = __webpack_require__(/*! three */ "three");
 ////////////////////////////////////////////////////////////////////////////////
-class TextureLoader {
+class TextureReader {
     constructor(loadingManager) {
         this.textureLoader = new THREE.TextureLoader(loadingManager);
     }
-    canLoad(url) {
+    isValid(url) {
         const extension = url.split(".").pop().toLowerCase();
-        return TextureLoader.extensions.indexOf(extension) >= 0;
+        return TextureReader.extensions.indexOf(extension) >= 0;
     }
-    canLoadMimeType(mimeType) {
-        return TextureLoader.mimeTypes.indexOf(mimeType) >= 0;
+    isValidMimeType(mimeType) {
+        return TextureReader.mimeTypes.indexOf(mimeType) >= 0;
     }
-    load(url) {
+    get(url) {
         return new Promise((resolve, reject) => {
             this.textureLoader.load(url, texture => {
                 resolve(texture);
@@ -26121,22 +31372,22 @@ class TextureLoader {
             });
         });
     }
-    loadImmediate(url) {
+    getImmediate(url) {
         return this.textureLoader.load(url, null, null, errorEvent => {
             console.error(errorEvent);
         });
     }
 }
-TextureLoader.extensions = ["jpg", "png"];
-TextureLoader.mimeTypes = ["image/jpeg", "image/png"];
-exports.default = TextureLoader;
+TextureReader.extensions = ["jpg", "png"];
+TextureReader.mimeTypes = ["image/jpeg", "image/png"];
+exports.default = TextureReader;
 
 
 /***/ }),
 
-/***/ "./core/models/Asset.ts":
+/***/ "./models/Annotation.ts":
 /*!******************************!*\
-  !*** ./core/models/Asset.ts ***!
+  !*** ./models/Annotation.ts ***!
   \******************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
@@ -26160,116 +31411,340 @@ exports.default = TextureLoader;
  * limitations under the License.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-var EAssetType;
-(function (EAssetType) {
-    EAssetType[EAssetType["Model"] = 0] = "Model";
-    EAssetType[EAssetType["Geometry"] = 1] = "Geometry";
-    EAssetType[EAssetType["Image"] = 2] = "Image";
-    EAssetType[EAssetType["Texture"] = 3] = "Texture";
-    EAssetType[EAssetType["Points"] = 4] = "Points";
-    EAssetType[EAssetType["Volume"] = 5] = "Volume";
-})(EAssetType = exports.EAssetType || (exports.EAssetType = {}));
-var EMapType;
-(function (EMapType) {
-    EMapType[EMapType["Color"] = 0] = "Color";
-    EMapType[EMapType["Normal"] = 1] = "Normal";
-    EMapType[EMapType["Occlusion"] = 2] = "Occlusion";
-    EMapType[EMapType["Emissive"] = 3] = "Emissive";
-    EMapType[EMapType["MetallicRoughness"] = 4] = "MetallicRoughness";
-    EMapType[EMapType["Zone"] = 5] = "Zone";
-})(EMapType = exports.EMapType || (exports.EMapType = {}));
-class Asset {
-    constructor(typeOrData, uri) {
-        this.uri = "";
-        this.mimeType = "";
-        this.type = undefined;
-        this.mapType = undefined;
-        this.byteSize = 0;
-        this.numFaces = 0;
-        this.numVertices = 0;
-        this.imageSize = 0;
-        if (uri === undefined) {
-            this.fromData(typeOrData);
-        }
-        else {
-            this.type = typeOrData;
-            this.uri = uri;
-        }
+const Document_1 = __webpack_require__(/*! @ff/core/Document */ "../../libs/ff-core/source/Document.ts");
+var EAnnotationStyle;
+(function (EAnnotationStyle) {
+    EAnnotationStyle[EAnnotationStyle["Default"] = 0] = "Default";
+    EAnnotationStyle[EAnnotationStyle["Line"] = 1] = "Line";
+    EAnnotationStyle[EAnnotationStyle["Balloon"] = 2] = "Balloon";
+})(EAnnotationStyle = exports.EAnnotationStyle || (exports.EAnnotationStyle = {}));
+class Annotation extends Document_1.default {
+    static fromJSON(json) {
+        return new Annotation(json);
     }
-    isValid() {
-        return !!this.uri && this.type !== undefined;
-    }
-    fromData(assetData) {
-        this.uri = assetData.uri;
-        this.mimeType = assetData.mimeType || "";
-        this.type = EAssetType[assetData.type];
-        this.mapType = EMapType[assetData.mapType];
-        this.byteSize = assetData.byteSize || 0;
-        this.numFaces = assetData.numFaces || 0;
-        this.numVertices = assetData.numVertices || 0;
-        this.imageSize = assetData.imageSize || 0;
-        if (this.type === undefined) {
-            this.type = this.guessAssetType();
-            if (this.type === undefined) {
-                console.warn(`failed to determine asset type from asset: ${this.uri}`);
-            }
-        }
-    }
-    toData() {
-        const data = {
-            uri: this.uri,
-            type: EAssetType[this.type]
+    init() {
+        return {
+            id: this.generateId(),
+            title: "New Annotation",
+            lead: "",
+            tags: [],
+            articleId: "",
+            imageUri: "",
+            style: EAnnotationStyle.Default,
+            visible: true,
+            expanded: false,
+            position: null,
+            direction: null,
+            scale: 1,
+            offset: 0,
+            tilt: 0,
+            azimuth: 0,
+            zoneIndex: -1,
         };
-        if (this.mimeType) {
-            data.mimeType = this.mimeType;
+    }
+    deflate(data, json) {
+        json.id = data.id;
+        if (data.title) {
+            json.title = data.title;
         }
-        if (this.mapType !== undefined) {
-            data.mapType = EMapType[this.mapType];
+        if (data.lead) {
+            json.lead = data.lead;
         }
-        if (this.byteSize > 0) {
-            data.byteSize = this.byteSize;
+        if (data.tags.length > 0) {
+            json.tags = data.tags;
         }
-        if (this.type === EAssetType.Model || this.type === EAssetType.Geometry) {
-            if (this.numFaces > 0) {
-                data.numFaces = this.numFaces;
-            }
-            if (this.numVertices > 0) {
-                data.numVertices = this.numVertices;
-            }
+        if (data.articleId) {
+            json.articleId = data.articleId;
         }
-        if (this.type === EAssetType.Image || this.type === EAssetType.Texture) {
-            if (this.imageSize > 0) {
-                data.imageSize = this.imageSize;
-            }
+        if (data.imageUri) {
+            json.imageUri = data.imageUri;
+        }
+        if (data.style !== EAnnotationStyle.Default) {
+            json.style = EAnnotationStyle[data.style];
+        }
+        if (data.visible === false) {
+            json.visible = data.visible;
+        }
+        // TODO: Decide whether to serialize
+        // if (data.expanded) {
+        //     json.expanded = data.expanded;
+        // }
+        if (data.position) {
+            json.position = data.position.slice();
+        }
+        if (data.direction) {
+            json.direction = data.direction.slice();
+        }
+        if (data.scale !== 1) {
+            json.scale = data.scale;
+        }
+        if (data.offset !== 0) {
+            json.offset = data.offset;
+        }
+        if (data.tilt !== 0) {
+            json.tilt = data.tilt;
+        }
+        if (data.azimuth !== 0) {
+            json.azimuth = data.azimuth;
+        }
+        if (data.zoneIndex > -1) {
+            json.zoneIndex = data.zoneIndex;
         }
         return data;
     }
+    inflate(json, data) {
+        data.id = json.id;
+        data.title = json.title || "";
+        data.lead = json.lead || "";
+        data.tags = json.tags || [];
+        data.articleId = json.articleId || "";
+        data.imageUri = json.imageUri || "";
+        data.style = EAnnotationStyle[json.style] || EAnnotationStyle.Default;
+        data.visible = json.visible !== undefined ? json.visible : true;
+        data.expanded = json.expanded || false;
+        data.position = json.position.slice();
+        data.direction = json.direction.slice();
+        data.scale = json.scale !== undefined ? json.scale : 1;
+        data.offset = json.offset || 0;
+        data.tilt = json.tilt || 0;
+        data.azimuth = json.azimuth || 0;
+        data.zoneIndex = json.zoneIndex !== undefined ? json.zoneIndex : -1;
+    }
+}
+exports.default = Annotation;
+
+
+/***/ }),
+
+/***/ "./models/Article.ts":
+/*!***************************!*\
+  !*** ./models/Article.ts ***!
+  \***************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Document_1 = __webpack_require__(/*! @ff/core/Document */ "../../libs/ff-core/source/Document.ts");
+class Article extends Document_1.default {
+    static fromJSON(json) {
+        return new Article(json);
+    }
     toString() {
-        return `Asset - type: '${EAssetType[this.type]}', uri: '${this.uri}', mime type: '${this.mimeType || "(not set)"}'`;
+        return this.data.title;
+    }
+    init() {
+        return {
+            id: this.generateId(),
+            title: "New Article",
+            lead: "",
+            tags: [],
+            uri: "",
+            mimeType: "",
+            thumbnailUri: "",
+        };
+    }
+    deflate(data, json) {
+        json.id = data.id;
+        json.uri = data.uri;
+        if (data.title) {
+            json.title = data.title;
+        }
+        if (data.lead) {
+            json.lead = data.lead;
+        }
+        if (data.tags.length > 0) {
+            json.tags = data.tags.slice();
+        }
+        if (data.mimeType) {
+            json.mimeType = data.mimeType;
+        }
+        if (data.thumbnailUri) {
+            json.thumbnailUri = data.thumbnailUri;
+        }
+    }
+    inflate(json, data) {
+        data.id = json.id;
+        data.uri = json.uri;
+        data.title = json.title || "";
+        data.lead = json.lead || "";
+        data.tags = json.tags || [];
+        data.mimeType = json.mimeType || "";
+        data.thumbnailUri = json.thumbnailUri || "";
+    }
+}
+exports.default = Article;
+
+
+/***/ }),
+
+/***/ "./models/Asset.ts":
+/*!*************************!*\
+  !*** ./models/Asset.ts ***!
+  \*************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Document_1 = __webpack_require__(/*! @ff/core/Document */ "../../libs/ff-core/source/Document.ts");
+const model_1 = __webpack_require__(/*! common/types/model */ "../common/types/model.ts");
+exports.EAssetType = model_1.EAssetType;
+exports.EMapType = model_1.EMapType;
+class Asset extends Document_1.default {
+    setModel(uri) {
+        this.data.uri = uri;
+        this.data.type = model_1.EAssetType.Model;
+        this.data.mimeType = this.guessAssetMimeType();
+    }
+    setGeometry(uri) {
+        this.data.uri = uri;
+        this.data.type = model_1.EAssetType.Geometry;
+        this.data.mimeType = this.guessAssetMimeType();
+    }
+    setTexture(uri, mapType) {
+        this.data.uri = uri;
+        this.data.type = model_1.EAssetType.Image;
+        this.data.mimeType = this.guessAssetMimeType();
+        this.data.mapType = mapType;
+    }
+    isValid() {
+        return !!this.data.uri && this.data.type !== undefined;
+    }
+    toString() {
+        const data = this.data;
+        return `Asset - type: '${model_1.EAssetType[data.type]}', uri: '${data.uri}', mime type: '${data.mimeType || "(not set)"}'`;
+    }
+    init() {
+        return {
+            uri: "",
+            mimeType: "",
+            type: undefined,
+            mapType: undefined,
+            byteSize: 0,
+            numFaces: 0,
+            numVertices: 0,
+            imageSize: 0,
+        };
+    }
+    deflate(data, json) {
+        json.uri = data.uri;
+        json.type = model_1.EAssetType[data.type];
+        if (data.mimeType) {
+            json.mimeType = data.mimeType;
+        }
+        if (data.mapType !== undefined) {
+            json.mapType = model_1.EMapType[data.mapType];
+        }
+        if (data.byteSize > 0) {
+            json.byteSize = data.byteSize;
+        }
+        // for model and geometry assets, save number of faces
+        if (data.type === model_1.EAssetType.Model || data.type === model_1.EAssetType.Geometry) {
+            if (data.numFaces > 0) {
+                json.numFaces = data.numFaces;
+            }
+        }
+        // for model, image, and texture assets, save image/map size
+        if (data.type === model_1.EAssetType.Model || data.type === model_1.EAssetType.Image || data.type === model_1.EAssetType.Texture) {
+            if (data.imageSize > 0) {
+                json.imageSize = data.imageSize;
+            }
+        }
+    }
+    inflate(json, data) {
+        data.uri = json.uri;
+        data.mimeType = json.mimeType || "";
+        data.type = model_1.EAssetType[json.type];
+        data.mapType = model_1.EMapType[json.mapType];
+        data.byteSize = json.byteSize || 0;
+        data.numFaces = json.numFaces || 0;
+        data.imageSize = json.imageSize || 0;
+        if (data.type === undefined) {
+            data.type = this.guessAssetType();
+            if (data.type === undefined) {
+                console.warn(`failed to determine asset type from asset: ${data.uri}`);
+            }
+        }
     }
     guessAssetType() {
-        if (this.type !== undefined && EAssetType[this.type]) {
-            return this.type;
+        const data = this.data;
+        if (data.type !== undefined && model_1.EAssetType[data.type]) {
+            return data.type;
         }
-        if (this.mimeType) {
-            if (this.mimeType === Asset.mimeType.gltfJson || this.mimeType === Asset.mimeType.gltfBinary) {
-                return EAssetType.Model;
+        if (data.mimeType) {
+            if (data.mimeType === Asset.mimeType.gltfJson || data.mimeType === Asset.mimeType.gltfBinary) {
+                return model_1.EAssetType.Model;
             }
-            if (this.mimeType === Asset.mimeType.imageJpeg || this.mimeType === Asset.mimeType.imagePng) {
-                return EAssetType.Image;
+            if (data.mimeType === Asset.mimeType.imageJpeg || data.mimeType === Asset.mimeType.imagePng) {
+                return model_1.EAssetType.Image;
             }
         }
-        const extension = this.uri.split(".").pop().toLowerCase();
+        const extension = data.uri.split(".").pop().toLowerCase();
         if (extension === "gltf" || extension === "glb") {
-            return EAssetType.Model;
+            return model_1.EAssetType.Model;
         }
         if (extension === "obj" || extension === "ply") {
-            return EAssetType.Geometry;
+            return model_1.EAssetType.Geometry;
         }
         if (extension === "jpg" || extension === "png") {
-            return EAssetType.Image;
+            return model_1.EAssetType.Image;
         }
         return undefined;
+    }
+    guessAssetMimeType() {
+        const data = this.data;
+        if (data.mimeType) {
+            return data.mimeType;
+        }
+        const extension = data.uri.split(".").pop().toLowerCase();
+        if (extension === "gltf") {
+            return Asset.mimeType.gltfJson;
+        }
+        if (extension === "glb") {
+            return Asset.mimeType.gltfBinary;
+        }
+        if (extension === "jpg") {
+            return Asset.mimeType.imageJpeg;
+        }
+        if (extension === "png") {
+            return Asset.mimeType.imagePng;
+        }
+        return "";
     }
 }
 Asset.mimeType = {
@@ -26283,10 +31758,10 @@ exports.default = Asset;
 
 /***/ }),
 
-/***/ "./core/models/Derivative.ts":
-/*!***********************************!*\
-  !*** ./core/models/Derivative.ts ***!
-  \***********************************/
+/***/ "./models/Derivative.ts":
+/*!******************************!*\
+  !*** ./models/Derivative.ts ***!
+  \******************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -26311,53 +31786,33 @@ exports.default = Asset;
 Object.defineProperty(exports, "__esModule", { value: true });
 const THREE = __webpack_require__(/*! three */ "three");
 const helpers_1 = __webpack_require__(/*! @ff/three/helpers */ "../../libs/ff-three/source/helpers.ts");
-const UberPBRMaterial_1 = __webpack_require__(/*! ../shaders/UberPBRMaterial */ "./core/shaders/UberPBRMaterial.ts");
-const Asset_1 = __webpack_require__(/*! ./Asset */ "./core/models/Asset.ts");
+const Document_1 = __webpack_require__(/*! @ff/core/Document */ "../../libs/ff-core/source/Document.ts");
+const model_1 = __webpack_require__(/*! common/types/model */ "../common/types/model.ts");
+exports.EDerivativeQuality = model_1.EDerivativeQuality;
+exports.EDerivativeUsage = model_1.EDerivativeUsage;
+const UberPBRMaterial_1 = __webpack_require__(/*! ../shaders/UberPBRMaterial */ "./shaders/UberPBRMaterial.ts");
+const Asset_1 = __webpack_require__(/*! ./Asset */ "./models/Asset.ts");
 exports.Asset = Asset_1.default;
 exports.EAssetType = Asset_1.EAssetType;
-var EDerivativeUsage;
-(function (EDerivativeUsage) {
-    EDerivativeUsage[EDerivativeUsage["Web2D"] = 0] = "Web2D";
-    EDerivativeUsage[EDerivativeUsage["Web3D"] = 1] = "Web3D";
-    EDerivativeUsage[EDerivativeUsage["Print"] = 2] = "Print";
-    EDerivativeUsage[EDerivativeUsage["Editorial"] = 3] = "Editorial";
-})(EDerivativeUsage = exports.EDerivativeUsage || (exports.EDerivativeUsage = {}));
-var EDerivativeQuality;
-(function (EDerivativeQuality) {
-    EDerivativeQuality[EDerivativeQuality["Thumb"] = 0] = "Thumb";
-    EDerivativeQuality[EDerivativeQuality["Low"] = 1] = "Low";
-    EDerivativeQuality[EDerivativeQuality["Medium"] = 2] = "Medium";
-    EDerivativeQuality[EDerivativeQuality["High"] = 3] = "High";
-    EDerivativeQuality[EDerivativeQuality["Highest"] = 4] = "Highest";
-    EDerivativeQuality[EDerivativeQuality["LOD"] = 5] = "LOD";
-    EDerivativeQuality[EDerivativeQuality["Stream"] = 6] = "Stream";
-})(EDerivativeQuality = exports.EDerivativeQuality || (exports.EDerivativeQuality = {}));
-class Derivative {
-    constructor(usageOrData, quality) {
-        this.id = "";
-        if (quality === undefined) {
-            this.fromData(usageOrData);
-        }
-        else {
-            this.usage = usageOrData;
-            this.quality = quality;
-            this.assets = [];
-        }
+class Derivative extends Document_1.default {
+    constructor() {
+        super(...arguments);
         this.model = null;
     }
-    dispose() {
-        if (this.model) {
-            helpers_1.disposeObject(this.model);
-        }
+    static fromJSON(json) {
+        return new Derivative(json);
     }
-    load(loaders, assetPath) {
-        if (this.usage !== EDerivativeUsage.Web3D) {
+    dispose() {
+        this.unload();
+        super.dispose();
+    }
+    load(assetReader) {
+        if (this.data.usage !== model_1.EDerivativeUsage.Web3D) {
             throw new Error("can't load, not a Web3D derivative");
         }
-        console.log("Derivative.load - asset path: %s", assetPath);
         const modelAsset = this.findAsset(Asset_1.EAssetType.Model);
         if (modelAsset) {
-            return loaders.loadModel(modelAsset, assetPath)
+            return assetReader.getModel(modelAsset.data.uri)
                 .then(object => {
                 if (this.model) {
                     helpers_1.disposeObject(this.model);
@@ -26369,10 +31824,10 @@ class Derivative {
         const geoAsset = this.findAsset(Asset_1.EAssetType.Geometry);
         const imageAssets = this.findAssets(Asset_1.EAssetType.Image);
         if (geoAsset) {
-            return loaders.loadGeometry(geoAsset, assetPath)
+            return assetReader.getGeometry(geoAsset.data.uri)
                 .then(geometry => {
                 this.model = new THREE.Mesh(geometry, new UberPBRMaterial_1.default());
-                return Promise.all(imageAssets.map(asset => loaders.loadTexture(asset, assetPath)))
+                return Promise.all(imageAssets.map(asset => assetReader.getTexture(asset.data.uri)))
                     .catch(error => {
                     console.warn("failed to load texture files");
                     return [];
@@ -26390,52 +31845,75 @@ class Derivative {
             });
         }
     }
-    createAsset(type, uri) {
-        if (!uri) {
-            throw new Error("uri must be specified");
+    unload() {
+        if (this.model) {
+            helpers_1.disposeObject(this.model);
         }
-        const asset = new Asset_1.default(type, uri);
-        this.assets.push(asset);
+    }
+    createAsset(type, uri) {
+        const asset = new Asset_1.default();
+        asset.data.type = type;
+        asset.data.uri = uri;
+        this.addAsset(asset);
         return asset;
     }
-    fromData(data) {
-        this.usage = EDerivativeUsage[data.usage];
-        if (this.usage === undefined) {
-            throw new Error(`unknown derivative usage: ${data.usage}`);
+    addAsset(asset) {
+        if (!asset.data.uri) {
+            throw new Error("uri must be specified");
         }
-        this.quality = EDerivativeQuality[data.quality];
-        if (this.quality === undefined) {
-            throw new Error(`unknown derivative quality: ${data.quality}`);
-        }
-        this.assets = data.assets.map(assetData => new Asset_1.default(assetData));
+        this.data.assets.push(asset);
+        this.update();
     }
-    toData() {
-        return {
-            usage: EDerivativeUsage[this.usage],
-            quality: EDerivativeQuality[this.quality],
-            assets: this.assets.map(asset => asset.toData())
-        };
-    }
-    toString(verbose = false) {
-        if (verbose) {
-            return `Derivative - usage: '${EDerivativeUsage[this.usage]}', quality: '${EDerivativeQuality[this.quality]}'\n   `
-                + this.assets.map(asset => asset.toString()).join("\n   ");
-        }
-        else {
-            return `Derivative - usage: '${EDerivativeUsage[this.usage]}', quality: '${EDerivativeQuality[this.quality]}', #assets: ${this.assets.length})`;
+    removeAsset(asset) {
+        const index = this.data.assets.indexOf(asset);
+        if (index >= 0) {
+            this.data.assets.splice(index, 1);
         }
     }
     findAsset(type) {
-        return this.assets.find(asset => asset.type === type);
+        return this.data.assets.find(asset => asset.data.type === type);
     }
     findAssets(type) {
-        return this.assets.filter(asset => asset.type === type);
+        return this.data.assets.filter(asset => asset.data.type === type);
+    }
+    toString(verbose = false) {
+        const data = this.data;
+        if (verbose) {
+            return `Derivative - usage: '${model_1.EDerivativeUsage[data.usage]}', quality: '${model_1.EDerivativeQuality[data.quality]}'\n   `
+                + data.assets.map(asset => asset.toString()).join("\n   ");
+        }
+        else {
+            return `Derivative - usage: '${model_1.EDerivativeUsage[data.usage]}', quality: '${model_1.EDerivativeQuality[data.quality]}', #assets: ${data.assets.length})`;
+        }
+    }
+    init() {
+        return {
+            usage: model_1.EDerivativeUsage.Web3D,
+            quality: model_1.EDerivativeQuality.Medium,
+            assets: [],
+        };
+    }
+    deflate(data, json) {
+        json.usage = model_1.EDerivativeUsage[data.usage];
+        json.quality = model_1.EDerivativeQuality[data.quality];
+        json.assets = data.assets.map(asset => asset.toJSON());
+    }
+    inflate(json, data) {
+        data.usage = model_1.EDerivativeUsage[json.usage];
+        if (data.usage === undefined) {
+            throw new Error(`unknown derivative usage: ${json.usage}`);
+        }
+        data.quality = model_1.EDerivativeQuality[json.quality];
+        if (data.quality === undefined) {
+            throw new Error(`unknown derivative quality: ${json.quality}`);
+        }
+        data.assets = json.assets.map(assetJson => new Asset_1.default(assetJson));
     }
     assignTextures(assets, textures, material) {
         for (let i = 0; i < assets.length; ++i) {
             const asset = assets[i];
             const texture = textures[i];
-            switch (asset.mapType) {
+            switch (asset.data.mapType) {
                 case Asset_1.EMapType.Color:
                     material.map = texture;
                     break;
@@ -26455,38 +31933,16 @@ class Derivative {
             }
         }
     }
-    disposeMesh(mesh) {
-        mesh.geometry.dispose();
-        const material = mesh.material;
-        if (material.map) {
-            material.map.dispose();
-        }
-        if (material.aoMap) {
-            material.aoMap.dispose();
-        }
-        if (material.emissiveMap) {
-            material.emissiveMap.dispose();
-        }
-        if (material.metalnessMap) {
-            material.metalnessMap.dispose();
-        }
-        if (material.roughnessMap) {
-            material.roughnessMap.dispose();
-        }
-        if (material.normalMap) {
-            material.normalMap.dispose();
-        }
-    }
 }
 exports.default = Derivative;
 
 
 /***/ }),
 
-/***/ "./core/models/DerivativeList.ts":
-/*!***************************************!*\
-  !*** ./core/models/DerivativeList.ts ***!
-  \***************************************/
+/***/ "./models/DerivativeList.ts":
+/*!**********************************!*\
+  !*** ./models/DerivativeList.ts ***!
+  \**********************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -26509,8 +31965,8 @@ exports.default = Derivative;
  * limitations under the License.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-const Derivative_1 = __webpack_require__(/*! ./Derivative */ "./core/models/Derivative.ts");
-const Asset_1 = __webpack_require__(/*! ./Asset */ "./core/models/Asset.ts");
+const Derivative_1 = __webpack_require__(/*! ./Derivative */ "./models/Derivative.ts");
+const Asset_1 = __webpack_require__(/*! ./Asset */ "./models/Asset.ts");
 ////////////////////////////////////////////////////////////////////////////////
 const _EMPTY_ARRAY = [];
 const _qualityLevels = [
@@ -26567,12 +32023,16 @@ class DerivativeList {
         const key = Derivative_1.EDerivativeUsage[usage];
         return this.derivatives[key] || _EMPTY_ARRAY;
     }
+    getArray() {
+        return Object.keys(this.derivatives)
+            .reduce((arr, key) => arr.concat(this.derivatives[key]), []);
+    }
     get(usage, quality) {
         const key = Derivative_1.EDerivativeUsage[usage];
         const bin = this.derivatives[key];
         if (bin) {
             for (let i = 0, n = bin.length; i < n; ++i) {
-                if (bin[i].quality === quality) {
+                if (bin[i].data.quality === quality) {
                     return bin[i];
                 }
             }
@@ -26582,25 +32042,46 @@ class DerivativeList {
     getOrCreate(usage, quality) {
         const bin = this.getOrCreateBin(usage);
         for (let i = 0, n = bin.length; i < n; ++i) {
-            if (bin[i].quality === quality) {
+            if (bin[i].data.quality === quality) {
                 return bin[i];
             }
         }
-        const derivative = new Derivative_1.default(usage, quality);
+        const derivative = new Derivative_1.default();
+        derivative.set("usage", usage);
+        derivative.set("quality", quality);
         bin.push(derivative);
         return derivative;
     }
-    createModelAsset(uri, quality) {
+    createModelAsset(assetPath, quality) {
+        quality = (typeof quality === "string" ? Derivative_1.EDerivativeQuality[quality] : quality);
+        quality = isFinite(quality) ? quality : Derivative_1.EDerivativeQuality.Medium;
         const derivative = this.getOrCreate(Derivative_1.EDerivativeUsage.Web3D, quality);
-        derivative.createAsset(Asset_1.EAssetType.Model, uri);
+        const asset = new Asset_1.default();
+        asset.setModel(assetPath);
+        derivative.addAsset(asset);
         return derivative;
     }
-    createMeshAsset(geoUri, textureUri, quality) {
+    createMeshAsset(geoPath, colorMapPath, occlusionMapPath, normalMapPath, quality) {
+        quality = (typeof quality === "string" ? Derivative_1.EDerivativeQuality[quality] : quality);
+        quality = isFinite(quality) ? quality : Derivative_1.EDerivativeQuality.Medium;
         const derivative = this.getOrCreate(Derivative_1.EDerivativeUsage.Web3D, quality);
-        derivative.createAsset(Asset_1.EAssetType.Geometry, geoUri);
-        if (textureUri) {
-            const asset = derivative.createAsset(Asset_1.EAssetType.Image, textureUri);
-            asset.mapType = Asset_1.EMapType.Color;
+        const geoAsset = new Asset_1.default();
+        geoAsset.setGeometry(geoPath);
+        derivative.addAsset(geoAsset);
+        if (colorMapPath) {
+            const colorMapAsset = new Asset_1.default();
+            colorMapAsset.setTexture(colorMapPath, Asset_1.EMapType.Color);
+            derivative.addAsset(colorMapAsset);
+        }
+        if (occlusionMapPath) {
+            const occlusionMapAsset = new Asset_1.default();
+            occlusionMapAsset.setTexture(occlusionMapPath, Asset_1.EMapType.Occlusion);
+            derivative.addAsset(occlusionMapAsset);
+        }
+        if (normalMapPath) {
+            const normalMapAsset = new Asset_1.default();
+            normalMapAsset.setTexture(normalMapPath, Asset_1.EMapType.Normal);
+            derivative.addAsset(normalMapAsset);
         }
         return derivative;
     }
@@ -26610,14 +32091,14 @@ class DerivativeList {
         }
         this.derivatives = {};
     }
-    toData() {
+    toJSON() {
         const data = [];
         for (let key in this.derivatives) {
-            this.derivatives[key].forEach(derivative => data.push(derivative.toData()));
+            this.derivatives[key].forEach(derivative => data.push(derivative.toJSON()));
         }
         return data;
     }
-    fromData(data) {
+    fromJSON(data) {
         this.clear();
         data.forEach(derivativeData => {
             const bin = this.getOrCreateBin(Derivative_1.EDerivativeUsage[derivativeData.usage]);
@@ -26644,10 +32125,426 @@ exports.default = DerivativeList;
 
 /***/ }),
 
-/***/ "./core/shaders/UberPBRMaterial.ts":
-/*!*****************************************!*\
-  !*** ./core/shaders/UberPBRMaterial.ts ***!
-  \*****************************************/
+/***/ "./nodes/NVDocuments.ts":
+/*!******************************!*\
+  !*** ./nodes/NVDocuments.ts ***!
+  \******************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Node_1 = __webpack_require__(/*! @ff/graph/Node */ "../../libs/ff-graph/source/Node.ts");
+const CScene_1 = __webpack_require__(/*! @ff/scene/components/CScene */ "../../libs/ff-scene/source/components/CScene.ts");
+const CVDocumentProvider_1 = __webpack_require__(/*! ../components/CVDocumentProvider */ "./components/CVDocumentProvider.ts");
+const CVNodeProvider_1 = __webpack_require__(/*! ../components/CVNodeProvider */ "./components/CVNodeProvider.ts");
+////////////////////////////////////////////////////////////////////////////////
+class NVDocuments extends Node_1.default {
+    get scene() {
+        return this.components.get(CScene_1.default);
+    }
+    get documentProvider() {
+        return this.components.get(CVDocumentProvider_1.default);
+    }
+    get nodeProvider() {
+        return this.components.get(CVNodeProvider_1.default);
+    }
+    createComponents() {
+        this.createComponent(CScene_1.default, "Master Scene");
+        this.createComponent(CVDocumentProvider_1.default);
+        this.createComponent(CVNodeProvider_1.default);
+    }
+}
+NVDocuments.typeName = "NVDocuments";
+exports.default = NVDocuments;
+
+
+/***/ }),
+
+/***/ "./nodes/NVEngine.ts":
+/*!***************************!*\
+  !*** ./nodes/NVEngine.ts ***!
+  \***************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Node_1 = __webpack_require__(/*! @ff/graph/Node */ "../../libs/ff-graph/source/Node.ts");
+const CPulse_1 = __webpack_require__(/*! @ff/graph/components/CPulse */ "../../libs/ff-graph/source/components/CPulse.ts");
+const CRenderer_1 = __webpack_require__(/*! @ff/scene/components/CRenderer */ "../../libs/ff-scene/source/components/CRenderer.ts");
+const CPickSelection_1 = __webpack_require__(/*! @ff/scene/components/CPickSelection */ "../../libs/ff-scene/source/components/CPickSelection.ts");
+const CFullscreen_1 = __webpack_require__(/*! @ff/scene/components/CFullscreen */ "../../libs/ff-scene/source/components/CFullscreen.ts");
+const CVAssetReader_1 = __webpack_require__(/*! ../components/CVAssetReader */ "./components/CVAssetReader.ts");
+////////////////////////////////////////////////////////////////////////////////
+class NVEngine extends Node_1.default {
+    get pulse() {
+        return this.components.get(CPulse_1.default);
+    }
+    get renderer() {
+        return this.components.get(CRenderer_1.default);
+    }
+    get fullscreen() {
+        return this.components.get(CFullscreen_1.default);
+    }
+    get selection() {
+        return this.components.get(CPickSelection_1.default);
+    }
+    get assetReader() {
+        return this.components.get(CVAssetReader_1.default);
+    }
+    createComponents() {
+        this.createComponent(CPulse_1.default);
+        this.createComponent(CRenderer_1.default);
+        this.createComponent(CFullscreen_1.default);
+        this.createComponent(CVAssetReader_1.default);
+        const selection = this.createComponent(CPickSelection_1.default);
+        // allow simultaneous selection of nodes and components
+        //selection.exclusiveSelect = false;
+        // don't allow selecting multiple nodes or components
+        //selection.multiSelect = false;
+        // do not display selection brackets
+        selection.ins.viewportBrackets.setValue(false);
+    }
+}
+NVEngine.typeName = "NVEngine";
+exports.default = NVEngine;
+
+
+/***/ }),
+
+/***/ "./nodes/NVNode.ts":
+/*!*************************!*\
+  !*** ./nodes/NVNode.ts ***!
+  \*************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const Node_1 = __webpack_require__(/*! @ff/graph/Node */ "../../libs/ff-graph/source/Node.ts");
+const CVNode_1 = __webpack_require__(/*! ../components/CVNode */ "./components/CVNode.ts");
+const CVCamera_1 = __webpack_require__(/*! ../components/CVCamera */ "./components/CVCamera.ts");
+const CVLight_1 = __webpack_require__(/*! ../components/CVLight */ "./components/CVLight.ts");
+const CVDirectionalLight_1 = __webpack_require__(/*! ../components/CVDirectionalLight */ "./components/CVDirectionalLight.ts");
+const CVPointLight_1 = __webpack_require__(/*! ../components/CVPointLight */ "./components/CVPointLight.ts");
+const CVSpotLight_1 = __webpack_require__(/*! ../components/CVSpotLight */ "./components/CVSpotLight.ts");
+const CVMeta_1 = __webpack_require__(/*! ../components/CVMeta */ "./components/CVMeta.ts");
+const CVModel2_1 = __webpack_require__(/*! ../components/CVModel2 */ "./components/CVModel2.ts");
+const CVScene_1 = __webpack_require__(/*! ../components/CVScene */ "./components/CVScene.ts");
+class NVNode extends Node_1.default {
+    get transform() {
+        return this.components.get(CVNode_1.default);
+    }
+    get meta() {
+        return this.components.get(CVMeta_1.default, true);
+    }
+    get model() {
+        return this.components.get(CVModel2_1.default, true);
+    }
+    get camera() {
+        return this.components.get(CVCamera_1.default, true);
+    }
+    get light() {
+        return this.components.get(CVLight_1.CLight, true);
+    }
+    get scene() {
+        return this.components.get(CVScene_1.default, true);
+    }
+    createComponents() {
+        this.name = "Node";
+        this.createComponent(CVNode_1.default);
+    }
+    createModel() {
+        this.name = "Model";
+        this.createComponent(CVMeta_1.default);
+        this.createComponent(CVModel2_1.default);
+    }
+    fromDocument(document, nodeIndex, pathMap) {
+        const node = document.nodes[nodeIndex];
+        this.transform.fromData(node);
+        let name = "Node";
+        if (isFinite(node.meta)) {
+            this.createComponent(CVMeta_1.default).fromDocument(document, node);
+            pathMap.set(`meta/${node.meta}`, this.meta);
+            name = "Meta";
+        }
+        if (isFinite(node.model)) {
+            this.createComponent(CVModel2_1.default).fromDocument(document, node);
+            pathMap.set(`model/${node.model}`, this.model);
+            name = "Model";
+        }
+        if (isFinite(node.camera)) {
+            this.createComponent(CVCamera_1.default).fromDocument(document, node);
+            pathMap.set(`camera/${node.camera}`, this.camera);
+            name = "Camera";
+        }
+        if (isFinite(node.light)) {
+            const type = document.lights[node.light].type;
+            switch (type) {
+                case "directional":
+                    this.createComponent(CVDirectionalLight_1.default).fromDocument(document, node);
+                    name = "Directional Light";
+                    break;
+                case "point":
+                    this.createComponent(CVPointLight_1.default).fromDocument(document, node);
+                    name = "Point Light";
+                    break;
+                case "spot":
+                    this.createComponent(CVSpotLight_1.default).fromDocument(document, node);
+                    name = "Spot Light";
+                    break;
+                default:
+                    throw new Error(`unknown light type: '${type}'`);
+            }
+            pathMap.set(`light/${node.light}`, this.light);
+        }
+        this.name = node.name || name;
+        const childIndices = node.children;
+        if (childIndices) {
+            childIndices.forEach(childIndex => {
+                const childNode = this.graph.createCustomNode(NVNode);
+                this.transform.addChild(childNode.transform);
+                childNode.fromDocument(document, childIndex, pathMap);
+            });
+        }
+    }
+    toDocument(document, pathMap, components) {
+        components = components || {
+            meta: true,
+            setup: true,
+            model: true,
+            camera: true,
+            light: true,
+        };
+        document.nodes = document.nodes || [];
+        const nodeIndex = document.nodes.length;
+        const node = this.transform.toData();
+        document.nodes.push(node);
+        if (this.name) {
+            node.name = this.name;
+        }
+        if (this.model && components.model) {
+            node.model = this.model.toDocument(document, node);
+            pathMap.set(this.model, `model/${node.model}`);
+        }
+        if (this.camera && components.camera) {
+            node.camera = this.camera.toDocument(document, node);
+            pathMap.set(this.camera, `camera/${node.camera}`);
+        }
+        if (this.light && components.light) {
+            node.light = this.light.toDocument(document, node);
+            pathMap.set(this.light, `light/${node.light}`);
+        }
+        if (this.meta && components.meta) {
+            node.meta = this.meta.toDocument(document, node);
+            pathMap.set(this.meta, `info/${node.meta}`);
+        }
+        const children = this.transform.children
+            .map(child => child.node).filter(node => node.is(NVNode));
+        children.forEach(child => {
+            if (child.hasNodeComponents(components)) {
+                const index = child.toDocument(document, pathMap, components);
+                node.children = node.children || [];
+                node.children.push(index);
+            }
+        });
+        return nodeIndex;
+    }
+    hasNodeComponents(components) {
+        if (!components) {
+            return true;
+        }
+        const tf = this.transform;
+        const comps = this.components;
+        if (components.model && (comps.has(CVModel2_1.default) || tf.hasChildComponents(CVModel2_1.default, true))) {
+            return true;
+        }
+        if (components.camera && (comps.has(CVCamera_1.default) || tf.hasChildComponents(CVCamera_1.default, true))) {
+            return true;
+        }
+        if (components.light && (comps.has(CVLight_1.CLight) || tf.hasChildComponents(CVLight_1.CLight, true))) {
+            return true;
+        }
+        return false;
+    }
+}
+NVNode.typeName = "NVNode";
+exports.default = NVNode;
+
+
+/***/ }),
+
+/***/ "./nodes/NVScene.ts":
+/*!**************************!*\
+  !*** ./nodes/NVScene.ts ***!
+  \**************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const NVNode_1 = __webpack_require__(/*! ./NVNode */ "./nodes/NVNode.ts");
+const CVScene_1 = __webpack_require__(/*! ../components/CVScene */ "./components/CVScene.ts");
+const CVSetup_1 = __webpack_require__(/*! ../components/CVSetup */ "./components/CVSetup.ts");
+const CVMeta_1 = __webpack_require__(/*! ../components/CVMeta */ "./components/CVMeta.ts");
+const CLight_1 = __webpack_require__(/*! @ff/scene/components/CLight */ "../../libs/ff-scene/source/components/CLight.ts");
+////////////////////////////////////////////////////////////////////////////////
+class NVScene extends NVNode_1.default {
+    get setup() {
+        return this.components.get(CVSetup_1.default, true);
+    }
+    createComponents() {
+        this.createComponent(CVScene_1.default);
+        this.createComponent(CVSetup_1.default);
+        this.createComponent(CVMeta_1.default);
+    }
+    fromDocument(document, sceneIndex, pathMap) {
+        const scene = document.scenes[sceneIndex];
+        if (scene.name) {
+            this.name = scene.name;
+        }
+        this.scene.fromDocument(document, scene);
+        // serialize node tree
+        const nodeIndices = scene.nodes;
+        if (nodeIndices) {
+            nodeIndices.forEach(nodeIndex => {
+                const childNode = this.graph.createCustomNode(NVNode_1.default);
+                this.transform.addChild(childNode.transform);
+                childNode.fromDocument(document, nodeIndex, pathMap);
+            });
+        }
+        // serialize additional scene components
+        if (isFinite(scene.meta)) {
+            this.meta.fromDocument(document, scene);
+            pathMap.set(`meta/${scene.meta}`, this.meta);
+        }
+        if (isFinite(scene.setup)) {
+            this.setup.fromDocument(document, sceneIndex, pathMap);
+        }
+        // enable shadow casting for first light source
+        const lights = this.getGraphComponents(CLight_1.default);
+        const light0 = lights[0];
+        const light1 = lights[1];
+        if (light0) {
+            light0.ins.shadowEnabled.setValue(true);
+            light0.ins.shadowSize.setValue(1000);
+        }
+        if (light1) {
+            light1.ins.shadowEnabled.setValue(true);
+            light1.ins.shadowSize.setValue(1000);
+        }
+    }
+    toDocument(document, pathMap, components) {
+        document.scenes = document.scenes || [];
+        const sceneIndex = document.scenes.length;
+        const scene = { units: "cm" };
+        document.scenes.push(scene);
+        if (this.name) {
+            scene.name = this.name;
+        }
+        this.scene.toDocument(document, scene);
+        // serialize node tree
+        const children = this.transform.children
+            .map(child => child.node).filter(node => node.is(NVNode_1.default));
+        children.forEach(child => {
+            if (child.hasNodeComponents(components)) {
+                const index = child.toDocument(document, pathMap, components);
+                scene.nodes = scene.nodes || [];
+                scene.nodes.push(index);
+            }
+        });
+        // serialize additional scene components
+        if (!components || components.setup) {
+            if (this.meta) {
+                scene.meta = this.meta.toDocument(document, scene);
+                pathMap.set(this.meta, `meta/${scene.meta}`);
+            }
+            if (this.setup) {
+                this.setup.toDocument(document, sceneIndex, pathMap);
+            }
+        }
+        return sceneIndex;
+    }
+}
+NVScene.typeName = "NVScene";
+exports.default = NVScene;
+
+
+/***/ }),
+
+/***/ "./shaders/UberPBRMaterial.ts":
+/*!************************************!*\
+  !*** ./shaders/UberPBRMaterial.ts ***!
+  \************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -26671,10 +32568,10 @@ exports.default = DerivativeList;
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 const THREE = __webpack_require__(/*! three */ "three");
-const fragmentShader = __webpack_require__(/*! raw-loader!./uberPBRShader.frag */ "../../node_modules/raw-loader/index.js!./core/shaders/uberPBRShader.frag");
-const vertexShader = __webpack_require__(/*! raw-loader!./uberPBRShader.vert */ "../../node_modules/raw-loader/index.js!./core/shaders/uberPBRShader.vert");
-const config_1 = __webpack_require__(/*! common/types/config */ "../common/types/config.ts");
-exports.EShaderMode = config_1.EShaderMode;
+const fragmentShader = __webpack_require__(/*! raw-loader!./uberPBRShader.frag */ "../../node_modules/raw-loader/index.js!./shaders/uberPBRShader.frag");
+const vertexShader = __webpack_require__(/*! raw-loader!./uberPBRShader.vert */ "../../node_modules/raw-loader/index.js!./shaders/uberPBRShader.vert");
+const setup_1 = __webpack_require__(/*! common/types/setup */ "../common/types/setup.ts");
+exports.EShaderMode = setup_1.EShaderMode;
 class UberPBRMaterial extends THREE.MeshStandardMaterial {
     constructor(params) {
         super();
@@ -26739,7 +32636,7 @@ class UberPBRMaterial extends THREE.MeshStandardMaterial {
         this.defines["MODE_XRAY"] = false;
         this.needsUpdate = true;
         switch (mode) {
-            case config_1.EShaderMode.Clay:
+            case setup_1.EShaderMode.Clay:
                 this._paramCopy = {
                     color: this.color,
                     map: this.map,
@@ -26759,7 +32656,7 @@ class UberPBRMaterial extends THREE.MeshStandardMaterial {
                 this.transparent = false;
                 this.depthWrite = true;
                 break;
-            case config_1.EShaderMode.Normals:
+            case setup_1.EShaderMode.Normals:
                 this._paramCopy = {
                     blending: this.blending,
                     transparent: this.transparent,
@@ -26770,7 +32667,7 @@ class UberPBRMaterial extends THREE.MeshStandardMaterial {
                 this.transparent = false;
                 this.depthWrite = true;
                 break;
-            case config_1.EShaderMode.XRay:
+            case setup_1.EShaderMode.XRay:
                 this._paramCopy = {
                     side: this.side,
                     blending: this.blending,
@@ -26783,7 +32680,7 @@ class UberPBRMaterial extends THREE.MeshStandardMaterial {
                 this.transparent = true;
                 this.depthWrite = false;
                 break;
-            case config_1.EShaderMode.Wireframe:
+            case setup_1.EShaderMode.Wireframe:
                 this._paramCopy = {
                     wireframe: this.wireframe
                 };
@@ -26825,10 +32722,10 @@ exports.default = UberPBRMaterial;
 
 /***/ }),
 
-/***/ "./explorer/ui/ContentView.ts":
-/*!************************************!*\
-  !*** ./explorer/ui/ContentView.ts ***!
-  \************************************/
+/***/ "./ui/SceneView.ts":
+/*!*************************!*\
+  !*** ./ui/SceneView.ts ***!
+  \*************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -26859,18 +32756,23 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 const ManipTarget_1 = __webpack_require__(/*! @ff/browser/ManipTarget */ "../../libs/ff-browser/source/ManipTarget.ts");
 const RenderQuadView_1 = __webpack_require__(/*! @ff/scene/RenderQuadView */ "../../libs/ff-scene/source/RenderQuadView.ts");
+const SystemView_1 = __webpack_require__(/*! @ff/scene/ui/SystemView */ "../../libs/ff-scene/source/ui/SystemView.ts");
 const QuadSplitter_1 = __webpack_require__(/*! @ff/ui/QuadSplitter */ "../../libs/ff-ui/source/QuadSplitter.ts");
-const CustomElement_1 = __webpack_require__(/*! @ff/ui/CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
 ////////////////////////////////////////////////////////////////////////////////
-let ContentView = class ContentView extends CustomElement_1.default {
+/**
+ * Displays up to four viewports rendering 3D content from a node/component system.
+ * The built-in quad split functionality provides four different layouts: single view, horizontal split,
+ * vertical split, and quad split. The split proportions can be adjusted by moving the split handles
+ * between viewports.
+ */
+let SceneView = class SceneView extends SystemView_1.default {
     constructor(system) {
-        super();
+        super(system);
         this.view = null;
         this.canvas = null;
         this.overlay = null;
         this.splitter = null;
         this.onResize = this.onResize.bind(this);
-        this.system = system;
         this.manipTarget = new ManipTarget_1.default();
         this.addEventListener("pointerdown", this.manipTarget.onPointerDown);
         this.addEventListener("pointermove", this.manipTarget.onPointerMove);
@@ -26880,27 +32782,26 @@ let ContentView = class ContentView extends CustomElement_1.default {
         this.addEventListener("contextmenu", this.manipTarget.onContextMenu);
     }
     firstConnected() {
-        this.setStyle({
-            position: "absolute",
-            top: "0", bottom: "0", left: "0", right: "0",
-            touchAction: "none",
-        });
+        this.classList.add("sv-scene-view");
+        // disable default touch action on mobile devices
+        this.style.touchAction = "none";
         this.setAttribute("touch-action", "none");
-        this.canvas = this.createElement("canvas", {
+        this.canvas = this.appendElement("canvas", {
             display: "block",
             width: "100%",
             height: "100%"
-        }, this);
-        this.overlay = this.createElement("div", {
+        });
+        this.overlay = this.appendElement("div", {
             position: "absolute",
             top: "0", bottom: "0", left: "0", right: "0",
             overflow: "hidden"
-        }, this);
-        this.splitter = this.createElement(QuadSplitter_1.default, {
+        });
+        this.overlay.classList.add("sv-content-overlay");
+        this.splitter = this.appendElement(QuadSplitter_1.default, {
             position: "absolute",
             top: "0", bottom: "0", left: "0", right: "0",
             overflow: "hidden"
-        }, this);
+        });
         this.splitter.onChange = (message) => {
             this.view.horizontalSplit = message.horizontalSplit;
             this.view.verticalSplit = message.verticalSplit;
@@ -26909,9 +32810,6 @@ let ContentView = class ContentView extends CustomElement_1.default {
         this.view.on("layout", event => this.splitter.layout = event.layout);
         this.view.layout = QuadSplitter_1.EQuadViewLayout.Single;
         this.splitter.layout = QuadSplitter_1.EQuadViewLayout.Single;
-        //this.view.viewports[0].enableCameraManip(true);
-        //this.view.addViewport().setSize(0, 0, 0.5, 1);
-        //this.view.addViewport().setSize(0.5, 0, 0.5, 1);
         this.manipTarget.next = this.view;
     }
     connected() {
@@ -26927,198 +32825,149 @@ let ContentView = class ContentView extends CustomElement_1.default {
         this.view.resize();
     }
 };
+SceneView = __decorate([
+    SystemView_1.customElement("sv-scene-view")
+], SceneView);
+exports.default = SceneView;
+
+
+/***/ }),
+
+/***/ "./ui/Spinner.ts":
+/*!***********************!*\
+  !*** ./ui/Spinner.ts ***!
+  \***********************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var Spinner_1;
+const CustomElement_1 = __webpack_require__(/*! @ff/ui/CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
+////////////////////////////////////////////////////////////////////////////////
+let Spinner = Spinner_1 = class Spinner extends CustomElement_1.default {
+    ////////////////////////////////////////////////////////////////////////////////
+    constructor() {
+        super(...arguments);
+        this.visible = false;
+    }
+    firstConnected() {
+        super.firstConnected();
+        this.classList.add("sv-spinner");
+    }
+    render() {
+        this.style.visibility = this.visible ? "visible" : "hidden";
+        return Spinner_1.template;
+    }
+};
+Spinner.template = CustomElement_1.html `<div class="sv-spinner-wheel"><svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 512 512" style="enable-background:new 0 0 512 512;" xml:space="preserve"><style type="text/css">.st0{fill:none;stroke:#009ADE;stroke-width:5;stroke-miterlimit:10;}.st1{fill:none;stroke:#FFCD00;stroke-width:5;stroke-miterlimit:10;}</style><circle class="st0" cx="256.6" cy="256" r="252"/><path class="st1" d="M408.6,307c-16.3-28-42.1-28.4-45.3-28.3c0,0,0-0.1,0-0.1L472,256l-108.7-22.6l0,0c1.1-1,22.3-19.7,54-20.2 c23.9-0.4,44.6-29.6,31.4-52.1c0,0-3.9,35.4-48.6,23.6c-31.4-8.3-49.9,9.7-52,12l0,0l60.9-93L316,164.5c0,0,0,0,0,0 c0.1-1.4,1.8-29.6,23.9-52.4c16.7-17.2,10.6-52.5-14.6-59.1c0,0,22.2,27.8-17.7,51c-28.1,16.3-28.4,42.1-28.3,45.3l-0.1,0 L256.6,40.5l-22.7,108.7c0,0,0,0,0,0c-0.9-1-19.7-22.2-20.2-54c-0.4-23.9-29.6-44.6-52.1-31.4c0,0,35.3,3.9,23.6,48.6 c-8.3,31.5,9.8,49.9,12,52.1l0,0l-93-60.9l0,0l0,0l49.6,75.7l11.3,17.2c0,0,0,0,0,0c-0.9,0-29.4-1.6-52.5-23.9 c-17.2-16.7-52.5-10.6-59.1,14.6c0,0,27.8-22.2,51,17.7c16.4,28.1,42.3,28.4,45.3,28.3c0,0,0,0,0,0L41.1,256l108.8,22.7v0 c-0.7,0.7-22,19.7-54,20.2c-23.9,0.4-44.6,29.6-31.4,52.1c0,0,3.9-35.4,48.6-23.6c31.5,8.3,50-9.9,52.1-12c0,0,0,0.1,0.1,0.1 l-60.9,92.9l92.9-60.9c0,1-1.6,29.5-23.9,52.5c-16.7,17.2-10.6,52.5,14.6,59.1c0,0-22.2-27.8,17.7-51c28.1-16.4,28.4-42.2,28.3-45.3 c0,0,0.1,0,0.1,0l22.7,108.7l22.7-108.7l0,0c0.8,0.9,19.7,22.1,20.2,54c0.4,23.9,29.6,44.6,52.1,31.4c0,0-35.3-3.9-23.6-48.5 c8.3-31.5-9.8-49.9-12-52.1c0,0,0.1,0,0.1-0.1l92.9,60.9l-32.1-49.1L348,315.4l0,0c1.3,0.1,29.6,1.7,52.4,23.9 c17.2,16.7,52.5,10.6,59.1-14.6C459.6,324.7,431.8,346.9,408.6,307z"/></svg></div>`;
 __decorate([
-    CustomElement_1.property({ attribute: false })
-], ContentView.prototype, "system", void 0);
+    CustomElement_1.property({ type: Boolean })
+], Spinner.prototype, "visible", void 0);
+Spinner = Spinner_1 = __decorate([
+    CustomElement_1.customElement("sv-spinner")
+], Spinner);
+exports.default = Spinner;
+
+
+/***/ }),
+
+/***/ "./ui/mini/ContentView.ts":
+/*!********************************!*\
+  !*** ./ui/mini/ContentView.ts ***!
+  \********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const CVAssetReader_1 = __webpack_require__(/*! ../../components/CVAssetReader */ "./components/CVAssetReader.ts");
+const SystemView_1 = __webpack_require__(/*! @ff/scene/ui/SystemView */ "../../libs/ff-scene/source/ui/SystemView.ts");
+const SceneView_1 = __webpack_require__(/*! ../SceneView */ "./ui/SceneView.ts");
+__webpack_require__(/*! ../Spinner */ "./ui/Spinner.ts");
+////////////////////////////////////////////////////////////////////////////////
+let ContentView = class ContentView extends SystemView_1.default {
+    ////////////////////////////////////////////////////////////////////////////////
+    constructor() {
+        super(...arguments);
+        this.sceneView = null;
+    }
+    get assetReader() {
+        return this.system.getMainComponent(CVAssetReader_1.default);
+    }
+    firstConnected() {
+        this.classList.add("sv-content-view");
+        this.sceneView = new SceneView_1.default(this.system);
+    }
+    connected() {
+        this.assetReader.outs.busy.on("value", this.performUpdate, this);
+    }
+    disconnected() {
+        this.assetReader.outs.busy.off("value", this.performUpdate, this);
+    }
+    render() {
+        const isLoading = this.assetReader.outs.busy.value;
+        return SystemView_1.html `${this.sceneView}
+            <sv-spinner ?visible=${isLoading}></sv-spinner>`;
+    }
+};
 ContentView = __decorate([
-    CustomElement_1.customElement("sv-content-view")
+    SystemView_1.customElement("sv-content-view")
 ], ContentView);
 exports.default = ContentView;
 
 
 /***/ }),
 
-/***/ "./mini/MiniApplication.ts":
-/*!*********************************!*\
-  !*** ./mini/MiniApplication.ts ***!
-  \*********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * 3D Foundation Project
- * Copyright 2018 Smithsonian Institution
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const parseUrlParameter_1 = __webpack_require__(/*! @ff/browser/parseUrlParameter */ "../../libs/ff-browser/source/parseUrlParameter.ts");
-const Commander_1 = __webpack_require__(/*! @ff/core/Commander */ "../../libs/ff-core/source/Commander.ts");
-const ClassRegistry_1 = __webpack_require__(/*! @ff/core/ClassRegistry */ "../../libs/ff-core/source/ClassRegistry.ts");
-const System_1 = __webpack_require__(/*! @ff/graph/System */ "../../libs/ff-graph/source/System.ts");
-const CPulse_1 = __webpack_require__(/*! @ff/graph/components/CPulse */ "../../libs/ff-graph/source/components/CPulse.ts");
-const CRenderer_1 = __webpack_require__(/*! @ff/scene/components/CRenderer */ "../../libs/ff-scene/source/components/CRenderer.ts");
-const CVLoaders_1 = __webpack_require__(/*! ../core/components/CVLoaders */ "./core/components/CVLoaders.ts");
-const CVOrbitNavigation_1 = __webpack_require__(/*! ../core/components/CVOrbitNavigation */ "./core/components/CVOrbitNavigation.ts");
-const CMini_1 = __webpack_require__(/*! ./components/CMini */ "./mini/components/CMini.ts");
-const components_1 = __webpack_require__(/*! @ff/graph/components */ "../../libs/ff-graph/source/components/index.ts");
-const components_2 = __webpack_require__(/*! @ff/scene/components */ "../../libs/ff-scene/source/components/index.ts");
-const components_3 = __webpack_require__(/*! ../core/components */ "./core/components/index.ts");
-const components_4 = __webpack_require__(/*! ./components */ "./mini/components/index.ts");
-const MainView_1 = __webpack_require__(/*! ./ui/MainView */ "./mini/ui/MainView.ts");
-class MiniApplication {
-    constructor(element, props) {
-        console.log(MiniApplication.splashMessage);
-        // register components
-        const registry = new ClassRegistry_1.default();
-        registry.add(components_1.componentTypes);
-        registry.add(components_2.componentTypes);
-        registry.add(components_3.componentTypes);
-        registry.add(components_4.componentTypes);
-        this.commander = new Commander_1.default();
-        const system = this.system = new System_1.default(registry);
-        const node = system.graph.createNode("Mini");
-        node.createComponent(CPulse_1.default);
-        node.createComponent(CRenderer_1.default);
-        node.createComponent(CVLoaders_1.default);
-        node.createComponent(CVOrbitNavigation_1.default);
-        node.createComponent(CMini_1.default).createActions(this.commander);
-        // create main view if not given
-        if (element) {
-            new MainView_1.default(this).appendTo(element);
-        }
-        // start rendering
-        node.components.get(CPulse_1.default).start();
-        // start loading from properties
-        this.props = this.initFromProps(props);
-    }
-    initFromProps(props) {
-        const miniController = this.system.components.get(CMini_1.default);
-        props.item = props.item || parseUrlParameter_1.default("item") || parseUrlParameter_1.default("i");
-        props.model = props.model || parseUrlParameter_1.default("model") || parseUrlParameter_1.default("m");
-        props.geometry = props.geometry || parseUrlParameter_1.default("geometry") || parseUrlParameter_1.default("g");
-        props.texture = props.texture || parseUrlParameter_1.default("texture") || parseUrlParameter_1.default("tex");
-        if (props.item) {
-            miniController.loadItem(props.item);
-        }
-        else if (props.model) {
-            miniController.loadModel(props.model);
-        }
-        else if (props.geometry) {
-            miniController.loadGeometryAndTexture(props.geometry, props.texture);
-        }
-        return props;
-    }
-}
-MiniApplication.splashMessage = [
-    "Voyager - 3D Explorer and Tool Suite",
-    "3D Foundation Project",
-    "(c) 2018 Smithsonian Institution",
-    "https://3d.si.edu"
-].join("\n");
-exports.default = MiniApplication;
-window["VoyagerMini"] = MiniApplication;
-
-
-/***/ }),
-
-/***/ "./mini/components/CMini.ts":
-/*!**********************************!*\
-  !*** ./mini/components/CMini.ts ***!
-  \**********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * 3D Foundation Project
- * Copyright 2018 Smithsonian Institution
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const CController_1 = __webpack_require__(/*! @ff/graph/components/CController */ "../../libs/ff-graph/source/components/CController.ts");
-/**
- * Voyager Mini controller component. Manages presentation of items and assets.
- */
-class CMini extends CController_1.default {
-    loadItem(itemUrl, templateUrl) {
-        // TODO: Implement
-    }
-    loadModel(modelUrl, quality, itemUrl, templateUrl) {
-        // TODO: Implement
-    }
-    loadGeometryAndTexture(geometryUrl, textureUrl, quality, itemUrl, templateUrl) {
-        // TODO: Implement
-    }
-}
-CMini.type = "CMini";
-exports.default = CMini;
-
-
-/***/ }),
-
-/***/ "./mini/components/index.ts":
-/*!**********************************!*\
-  !*** ./mini/components/index.ts ***!
-  \**********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/**
- * 3D Foundation Project
- * Copyright 2018 Smithsonian Institution
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-const CMini_1 = __webpack_require__(/*! ./CMini */ "./mini/components/CMini.ts");
-exports.CMini = CMini_1.default;
-exports.componentTypes = [
-    CMini_1.default
-];
-
-
-/***/ }),
-
-/***/ "./mini/ui/MainView.ts":
+/***/ "./ui/mini/MainView.ts":
 /*!*****************************!*\
-  !*** ./mini/ui/MainView.ts ***!
+  !*** ./ui/mini/MainView.ts ***!
   \*****************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
@@ -27149,9 +32998,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const CustomElement_1 = __webpack_require__(/*! @ff/ui/CustomElement */ "../../libs/ff-ui/source/CustomElement.ts");
-const MiniApplication_1 = __webpack_require__(/*! ../MiniApplication */ "./mini/MiniApplication.ts");
-const ContentView_1 = __webpack_require__(/*! ../../explorer/ui/ContentView */ "./explorer/ui/ContentView.ts");
-__webpack_require__(/*! ./styles.scss */ "./mini/ui/styles.scss");
+const ContentView_1 = __webpack_require__(/*! ./ContentView */ "./ui/mini/ContentView.ts");
+const MiniApplication_1 = __webpack_require__(/*! ../../applications/MiniApplication */ "./applications/MiniApplication.ts");
+__webpack_require__(/*! ./styles.scss */ "./ui/mini/styles.scss");
 ////////////////////////////////////////////////////////////////////////////////
 /**
  * Main UI view for the Voyager Mini application.
@@ -27164,15 +33013,17 @@ let MainView = class MainView extends CustomElement_1.default {
         }
         else {
             const props = {
-                item: this.getAttribute("item"),
+                document: this.getAttribute("document"),
                 model: this.getAttribute("model"),
                 geometry: this.getAttribute("geometry"),
-                texture: this.getAttribute("texture")
+                texture: this.getAttribute("texture"),
             };
             this.application = new MiniApplication_1.default(null, props);
         }
+        window["voyagerMini"] = this.application;
     }
     firstConnected() {
+        super.firstConnected();
         const system = this.application.system;
         new ContentView_1.default(system).appendTo(this);
     }
@@ -27185,14 +33036,133 @@ exports.default = MainView;
 
 /***/ }),
 
-/***/ "./mini/ui/styles.scss":
+/***/ "./ui/mini/styles.scss":
 /*!*****************************!*\
-  !*** ./mini/ui/styles.scss ***!
+  !*** ./ui/mini/styles.scss ***!
   \*****************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
 // extracted by mini-css-extract-plugin
+
+/***/ }),
+
+/***/ "./utils/Pin.ts":
+/*!**********************!*\
+  !*** ./utils/Pin.ts ***!
+  \**********************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/**
+ * FF Typescript Foundation Library
+ * Copyright 2018 Ralph Wiedemeier, Frame Factory GmbH
+ *
+ * License: MIT
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const THREE = __webpack_require__(/*! three */ "three");
+////////////////////////////////////////////////////////////////////////////////
+class Pin extends THREE.Group {
+    constructor() {
+        super();
+        const needlePoints = [
+            0, 0,
+            0.25, 0.4,
+            0.4, 10,
+        ];
+        const handlePoints = [
+            0, 10,
+            3.4, 10,
+            3.5, 10.1,
+            3.5, 11,
+            3.45, 11.1,
+            2.05, 12.5,
+            2, 12.6,
+            2, 17.4,
+            2.05, 17.5,
+            3.45, 18.9,
+            3.5, 19,
+            3.5, 19.9,
+            3.4, 20,
+            0, 20,
+        ];
+        const needleMaterial = new THREE.MeshStandardMaterial({ color: "white", metalness: 1 });
+        needleMaterial.transparent = true;
+        const needle = new THREE.Mesh(this.createLatheGeometry(needlePoints), needleMaterial);
+        const handleMaterial = new THREE.MeshStandardMaterial(({ color: "#ffcd00", roughness: 0.8, metalness: 0.1 }));
+        handleMaterial.transparent = true;
+        const handle = new THREE.Mesh(this.createLatheGeometry(handlePoints), handleMaterial);
+        needle.matrixAutoUpdate = false;
+        this.add(needle);
+        handle.matrixAutoUpdate = false;
+        this.add(handle);
+        this.matrixAutoUpdate = false;
+        this.scale.setScalar(0.1);
+        this.updateMatrix();
+    }
+    dispose() {
+    }
+    createLatheGeometry(points) {
+        const vectors = [];
+        for (let i = 0, n = points.length; i < n; i += 2) {
+            vectors.push(new THREE.Vector2(points[i], points[i + 1]));
+        }
+        return new THREE.LatheBufferGeometry(vectors, 16);
+    }
+}
+exports.default = Pin;
+
+
+/***/ }),
+
+/***/ "./utils/unitScaleFactor.ts":
+/*!**********************************!*\
+  !*** ./utils/unitScaleFactor.ts ***!
+  \**********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * 3D Foundation Project
+ * Copyright 2018 Smithsonian Institution
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+const common_1 = __webpack_require__(/*! common/types/common */ "../common/types/common.ts");
+////////////////////////////////////////////////////////////////////////////////
+const _unitScaleFactor = {
+    "mm": { "mm": 1, "cm": 0.1, "m": 0.001, "km": 1, "in": 0.0393701, "ft": 0.00328084, "yd": 0.00109361, "mi": 1 },
+    "cm": { "mm": 10, "cm": 1, "m": 0.01, "km": 1, "in": 0.393701, "ft": 0.0328084, "yd": 0.0109361, "mi": 1 },
+    "m": { "mm": 1000, "cm": 100, "m": 1, "km": 1, "in": 39.3701, "ft": 3.28084, "yd": 1.09361, "mi": 1 },
+    "km": { "mm": 1000000, "cm": 100000, "m": 1000, "km": 1, "in": 39370.1, "ft": 3280.84, "yd": 1093.61, "mi": 1 },
+    "in": { "mm": 25.4, "cm": 2.54, "m": 0.0254, "km": 1, "in": 1, "ft": 0.0833333, "yd": 0.0277778, "mi": 1 },
+    "ft": { "mm": 304.8, "cm": 30.48, "m": 0.3048, "km": 1, "in": 12, "ft": 1, "yd": 0.333334, "mi": 1 },
+    "yd": { "mm": 914.4, "cm": 91.44, "m": 0.9144, "km": 1, "in": 36, "ft": 3, "yd": 1, "mi": 1 },
+    "mi": { "mm": 1.609e+6, "cm": 1.609e+5, "m": 1.609e+3, "km": 1, "in": 63346456.693, "ft": 5278871.391, "yd": 1759623.797, "mi": 1 },
+};
+function default_1(from, to) {
+    const fromType = common_1.EUnitType[from];
+    const toType = common_1.EUnitType[to];
+    return _unitScaleFactor[fromType][toType] || 1;
+}
+exports.default = default_1;
+
 
 /***/ }),
 

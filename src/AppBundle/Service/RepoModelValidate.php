@@ -150,7 +150,13 @@ class RepoModelValidate implements RepoModelValidateInterface {
 
         // Retrieve all of the logs produced by the processing service.
         foreach ($processing_job['job_ids'] as $job_id_value) {
-          $processing_assets[] = $this->processing->get_processing_assets($filesystem, $job_id_value);
+          $processing_assets = $this->processing->get_processing_assets($filesystem, $job_id_value);
+
+          if (!empty($processing_assets) && array_key_exists('errors', $processing_assets)) {
+            $return['errors'][] = $processing_assets['errors'];
+            return $return;
+          }
+          
         }
 
       }

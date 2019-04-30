@@ -19,13 +19,8 @@ parameters:
     secret: ThisTokenIsNotSoSecretChangeIt
 
     # EDAN Connection Settings
-    edan_url: ~
     edan_app_id: ~
     edan_auth_token: ~
-    edan_version: ~
-    edan_search_endpoint: ~
-    edan_content_endpoint: ~
-    edan_active: ~
 
     # SI Active Directory Settings
     si_ldap_host: ~
