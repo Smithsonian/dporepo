@@ -5,7 +5,7 @@ A Symfony project created on November 30, 2017, 8:53 pm.
 A port from the [PHP Slim-based project](https://github.com/Smithsonian/dporepo_slim) to [Symfony 3.4](https://symfony.com/).
 
 ## Requirements
-- PHP 7.2
+- PHP 7.2 *This is critical. PHP 7.1 throws errors with the repo code.*
 - Symfony framework 3.4
 - MySQL 5.7
 - jQuery 1.12
