@@ -24,7 +24,7 @@ TODO: needs specification for supported environments
 
 ### Prepare the website
 #### Create a directory and clone dporepo into it
-- cd /c/xampp/htdocs/
+- cd into the LAMP environment main webroot (htdocs)
 - mkdir dporepo
 - git clone https://github.com/Smithsonian/dporepo.git dporepo/
 
@@ -54,6 +54,30 @@ The database settings must match the database and user account created in step P
 
 - If PHP runs out of memory you can brute-force it to use unlimited memory.
 ``` php -d memory_limit=-1 composer update```
+
+#### Create a vhosts entry to point to the dporepo web root
+TODO better info
+Make sure Apache host config files includes the vhosts files.
+Ensure that the DocumentRoot and Directory point to your filesystem location of the "web" directory of the application.
+
+Vhost example file
+NameVirtualHost *:8080
+
+<VirtualHost *:8080>
+    DocumentRoot "C:/xampp/htdocs/dporepo/web/"
+    ServerName localhost:8080
+    ErrorLog "logs/error.log"
+    CustomLog "logs/access.log" common
+    #SSLEngine on
+    #SSLCertificateFile "conf/ssl.crt/server.crt" 
+    #SSLCertificateKeyFile "conf/ssl.key/server.key"
+    <Directory "C:/xampp/htdocs/dporepo/web">
+        AllowOverride All
+        Order Allow,Deny
+        Allow from All
+    </Directory>
+</VirtualHost>
+
 
 ### Launch UI
 #### Using a browser navigate to the homepage.
