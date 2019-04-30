@@ -34,7 +34,7 @@ TODO: needs specification for supported environments
 - Create empty MySQL database, and database user account.
 - Enable ldap extension and PDO extension, if not enabled, in php.ini
 
-### Parameters (app/config/parameters.yml)
+#### Parameters (app/config/parameters.yml)
 
 If you have a filled-out `parameters.yml` file, move it into the app/config directory.
 
@@ -42,7 +42,7 @@ If not, you will be prompted during the installation to provide these settings.
 
 The database settings must match the database and user account created in step Prepare database.
 
-### Install Symfony and Third Party Libaries using Composer
+#### Install Symfony and Third Party Libraries using Composer
 
 - Change directory into the web root. Run composer.
 ```php composer update```
