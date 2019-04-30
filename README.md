@@ -14,7 +14,8 @@ A port from the [PHP Slim-based project](https://github.com/Smithsonian/dporepo_
 
 ### Assumptions
 - LAMP or WAMP environment has already been installed.
-- Git has been installed
+- Git has been installed.
+- Composer has been installed.
 
 ### PHP Settings
 TODO
