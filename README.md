@@ -50,8 +50,6 @@ The database settings must match the database and user account created in step P
 - If PHP runs out of memory you can brute-force it to use unlimited memory.
 ``` php -d memory_limit=-1 composer update```
 
-- TODO: Right now users have to disable the EDAN client within composer.json in order for install to work.
-
 ### Launch UI
 #### Using a browser navigate to the homepage.
 If you see PDO errors (can't find file), set unix_socket underneath doctrine:, dbal: within app/config/config.yml
