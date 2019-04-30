@@ -16,6 +16,9 @@ A port from the [PHP Slim-based project](https://github.com/Smithsonian/dporepo_
 - LAMP or WAMP environment has already been installed.
 - Git has been installed
 
+### PHP Settings
+TODO
+
 ### Install webserver and database
 TODO: needs specification for supported environments
 
@@ -74,13 +77,17 @@ You should now have access to all repo functions.
 
 Download this .sql file and run this within the MySQL environment: http://gors.in/aj8C0h
 
-### Install the DPO EDAN Bundle
+### Smithsonian-specific Instructions
+#### Install the DPO EDAN Bundle
 Following the installation instructions out on GitHub
 
 https://github.com/Smithsonian/DpoEdanBundle
 
-#### Test endpoints (switch the port if need be)
+##### Test endpoints (switch the port if need be)
 
 http://127.0.0.1:8000/admin/edan/space%20shuttle
 
 http://127.0.0.1:8000/admin/edan/nmnhinvertebratezoology_957944
+
+### Configure remote file storage
+TODO
