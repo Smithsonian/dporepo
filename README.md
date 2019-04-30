@@ -38,7 +38,9 @@ TODO: needs specification for supported environments
 
 If you have a filled-out `parameters.yml` file, move it into the app/config directory.
 
-If not, you will be prompted during the installation to provide these settings.
+If not, you have 2 options:
+1. Copy parameters.yml.dist to parameters.yml. Fill in the missing values for the database and other settings.
+2. Do nothing. You will be prompted during the installation to provide these settings via the command line, one at a time.
 
 The database settings must match the database and user account created in step Prepare database.
 
@@ -81,4 +83,4 @@ https://github.com/Smithsonian/DpoEdanBundle
 
 http://127.0.0.1:8000/admin/edan/space%20shuttle
 
-http://127.0.0.1:8000/admin/edan/space%20shuttle
+http://127.0.0.1:8000/admin/edan/nmnhinvertebratezoology_957944
