@@ -12,27 +12,27 @@ A port from the [PHP Slim-based project](https://github.com/Smithsonian/dporepo_
 
 ## Installation
 
+### Assumptions
+- LAMP or WAMP environment has already been installed.
+- Git has been installed
+
 ### Install webserver and database
 TODO: needs specification for supported environments
 
-### Prepare website
-Create website root
-Create empty MySQL database, and user account.
-Enable ldap extension and PDO extension, if not enabled, in php.ini
+### Prepare the website
+#### Create a directory and clone dporepo into it
+- cd /c/xampp/htdocs/
+- mkdir dporepo
+- git clone https://github.com/Smithsonian/dporepo.git dporepo/
 
-### Clone the Repositories
-In addition to the repository code you will need the JSON schemas.
+#### Create the json directory and clone dporepo-schemas into it
+- cd dporepo/web/
+- mkdir json
+- git clone https://github.com/Smithsonian/dporepo-schemas.git json/
 
-In the web root- 
-```
-git clone git@github.com:Smithsonian/dporepo.git
-```
-
-In the /web path under the web root create a directory "json".
-Inside web/json-
-```
-git clone git@github.com:Smithsonian/dporepo-schemas.git
-```
+#### Prepare database
+- Create empty MySQL database, and database user account.
+- Enable ldap extension and PDO extension, if not enabled, in php.ini
 
 ### Parameters (app/config/parameters.yml)
 
@@ -40,15 +40,15 @@ If you have a filled-out `parameters.yml` file, move it into the app/config dire
 
 If not, you will be prompted during the installation to provide these settings.
 
-The database settings must match the database and user account created in step Prepare website.
+The database settings must match the database and user account created in step Prepare database.
 
-### Install using Composer
+### Install Symfony and Third Party Libaries using Composer
 
-- Change directory into the web root. Run-
-```composer install```
+- Change directory into the web root. Run composer.
+```php composer update```
 
-- If PHP runs out of memory you can brute-force it to use unlimited memory:
-``` php -d memory_limit=-1 /usr/local/bin/composer install```
+- If PHP runs out of memory you can brute-force it to use unlimited memory.
+``` php -d memory_limit=-1 composer update```
 
 - TODO: Right now users have to disable the EDAN client within composer.json in order for install to work.
 
@@ -56,11 +56,31 @@ The database settings must match the database and user account created in step P
 #### Using a browser navigate to the homepage.
 If you see PDO errors (can't find file), set unix_socket underneath doctrine:, dbal: within app/config/config.yml
 
-#### Click Install
+#### Install the Application
+Go to http://localhost:8080/ (Windows/XAMPP) http://127.0.0.1:8000/ (Mac) and click the "Install" button (switch the port number if need be)
+
 If installation says it succeeded but you have no database, the most likely culprit is your version of MySQL doesn't support json fields. 
 - TODO: Temp cheat, change the 2 JSON fields to varchar(8000) within database_create.sql
+authoring_item, authoring_presentation tables
 
-#### Click Login
+#### Register, and create a new user account.
+Go to http://localhost:8080/login (Windows/XAMPP) http://127.0.0.1:8000/login (Mac) and click on "Register for an Account"
 
-#### Click Register, and create a new user account.
+Set the Username to admin.
+
 You should now have access to all repo functions.
+
+#### Import Smithsonian Unit and ISNI data into the database
+
+Download this .sql file and run this within the MySQL environment: http://gors.in/aj8C0h
+
+### Install the DPO EDAN Bundle
+Following the installation instructions out on GitHub
+
+https://github.com/Smithsonian/DpoEdanBundle
+
+#### Test endpoints (switch the port if need be)
+
+http://127.0.0.1:8000/admin/edan/space%20shuttle
+
+http://127.0.0.1:8000/admin/edan/space%20shuttle
