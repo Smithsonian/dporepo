@@ -80,27 +80,36 @@
   </div>
 
   <h3>Uploaded Metadata</h3>
-  <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
-    <thead>
-      <tr>
-        {% if job_data.job_type == 'subjects metadata import' %}
-          <th class="text-center">Subject</th>
-          <th class="text-center">Item</th>
-        {% elseif job_data.job_type == 'items metadata import' %}
-          <th class="text-center">Subject</th>
-          <th class="text-center">Item</th>
-        {% elseif job_data.job_type == 'capture datasets metadata import' %}
-          <th class="text-center">Item</th>
-          <th class="text-center">Capture Dataset</th>
-        {% elseif job_data.job_type == 'models metadata import' %}
-          <th class="text-center">Item</th>
-          <th class="text-center">Model Purpose</th>
-          <th class="text-center">Model Type</th>
-          <th class="text-center">Model Date of Creation</th>
-        {% endif %}
-      </tr>
-    </thead>
-  </table>
+
+  {% if job_data.job_status == 'complete' %}
+    <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
+      <thead>
+        <tr>
+          {% if job_data.job_type == 'subjects metadata import' %}
+            <th class="text-center">Subject</th>
+            <th class="text-center">Item</th>
+          {% elseif job_data.job_type == 'items metadata import' %}
+            <th class="text-center">Subject</th>
+            <th class="text-center">Item</th>
+          {% elseif job_data.job_type == 'capture datasets metadata import' %}
+            <th class="text-center">Item</th>
+            <th class="text-center">Capture Dataset</th>
+          {% elseif job_data.job_type == 'models metadata import' %}
+            <th class="text-center">Item</th>
+            <th class="text-center">Model Purpose</th>
+            <th class="text-center">Model Type</th>
+            <th class="text-center">Model Date of Creation</th>
+          {% endif %}
+        </tr>
+      </thead>
+    </table>
+  {% else %}
+    <div class="row">
+      <div class="col-sm-12 col-md-12">
+        <p class="well"><span class="glyphicon glyphicon-info-sign"></span> Metadata will appear here after the ingest has completed.</p>
+      </div>
+    </div>
+  {% endif %}
 
   {% if project.uploaded_files is defined %}
     <div class="row">
