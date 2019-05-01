@@ -865,13 +865,12 @@
           "columns": [
               { "data": "subject_name" },
               { "data": "holding_entity_name" },
-              { "data": "items_count" },
               { "data": "last_modified" }
             ],
           "dom": 'lfip<"datatables_bulk_actions">tip',
           "pagingType": "simple_numbers",
           "stateSave": true,
-          "order": [[3,"desc"]],
+          "order": [[2,"desc"]],
           // Show processing throbber.
           "processing": true,
           "serverMethod": "POST",
@@ -886,7 +885,7 @@
           // Set some widths.
           "aoColumnDefs":[
               {"sWidth":"105px","aTargets":[0]},
-              {"bSortable":false,"aTargets":[0,3]}
+              {"bSortable":false,"aTargets":[0,2]}
           ],
           "fnRowCallback":function(nRow, aData, iDisplayIndex) {
             // This table row.
