@@ -35,6 +35,7 @@
         <dt>Item Type</dt>
         <dd>{{ item_data.item_type_label|e }}</dd>
       </dl>
+    <div class="model-iframe"></div>
     </div>
     <div class="col-sm-12 col-md-12">
       <dl class="dl-horizontal">
@@ -213,6 +214,8 @@
           item_id = "{{ item_id }}",
           details_page = "/admin/capture_dataset/view/";
 
+    $('.model-iframe').html("<iframe src='/admin/model/viewer/" + item_id + "' scrolling='no' height='300' width='400'></iframe>");
+    
       $("#browse").dataTable({
         "columns": [
           { "data": "manage" },
