@@ -164,6 +164,7 @@ class RepoImport implements RepoImportInterface {
       '-diffuse',
       '-normal_t',
       '-normal_w',
+      '-normals',
       '-occlusion',
     );
 
@@ -626,6 +627,8 @@ class RepoImport implements RepoImportInterface {
         // Set the parent record's repository ID.
         switch ($data->type) {
           case 'subject':
+
+            $csv_val->subject_name = '';
 
             // Check to see if the subject already exists- DPO3DREP-546
             $subject_exists = $this->repo_storage_controller->execute('getRecords', array(

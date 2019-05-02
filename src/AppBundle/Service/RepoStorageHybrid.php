@@ -4636,20 +4636,21 @@ class RepoStorageHybrid implements RepoStorage {
     // If subjects were ingested (with a project as the parent record)...
     if ($job_data['job_type'] === 'subjects metadata import') {
 
-      $record_table = 'subject';
+      $record_table = 'item';
+
+      $query_params['related_tables'][] = array(
+        'table_name' => 'item',
+        'table_join_field' => 'project_id',
+        'join_type' => 'LEFT JOIN',
+        'base_join_table' => 'project',
+        'base_join_field' => 'project_id',
+      );
 
       $query_params['related_tables'][] = array(
         'table_name' => 'subject',
         'table_join_field' => 'subject_id',
         'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'job_import_record',
-        'base_join_field' => 'record_id',
-      );
-      $query_params['related_tables'][] = array(
-        'table_name' => 'item',
-        'table_join_field' => 'subject_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'subject',
+        'base_join_table' => 'item',
         'base_join_field' => 'subject_id',
       );
 
@@ -4667,159 +4668,159 @@ class RepoStorageHybrid implements RepoStorage {
     }
     
 
-    // If items were ingested (with a subject as the parent record)...
-    if ($job_data['job_type'] === 'items metadata import') {
+    // // If items were ingested (with a subject as the parent record)...
+    // if ($job_data['job_type'] === 'items metadata import') {
 
-      $record_table = 'item';
+    //   $record_table = 'item';
 
-      $query_params['related_tables'][] = array(
-        'table_name' => 'item',
-        'table_join_field' => 'item_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'job_import_record',
-        'base_join_field' => 'record_id',
-      );
-      $query_params['related_tables'][] = array(
-        'table_name' => 'subject',
-        'table_join_field' => 'subject_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'item',
-        'base_join_field' => 'subject_id',
-      );
+    //   $query_params['related_tables'][] = array(
+    //     'table_name' => 'item',
+    //     'table_join_field' => 'item_id',
+    //     'join_type' => 'LEFT JOIN',
+    //     'base_join_table' => 'job_import_record',
+    //     'base_join_field' => 'record_id',
+    //   );
+    //   $query_params['related_tables'][] = array(
+    //     'table_name' => 'subject',
+    //     'table_join_field' => 'subject_id',
+    //     'join_type' => 'LEFT JOIN',
+    //     'base_join_table' => 'item',
+    //     'base_join_field' => 'subject_id',
+    //   );
 
-      if (NULL !== $search_value) {
-        $query_params['search_params'][3] = array(
-          'field_names' => array(
-            'subject_name',
-            'item_description',
-          ),
-          'search_values' => array($search_value),
-          'comparison' => 'LIKE',
-        );
-      }
+    //   if (NULL !== $search_value) {
+    //     $query_params['search_params'][3] = array(
+    //       'field_names' => array(
+    //         'subject_name',
+    //         'item_description',
+    //       ),
+    //       'search_values' => array($search_value),
+    //       'comparison' => 'LIKE',
+    //     );
+    //   }
 
-    }
-
-
-    // If capture datasets were ingested (with an item as the parent record)...
-    if ($job_data['job_type'] === 'capture datasets metadata import') {
-
-      $record_table = 'capture_dataset';
-
-      $query_params['related_tables'][] = array(
-        'table_name' => 'capture_dataset',
-        'table_join_field' => 'capture_dataset_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'job_import_record',
-        'base_join_field' => 'record_id',
-      );
-      $query_params['related_tables'][] = array(
-        'table_name' => 'item',
-        'table_join_field' => 'item_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'capture_dataset',
-        'base_join_field' => 'item_id',
-      );
-      $query_params['related_tables'][] = array(
-        'table_name' => 'subject',
-        'table_join_field' => 'subject_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'item',
-        'base_join_field' => 'subject_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'capture_dataset',
-        'field_name' => 'capture_dataset_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'capture_dataset',
-        'field_name' => 'capture_dataset_name',
-      );
-
-      if (NULL !== $search_value) {
-        $query_params['search_params'][3] = array(
-          'field_names' => array(
-            'item_description',
-            'capture_dataset_name',
-          ),
-          'search_values' => array($search_value),
-          'comparison' => 'LIKE',
-        );
-      }
-
-    }
+    // }
 
 
-    // If models were ingested (with a capture dataset as the parent record)...
-    if ($job_data['job_type'] === 'models metadata import') {
+    // // If capture datasets were ingested (with an item as the parent record)...
+    // if ($job_data['job_type'] === 'capture datasets metadata import') {
 
-      $record_table = 'model';
+    //   $record_table = 'capture_dataset';
 
-      $query_params['related_tables'][] = array(
-        'table_name' => 'model',
-        'table_join_field' => 'model_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'job_import_record',
-        'base_join_field' => 'record_id',
-      );
-      $query_params['related_tables'][] = array(
-        'table_name' => 'capture_dataset',
-        'table_join_field' => 'capture_dataset_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'model',
-        'base_join_field' => 'capture_dataset_id',
-      );
-      $query_params['related_tables'][] = array(
-        'table_name' => 'item',
-        'table_join_field' => 'item_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'model',
-        'base_join_field' => 'item_id',
-      );
-      $query_params['related_tables'][] = array(
-        'table_name' => 'subject',
-        'table_join_field' => 'subject_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'item',
-        'base_join_field' => 'subject_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'capture_dataset',
-        'field_name' => 'capture_dataset_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'capture_dataset',
-        'field_name' => 'capture_dataset_name',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'model',
-        'field_name' => 'model_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'model',
-        'field_name' => 'model_file_type',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'model',
-        'field_name' => 'model_purpose',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'model',
-        'field_name' => 'date_of_creation',
-      );
+    //   $query_params['related_tables'][] = array(
+    //     'table_name' => 'capture_dataset',
+    //     'table_join_field' => 'capture_dataset_id',
+    //     'join_type' => 'LEFT JOIN',
+    //     'base_join_table' => 'job_import_record',
+    //     'base_join_field' => 'record_id',
+    //   );
+    //   $query_params['related_tables'][] = array(
+    //     'table_name' => 'item',
+    //     'table_join_field' => 'item_id',
+    //     'join_type' => 'LEFT JOIN',
+    //     'base_join_table' => 'capture_dataset',
+    //     'base_join_field' => 'item_id',
+    //   );
+    //   $query_params['related_tables'][] = array(
+    //     'table_name' => 'subject',
+    //     'table_join_field' => 'subject_id',
+    //     'join_type' => 'LEFT JOIN',
+    //     'base_join_table' => 'item',
+    //     'base_join_field' => 'subject_id',
+    //   );
+    //   $query_params['fields'][] = array(
+    //     'table_name' => 'capture_dataset',
+    //     'field_name' => 'capture_dataset_id',
+    //   );
+    //   $query_params['fields'][] = array(
+    //     'table_name' => 'capture_dataset',
+    //     'field_name' => 'capture_dataset_name',
+    //   );
 
-      if (NULL !== $search_value) {
-        $query_params['search_params'][3] = array(
-          'field_names' => array(
-            'item_description',
-            'capture_dataset_name',
-          ),
-          'search_values' => array($search_value),
-          'comparison' => 'LIKE',
-        );
-      }
+    //   if (NULL !== $search_value) {
+    //     $query_params['search_params'][3] = array(
+    //       'field_names' => array(
+    //         'item_description',
+    //         'capture_dataset_name',
+    //       ),
+    //       'search_values' => array($search_value),
+    //       'comparison' => 'LIKE',
+    //     );
+    //   }
 
-    }
+    // }
+
+
+    // // If models were ingested (with a capture dataset as the parent record)...
+    // if ($job_data['job_type'] === 'models metadata import') {
+
+    //   $record_table = 'model';
+
+    //   $query_params['related_tables'][] = array(
+    //     'table_name' => 'model',
+    //     'table_join_field' => 'model_id',
+    //     'join_type' => 'LEFT JOIN',
+    //     'base_join_table' => 'job_import_record',
+    //     'base_join_field' => 'record_id',
+    //   );
+    //   $query_params['related_tables'][] = array(
+    //     'table_name' => 'capture_dataset',
+    //     'table_join_field' => 'capture_dataset_id',
+    //     'join_type' => 'LEFT JOIN',
+    //     'base_join_table' => 'model',
+    //     'base_join_field' => 'capture_dataset_id',
+    //   );
+    //   $query_params['related_tables'][] = array(
+    //     'table_name' => 'item',
+    //     'table_join_field' => 'item_id',
+    //     'join_type' => 'LEFT JOIN',
+    //     'base_join_table' => 'model',
+    //     'base_join_field' => 'item_id',
+    //   );
+    //   $query_params['related_tables'][] = array(
+    //     'table_name' => 'subject',
+    //     'table_join_field' => 'subject_id',
+    //     'join_type' => 'LEFT JOIN',
+    //     'base_join_table' => 'item',
+    //     'base_join_field' => 'subject_id',
+    //   );
+    //   $query_params['fields'][] = array(
+    //     'table_name' => 'capture_dataset',
+    //     'field_name' => 'capture_dataset_id',
+    //   );
+    //   $query_params['fields'][] = array(
+    //     'table_name' => 'capture_dataset',
+    //     'field_name' => 'capture_dataset_name',
+    //   );
+    //   $query_params['fields'][] = array(
+    //     'table_name' => 'model',
+    //     'field_name' => 'model_id',
+    //   );
+    //   $query_params['fields'][] = array(
+    //     'table_name' => 'model',
+    //     'field_name' => 'model_file_type',
+    //   );
+    //   $query_params['fields'][] = array(
+    //     'table_name' => 'model',
+    //     'field_name' => 'model_purpose',
+    //   );
+    //   $query_params['fields'][] = array(
+    //     'table_name' => 'model',
+    //     'field_name' => 'date_of_creation',
+    //   );
+
+    //   if (NULL !== $search_value) {
+    //     $query_params['search_params'][3] = array(
+    //       'field_names' => array(
+    //         'item_description',
+    //         'capture_dataset_name',
+    //       ),
+    //       'search_values' => array($search_value),
+    //       'comparison' => 'LIKE',
+    //     );
+    //   }
+
+    // }
 
 
     $query_params['search_params'][0] = array('field_names' => array('job_import_record.record_table'), 'search_values' => array($record_table), 'comparison' => '=');

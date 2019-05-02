@@ -30,8 +30,11 @@ class SubjectForm extends AbstractType
                 'required' => true,
               ))
             ->add('holding_entity_guid', null, array(
-                'label' => 'Holding Entity GUID',
-                'required' => false,
+                'label' => 'Holding Entity GUID (ISNI ID)',
+                'required' => true,
+                'attr' => array(
+                  'placeholder' => 'Example: 0000000123642127',
+                )
               ))
             ->add('local_subject_id', null, array(
                 'label' => 'Local Subject ID',
