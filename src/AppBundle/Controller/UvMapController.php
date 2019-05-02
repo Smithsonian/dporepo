@@ -62,7 +62,7 @@ class UvMapController extends Controller
     $id = !empty($request->attributes->get('id')) ? $request->attributes->get('id') : false;
 
     // If no parent_id is passed, throw a createNotFoundException (404).
-    if(!$parent_id) throw $this->createNotFoundException('The record does not exist');
+    if(!$id && !$parent_id) throw $this->createNotFoundException('The record does not exist');
 
     // Retrieve data from the database, and if the record doesn't exist, throw a createNotFoundException (404).
     
