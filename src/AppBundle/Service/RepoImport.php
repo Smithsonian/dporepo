@@ -164,6 +164,7 @@ class RepoImport implements RepoImportInterface {
       '-diffuse',
       '-normal_t',
       '-normal_w',
+      '-normals',
       '-occlusion',
     );
 
