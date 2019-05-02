@@ -627,6 +627,8 @@ class RepoImport implements RepoImportInterface {
         switch ($data->type) {
           case 'subject':
 
+            $csv_val->subject_name = '';
+
             // Check to see if the subject already exists- DPO3DREP-546
             $subject_exists = $this->repo_storage_controller->execute('getRecords', array(
                 'base_table' => 'subject',
