@@ -189,6 +189,25 @@ class ItemController extends Controller
       // Throw a createNotFoundException (404).
       if(!isset($item->item_data->item_id)) throw $this->createNotFoundException('The record does not exist');
 
+      // Temporary hack for the URL for Voyager's Authoring mode.
+      switch ($item_id) {
+        case '2615':
+          $voyager_url = '?root=%2Fwebdav%2F159B8278-2125-5EE1-7F3E-E2CFD06AB33D%2FFSGA+-+Incense+burner+v1-t%2Fdata%2Ff1978_40-master%2F&document=%2Fwebdav%2F159B8278-2125-5EE1-7F3E-E2CFD06AB33D%2FFSGA+-+Incense+burner+v1-t%2Fdata%2Ff1978_40-master%2Ff1978_40-master-document.json&mode=Author&referrer=%2Fadmin%2Fitem%2Fview%2F' . $item_id;
+          break;
+        case '2618':
+          $voyager_url = '?root=%2Fwebdav%2F6F0FB341-4C78-69C1-08C9-033EE76529EF%2Fusnm_pal_0041242-model_and_datasets%2Fdata%2Fusnm_pal_0041242-master%2F&document=%2Fwebdav%2F6F0FB341-4C78-69C1-08C9-033EE76529EF%2Fusnm_pal_0041242-model_and_datasets%2Fdata%2Fusnm_pal_0041242-master%2Fusnm_pal_00412421-master-document.json&mode=Author&referrer=%2Fadmin%2Fitem%2Fview%2F' . $item_id;
+          break;
+        case '2619':
+          $voyager_url = '?root=%2Fwebdav%2F4EC18FC9-25CB-03CF-2389-56E22C52885A%2Fusnm_pal_0041242-model_and_datasets%2Fdata%2Fusnm_pal_0041242-master%2F&document=%2Fwebdav%2F4EC18FC9-25CB-03CF-2389-56E22C52885A%2Fusnm_pal_0041242-model_and_datasets%2Fdata%2Fusnm_pal_0041242-master%2Fusnm_pal_00412421-master-document.json&mode=Author&referrer=%2Fadmin%2Fitem%2Fview%2F' . $item_id;
+          break;
+        case '2620':
+          $voyager_url = '?root=%2Fwebdav%2F0829C2AF-FE61-C674-9EFF-514A41725656%2FNPG+-+Lyndon+B.+Johnson+v2-t%2Fdata%2Fmodel%2F&document=%2Fwebdav%2F0829C2AF-FE61-C674-9EFF-514A41725656%2FNPG+-+Lyndon+B.+Johnson+v2-t%2Fdata%2Fmodel%2Fnpg_91_28-document.json&mode=Author&referrer=%2Fadmin%2Fitem%2Fview%2F' . $item_id;
+          break;
+        case '2621':
+          $voyager_url = '?root=%2Fwebdav%2F1E4E586C-5CDE-9C45-B695-6C630BC9035D%2Ff1991_59-model%2Fdata%2Fmodel%2F&document=%2Fwebdav%2F1E4E586C-5CDE-9C45-B695-6C630BC9035D%2Ff1991_59-model%2Fdata%2Fmodel%2Ff1991_59-master-document.json&mode=Author&referrer=%2Fadmin%2Fitem%2Fview%2F' . $item_id;
+          break;
+      }
+
       $subject_data = $project_data = array();
       $project_id = isset($item->item_data->project_id) ? $item->item_data->project_id : NULL;
       if(NULL !== $project_id) {
@@ -214,6 +233,7 @@ class ItemController extends Controller
         'destination' => $project_id . '|' . $subject_id . '|' . $item_id,
         'uploads_path' => $this->uploads_path,
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'voyager_url' => $voyager_url,
       ));
     }
 

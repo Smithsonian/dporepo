@@ -81,7 +81,7 @@
             </div>
             <div class="col-md-6">
               {% if (data.model_purpose == 'master') and (data.files.file_path is defined) %}
-                <div><a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?item=admin/get_file?path={{data.files.file_path}}&referrer=" class="btn btn-primary" role="button">Author content</a></div>
+                <div><a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?{{ voyager_url }}" class="btn btn-primary" role="button">Author content</a></div>
               {% endif %}
 
               {% if data.model_id_thumb_3d is defined and data.model_id_thumb_3d != '' %}
