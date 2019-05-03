@@ -316,6 +316,42 @@ class ModelController extends Controller
       // If there are no results, throw a createNotFoundException (404).
       if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
 
+        if(isset($item_array['authoring']) && is_array($data['authoring'])) {
+          $data['authoring']['referrer'] = '/admin/model/view/' . $id;
+          $data['authoring']['mode'] = 'author';
+
+          /*
+           *
+          https://si-3ddigip01.si.edu:8445/lib/javascripts/voyager-tools/voyager-story-dev.html?
+
+          root=/webdav/78D55C4C-F5DA-1D74-11D0-D78B4A4CF649/nmnh_sea_turtle-model_and_dataset/data/models/
+          &document=/webdav/78D55C4C-F5DA-1D74-11D0-D78B4A4CF649/nmnh_sea_turtle-model_and_dataset/data/models/nmnh_sea_turtle-master-document.json
+          &mode=author
+          &referrer=/admin/workflow/108?qc_hd_done
+
+           */
+        }
+
+        // Temporary hack for the URL for Voyager's Authoring mode.
+      /*switch ($data['item_id']) {
+        case '2615':
+          $voyager_url = '?root=%2Fwebdav%2F159B8278-2125-5EE1-7F3E-E2CFD06AB33D%2FFSGA+-+Incense+burner+v1-t%2Fdata%2Ff1978_40-master%2F&document=%2Fwebdav%2F159B8278-2125-5EE1-7F3E-E2CFD06AB33D%2FFSGA+-+Incense+burner+v1-t%2Fdata%2Ff1978_40-master%2Ff1978_40-master-document.json&mode=Author&referrer=%2Fadmin%2Fitem%2Fview%2F' . $data['item_id'];
+          break;
+        case '2618':
+          $voyager_url = '?root=%2Fwebdav%2F6F0FB341-4C78-69C1-08C9-033EE76529EF%2Fusnm_pal_0041242-model_and_datasets%2Fdata%2Fusnm_pal_0041242-master%2F&document=%2Fwebdav%2F6F0FB341-4C78-69C1-08C9-033EE76529EF%2Fusnm_pal_0041242-model_and_datasets%2Fdata%2Fusnm_pal_0041242-master%2Fusnm_pal_00412421-master-document.json&mode=Author&referrer=%2Fadmin%2Fitem%2Fview%2F' . $data['item_id'];
+          break;
+        case '2619':
+          $voyager_url = '?root=%2Fwebdav%2F4EC18FC9-25CB-03CF-2389-56E22C52885A%2Fusnm_pal_0041242-model_and_datasets%2Fdata%2Fusnm_pal_0041242-master%2F&document=%2Fwebdav%2F4EC18FC9-25CB-03CF-2389-56E22C52885A%2Fusnm_pal_0041242-model_and_datasets%2Fdata%2Fusnm_pal_0041242-master%2Fusnm_pal_00412421-master-document.json&mode=Author&referrer=%2Fadmin%2Fitem%2Fview%2F' . $data['item_id'];
+          break;
+        case '2620':
+          $voyager_url = '?root=%2Fwebdav%2F0829C2AF-FE61-C674-9EFF-514A41725656%2FNPG+-+Lyndon+B.+Johnson+v2-t%2Fdata%2Fmodel%2F&document=%2Fwebdav%2F0829C2AF-FE61-C674-9EFF-514A41725656%2FNPG+-+Lyndon+B.+Johnson+v2-t%2Fdata%2Fmodel%2Fnpg_91_28-document.json&mode=Author&referrer=%2Fadmin%2Fitem%2Fview%2F' . $data['item_id'];
+          break;
+        case '2621':
+          $voyager_url = '?root=%2Fwebdav%2F1E4E586C-5CDE-9C45-B695-6C630BC9035D%2Ff1991_59-model%2Fdata%2Fmodel%2F&document=%2Fwebdav%2F1E4E586C-5CDE-9C45-B695-6C630BC9035D%2Ff1991_59-model%2Fdata%2Fmodel%2Ff1991_59-master-document.json&mode=Author&referrer=%2Fadmin%2Fitem%2Fview%2F' . $data['item_id'];
+          break;
+      }
+      */
+
       // The repository's upload path.
       $data['uploads_path'] = $this->uploads_directory;
 
@@ -326,6 +362,7 @@ class ModelController extends Controller
         'page_title' => 'Model Detail',
         'data' => $data,
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        //'voyager_url' => $voyager_url,
       ));
     }
 
