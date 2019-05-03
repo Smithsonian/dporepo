@@ -908,38 +908,37 @@ class RepoStorageHybrid implements RepoStorage {
     $statement->execute();
     $document_files = $statement->fetchAll();
 
-    // Now we have the filesystem path and the filename.
-    // Turn those into values that look like this:
-    //    root=/webdav/78D55C4C-F5DA-1D74-11D0-D78B4A4CF649/nmnh_sea_turtle-model_and_dataset/data/models/
-    //    document=/webdav/78D55C4C-F5DA-1D74-11D0-D78B4A4CF649/nmnh_sea_turtle-model_and_dataset/data/models/nmnh_sea_turtle-master-document.json
+    if(empty($document_files)) {
+      return NULL;
+    }
 
-    /*
+    $file_path = $document_files[0]['file_path'];
+
+    // Now we have the filesystem path, and it looks like this:
+    //  \uploads\repository\F6436C78-A601-CBA5-497B-CE762E88AF25\usnm_pal_0041242-model\data\model\usnm_pal_00412421-master-document.json
+
+    // Turn the path into values that look like this:
+    //    root       /webdav/F6436C78-A601-CBA5-497B-CE762E88AF25/usnm_pal_0041242-model/data/model/
+
+    //    document   /webdav/F6436C78-A601-CBA5-497B-CE762E88AF25/usnm_pal_0041242-model/data/model/usnm_pal_00412421-master-document.json
+
+    $path = 'web' . str_replace("\\", "/",  $file_path);
+    $temp = 'web/uploads/repository'; //@todo temp hack - this must be uploads directory in parameters.yml
+    $path = str_replace($temp, '', $path);
+    if(substr($path,0,1) !== '/') {
+      $path = '/' . $path;
+    }
+    $document = '/webdav' . $path;
+
+    $path_array = explode('/', $document);
+    $filename = array_pop($path_array);
+    $root = implode('/', $path_array) . '/';
+
       $authoring_document = array(
-      'root' => '',
-      'document' => '',
+      'root' => $root,
+      'document' => $document,
     );
     return $authoring_document;
-
-     */
-
-    // see processing_job.asset_path, processing_job_file
-
-    /*
-    $directory = pathinfo($path[0]['asset_path'], PATHINFO_DIRNAME);
-    $base_file_name = pathinfo($path[0]['asset_path'], PATHINFO_FILENAME);
-    // Since we're building the WebDAV path, all slashes need to be forward slashes.
-    $webdav_directory = str_replace('\\', '/', $directory);
-    $project_directory = str_replace('\\', '/', $this->project_directory);
-    // Path to the document.json file.
-    $document_json_path = $directory . DIRECTORY_SEPARATOR . $base_file_name . '-document.json';
-    // If the document.json file doesn't exist, throw a createNotFoundException (404).
-    if (!is_file($document_json_path)) throw $this->createNotFoundException('JSON not found - ' . $base_file_name . '-document.json');
-
-    // The webDav-based path to the root.
-    $root = str_replace($project_directory . 'web/uploads/repository', '/webdav', $webdav_directory) . '/';
-    // The webDav-based path to the document.json.
-    $document = $root . $base_file_name . '-document.json';
-    */
 
   }
 
