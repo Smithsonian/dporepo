@@ -50,9 +50,8 @@
     {% if item_data.thumb_3d is defined %}
         <a href="/admin/model/viewer/{{item_data.thumb_3d.model_id}}" class="btn btn-primary" role="button">Preview 3D thumbnail</a>
     {% endif %}
-
-    {% if item_data.master_model is defined and item_data.master_model.model_files.0 is defined %}
-      <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html{{ voyager_url }}" class="btn btn-primary" role="button">Author content</a>
+    {% if item_data.authoring is defined %}
+      <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?root={{ item_data.authoring.root }}document=admin/get_file?path={{item_data.authoring.document}}&referrer={{ item_data.authoring.referrer }}&mode={{ item_data.authoring.mode }}" class="btn btn-primary" role="button">Author content</a>
     {% endif %}
 
 
