@@ -893,6 +893,27 @@ class WorkflowController extends Controller
         )
       );
 
+      // Temporary hack for Windows paths - when data was imported from a Mac environment.
+      if ((DIRECTORY_SEPARATOR === '\\') && empty($data)) {
+
+        $file_path_for_query = str_replace('\\', '/', $file_path_for_query);
+
+        // $this->u->dumper($file_path_for_query);
+
+        $data = $this->repo_storage_controller->execute('getRecords', array(
+            'base_table' => 'file_upload',
+            'fields' => array(),
+            'limit' => 1,
+            'search_params' => array(
+              0 => array('field_names' => array('file_upload.file_path'), 'search_values' => array($file_path_for_query), 'comparison' => '='),
+            ),
+            'search_type' => 'AND',
+            'omit_active_field' => true,
+          )
+        );
+
+      }
+
     }
 
     return $data;
