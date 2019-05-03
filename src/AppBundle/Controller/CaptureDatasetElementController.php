@@ -162,7 +162,8 @@ class CaptureDatasetElementController extends Controller
         }
 
         return $this->render('datasetElements/dataset_element_form.html.twig', array(
-            'page_title' => ((int)$id && isset($dataset_element->capture_sequence_number)) ? 'Capture Data Element: ' . $dataset_element->capture_sequence_number : 'Add a Capture Data Element',
+            // 'page_title' => ((int)$id && isset($dataset_element->capture_sequence_number)) ? 'Capture Data Element: ' . $dataset_element->capture_sequence_number : 'Add a Capture Data Element',
+            'page_title' => 'Capture Data Element',
             'project_id' => $item_data['project_id'],
             'subject_id' => $item_data['subject_id'],
             'item_id' => $item_data['item_id'],
