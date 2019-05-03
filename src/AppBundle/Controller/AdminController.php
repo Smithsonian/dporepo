@@ -218,9 +218,10 @@ class AdminController extends Controller
 
     $search = !empty($req['search']['value']) ? $req['search']['value'] : false;
     $sort_field = $req['columns'][ $req['order'][0]['column'] ]['data'];
+    $sort_order = isset($req['order'][0]['dir']) ? $req['order'][0]['dir'] : 'asc';
     $start_record = !empty($req['start']) ? $req['start'] : 0;
     $stop_record = !empty($req['length']) ? $req['length'] : 20;
-  $logged_user = $this->getUser()->getId();
+    $logged_user = $this->getUser()->getId();
 
     $query_params = array(
       'sort_field' => $sort_field,
