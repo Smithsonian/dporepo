@@ -411,6 +411,15 @@ class RepoStorageHybrid implements RepoStorage {
     $return_data['inherit_api_access_model_face_count_id'] = isset($download_permissions['inherit_api_access_model_face_count_id']) ? $download_permissions['inherit_api_access_model_face_count_id'] : NULL;
     $return_data['inherit_api_access_uv_map_size_id'] = isset($download_permissions['inherit_api_access_uv_map_size_id']) ? $download_permissions['inherit_api_access_uv_map_size_id'] : NULL;
 
+    // Get authoring document.
+    $at_params = array(
+      'item_id' => $params['item_id']
+    );
+    $authoring_document = $this->getAuthoringDocument($at_params);
+    if(NULL !== $authoring_document) {
+      $return_data['authoring'] = $authoring_document;
+    }
+
     return $return_data;
   }
 
@@ -559,6 +568,17 @@ class RepoStorageHybrid implements RepoStorage {
     $return_data['inherit_api_published'] = isset($download_permissions['inherit_api_published']) ? $download_permissions['inherit_api_published'] : NULL;
     $return_data['inherit_api_discoverable'] = isset($download_permissions['inherit_api_discoverable']) ? $download_permissions['inherit_api_discoverable'] : NULL;
     //$return_data['api_access_model_purpose'] = isset($download_permissions['api_access_model_purpose']) ? $download_permissions['api_access_model_purpose'] : NULL;
+
+    if(NULL !== $item_id) {
+      $params = array(
+        'item_id' => $item_id,
+        //@todo also pass model file base to narrow this down
+      );
+      $authoring_document = $this->getAuthoringDocument($params);
+      if(NULL !== $authoring_document) {
+        $return_data['authoring'] = $authoring_document;
+      }
+    }
 
     return $return_data;
 
@@ -834,6 +854,92 @@ class RepoStorageHybrid implements RepoStorage {
     $statement->execute();
     $files = $statement->fetchAll();
     return $files;
+  }
+
+  /***
+   * @param $params
+   * @return array
+   * root - the value to pass to the root param for the authoring tool
+   * document - the value to pass to the document param for the authoring tool
+   */
+  public function getAuthoringDocument($params) {
+
+    // file_upload has all files for an ingest
+    // In the case were Cook was able to successfully bake a model, a document.json file will exist.
+    // We have an incoming item_id
+
+    if (!isset($params['item_id'])) {
+      return NULL;
+    }
+
+    $item_id = isset($params['item_id']) ? $params['item_id'] : NULL;
+
+    // We relate these tables: model - model_file - file_upload - job
+    // Incoming item_id maps to model.item_id
+    // We also check that file_upload.file_name ends in document.json
+
+    // Base SQL for all queries- first just get all jobs associated with the item.
+    $sql = "SELECT DISTINCT f.job_id
+          FROM model m
+          JOIN model_file mf on m.model_id = mf.model_id 
+          JOIN file_upload f on mf.file_upload_id = f.file_upload_id
+          WHERE m.active=1 AND m.item_id=" . $item_id . " ";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->execute();
+    $job_ids = $statement->fetchAll();
+
+    if(count($job_ids) < 1) {
+      return NULL;
+    }
+
+    $job_ids_array = array();
+    foreach($job_ids as $j) {
+      $job_ids_array[] = $j['job_id'];
+    }
+    $job_ids_string = implode(',', $job_ids_array);
+
+    $sql = "SELECT DISTINCT f.file_path, f.file_name
+          FROM file_upload f
+          WHERE f.job_id IN (" . $job_ids_string . ") 
+          AND f.file_name like '%document.json'"; //@todo should be -hd-document.json ?
+
+    $statement = $this->connection->prepare($sql);
+    $statement->execute();
+    $document_files = $statement->fetchAll();
+
+    if(empty($document_files)) {
+      return NULL;
+    }
+
+    $file_path = $document_files[0]['file_path'];
+
+    // Now we have the filesystem path, and it looks like this:
+    //  \uploads\repository\F6436C78-A601-CBA5-497B-CE762E88AF25\usnm_pal_0041242-model\data\model\usnm_pal_00412421-master-document.json
+
+    // Turn the path into values that look like this:
+    //    root       /webdav/F6436C78-A601-CBA5-497B-CE762E88AF25/usnm_pal_0041242-model/data/model/
+
+    //    document   /webdav/F6436C78-A601-CBA5-497B-CE762E88AF25/usnm_pal_0041242-model/data/model/usnm_pal_00412421-master-document.json
+
+    $path = 'web' . str_replace("\\", "/",  $file_path);
+    $temp = 'web/uploads/repository'; //@todo temp hack - this must be uploads directory in parameters.yml
+    $path = str_replace($temp, '', $path);
+    if(substr($path,0,1) !== '/') {
+      $path = '/' . $path;
+    }
+    $document = '/webdav' . $path;
+
+    $path_array = explode('/', $document);
+    $filename = array_pop($path_array);
+    $root = implode('/', $path_array) . '/';
+
+      $authoring_document = array(
+      'root' => $root,
+      'document' => $document,
+    );
+    return $authoring_document;
+
   }
 
   public function getCaptureDataset($params) {
