@@ -81,7 +81,7 @@
             </div>
             <div class="col-md-6">
               {% if (data.model_purpose == 'master') and (data.authoring is defined) %}
-                <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?root={{ data.authoring.root }}&document=admin/get_file?path={{data.authoring.document}}&referrer={{ data.authoring.referrer }}&mode={{ data.authoring.mode }}" class="btn btn-primary" role="button">Author content</a>
+                <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?root={{ data.authoring.root }}&document={{data.authoring.document}}&referrer={{ data.authoring.referrer }}&mode={{ data.authoring.mode }}" class="btn btn-primary" role="button">Author content</a>
               {% endif %}
 
               {% if data.model_id_thumb_3d is defined and data.model_id_thumb_3d != '' %}
