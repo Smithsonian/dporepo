@@ -18,12 +18,12 @@ Packrat uses the Voyager 3D model viewer. https://github.com/Smithsonian/dpo-voy
 
 ### PHP Settings
 To support uploads of large files, set the following within php.ini.
-max_file_uploads = 100
-memory_limit = 4096
-post_max_size = 5G
-upload_max_filesize = 5G
-upload_tmp_dir = C:\tmp
-max_execution_time = 3600
+max_file_uploads = 100\
+memory_limit = 4096\
+post_max_size = 5G\
+upload_max_filesize = 5G\
+upload_tmp_dir = C:\tmp\
+max_execution_time = 3600\
 
 ### Prepare the website
 #### Create a directory and clone dporepo into it
@@ -65,20 +65,20 @@ Ensure that the DocumentRoot and Directory point to your filesystem location of 
 Vhost example file
 NameVirtualHost *:8080
 
-<VirtualHost *:8080>. 
-    DocumentRoot "C:/xampp/htdocs/dporepo/web/". 
-    ServerName localhost:8080. 
-    ErrorLog "logs/error.log". 
-    CustomLog "logs/access.log" common. 
-    #SSLEngine on. 
-    #SSLCertificateFile "conf/ssl.crt/server.crt"   
-    #SSLCertificateKeyFile "conf/ssl.key/server.key". 
-    <Directory "C:/xampp/htdocs/dporepo/web">. 
-        AllowOverride All. 
-        Order Allow,Deny. 
-        Allow from All.
-    </Directory>.
-</VirtualHost>.
+<VirtualHost *:8080>\
+    DocumentRoot "C:/xampp/htdocs/dporepo/web/"\
+    ServerName localhost:8080\
+    ErrorLog "logs/error.log"\ 
+    CustomLog "logs/access.log" common\
+    #SSLEngine on\
+    #SSLCertificateFile "conf/ssl.crt/server.crt"\
+    #SSLCertificateKeyFile "conf/ssl.key/server.key"\
+    <Directory "C:/xampp/htdocs/dporepo/web">\
+        AllowOverride All\
+        Order Allow,Deny\
+        Allow from All\
+    </Directory>\
+</VirtualHost>\
 
 
 ### Launch UI
@@ -88,8 +88,8 @@ If you see PDO errors (can't find file), set unix_socket underneath doctrine:, d
 #### Install the Application
 Go to http://localhost:8080/ (Windows/XAMPP) http://127.0.0.1:8000/ (Mac) and click the "Install" button (switch the port number if need be)
 
-If installation says it succeeded but you have no database, the most likely culprit is your version of MySQL doesn't support json fields.  
-- TODO: Temp cheat, change the 2 JSON fields to varchar(8000) within database_create.sql
+If installation says it succeeded but you have no database, the most likely culprit is your version of MySQL doesn't support json fields.\
+- TODO: Temp fix for wrong MySQL version- change the 2 JSON fields to varchar(8000) within database_create.sql
 authoring_item, authoring_presentation tables
 
 #### Register, and create a new user account.
@@ -128,9 +128,9 @@ http://127.0.0.1:8000/admin/edan/nmnhinvertebratezoology_957944.
 
 Copyright 2019 Smithsonian Institution.
 
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use the content of this repository except in compliance with the License. You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use the content of this repository except in compliance with the License. You may obtain a copy of the License at\
 
-http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0\
 
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
