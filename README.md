@@ -19,13 +19,15 @@ Packrat uses the Voyager 3D model viewer. https://github.com/Smithsonian/dpo-voy
 - Composer has been installed.
 
 ### PHP Settings
-To support uploads of large files, set the following within php.ini.
-max_file_uploads = 100\
-memory_limit = 4096\
-post_max_size = 5G\
-upload_max_filesize = 5G\
-upload_tmp_dir = C:\tmp\
-max_execution_time = 3600\
+To support uploads of large files, set the following within php.ini. \
+```
+max_file_uploads = 100
+memory_limit = 4096
+post_max_size = 5G
+upload_max_filesize = 5G
+upload_tmp_dir = C:\tmp
+max_execution_time = 3600
+```
 
 ### Prepare the website
 #### Create a directory and clone dporepo into it
@@ -49,7 +51,7 @@ If not, you have 2 options:
 1. Copy parameters.yml.dist to parameters.yml. Fill in the missing values for the database and other settings.
 2. Do nothing. You will be prompted during the installation to provide these settings via the command line, one at a time.
 
-The database settings must match the database and datagbase user account created in step Prepare database.
+The database settings must match the database and database user account created in step Prepare database.
 
 #### Install Symfony and Third Party Libraries using Composer
 
@@ -67,18 +69,19 @@ Ensure that the DocumentRoot and Directory point to your filesystem location of 
 Vhost example file
 NameVirtualHost *:8080
 
-<VirtualHost *:8080><br />
-    DocumentRoot "C:/xampp/htdocs/dporepo/web/"\
-    ServerName localhost:8080\
-    ErrorLog "logs/error.log"\ 
-    CustomLog "logs/access.log" common\
-    <Directory "C:/xampp/htdocs/dporepo/web"><br />
-        AllowOverride All\
-        Order Allow,Deny\
-        Allow from All\
-    </Directory><br />
+```
+<VirtualHost *:8080>
+    DocumentRoot "C:/xampp/htdocs/dporepo/web/"
+    ServerName localhost:8080
+    ErrorLog "logs/error.log" 
+    CustomLog "logs/access.log" common
+    <Directory "C:/xampp/htdocs/dporepo/web">
+        AllowOverride All
+        Order Allow,Deny
+        Allow from All
+    </Directory>
 </VirtualHost>
-
+```
 
 ### Launch UI
 #### Using a browser navigate to the homepage.
