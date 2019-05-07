@@ -3,8 +3,10 @@
 A Symfony project created on November 30, 2017
 
 Packrat provides a web-based user interface for ingesting assets and metadata pertaining to 3D models, and processing them using the Cook 3D model processing service. https://github.com/Smithsonian/dpo-cook
+
 Packrat uses the Voyager 3D model viewer. https://github.com/Smithsonian/dpo-voyager
 
+## Installation
 ### Requirements
 - PHP 7.2 *This is critical. If using XAMPP be sure to download the version with PHP 7.2*
 - Symfony framework 3.4
@@ -111,8 +113,10 @@ http://127.0.0.1:8000/admin/edan/nmnhinvertebratezoology_957944.
 
 #### Configure remote file storage
 
+## Usage
+https://github.com/Smithsonian/dporepo/wiki/Using-Packrat
 
-# License Information
+## License Information
 
 Copyright 2019 Smithsonian Institution.
 
@@ -122,6 +126,6 @@ http://www.apache.org/licenses/LICENSE-2.0\
 
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
-# Pre-Release Software
+## Pre-Release Software
 
 This software is pre-release and provided "as is". Breaking changes can and will happen during development.
