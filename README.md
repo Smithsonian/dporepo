@@ -85,8 +85,9 @@ If you see PDO errors (can't find file), set unix_socket underneath doctrine:, d
 #### Install the Application
 Go to http://localhost:8080/ (Windows/XAMPP) http://127.0.0.1:8000/ (Mac) and click the "Install" button (switch the port number if need be)
 
-If installation says it succeeded but you have no database, the most likely culprit is that your version of MySQL doesn't support json fields.\
-- TODO: Temp fix for wrong MySQL version- change the 2 JSON fields to varchar(8000) within database_create.sql
+If installation says it succeeded but you have no database, the most likely culprit is that your version of MySQL doesn't support json fields.<br />
+
+TODO: Temp fix for wrong MySQL version- change the 2 JSON fields to varchar(8000) within database_create.sql
 authoring_item, authoring_presentation tables
 
 #### Register, and create a new user account.
