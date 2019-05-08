@@ -35,14 +35,14 @@
           <div class="form-group">
             <label class="control-label" for="fos_user_profile_form_email" class="required">Email</label>
             <div class="controls">
-              <input id="fos_user_profile_form_email" name="fos_user_profile_form[email]" required="required" value="{{ form.vars.data.email|e }}" type="email" class="form-control">
+              <input id="fos_user_profile_form_email" name="fos_user_profile_form[email]" required="required" autocomplete="off" value="{{ form.vars.data.email|e }}" type="email" class="form-control">
             </div>
           </div>
 
           <div class="form-group">
             <label class="control-label" for="fos_user_profile_form_current_password" class="required">Current Password</label>
             <div class="controls">
-              <input id="fos_user_profile_form_current_password" name="fos_user_profile_form[current_password]" required="required" type="password" class="form-control">
+              <input id="fos_user_profile_form_current_password" name="fos_user_profile_form[current_password]" required="required" autocomplete="off" type="password" class="form-control">
             </div>
           </div> #}
 
