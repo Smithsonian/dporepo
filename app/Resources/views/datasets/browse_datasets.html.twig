@@ -214,7 +214,11 @@
           item_id = "{{ item_id }}",
           details_page = "/admin/capture_dataset/view/";
 
-      // $('.model-iframe').html("<iframe src='/admin/model/viewer/" + item_id + "' scrolling='no' height='300' width='400'></iframe>");
+      {% if item_data.thumb_3d is defined %}
+        var thumb_3d_model_id = '{{ item_data.thumb_3d.model_id }}';
+      {% endif %}
+
+      $('.model-iframe').html("<iframe src='/admin/model/viewer/" + thumb_3d_model_id + "' scrolling='no' height='300' width='400'></iframe>");
     
       $("#browse").dataTable({
         "columns": [
