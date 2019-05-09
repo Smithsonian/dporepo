@@ -217,7 +217,7 @@
 
       {% if item_data.thumb_3d is defined %}
         var thumb_3d_model_id = '{{ item_data.thumb_3d.model_id }}';
-        $('.model-iframe').html("<iframe src='/admin/model/viewer/" + thumb_3d_model_id + "' scrolling='no' height='300' width='400'></iframe>");
+        $('.model-iframe').html("<iframe src='/admin/model/viewer/" + thumb_3d_model_id + "' scrolling='no' height='500' width='600'></iframe>");
       {% endif %}
     
       $("#browse").dataTable({
