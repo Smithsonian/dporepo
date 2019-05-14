@@ -101,7 +101,7 @@ class RepoUserAccess {
       && isset($user_has_access['username_canonical']) && $user_has_access['username_canonical'] == $username) {
 
       // If $user_has_access['project_ids'] not an array, make it an array.
-      if (!is_array($user_has_access['project_ids'])) {
+      if (!empty($user_has_access['project_ids']) && !is_array($user_has_access['project_ids'])) {
         $user_has_access['project_ids'] = !is_array($user_has_access['project_ids']) ? array($user_has_access['project_ids']) : $user_has_access['project_ids'];
       }
 
