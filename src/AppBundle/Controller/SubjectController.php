@@ -306,9 +306,11 @@ class SubjectController extends Controller
       );
 
       // Check user's permissions.
+      $username = $this->getUser()->getUsernameCanonical();
       $user_can_create = $user_can_edit = $user_can_delete = false;
-      if(false !== $item_record['project_id']) {
-        $username = $this->getUser()->getUsernameCanonical();
+
+      // If there's a parent project ID...
+      if(array_key_exists('project_id', $item_record) && (false !== $item_record['project_id'])) {
         // Check if user has permission to access this page.
         $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $item_record['project_id']);
         if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
@@ -329,6 +331,32 @@ class SubjectController extends Controller
         // Check if user has permission to delete content.
         $access = $this->repo_user_access->get_user_access($username, 'delete_project_details', $item_record['project_id']);
         if(array_key_exists('project_ids', $access) && in_array($item_record['project_id'], $access['project_ids'])) {
+          $user_can_delete = true;
+        }
+      }
+
+      // If there is no parent project ID... (this means there are no items *yet* associated to the subject).
+      if(!array_key_exists('project_id', $item_record)) {
+        // Check if user has permission to access this page.
+        $access = $this->repo_user_access->get_user_access_any($username, 'view_projects');
+        if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
+          $response = new Response();
+          $response->setStatusCode(403);
+          return $response;
+        }
+        // Check if user has permission to create content.
+        $access = $this->repo_user_access->get_user_access_any($username, 'create_projects');
+        if(array_key_exists('project_ids', $access)) {
+          $user_can_create = true;
+        }
+        // Check if user has permission to create content.
+        $access = $this->repo_user_access->get_user_access_any($username, 'edit_project_details');
+        if(array_key_exists('project_ids', $access)) {
+          $user_can_edit = true;
+        }
+        // Check if user has permission to create content.
+        $access = $this->repo_user_access->get_user_access_any($username, 'delete_project_details');
+        if(array_key_exists('project_ids', $access)) {
           $user_can_delete = true;
         }
       }
