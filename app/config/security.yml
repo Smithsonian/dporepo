@@ -42,7 +42,7 @@ security:
 
     access_control:
         - { path: ^/login$, role: IS_AUTHENTICATED_ANONYMOUSLY }
-        - { path: ^/register, role: [ROLE_ADMIN] }
+        - { path: ^/register, role: [IS_AUTHENTICATED_ANONYMOUSLY] }
         - { path: ^/resetting, role: IS_AUTHENTICATED_ANONYMOUSLY }
         - { path: ^/workflow, role: IS_AUTHENTICATED_ANONYMOUSLY } #todo- revisit
         - { path: ^/bagit, role: IS_AUTHENTICATED_ANONYMOUSLY }    #todo- revisit

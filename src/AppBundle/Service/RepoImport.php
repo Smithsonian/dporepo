@@ -164,6 +164,7 @@ class RepoImport implements RepoImportInterface {
       '-diffuse',
       '-normal_t',
       '-normal_w',
+      '-normals',
       '-occlusion',
     );
 
@@ -633,19 +634,22 @@ class RepoImport implements RepoImportInterface {
                 'fields' => array(),
                 'limit' => 1,
                 'search_params' => array(
-                  0 => array('field_names' => array('subject.holding_entity_guid'), 'search_values' => array($csv_val->holding_entity_guid), 'comparison' => '='),
+                  0 => array('field_names' => array('subject.subject_guid'), 'search_values' => array($csv_val->subject_guid), 'comparison' => '='),
                 ),
                 'search_type' => 'AND',
                 'omit_active_field' => true,
               )
             );
 
-            // If the subject doesn't exist, process.
+            // Set the project_id
             if (empty($subject_exists)) {
-              // Set the project_id
               $csv_val->project_id = (int)$data->project_id;
-              // Query EDAN to populate the CSV with EDAN record info (subject_name, and subject_display_name)
-              if ($this->edan) {
+            }
+
+            if ($this->edan) {
+              // If the subject doesn't exist, process.
+              if (empty($subject_exists)) {
+                // Query EDAN to populate the CSV with EDAN record info (subject_name, and subject_display_name)
                 $result = $this->edan->getRecord($csv_val->subject_guid);
                 // The EDAN record assignment has already been validated during pre-validation,
                 // so no error handling - for now.
@@ -657,9 +661,9 @@ class RepoImport implements RepoImportInterface {
                     $csv_val->local_subject_id = $result['content']['freetext']['identifier'][0]['content'];
                   }
                 }
+              } else {
+                $csv_val->subject_name = $subject_exists[0]['subject_name'];
               }
-            } else {
-              $csv_val->subject_name = $subject_exists[0]['subject_name'];
             }
 
             // Remove the 'ISN:' prefix from the ISNI ID (if present).

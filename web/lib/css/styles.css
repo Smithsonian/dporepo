@@ -444,7 +444,7 @@ dd {
 }
 
 .well {
-  overflow: scroll;
+  /*overflow: scroll;*/
 }
 
 .project-well, .subject-well, .item-well {

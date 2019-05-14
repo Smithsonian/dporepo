@@ -1,2 +1,2 @@
 import_row_id,import_parent_id,date_of_creation,derived_from,creation_method,units,model_purpose,file_path
-1,1,2015-12-04,1;2;3;4;5,scan_to_mesh,millimeter,master,f1978_40-master/f1978_40-master.obj
+1,1,2015-12-04,1,scan_to_mesh,millimeter,master,mymodel-master/mymodel-master.obj

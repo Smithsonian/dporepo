@@ -35,6 +35,7 @@
         <dt>Item Type</dt>
         <dd>{{ item_data.item_type_label|e }}</dd>
       </dl>
+    <div class="model-iframe"></div>
     </div>
     <div class="col-sm-12 col-md-12">
       <dl class="dl-horizontal">
@@ -51,8 +52,8 @@
     {% if item_data.thumb_3d is defined %}
         <a href="/admin/model/viewer/{{item_data.thumb_3d.model_id}}" class="btn btn-primary" role="button">Preview 3D thumbnail</a>
     {% endif %}
-    {% if item_data.master_model is defined %}
-      <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?item=admin/get_file?path={{item_data.master_model.model_files.0.file_path}}&referrer=" class="btn btn-primary" role="button">Author content</a>
+    {% if item_data.authoring is defined %}
+      <a href="/lib/javascripts/voyager-tools/voyager-story-dev.html?root={{ item_data.authoring.root }}&document={{item_data.authoring.document}}&referrer={{ item_data.authoring.referrer }}&mode={{ item_data.authoring.mode }}" class="btn btn-primary" role="button">Author content</a>
     {% endif %}
 
 
@@ -216,6 +217,8 @@
           subject_id = "{{ subject_id }}",
           item_id = "{{ item_id }}",
           details_page = "/admin/capture_dataset/view/";
+
+      // $('.model-iframe').html("<iframe src='/admin/model/viewer/" + item_id + "' scrolling='no' height='300' width='400'></iframe>");
 
       $("#browse").dataTable({
         "columns": [
@@ -494,7 +497,7 @@
 
         }
       });
-      
+
       {% if user_can_create %}
         var models_add_button = $('<a />')
           .addClass('btn btn-default add-record-button')

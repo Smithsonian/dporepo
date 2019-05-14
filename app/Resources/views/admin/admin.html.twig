@@ -287,6 +287,24 @@
         }
       });
 
+        // Send to details page when clicked.
+        $('#browse_assigned_workflows tbody').on('click','td',function(event){
+            if(!$(this).hasClass("manage_column")){
+                var item_id = $(this).siblings(":first").text();
+                if(item_id) {
+                    var item_detail_page = "/admin/item/view/";
+                    window.location.href = item_detail_page + item_id;
+                }
+                else {
+                    var workflow_id = $(this).parent().children(":nth-child(2)").text();
+                    if(workflow_id) {
+                        var workflow_details_page = "/admin/workflows/";
+                        window.location.href = workflow_details_page + workflow_id;
+                    }
+                }
+            }
+        });
+
     });
   </script>
 {% endblock %}

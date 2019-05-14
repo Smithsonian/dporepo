@@ -128,30 +128,6 @@ class CaptureDatasetController extends Controller
 
       $data = $this->repo_storage_controller->execute('getDatatableCaptureDataset', $query_params);
 
-      if (is_array($data) && isset($data['aaData'])) {
-        //@todo bad practice- instead get the dataset files in the above function, getDatatableCaptureDataset.
-        foreach($data['aaData'] as $k => $row) {
-          $id = $row['manage'];
-
-          $dataset_file = $this->repo_storage_controller->execute('getDatasetFiles',
-            array(
-              'capture_dataset_id' => $id,
-              'limit' => 1)
-          );
-          $data['aaData'][$k]['file_path'] = '';
-          if (count($dataset_file) > 0) {
-            $path = str_replace("\\", "/",  $dataset_file['file_path']);
-            $path = str_replace($this->uploads_directory, '', $path);
-            $path = str_replace("\\", "/", $this->external_file_storage_path . $path);
-            $path = str_replace("//", "/", $path);
-            // The complete path should look like this:
-            // /3DRepo/uploads/1E155C38-DC69-E33B-4208-7757D5CDAA35/data/cc/camera/f1978_40-cc_j3a.JPG
-            //$model_url = str_replace($uploads_path, $this->external_file_storage_path, $data['viewable_model']['file_path']);
-            $data['aaData'][$k]['file_path'] = $path;
-          }
-        }
-      }
-
       return $this->json($data);
     }
 

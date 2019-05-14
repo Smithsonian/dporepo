@@ -411,6 +411,15 @@ class RepoStorageHybrid implements RepoStorage {
     $return_data['inherit_api_access_model_face_count_id'] = isset($download_permissions['inherit_api_access_model_face_count_id']) ? $download_permissions['inherit_api_access_model_face_count_id'] : NULL;
     $return_data['inherit_api_access_uv_map_size_id'] = isset($download_permissions['inherit_api_access_uv_map_size_id']) ? $download_permissions['inherit_api_access_uv_map_size_id'] : NULL;
 
+    // Get authoring document.
+    $at_params = array(
+      'item_id' => $params['item_id']
+    );
+    $authoring_document = $this->getAuthoringDocument($at_params);
+    if(NULL !== $authoring_document) {
+      $return_data['authoring'] = $authoring_document;
+    }
+
     return $return_data;
   }
 
@@ -559,6 +568,17 @@ class RepoStorageHybrid implements RepoStorage {
     $return_data['inherit_api_published'] = isset($download_permissions['inherit_api_published']) ? $download_permissions['inherit_api_published'] : NULL;
     $return_data['inherit_api_discoverable'] = isset($download_permissions['inherit_api_discoverable']) ? $download_permissions['inherit_api_discoverable'] : NULL;
     //$return_data['api_access_model_purpose'] = isset($download_permissions['api_access_model_purpose']) ? $download_permissions['api_access_model_purpose'] : NULL;
+
+    if(NULL !== $item_id) {
+      $params = array(
+        'item_id' => $item_id,
+        //@todo also pass model file base to narrow this down
+      );
+      $authoring_document = $this->getAuthoringDocument($params);
+      if(NULL !== $authoring_document) {
+        $return_data['authoring'] = $authoring_document;
+      }
+    }
 
     return $return_data;
 
@@ -834,6 +854,92 @@ class RepoStorageHybrid implements RepoStorage {
     $statement->execute();
     $files = $statement->fetchAll();
     return $files;
+  }
+
+  /***
+   * @param $params
+   * @return array
+   * root - the value to pass to the root param for the authoring tool
+   * document - the value to pass to the document param for the authoring tool
+   */
+  public function getAuthoringDocument($params) {
+
+    // file_upload has all files for an ingest
+    // In the case were Cook was able to successfully bake a model, a document.json file will exist.
+    // We have an incoming item_id
+
+    if (!isset($params['item_id'])) {
+      return NULL;
+    }
+
+    $item_id = isset($params['item_id']) ? $params['item_id'] : NULL;
+
+    // We relate these tables: model - model_file - file_upload - job
+    // Incoming item_id maps to model.item_id
+    // We also check that file_upload.file_name ends in document.json
+
+    // Base SQL for all queries- first just get all jobs associated with the item.
+    $sql = "SELECT DISTINCT f.job_id
+          FROM model m
+          JOIN model_file mf on m.model_id = mf.model_id 
+          JOIN file_upload f on mf.file_upload_id = f.file_upload_id
+          WHERE m.active=1 AND m.item_id=" . $item_id . " ";
+
+    $statement = $this->connection->prepare($sql);
+    $statement->execute();
+    $job_ids = $statement->fetchAll();
+
+    if(count($job_ids) < 1) {
+      return NULL;
+    }
+
+    $job_ids_array = array();
+    foreach($job_ids as $j) {
+      $job_ids_array[] = $j['job_id'];
+    }
+    $job_ids_string = implode(',', $job_ids_array);
+
+    $sql = "SELECT DISTINCT f.file_path, f.file_name
+          FROM file_upload f
+          WHERE f.job_id IN (" . $job_ids_string . ") 
+          AND f.file_name like '%document.json'"; //@todo should be -hd-document.json ?
+
+    $statement = $this->connection->prepare($sql);
+    $statement->execute();
+    $document_files = $statement->fetchAll();
+
+    if(empty($document_files)) {
+      return NULL;
+    }
+
+    $file_path = $document_files[0]['file_path'];
+
+    // Now we have the filesystem path, and it looks like this:
+    //  \uploads\repository\F6436C78-A601-CBA5-497B-CE762E88AF25\usnm_pal_0041242-model\data\model\usnm_pal_00412421-master-document.json
+
+    // Turn the path into values that look like this:
+    //    root       /webdav/F6436C78-A601-CBA5-497B-CE762E88AF25/usnm_pal_0041242-model/data/model/
+
+    //    document   /webdav/F6436C78-A601-CBA5-497B-CE762E88AF25/usnm_pal_0041242-model/data/model/usnm_pal_00412421-master-document.json
+
+    $path = 'web' . str_replace("\\", "/",  $file_path);
+    $temp = 'web/uploads/repository'; //@todo temp hack - this must be uploads directory in parameters.yml
+    $path = str_replace($temp, '', $path);
+    if(substr($path,0,1) !== '/') {
+      $path = '/' . $path;
+    }
+    $document = '/webdav' . $path;
+
+    $path_array = explode('/', $document);
+    $filename = array_pop($path_array);
+    $root = implode('/', $path_array) . '/';
+
+      $authoring_document = array(
+      'root' => $root,
+      'document' => $document,
+    );
+    return $authoring_document;
+
   }
 
   public function getCaptureDataset($params) {
@@ -4375,8 +4481,11 @@ class RepoStorageHybrid implements RepoStorage {
         'model_purpose' => 'delivery_web'
       );
       $model_assets = $this->getModelAssets($asset_params);
-      $data['aaData'][$k]['delivery_web'] = $model_assets['delivery_web'];
-      $data['aaData'][$k]['model_id_delivery_web'] = isset($model_assets['model_id_delivery_web']) ? $model_assets['model_id_delivery_web'] : '';
+
+      if (!empty($model_assets)) {
+        $data['aaData'][$k]['delivery_web'] = $model_assets['delivery_web'];
+        $data['aaData'][$k]['model_id_delivery_web'] = isset($model_assets['model_id_delivery_web']) ? $model_assets['model_id_delivery_web'] : '';
+      }
     }
 
     return $data;
@@ -4520,333 +4629,6 @@ class RepoStorageHybrid implements RepoStorage {
         'comparison' => 'LIKE',
       );
     }
-
-    if(NULL !== $date_range_start) {
-      $c = count($query_params['search_params']);
-      $query_params['search_params'][$c] = array(
-        'field_names' => array('project.date_created'),
-        'search_values' => array($date_range_start),
-        'comparison' => '<',
-      );
-    }
-    if(NULL !== $date_range_end) {
-      $c = count($query_params['search_params']);
-      $query_params['search_params'][$c] = array(
-        'field_names' => array('project.date_created'),
-        'search_values' => array($date_range_end),
-        'comparison' => '>',
-      );
-    }
-
-    $data = $this->getRecordsDatatable($query_params);
-    return $data;
-  }
-
-  /**
-   * Get datatable data for an import's details.
-   * @param $params
-   * @return mixed
-   */
-  public function getDatatableImportDetails($params) {
-
-    $record_type = 'job_import_record';
-    $sort_field = array_key_exists('sort_field', $params) ? $params['sort_field'] : NULL;
-    $sort_order = array_key_exists('sort_order', $params) ? $params['sort_order'] : NULL;
-    $start_record = array_key_exists('start_record', $params) ? $params['start_record'] : NULL;
-    $stop_record = array_key_exists('stop_record', $params) ? $params['stop_record'] : NULL;
-    $job_id = array_key_exists('id', $params) ? $params['id'] : NULL;
-
-    $search_value = array_key_exists('search_value', $params) ? $params['search_value'] : NULL;
-    $date_range_start = array_key_exists('date_range_start', $params) ? $params['date_range_start'] : NULL;
-    $date_range_end = array_key_exists('date_range_end', $params) ? $params['date_range_end'] : NULL;
-
-    // Determine what was ingested via $job_data['job_type'] (e.g. subjects, items, capture datasets).
-    $job_data = $this->getRecord(array(
-        'base_table' => 'job',
-        'id_field' => 'job_id',
-        'id_value' => $job_id,
-        'omit_active_field' => true,
-      )
-    );
-    // TODO: ^^^ error handling if job is not found? ^^^
-
-    $query_params = array(
-      'distinct' => true, // @todo Do we always want this to be true?
-      'base_table' => $record_type,
-      'fields' => array(),
-    );
-
-    $query_params['limit'] = array(
-      'limit_start' => $start_record,
-      'limit_stop' => $stop_record,
-    );
-
-    if (!empty($sort_field) && !empty($sort_order)) {
-      $query_params['sort_fields'][] = array(
-        'field_name' => $sort_field,
-        'sort_order' => $sort_order,
-      );
-    } else {
-      $query_params['sort_fields'][] = array(
-        'field_name' => $record_type . '.date_created',
-        'sort_order' => 'DESC',
-      );
-    }
-
-    $query_params['related_tables'][] = array(
-      'table_name' => 'job',
-      'table_join_field' => 'job_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'job_import_record',
-      'base_join_field' => 'job_id',
-    );
-    $query_params['related_tables'][] = array(
-      'table_name' => 'project',
-      'table_join_field' => 'project_id',
-      'join_type' => 'LEFT JOIN',
-      'base_join_table' => 'job',
-      'base_join_field' => 'project_id',
-    );
-
-    $query_params['fields'][] = array(
-      'table_name' => 'project',
-      'field_name' => 'project_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'project',
-      'field_name' => 'project_name',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'subject',
-      'field_name' => 'subject_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'subject',
-      'field_name' => 'subject_name',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'item',
-      'field_name' => 'item_id',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => 'item',
-      'field_name' => 'item_description',
-    );
-
-    // If subjects were ingested (with a project as the parent record)...
-    if ($job_data['job_type'] === 'subjects metadata import') {
-
-      $record_table = 'subject';
-
-      $query_params['related_tables'][] = array(
-        'table_name' => 'subject',
-        'table_join_field' => 'subject_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'job_import_record',
-        'base_join_field' => 'record_id',
-      );
-      $query_params['related_tables'][] = array(
-        'table_name' => 'item',
-        'table_join_field' => 'subject_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'subject',
-        'base_join_field' => 'subject_id',
-      );
-
-      if (NULL !== $search_value) {
-        $query_params['search_params'][3] = array(
-          'field_names' => array(
-            'subject_name',
-            'item_description',
-          ),
-          'search_values' => array($search_value),
-          'comparison' => 'LIKE',
-        );
-      }
-
-    }
-    
-
-    // If items were ingested (with a subject as the parent record)...
-    if ($job_data['job_type'] === 'items metadata import') {
-
-      $record_table = 'item';
-
-      $query_params['related_tables'][] = array(
-        'table_name' => 'item',
-        'table_join_field' => 'item_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'job_import_record',
-        'base_join_field' => 'record_id',
-      );
-      $query_params['related_tables'][] = array(
-        'table_name' => 'subject',
-        'table_join_field' => 'subject_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'item',
-        'base_join_field' => 'subject_id',
-      );
-
-      if (NULL !== $search_value) {
-        $query_params['search_params'][3] = array(
-          'field_names' => array(
-            'subject_name',
-            'item_description',
-          ),
-          'search_values' => array($search_value),
-          'comparison' => 'LIKE',
-        );
-      }
-
-    }
-
-
-    // If capture datasets were ingested (with an item as the parent record)...
-    if ($job_data['job_type'] === 'capture datasets metadata import') {
-
-      $record_table = 'capture_dataset';
-
-      $query_params['related_tables'][] = array(
-        'table_name' => 'capture_dataset',
-        'table_join_field' => 'capture_dataset_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'job_import_record',
-        'base_join_field' => 'record_id',
-      );
-      $query_params['related_tables'][] = array(
-        'table_name' => 'item',
-        'table_join_field' => 'item_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'capture_dataset',
-        'base_join_field' => 'item_id',
-      );
-      $query_params['related_tables'][] = array(
-        'table_name' => 'subject',
-        'table_join_field' => 'subject_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'item',
-        'base_join_field' => 'subject_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'capture_dataset',
-        'field_name' => 'capture_dataset_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'capture_dataset',
-        'field_name' => 'capture_dataset_name',
-      );
-
-      if (NULL !== $search_value) {
-        $query_params['search_params'][3] = array(
-          'field_names' => array(
-            'item_description',
-            'capture_dataset_name',
-          ),
-          'search_values' => array($search_value),
-          'comparison' => 'LIKE',
-        );
-      }
-
-    }
-
-
-    // If models were ingested (with a capture dataset as the parent record)...
-    if ($job_data['job_type'] === 'models metadata import') {
-
-      $record_table = 'model';
-
-      $query_params['related_tables'][] = array(
-        'table_name' => 'model',
-        'table_join_field' => 'model_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'job_import_record',
-        'base_join_field' => 'record_id',
-      );
-      $query_params['related_tables'][] = array(
-        'table_name' => 'capture_dataset',
-        'table_join_field' => 'capture_dataset_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'model',
-        'base_join_field' => 'capture_dataset_id',
-      );
-      $query_params['related_tables'][] = array(
-        'table_name' => 'item',
-        'table_join_field' => 'item_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'model',
-        'base_join_field' => 'item_id',
-      );
-      $query_params['related_tables'][] = array(
-        'table_name' => 'subject',
-        'table_join_field' => 'subject_id',
-        'join_type' => 'LEFT JOIN',
-        'base_join_table' => 'item',
-        'base_join_field' => 'subject_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'capture_dataset',
-        'field_name' => 'capture_dataset_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'capture_dataset',
-        'field_name' => 'capture_dataset_name',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'model',
-        'field_name' => 'model_id',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'model',
-        'field_name' => 'model_file_type',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'model',
-        'field_name' => 'model_purpose',
-      );
-      $query_params['fields'][] = array(
-        'table_name' => 'model',
-        'field_name' => 'date_of_creation',
-      );
-
-      if (NULL !== $search_value) {
-        $query_params['search_params'][3] = array(
-          'field_names' => array(
-            'item_description',
-            'capture_dataset_name',
-          ),
-          'search_values' => array($search_value),
-          'comparison' => 'LIKE',
-        );
-      }
-
-    }
-
-
-    $query_params['search_params'][0] = array('field_names' => array('job_import_record.record_table'), 'search_values' => array($record_table), 'comparison' => '=');
-    $query_params['search_type'] = 'AND';
-
-    $query_params['search_params'][1] = array('field_names' => array('job_import_record.job_id'), 'search_values' => array((int)$job_id),'comparison' => '=');
-    $query_params['search_type'] = 'AND';
-
-    if ($job_data['job_type'] === 'subjects metadata import') {
-      $query_params['search_params'][2] = array('field_names' => array('subject.active'), 'search_values' => array(1),'comparison' => '=');
-      $query_params['search_params'][3] = array('field_names' => array('item.active'), 'search_values' => array(1),'comparison' => '=');
-      $query_params['search_type'] = 'AND';
-    }
-
-    // $query_params['search_params'][2] = array('field_names' => array('item.item_id'), 'search_values' => array(''), 'comparison' => 'IS NOT NULL');
-    // $query_params['search_type'] = 'AND';
-
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => $record_type . '_id',
-      'field_alias' => 'manage',
-    );
-    $query_params['fields'][] = array(
-      'table_name' => $record_type,
-      'field_name' => $record_type . '_id',
-      'field_alias' => 'DT_RowId',
-    );
 
     if(NULL !== $date_range_start) {
       $c = count($query_params['search_params']);

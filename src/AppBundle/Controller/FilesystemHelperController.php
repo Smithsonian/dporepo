@@ -15,6 +15,7 @@ use Symfony\Component\HttpKernel\KernelInterface;
 // Custom utility bundles
 use AppBundle\Utils\AppUtilities;
 
+use AppBundle\Service\FileHelperService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class FilesystemHelperController extends Controller
@@ -49,16 +50,19 @@ class FilesystemHelperController extends Controller
    */
   private $external_file_storage_path;
 
+  private $f;
+
   protected $container;
 
   /**
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(ContainerInterface $container, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, Connection $conn)
+  public function __construct(ContainerInterface $container, KernelInterface $kernel, string $uploads_directory, string $external_file_storage_path, Connection $conn, FileHelperService $f)
   {
     // Usage: $this->u->dumper($variable);
     $this->u = new AppUtilities();
+    $this->f = $f;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
 
     $this->container = $container;
@@ -220,51 +224,88 @@ class FilesystemHelperController extends Controller
 
     $path = str_replace("\\", "/", $path);
 
-    // If the external storage directory isn't in the path, try to set the right path.
-    if(strpos($path, $this->external_file_storage_path) !== 0) {
+    if($this->f->external_file_storage_on) {
 
-      $uploads_dir = str_replace("\\", "/", $this->uploads_directory);
-      // Remove the uploads directory if it exists.
-      if(strpos($path, str_replace("web", "", $uploads_dir)) !== false) {
-        if(strpos($path, 'web') !== 0) {
-          $path = 'web' . $path;
+      // If the external storage directory isn't in the path, try to set the right path.
+      if (strpos($path, $this->external_file_storage_path) !== 0) {
+
+        $uploads_dir = str_replace("\\", "/", $this->uploads_directory);
+        // Remove the uploads directory if it exists.
+        if (strpos($path, str_replace("web", "", $uploads_dir)) !== false) {
+          if (strpos($path, 'web') !== 0) {
+            $path = 'web' . $path;
+          }
+          $path = str_replace("\\", "/", $path);
+          $path = str_replace(str_replace("\\", "/", $uploads_dir), '', $path);
         }
-        $path = str_replace("\\", "/",  $path);
-        $path = str_replace(str_replace("\\", "/",  $uploads_dir), '', $path);
+        $path = str_replace("\\", "/", $this->external_file_storage_path . $path);
+        $path = str_replace("//", "/", $path);
+
+        // The complete path should now look like this:
+        // /3DRepo/uploads/1E155C38-DC69-E33B-4208-7757D5CDAA35/data/cc/camera/f1978_40-cc_j3a.JPG
       }
-      $path = str_replace("\\", "/", $this->external_file_storage_path . $path);
-      $path = str_replace("//", "/", $path);
+      $file_path_array = explode('/', $path);
+      $file_name = array_pop($file_path_array);
 
-      // The complete path should now look like this:
-      // /3DRepo/uploads/1E155C38-DC69-E33B-4208-7757D5CDAA35/data/cc/camera/f1978_40-cc_j3a.JPG
-    }
+      // Retrieve a read-stream
+      try {
+        $filesystem = $this->container->get('oneup_flysystem.assets_filesystem');
+        $stream = $filesystem->readStream($path);
+        $contents = stream_get_contents($stream);
+        // Before calling fclose on the resource, check if it's still valid using is_resource.
+        if (is_resource($stream)) fclose($stream);
+        // Return a response with a specific content
+        $response = new Response($contents);
+        // Create the disposition of the file
+        $disposition = $response->headers->makeDisposition(
+          ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+          $file_name
+        );
+        // Set the content disposition
+        $response->headers->set('Content-Disposition', $disposition);
+        // Dispatch request
+        return $response;
+      } // Catch the error.
+      catch (\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
+        throw $this->createNotFoundException($e->getMessage() . " (File Path: $path)");
+      }
 
-    $file_path_array = explode('/', $path);
-    $file_name = array_pop($file_path_array);
+    } // Serving file from remote storage.
+    else {
+      // Serve file from local filesystem.
+      $path = $this->project_directory . 'web' . str_replace('\\', DIRECTORY_SEPARATOR, str_replace('/', DIRECTORY_SEPARATOR, $path));
 
-    // Retrieve a read-stream
-    try {
-      $filesystem = $this->container->get('oneup_flysystem.assets_filesystem');
-      $stream = $filesystem->readStream($path);
-      $contents = stream_get_contents($stream);
-      // Before calling fclose on the resource, check if it's still valid using is_resource.
-      if (is_resource($stream)) fclose($stream);
-      // Return a response with a specific content
-      $response = new Response($contents);
-      // Create the disposition of the file
-      $disposition = $response->headers->makeDisposition(
-        ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-        $file_name
-      );
-      // Set the content disposition
-      $response->headers->set('Content-Disposition', $disposition);
-      // Dispatch request
-      return $response;
-    }
-    // Catch the error.
-    catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
-      throw $this->createNotFoundException($e->getMessage() . " (File Path: $path)");
-    }
+      $finder = new Finder();
+      $file_path_array = explode(DIRECTORY_SEPARATOR, $path);
+      $file_name = array_pop($file_path_array);
+      $newpath = implode(DIRECTORY_SEPARATOR, $file_path_array);
+
+      $files = $finder
+        ->files()
+        ->name($file_name)
+        ->sortByName()
+        ->in($newpath);
+
+      foreach ($files as $file) {
+        $contents= $file->getContents();
+
+        // Return a response with file content
+        $response = new Response($contents);
+        // Create the disposition of the file
+        $disposition = $response->headers->makeDisposition(
+          ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+          $file_name
+        );
+        // Set the content disposition
+        $response->headers->set('Content-Disposition', $disposition);
+
+        // Before calling fclose on the resource, check if it’s still valid using is_resource.
+        if (is_resource($contents)) fclose($contents);
+
+        // Dispatch request
+        return $response;
+      } // Each file (really only 1st file)
+    } // Serving file from local filesystem
 
   }
 

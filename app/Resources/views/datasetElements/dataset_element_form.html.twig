@@ -29,25 +29,27 @@
         </div>
     </div>
 
-    {{ form_start(form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
+    <div class="hidden">
+      {{ form_start(form) }} {# , {'attr': {'novalidate': 'novalidate'}} #}
 
-    <div class="row">
-        <div class="col-sm-6 col-md-6">
-            {{ form_row(form.capture_device_configuration_id) }}
-            {{ form_row(form.capture_device_field_id) }}
-            {{ form_row(form.capture_sequence_number) }}
-        </div>
-        <div class="col-sm-6 col-md-6">
-            {{ form_row(form.cluster_position_field_id) }}
-            {{ form_row(form.position_in_cluster_field_id) }}
-        </div>
+      <div class="row">
+          <div class="col-sm-6 col-md-6">
+              {{ form_row(form.capture_device_configuration_id) }}
+              {{ form_row(form.capture_device_field_id) }}
+              {{ form_row(form.capture_sequence_number) }}
+          </div>
+          <div class="col-sm-6 col-md-6">
+              {{ form_row(form.cluster_position_field_id) }}
+              {{ form_row(form.position_in_cluster_field_id) }}
+          </div>
+      </div>
+
+      <div class="field-group" style="clear:both;">
+          {{ form_row(form.save) }}
+      </div>
+
+      {{ form_end(form) }}
     </div>
-
-    <div class="field-group" style="clear:both;">
-        {{ form_row(form.save) }}
-    </div>
-
-    {{ form_end(form) }}
 
     {% if dataset_element_data.capture_data_element_id is defined %}
         <div class="row">

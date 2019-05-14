@@ -905,19 +905,18 @@ class ImportController extends Controller
       // TODO: ^^^ error handling if job is not found? ^^^
 
       $query_params = array(
+        'record_type' => 'item',
         'sort_field' => $sort_field,
         'sort_order' => $sort_order,
         'start_record' => $start_record,
         'stop_record' => $stop_record,
-        'id' => $job_data['job_id'],
-        'job_type' => $job_data['job_type'],
+        'project_id' => $job_data['project_id'],
       );
-
       if ($search) {
         $query_params['search_value'] = $search;
       }
 
-      $data = $this->repo_storage_controller->execute('getDatatableImportDetails', $query_params);
+      $data = $this->repo_storage_controller->execute('getDatatableItem', $query_params);
 
       return $this->json($data);
     }

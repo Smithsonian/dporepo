@@ -252,8 +252,10 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
       // Create an array of all of the file extensions.
       $all_file_extensions = array();
       foreach($data as $key => $value) {
-        // Exclude the 'file_name_map.csv' file, and ignore model file extensions.
-        if (($value['file_name'] !== 'file_name_map.csv') && !in_array($value['file_extension'], $exclude_model_extensions)) {
+        // Exclude the 'file_name_map.csv' file, the diffuse UV map, and ignore model file extensions.
+        if (($value['file_name'] !== 'file_name_map.csv') && 
+            !in_array($value['file_extension'], $exclude_model_extensions) &&
+            !stristr($value['file_name'], '-diffuse')) {
           array_push($all_file_extensions, $value['file_extension']);
         }
       }
@@ -300,16 +302,19 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
                   break;
                 default:
 
-                  // We want to check against the "other" file type present.
-                  // So, remove the $image_pair_type file extension from the $unique_file_extensions array.
-                  $key = array_search($image_pair_type, $unique_file_extensions);
-                  if (false !== $key) unset($unique_file_extensions[$key]);
-                  $unique_file_extensions = array_values($unique_file_extensions);
+                  if (($fvalue !== 'obj') && !stristr($file_basename, '-diffuse')) {
+                    // We want to check against the "other" file type present.
+                    // So, remove the $image_pair_type file extension from the $unique_file_extensions array.
+                    $key = array_search($image_pair_type, $unique_file_extensions);
+                    if (false !== $key) unset($unique_file_extensions[$key]);
+                    $unique_file_extensions = array_values($unique_file_extensions);
 
-                  // Set an error if a corresponding cr2 or dng doesn't exist.
-                  if (!array_key_exists($file_basename . '.' . $unique_file_extensions[0], $all_files)) {
-                    $return[]['errors'] = 'Corresponding ' . strtoupper($unique_file_extensions[0]) . ' not found for ' . strtoupper($fvalue) . ': ' . $fkey;
+                    // Set an error if a corresponding cr2 or dng doesn't exist.
+                    if (!array_key_exists($file_basename . '.' . $unique_file_extensions[0], $all_files)) {
+                      $return[]['errors'] = 'Corresponding ' . strtoupper($unique_file_extensions[0]) . ' not found for ' . strtoupper($fvalue) . ': ' . $fkey;
+                    }
                   }
+
               }
             }
 
