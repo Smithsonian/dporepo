@@ -344,7 +344,7 @@ class CaptureDatasetController extends Controller
       ));
 
       // Check user's permissions.
-      $user_can_create = $user_can_edit = false;
+      $user_can_create = $user_can_edit = $user_can_delete = false;
       if(is_array($parent_records) && array_key_exists('project_id', $parent_records)) {
         $username = $this->getUser()->getUsernameCanonical();
         // Check if user has permission to access this page.
@@ -363,6 +363,11 @@ class CaptureDatasetController extends Controller
         $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $parent_records['project_id']);
         if(array_key_exists('project_ids', $access) && in_array($parent_records['project_id'], $access['project_ids'])) {
           $user_can_edit = true;
+        }
+        // Check if user has permission to delete content.
+        $access = $this->repo_user_access->get_user_access($username, 'delete_project_details', $parent_records['project_id']);
+        if(array_key_exists('project_ids', $access) && in_array($parent_records['project_id'], $access['project_ids'])) {
+          $user_can_delete = true;
         }
       }
 
@@ -401,6 +406,7 @@ class CaptureDatasetController extends Controller
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         'user_can_create' => $user_can_create,
         'user_can_edit' => $user_can_edit,
+        'user_can_delete' => $user_can_delete,
       ));
     }
 

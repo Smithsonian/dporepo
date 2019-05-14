@@ -96,7 +96,7 @@ class CaptureDataFileController extends Controller
         // Get the parent project ID.
         $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
           'base_record_id' => $parent_id ? $parent_id : $id,
-          'record_type' => $parent_id ? 'capture_dataset' : 'uv_map_with_model_id',
+          'record_type' => $parent_id ? 'capture_data_element' : 'capture_data_file',
         ));
 
         // Check user's permissions.

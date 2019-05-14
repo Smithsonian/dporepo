@@ -120,9 +120,10 @@ class CaptureDatasetElementController extends Controller
             'record_type' => 'capture_data_element',
         ));
 
+        $dataset_element->user_can_create = $dataset_element->user_can_edit = $dataset_element->user_can_delete = false;
+
         if (!empty($id)) {
             // Check user's permissions.
-            $dataset_element->user_can_create = $dataset_element->user_can_edit = false;
             if(is_array($parent_records) && array_key_exists('project_id', $parent_records)) {
                 $username = $this->getUser()->getUsernameCanonical();
                 // Check if user has permission to access this page.
@@ -141,6 +142,11 @@ class CaptureDatasetElementController extends Controller
                 $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $parent_records['project_id']);
                 if(array_key_exists('project_ids', $access) && in_array($parent_records['project_id'], $access['project_ids'])) {
                   $dataset_element->user_can_edit = true;
+                }
+                // Check if user has permission to delete content.
+                $access = $this->repo_user_access->get_user_access($username, 'delete_project_details', $parent_records['project_id']);
+                if(array_key_exists('project_ids', $access) && in_array($parent_records['project_id'], $access['project_ids'])) {
+                  $dataset_element->user_can_delete = true;
                 }
             }
         }
@@ -199,6 +205,7 @@ class CaptureDatasetElementController extends Controller
             'form' => $form->createView(),
             'user_can_create' => $dataset_element->user_can_create,
             'user_can_edit' => $dataset_element->user_can_edit,
+            'user_can_delete' => $dataset_element->user_can_delete,
         ));
 
     }

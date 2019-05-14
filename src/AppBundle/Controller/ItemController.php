@@ -237,7 +237,7 @@ class ItemController extends Controller
       }
 
       // Check user's permissions.
-      $user_can_create = $user_can_edit = false;
+      $user_can_create = $user_can_edit = $user_can_delete = false;
       if(false !== $project_id) {
         $username = $this->getUser()->getUsernameCanonical();
         // Check if user has permission to access this page.
@@ -256,6 +256,11 @@ class ItemController extends Controller
         $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $project_id);
         if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
           $user_can_edit = true;
+        }
+        // Check if user has permission to delete content.
+        $access = $this->repo_user_access->get_user_access($username, 'delete_project_details', $project_id);
+        if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
+          $user_can_delete = true;
         }
       }
 
@@ -276,6 +281,7 @@ class ItemController extends Controller
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         'user_can_create' => $user_can_create,
         'user_can_edit' => $user_can_edit,
+        'user_can_delete' => $user_can_delete,
       ));
     }
 
@@ -300,33 +306,31 @@ class ItemController extends Controller
         $item->project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
         $item->subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
 
-        // Get the parent project ID.
-        $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
-          'base_record_id' => $item->project_id,
-          'record_type' => 'item',
-        ));
+        $id = false;
+        $ajax = false;
+        $parent_records = array();
 
-        // Check user's permissions.
-        // If parent records exist, the record is being edited. Otherwise, the record is being added.
-        if(is_array($parent_records) && array_key_exists('project_id', $parent_records)) {
-          $permission = 'edit_project_details';
-        } else {
-          $permission = 'create_project_details';
+        if (!empty($request->attributes->get('item_id'))) {
+          $id = $request->attributes->get('item_id');
+          // Get the parent project ID.
+          $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
+            'base_record_id' => $id,
+            'record_type' => 'item',
+          ));
         }
 
+        // Set the project ID
+        $project_id = array_key_exists('project_id', $parent_records) ? $parent_records['project_id'] : $item->project_id;
+
+        // Check user's permissions.
         $username = $this->getUser()->getUsernameCanonical();
-        $access = $this->repo_user_access->get_user_access($username, $permission, $parent_records['project_id']);
+        // If an item ID exists, the record is being edited. Otherwise, the record is being added.
+        $permission = $id ? 'edit_project_details' : 'create_project_details';
+        $access = $this->repo_user_access->get_user_access($username, $permission, $project_id);
         if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
           $response = new Response();
           $response->setStatusCode(403);
           return $response;
-        }
-
-        $id = false;
-        $ajax = false;
-
-        if (!empty($request->attributes->get('item_id'))) {
-          $id = $request->attributes->get('item_id');
         }
         
         // If being POSTed via ajax, set the ajax flag to true.

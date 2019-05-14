@@ -17,7 +17,7 @@ class CaptureDatasetElementForm extends AbstractType
     {
 
         $data = (array)$options['data'];
-        $disabled = $data['user_can_edit'] ? false : true;
+        $disabled = array_key_exists('user_can_edit', $data) ? false : true;
 
         $builder
             ->add('capture_dataset_id', HiddenType::class, array(

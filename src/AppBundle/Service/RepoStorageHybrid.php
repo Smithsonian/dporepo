@@ -5281,6 +5281,16 @@ class RepoStorageHybrid implements RepoStorage {
               LEFT JOIN project ON project.project_id = item.project_id';
           break;
 
+        case 'capture_data_file':
+          $params['id_field_name'] = 'capture_data_file.capture_data_file_id';
+          $params['select'] = 'project.project_id, subject.subject_id, item.item_id, capture_dataset.capture_dataset_id, capture_data_element.capture_data_element_id, capture_data_file.capture_data_file_id';
+          $params['left_joins'] = 'LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_id = capture_data_file.capture_data_element_id
+              LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = capture_data_element.capture_dataset_id
+              LEFT JOIN item ON item.item_id = capture_dataset.item_id
+              LEFT JOIN subject ON subject.subject_id = item.subject_id
+              LEFT JOIN project ON project.project_id = item.project_id';
+          break;
+
         case 'model_with_item_id':
           $params['record_type'] = 'model';
           $params['id_field_name'] = 'model.model_id';

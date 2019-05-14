@@ -183,33 +183,23 @@ class SubjectController extends Controller
           $id = $request->attributes->get('subject_id');
         }
 
+        // If being POSTed via ajax, set the ajax flag to true.
+        if (!empty($request->attributes->get('ajax'))) $ajax = true;
+
         // Check user's permissions.
-        $project_id = (!empty($item_record) && array_key_exists('project_id', $item_record)) ? $item_record['project_id'] : '';
         $username = $this->getUser()->getUsernameCanonical();
         // Check if user has permission to access this page.
-        $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $project_id);
-        if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+        $access = $this->repo_user_access->get_user_access_any($username, 'edit_projects');
+        if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
           $response = new Response();
           $response->setStatusCode(403);
           return $response;
         }
-
-        // If being POSTed via ajax, set the ajax flag to true.
-        if (!empty($request->attributes->get('ajax'))) $ajax = true;
-
-        $username = $this->getUser()->getUsernameCanonical();
-        $user_can_edit = false;
-        if(false !== $subject->project_id && false !== $id) {
-          $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $subject->project_id);
-          if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
-            $response = new Response();
-            $response->setStatusCode(403);
-            return $response;
-          }
-
-          $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $subject->project_id);
-          if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
-            $user_can_edit = true;
+        // Check if user has permission to create content.
+        if (false === $id) {
+          $access = $this->repo_user_access->get_user_access_any($username, 'create_projects');
+          if(array_key_exists('project_ids', $access)) {
+            $user_can_create = true;
           }
         }
 
@@ -282,7 +272,6 @@ class SubjectController extends Controller
               'page_title' => !empty($id) ? 'Subject: ' . $subject['subject_name'] : 'Create Subject',
               'subject_data' => $subject,
               'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-              'user_can_edit' => $user_can_edit,
               'form' => $form->createView(),
           ));
         }
