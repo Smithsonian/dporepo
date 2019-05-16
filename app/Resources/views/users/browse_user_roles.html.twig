@@ -17,7 +17,7 @@
                 <table id="browse_user_roles" class="table table-striped table-bordered" cellspacing="0" width="100%">
                     <thead>
                     <tr>
-                        <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                        <th style="padding-left: 8px;"><input class="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                         <th class="text-center">Stakeholder</th>
                         <th class="text-center">Project</th>
                         <th class="text-center">Role</th>
@@ -71,7 +71,7 @@
           "fnRowCallback":function(nRow, aData, iDisplayIndex) {
             // // Create the checkboxes.
              $(nRow).find('td:eq(0)').html(
-              "<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
+              "<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
              )
              .addClass("manage_column");
           }

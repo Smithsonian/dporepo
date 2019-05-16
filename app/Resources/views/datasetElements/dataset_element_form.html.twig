@@ -62,7 +62,7 @@
                         <table id="browse_capture_data_files" class="table table-striped table-bordered" cellspacing="0" width="100%">
                             <thead>
                             <tr>
-                                <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                                <th style="padding-left: 8px;"><input class="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                                 <th class="text-center">Preview</th>
                                 <th class="text-center">Capture Data File Name</th>
                                 <th class="text-center">Capture Data File Type</th>
@@ -98,7 +98,7 @@
                         <table id="browse_capture_devices" class="table table-striped table-bordered" cellspacing="0" width="100%">
                             <thead>
                             <tr>
-                                <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                                <th style="padding-left: 8px;"><input class="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                                 <th class="text-center">Calibration File</th>
                                 <th class="text-center">Last Modified</th>
                             </tr>
@@ -136,7 +136,7 @@
                   "render": function ( data, type, row, meta ) {
                     //@todo use a class instead of hard-coded width
                     if(data) {
-                      return '<img src="/admin/get_file?path=' + data + '" width="120px" />';
+                      return '<img alt="thumbnail" src="/admin/get_file?path=' + data + '" width="120px" />';
                     }
                     else {
                       return '';
@@ -207,7 +207,7 @@
                 var thisTableRow = $(nRow);
                 // Create the delete record checkboxes.
                 thisTableRow.find('td:eq(0)')
-                  .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+                  .html("<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
                   .addClass("manage_column");
                 // Send to details page when clicked.
                 thisTableRow.find('td').click(function() {
@@ -277,7 +277,7 @@
                 var thisTableRow = $(nRow);
                 // Create the delete record checkboxes.
                 thisTableRow.find('td:eq(0)')
-                  .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+                  .html("<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
                   .addClass("manage_column");
                 // Send to details page when clicked.
                 thisTableRow.find('td').click(function() {

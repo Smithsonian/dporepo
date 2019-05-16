@@ -105,7 +105,7 @@
                     <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
                         <thead>
                         <tr>
-                            <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                            <th style="padding-left: 8px;"><input class="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                             <th class="text-center">Download</th>
                             <th class="text-center">Preview</th>
                             <th class="text-center">Capture Device Configuration ID</th>
@@ -146,7 +146,7 @@
                     <table id="browse_capture_dataset_rights" class="table table-striped table-bordered" cellspacing="0" width="100%">
                         <thead>
                         <tr>
-                            <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                            <th style="padding-left: 8px;"><input class="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                             <th class="text-center">Data Rights Restriction</th>
                             <th class="text-center">Start Date</th>
                             <th class="text-center">End Date</th>
@@ -164,7 +164,7 @@
                     <table id="browse_models" class="table table-striped table-bordered" cellspacing="0" width="100%">
                         <thead>
                         <tr>
-                            <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                            <th style="padding-left: 8px;"><input class="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                             <th class="text-center">Download</th>
                             <th class="text-center"></th>
                             <th class="text-center"></th>
@@ -204,7 +204,7 @@
                     <table id="browse_photogrammetry_scale_bars" class="table table-striped table-bordered" cellspacing="0" width="100%">
                         <thead>
                         <tr>
-                            <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                            <th style="padding-left: 8px;"><input class="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                             <th class="text-center">Scale Bar ID</th>
                             <th class="text-center">Scale Bar Manufacturer</th>
                             <th class="text-center">Scale Bar Barcode Type</th>
@@ -291,7 +291,7 @@
               "render": function ( data, type, row, meta ) {
                 //@todo use a class instead of hard-coded width
                 if(data) {
-                  return '<img src="/admin/get_file?path=' + data + '" width="120px" />';
+                  return '<img alt="thumbnail" src="/admin/get_file?path=' + data + '" width="120px" />';
                 }
                 else {
                   return '';
@@ -365,11 +365,11 @@
             var thisTableRow = $(nRow);
             // Create the delete record checkboxes.
             thisTableRow.find('td:eq(0)')
-              .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+              .html("<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
               .addClass("manage_column");
             // Create the download checkboxes.
             thisTableRow.find('td:eq(1)')
-              .html("<input type='checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
+              .html("<input type='checkbox' title='download_checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
               .addClass("manage_column");
             // Send to details page when clicked.
             thisTableRow.find('td').click(function() {
@@ -385,6 +385,7 @@
         });
         var request_download_button = $("<button></button>")
           .addClass('btn btn-default glyphicon glyphicon-download-alt')
+		  .attr('aria-label','glyphicon-download-alt')
           .attr('style', 'width: 13.8rem;')
           .on("click", function(){
             var download_ids = new Array;
@@ -451,7 +452,7 @@
             var thisTableRow = $(nRow);
             // Create the delete record checkboxes.
             thisTableRow.find('td:eq(0)')
-              .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+              .html("<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
               .addClass("manage_column");
             // Send to details page when clicked.
             thisTableRow.find('td').click(function() {
@@ -546,11 +547,11 @@
 
             // Create the delete record checkboxes.
             thisTableRow.find('td:eq(0)')
-              .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+              .html("<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
               .addClass("manage_column");
             // Create the download checkboxes.
             thisTableRow.find('td:eq(1)')
-              .html("<input type='checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
+              .html("<input type='checkbox' title='download_checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
               .addClass("manage_column");
 
             // Send to details page when clicked.
@@ -577,6 +578,7 @@
 
         var request_model_download_button = $('<button></button>')
           .addClass('btn btn-default glyphicon glyphicon-download-alt')
+		  .attr('aria-label','glyphicon-download-alt')
           .attr('style', 'width: 13.8rem;')
           .attr('id', 'request-download-button')
           .on('click', function(){
@@ -654,7 +656,7 @@
             var thisTableRow = $(nRow);
             // Create the delete record checkboxes.
             thisTableRow.find('td:eq(0)')
-              .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+              .html("<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
               .addClass("manage_column");
 
             // Send to details page when clicked.

@@ -1020,7 +1020,7 @@
             "render": function ( data, type, row, meta ) {
                 //@todo use a class instead of hard-coded width
                 if(data) {
-                  return '<img src="/admin/get_file?path=' + data + '" width="120px" />';
+                  return '<img alt="thumbnail" src="/admin/get_file?path=' + data + '" width="120px" />';
                 }
                 else {
                   return '';
@@ -1062,6 +1062,7 @@
             // Select record checkbox.
             var recordCheckbox = $('<input />')
                 .attr('type', 'checkbox')
+                .attr('title', 'select_record_checkbox')
                 .attr('name', 'select_record')
                 .val(aData['manage'])
                 .on('click', function(e){

@@ -8,6 +8,7 @@ jQuery(document).ready(function($) {
 	  var remove_button = $('<button></button>')
 	        .addClass('btn btn-default glyphicon glyphicon-trash')
 	        .attr('style', 'width: 12rem;')
+			.attr('aria-label','trash')
 	        .attr('id', 'remove-records-button');
 
 	  $('.datatables_bulk_actions').prepend(remove_button);
