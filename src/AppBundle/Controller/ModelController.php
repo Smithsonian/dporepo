@@ -534,7 +534,7 @@ class ModelController extends Controller
       $item_json_url = $thumb_3d_url = $model_url = $uv_map_url = '';
       $model_id_delivery_web = $model_id_thumb_3d = '';
       /**
-        derivative_thumb_3d
+        thumb_3d
           0 =>
             model_files =>
         derivative_delivery_web
@@ -547,8 +547,8 @@ class ModelController extends Controller
 
       $data['has_viewable_model'] = false;
 
-      if(array_key_exists('derivative_thumb_3d', $data)) {
-        foreach($data['derivative_thumb_3d'] as $k => $model_v) {
+      if(array_key_exists('thumb_3d', $data)) {
+        foreach($data['thumb_3d'] as $k => $model_v) {
           if(array_key_exists('model_files', $model_v) && count($model_v['model_files']) > 0) {
             $thumb_3d_url = $model_v['model_files'][0]['file_path'];
             $model_id_thumb_3d = $model_v['model_id'];
