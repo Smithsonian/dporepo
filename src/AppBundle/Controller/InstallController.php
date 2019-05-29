@@ -32,7 +32,7 @@ class InstallController extends Controller
   * Constructor
   * @param object  $u  Utility functions object
   */
-  public function __construct(object $conn, FilesystemHelperController $fs, string $remote_uploads_directory, KernelInterface $kernel, string $uploads_directory)
+  public function __construct($conn, FilesystemHelperController $fs, string $remote_uploads_directory, KernelInterface $kernel, string $uploads_directory)
   {
 
     $this->fs = $fs;

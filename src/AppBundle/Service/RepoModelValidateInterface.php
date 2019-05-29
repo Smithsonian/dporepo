@@ -14,7 +14,7 @@ interface RepoModelValidateInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function validateModels(string $uuid, obj $filesystem);
+  public function validateModels($uuid = '', $filesystem);
 
   /**
    * @param string $path The directory which contains model(s) to be validated and processed.
@@ -23,6 +23,6 @@ interface RepoModelValidateInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function runValidateModels(string $path, array $job_data, obj $filesystem);
+  public function runValidateModels($path = '', $job_data = array(), $filesystem);
 
 }

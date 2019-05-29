@@ -26,7 +26,7 @@ class RepoStorageHybridBackupCommand extends Command
    */
   private $project_directory;
 
-  public function __construct(KernelInterface $kernel, object $conn, string $uploads_directory, FilesystemHelperController $fs)
+  public function __construct(KernelInterface $kernel, $conn, string $uploads_directory, FilesystemHelperController $fs)
   {
     // Storage controller
     $this->kernel = $kernel;

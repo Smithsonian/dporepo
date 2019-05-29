@@ -21,7 +21,7 @@ class TransferFilesCheckerCommand extends ContainerAwareCommand
   private $project_directory;
   private $u;
 
-  public function __construct(KernelInterface $kernel, RepoFileTransfer $fileTransfer, string $uploads_directory, bool $external_file_storage_on, object $conn)
+  public function __construct(KernelInterface $kernel, RepoFileTransfer $fileTransfer, string $uploads_directory, bool $external_file_storage_on, $conn)
   {
     // Storage controller
     $this->repo_storage_controller = new RepoStorageHybridController($conn);

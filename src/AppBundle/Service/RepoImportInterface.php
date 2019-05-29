@@ -14,7 +14,7 @@ interface RepoImportInterface {
    * @param array $params Parameters: job_id, project_id, record_id, record_type
    * @return array
    */
-  public function importCsv(array $params);
+  public function importCsv($params = array());
 
   /**
    * Prepare Data
@@ -23,7 +23,7 @@ interface RepoImportInterface {
    * @param string $job_upload_directory The upload directory
    * @return array Import result and/or any messages
    */
-  public function prepareData(string $job_type, string $job_upload_directory);
+  public function prepareData($job_type = '', $job_upload_directory = '');
 
   /**
    * Ingest CSV Data
@@ -34,7 +34,7 @@ interface RepoImportInterface {
    * @param int $i  Iterator
    * @return array  An array of job log IDs
    */
-  public function ingestCsvData(obj $data, array $job_data, $record_type, int $i);
+  public function ingestCsvData($data, $job_data = array(), $record_type = '', $i);
 
   /**
    * Insert Capture Data Elements
@@ -44,7 +44,7 @@ interface RepoImportInterface {
    * @param array $data Job data
    * @return null
    */
-  public function insertCaptureDataElementsAndFiles(array $capture_data_elements, int $capture_dataset_id, array $data);
+  public function insertCaptureDataElementsAndFiles($capture_data_elements = array(), $capture_dataset_id = '', $data = array());
 
   /**
    * Extract Data From External
@@ -53,7 +53,7 @@ interface RepoImportInterface {
    * @param array $data Job data
    * @return array
    */
-  public function extractDataFromExternal(string $function_name, array $data);
+  public function extractDataFromExternal($function_name = '', $data = array());
 
   /**
    * Get Model Data From Processing Service Results
@@ -61,7 +61,7 @@ interface RepoImportInterface {
    * @param array $data Job data
    * @return array
    */
-  public function getModelDataFromProcessingServiceResults(array $data);
+  public function getModelDataFromProcessingServiceResults($data = array());
 
   /**
    * Get Data From File Names
@@ -69,7 +69,7 @@ interface RepoImportInterface {
    * @param array $data Job data
    * @return array
    */
-  public function getDataFromFileNames(array $data);
+  public function getDataFromFileNames($data = array());
 
   /**
    * Get Capture Dataset Data From Filenames
@@ -78,7 +78,7 @@ interface RepoImportInterface {
    * @param array $data Job data
    * @return array
    */
-  public function getDatasetDataFromFilenames(array $image_file_names, array $data);
+  public function getDatasetDataFromFilenames($image_file_names = array(), $data = array());
   
   /**
    * Get File Info
@@ -86,7 +86,7 @@ interface RepoImportInterface {
    * @param string $uuid The job UUID
    * @param string $file_name The file name
    */
-  public function getFileInfo(string $uuid, string $file_name);
+  public function getFileInfo($uuid = '', $file_name = '');
 
   /**
    * Get File Name Map
@@ -94,7 +94,7 @@ interface RepoImportInterface {
    * @param array $job_data Job data
    * @return array
    */
-  public function getFilenameMap(array $job_data);
+  public function getFilenameMap($job_data = array());
 
   /**
    * Insert Model Files

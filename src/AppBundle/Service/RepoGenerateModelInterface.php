@@ -15,7 +15,7 @@ interface RepoGenerateModelInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function generateModelAssets(string $uuid, string $recipe_name, obj $filesystem);
+  public function generateModelAssets($uuid = '', $recipe_name = '', $filesystem);
 
   /**
    * @param string $path The directory which contains model(s) to be validated and processed.
@@ -25,7 +25,7 @@ interface RepoGenerateModelInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function runWebHd(string $path, array $job_data, string $recipe_name, obj $filesystem);
+  public function runWebHd($path = '', $job_data = array(), $recipe_name = '', $filesystem);
 
   /**
    * @param string $path The directory which contains model(s) to be processed.
@@ -35,12 +35,12 @@ interface RepoGenerateModelInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function runWebDerivative(string $path, array $job_data, string $recipe_name, obj $filesystem);
+  public function runWebDerivative($path = '', $job_data = array(), $recipe_name = '', $filesystem);
 
   /**
    * @param string $models_csv The models.csv file.
    * @return array
    */
-  public function getModelsAndModelPurpose(string $models_csv);
+  public function getModelsAndModelPurpose($models_csv = '');
 
 }

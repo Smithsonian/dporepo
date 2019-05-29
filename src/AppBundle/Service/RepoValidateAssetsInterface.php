@@ -13,14 +13,14 @@ interface RepoValidateAssetsInterface {
    * @param array  $params  Parameters. For now, only 'localpath' is being sent.
    * @return array 
    */
-  public function validate_assets(array $params);
+  public function validate_assets($params = array());
 
   /**
    * Validate Images
-   * @param array $localpath The local path to uploaded assets.
+   * @param string $localpath The local path to uploaded assets.
    * @return array containing success/fail value, and any messages.
    */
-  public function validate_images(string $localpath);
+  public function validate_images($localpath = '');
 
   /**
    * Validate Image Pairs
@@ -28,7 +28,7 @@ interface RepoValidateAssetsInterface {
    * @param string $job_status The job status string.
    * @return array containing success/fail value, and any messages.
    */
-  public function validate_image_pairs(array $data, string $job_status);
+  public function validate_image_pairs($data = array(), $job_status = '');
 
   /**
    * Get Mime Type
@@ -36,6 +36,6 @@ interface RepoValidateAssetsInterface {
    * @param string  $filename  The file name
    * @return string
    */
-  public function getMimeType(string $filename);
+  public function getMimeType($filename = '');
 
 }
