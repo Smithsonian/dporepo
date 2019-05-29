@@ -98,15 +98,6 @@ class CaptureDatasetElementController extends Controller
      */
     function showDatasetElementsForm( Connection $conn, Request $request, SubjectController $subjects, ItemController $items, CaptureDatasetController $datasets )
     {
-        
-      $username = $this->getUser()->getUsernameCanonical();
-      $access = $this->repo_user_access->get_user_access_any($username, 'create_project_details');
-
-      if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
-        $response = new Response();
-        $response->setStatusCode(403);
-        return $response;
-      }
 
         $dataset_element = new CaptureDatasetElement();
         $post = $request->request->all();
@@ -121,6 +112,43 @@ class CaptureDatasetElementController extends Controller
           if(is_array($dataset_element_array) && !empty($dataset_element_array)) {
             $dataset_element = (object)$dataset_element_array;
           }
+        }
+
+        // Get the parent project ID.
+        $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
+            'base_record_id' => $id,
+            'record_type' => 'capture_data_element',
+        ));
+
+        $dataset_element->user_can_create = $dataset_element->user_can_edit = $dataset_element->user_can_delete = false;
+
+        if (!empty($id)) {
+            // Check user's permissions.
+            if(is_array($parent_records) && array_key_exists('project_id', $parent_records)) {
+                $username = $this->getUser()->getUsernameCanonical();
+                // Check if user has permission to access this page.
+                $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $parent_records['project_id']);
+                if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+                  $response = new Response();
+                  $response->setStatusCode(403);
+                  return $response;
+                }
+                // Check if user has permission to create content.
+                $access = $this->repo_user_access->get_user_access($username, 'create_project_details', $parent_records['project_id']);
+                if(array_key_exists('project_ids', $access) && in_array($parent_records['project_id'], $access['project_ids'])) {
+                  $dataset_element->user_can_create = true;
+                }
+                // Check if user has permission to edit content.
+                $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $parent_records['project_id']);
+                if(array_key_exists('project_ids', $access) && in_array($parent_records['project_id'], $access['project_ids'])) {
+                  $dataset_element->user_can_edit = true;
+                }
+                // Check if user has permission to delete content.
+                $access = $this->repo_user_access->get_user_access($username, 'delete_project_details', $parent_records['project_id']);
+                if(array_key_exists('project_ids', $access) && in_array($parent_records['project_id'], $access['project_ids'])) {
+                  $dataset_element->user_can_delete = true;
+                }
+            }
         }
 
         $dataset_element->capture_dataset_id = !empty($request->attributes->get('capture_dataset_id')) ? $request->attributes->get('capture_dataset_id') : $dataset_element->capture_dataset_id;
@@ -175,6 +203,9 @@ class CaptureDatasetElementController extends Controller
             'dataset_element_data' => $dataset_element,
             'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
             'form' => $form->createView(),
+            'user_can_create' => $dataset_element->user_can_create,
+            'user_can_edit' => $dataset_element->user_can_edit,
+            'user_can_delete' => $dataset_element->user_can_delete,
         ));
 
     }

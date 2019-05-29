@@ -5,6 +5,8 @@ namespace AppBundle\Form;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 
@@ -15,6 +17,7 @@ class CaptureDatasetElementForm extends AbstractType
     {
 
         $data = (array)$options['data'];
+        $disabled = array_key_exists('user_can_edit', $data) ? false : true;
 
         $builder
             ->add('capture_dataset_id', HiddenType::class, array(
@@ -22,23 +25,29 @@ class CaptureDatasetElementForm extends AbstractType
             ))
             ->add('capture_device_configuration_id', null, array(
                 'label' => 'Capture Device Configuration ID',
+                'disabled' => $disabled,
               ))
             ->add('capture_device_field_id', null, array(
                 'label' => 'Capture Device Field ID',
+                'disabled' => $disabled,
               ))
             ->add('capture_sequence_number', null, array(
                 'label' => 'Capture Sequence Number',
                 'required' => true,
+                'disabled' => $disabled,
               ))
             ->add('cluster_position_field_id', null, array(
                 'label' => 'Cluster Position Field ID',
+                'disabled' => $disabled,
               ))
             ->add('position_in_cluster_field_id', null, array(
                 'label' => 'Position In Cluster Field ID',
+                'disabled' => $disabled,
               ))
             ->add('save', SubmitType::class, array(
                 'label' => 'Save Edits',
                 'attr' => array('class' => 'btn btn-primary'),
+                'disabled' => $disabled,
               ))
         ;
     }

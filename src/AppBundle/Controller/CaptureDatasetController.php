@@ -161,15 +161,38 @@ class CaptureDatasetController extends Controller
 
         $item_id = !empty($request->attributes->get('item_id')) ? $request->attributes->get('item_id') : false;
 
+        // Get the parent project ID.
+        $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
+          'base_record_id' => $item_id ? $item_id : $id,
+          'record_type' => $item_id ? 'item' : 'capture_dataset',
+        ));
+
+        // Check user's permissions.
+        // If parent records exist and there's no item_id, the record is being edited. Otherwise, the record is being added.
+        if(is_array($parent_records) && array_key_exists('project_id', $parent_records) && !$item_id) {
+          $permission = 'edit_project_details';
+        } else {
+          $permission = 'create_project_details';
+        }
+
+        $username = $this->getUser()->getUsernameCanonical();
+        $access = $this->repo_user_access->get_user_access($username, $permission, $parent_records['project_id']);
+        if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+          $response = new Response();
+          $response->setStatusCode(403);
+          return $response;
+        }
+
         // Retrieve data from the database.
         if (!empty($id) && empty($post)) {
+
             $dataset_array = $this->repo_storage_controller->execute('getCaptureDataset', array(
               'capture_dataset_id' => $id,
             ));
-            if(is_array($dataset_array)) {
-              $dataset = (object)$dataset_array;
-            }
+            // If the record isn't found, throw a createNotFoundException (404).
+            if(empty($dataset_array)) throw $this->createNotFoundException('The record does not exist');
 
+            $dataset = (object)$dataset_array;
             $dataset->access_model_purpose = NULL;
             $dataset->inherit_publication_default = '';
             $dataset->api_publication_picker = NULL;
@@ -314,6 +337,40 @@ class CaptureDatasetController extends Controller
     {
       $id = !empty($request->attributes->get('capture_dataset_id')) ? $request->attributes->get('capture_dataset_id') : false;
 
+      // Get the parent project ID.
+      $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
+        'base_record_id' => $id,
+        'record_type' => 'capture_dataset',
+      ));
+
+      // Check user's permissions.
+      $user_can_create = $user_can_edit = $user_can_delete = false;
+      if(is_array($parent_records) && array_key_exists('project_id', $parent_records)) {
+        $username = $this->getUser()->getUsernameCanonical();
+        // Check if user has permission to access this page.
+        $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $parent_records['project_id']);
+        if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+          $response = new Response();
+          $response->setStatusCode(403);
+          return $response;
+        }
+        // Check if user has permission to create content.
+        $access = $this->repo_user_access->get_user_access($username, 'create_project_details', $parent_records['project_id']);
+        if(array_key_exists('project_ids', $access) && in_array($parent_records['project_id'], $access['project_ids'])) {
+          $user_can_create = true;
+        }
+        // Check if user has permission to edit content.
+        $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $parent_records['project_id']);
+        if(array_key_exists('project_ids', $access) && in_array($parent_records['project_id'], $access['project_ids'])) {
+          $user_can_edit = true;
+        }
+        // Check if user has permission to delete content.
+        $access = $this->repo_user_access->get_user_access($username, 'delete_project_details', $parent_records['project_id']);
+        if(array_key_exists('project_ids', $access) && in_array($parent_records['project_id'], $access['project_ids'])) {
+          $user_can_delete = true;
+        }
+      }
+
       // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
       $dataset_data = $this->getDataset((int)$id);
       if(!$dataset_data) throw $this->createNotFoundException('The record does not exist');
@@ -347,6 +404,9 @@ class CaptureDatasetController extends Controller
         'dataset_files' => $dataset_files,
         'uploads_path' => $this->uploads_directory,
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'user_can_create' => $user_can_create,
+        'user_can_edit' => $user_can_edit,
+        'user_can_delete' => $user_can_delete,
       ));
     }
 

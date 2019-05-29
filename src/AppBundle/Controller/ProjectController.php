@@ -46,21 +46,35 @@ class ProjectController extends Controller
      */
     public function browseProjects(Connection $conn, Request $request, IsniController $isni)
     {
-
+      // Check user's permissions.
+      $user_can_create = $user_can_delete = false;
       $username = $this->getUser()->getUsernameCanonical();
-      $access = $this->repo_user_access->get_user_access_any($username, 'view_projects');
 
+      // Check if user has permission to access this page.
+      $access = $this->repo_user_access->get_user_access_any($username, 'view_projects');
       if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
         $response = new Response();
         $response->setStatusCode(403);
         return $response;
       }
+      // Check if user has permission to create content.
+      $access = $this->repo_user_access->get_user_access_any($username, 'create_projects');
+      if(array_key_exists('project_ids', $access)) {
+        $user_can_create = true;
+      }
+      // Check if user has permission to delete content.
+      $access = $this->repo_user_access->get_user_access_any($username, 'delete_projects');
+      if(array_key_exists('project_ids', $access)) {
+        $user_can_delete = true;
+      }
 
-        return $this->render('projects/browse_projects.html.twig', array(
-            'page_title' => 'Browse Projects',
-            'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-            'current_tab' => 'workspace'
-        ));
+      return $this->render('projects/browse_projects.html.twig', array(
+          'page_title' => 'Browse Projects',
+          'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+          'current_tab' => 'workspace',
+          'user_can_create' => $user_can_create,
+          'user_can_delete' => $user_can_delete,
+      ));
     }
 
     /**
@@ -126,20 +140,25 @@ class ProjectController extends Controller
 
         $username = $this->getUser()->getUsernameCanonical();
         $user_can_edit = false;
+
         if(false == $id) {
-          $access = $this->repo_user_access->get_user_access_any($username, 'edit_projects');
-          if(array_key_exists('project_ids', $access) && isset($access['project_ids'])) {
-            $user_can_edit = true;
+          // Check if user has permission to create content.
+          $access = $this->repo_user_access->get_user_access_any($username, 'create_projects');
+          if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+            $response = new Response();
+            $response->setStatusCode(403);
+            return $response;
           }
         }
         else {
+          // Check if user has permission to access this page.
           $access = $this->repo_user_access->get_user_access($username, 'view_projects', $id);
           if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
             $response = new Response();
             $response->setStatusCode(403);
             return $response;
           }
-
+          // Check if user has permission to edit content.
           $access = $this->repo_user_access->get_user_access($username, 'edit_projects', $id);
           if(array_key_exists('project_ids', $access) && isset($access['project_ids'])) {
             $user_can_edit = true;
@@ -207,39 +226,46 @@ class ProjectController extends Controller
     {
       $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
 
-      $username = $this->getUser()->getUsernameCanonical();
-      $user_can_edit = $user_can_edit_project = false;
+      // Check to see if the record exists/active, and if it doesn't, throw a createNotFoundException (404).
+      $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => $project_id));
+      if(!$project_data) throw $this->createNotFoundException('The record does not exist');
+
+      $user_can_edit = $user_can_create = $user_can_delete = false;
+
       if(false !== $project_id) {
+        $username = $this->getUser()->getUsernameCanonical();
+        // Check if user has permission to access this page.
         $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $project_id);
         if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
           $response = new Response();
           $response->setStatusCode(403);
           return $response;
         }
-
-        $access = $this->repo_user_access->get_user_access($username, 'edit_projects', $project_id);
-        if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
-          $user_can_edit_project = true;
-        }
-
+        // Check if user has permission to edit content.
         $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $project_id);
         if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
           $user_can_edit = true;
         }
+        // Check if user has permission to create content.
+        $access = $this->repo_user_access->get_user_access($username, 'create_project_details', $project_id);
+        if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
+          $user_can_create = true;
+        }
+        // Check if user has permission to delete content.
+        $access = $this->repo_user_access->get_user_access($username, 'delete_project_details', $project_id);
+        if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
+          $user_can_delete = true;
+        }
       }
-
-      // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-      $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => $project_id));
-
-      if(!$project_data) throw $this->createNotFoundException('The record does not exist');
 
       return $this->render('items/browse_project_items.html.twig', array(
         'page_title' => 'Project: ' . $project_data['project_name'],
         'project_id' => $project_id,
         'project_data' => $project_data,
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        'user_can_edit_project' => $user_can_edit_project,
         'user_can_edit' => $user_can_edit,
+        'user_can_create' => $user_can_create,
+        'user_can_delete' => $user_can_delete,
       ));
     }
 
