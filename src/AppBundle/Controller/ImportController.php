@@ -1043,7 +1043,7 @@ class ImportController extends Controller
           'values' => array(
             'uuid' => $uuid,
             'project_id' => (int)$project['project_id'],
-            'job_label' => 'Metadata Import: "' . $project['project_name'] . '"',
+            'job_label' => 'Import Summary: "' . $project['project_name'] . '"',
             'job_type' => $job_type . ' metadata import',
             'job_status' => 'uploading',
             'date_completed' => null,
