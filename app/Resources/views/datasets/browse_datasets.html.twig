@@ -69,7 +69,7 @@
           <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
               <tr>
-                <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                <th style="padding-left: 8px;"><input class="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                 <th class="text-center">Download</th>
                 <th class="text-center"></th>
                 <th class="text-center"></th>
@@ -132,7 +132,7 @@
           <table id="browse_models" class="table table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
               <tr>
-                <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                <th style="padding-left: 8px;"><input class="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                 <th class="text-center">Download</th>
                 <th class="text-center"></th>
                 <th class="text-center"></th>
@@ -172,8 +172,7 @@
           <table id="browse_workflows" class="table table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
               <tr>
-                <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
-                <th class="text-center"></th>
+                <th style="padding-left: 8px;"><input class="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                 <th class="text-center"></th>
                 <th class="text-center"></th>
                 <th class="text-center"></th>
@@ -271,7 +270,7 @@
           "render": function ( data, type, row, meta ) {
               //@todo use a class instead of hard-coded width
               if(data) {
-                return '<img src="/admin/get_file?path=' + data + '" width="120px" />';
+                return '<img alt="thumbnail" src="/admin/get_file?path=' + data + '" width="120px" />';
               }
               else {
                 return '';
@@ -324,12 +323,12 @@
 
           // Create the delete record checkboxes.
           thisTableRow.find('td:eq(0)')
-            .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+            .html("<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
             .addClass("manage_column");
 
           // Create the download checkboxes.
           thisTableRow.find('td:eq(1)')
-            .html("<input type='checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
+            .html("<input type='checkbox' title='download_checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
             .addClass("manage_column");
 
           // Send to details page when clicked.
@@ -348,6 +347,7 @@
 
       var request_download_button = $('<button></button>')
         .addClass('btn btn-default glyphicon glyphicon-download-alt')
+		.attr('aria-label','glyphicon-download-alt')
         .attr('style', 'width: 13.8rem;')
         .attr('id', 'request-download-button')
         .on('click', function(){
@@ -471,11 +471,11 @@
 
           // Create the delete record checkboxes.
           thisTableRow.find('td:eq(0)')
-            .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+            .html("<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
             .addClass("manage_column");
           // Create the download checkboxes.
           thisTableRow.find('td:eq(1)')
-            .html("<input type='checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
+            .html("<input type='checkbox' title='download_checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
             .addClass("download");
           // Add a class to the table cell containing the "Preview" button.
           thisTableRow.find('td:eq(2)').addClass('js-preview');
@@ -506,6 +506,7 @@
 
       var request_model_download_button = $('<button></button>')
         .addClass('btn btn-default glyphicon glyphicon-download-alt')
+		.attr('aria-label','glyphicon-download-alt')
         .attr('style', 'width: 13.8rem;')
         .attr('id', 'request-download-button')
         .on('click', function(){

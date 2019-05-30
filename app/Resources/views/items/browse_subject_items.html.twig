@@ -52,7 +52,7 @@
           <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
               <tr>
-                <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
+                <th style="padding-left: 8px;"><input id="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                 <th class="text-center">Download</th>
                 <th class="text-center">Item Description</th>
                 <th class="text-center">Local Item ID</th>
@@ -120,12 +120,12 @@
 
           // Create the delete record checkboxes.
           thisTableRow.find('td:eq(0)')
-            .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+            .html("<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
             .addClass("manage_column");
 
           // Create the download checkboxes.
           thisTableRow.find('td:eq(1)')
-            .html("<input type='checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
+            .html("<input type='checkbox' title='download_checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
             .addClass("manage_column");
 
           // Send to details page when clicked.
@@ -144,6 +144,7 @@
 
       var request_download_button = $("<button></button>")
         .addClass('btn btn-default glyphicon glyphicon-download-alt')
+		.attr('aria-label','glyphicon-download-alt')
         .attr('style', 'width: 13.8rem;')
         .on("click", function(){
 

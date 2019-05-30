@@ -66,7 +66,7 @@
     <div class="panel-heading">
       <h3><span class="glyphicon glyphicon-list-alt" style="font-size: 2.0rem;" aria-hidden="true"></span> Assigned to You</h3>
     </div>
-        <div class="panel-body" role="tabpanel" id="browseUploads" aria-labelledby="browse-tab">
+        <div class="panel-body" role="tabpanel" id="browseUploads">
             <table id="browse_assigned_workflows" class="table table-striped table-bordered" cellspacing="0" width="100%">
                 <thead>
                 <tr>
@@ -145,7 +145,7 @@
          "fnRowCallback":function(nRow, aData, iDisplayIndex) {
            // // Create the checkboxes.
            // $(nRow).find('td:eq(0)').html(
-           //  "<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
+           //  "<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
            // )
            // .addClass("manage_column");
           }
@@ -234,7 +234,7 @@
 
             // // Create the checkboxes.
             // $(nRow).find('td:eq(0)').html(
-            //   "<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
+            //   "<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
             // )
             // .addClass("manage_column");
 
