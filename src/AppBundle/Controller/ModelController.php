@@ -373,7 +373,7 @@ class ModelController extends Controller
       // If there are no results, throw a createNotFoundException (404).
       if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
 
-        if(isset($item_array['authoring']) && is_array($data['authoring'])) {
+        if(isset($data['authoring']) && is_array($data['authoring'])) {
           $data['authoring']['referrer'] = '/admin/model/view/' . $id;
           $data['authoring']['mode'] = 'author';
 
