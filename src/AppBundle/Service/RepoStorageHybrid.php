@@ -6669,6 +6669,9 @@ class RepoStorageHybrid implements RepoStorage {
       $statement->execute();
     }
     $records_values = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    $this->connection->close();
+    
     return $records_values;
 
   }
@@ -7090,6 +7093,7 @@ class RepoStorageHybrid implements RepoStorage {
           }
           $statement->execute();
           $last_inserted_id = $this->connection->lastInsertId();
+          $this->connection->close();
 
           if(!$last_inserted_id) {
             return array('return' => 'fail', 'messages' => 'INSERT INTO `' . $base_table . '` failed.');
