@@ -202,6 +202,7 @@ class ItemController extends Controller
       if(is_array($item_array)) {
         $item->item_data = (object)$item_array;
       }
+
       // Throw a createNotFoundException (404).
       if(!isset($item->item_data->item_id)) throw $this->createNotFoundException('The record does not exist');
 
@@ -235,6 +236,34 @@ class ItemController extends Controller
         $subject_data = $this->repo_storage_controller->execute('getSubject', array('record_id' => (int)$subject_id));
       }
 
+      // Check user's permissions.
+      $user_can_create = $user_can_edit = $user_can_delete = false;
+      if(false !== $project_id) {
+        $username = $this->getUser()->getUsernameCanonical();
+        // Check if user has permission to access this page.
+        $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $project_id);
+        if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+          $response = new Response();
+          $response->setStatusCode(403);
+          return $response;
+        }
+        // Check if user has permission to create content.
+        $access = $this->repo_user_access->get_user_access($username, 'create_project_details', $project_id);
+        if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
+          $user_can_create = true;
+        }
+        // Check if user has permission to edit content.
+        $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $project_id);
+        if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
+          $user_can_edit = true;
+        }
+        // Check if user has permission to delete content.
+        $access = $this->repo_user_access->get_user_access($username, 'delete_project_details', $project_id);
+        if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
+          $user_can_delete = true;
+        }
+      }
+
       // Truncate the item_description so the breadcrumb don't blow up.
       $more_indicator = (strlen($item->item_data->item_description) > 50) ? '...' : '';
       $item->item_data->item_description_truncated = substr($item->item_data->item_description, 0, 50) . $more_indicator;
@@ -250,7 +279,9 @@ class ItemController extends Controller
         'destination' => $project_id . '|' . $subject_id . '|' . $item_id,
         'uploads_path' => $this->uploads_path,
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-//        'voyager_url' => $voyager_url,
+        'user_can_create' => $user_can_create,
+        'user_can_edit' => $user_can_edit,
+        'user_can_delete' => $user_can_delete,
       ));
     }
 
@@ -277,9 +308,29 @@ class ItemController extends Controller
 
         $id = false;
         $ajax = false;
+        $parent_records = array();
 
         if (!empty($request->attributes->get('item_id'))) {
           $id = $request->attributes->get('item_id');
+          // Get the parent project ID.
+          $parent_records = $this->repo_storage_controller->execute('getParentRecords', array(
+            'base_record_id' => $id,
+            'record_type' => 'item',
+          ));
+        }
+
+        // Set the project ID
+        $project_id = array_key_exists('project_id', $parent_records) ? $parent_records['project_id'] : $item->project_id;
+
+        // Check user's permissions.
+        $username = $this->getUser()->getUsernameCanonical();
+        // If an item ID exists, the record is being edited. Otherwise, the record is being added.
+        $permission = $id ? 'edit_project_details' : 'create_project_details';
+        $access = $this->repo_user_access->get_user_access($username, $permission, $project_id);
+        if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+          $response = new Response();
+          $response->setStatusCode(403);
+          return $response;
         }
         
         // If being POSTed via ajax, set the ajax flag to true.

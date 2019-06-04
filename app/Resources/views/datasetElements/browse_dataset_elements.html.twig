@@ -92,7 +92,9 @@
 
         <div class="col-sm-12 col-md-12">
             <a href="/admin/item/view/{{ item_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back to Item</a>
-            <a href="/admin/capture_dataset/manage/{{ capture_dataset_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span> Edit Dataset</a>
+            {% if user_can_edit %}
+                <a href="/admin/capture_dataset/manage/{{ capture_dataset_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span> Edit Dataset</a>
+            {% endif %}
         </div>
 
         <div class="col-sm-12 col-md-12 child-data">
@@ -101,11 +103,13 @@
                 <div class="panel-body">
                     <h2>Capture Data Elements</h2>
                     <input type="hidden" id="delete-path" value="admin/capture_dataset_element/delete" />
-                    <a href="/admin/dataset_element/add/{{ capture_dataset_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Capture Data Element</a>
+                    {% if user_can_create %}
+                        <a href="/admin/dataset_element/add/{{ capture_dataset_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Capture Data Element</a>
+                    {% endif %}
                     <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
                         <thead>
                         <tr>
-                            <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                            <th style="padding-left: 8px;"><input class="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                             <th class="text-center">Download</th>
                             <th class="text-center">Preview</th>
                             <th class="text-center">Capture Device Configuration ID</th>
@@ -146,7 +150,7 @@
                     <table id="browse_capture_dataset_rights" class="table table-striped table-bordered" cellspacing="0" width="100%">
                         <thead>
                         <tr>
-                            <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                            <th style="padding-left: 8px;"><input class="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                             <th class="text-center">Data Rights Restriction</th>
                             <th class="text-center">Start Date</th>
                             <th class="text-center">End Date</th>
@@ -164,7 +168,7 @@
                     <table id="browse_models" class="table table-striped table-bordered" cellspacing="0" width="100%">
                         <thead>
                         <tr>
-                            <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                            <th style="padding-left: 8px;"><input class="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                             <th class="text-center">Download</th>
                             <th class="text-center"></th>
                             <th class="text-center"></th>
@@ -204,7 +208,7 @@
                     <table id="browse_photogrammetry_scale_bars" class="table table-striped table-bordered" cellspacing="0" width="100%">
                         <thead>
                         <tr>
-                            <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                            <th style="padding-left: 8px;"><input class="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                             <th class="text-center">Scale Bar ID</th>
                             <th class="text-center">Scale Bar Manufacturer</th>
                             <th class="text-center">Scale Bar Barcode Type</th>
@@ -291,7 +295,7 @@
               "render": function ( data, type, row, meta ) {
                 //@todo use a class instead of hard-coded width
                 if(data) {
-                  return '<img src="/admin/get_file?path=' + data + '" width="120px" />';
+                  return '<img alt="thumbnail" src="/admin/get_file?path=' + data + '" width="120px" />';
                 }
                 else {
                   return '';
@@ -365,11 +369,11 @@
             var thisTableRow = $(nRow);
             // Create the delete record checkboxes.
             thisTableRow.find('td:eq(0)')
-              .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+              .html("<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
               .addClass("manage_column");
             // Create the download checkboxes.
             thisTableRow.find('td:eq(1)')
-              .html("<input type='checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
+              .html("<input type='checkbox' title='download_checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
               .addClass("manage_column");
             // Send to details page when clicked.
             thisTableRow.find('td').click(function() {
@@ -385,6 +389,7 @@
         });
         var request_download_button = $("<button></button>")
           .addClass('btn btn-default glyphicon glyphicon-download-alt')
+		  .attr('aria-label','glyphicon-download-alt')
           .attr('style', 'width: 13.8rem;')
           .on("click", function(){
             var download_ids = new Array;
@@ -451,7 +456,7 @@
             var thisTableRow = $(nRow);
             // Create the delete record checkboxes.
             thisTableRow.find('td:eq(0)')
-              .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+              .html("<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
               .addClass("manage_column");
             // Send to details page when clicked.
             thisTableRow.find('td').click(function() {
@@ -465,11 +470,14 @@
             });
           }
         });
-        var capture_dataset_rights_add_button = $('<a />')
-          .addClass('btn btn-default add-record-button')
-          .attr('href', '/admin/capture_dataset_rights/add/' + capture_dataset_id)
-          .html('<span class="glyphicon glyphicon-plus"></span> Add Capture Dataset Rights');
-        $('#browse_capture_dataset_rights_wrapper').find('.datatables_bulk_actions').append(capture_dataset_rights_add_button);
+
+        {% if user_can_create %}
+            var capture_dataset_rights_add_button = $('<a />')
+              .addClass('btn btn-default add-record-button')
+              .attr('href', '/admin/capture_dataset_rights/add/' + capture_dataset_id)
+              .html('<span class="glyphicon glyphicon-plus"></span> Add Capture Dataset Rights');
+            $('#browse_capture_dataset_rights_wrapper').find('.datatables_bulk_actions').append(capture_dataset_rights_add_button);
+        {% endif %}
 
         $('#browse_models').dataTable( {
           "columns": [
@@ -546,11 +554,11 @@
 
             // Create the delete record checkboxes.
             thisTableRow.find('td:eq(0)')
-              .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+              .html("<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
               .addClass("manage_column");
             // Create the download checkboxes.
             thisTableRow.find('td:eq(1)')
-              .html("<input type='checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
+              .html("<input type='checkbox' title='download_checkbox' name='download_checkbox' value='" + aData['manage'] + "' />")
               .addClass("manage_column");
 
             // Send to details page when clicked.
@@ -568,15 +576,18 @@
 
           }
         });
-
-        var models_add_button = $('<a />')
-          .addClass('btn btn-default add-record-button')
-          .attr('href', '/admin/model/add/' + capture_dataset_id + '?parent_type=capture_dataset_id')
-          .html('<span class="glyphicon glyphicon-plus"></span> Add a Model');
-        $('#browse_models_wrapper').find('.datatables_bulk_actions').prepend(models_add_button);
+        
+        {% if user_can_create %}
+            var models_add_button = $('<a />')
+              .addClass('btn btn-default add-record-button')
+              .attr('href', '/admin/model/add/' + capture_dataset_id + '?parent_type=capture_dataset_id')
+              .html('<span class="glyphicon glyphicon-plus"></span> Add a Model');
+            $('#browse_models_wrapper').find('.datatables_bulk_actions').prepend(models_add_button);
+        {% endif %}
 
         var request_model_download_button = $('<button></button>')
           .addClass('btn btn-default glyphicon glyphicon-download-alt')
+		  .attr('aria-label','glyphicon-download-alt')
           .attr('style', 'width: 13.8rem;')
           .attr('id', 'request-download-button')
           .on('click', function(){
@@ -654,7 +665,7 @@
             var thisTableRow = $(nRow);
             // Create the delete record checkboxes.
             thisTableRow.find('td:eq(0)')
-              .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+              .html("<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
               .addClass("manage_column");
 
             // Send to details page when clicked.
@@ -669,11 +680,13 @@
             });
           }
         });
-        var photogrammetry_scale_bars_add_button = $('<a />')
-          .addClass('btn btn-default add-record-button')
-          .attr('href', '/admin/photogrammetry_scale_bar/add/' + capture_dataset_id)
-          .html('<span class="glyphicon glyphicon-plus"></span> Add a Photogrammetry Scale Bar');
-        $('#browse_photogrammetry_scale_bars_wrapper').find('.datatables_bulk_actions').append(photogrammetry_scale_bars_add_button);
+        {% if user_can_create %}
+            var photogrammetry_scale_bars_add_button = $('<a />')
+              .addClass('btn btn-default add-record-button')
+              .attr('href', '/admin/photogrammetry_scale_bar/add/' + capture_dataset_id)
+              .html('<span class="glyphicon glyphicon-plus"></span> Add a Photogrammetry Scale Bar');
+            $('#browse_photogrammetry_scale_bars_wrapper').find('.datatables_bulk_actions').append(photogrammetry_scale_bars_add_button);
+        {% endif %}
       });
     </script>
 {% endblock %}

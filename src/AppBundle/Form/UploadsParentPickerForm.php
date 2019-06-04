@@ -20,6 +20,7 @@ class UploadsParentPickerForm extends AbstractType
                 'property' => 'uploads_parent_picker_form_parent_picker',
                 'attr' => array(
                     'placeholder' => 'Begin typing a project name',
+                    'title' => 'parent_picker_text',
                 ),
                 'class'  => null,
                 'render' => 'parent_record_name',

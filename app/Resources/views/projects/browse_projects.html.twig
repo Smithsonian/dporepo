@@ -18,13 +18,15 @@
       <div class="panel panel-default">
         <div class="panel-body">
             <h3><span class="glyphicon glyphicon-list-alt" style="font-size: 2.0rem;" aria-hidden="true"></span> Projects</h3>
-            <a href="/admin/project/add/" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Project</a>
+            {% if user_can_create %}
+              <a href="/admin/project/add/" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Project</a>
+            {% endif %}
             <input type="hidden" id="delete-path" value="admin/project/delete" />
 
             <table id="browse" class="table table-striped table-bordered" cellspacing="0" width="100%">
                 <thead>
                 <tr>
-                    <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                    <th style="padding-left: 8px;"><input class="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                     <th class="text-center">Project</th>
                     <th class="text-center">Stakeholder</th>
                     <th class="text-center">Items Count</th>
@@ -43,13 +45,15 @@
       <div class="panel panel-default">
         <div class="panel-body">
             <h3><span class="glyphicon glyphicon-list-alt" style="font-size: 2.0rem;" aria-hidden="true"></span> Subjects</h3>
-            <a href="/admin/subject/add" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Subject</a>
+            {% if user_can_create %}
+              <a href="/admin/subject/add" class="btn btn-default" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add a Subject</a>
+            {% endif %}
             <input type="hidden" id="delete-path" value="admin/subject/delete" />
 
             <table id="browse_subjects" class="table table-striped table-bordered" cellspacing="0" width="100%">
                 <thead>
                 <tr>
-                    <th style="padding-left: 8px;"><input class="remove-records-checkbox" type="checkbox"> Remove?</th>
+                    <th style="padding-left: 8px;"><input class="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                     <th class="text-center">Subject Name</th>
                     <th class="text-center">Holding Unit Name</th>
                     <th class="text-center">Items Count</th>
@@ -112,7 +116,7 @@
 
           // Create the delete record checkboxes.
           thisTableRow.find('td:eq(0)')
-            .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+            .html("<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
             .addClass("manage_column");
 
           // Send to details page when clicked.
@@ -167,7 +171,7 @@
 
           // Create the delete record checkboxes.
           thisTableRow.find('td:eq(0)')
-            .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+            .html("<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
             .addClass("manage_column");
 
           // Send to details page when clicked.

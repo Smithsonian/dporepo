@@ -1033,20 +1033,22 @@ class RepoStorageHybrid implements RepoStorage {
       $dataset_files = $ret;
     }
 
-    $id_params = array(
-      'record_type' => 'capture_dataset',
-      'project_id' => $return_data['project_id'],
-      'subject_id' => $return_data['subject_id'],
-      'item_id' => $return_data['item_id'],
-      'capture_dataset_id' => $capture_dataset_id,
-      'dataset_files' => $dataset_files,
-    );
-    $download_permissions = $this->getApiPermissions($id_params);
-    $return_data['inherit_api_published'] = isset($download_permissions['inherit_api_published']) ? $download_permissions['inherit_api_published'] : NULL;
-    $return_data['inherit_api_discoverable'] = isset($download_permissions['inherit_api_discoverable']) ? $download_permissions['inherit_api_discoverable'] : NULL;
-    $return_data['inherit_api_access_model_face_count_id'] = isset($download_permissions['inherit_api_access_model_face_count_id']) ? $download_permissions['inherit_api_access_model_face_count_id'] : NULL;
-    $return_data['inherit_api_access_uv_map_size_id'] = isset($download_permissions['inherit_api_access_uv_map_size_id']) ? $download_permissions['inherit_api_access_uv_map_size_id'] : NULL;
-    $return_data['api_access_model_purpose'] = isset($download_permissions['api_access_model_purpose']) ? $download_permissions['api_access_model_purpose'] : NULL;
+    if (!empty($return_data)) {
+      $id_params = array(
+        'record_type' => 'capture_dataset',
+        'project_id' => $return_data['project_id'],
+        'subject_id' => $return_data['subject_id'],
+        'item_id' => $return_data['item_id'],
+        'capture_dataset_id' => $capture_dataset_id,
+        'dataset_files' => $dataset_files,
+      );
+      $download_permissions = $this->getApiPermissions($id_params);
+      $return_data['inherit_api_published'] = isset($download_permissions['inherit_api_published']) ? $download_permissions['inherit_api_published'] : NULL;
+      $return_data['inherit_api_discoverable'] = isset($download_permissions['inherit_api_discoverable']) ? $download_permissions['inherit_api_discoverable'] : NULL;
+      $return_data['inherit_api_access_model_face_count_id'] = isset($download_permissions['inherit_api_access_model_face_count_id']) ? $download_permissions['inherit_api_access_model_face_count_id'] : NULL;
+      $return_data['inherit_api_access_uv_map_size_id'] = isset($download_permissions['inherit_api_access_uv_map_size_id']) ? $download_permissions['inherit_api_access_uv_map_size_id'] : NULL;
+      $return_data['api_access_model_purpose'] = isset($download_permissions['api_access_model_purpose']) ? $download_permissions['api_access_model_purpose'] : NULL;
+    }
 
     return $return_data;
   }
@@ -4059,6 +4061,7 @@ class RepoStorageHybrid implements RepoStorage {
     );
 
     foreach($data as $k => $d) {
+
       if(isset($d['metadata']) && !empty($d['metadata']) && strlen(trim($d['metadata'])) > 0) {
         $d_metadata_array = json_decode($d['metadata'], true);
         foreach($metadata_field_names as $k2 => $v2) {
@@ -5269,10 +5272,20 @@ class RepoStorageHybrid implements RepoStorage {
               LEFT JOIN project ON project.project_id = item.project_id';
           break;
 
-        case 'capture_dataset_element':
+        case 'capture_data_element':
           $params['id_field_name'] = 'capture_data_element.capture_data_element_id';
           $params['select'] = 'project.project_id, subject.subject_id, item.item_id, capture_dataset.capture_dataset_id, capture_data_element.capture_data_element_id';
           $params['left_joins'] = 'LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = capture_data_element.capture_dataset_id
+              LEFT JOIN item ON item.item_id = capture_dataset.item_id
+              LEFT JOIN subject ON subject.subject_id = item.subject_id
+              LEFT JOIN project ON project.project_id = item.project_id';
+          break;
+
+        case 'capture_data_file':
+          $params['id_field_name'] = 'capture_data_file.capture_data_file_id';
+          $params['select'] = 'project.project_id, subject.subject_id, item.item_id, capture_dataset.capture_dataset_id, capture_data_element.capture_data_element_id, capture_data_file.capture_data_file_id';
+          $params['left_joins'] = 'LEFT JOIN capture_data_element ON capture_data_element.capture_data_element_id = capture_data_file.capture_data_element_id
+              LEFT JOIN capture_dataset ON capture_dataset.capture_dataset_id = capture_data_element.capture_dataset_id
               LEFT JOIN item ON item.item_id = capture_dataset.item_id
               LEFT JOIN subject ON subject.subject_id = item.subject_id
               LEFT JOIN project ON project.project_id = item.project_id';
@@ -5288,22 +5301,22 @@ class RepoStorageHybrid implements RepoStorage {
               LEFT JOIN subject ON subject.subject_id = item.subject_id
               LEFT JOIN project ON project.project_id = item.project_id';
           break;
-        /*case 'model_with_capture_dataset_id':
-          $params['record_type'] = 'model';
-          $params['id_field_name'] = 'model.model_id';
-          $params['select'] = 'project.project_id, project.project_name, subject.subject_id, item.item_id, item.item_description, model.model_id, capture_dataset.capture_dataset_id, capture_dataset.capture_dataset_name';
-          $params['left_joins'] = '
-              LEFT JOIN capture_dataset_model ON model.model_id = capture_dataset_model.model_id
-              LEFT JOIN capture_dataset ON capture_dataset_model.capture_dataset_id = capture_dataset.capture_dataset_id
-              LEFT JOIN item ON item.item_id = capture_dataset.item_id
+
+        case 'uv_map_with_model_id':
+          $params['record_type'] = 'uv_map';
+          $params['id_field_name'] = 'uv_map.uv_map_id';
+          $params['select'] = 'project.project_id, project.project_name, subject.subject_id, subject.subject_name, item.item_id, item.item_description ';
+          $params['left_joins'] = 'LEFT JOIN model ON model.model_id = uv_map.model_id
+              LEFT JOIN item ON item.item_id = model.item_id
               LEFT JOIN subject ON subject.subject_id = item.subject_id
               LEFT JOIN project ON project.project_id = item.project_id';
           break;
-        */
+
         default: // subject
           //@todo- subject does not have a parent
           $params['id_field_name'] = 'subject.subject_id';
           $params['select'] = 'subject.subject_id';
+          $params['left_joins'] = '';
 
       }
 
@@ -6671,7 +6684,7 @@ class RepoStorageHybrid implements RepoStorage {
     $records_values = $statement->fetchAll(PDO::FETCH_ASSOC);
 
     $this->connection->close();
-    
+
     return $records_values;
 
   }

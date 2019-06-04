@@ -186,19 +186,20 @@ class SubjectController extends Controller
         // If being POSTed via ajax, set the ajax flag to true.
         if (!empty($request->attributes->get('ajax'))) $ajax = true;
 
+        // Check user's permissions.
         $username = $this->getUser()->getUsernameCanonical();
-        $user_can_edit = false;
-        if(false !== $subject->project_id && false !== $id) {
-          $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $subject->project_id);
-          if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
-            $response = new Response();
-            $response->setStatusCode(403);
-            return $response;
-          }
-
-          $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $subject->project_id);
-          if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
-            $user_can_edit = true;
+        // Check if user has permission to access this page.
+        $access = $this->repo_user_access->get_user_access_any($username, 'edit_projects');
+        if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
+          $response = new Response();
+          $response->setStatusCode(403);
+          return $response;
+        }
+        // Check if user has permission to create content.
+        if (false === $id) {
+          $access = $this->repo_user_access->get_user_access_any($username, 'create_projects');
+          if(array_key_exists('project_ids', $access)) {
+            $user_can_create = true;
           }
         }
 
@@ -271,7 +272,6 @@ class SubjectController extends Controller
               'page_title' => !empty($id) ? 'Subject: ' . $subject['subject_name'] : 'Create Subject',
               'subject_data' => $subject,
               'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-              'user_can_edit' => $user_can_edit,
               'form' => $form->createView(),
           ));
         }
@@ -286,6 +286,70 @@ class SubjectController extends Controller
 
       $subject_id = !empty($request->attributes->get('subject_id')) ? $request->attributes->get('subject_id') : false;
 
+      // Get the parent project ID.
+      $item_record = $this->repo_storage_controller->execute('getRecord', array(
+          'base_table' => 'item',
+          'id_field' => 'subject_id',
+          'id_value' => $subject_id,
+        )
+      );
+
+      // Check user's permissions.
+      $username = $this->getUser()->getUsernameCanonical();
+      $user_can_create = $user_can_edit = $user_can_delete = false;
+
+      // If there's a parent project ID...
+      if(array_key_exists('project_id', $item_record) && (false !== $item_record['project_id'])) {
+        // Check if user has permission to access this page.
+        $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $item_record['project_id']);
+        if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
+          $response = new Response();
+          $response->setStatusCode(403);
+          return $response;
+        }
+        // Check if user has permission to create content.
+        $access = $this->repo_user_access->get_user_access($username, 'create_project_details', $item_record['project_id']);
+        if(array_key_exists('project_ids', $access) && in_array($item_record['project_id'], $access['project_ids'])) {
+          $user_can_create = true;
+        }
+        // Check if user has permission to edit content.
+        $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $item_record['project_id']);
+        if(array_key_exists('project_ids', $access) && in_array($item_record['project_id'], $access['project_ids'])) {
+          $user_can_edit = true;
+        }
+        // Check if user has permission to delete content.
+        $access = $this->repo_user_access->get_user_access($username, 'delete_project_details', $item_record['project_id']);
+        if(array_key_exists('project_ids', $access) && in_array($item_record['project_id'], $access['project_ids'])) {
+          $user_can_delete = true;
+        }
+      }
+
+      // If there is no parent project ID... (this means there are no items *yet* associated to the subject).
+      if(!array_key_exists('project_id', $item_record)) {
+        // Check if user has permission to access this page.
+        $access = $this->repo_user_access->get_user_access_any($username, 'view_projects');
+        if(!array_key_exists('permission_name', $access) || empty($access['permission_name'])) {
+          $response = new Response();
+          $response->setStatusCode(403);
+          return $response;
+        }
+        // Check if user has permission to create content.
+        $access = $this->repo_user_access->get_user_access_any($username, 'create_projects');
+        if(array_key_exists('project_ids', $access)) {
+          $user_can_create = true;
+        }
+        // Check if user has permission to create content.
+        $access = $this->repo_user_access->get_user_access_any($username, 'edit_project_details');
+        if(array_key_exists('project_ids', $access)) {
+          $user_can_edit = true;
+        }
+        // Check if user has permission to create content.
+        $access = $this->repo_user_access->get_user_access_any($username, 'delete_project_details');
+        if(array_key_exists('project_ids', $access)) {
+          $user_can_delete = true;
+        }
+      }
+
       // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
       $subject_data = $this->getSubject((int)$subject_id);
       if(!$subject_data) throw $this->createNotFoundException('The record does not exist');
@@ -295,6 +359,9 @@ class SubjectController extends Controller
         'subject_id' => $subject_id,
         'subject_data' => $subject_data,
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
+        'user_can_create' => $user_can_create,
+        'user_can_edit' => $user_can_edit,
+        'user_can_delete' => $user_can_delete,
       ));
     }
 

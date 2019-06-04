@@ -51,7 +51,7 @@
                         <table id="browse_capture_device_components" class="table table-striped table-bordered" cellspacing="0" width="100%">
                             <thead>
                             <tr>
-                                <th style="padding-left: 8px;"><input id="remove-records-checkbox" type="checkbox"> Remove?</th>
+                                <th style="padding-left: 8px;"><input id="remove-records-checkbox" title="remove-records-checkbox" type="checkbox"> Remove?</th>
                                 <th class="text-center">Serial Number</th>
                                 <th class="text-center">Capture Device Component Type</th>
                                 <th class="text-center">Manufacturer</th>
@@ -119,7 +119,7 @@
                 var thisTableRow = $(nRow);
                 // Create the delete record checkboxes.
                 thisTableRow.find('td:eq(0)')
-                  .html("<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
+                  .html("<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />")
                   .addClass("manage_column");
                 // Send to details page when clicked.
                 thisTableRow.find('td').click(function() {

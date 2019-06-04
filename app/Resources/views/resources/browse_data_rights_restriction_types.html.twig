@@ -62,7 +62,7 @@
           "fnRowCallback":function(nRow, aData, iDisplayIndex) {
             // Create the checkboxes.
             $(nRow).find('td:eq(0)').html(
-              "<input type='checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
+              "<input type='checkbox' title='manage_checkbox' name='manage_checkbox' value='" + aData['manage'] + "' />"
             )
             .addClass("manage_column");
           }
