@@ -19,7 +19,7 @@ class ValidateCommand extends Command
   private $validate;
   private $project_directory;
 
-  public function __construct(KernelInterface $kernel, RepoImport $repo_import, RepoValidateData $validate, string $uploads_directory, bool $external_file_storage_on, object $conn)
+  public function __construct(KernelInterface $kernel, RepoImport $repo_import, RepoValidateData $validate, string $uploads_directory, bool $external_file_storage_on, $conn)
   {
     // Repo Import service
     $this->repo_import = $repo_import;

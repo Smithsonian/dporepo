@@ -19,7 +19,7 @@ class WorkflowCommand extends ContainerAwareCommand
   private $processing;
   public $u;
 
-  public function __construct(object $conn, RepoProcessingService $processing)
+  public function __construct($conn, RepoProcessingService $processing)
   {
     // Storage controller
     $this->repo_storage_controller = new RepoStorageHybridController($conn);

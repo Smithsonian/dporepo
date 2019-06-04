@@ -28,7 +28,7 @@ interface RepoProcessingServiceInterface {
    * @param string $recipe_name
    * @return array
    */
-  public function getRecipeByName(string $recipe_name);
+  public function getRecipeByName($recipe_name = '');
 
   /**
    * Post job
@@ -38,7 +38,7 @@ interface RepoProcessingServiceInterface {
    * @param array $params
    * @return array
    */
-  public function postJob(string $recipe_id, string $job_name, array $params);
+  public function postJob($recipe_id = '', $job_name = '', $params = array());
 
   /**
    * Run job
@@ -46,7 +46,7 @@ interface RepoProcessingServiceInterface {
    * @param $job_id
    * @return array
    */
-  public function runJob(string $job_id);
+  public function runJob($job_id = '');
 
   /**
    * Cancel job
@@ -54,7 +54,7 @@ interface RepoProcessingServiceInterface {
    * @param $job_id
    * @return array
    */
-  public function cancelJob(string $job_id);
+  public function cancelJob($job_id = '');
 
   /**
    * Delete job
@@ -62,7 +62,7 @@ interface RepoProcessingServiceInterface {
    * @param $job_id
    * @return array
    */
-  public function deleteJob(string $job_id);
+  public function deleteJob($job_id = '');
 
   /**
    * Get job
@@ -70,7 +70,7 @@ interface RepoProcessingServiceInterface {
    * @param $job_id
    * @return array
    */
-  public function getJob(string $job_id);
+  public function getJob($job_id = '');
 
   /**
    * Get jobs
@@ -85,7 +85,7 @@ interface RepoProcessingServiceInterface {
    * @param string $job_name
    * @return array
    */
-  public function getJobByName(string $job_name);
+  public function getJobByName($job_name = '');
 
   /**
    * Retrieve the server machine state
@@ -104,7 +104,7 @@ interface RepoProcessingServiceInterface {
    * @param string $content_type
    * @return array
    */
-  public function query_api(array $params, string $method, array $post_params, bool $return_output, string $content_type);
+  public function query_api($params = array(), $method = '', $post_params = array(), $return_output, $content_type = '');
 
   /**
    * See if a job or set of jobs are running.
@@ -112,7 +112,7 @@ interface RepoProcessingServiceInterface {
    * @param array $job_ids An array of job ids
    * @return bool
    */
-  public function are_jobs_running(array $job_ids);
+  public function are_jobs_running($job_ids = array());
 
   /**
    * Get processing assets.
@@ -122,7 +122,7 @@ interface RepoProcessingServiceInterface {
    * @param string $job_id The processing service job ID.
    * @return bool
    */
-  public function get_processing_assets(obj $filesystem, string $job_id);
+  public function get_processing_assets($filesystem, $job_id = '');
 
   /**
    * @param string $recipe The processing service recipe.
@@ -134,7 +134,7 @@ interface RepoProcessingServiceInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function initializeJob(string $recipe, array $params, string $path, string $user_id, array $project_data, obj $filesystem);
+  public function initializeJob($recipe = '', $params = array(), $path = '', $user_id = '', $project_data = array(), $filesystem);
 
   /**
    * @param string $path The path to the assets to be processed.
@@ -146,14 +146,14 @@ interface RepoProcessingServiceInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function sendJob(string $path, string $recipe, string $user_id, array $params, $project_data = array(), obj $filesystem);
+  public function sendJob($path = '', $recipe = '', $user_id = '', $params = array(), $project_data = array(), $filesystem);
 
   /**
    * @param object $filesystem Filesystem object (via Flysystem).
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return array
    */
-  public function executeJob(obj $filesystem);
+  public function executeJob($filesystem);
 
   /**
    * Get Processing Results
@@ -165,7 +165,7 @@ interface RepoProcessingServiceInterface {
    * See: https://flysystem.thephpleague.com/docs/usage/filesystem-api/
    * @return
    */
-  public function getProcessingResults(string $job_id, string $user_id, string $path, $filesystem);
+  public function getProcessingResults($job_id = '', $user_id = '', $path = '', $filesystem);
 
   /**
    * Get UV Map
@@ -173,6 +173,6 @@ interface RepoProcessingServiceInterface {
    * @param string $asset_path The path to the model
    * @return string
    */
-  public function getUvMap(string $asset_path);
+  public function getUvMap($asset_path = '');
 
 }

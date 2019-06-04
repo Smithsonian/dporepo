@@ -168,7 +168,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
    * @param array $localpath The local path to uploaded assets..
    * @return array containing success/fail value, and any messages.
    */
-  public function validate_images($localpath)
+  public function validate_images($localpath = '')
   {
 
     $data = array();
@@ -333,7 +333,7 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
    * @param string  $filename  The file name
    * @return string
    */
-  public function getMimeType($filename = null) {
+  public function getMimeType($filename = '') {
 
     if (!empty($filename)) {
       $buffer = file_get_contents($filename);

@@ -66,3 +66,10 @@ DirectoryIndex app.php
         # RedirectTemp cannot be used instead
     </IfModule>
 </IfModule>
+
+<IfModule mod_php5.c>
+  php_flag memory_limit          4096
+  php_flag post_max_size         5G
+  php_flag upload_max_filesize   5G
+  php_flag max_execution_time    3600
+</IfModule>
