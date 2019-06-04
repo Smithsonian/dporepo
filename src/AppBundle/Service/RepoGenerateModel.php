@@ -232,7 +232,8 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
       }
 
       // Continue only if job_ids are returned.
-      if (!empty($processing_job) && ($processing_job[0]['return'] === 'success')) {
+      if (!empty($processing_job) && is_array($processing_job) && array_key_exists(0, $processing_job)
+        && array_key_exists('return', $processing_job[0]) && ($processing_job[0]['return'] === 'success')) {
 
         // Check to see if jobs are running. Don't pass "Go" until all jobs are finished.
         while ($this->processing->are_jobs_running( array($processing_job[0]['workflow']['processing_job_id']) )) {
