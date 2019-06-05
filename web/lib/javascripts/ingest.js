@@ -194,7 +194,7 @@ uploadsDropzone.on("success", function(file, responseText) {
 
     if(responseText.csv && JSON.parse(responseText.csv).length) {
 
-      // Store the cature datasets and models CSVs if present.
+      // Store the capture datasets and models CSVs if present.
       if (file.name === 'capture_datasets.csv') captureDatasetsCsv = JSON.parse(responseText.csv);
       if (file.name === 'models.csv') modelsCsv = JSON.parse(responseText.csv);
       // Check for various combinations of capture datasets and models, and display a warning or error if/where applicable.
@@ -558,7 +558,8 @@ function preValidateCsvBagged() {
   for (var i = 0; i < queuedFiles.length; i++) {
 
     // Get all of the paths in the CSVs, excluding capture_datasets.csv if capture datasets are existing records.
-    if((typeof existing_capture_datasets === 'undefined') && (queuedFiles[i].name === 'capture_datasets.csv')) {
+    // if((typeof existing_capture_datasets === 'undefined') && (queuedFiles[i].name === 'capture_datasets.csv')) {
+    if(queuedFiles[i].name === 'capture_datasets.csv') {
       getCsvPaths(queuedFiles[i], csvPaths);
     }
 
@@ -574,7 +575,6 @@ function preValidateCsvBagged() {
 
   // Run the diff and output any errors.
   compareCsvManifestPaths(csvPaths, manifestPaths);
-
 
   for (var i = 0; i < queuedFiles.length; i++) {
 
@@ -1210,23 +1210,30 @@ function getCsvPaths(file, csvPaths) {
 
     let file = event.target.result,
         fileArray = file.split(/\r?\n/)
-        csvType = 'capture_datasets';
+        csvType = 'capture_datasets'
+        pathFieldKey = '';
+
+    // Get the key of the directory_path
+    let header = fileArray[0].trim().split(',');
+
+    for (var h = 0; h < header.length; h++) {
+      // Set the pathFieldKey so we can target the correct column for the path.
+      // capture dataset = directory_path
+      // model = file_path
+      if ((header[h] === 'directory_path') || (header[h] === 'file_path')) {
+        pathFieldKey = h;
+      }
+    }
 
     // Loop through CSV rows.
     for (var k = 0; k < fileArray.length; k++) {
       if((k > 0) && fileArray[k].length) {
         // Split the CSV row on the comma.
         let currentLineArray = fileArray[k].trim().split(',');
-        // The directory_path (capture_dataset) and file_path (model) are always at the end of the array (last column in the CSV).
-        let path = currentLineArray.pop();
-        // Strip the file name from the model path.
+        // The get the path value - directory_path (capture_dataset) - file_path (model).
+        let path = currentLineArray[pathFieldKey];
+        // If the file_path column is present, set the csvType to models.
         if (event.target.result.indexOf('file_path') !== -1) {
-          // Strip the file name.
-          path = path.replace(/[^\/]*$/, '');
-          // Remove the trailing slash.
-          if(path.substr(-1) === '/') {
-            path = path.substr(0, path.length - 1);
-          }
           csvType = 'models';
         }
         // Push the path to the csvPaths array.
@@ -1238,6 +1245,7 @@ function getCsvPaths(file, csvPaths) {
 }
 
 function getManifestPaths(file, manifestPaths) {
+
   // Read the manifest file.
   let reader = new FileReader();
   reader.readAsText(file);
@@ -1252,9 +1260,15 @@ function getManifestPaths(file, manifestPaths) {
         // Split the manifest line at the whitespace.
         var arr = fileArray[j].split(/(\s+)/);
 
-        if (typeof arr[2] !== 'undefined') {
-          // Strip the file name from the path.
-          var path = arr[2].replace(/[^\/]*$/, '');
+        if ((typeof arr[2] !== 'undefined') && (arr[2].indexOf('-diffuse') === -1)) {
+
+          // For capture datasets, strip the file name from the path.
+          if ((arr[2].indexOf('.png') !== -1) || (arr[2].indexOf('.dng') !== -1) || (arr[2].indexOf('.jpg') !== -1)) {
+            var path = arr[2].replace(/[^\/]*$/, '');
+          } else {
+            var path = arr[2];
+          }
+
           // Clean-up the paths.
           path = path.replace('data/', '');
           path = path.replace('/camera/', '');
@@ -1293,9 +1307,6 @@ function compareCsvManifestPaths(csvPaths, manifestPaths) {
     // Sort the csvPathsRaw array.
     csvPathsRaw.sort();
 
-    // console.log(csvPathsRaw);
-    // console.log(manifestPaths);
-
     var diff = $(csvPathsRaw).not(manifestPaths).get();
 
     // If there are file-based errors, populate the panel-body.
@@ -1304,7 +1315,7 @@ function compareCsvManifestPaths(csvPaths, manifestPaths) {
       let fileMessageOrderedList = $('<ol />');
       for (var i = 0; i < diff.length; i++) {
         if (diff[i].length) {
-          fileMessageOrderedList.append('<li>Path is not relative to the "data" directory in the ' + csvPaths[i].type + '.csv. Path: ' + diff[i] + '</li>');
+          fileMessageOrderedList.append('<li>The directory or file path found in the ' + csvPaths[i].type + '.csv is incorrect (' + diff[i] + '). Please check for spelling errors and/or path format.</li>');
         }
       }
       // Append the ordered list to the fileMessageContainer.
