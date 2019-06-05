@@ -162,6 +162,7 @@ class CaptureDatasetForm extends AbstractType
             ->add('directory_path', null, array(
                 'label' => 'Directory Path',
                 'required' => false,
+                'attr' => array('placeholder' => 'Example: capture_dataset_directory_01'),
               ))
             ->add('api_publication_picker', ChoiceType::class, array(
               'label' => 'API Publication Status',
