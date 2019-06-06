@@ -142,6 +142,10 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
               'table_name' => 'processing_job',
               'field_name' => 'recipe',
             ),
+            array(
+              'table_name' => 'processing_job',
+              'field_name' => 'processing_service_job_id',
+            ),
           ),
           'limit' => 1,
           // Joins
@@ -165,8 +169,17 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
       );
 
       if (empty($workflow)) {
-        $return['errors'][] = 'No workflow jobs found. All workflow jobs are completed.';
+        $return['messages'][] = 'No workflow jobs found. All workflow jobs have completed.';
         return $return;
+      }
+
+      // If the processing job is currently running, return with a message.
+      if (!empty($workflow)) {
+        $is_processing_job_running = $this->processing->are_jobs_running( array($workflow[0]['processing_service_job_id']));
+        if ($is_processing_job_running) {
+          $return['messages'][] = 'Processing job is running (processing job ID: ' . $workflow[0]['processing_service_job_id'] . ')';
+          return $return;
+        }
       }
 
       if (!empty($workflow)) {

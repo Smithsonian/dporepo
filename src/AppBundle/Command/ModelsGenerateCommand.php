@@ -76,6 +76,24 @@ class ModelsGenerateCommand extends ContainerAwareCommand
       $output->writeln('<comment>Model(s) Generated</comment>' . "\n");
     }
 
+    // Output messages.
+    if (!empty($result) && array_key_exists('messages', $result)) {
+      $output->writeln('<comment>Result</comment>' . "\n");
+      foreach ($result['messages'] as $key => $value) {
+        $output->writeln('---------------------------' . "\n");
+        $output->writeln('<comment>' . $value . '</comment>' . "\n");
+      }
+    }
+
+    // Output errors.
+    if (!empty($result) && array_key_exists('errors', $result)) {
+      $output->writeln('<comment>Errors</comment>' . "\n");
+      foreach ($result['errors'] as $key => $value) {
+        $output->writeln('---------------------------' . "\n");
+        $output->writeln('<error>' . $value . '</error>' . "\n");
+      }
+    }
+
     return $result;
   }
 }
