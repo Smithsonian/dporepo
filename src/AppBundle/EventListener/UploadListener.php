@@ -339,19 +339,32 @@ class UploadListener
         // Execute the validation against the JSON schema.
         $data->results = (object)$repoValidate->validateData($data->csv, $schema, $record_type, $blacklisted_fields);
 
-        // If applicable, validate that the EDAN record exists (subject_guid),
-        // and that the holding entity relation in metadata storage exists.
+        // Additional Validations
+        // 1) If the DpoEdanBundle is present, validate that the EDAN record exists (subject_guid).
+        // 2) Validate that the holding entity relation in metadata storage exists.
+        // 3) If the DpoEdanBundle isn't present, validate that the subject_name isn't empty.
         if (($schema === 'subject') && !empty($data->csv)) {
+
           // If the DpoEdanBundle exists, validate that the EDAN record exists.
           if ($this->edan) $data->edan_results = $this->repo_import->validateEdanRecord($data);
-          // Validate that the holding entity exists.
+
+          // Holding entity relation / Empty subject_name
           foreach($data->csv as $csv_key => $csv_value) {
+
+            // Validate that the holding entity exists.
             $data->holding_entity_results = $repoValidate->getHoldingEntity($csv_value->holding_entity_guid);
             // If not found, return the error message.
             if (empty($data->holding_entity_results)) {
-              $data->holding_entity_results['messages'][] = array('row' => 'Row ' . ($csv_key+1), 'error' => $csv_value->holding_entity_guid . ' not found. Please contact the administrator for assistance.');
+              $data->holding_entity_results['messages'][] = array('row' => 'Row ' . ($csv_key+1), 'error' => 'holding_entity_name (' . $csv_value->holding_entity_guid . ') not found. Please contact the administrator for assistance.');
             }
+
+            // If the DpoEdanBundle isn't present, validate that the subject_name isn't empty (DPO3DREP-660)
+            if (!$this->edan && empty($csv_value->subject_name)) {
+              $data->subject_name_results['messages'][] = array('row' => 'Row ' . ($csv_key+1), 'error' => 'Subject name is empty.');
+            }
+
           }
+
         }
 
         // Add the column headers back to the array.
@@ -379,6 +392,12 @@ class UploadListener
         if(isset($data->holding_entity_results['messages'])) {
           unset($data->holding_entity_results['is_valid']);
           $data->results = (object)array_merge_recursive($data->holding_entity_results, (array)$data->results);
+        }
+
+        // Merge subject name messages.
+        if(isset($data->subject_name_results['messages'])) {
+          unset($data->subject_name_results['is_valid']);
+          $data->results = (object)array_merge_recursive($data->subject_name_results, (array)$data->results);
         }
       }
     }
