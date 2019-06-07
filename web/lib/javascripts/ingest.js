@@ -1319,7 +1319,7 @@ function compareCsvManifestPaths(csvPaths, manifestPaths) {
       if(manifestPaths.indexOf(csvPathRaw) < 0) {
 
         let fileMessageOrderedList = $('<ol />');
-        fileMessageOrderedList.append('<li>The directory or file path found in the ' + csvPaths[i].type + '.csv is incorrect (Looking for ' + csvPathRaw + '). Please check for spelling errors and/or path format.</li>');
+        fileMessageOrderedList.append('<li>The directory or file path found in the ' + csvPaths[c].type + '.csv is incorrect (Looking for ' + csvPathRaw + '). Please check for spelling errors and/or path format.</li>');
 
         // If there are file-based errors, populate the panel-body.
         let fileMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>File Paths Pre-validation</h4>');
