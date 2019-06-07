@@ -1317,9 +1317,9 @@ function compareCsvManifestPaths(csvPaths, manifestPaths) {
     for (var c = 0; c < csvPaths.length; c++) {
       csvPathRaw  = (csvPaths[c].path);
 
-      if(csvPathRaw != manifestPaths[c]) {
+      if(manifestPaths.indexOf(csvPathRaw) < 0) {
 
-        if(!has_path_errors) {
+        if(has_path_errors == false) {
           has_path_errors = true;
           let fileMessageOrderedList = $('<ol />');
         }
