@@ -747,7 +747,8 @@ class RepoImport implements RepoImportInterface {
             // Set the capture_dataset_id.
             $csv_val->capture_dataset_id = null;
             if (null === $session->get('model_import_type')) {
-              if (!empty($new_repository_ids[$i]) && !empty($csv_val->import_parent_id)) {
+              if (!empty($new_repository_ids[$i]) && is_array($new_repository_ids) && isset($new_repository_ids[$i])
+                && !empty($csv_val->import_parent_id) && isset($new_repository_ids[$i][$csv_val->import_parent_id])) {
                 $csv_val->capture_dataset_id = $new_repository_ids[$i][$csv_val->import_parent_id];
               } else {
                 $csv_val->capture_dataset_id = $data->record_id;
