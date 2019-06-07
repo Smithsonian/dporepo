@@ -28,7 +28,7 @@
     <div class="row">
         <div class="col-sm-12 col-md-12">
             <div class="col-md-6">
-              {% if data.capture_datasets %}
+              {% if data.model_purpose == 'master' and data.capture_datasets %}
                 <div><label>Capture Datasets:</label>
                 {% for cd in data.capture_datasets %}
                     <a href="/admin/capture_dataset/view/{{cd.capture_dataset_id}}">{{cd.capture_dataset_name}}</a><br />
@@ -95,6 +95,7 @@
         </div>
     </div>
 
+    {% if data.model_purpose == 'master' %}
     <div class="col-sm-12 col-md-12 child-data">
         <div class="panel panel-default">
             <div class="panel-body">
@@ -134,6 +135,8 @@
             </div>
         </div>
     </div>
+    {% endif %}
+
     <div class="col-sm-12 col-md-12 child-data">
         <div class="panel panel-default">
             <div class="panel-body">
@@ -171,6 +174,7 @@
           </div>
     </div>
 
+    {% if data.model_purpose == 'master' %}
     <div class="col-sm-12 col-md-12 child-data">
         <div class="panel panel-default">
             <div class="panel-body">
@@ -213,6 +217,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 {% endblock %}
 
 {% block javascripts %}
