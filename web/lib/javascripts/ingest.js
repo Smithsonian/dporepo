@@ -943,7 +943,7 @@ function requiredCsvValidation(parentRecordType, csvList) {
   if (parentRecordType.length && csvList.length) {
 
     if (parentRecordType === 'project') {
-      requiredCsvs = 'file_name_map.csv, subjects.csv, items.csv';
+      requiredCsvs = 'subjects.csv, items.csv, capture_datasets.csv -or- models.csv'; // file_name_map.csv, 
     }
 
     // // File name map - no file_name_map.csv found
@@ -964,8 +964,14 @@ function requiredCsvValidation(parentRecordType, csvList) {
       generateWarning = true;
     }
 
+    // Project as parent record - capture_datasets.csv and models.csv not found
+    if ( (parentRecordType === 'project') && ((csvList.indexOf('models.csv') === -1) && (csvList.indexOf('capture_datasets.csv') === -1)) ) {
+      csvTargetFile = 'capture_datasets.csv or models.csv';
+      generateWarning = true;
+    }
+
     if (generateWarning) {
-      errorText = '<strong>' + csvTargetFile + ':</strong> Not found. Required CSV files: ' + requiredCsvs;
+      errorText = '<strong>' + csvTargetFile + ' not found</strong><br><br>Required CSV files:<br>' + requiredCsvs;
     }
 
     // Check to see if all CSVs are named correctly.
