@@ -313,24 +313,31 @@ class ModelController extends Controller
       $data = $this->repo_storage_controller->execute('getModel', array(
         'model_id' => $id));
 
+      $page_title = 'Model Derivative Detail';
+      if(array_key_exists('model_purpose', $data)) {
+        if($data['model_purpose'] == 'master') {
+          $page_title = 'Master Model Detail';
+        }
+      }
+
       // If there are no results, throw a createNotFoundException (404).
       if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
 
-        if(isset($item_array['authoring']) && is_array($data['authoring'])) {
-          $data['authoring']['referrer'] = '/admin/model/view/' . $id;
-          $data['authoring']['mode'] = 'author';
+      if(isset($item_array['authoring']) && is_array($data['authoring'])) {
+        $data['authoring']['referrer'] = '/admin/model/view/' . $id;
+        $data['authoring']['mode'] = 'author';
 
-          /*
-           *
-          https://si-3ddigip01.si.edu:8445/lib/javascripts/voyager-tools/voyager-story-dev.html?
+        /*
+         *
+        https://si-3ddigip01.si.edu:8445/lib/javascripts/voyager-tools/voyager-story-dev.html?
 
-          root=/webdav/78D55C4C-F5DA-1D74-11D0-D78B4A4CF649/nmnh_sea_turtle-model_and_dataset/data/models/
-          &document=/webdav/78D55C4C-F5DA-1D74-11D0-D78B4A4CF649/nmnh_sea_turtle-model_and_dataset/data/models/nmnh_sea_turtle-master-document.json
-          &mode=author
-          &referrer=/admin/workflow/108?qc_hd_done
+        root=/webdav/78D55C4C-F5DA-1D74-11D0-D78B4A4CF649/nmnh_sea_turtle-model_and_dataset/data/models/
+        &document=/webdav/78D55C4C-F5DA-1D74-11D0-D78B4A4CF649/nmnh_sea_turtle-model_and_dataset/data/models/nmnh_sea_turtle-master-document.json
+        &mode=author
+        &referrer=/admin/workflow/108?qc_hd_done
 
-           */
-        }
+         */
+      }
 
         // Temporary hack for the URL for Voyager's Authoring mode.
       /*switch ($data['item_id']) {
@@ -359,7 +366,7 @@ class ModelController extends Controller
       $this->getPreviewableModels($data);
 
       return $this->render('datasets/model_detail.html.twig', array(
-        'page_title' => 'Model Detail',
+        'page_title' => $page_title,
         'data' => $data,
         'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
         //'voyager_url' => $voyager_url,

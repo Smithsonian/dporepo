@@ -14,7 +14,7 @@
       <li>Project: <a href="/admin/project/{{data.parent_records.project_id}}">{{data.parent_records.project_name}}</a></li>
 
       <li>Item: <a href="/admin/item/view/{{data.parent_records.item_id}}">{{ data.parent_records.item_description|length > 50 ? data.parent_records.item_description|slice(0, 50) ~ '...' : data.parent_records.item_description  }}</a></li>
-      <li class="active">Model Detail</li>
+      <li class="active">{{ page_title }}</li>
     </ol>
 
     <div class="row">
