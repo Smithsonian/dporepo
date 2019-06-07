@@ -1313,31 +1313,26 @@ function compareCsvManifestPaths(csvPaths, manifestPaths) {
     manifestPaths.sort();
 
     // Check the paths from the csvPaths array.
-    var has_path_errors = false;
     for (var c = 0; c < csvPaths.length; c++) {
       csvPathRaw  = (csvPaths[c].path);
 
       if(manifestPaths.indexOf(csvPathRaw) < 0) {
 
-        if(has_path_errors == false) {
-          has_path_errors = true;
-          let fileMessageOrderedList = $('<ol />');
-        }
+        let fileMessageOrderedList = $('<ol />');
         fileMessageOrderedList.append('<li>The directory or file path found in the ' + csvPaths[i].type + '.csv is incorrect (' + diff[i] + '). Please check for spelling errors and/or path format.</li>');
+
+        // If there are file-based errors, populate the panel-body.
+        let fileMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>File Paths Pre-validation</h4>');
+        // Append the ordered list to the fileMessageContainer.
+        if(fileMessageOrderedList.find('li').length) {
+          fileMessageContainer.append(fileMessageOrderedList);
+          // Append the fileMessageContainer to the panel-body container.
+          $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
+        }
+
       }
 
     } // For each csvPaths
-
-    // If there are file-based errors, populate the panel-body.
-    if(has_path_errors) {
-      let fileMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>File Paths Pre-validation</h4>');
-      // Append the ordered list to the fileMessageContainer.
-      if(fileMessageOrderedList.find('li').length) {
-        fileMessageContainer.append(fileMessageOrderedList);
-        // Append the fileMessageContainer to the panel-body container.
-        $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
-      }
-    }
 
   }, 3000);
 
