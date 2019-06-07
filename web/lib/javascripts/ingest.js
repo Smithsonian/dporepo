@@ -1248,7 +1248,7 @@ function getCsvPaths(file, csvPaths) {
       if((k > 0) && fileArray[k].length) {
         // Split the CSV row on the comma.
         let currentLineArray = fileArray[k].trim().split(',');
-        // The get the path value - directory_path (capture_dataset) - file_path (model).
+        // The get the path value: directory_path (capture_dataset) - file_path (model).
         let path = currentLineArray[pathFieldKey];
         // Push the path to the csvPaths array.
         csvPaths.push({type: csvType, path: path});
@@ -1312,26 +1312,25 @@ function compareCsvManifestPaths(csvPaths, manifestPaths) {
     csvPaths.sort();
     manifestPaths.sort();
 
-    // Pull the paths from the csvPaths array.
-    var csvPathsRaw = [];
+    // Check the paths from the csvPaths array.
+    var has_path_errors = false;
     for (var c = 0; c < csvPaths.length; c++) {
-      csvPathsRaw.push(csvPaths[c].path);
-    }
+      csvPathRaw  = (csvPaths[c].path);
 
-    // Sort the csvPathsRaw array.
-    csvPathsRaw.sort();
+      if(csvPathRaw != manifestPaths[c]) {
 
-    var diff = $(csvPathsRaw).not(manifestPaths).get();
+        if(!has_path_errors) {
+          has_path_errors = true;
+          let fileMessageOrderedList = $('<ol />');
+        }
+        fileMessageOrderedList.append('<li>The directory or file path found in the ' + csvPaths[i].type + '.csv is incorrect (' + diff[i] + '). Please check for spelling errors and/or path format.</li>');
+      }
+
+    } // For each csvPaths
 
     // If there are file-based errors, populate the panel-body.
-    if(diff.length) {
+    if(has_path_errors) {
       let fileMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>File Paths Pre-validation</h4>');
-      let fileMessageOrderedList = $('<ol />');
-      for (var i = 0; i < diff.length; i++) {
-        if (diff[i].length) {
-          fileMessageOrderedList.append('<li>The directory or file path found in the ' + csvPaths[i].type + '.csv is incorrect (' + diff[i] + '). Please check for spelling errors and/or path format.</li>');
-        }
-      }
       // Append the ordered list to the fileMessageContainer.
       if(fileMessageOrderedList.find('li').length) {
         fileMessageContainer.append(fileMessageOrderedList);
