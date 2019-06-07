@@ -1233,6 +1233,10 @@ function getCsvPaths(file, csvPaths) {
       if (header[h] === 'existing_record') {
         csv_is_simple = true;
       }
+      // If the file_path column is present, set the csvType to models.
+      if (header[h] === 'file_path') {
+        csvType = 'models';
+      }
     }
 
     if(csv_is_simple) {
@@ -1246,10 +1250,6 @@ function getCsvPaths(file, csvPaths) {
         let currentLineArray = fileArray[k].trim().split(',');
         // The get the path value - directory_path (capture_dataset) - file_path (model).
         let path = currentLineArray[pathFieldKey];
-        // If the file_path column is present, set the csvType to models.
-        if (event.target.result.indexOf('file_path') !== -1) {
-          csvType = 'models';
-        }
         // Push the path to the csvPaths array.
         csvPaths.push({type: csvType, path: path});
       }
