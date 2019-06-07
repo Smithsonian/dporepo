@@ -1221,6 +1221,7 @@ function getCsvPaths(file, csvPaths) {
 
     // Get the key of the directory_path
     let header = fileArray[0].trim().split(',');
+    var csv_is_simple = false;
 
     for (var h = 0; h < header.length; h++) {
       // Set the pathFieldKey so we can target the correct column for the path.
@@ -1229,6 +1230,13 @@ function getCsvPaths(file, csvPaths) {
       if ((header[h] === 'directory_path') || (header[h] === 'file_path')) {
         pathFieldKey = h;
       }
+      if (header[h] === 'existing_record') {
+        csv_is_simple = true;
+      }
+    }
+
+    if(csv_is_simple) {
+      return;
     }
 
     // Loop through CSV rows.
