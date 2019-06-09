@@ -386,7 +386,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
       }
 
       // If the UV map isn't found, return an error.
-      if (!is_file($uv_map->getPathname())) {
+      if (!empty($uv_map) && !is_file($uv_map->getPathname())) {
         $data[0]['errors'][] = 'UV map not found in the repository\'s file system. Path: ' . $uv_map->getPathname();
         return $data;
       }
