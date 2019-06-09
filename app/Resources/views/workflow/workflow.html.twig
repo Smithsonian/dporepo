@@ -40,7 +40,7 @@
           <p><strong>Created By:</strong> {{ data.username }}</p>
           <p><strong>Date Created:</strong> {{ data.date_created }}</p>
           {% if (data.processing_job_id) %}
-            <p><strong>Processing Job ID:</strong> <a href="http://si-3ddigip01.si.edu:8000/clients/7210f16c-d71a-4845-837f-b598ea38d36b/jobs/{{ data.processing_job_id }}" target="_blank">{{ data.processing_job_id }}</a></p>
+            <p><strong>Processing Job ID:</strong> {{ data.processing_job_id }}</p>
           {% endif %}
           <p><strong>Ingest Job ID:</strong> <a href="/admin/ingest/{{ data.ingest_job_uuid }}/{{ data.ingest_job.project_id }}">{{ data.ingest_job_uuid }}</a></p>
           {% if (data.model_id is defined) %}
