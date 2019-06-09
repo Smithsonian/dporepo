@@ -184,10 +184,10 @@ class WorkflowController extends Controller
 
     //@todo include anybody with admin role globally or for this project?
     $workflow['point_of_contact_guid_options'] = array(
-      "Anderson, Max"=>0,
-      "Blundell, Jon"=>1,
-      "Conrad, Joe"=>2,
-      "Dattoria, Megan"=>3
+      "Day, Sunny"=>0,
+      "Sky, Blue"=>1,
+      "Rain, Light"=>2,
+      "Snow, Fluffy"=>3,
     );
     $workflow['point_of_contact_guid_picker'] = NULL;
 
