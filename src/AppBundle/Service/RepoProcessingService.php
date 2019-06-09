@@ -573,24 +573,23 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
     if (!empty($job_data)) {
       // Get the processing job from the processing service.
       $processing_job = $this->getJob($job_data[0]['processing_service_job_id']);
+
+      // Faking
+      // $processing_job['httpcode'] = '500';
+
       // Error handling
-      if ($processing_job['httpcode'] !== 200) $data[]['errors'][] = 'The processing service returned HTTP code ' . $processing_job['httpcode'];
+      if ($processing_job['httpcode'] !== 200) {
+        $data['errors'][] = 'The processing service returned HTTP code ' . $processing_job['httpcode'] . '. Processing job ID: ' . $job_data[0]['processing_service_job_id'];
+      }
+
       // No error...
       if ($processing_job['httpcode'] === 200) {
         // Decode JSON
         $processing_job_array = json_decode($processing_job['result'], true);
-
-        // // Log the errors to the database.
-        // if ($processing_job_array['state'] === 'error') {
-        //   $this->repo_validate->logErrors(
-        //     array(
-        //       'job_id' => $repo_processing_job_id,
-        //       'user_id' => $job_data[0]['created_by_user_account_id'],
-        //       'job_log_label' => 'Processing Job',
-        //       'errors' => array($processing_job['error'] . ' (Processing job ID: ' . $processing_job['id'] . ')'),
-        //     )
-        //   );
-        // }
+        
+        // // Faking
+        // $processing_job_array['state'] = 'error';
+        // $processing_job_array['error'] = 'Tool Unfold: terminated with code: 1';
 
         // If the state of the job is 'error' or 'done', proceed with pulling assets from the processing service.
         if (in_array($processing_job_array['state'], array('error', 'done'))) {
@@ -676,7 +675,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
             }
             // Catch the error.
             catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
-              $data['errors'][] = $e->getMessage() . ' - The directory, ' . $job_id . ', does not exist.';
+              $data['errors'][] = $e->getMessage() . ' - processing service job ID: ' . $job_id;
               return $data;
             }
 
@@ -747,20 +746,27 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
           }
 
         }
+
+        // Update the processing job record.
+        $repo_processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
+          'base_table' => 'processing_job',
+          'record_id' => $job_data[0]['processing_job_id'],
+          'user_id' => $job_data[0]['created_by_user_account_id'],
+          'values' => array(
+            'job_json' => json_encode($processing_job_array),
+            'state' => $processing_job_array['state']
+          )
+        ));
+
+        $data['state'] = $processing_job_array['state'];
+
+        // If the processing job state is 'error', add to the errors array.
+        if ($processing_job_array['state'] === 'error') {
+          $data['errors'][] = 'The processing service returned "' . $processing_job_array['error'] . '". Processing job ID: ' . $job_data[0]['processing_service_job_id'];
+        }
+
       }
 
-      // Update the processing job record.
-      $repo_processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
-        'base_table' => 'processing_job',
-        'record_id' => $job_data[0]['processing_job_id'],
-        'user_id' => $job_data[0]['created_by_user_account_id'],
-        'values' => array(
-          'job_json' => json_encode($processing_job_array),
-          'state' => $processing_job_array['state']
-        )
-      ));
-
-      $data['state'] = $processing_job_array['state'];
     }
 
     return $data;
