@@ -1347,7 +1347,8 @@ class RepoImport implements RepoImportInterface {
         $dir_parent = array_slice($dir_parts, -2, 2);
 
         // Get image files.
-        if (in_array(strtolower($file->getExtension()), $this->image_extensions)) {
+        if (in_array(strtolower($file->getExtension()), $this->image_extensions)
+            && (($dir_parent[1] === 'camera') || ($dir_parent[1] === 'raw'))) {
 
           // @TODO - Somewhat of a hack. Not sure what to do if directory structure isn't as we're expecting it to be.
           // If the parent directory is 'data', force the name of the directory to be 'camera'.
