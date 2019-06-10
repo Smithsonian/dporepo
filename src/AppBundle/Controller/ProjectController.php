@@ -244,51 +244,6 @@ class ProjectController extends Controller
     }
 
     /**
-     * @Route("/admin/collections/{project_id}", name="collection_view", methods="GET", requirements={"project_id"="\d+"})
-     */
-    public function viewProjecta(Connection $conn, Request $request, ProjectController $projects)
-    {
-      $project_id = !empty($request->attributes->get('project_id')) ? $request->attributes->get('project_id') : false;
-
-      $username = $this->getUser()->getUsernameCanonical();
-      $user_can_edit = $user_can_edit_project = false;
-      if(false !== $project_id) {
-        $access = $this->repo_user_access->get_user_access($username, 'view_project_details', $project_id);
-        if(!array_key_exists('project_ids', $access) || !isset($access['project_ids'])) {
-          $response = new Response();
-          $response->setStatusCode(403);
-          return $response;
-        }
-
-        $access = $this->repo_user_access->get_user_access($username, 'edit_projects', $project_id);
-        if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
-          $user_can_edit_project = true;
-        }
-
-        $access = $this->repo_user_access->get_user_access($username, 'edit_project_details', $project_id);
-        if(array_key_exists('project_ids', $access) && in_array($project_id, $access['project_ids'])) {
-          $user_can_edit = true;
-        }
-      }
-
-      // Check to see if the parent record exists/active, and if it doesn't, throw a createNotFoundException (404).
-      $project_data = $this->repo_storage_controller->execute('getProject', array('project_id' => $project_id));
-
-      if(!$project_data) throw $this->createNotFoundException('The record does not exist');
-
-      return $this->render('collections/collections.html.twig', array(
-        'page_title' => 'Collections',
-        'project_id' => $project_id,
-        'project_data' => $project_data,
-        'is_favorite' => $this->getUser()->favorites($request, $this->u, $conn),
-        'user_can_edit_project' => $user_can_edit_project,
-        'user_can_edit' => $user_can_edit,
-        'current_tab' => 'collections',
-      ));
-    }
-
-
-    /**
      * Get Projects
      *
      * Run a query to retrieve all projects from the database.

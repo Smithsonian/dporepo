@@ -1,0 +1,393 @@
+{% extends 'default_bootstrap_admin.html.twig' %}
+
+{% block content %}
+
+    <div class="row">
+      <div class="col-sm-12 col-md-12">
+        <div class="form-group">
+        {% if project_data is defined and project_data.project_id is defined %}
+          <a href="/admin/collection/view/{{ project_data.project_id }}" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
+        {% else %}
+          <a href="/admin/collection" class="btn btn-default" role="button"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span> Back</a>
+        {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {{ form_start(form) }}
+
+    <div class="row">
+      <div class="col-sm-6 col-md-6">
+        <div class="form-group">
+          <img width="50%" alt="thumbnail" src="/admin/get_file?path=\uploads\thumbnail\collection-thumb.png">
+          <br/><br/><button type="button" class="btn btn-primary" id="upload-image">Upload Image</button>
+        </div>
+        {{ form_row(form.project_name) }}
+        <!--{{ form_row(form.api_publication_picker) }}-->
+        {{ form_row(form.stakeholder_guid) }}
+        {{ form_row(form.stakeholder_label) }}
+        {{ form_row(form.stakeholder_guid_picker) }}
+
+        <div class="form-group">
+          <div class="controls stakeholder-container">
+            <label class="control-label hidden" for="external_stakeholder">External Stakeholder</label>
+            <div id="stakeholder-display">
+              {% if project_data.stakeholder_label is not empty %}
+                {{ project_data.stakeholder_label }}<br>
+                ISNI ID: <a href="http://www.isni.org/{{ project_data.stakeholder_guid }}" title="View full record (opens in a new tab/window)" target="_blank">{{ project_data.stakeholder_guid }}</a>
+              {% endif %}
+            </div>
+            <button type="button" class="btn btn-default btn-sm" data-toggle="modal" data-target="#isniSearchModal">
+              Choose a Stakeholder from ISNI
+            </button>
+          </div>
+        </div>
+
+        
+      </div>
+
+      <div class="col-sm-6 col-md-6">
+        {{ form_row(form.project_description) }}
+      </div>
+      <div class="col-sm-12 col-md-12">
+            <div class="panel panel-default">
+                <div class="panel-body">
+
+                    <h2>Experiences</h2>
+                    <table id="experiences_table" class="table table-striped table-bordered" cellspacing="0" width="100%">
+                      <thead>
+                        <tr>
+                            <th class="text-center">Select</th>
+                            <th class="text-center">Thumbnail</th>
+                            <th class="text-center">Title</th>
+                            <th class="text-center">Description</th>
+                            <th class="text-center">Experience ID</th>
+                            <th class="text-center">Created</th>
+                            <th class="text-center">Last Modified</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr id="1" role="row" class="odd">
+                          <td class="manage_column"><input type="checkbox" title="manage_checkbox" name="manage_checkbox" value="2"></td>
+                          <td><img width="200px" alt="thumbnail" src="/admin/get_file?path=\uploads\thumbnail\collection-thumb.png"></td>
+                          <td>NMNH: PaleoBio: Virtual Workflow Design Document</td>
+                          <td>Donec rutrum, urna vitae volutpat viverra, tellus mauris tempor urna, a varius ipsum ex at lectus. Sed rhoncus mollis metus, maximus molestie mauris semper non.</td>
+                          <td>443533</td>
+                          <td>2019-04-30 16:17:10</td>
+                          <td>2019-04-30 16:17:10</td>
+                        </tr>
+                        <tr id="2" role="row" class="even">
+                          <td class="manage_column"><input type="checkbox" title="manage_checkbox" name="manage_checkbox" value="2"></td>
+                          <td><img width="200px" alt="thumbnail" src="/admin/get_file?path=\uploads\thumbnail\collection-thumb2.png"></td>
+                          <td>NMNH: Botany: Physical Workflow Design Document</td>
+                          <td>Donec rutrum, urna vitae volutpat viverra, tellus mauris tempor urna, a varius ipsum ex at lectus. Sed rhoncus mollis metus, maximus molestie mauris semper non.</td>
+                          <td>443333</td>
+                          <td>2019-04-30 16:17:10</td>
+                          <td>2019-04-30 16:17:10</td>
+                        </tr>
+                        <tr id="3" role="row" class="odd">
+                          <td class="manage_column"><input type="checkbox" title="manage_checkbox" name="manage_checkbox" value="2"></td>
+                          <td><img width="200px" alt="thumbnail" src="/admin/get_file?path=\uploads\thumbnail\collection-thumb3.png"></td>
+                          <td>NMNH: PaleoBio: Virtual Workflow Design Document</td>
+                          <td>Donec rutrum, urna vitae volutpat viverra, tellus mauris tempor urna, a varius ipsum ex at lectus. Sed rhoncus mollis metus, maximus molestie mauris semper non.</td>
+                          <td>4422533</td>
+                          <td>2019-04-30 16:17:10</td>
+                          <td>2019-04-30 16:17:10</td>
+                        </tr>
+                        <tr id="4" role="row" class="even">
+                          <td class="manage_column"><input type="checkbox" title="manage_checkbox" name="manage_checkbox" value="2"></td>
+                          <td><img width="200px" alt="thumbnail" src="/admin/get_file?path=\uploads\thumbnail\collection-thumb4.png"></td>
+                          <td>NMNH: PaleoBio: Virtual Workflow Design Document</td>
+                          <td>Donec rutrum, urna vitae volutpat viverra, tellus mauris tempor urna, a varius ipsum ex at lectus. Sed rhoncus mollis metus, maximus molestie mauris semper non.</td>
+                          <td>043573</td>
+                          <td>2019-04-30 16:17:10</td>
+                          <td>2019-04-30 16:17:10</td>
+                        </tr>
+                        <tr id="5" role="row" class="odd">
+                          <td class="manage_column"><input type="checkbox" title="manage_checkbox" name="manage_checkbox" value="2"></td>
+                          <td><img width="200px" alt="thumbnail" src="/admin/get_file?path=\uploads\thumbnail\collection-thumb5.png"></td>
+                          <td>NMNH: PaleoBio: Virtual Workflow Design Document</td>
+                          <td>Donec rutrum, urna vitae volutpat viverra, tellus mauris tempor urna, a varius ipsum ex at lectus. Sed rhoncus mollis metus, maximus molestie mauris semper non.</td>
+                          <td>444733</td>
+                          <td>2019-04-30 16:17:10</td>
+                          <td>2019-04-30 16:17:10</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+      <div class="col-md-12">
+        {{ form_row(form.save) }}
+      </div>
+    </div>
+
+    {{ form_end(form) }}
+
+    <!-- Modal -->
+    <div class="modal fade" id="isniSearchModal" tabindex="-1" role="dialog" aria-labelledby="isniSearchLabel">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title" id="isniSearchLabel">Choose a Stakeholder</h4>
+          </div>
+          <div class="modal-body">
+
+            <div class="row" style="margin-right: 0; margin-left: 0;">
+
+              <div class="col-sm-12 col-md-12">
+                <h4>Search ISNI</h4>
+                <div class="form-group panel panel-default">
+                  <div class="panel-body">
+
+                    <div class="row">
+                      <div class="col-sm-10 col-md-10">
+                        <label class="control-label hidden" for="searchQuery">Search</label>
+                        <div class="controls">
+                          <input name="searchQuery" title="search-query" id="search-query" type="text" value="" class="form-control">
+                        </div>
+                      </div>
+                      <div class="col-sm-2 col-md-2">
+                        <div class="controls">
+                          <button type="button" id="search-query-button" class="btn btn-default">Search</button>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+                <p>Search ISNI and select the desired name to serve as the label. Once a label has been assigned to an 
+                  ISNI record, it will become the associated label from this point forward.</p>
+              </div>
+
+            </div>
+
+            <div class="row" style="margin-right: 0; margin-left: 0;">
+              <div id="search-results" class="col-sm-12 col-md-12">
+
+              </div>
+            </div>
+
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            {% if user_can_edit %}
+                <button type="button" class="btn btn-primary" id="save-changes">Save changes</button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+{% endblock %}
+
+{% block js_bottom %}
+  {{ parent() }}
+  <script src="{{ asset('lib/javascripts/datatables/js/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ asset('lib/javascripts/datatables/js/dataTables.buttons.min.js') }}"></script>
+    <script src="{{ asset('lib/javascripts/datatables/js/dataTables.bootstrap.min.js') }}"></script>
+    <script src="{{ asset('lib/javascripts/buttons/js/buttons.bootstrap.min.js') }}"></script>
+    <script src="{{ asset('lib/javascripts/buttons/js/buttons.colVis.min.js') }}"></script>
+  <script type="text/javascript">
+    jQuery(document).ready(function($) {
+
+      // TODO: Convert the unit ID in the unit options to the ISNI id?
+      // Right now, can't change over to ISNI once a unit ID has been chosen and recorded in the database.
+      $('select.stakeholder-chosen-select').chosen().change(function(evt, params){
+        // console.log(params.selected);
+      });
+
+      // Set variables.
+      var resultsContainer = $('#search-results')
+          loadingGif = $('<img />').attr('src', '/lib/images/spinner.gif').attr('alt', 'loading animation').attr('style', 'width: 140px;'),
+          loadingGifContainer = $('<div />').addClass('center-block').attr('style', 'width: 140px;').append(loadingGif);
+
+      // Search ISNI button click handler.
+      $('#search-query-button').on('click', function(e) {
+
+        var searchQuery = $('#search-query').val();
+
+        // Validate - search query.
+        if(!searchQuery.length) {
+          swal({
+            title: "Search Term is Empty",
+            text: "Please enter a search term.",
+          });
+          return;
+        }
+
+        // Remove previous search results and search value, if present.
+        resultsContainer.empty();
+        // Add the loading gif.
+        resultsContainer.append(loadingGifContainer);
+
+        // Make an AJAX request to the ISNI endpoint.
+        // Example: http://127.0.0.1:8000/admin/isni/NASM/1/50
+        $.ajax({
+          type: 'GET'
+          ,dataType: 'json'
+          ,url: '/admin/isni/' + searchQuery + '/1/50'
+          ,success: function(result) {
+
+            if(result) {
+
+              // Remove the loading gif.
+              loadingGifContainer.remove();
+
+              // Populate the search results.
+              for (var key in result) {
+
+                var isniIdHeader = $('<h4 />').text('ISNI ID'),
+                    isniId = $('<a />')
+                        .attr('href','http://www.isni.org/' + result[key].isniId)
+                        .attr('title','View full record (opens in a new tab/window)')
+                        .attr('target','_blank')
+                        .text(result[key].isniId),
+                    isniOrgTypeHeader = $('<h4 />').text('Organization Type'),
+                    isniOrgTypeContainer = $('<div />').text(result[key].organisationType),
+                    isniLabelsHeader = $('<h4 />').text('Organization Names'),
+                    isniLabelsContainer = buildLabelRadioButtons(result[key].isniId, result[key].organisationName),
+                    containerDivLeft = $('<div />')
+                        .attr('id', result[key].isniId)
+                        .addClass('col-sm-10 col-md-10 well')
+                        .append(isniLabelsHeader, isniLabelsContainer, isniOrgTypeHeader, isniOrgTypeContainer, isniIdHeader, isniId),
+                    radioButton = $('<input class="isni-chosen" name="isni_chosen" type="radio" value="' + result[key].isniId + '">'),
+                    radioButtonIcon = $('<i />').addClass('glyphicon hidden')
+                        .on('click', function() {
+                            var thisCheckboxIcon = $(this);
+                            $('.isni-picker i').removeClass('glyphicon-check').addClass('hidden');
+                            thisCheckboxIcon.removeClass('hidden').addClass('glyphicon-check');
+                            $('.well').removeAttr('style');
+                            thisCheckboxIcon.parent().parent().parent().find('.well').attr('style', 'border-color: #3797fc;');
+                            thisCheckboxIcon.parent().parent().find('.isni-chosen').trigger('click');
+                      }),
+                    radioButtonIconHeader = $('<h3 />').addClass('isni-picker').append(radioButtonIcon),
+                    containerDivRight = $('<div />').addClass('col-sm-2 col-md-2').append(radioButton, radioButtonIconHeader),
+                    containerDivRow = $('<div />').addClass('row').append(containerDivLeft, containerDivRight);
+
+                resultsContainer.append(containerDivRow);
+
+              }
+            
+            }
+
+          }
+        });
+
+      });
+
+      // Save the stakeholder data (populate the display area and hidden fields in the parent form).
+      $('#project_form_stakeholder_guid_picker').on('change', function(){
+        var stakeholderId = this.value;
+        var stakeholderName = $( "#stakeholder_guid_picker" ).val();
+
+        $('#project_form_stakeholder_guid').val('');
+        $('#project_form_stakeholder_label').val(stakeholderName);
+
+        $('#stakeholder-display').empty().append(stakeholderName);
+      });
+
+      $('#save-changes').on('click', function(){
+
+        // Set all of the variables.
+        var chosenIsniGuid = $("input:radio[name='isni_chosen']:checked").val(),
+            chosenIsniLabel = $("input:radio[name='" + chosenIsniGuid + "']:checked").val(),
+            chosenSiGuid = $('#stakeholder_guid_picker').val(),
+            isniValuePresent = (typeof chosenIsniGuid !== 'undefined') ? true : false,
+            isniLabelPresent = (typeof chosenIsniLabel !== 'undefined') ? true : false,
+            isniInfo = 'ISNI ID: <a href="http://www.isni.org/' + chosenIsniGuid + '" title="View full record (opens in a new tab/window)" target="_blank">' + chosenIsniGuid + '</a>',
+            displayText = chosenIsniLabel + '<br> ' + isniInfo;
+
+        // Validation - ISNI record
+        if(!isniValuePresent) {
+          swal('ISNI Choice is Empty', 'Please choose an ISNI record.');
+          return;
+        }
+        // Validation - ISNI label
+        if(!isniLabelPresent) {
+          swal('ISNI Organization Name Label is Empty', 'Even though an ISNI record has been chosen, a name label must also be chosen.');
+          return;
+        }
+
+        // Populate the display area and hidden fields in the parent form.
+        if(isniValuePresent) {
+          $('#project_form_stakeholder_label').val(chosenIsniLabel);
+          $('#project_form_stakeholder_guid').val(chosenIsniGuid);
+          $('#stakeholder_guid_picker').val(chosenIsniGuid);
+          $('#stakeholder-display').empty().append(displayText);
+          $('#isniSearchModal').modal('hide');
+        }
+
+      });
+
+      // ISNI radio buttons click handler
+      $('#isniSearchModal').on('click', '.isni-label', function(){
+        var thisCheckboxContainer = $(this).parent().parent().parent().parent().find('.isni-picker');
+            thisCheckboxIcon = thisCheckboxContainer.find('i');
+        $('.isni-label').prop('checked', false);
+        $(this).prop('checked', true);
+        $('.isni-picker i').removeClass('glyphicon-check').addClass('hidden');
+        thisCheckboxIcon.removeClass('hidden').addClass('glyphicon-check');
+        $('.well').removeAttr('style');
+        thisCheckboxIcon.parent().parent().parent().find('.well').attr('style', 'border-color: #3797fc;');
+        thisCheckboxIcon.parent().parent().find('.isni-chosen').trigger('click');
+      });
+
+      // When the modal is shown...
+      $('#isniSearchModal').on('show.bs.modal', function (e){
+        // Remove previous search results and search value, if present.
+        resultsContainer.empty();
+        $('#search-query').val('');
+        // Set focus on the search input.
+        setTimeout(function(){
+          $('#isniSearchModal input#search-query').focus();
+        }, 500);
+        // Enable keyboard enter/return capability on search query submit.
+        $(document).keypress(function(e) {
+          if(e.which === 13) {
+            if($('#search-query:focus').length) {
+              $('#search-query-button').trigger('click');
+            }
+          }
+        });
+
+      });
+
+      // When the modal is hidden...
+      $('#isniSearchModal').on('hidden.bs.modal', function (e){
+        // Remove previous search results and search value, if present.
+        resultsContainer.empty();
+        $('#search-query').val('');
+      });
+
+      function buildLabelRadioButtons(isniId, array) {
+        // Declare the isniLabelsContainer variable.
+        var isniLabelsContainer = '';
+        // Loop through the ISNI names array.
+        for (var key in array) {
+          if(array[key].length) {
+            // var checked = (parseInt(key) === 0) ? true : false;
+            var radioButtonLabel = $('<label />').attr('for', isniId).attr('style', 'font-weight: normal;').text(array[key]),
+                radioButtonLabelDiv = $('<div />').addClass('col-sm-10 col-md-10').append(radioButtonLabel),
+                radioButton = $('<input />').attr('name', isniId).attr('type', 'radio').attr('value', array[key]).addClass('isni-label'),
+                radioButtonDiv = $('<div />').addClass('col-sm-2 col-md-2').append(radioButton),
+                radioButtonContainer = $('<div />').append(radioButtonLabelDiv, radioButtonDiv).html();
+            // Populate the ISNI labels container.
+            isniLabelsContainer += '<div class="row isni-labels">' + radioButtonContainer + '</div>';
+          }
+        }
+        return isniLabelsContainer;
+      }
+      $('#experiences_table').dataTable( {
+          "dom": 'lfip<"">tip',
+          "pagingType": "simple_numbers",
+          "stateSave": true,
+          "order": [[5,"desc"]],
+          // Values in the length dropdown.
+          "lengthMenu":[10,50,100,500]
+        });
+    });
+    
+  </script>
+{% endblock %}
