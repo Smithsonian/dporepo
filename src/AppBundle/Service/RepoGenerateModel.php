@@ -116,7 +116,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
   public function generateModelAssets($uuid = null, $recipe_name = null, $filesystem)
   {
 
-    $data = array();
+    $data = $processing_job = array();
     $recipe_query = array();
     $job_status = 'metadata ingest in progress';
     $job_failed_message = 'The job has failed. Exiting model assets generation process.';
