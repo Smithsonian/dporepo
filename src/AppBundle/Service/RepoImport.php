@@ -1258,16 +1258,22 @@ class RepoImport implements RepoImportInterface {
     // Query the database for 'inspect-mesh' jobs.
     if (!empty($data)) {
 
+      $file_info = null;
+
       $repo_processing_job_data = $this->repo_storage_controller->execute('getRecords', array(
         'base_table' => 'processing_job',
         'fields' => array(
+          array(
+            'table_name' => 'processing_job',
+            'field_name' => 'ingest_job_uuid',
+          ),
           array(
             'table_name' => 'processing_job_file',
             'field_name' => 'job_id',
           ),
           array(
             'table_name' => 'processing_job_file',
-            'field_name' => 'file_contents',
+            'field_name' => 'file_name',
           ),
         ),
         // Joins
@@ -1293,27 +1299,39 @@ class RepoImport implements RepoImportInterface {
         )
       );
 
-      foreach ($repo_processing_job_data as $key => $value) {
-        // Get the processing job's model-report.json file's contents.
-        $file_contents = json_decode($value['file_contents'], true);
-        $model_file_name = $file_contents['parameters']['meshFile'];
+      // Get the file's information.
+      if (!empty($repo_processing_job_data)) {
+        $file_info = $this->getFileInfo($repo_processing_job_data[0]['ingest_job_uuid'], $repo_processing_job_data[0]['file_name']);
+      }
 
-        foreach ($data->csv as $csv_key => $csv_val) {
-          // If the processing service's $model_file_name is found in the repository's file_path,
-          // add values from the model-report.json file's contents.
-          if(stristr($csv_val->file_path, $model_file_name)) {
-            // Break-out the topology and statistics into dedicated variables (mainly for readability).
-            $topology = $file_contents['steps']['inspect']['result']['inspection']['topology'];
-            $statistics = $file_contents['steps']['inspect']['result']['inspection']['statistics'];
-            // Determine the model_modality (type of geometry) - 'point_cloud' or a 'mesh'.
-            $data->csv[$csv_key]->model_modality = (($statistics['numFaces'] === 0) && ($statistics['numEdges'] === 0)) ? 'point_cloud' : 'mesh';
-            $data->csv[$csv_key]->is_watertight = $topology['isWatertight'];
-            $data->csv[$csv_key]->has_normals = $statistics['hasNormals'];
-            $data->csv[$csv_key]->face_count = $statistics['numFaces'];
-            $data->csv[$csv_key]->vertices_count = $statistics['numVertices'];
-            $data->csv[$csv_key]->has_vertex_color = $statistics['hasVertexColors'];
-            $data->csv[$csv_key]->has_uv_space = $statistics['hasTexCoords'];
+      if (!empty($file_info)) {
+        $file_path = $this->project_directory . 'web' . $file_info[0]['file_path'];
+
+        if (is_file($file_path)) {
+          // Get the processing job's model-report.json file's contents.
+          $file_contents_raw = file_get_contents($file_path);
+          $file_contents = json_decode($file_contents_raw, true);
+          // Model file name.
+          $model_file_name = $file_contents['parameters']['meshFile'];
+          // Add model information to the CSV.
+          foreach ($data->csv as $csv_key => $csv_val) {
+            // If the processing service's $model_file_name is found in the repository's file_path,
+            // add values from the model-report.json file's contents.
+            if(stristr($csv_val->file_path, $model_file_name)) {
+              // Break-out the topology and statistics into dedicated variables (mainly for readability).
+              $topology = $file_contents['steps']['inspect']['result']['inspection']['topology'];
+              $statistics = $file_contents['steps']['inspect']['result']['inspection']['statistics'];
+              // Determine the model_modality (type of geometry) - 'point_cloud' or a 'mesh'.
+              $data->csv[$csv_key]->model_modality = (($statistics['numFaces'] === 0) && ($statistics['numEdges'] === 0)) ? 'point_cloud' : 'mesh';
+              $data->csv[$csv_key]->is_watertight = $topology['isWatertight'];
+              $data->csv[$csv_key]->has_normals = $statistics['hasNormals'];
+              $data->csv[$csv_key]->face_count = $statistics['numFaces'];
+              $data->csv[$csv_key]->vertices_count = $statistics['numVertices'];
+              $data->csv[$csv_key]->has_vertex_color = $statistics['hasVertexColors'];
+              $data->csv[$csv_key]->has_uv_space = $statistics['hasTexCoords'];
+            }
           }
+
         }
 
       }
