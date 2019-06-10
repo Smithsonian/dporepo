@@ -498,24 +498,17 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
         $json_decoded = json_decode($state['result'], true);
 
         foreach ($json_decoded['clients'] as $key => $value) {
-
-          if ($value['name'] === 'Goran Halusa') {
-            $client_jobs = $json_decoded['clients'][$key];
-            break;
-          }
-        }
-
-        // Check for job_ids in the repository client's runningJobs.
-        if (!empty($client_jobs) && !empty($client_jobs['runningJobs'])) {
-          foreach ($job_ids as $key => $value) {
-            // If a running job is found, set $data to true and break.
-            if (in_array($value, $client_jobs['runningJobs'])) {
-              $data = true;
-              break;
+          if (!empty($value['runningJobs'])) {
+            foreach ($job_ids as $k => $v) {
+              // If a running job is found, set $data to true and break.
+              if (in_array($v, $value['runningJobs'])) {
+                $data = true;
+                break;
+              }
             }
           }
         }
-
+        
       }
     }
 
