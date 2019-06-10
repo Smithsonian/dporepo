@@ -244,6 +244,18 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
         return $return;
       }
 
+      // Log errors and return.
+      if (array_key_exists('errors', $processing_job[0])) {
+        $this->repoValidate->logErrors(
+          array(
+            'job_id' => $job_data['job_id'],
+            'user_id' => $job_data['created_by_user_account_id'],
+            'job_log_label' => 'Process model',
+            'errors' => $processing_job[0]['errors'],
+          )
+        );
+      }
+
       // Continue only if job_ids are returned.
       if (!empty($processing_job) && is_array($processing_job) && array_key_exists(0, $processing_job)
         && array_key_exists('return', $processing_job[0]) && ($processing_job[0]['return'] === 'success')) {
