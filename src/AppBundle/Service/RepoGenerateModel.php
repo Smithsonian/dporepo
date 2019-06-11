@@ -116,6 +116,19 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
   public function generateModelAssets($uuid = null, $recipe_name = null, $filesystem)
   {
 
+    // Manual tests
+    // Just replace the $uuid,
+    // and hit the "// Faking" comments in this file
+    // and in src/AppBundle/Service/RepoProcessingService.php
+
+    // $uuid = 'E2DC1828-73B4-E97B-9148-83A7A3A99B67';
+    // $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
+    // $path = $this->project_directory . $this->uploads_directory . $uuid;
+    // $data = $this->manualTestRunWebHd($uuid, $job_data, $path, $filesystem);
+    // $data = $this->manualTestRunWebDerivative($uuid, $job_data, $path, $filesystem);
+    // $data = $this->manualTestGetProcessingAssets($filesystem);
+    // return $data;
+
     $data = $processing_job = array();
     $recipe_query = array();
     $job_status = 'metadata ingest in progress';
@@ -220,20 +233,60 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
     if (!is_dir($path)) {
       $return['errors'][] = 'Target directory not found - ' . $path;
+      $this->repoValidate->logErrors(
+        array(
+          'job_id' => $job_data['job_id'],
+          'uuid' => $job_data['uuid'],
+          'user_id' => $job_data['created_by_user_account_id'],
+          'job_log_label' => 'Process model',
+          'errors' => $return['errors'],
+        )
+      );
       return $return;
     }
 
     if (is_dir($path)) {
 
-      // Run the processing job.
+      // Run processing job.
       switch($recipe_name) {
         // web-thumb, web-multi
         case 'web-thumb':
         case 'web-multi':
+          // Run the processing job.
           $processing_job = $this->runWebDerivative($path, $job_data, $recipe_name, $filesystem);
           break;
         case 'web-hd':
-          $processing_job = $this->runWebHd($path, $job_data, $recipe_name, $filesystem);
+          // Query the workflow table for workflow data.
+          $query_params = array('ingest_job_uuid' => $job_data['uuid']);
+          $workflow = $this->repo_storage_controller->execute('getWorkflows', $query_params);
+
+          // $this->u->dumper($query_params);
+
+          // Prevent the web-hd job from being run more than once.
+          if (!empty($workflow) && !empty($workflow[0])) {
+            // Set the message and return.
+            $data['messages'][] = 'Workflow already exists. Ingest job ID: ' . $job_data['uuid'] . ', Processing job ID: ' . $workflow[0]['processing_job_id'];
+            return $data;
+          } else {
+            // Run the processing job.
+            $processing_job = $this->runWebHd($path, $job_data, $recipe_name, $filesystem);
+          }
+      }
+
+      // Log processing job errors.
+      foreach ($processing_job as $pkey => $pvalue) {
+        if (array_key_exists('errors', $pvalue)) {
+          $this->repoValidate->logErrors(
+            array(
+              'job_id' => $job_data['job_id'],
+              'uuid' => $job_data['uuid'],
+              'user_id' => $job_data['created_by_user_account_id'],
+              'job_log_label' => 'Process model',
+              'errors' => $pvalue['errors'],
+            )
+          );
+          return $pvalue;
+        }
       }
 
       // Check the job's status to insure that the job_status hasn't been set to 'failed'.
@@ -266,8 +319,22 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           sleep(5);
         }
 
-        // Retrieve all of the logs produced by the processing service.
+        // Retrieve all of the logs and assets produced by the processing service.
         $data = $this->processing->get_processing_assets($filesystem, $processing_job[0]['workflow']['processing_job_id']);
+
+        // Log errors and return.
+        if (array_key_exists('errors', $data)) {
+          $this->repoValidate->logErrors(
+            array(
+              'job_id' => $job_data['job_id'],
+              'uuid' => $job_data['uuid'],
+              'user_id' => $job_data['created_by_user_account_id'],
+              'job_log_label' => 'Process model',
+              'errors' => $data['errors'],
+            )
+          );
+          return $data;
+        }
 
         // Update the workflow record. Set the step state to NULL and step-id to qc-hd or qc-web.
         $query_params = array(
@@ -282,7 +349,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
     }
 
     // Update the 'job_status' in the 'job' table accordingly (only for the web-hd recipe).
-    if (!empty($job_status) && ($recipe_name === 'web-hd')) {
+    if (!empty($job_status) && !empty($processing_job) && ($recipe_name === 'web-hd')) {
       $this->repo_storage_controller->execute('setJobStatus',
         array(
           'job_id' => $job_data['uuid'], 
@@ -329,6 +396,12 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
         $uv_map = $file;
       }
 
+      // If the UV map isn't found, return an error.
+      if (!empty($uv_map) && !is_file($uv_map->getPathname())) {
+        $data[0]['errors'][] = 'UV map not found in the repository\'s file system. Path: ' . $uv_map->getPathname();
+        return $data;
+      }
+
       if (!empty($models_csv)) {
         
         $model_types = $this->getModelsAndModelPurpose($models_csv);
@@ -344,13 +417,17 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           // Make sure that the model_purpose is master.
           if ($file->isFile() && array_key_exists($file->getFilename(), $model_types) && ($model_types[$file->getFilename()] === 'master')) {
 
-            // $file_path = str_replace($this->project_directory . $this->uploads_directory, DIRECTORY_SEPARATOR, $file->getPathname());
+            // Faking
+            // $recipe_name = 'fake-recipe';
 
             // Get the ID of the recipe, so it can be passed to processing service's job creation endpoint (post_job).
             $recipe = $this->processing->getRecipeByName( $recipe_name );
 
             // Error handling
-            if (isset($recipe['error']) && !empty($recipe['error'])) $data[$i]['errors'][] = $recipe['error'];
+            if (isset($recipe['error']) && !empty($recipe['error'])) {
+              $data[$i]['errors'][] = $recipe['error'] . '. (Recipe name: ' . $recipe_name . ')';
+              return $data;
+            }
 
             if (!isset($recipe['error'])) {
 
@@ -366,16 +443,28 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
               // Post a new job.
               $result = $this->processing->postJob($recipe['id'], $job_name, $params);
 
+              // Faking
+              // $result['httpcode'] = '500';
+
               // Error handling
-              if ($result['httpcode'] !== 201) $data[$i]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
+              if ($result['httpcode'] !== 201) {
+                $data[$i]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'] . '. Ingest job ID: ' . $job_data['uuid'];
+                return $data;
+              }
 
               if ($result['httpcode'] === 201) {
+
+                // Faking
+                // $job_name = 'fake job name';
 
                 // Get the processing_job data.
                 $processing_job = $this->processing->getJobByName($job_name);
 
                 // Error handling
-                if (isset($processing_job['error']) && !empty($processing_job['error'])) $data[$i]['errors'][] = $processing_job['error'];
+                if (isset($processing_job['error']) && !empty($processing_job['error'])) {
+                  $data[$i]['errors'][] = $processing_job['error'] . ' (Job name: ' . $job_name . ')';
+                  return $data;
+                }
 
                 // Log processing_job data to the metadata storage
                 if (isset($processing_job['error']) && empty($processing_job['error'])) {
@@ -435,24 +524,12 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
                 }
                 // Catch the error.
-                catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
+                catch(\League\Flysystem\FileExistsException | \League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
                   $data[$i]['errors'][] = 'Processing Service: ' . $e->getMessage();
                 }
 
               }
 
-            }
-
-            if (!empty($data[$i]['errors'])) {
-              // Log the errors to the database.
-              $this->repoValidate->logErrors(
-                array(
-                  'job_id' => $job_data['job_id'],
-                  'user_id' => $job_data['created_by_user_account_id'],
-                  'job_log_label' => 'Generate Model',
-                  'errors' => $data[$i]['errors'],
-                )
-              );
             }
 
             $i++;
@@ -478,7 +555,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
   public function runWebDerivative($path = null, $job_data = array(), $recipe_name = null, $filesystem)
   {
 
-    $data = $workflow_data = array();
+    $data = $workflow = array();
     $uv_map = null;
 
     // $this->u->dumper($path,0);
@@ -488,17 +565,8 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
     if (!empty($path) && !empty($job_data)) {
 
       // Query the workflow table for workflow data.
-      $workflow = $this->repo_storage_controller->execute('getRecords', array(
-          'base_table' => 'workflow',
-          'fields' => array(),
-          'limit' => 1,
-          'search_params' => array(
-            0 => array('field_names' => array('workflow.ingest_job_uuid'), 'search_values' => array($job_data['uuid']), 'comparison' => '='),
-          ),
-          'search_type' => 'AND',
-          'omit_active_field' => true,
-        )
-      );
+      $query_params = array('ingest_job_uuid' => $job_data['uuid']);
+      $workflow = $this->repo_storage_controller->execute('getWorkflows', $query_params);
 
       if (!empty($workflow)) {
 
@@ -533,8 +601,18 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           $data[0]['errors'][] = 'More than one processing job found in metadata storage. Please contact the administrator for assistance.';
         }
 
+        // Faking
+        // $processing_job[0] = array();
+        // $processing_job[0]['asset_path'] = '/fake_directory';
+
         // If the model file path is found, continue.
         if (!empty($processing_job)) {
+
+          // If the asset_path isn't found, return an error.
+          if (!is_file($processing_job[0]['asset_path'])) {
+            $data[0]['errors'][] = 'Model asset not found in the repository\'s file system. Path: ' . $processing_job[0]['asset_path'];
+            return $data;
+          }
 
           $directory = pathinfo($processing_job[0]['asset_path'], PATHINFO_DIRNAME);
           $base_model_file_name = pathinfo($processing_job[0]['asset_path'], PATHINFO_BASENAME);
@@ -544,7 +622,11 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           // Get the UV map.
           $uv_map = $this->processing->getUvMap($processing_job[0]['asset_path']);
 
-          if (!empty($uv_map)) {
+          // If the UV map isn't found, return an error.
+          if (empty($uv_map)) {
+            $data[0]['errors'][] = 'UV map not found in the repository\'s file system. Path to model directory: ' . $directory;
+            return $data;
+          } else {
             $base_uv_file_name = pathinfo($uv_map, PATHINFO_BASENAME);
           }
 
@@ -582,41 +664,32 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
             // Get subject record from EDAN to inject tombstone information into document.json.
             if ($this->edan && ($recipe_name === 'web-thumb')) {
 
-              // Get workflow data (just for the item_id, so we can leverage to get the subject, and finally the EDAN record).
-              $query_params = array('ingest_job_uuid' => $job_data['uuid']);
-              $workflow_data = $this->repo_storage_controller->execute('getWorkflows', $query_params);
-              // If the workflow isn't found, set the error.
-              if (empty($workflow_data)) {
-                $data[0]['errors'][] = 'Workflow not found for ingest job ' . $job_data['uuid'];
+              // Query EDAN.
+              $edan_json = $this->repo_import->addEdanDataToJson($workflow[0]['item_id']);
+              // Error or set the metaDataFile parameter for the Cook.
+              if (is_array($edan_json) && array_key_exists('error', $edan_json)) {
+                // If an error is returned, set the error.
+                $data[0]['errors'][] = $edan_json['error'];
               } else {
-
-                // Query EDAN.
-                $edan_json = $this->repo_import->addEdanDataToJson($workflow_data[0]['item_id']);
-                // Error or set the metaDataFile parameter for the Cook.
-                if (is_array($edan_json) && array_key_exists('error', $edan_json)) {
-                  // If an error is returned, set the error.
-                  $data[0]['errors'][] = $edan_json['error'];
-                } else {
-                  // Send EDAN metadata to the Cook to inject into the document.json file via metaDataFile.json.
-                  if (!empty($edan_json)) {
-                    // The external path - on the processing service side.
-                    $path_external_meta = $processing_job[0]['processing_service_job_id'] . '/metaDataFile.json';
-                    // Create a temporary file.
-                    $temp = tmpfile();
-                    fwrite($temp, $edan_json);
-                    // Open the temporary file.
-                    $path = stream_get_meta_data($temp)['uri'];
-                    $stream_meta = fopen($path, 'r+');
-                    // Transfer the file.
-                    $filesystem->writeStream($path_external_meta, $stream_meta);
-                    // Before calling fclose on the resource, check if it’s still valid using is_resource.
-                    if (is_resource($stream_meta)) fclose($stream_meta);
-                    // Remove the temporary file.
-                    if (is_resource($temp)) fclose($temp);
-                  }
+                // Send EDAN metadata to the Cook to inject into the document.json file via metaDataFile.json.
+                if (!empty($edan_json)) {
+                  // The external path - on the processing service side.
+                  $path_external_meta = $processing_job[0]['processing_service_job_id'] . '/metaDataFile.json';
+                  // Create a temporary file.
+                  $temp = tmpfile();
+                  fwrite($temp, $edan_json);
+                  // Open the temporary file.
+                  $path = stream_get_meta_data($temp)['uri'];
+                  $stream_meta = fopen($path, 'r+');
+                  // Transfer the file.
+                  $filesystem->writeStream($path_external_meta, $stream_meta);
+                  // Before calling fclose on the resource, check if it’s still valid using is_resource.
+                  if (is_resource($stream_meta)) fclose($stream_meta);
+                  // Remove the temporary file.
+                  if (is_resource($temp)) fclose($temp);
                 }
-
               }
+
             }
 
             // Now that the file has been transferred, go ahead and run the processing job.
@@ -624,7 +697,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
             // Error handling
             if ($result['httpcode'] !== 202) {
-              $data[0]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'];
+              $data[0]['errors'][] = 'The processing service returned HTTP code ' . $result['httpcode'] . '. Processing job ID: ' . $processing_job[0]['processing_service_job_id'];
               // Matching the output of $this->repo_storage_controller->execute('createWorkflow'
               $data[0]['return'] = 'error';
             } else {
@@ -689,6 +762,66 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
     }
 
     return $data;
+  }
+
+  public function manualTestRunWebHd($uuid, $job_data, $path, $filesystem) {
+    // Run
+    $processing_job = $this->runWebHd($path, $job_data, 'web-hd', $filesystem);
+    // Log errors to the job_log table.
+    foreach ($processing_job as $pkey => $pvalue) {
+      if (array_key_exists('errors', $pvalue)) {
+        $this->repoValidate->logErrors(
+          array(
+            'job_id' => $job_data['job_id'],
+            'uuid' => $job_data['uuid'],
+            'user_id' => $job_data['created_by_user_account_id'],
+            'job_log_label' => 'Process model',
+            'errors' => $pvalue['errors'],
+          )
+        );
+        return $pvalue;
+      }
+    }
+  }
+
+  public function manualTestRunWebDerivative($uuid, $job_data, $path, $filesystem) {
+    // Run
+    $processing_job = $this->runWebDerivative($path, $job_data, 'web-thumb', $filesystem);
+    // Log errors to the job_log table.
+    foreach ($processing_job as $key => $data) {
+      if (array_key_exists('errors', $data)) {
+        $this->repoValidate->logErrors(
+          array(
+            'job_id' => $job_data['job_id'],
+            'uuid' => $job_data['uuid'],
+            'user_id' => $job_data['created_by_user_account_id'],
+            'job_log_label' => 'Process model',
+            'errors' => $data['errors'],
+          )
+        );
+        return $data;
+      }
+    }
+  }
+
+  public function manualTestGetProcessingAssets($filesystem) {
+    // Replace with a valid processing job uuid.
+    $processing_job_uuid = '2B97C2A3-13C6-F731-138B-86FD06CABE01';
+    // Run
+    $data = $this->processing->get_processing_assets($filesystem, $processing_job_uuid);
+    // Log errors to the job_log table.
+    if (array_key_exists('errors', $data)) {
+      $this->repoValidate->logErrors(
+        array(
+          'job_id' => $job_data['job_id'],
+          'uuid' => $job_data['uuid'],
+          'user_id' => $job_data['created_by_user_account_id'],
+          'job_log_label' => 'Process model',
+          'errors' => $data['errors'],
+        )
+      );
+      return $data;
+    }
   }
 
 }

@@ -134,6 +134,7 @@ class RepoFileTransfer implements RepoFileTransferInterface {
       $this->repoValidate->logErrors(
         array(
           'job_id' => $job_data['job_id'],
+          'uuid' => $job_data['uuid'],
           'user_id' => 0,
           'job_log_label' => 'File Transfer',
           'errors' => $data[0]['errors'],
@@ -226,6 +227,7 @@ class RepoFileTransfer implements RepoFileTransferInterface {
             $this->repoValidate->logErrors(
               array(
                 'job_id' => $job_data['job_id'],
+                'uuid' => $job_data['uuid'],
                 'user_id' => 0,
                 'job_log_label' => 'File Transfer',
                 'errors' => $data[$i]['errors'],

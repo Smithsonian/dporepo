@@ -778,6 +778,33 @@ class ImportController extends Controller
           )
         );
 
+        // Get model processing errors if they exist.
+        $project['model_processing_errors'] = $this->repo_storage_controller->execute('getRecords', array(
+            'base_table' => 'job_log',
+            'fields' => array(),
+            'search_params' => array(
+              array(
+                'field_names' => array('job_id'),
+                'search_values' => array($job_data['job_id']),
+                'comparison' => '='
+              ),
+              array(
+                'field_names' => array('job_log_status'),
+                'search_values' => array('error'),
+                'comparison' => '='
+              ),
+              array(
+                'field_names' => array('job_log_label'),
+                'search_values' => array('Process model'),
+                'comparison' => '='
+              )
+            ),
+            'search_type' => 'AND',
+            'sort_fields' => array(0 => array('field_name' => 'date_created')),
+            'omit_active_field' => true,
+          )
+        );
+
         // Get metadata ingest errors if they exist.
         $project['metadata_ingest_errors'] = $this->repo_storage_controller->execute('getRecords', array(
             'base_table' => 'job_log',

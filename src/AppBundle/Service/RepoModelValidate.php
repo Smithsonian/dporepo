@@ -281,8 +281,9 @@ class RepoModelValidate implements RepoModelValidateInterface {
             $this->repoValidate->logErrors(
               array(
                 'job_id' => $job_data['job_id'],
+                'uuid' => $job_data['uuid'],
                 'user_id' => $this->user_id,
-                'job_log_label' => 'Validate Model',
+                'job_log_label' => 'Asset Validation',
                 'errors' => $data[$i]['errors'],
               )
             );
