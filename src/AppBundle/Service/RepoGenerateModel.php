@@ -121,12 +121,13 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
     // and hit the "// Faking" comments in this file 
     // and in src/AppBundle/Service/RepoProcessingService.php
 
-    // $uuid = '76C09922-2B3F-8E63-F7ED-4D2DF860B26E';
+    // $uuid = 'E2DC1828-73B4-E97B-9148-83A7A3A99B67';
     // $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid));
     // $path = $this->project_directory . $this->uploads_directory . $uuid;
-    // $this->manualTestRunWebHd($uuid, $job_data, $path, $filesystem);
-    // $this->manualTestRunWebDerivative($uuid, $job_data, $path, $filesystem);
-    // $this->manualTestGetProcessingAssets($filesystem);
+    // $data = $this->manualTestRunWebHd($uuid, $job_data, $path, $filesystem);
+    // $data = $this->manualTestRunWebDerivative($uuid, $job_data, $path, $filesystem);
+    // $data = $this->manualTestGetProcessingAssets($filesystem);
+    // return $data;
 
     $data = array();
     $recipe_query = array();
@@ -273,20 +274,20 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
       }
 
       // Log processing job errors.
-            foreach ($processing_job as $pkey => $pvalue) {
-              if (array_key_exists('errors', $pvalue)) {
-                $this->repoValidate->logErrors(
-                  array(
-                    'job_id' => $job_data['job_id'],
+      foreach ($processing_job as $pkey => $pvalue) {
+        if (array_key_exists('errors', $pvalue)) {
+          $this->repoValidate->logErrors(
+            array(
+              'job_id' => $job_data['job_id'],
               'uuid' => $job_data['uuid'],
-                    'user_id' => $job_data['created_by_user_account_id'],
-                    'job_log_label' => 'Process model',
-                    'errors' => $pvalue['errors'], 
-                  )
-                );
-                return $pvalue;
-              }
-            }
+              'user_id' => $job_data['created_by_user_account_id'],
+              'job_log_label' => 'Process model',
+              'errors' => $pvalue['errors'], 
+            )
+          );
+          return $pvalue;
+        }
+      }
 
       // Check the job's status to insure that the job_status hasn't been set to 'failed'.
       $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid, 'generateModelAssets'));
@@ -588,11 +589,12 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           $data[0]['errors'][] = 'More than one processing job found in metadata storage. Please contact the administrator for assistance.';
         }
 
+        // Faking
+        // $processing_job[0] = array();
+        // $processing_job[0]['asset_path'] = '/fake_directory';
+
         // If the model file path is found, continue.
         if (!empty($processing_job)) {
-
-          // Faking
-          // $processing_job[0]['asset_path'] = '/fake_directory' . $processing_job[0]['asset_path'];
 
           // If the asset_path isn't found, return an error.
           if (!is_file($processing_job[0]['asset_path'])) {
