@@ -232,6 +232,15 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
 
     if (!is_dir($path)) {
       $return['errors'][] = 'Target directory not found - ' . $path;
+      $this->repoValidate->logErrors(
+        array(
+          'job_id' => $job_data['job_id'],
+          'uuid' => $job_data['uuid'],
+          'user_id' => $job_data['created_by_user_account_id'],
+          'job_log_label' => 'Process model',
+          'errors' => $return['errors'], 
+        )
+      );
       return $return;
     }
 
@@ -244,20 +253,6 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
         case 'web-multi':
           // Run the processing job.
           $processing_job = $this->runWebDerivative($path, $job_data, $recipe_name, $filesystem);
-          // Log errors.
-          foreach ($processing_job as $pkey => $pvalue) {
-            if (array_key_exists('errors', $pvalue)) {
-              $this->repoValidate->logErrors(
-                array(
-                  'job_id' => $job_data['job_id'],
-                  'user_id' => $job_data['created_by_user_account_id'],
-                  'job_log_label' => 'Process model',
-                  'errors' => $pvalue['errors'], 
-                )
-              );
-              return $pvalue;
-            }
-          }
           break;
         case 'web-hd':
           // Query the workflow table for workflow data.
@@ -274,12 +269,16 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           } else {
             // Run the processing job.
             $processing_job = $this->runWebHd($path, $job_data, $recipe_name, $filesystem);
-            // Log errors.
+          }
+      }
+
+      // Log processing job errors.
             foreach ($processing_job as $pkey => $pvalue) {
               if (array_key_exists('errors', $pvalue)) {
                 $this->repoValidate->logErrors(
                   array(
                     'job_id' => $job_data['job_id'],
+              'uuid' => $job_data['uuid'],
                     'user_id' => $job_data['created_by_user_account_id'],
                     'job_log_label' => 'Process model',
                     'errors' => $pvalue['errors'], 
@@ -288,8 +287,6 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
                 return $pvalue;
               }
             }
-          }
-      }
 
       // Check the job's status to insure that the job_status hasn't been set to 'failed'.
       $job_data = $this->repo_storage_controller->execute('getJobData', array($uuid, 'generateModelAssets'));
@@ -317,6 +314,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           $this->repoValidate->logErrors(
             array(
               'job_id' => $job_data['job_id'],
+              'uuid' => $job_data['uuid'],
               'user_id' => $job_data['created_by_user_account_id'],
               'job_log_label' => 'Process model',
               'errors' => $data['errors'], 
@@ -761,6 +759,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
         $this->repoValidate->logErrors(
           array(
             'job_id' => $job_data['job_id'],
+            'uuid' => $job_data['uuid'],
             'user_id' => $job_data['created_by_user_account_id'],
             'job_log_label' => 'Process model',
             'errors' => $pvalue['errors'], 
@@ -780,6 +779,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
         $this->repoValidate->logErrors(
           array(
             'job_id' => $job_data['job_id'],
+            'uuid' => $job_data['uuid'],
             'user_id' => $job_data['created_by_user_account_id'],
             'job_log_label' => 'Process model',
             'errors' => $data['errors'], 
@@ -800,6 +800,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
       $this->repoValidate->logErrors(
         array(
           'job_id' => $job_data['job_id'],
+          'uuid' => $job_data['uuid'],
           'user_id' => $job_data['created_by_user_account_id'],
           'job_log_label' => 'Process model',
           'errors' => $data['errors'], 

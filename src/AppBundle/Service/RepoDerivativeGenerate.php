@@ -226,6 +226,7 @@ class RepoDerivativeGenerate {
         $this->repoValidate->logErrors(
           array(
             'job_id' => $job_id,
+            'uuid' => $uuid,
             'user_id' => 0,
             'job_log_label' => 'Create dataset derivative images',
             'errors' => $errors,

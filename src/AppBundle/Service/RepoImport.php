@@ -607,6 +607,7 @@ class RepoImport implements RepoImportInterface {
         $this->repoValidate->logErrors(
           array(
             'job_id' => $data->job_id,
+            'uuid' => $data->uuid,
             'user_id' => 0,
             'job_log_label' => 'Metadata Ingest',
             'errors' => $error,

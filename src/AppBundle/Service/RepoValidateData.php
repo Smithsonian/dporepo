@@ -350,6 +350,7 @@ class RepoValidateData implements RepoValidate {
   public function logErrors($params = array()) {
 
     if(!empty($params) && !empty($params['errors'])) {
+      // Log errors to the 'job_log' table.
       foreach ($params['errors'] as $ekey => $error) {
         $job_log_id = $this->repo_storage_controller->execute('saveRecord', array(
           'base_table' => 'job_log',
@@ -361,6 +362,16 @@ class RepoValidateData implements RepoValidate {
             'job_log_description' => $error,
           )
         ));
+      }
+      // Update the 'job_status' in the 'job' table to 'failed'.
+      if (array_key_exists('uuid', $params)) {
+        $this->repo_storage_controller->execute('setJobStatus', 
+          array(
+            'job_id' => $params['uuid'], 
+            'status' => 'failed', 
+            'date_completed' => date('Y-m-d H:i:s')
+          )
+        );
       }
     }
 
