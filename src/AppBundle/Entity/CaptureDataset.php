@@ -27,7 +27,7 @@ class CaptureDataset
      * @Assert\Length(min="1", max="10")
      * @var int
      */
-    public $capture_dataset_field_id;
+    public $capture_sequence_number;
 
     /**
      * @Assert\NotBlank()

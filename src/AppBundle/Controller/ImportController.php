@@ -371,7 +371,7 @@ class ImportController extends Controller
         $form = $this->createForm(CaptureDatasetForm::class, $dataset);
         // Keep these fields
         // // model_import_row_id
-        // // capture_dataset_field_id
+        // // capture_sequence_number
         // // capture_method
         // // capture_dataset_type
         // // capture_dataset_name

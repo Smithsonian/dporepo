@@ -605,62 +605,15 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
                 foreach ($files as $file_key => $file_value) {
 
-                  // TODO: transfer to the file storage service (or leave them on the repository filesystem).
                   // Set the file path minus the protocol and host.
                   $file_path = str_replace($this->processing_service_location, '', $file_value['path']);
+
                   // Set the file name
                   $file_path_array = explode('/', $file_path);
                   $file_name = array_pop($file_path_array);
 
-                  // If the file's mimetype is application/json or text/plain, get the contents.
-                  // !!!WARNING!!!
-                  // Had to hack:
-                  // vendor/league/flysystem-webdav/src/WebDAVAdapter.php (lines 129-131)
-                  // vendor/league/flysystem/src/Filesystem.php (line 273)
-                  if (isset($file_value['mimetype'])) {
-
-                    $stream = $filesystem->readStream($file_path);
-                    $contents = stream_get_contents($stream);
-                    // Before calling fclose on the resource, check if it’s still valid using is_resource.
-                    if (is_resource($stream)) fclose($stream);
-
-                    // Save the processed asset to the repository's file system.
-                    // If asset is a file, get the parent directory from the $local_assets_path.
-                    if (is_file($local_assets_path)) {
-                      $local_assets_path_array = explode(DIRECTORY_SEPARATOR, $local_assets_path);
-                      array_pop($local_assets_path_array);
-                      $local_assets_path = implode(DIRECTORY_SEPARATOR, $local_assets_path_array);
-                    }
-                    // Move into the target directory.
-                    chdir($local_assets_path);
-                    // // Create the 'processed' directory.
-                    // if (!is_dir($local_assets_path . DIRECTORY_SEPARATOR . 'processed')) {
-                    //   mkdir($local_assets_path . DIRECTORY_SEPARATOR . 'processed', 0755);
-                    // }
-                    // // Write the file to the 'processed' directory.
-                    // $handle = fopen($local_assets_path . DIRECTORY_SEPARATOR . 'processed' . DIRECTORY_SEPARATOR . $file_name, 'w');
-                    $handle = fopen($local_assets_path . DIRECTORY_SEPARATOR . $file_name, 'w');
-                    fwrite($handle, $contents);
-                    if (is_resource($handle)) fclose($handle);
-
-                    // Reset $contents to null if the file mime type isn't text/plain or application/json
-                    // so that we're not inserting the contents of model and image files into metadata storage.
-                    if (($file_value['mimetype'] !== 'text/plain; charset=utf-8') && ($file_value['mimetype'] !== 'application/json; charset=utf-8')) {
-                      // Reset $contents to null.
-                      $contents = null;
-                    }
-
-                  }
-
-                  $processing_assets[] = array(
-                    'job_id' => $job_id,
-                    'file_name' => $file_name,
-                    'file_path' => $local_assets_path . DIRECTORY_SEPARATOR . $file_name,
-                    'file_contents' => $contents,
-                  );
-
-                  // Reset $contents to null.
-                  $contents = null;
+                  // Transfer the asset
+                  $this->transfer_processing_asset($filesystem, $job_id, $local_assets_path, $file_path, $file_name, $file_value, $processing_assets);
 
                 }
 
@@ -675,7 +628,7 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
 
           }
 
-          // Loop through the processing-based logs.
+          // Loop through the processing logs.
           if (!empty($processing_assets)) {
             foreach ($processing_assets as $asset) {
 
@@ -739,8 +692,8 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
             }
           }
 
-        }
-      }
+        } // If job state is 'done'
+      } // If job_data exists
 
       // Update the processing job record.
       $repo_processing_job_id = $this->repo_storage_controller->execute('saveRecord', array(
@@ -757,6 +710,75 @@ class RepoProcessingService implements RepoProcessingServiceInterface {
     }
 
     return $data;
+  }
+
+  /***
+   * Copy a single processing asset from the webdav drop location to the local filesystem, and to remote storage, if configured.
+   * @param $filesystem
+   * @param $job_id
+   * @param $local_assets_path
+   * @param $file_path
+   * @param $file_name
+   * @param $file_value
+   * @param $processing_assets
+   * @return mixed
+   */
+  public function transfer_processing_asset($filesystem, $job_id, $local_assets_path, $file_path, $file_name, $file_value, &$processing_assets) {
+    // TODO: transfer to the file storage service (or leave them on the repository filesystem).
+    // If the file's mimetype is application/json or text/plain, get the contents.
+    // !!!WARNING!!!
+    // Had to hack:
+    // vendor/league/flysystem-webdav/src/WebDAVAdapter.php (lines 129-131)
+    // vendor/league/flysystem/src/Filesystem.php (line 273)
+    if (isset($file_value['mimetype'])) {
+
+      try {
+        $stream = $filesystem->readStream($file_path);
+        $contents = stream_get_contents($stream);
+        // Before calling fclose on the resource, check if it’s still valid using is_resource.
+        if (is_resource($stream)) fclose($stream);
+
+        // Save the processed asset to the repository's file system.
+        // If asset is a file, get the parent directory from the $local_assets_path.
+        if (is_file($local_assets_path)) {
+          $local_assets_path_array = explode(DIRECTORY_SEPARATOR, $local_assets_path);
+          array_pop($local_assets_path_array);
+          $local_assets_path = implode(DIRECTORY_SEPARATOR, $local_assets_path_array);
+        }
+        // Move into the target directory.
+        chdir($local_assets_path);
+        // // Create the 'processed' directory.
+        // if (!is_dir($local_assets_path . DIRECTORY_SEPARATOR . 'processed')) {
+        //   mkdir($local_assets_path . DIRECTORY_SEPARATOR . 'processed', 0755);
+        // }
+        // // Write the file to the 'processed' directory.
+        // $handle = fopen($local_assets_path . DIRECTORY_SEPARATOR . 'processed' . DIRECTORY_SEPARATOR . $file_name, 'w');
+        $handle = fopen($local_assets_path . DIRECTORY_SEPARATOR . 'package' . DIRECTORY_SEPARATOR . $file_name, 'w');
+        fwrite($handle, $contents);
+        if (is_resource($handle)) fclose($handle);
+
+        // Reset $contents to null if the file mime type isn't text/plain or application/json
+        // so that we're not inserting the contents of model and image files into metadata storage.
+        if (($file_value['mimetype'] !== 'text/plain; charset=utf-8') && ($file_value['mimetype'] !== 'application/json; charset=utf-8')) {
+          // Reset $contents to null.
+          $contents = null;
+        }
+      }
+      // Catch the error.
+      catch(\League\Flysystem\FileNotFoundException | \Sabre\HTTP\ClientException $e) {
+        $data['errors'][] = $e->getMessage() . ' - The directory, ' . $job_id . ', does not exist.';
+        return $data;
+      }
+
+    } // If we have a mimetype
+
+    $processing_assets[] = array(
+      'job_id' => $job_id,
+      'file_name' => $file_name,
+      'file_path' => $local_assets_path . DIRECTORY_SEPARATOR . $file_name,
+      'file_contents' => $contents,
+    );
+
   }
 
   /**

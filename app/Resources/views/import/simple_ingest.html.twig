@@ -1133,7 +1133,7 @@
 
                     var targetColumns = [
                         'capture_dataset_guid',
-                        'capture_dataset_field_id',
+                        'capture_sequence_number',
                         'capture_method',
                         'capture_dataset_type',
                         'capture_dataset_name',
@@ -1294,7 +1294,7 @@
         var csvColumns = [
             'background_removal_method',
             'capture_dataset_description',
-            'capture_dataset_field_id',
+            'capture_sequence_number',
             'capture_dataset_name',
             'capture_dataset_type',
             'capture_method',
@@ -1314,7 +1314,7 @@
         var csvValues = [
             $("#capture_dataset_form_background_removal_method option:selected").text(),
             formData['capture_dataset_form[capture_dataset_description]'],
-            formData['capture_dataset_form[capture_dataset_field_id]'],
+            formData['capture_dataset_form[capture_sequence_number]'],
             formData['capture_dataset_form[capture_dataset_name]'],
             $("#capture_dataset_form_capture_dataset_type option:selected").text(),
             $("#capture_dataset_form_capture_method option:selected").text(),

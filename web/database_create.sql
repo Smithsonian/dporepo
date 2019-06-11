@@ -1,20 +1,36 @@
 DROP TABLE IF EXISTS `authoring_item`;
-CREATE TABLE `authoring_item` (
-  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-  `json` json NOT NULL,
-  `model_uuid` varchar(32) NOT NULL DEFAULT '',
-  `date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+DROP TABLE IF EXISTS presentation;
+CREATE TABLE `presentation` (
+  `presentation_id` int(11) NOT NULL AUTO_INCREMENT,
+  `presentation_uuid` varchar(255) NOT NULL,
+  `json` varchar(8000) NOT NULL DEFAULT '',
+  `date_created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by_user_account_id` int(11) NOT NULL,
+  `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `last_modified_user_account_id` int(11) NOT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT '1',
+  `api_published` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`presentation_id`),
+  KEY `created_by_user_account_id` (`created_by_user_account_id`),
+  KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='This table stores presentation metadata';
 
-DROP TABLE IF EXISTS `authoring_presentation`;
-CREATE TABLE `authoring_presentation` (
-  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-  `json` json NOT NULL,
-  `model_uuid` varchar(32) NOT NULL DEFAULT '',
-  `date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+DROP TABLE IF EXISTS authoring_item;
+DROP TABLE IF EXISTS presentation_item;
+CREATE TABLE `presentation_item` (
+  `presentation_item_id` int(11) NOT NULL AUTO_INCREMENT,
+  `presentation_id` int(11) NOT NULL,
+  `presentation_uuid` varchar(255) NOT NULL,
+  `item_id` int(11) NOT NULL,
+  `item_uuid` varchar(255) NOT NULL,
+  `date_created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by_user_account_id` int(11) NOT NULL,
+  `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `last_modified_user_account_id` int(11) NOT NULL,
+  PRIMARY KEY (`presentation_item_id`),
+  KEY `created_by_user_account_id` (`created_by_user_account_id`),
+  KEY `last_modified_user_account_id` (`last_modified_user_account_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='This table stores presentation item metadata';
 
 DROP TABLE IF EXISTS `background_removal_method`;
 CREATE TABLE `background_removal_method` (
@@ -134,7 +150,7 @@ CREATE TABLE `capture_dataset` (
   `capture_dataset_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `capture_dataset_guid` varchar(255) NOT NULL DEFAULT '',
   `item_id` int(11) NOT NULL,
-  `capture_dataset_field_id` int(11) NOT NULL,
+  `capture_sequence_number` int(11) NOT NULL,
   `capture_method` int(11) DEFAULT NULL,
   `capture_dataset_type` int(11) DEFAULT NULL,
   `capture_dataset_name` varchar(255) NOT NULL DEFAULT '',
