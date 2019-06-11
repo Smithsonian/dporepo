@@ -161,8 +161,7 @@
               {% elseif job_data.job_status == 'cancelled' %}
                 <p><span class="glyphicon glyphicon-ban-circle"></span> Job cancelled</p>
               {% else %}
-                <h4 class="text-danger">Error Report</h4>
-                <ol>
+                <ol class="list-unstyled">
                   {% for model_processing_error in project.model_processing_errors %}
                     <li>{{ model_processing_error.job_log_description }}</li>
                   {% else %}
