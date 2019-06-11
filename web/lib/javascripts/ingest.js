@@ -1221,6 +1221,7 @@ function getCsvPaths(file, csvPaths) {
 
     // Get the key of the directory_path
     let header = fileArray[0].trim().split(',');
+    var csv_is_simple = false;
 
     for (var h = 0; h < header.length; h++) {
       // Set the pathFieldKey so we can target the correct column for the path.
@@ -1229,6 +1230,17 @@ function getCsvPaths(file, csvPaths) {
       if ((header[h] === 'directory_path') || (header[h] === 'file_path')) {
         pathFieldKey = h;
       }
+      if (header[h] === 'existing_record') {
+        csv_is_simple = true;
+      }
+      // If the file_path column is present, set the csvType to models.
+      if (header[h] === 'file_path') {
+        csvType = 'models';
+      }
+    }
+
+    if(csv_is_simple) {
+      return;
     }
 
     // Loop through CSV rows.
@@ -1236,12 +1248,8 @@ function getCsvPaths(file, csvPaths) {
       if((k > 0) && fileArray[k].length) {
         // Split the CSV row on the comma.
         let currentLineArray = fileArray[k].trim().split(',');
-        // The get the path value - directory_path (capture_dataset) - file_path (model).
+        // The get the path value: directory_path (capture_dataset) - file_path (model).
         let path = currentLineArray[pathFieldKey];
-        // If the file_path column is present, set the csvType to models.
-        if (event.target.result.indexOf('file_path') !== -1) {
-          csvType = 'models';
-        }
         // Push the path to the csvPaths array.
         csvPaths.push({type: csvType, path: path});
       }
@@ -1304,33 +1312,27 @@ function compareCsvManifestPaths(csvPaths, manifestPaths) {
     csvPaths.sort();
     manifestPaths.sort();
 
-    // Pull the paths from the csvPaths array.
-    var csvPathsRaw = [];
+    // Check the paths from the csvPaths array.
     for (var c = 0; c < csvPaths.length; c++) {
-      csvPathsRaw.push(csvPaths[c].path);
-    }
+      csvPathRaw  = (csvPaths[c].path);
 
-    // Sort the csvPathsRaw array.
-    csvPathsRaw.sort();
+      if(manifestPaths.indexOf(csvPathRaw) < 0) {
 
-    var diff = $(csvPathsRaw).not(manifestPaths).get();
+        let fileMessageOrderedList = $('<ol />');
+        fileMessageOrderedList.append('<li>The directory or file path found in the ' + csvPaths[c].type + '.csv is incorrect (Looking for ' + csvPathRaw + '). Please check for spelling errors and/or path format.</li>');
 
-    // If there are file-based errors, populate the panel-body.
-    if(diff.length) {
-      let fileMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>File Paths Pre-validation</h4>');
-      let fileMessageOrderedList = $('<ol />');
-      for (var i = 0; i < diff.length; i++) {
-        if (diff[i].length) {
-          fileMessageOrderedList.append('<li>The directory or file path found in the ' + csvPaths[i].type + '.csv is incorrect (' + diff[i] + '). Please check for spelling errors and/or path format.</li>');
+        // If there are file-based errors, populate the panel-body.
+        let fileMessageContainer = $('<div />').addClass('alert alert-danger files-validation-error').attr('role', 'alert').html('<h4>File Paths Pre-validation</h4>');
+        // Append the ordered list to the fileMessageContainer.
+        if(fileMessageOrderedList.find('li').length) {
+          fileMessageContainer.append(fileMessageOrderedList);
+          // Append the fileMessageContainer to the panel-body container.
+          $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
         }
+
       }
-      // Append the ordered list to the fileMessageContainer.
-      if(fileMessageOrderedList.find('li').length) {
-        fileMessageContainer.append(fileMessageOrderedList);
-        // Append the fileMessageContainer to the panel-body container.
-        $('.panel-validation-results').find('.panel-body').append(fileMessageContainer);
-      }
-    }
+
+    } // For each csvPaths
 
   }, 3000);
 

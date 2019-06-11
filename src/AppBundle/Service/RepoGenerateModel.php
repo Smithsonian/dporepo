@@ -117,8 +117,8 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
   {
 
     // Manual tests
-    // Just replace the $uuid, 
-    // and hit the "// Faking" comments in this file 
+    // Just replace the $uuid,
+    // and hit the "// Faking" comments in this file
     // and in src/AppBundle/Service/RepoProcessingService.php
 
     // $uuid = 'E2DC1828-73B4-E97B-9148-83A7A3A99B67';
@@ -129,7 +129,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
     // $data = $this->manualTestGetProcessingAssets($filesystem);
     // return $data;
 
-    $data = array();
+    $data = $processing_job = array();
     $recipe_query = array();
     $job_status = 'metadata ingest in progress';
     $job_failed_message = 'The job has failed. Exiting model assets generation process.';
@@ -239,7 +239,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           'uuid' => $job_data['uuid'],
           'user_id' => $job_data['created_by_user_account_id'],
           'job_log_label' => 'Process model',
-          'errors' => $return['errors'], 
+          'errors' => $return['errors'],
         )
       );
       return $return;
@@ -261,7 +261,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           $workflow = $this->repo_storage_controller->execute('getWorkflows', $query_params);
 
           // $this->u->dumper($query_params);
-          
+
           // Prevent the web-hd job from being run more than once.
           if (!empty($workflow) && !empty($workflow[0])) {
             // Set the message and return.
@@ -282,7 +282,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
               'uuid' => $job_data['uuid'],
               'user_id' => $job_data['created_by_user_account_id'],
               'job_log_label' => 'Process model',
-              'errors' => $pvalue['errors'], 
+              'errors' => $pvalue['errors'],
             )
           );
           return $pvalue;
@@ -295,6 +295,18 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
       if ($job_data['job_status'] === 'failed') {
         $return['errors'][] = $job_failed_message;
         return $return;
+      }
+
+      // Log errors and return.
+      if (array_key_exists(0, $processing_job) && array_key_exists('errors', $processing_job[0])) {
+        $this->repoValidate->logErrors(
+          array(
+            'job_id' => $job_data['job_id'],
+            'user_id' => $job_data['created_by_user_account_id'],
+            'job_log_label' => 'Process model',
+            'errors' => $processing_job[0]['errors'],
+          )
+        );
       }
 
       // Continue only if job_ids are returned.
@@ -318,7 +330,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
               'uuid' => $job_data['uuid'],
               'user_id' => $job_data['created_by_user_account_id'],
               'job_log_label' => 'Process model',
-              'errors' => $data['errors'], 
+              'errors' => $data['errors'],
             )
           );
           return $data;
@@ -764,7 +776,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
             'uuid' => $job_data['uuid'],
             'user_id' => $job_data['created_by_user_account_id'],
             'job_log_label' => 'Process model',
-            'errors' => $pvalue['errors'], 
+            'errors' => $pvalue['errors'],
           )
         );
         return $pvalue;
@@ -784,7 +796,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
             'uuid' => $job_data['uuid'],
             'user_id' => $job_data['created_by_user_account_id'],
             'job_log_label' => 'Process model',
-            'errors' => $data['errors'], 
+            'errors' => $data['errors'],
           )
         );
         return $data;
@@ -805,7 +817,7 @@ class RepoGenerateModel implements RepoGenerateModelInterface {
           'uuid' => $job_data['uuid'],
           'user_id' => $job_data['created_by_user_account_id'],
           'job_log_label' => 'Process model',
-          'errors' => $data['errors'], 
+          'errors' => $data['errors'],
         )
       );
       return $data;
