@@ -24,6 +24,11 @@ class AppKernel extends Kernel
             new Oneup\FlysystemBundle\OneupFlysystemBundle(),
         ];
 
+        // Check to see if the DpoEdanBundle class exists, and if so, include it (Smithsonian only).
+        if (class_exists('SiEdan\\DpoEdanBundle\\DpoEdanBundle')) {
+            $bundles[] = new SiEdan\DpoEdanBundle\DpoEdanBundle();
+        }
+
         if (in_array($this->getEnvironment(), ['dev', 'test'], true)) {
             $bundles[] = new Symfony\Bundle\DebugBundle\DebugBundle();
             $bundles[] = new Symfony\Bundle\WebProfilerBundle\WebProfilerBundle();
