@@ -20,6 +20,10 @@
                 {{ form_row(subject_form.subject_guid) }}
                 {{ form_row(subject_form.local_subject_id) }}
                 {{ form_row(subject_form.holding_entity_guid) }}
+                <div id="stakeholder-display"></div>
+                <button type="button" class="btn btn-default btn-sm" data-toggle="modal" data-target="#isniSearchModal">
+                  Choose a Stakeholder from ISNI
+                </button>
               </div>
               <div class="col-sm-6 col-md-6">
                 <fieldset>

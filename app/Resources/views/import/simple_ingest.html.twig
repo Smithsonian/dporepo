@@ -6,6 +6,7 @@
 {% use 'import/item_form_modal.html.twig' %}
 {% use 'import/capture_dataset_form_modal.html.twig' %}
 {% use 'import/model_form_modal.html.twig' %}
+{% use 'shared/isni_picker_modal.html.twig' %}
 
 {% block stylesheets %}
   {{ parent() }}
@@ -62,6 +63,8 @@
   <!-- Item Form Modal -->
   {# {% include 'import/item_form_modal.html.twig' %} #}
   {% block item_form %}{{ parent() }}{% endblock %}
+  <!-- ISNI Picker modal -->
+  {% block isni_picker_modal %}{{ parent() }}{% endblock %}
     <!-- Capture Dataset Form Modal -->
   {# {% include 'import/capture_dataset_modal.html.twig' %} #}
   {% block capture_dataset_form_modal %}{{ parent() }}{% endblock %}
@@ -83,6 +86,7 @@
   <script type="text/javascript" src="{{ asset('lib/javascripts/node_modules/handsontable/dist/handsontable.full.min.js') }}"></script>
   <script src="{{ asset('lib/javascripts/datepicker/js/bootstrap-datepicker.min.js') }}"></script>
   <script type="text/javascript" src="{{ asset('lib/javascripts/jquery.bootstrap.wizard.min.js') }}"></script>
+  <script src="{{ asset('lib/javascripts/isniPicker.js') }}"></script>
   <script type="text/javascript">
     $(document).ready(function() {
       /**

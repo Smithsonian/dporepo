@@ -1,0 +1,54 @@
+{% block isni_picker_modal %}
+<div class="modal fade" id="isniSearchModal" tabindex="-1" role="dialog" aria-labelledby="isniSearchLabel">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="isniSearchLabel">Choose a Stakeholder</h4>
+      </div>
+      <div class="modal-body">
+
+        <div class="row" style="margin-right: 0; margin-left: 0;">
+
+          <div class="col-sm-12 col-md-12">
+            <h4>Search ISNI</h4>
+            <div class="form-group panel panel-default">
+              <div class="panel-body">
+
+                <div class="row">
+                  <div class="col-sm-10 col-md-10">
+                    <label class="control-label hidden" for="searchQuery">Search</label>
+                    <div class="controls">
+                      <input name="searchQuery" title="search-query" id="search-query" type="text" value="" class="form-control">
+                    </div>
+                  </div>
+                  <div class="col-sm-2 col-md-2">
+                    <div class="controls">
+                      <button type="button" id="isni-search-query-button" class="btn btn-default">Search</button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+            <p>Search ISNI and select the desired name to serve as the label. Once a label has been assigned to an 
+              ISNI record, it will become the associated label from this point forward.</p>
+          </div>
+
+        </div>
+
+        <div class="row" style="margin-right: 0; margin-left: 0;">
+          <div id="search-results" class="col-sm-12 col-md-12">
+
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="save-changes">Choose</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
