@@ -1,4 +1,5 @@
 {% extends 'default_bootstrap_admin.html.twig' %}
+{% use 'shared/isni_picker_modal.html.twig' %}
 
 {% block content %}
 
@@ -22,6 +23,10 @@
           {{ form_row(form.subject_guid) }}
           {{ form_row(form.local_subject_id) }}
           {{ form_row(form.holding_entity_guid) }}
+          <div id="stakeholder-display"></div>
+          <button type="button" class="btn btn-default btn-sm" data-toggle="modal" data-target="#isniSearchModal" style="margin-bottom:2rem;">
+            Choose a Stakeholder from ISNI
+          </button>
           {{ form_row(form.save) }}
         </div>
         <div class="col-sm-6 col-md-6">
@@ -36,6 +41,9 @@
       </div>
 
     {{ form_end(form) }}
+
+    <!-- ISNI Picker modal -->
+    {% block isni_picker_modal %}{{ parent() }}{% endblock %}
 
     <!-- Modal -->
     <div class="modal fade" id="edanSearchModal" tabindex="-1" role="dialog" aria-labelledby="edanSearchLabel">
@@ -92,6 +100,7 @@
 
 {% block js_bottom %}
   {{ parent() }}
+  <script src="{{ asset('lib/javascripts/isniPicker.js') }}"></script>
   <script type="text/javascript">
     jQuery(document).ready(function($) {
 
