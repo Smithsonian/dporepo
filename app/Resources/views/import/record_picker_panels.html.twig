@@ -1,3 +1,13 @@
+{% block record_picker_panels %}
+
+{% if edan_active %}
+  {% set subject_button_icon = 'glyphicon-search' %}
+  {% set subject_button_text = 'Search EDAN' %}
+{% else %}
+  {% set subject_button_icon = 'glyphicon-pencil' %}
+  {% set subject_button_text = 'Create a New Subject' %}
+{% endif %}
+
 <!-- Panel 1 -->
 <div class="row" style="margin-top: 5rem;">
   <div class="col-lg-4">
@@ -22,7 +32,7 @@
       </div>
       <div class="panel-body">
         <button type="button" class="btn btn-default select-record" data-select="subject" disabled="disabled"><i class="glyphicon glyphicon-plus"></i> Select a Subject</button>
-        <button type="button" class="btn btn-default create-record" data-create="subject" disabled="disabled"><i class="glyphicon glyphicon-pencil"></i> Create a New Subject</button>
+        <button type="button" class="btn btn-default create-record" data-create="subject" disabled="disabled"><i class="glyphicon {{ subject_button_icon }}"></i> {{ subject_button_text }}</button>
         <div class="well subject-well hidden"></div>
       </div>
     </div>
@@ -41,3 +51,4 @@
     </div>
   </div>
 </div>
+{% endblock %}

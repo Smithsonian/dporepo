@@ -19,7 +19,7 @@
     </ul>
     <!-- Project / Subject / Item -->
     <div class="tab-pane" id="simple_ingest_tab_3">
-      {% include 'import/record_picker_panels.html.twig' %}
+      {% block record_picker_panels %}{{ parent() }}{% endblock %}
     </div>
     <!-- Capture Dataset(s) -->
     <div class="tab-pane" id="simple_ingest_tab_4">
