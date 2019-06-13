@@ -313,12 +313,12 @@ class UploadListener
         // Check to see if a CSV's 'import_row_id' has gaps or is not sequential.
         $data->row_ids_results = $repoValidate->validateRowIds($data->csv, $schema);
 
-        // Validate that the values within the capture_dataset_field_id fields are not already in the database.
+        // Validate that the values within the capture_sequence_number fields are not already in the database.
         if($schema === 'capture_dataset') {
 
           switch($record_type) {
             case 'subject':
-              // Validate that the 'capture_dataset_field_id' value is unique within the CSV when the parent record is a subject.
+              // Validate that the 'capture_sequence_number' value is unique within the CSV when the parent record is a subject.
               $data->capture_dataset_field_id_results = $repoValidate->validateCaptureDatasetFieldIdInCsv($data->csv);
               break;
             case 'item':
@@ -327,7 +327,7 @@ class UploadListener
                 'base_record_id' => $record_id,
                 'record_type' => $record_type,
               ));
-              // Validate that the 'capture_dataset_field_id' value is unique for datasets that share the same Project and Item (within the database).
+              // Validate that the 'capture_sequence_number' value is unique for datasets that share the same Project and Item (within the database).
               if (!empty($parent_records)) {
                 $data->capture_dataset_field_id_results = $repoValidate->validateCaptureDatasetFieldId($data->csv, $parent_records);
               }
@@ -376,7 +376,7 @@ class UploadListener
           $data->results = (object)array_merge_recursive($data->row_ids_results, (array)$data->results);
         }
 
-        // Merge capture_dataset_field_id_results messages.
+        // Merge capture_sequence_number messages.
         if(isset($data->capture_dataset_field_id_results['messages'])) {
           unset($data->capture_dataset_field_id_results['is_valid']);
           $data->results = (object)array_merge_recursive($data->capture_dataset_field_id_results, (array)$data->results);

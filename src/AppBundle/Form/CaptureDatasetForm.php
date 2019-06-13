@@ -125,7 +125,7 @@ class CaptureDatasetForm extends AbstractType
                 'label' => 'Capture Dataset GUID',
                 'required' => true,
               ))
-            ->add('capture_dataset_field_id', null, array(
+            ->add('capture_sequence_number', null, array(
                 'label' => 'Capture Dataset Field ID',
                 'required' => true,
               ))

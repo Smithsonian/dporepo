@@ -949,7 +949,7 @@ class RepoStorageHybrid implements RepoStorage {
     $capture_dataset_id = array_key_exists('capture_dataset_id', $params) ? $params['capture_dataset_id'] : NULL;
     $sql = "SELECT
           capture_dataset.capture_dataset_guid
-          ,capture_dataset.capture_dataset_field_id
+          ,capture_dataset.capture_sequence_number
           ,capture_dataset.capture_method
           ,capture_dataset.capture_dataset_type
           ,capture_dataset.capture_dataset_name
@@ -3460,7 +3460,7 @@ class RepoStorageHybrid implements RepoStorage {
       $query_params['search_params'][1] = array(
         'field_names' => array(
           'capture_dataset.capture_dataset_guid',
-          'capture_dataset.capture_dataset_field_id',
+          'capture_dataset.capture_sequence_number',
           'capture_dataset.capture_method',
           'capture_dataset.capture_dataset_type',
           'capture_dataset.capture_dataset_name',
@@ -3527,7 +3527,7 @@ class RepoStorageHybrid implements RepoStorage {
       'field_name' => 'capture_dataset_guid',
     );
     $query_params['fields'][] = array(
-      'field_name' => 'capture_dataset_field_id',
+      'field_name' => 'capture_sequence_number',
     );
     $query_params['fields'][] = array(
       'field_name' => 'capture_dataset_name',
@@ -3747,6 +3747,7 @@ class RepoStorageHybrid implements RepoStorage {
               as metadata 
              , ( SELECT GROUP_CONCAT(variant_type) from capture_data_file 
                 WHERE capture_data_file.capture_data_element_id = capture_data_element.capture_data_element_id
+                GROUP BY capture_data_file.capture_data_element_id
             )
             as variant_types
           FROM capture_data_element

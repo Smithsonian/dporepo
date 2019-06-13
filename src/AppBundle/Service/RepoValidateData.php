@@ -208,7 +208,7 @@ class RepoValidateData implements RepoValidate {
   }
 
   /**
-   * Validate capture_dataset_field_id in CSV
+   * Validate capture_sequence_number in CSV
    * @return mixed array containing success/fail value, and any messages.
    */
   public function validateCaptureDatasetFieldIdInCsv($data = array()) {
@@ -219,11 +219,11 @@ class RepoValidateData implements RepoValidate {
     if(empty($data)) $return['messages'][] = 'Nothing to validate. Please provide an object to validate.';
 
     foreach ($data as $key => $value) {
-      if (!empty($value->capture_dataset_field_id)) {
-        if (in_array($value->capture_dataset_field_id, $field_ids)) {
-          $return['messages'][] = array('row' => 'Row ' . ($key+1) . ' - Field: capture_dataset_field_id', 'error' => 'Illegal duplicate "capture_dataset_field_id" value found (' . $value->capture_dataset_field_id . ').');
+      if (!empty($value->capture_sequence_number)) {
+        if (in_array($value->capture_sequence_number, $field_ids)) {
+          $return['messages'][] = array('row' => 'Row ' . ($key+1) . ' - Field: capture_sequence_number', 'error' => 'Illegal duplicate "capture_sequence_number" value found (' . $value->capture_sequence_number . ').');
         }
-        $field_ids[] = $value->capture_dataset_field_id;
+        $field_ids[] = $value->capture_sequence_number;
       }
     }
 
@@ -231,7 +231,7 @@ class RepoValidateData implements RepoValidate {
   }
 
   /**
-   * Validate capture_dataset_field_id
+   * Validate capture_sequence_number
    * @param array $data The data to validate.
    * @param array $record_id The parent record ID.
    * @return mixed array containing success/fail value, and any messages.
@@ -247,8 +247,8 @@ class RepoValidateData implements RepoValidate {
     if(!empty($data) && !empty($parent_records)) {
 
       foreach($data as $key => $value) {
-        if(!empty($value->capture_dataset_field_id)) {
-          // Check the database to see if there is a capture_dataset_field_id with the same value as what's in the CSV.
+        if(!empty($value->capture_sequence_number)) {
+          // Check the database to see if there is a capture_sequence_number with the same value as what's in the CSV.
           $result = $this->repo_storage_controller->execute('getRecords', array(
               'base_table' => 'capture_dataset',
               'fields' => array(
@@ -260,10 +260,10 @@ class RepoValidateData implements RepoValidate {
               'search_params' => array(
                 array(
                   'field_names' => array(
-                    'capture_dataset_field_id'
+                    'capture_sequence_number'
                   ),
                   'search_values' => array(
-                    $value->capture_dataset_field_id
+                    $value->capture_sequence_number
                   ),
                   'comparison' => '='
                 ),
@@ -281,9 +281,9 @@ class RepoValidateData implements RepoValidate {
               'limit' => array('limit_start' => 1),
             )
           );
-          // If a matching capture_dataset_field_id is found, add to the messages array.
+          // If a matching capture_sequence_number is found, add to the messages array.
           if(!empty($result)) {
-            $return['messages'][] = array('row' => 'Row ' . ($key+1) . ' - Field: capture_dataset_field_id', 'error' => 'The "' . $result[0]['capture_dataset_name'] . '" Capture Dataset with the capture_dataset_field_id value (' . $value->capture_dataset_field_id . ') already exists.');
+            $return['messages'][] = array('row' => 'Row ' . ($key+1) . ' - Field: capture_sequence_number', 'error' => 'The "' . $result[0]['capture_dataset_name'] . '" Capture Dataset with the capture_sequence_number value (' . $value->capture_sequence_number . ') already exists.');
           }
         }
       }
