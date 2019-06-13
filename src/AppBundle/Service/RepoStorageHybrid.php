@@ -4374,9 +4374,11 @@ class RepoStorageHybrid implements RepoStorage {
             WHERE 
             capture_dataset_model.capture_dataset_id=:capture_dataset_id
             and capture_dataset.active=1
+            and model.purpose = 'master'
             and model.active = 1 
              
-            ";    }
+            ";
+    }
     else {
       //parent_model_id
       $sql = " DISTINCT model.model_id, model.model_id as manage, 
