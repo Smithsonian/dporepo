@@ -373,23 +373,24 @@ class ModelController extends Controller
       // If there are no results, throw a createNotFoundException (404).
       if (empty($data)) throw $this->createNotFoundException('Model not found (404)');
 
-        if(isset($data['authoring']) && is_array($data['authoring'])) {
-          $data['authoring']['referrer'] = '/admin/model/view/' . $id;
-          $data['authoring']['mode'] = 'author';
+      if(isset($data['authoring']) && is_array($data['authoring'])) {
+        $data['authoring']['referrer'] = '/admin/model/view/' . $id;
+        $data['authoring']['mode'] = 'author';
 
-          /*
-           *
-          https://si-3ddigip01.si.edu:8445/lib/javascripts/voyager-tools/voyager-story-dev.html?
+        /*
+         *
+        https://si-3ddigip01.si.edu:8445/lib/javascripts/voyager-tools/voyager-story-dev.html?
 
-          root=/webdav/78D55C4C-F5DA-1D74-11D0-D78B4A4CF649/nmnh_sea_turtle-model_and_dataset/data/models/
-          &document=/webdav/78D55C4C-F5DA-1D74-11D0-D78B4A4CF649/nmnh_sea_turtle-model_and_dataset/data/models/nmnh_sea_turtle-master-document.json
-          &mode=author
-          &referrer=/admin/workflow/108?qc_hd_done
+        root=/webdav/78D55C4C-F5DA-1D74-11D0-D78B4A4CF649/nmnh_sea_turtle-model_and_dataset/data/models/
+        &document=/webdav/78D55C4C-F5DA-1D74-11D0-D78B4A4CF649/nmnh_sea_turtle-model_and_dataset/data/models/nmnh_sea_turtle-master-document.json
+        &mode=author
+        &referrer=/admin/workflow/108?qc_hd_done
 
-           */
-        }
+         */
+      }
+      $data['master'] = isset($data['model_purpose']) && $data['model_purpose'] == 'master' ? 'Master ' : '';
 
-        // Temporary hack for the URL for Voyager's Authoring mode.
+      // Temporary hack for the URL for Voyager's Authoring mode.
       /*switch ($data['item_id']) {
         case '2615':
           $voyager_url = '?root=%2Fwebdav%2F159B8278-2125-5EE1-7F3E-E2CFD06AB33D%2FFSGA+-+Incense+burner+v1-t%2Fdata%2Ff1978_40-master%2F&document=%2Fwebdav%2F159B8278-2125-5EE1-7F3E-E2CFD06AB33D%2FFSGA+-+Incense+burner+v1-t%2Fdata%2Ff1978_40-master%2Ff1978_40-master-document.json&mode=Author&referrer=%2Fadmin%2Fitem%2Fview%2F' . $data['item_id'];
