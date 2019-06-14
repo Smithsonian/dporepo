@@ -18,6 +18,8 @@ use AppBundle\Service\RepoProcessingService;
 use AppBundle\Controller\RepoStorageHybridController;
 use AppBundle\Service\RepoImport;
 
+use AppBundle\Controller\BagitController;
+
 use AppBundle\Form\BatchProcessingForm;
 use AppBundle\Form\WorkflowParametersForm;
 
@@ -99,11 +101,13 @@ class WorkflowController extends Controller
    */
   private $processing_service_down_message;
 
+  private $bagit_controller;
+
   /**
    * Constructor
    * @param object  $u  Utility functions object
    */
-  public function __construct(AppUtilities $u, Connection $conn, RepoProcessingService $processing, RepoImport $repo_import, string $processing_service_location, bool $processing_service_on, KernelInterface $kernel, string $uploads_directory)
+  public function __construct(AppUtilities $u, Connection $conn, RepoProcessingService $processing, RepoImport $repo_import, string $processing_service_location, bool $processing_service_on, KernelInterface $kernel, string $uploads_directory, BagitController $b)
   {
     $this->u = $u;
     $this->repo_storage_controller = new RepoStorageHybridController($conn);
@@ -119,6 +123,8 @@ class WorkflowController extends Controller
     $this->uploads_directory = (DIRECTORY_SEPARATOR === '\\') ? str_replace('/', '\\', $uploads_directory) : $uploads_directory;
     $this->accepted_file_types = '.csv, .txt, .jpg, .tif, .png, .dng, .obj, .ply, .mtl, .zip, .cr2';
     $this->repo_user_access = new RepoUserAccess($conn);
+
+    $this->bagit_controller = $b;
 
     // Check for the presence of the EDAN bundle.
     $bundles = $this->kernel->getBundles();
@@ -1374,6 +1380,13 @@ class WorkflowController extends Controller
       $next_step_details = $this->repo_storage_controller->execute('getWorkflowNextStep', $query_params);
 
       if(isset($next_step_details['status']) && ($next_step_details['status'] == 'done')) {
+
+        // Add records to presentation, presentation_item
+        $this->storeAssets($workflow_id);
+
+        // Generate and zip a Bagit package of the files necessary to send to the API.
+        $this->generatePackage($workflow_id);
+
         $query_params = array(
           'workflow_id' => $workflow_id,
           'step_state' => "done",
@@ -1396,6 +1409,121 @@ class WorkflowController extends Controller
     }
 
     return $this->redirect('/admin/workflow/' . $workflow_id);
+  }
+
+
+  /**
+   * Generate and zip a Bagit package of the files necessary to send to the API.
+   *
+   * @param $workflow_id
+   */
+  public function generatePackage($workflow_id) {
+
+    // Get the path for the files
+    $query_params = array(
+      'workflow_id' => $workflow_id
+    );
+    $ret = $this->repo_storage_controller->execute('getLocalPathForWorkflow', $query_params);
+    if(is_array($ret)) {
+      return isset($ret['error']) ? $ret['error'] : 'An unknown error occurred when retrieving the base file path for the workflow ' . $workflow_id . '.';
+    }
+    $localpath = $ret;
+
+    // Read the report.json
+    $files = $this->getReportFiles($localpath);
+
+    // Create a subdirectory
+    $package_path = $localpath . DIRECTORY_SEPARATOR . 'package';
+    mkdir($package_path);
+
+    // Grab just the files we need and copy them to the subdirectory
+    foreach($files as $f) {
+      copy($f, $package_path . DIRECTORY_SEPARATOR . $f);
+    }
+
+    // Generate the Bagit package and zip
+    $this->bagit_controller->bagitCreateAndZip($package_path);
+
+    // Remove the files from the subdirectory
+    rmdir($package_path);
+
+    return true;
+  }
+
+  public function storeAssets($workflow_id) {
+    // Get the path for the files
+    $query_params = array(
+      'workflow_id' => $workflow_id
+    );
+    $ret = $this->repo_storage_controller->execute('getLocalPathForWorkflow', $query_params);
+    if(is_array($ret)) {
+      return isset($ret['error']) ? $ret['error'] : 'An unknown error occurred when retrieving the base file path for the workflow ' . $workflow_id . '.';
+    }
+    $localpath = $ret;
+
+    // Read the report.json
+    $files = $this->getReportFiles($localpath);
+
+    // Find document.json file
+    $document_json_filename = NULL;
+    foreach($files as $d => $f) {
+      if($d == 'document') {
+        $document_json_filename = $f;
+        break;
+      }
+    }
+
+    // Write authoring_document and authoring_item
+    if(NULL !== $document_json_filename) {
+      // Write authoring table.
+      $query_params = array(
+        'json_filename' => $localpath . DIRECTORY_SEPARATOR . $document_json_filename,
+        'worklow_id' => $workflow_id
+      );
+      $ret = $this->repo_storage_controller->execute('createPresentation', $query_params);
+
+    }
+
+  }
+
+  public function getReportFiles($localpath) {
+    $finder = new Finder();
+
+    //@todo- is this true or should we be looking at the master?
+    $finder->files()->name('*hd-report.json')->in($localpath);
+
+    $files = array();
+    $report_json = NULL;
+
+    if(count($finder) > 0) {
+      $report_file = $finder[0];
+      $contents = $report_file->getContents();
+      try {
+        $report_json = json_decode($contents);
+      }
+      catch(\Exception $ex) {
+        return $ex->getMessage();
+      }
+
+      // steps -> delivery -> parameters -> files
+      /*
+          "inspectionReport": "",
+					"unwrappedMeshFile": "f1991_59-master-1000k-unwrapped.obj",
+					"diffuseMap": "f1991_59-master-1000k-8192-diffuse.jpg",
+					"occlusionMap": "f1991_59-master-1000k-8192-occlusion.jpg",
+					"normalMap": "f1991_59-master-1000k-8192-normals.jpg",
+					"webAssetGlb": "f1991_59-master-1000k-8192-web-hd.glb",
+					"webAssetGltf": "f1991_59-master-1000k-8192-web-hd.gltf",
+					"webAssetBin": "f1991_59-master-1000k-8192-web-hd.bin",
+					"document": "f1991_59-master-document.json"
+       */
+      if(isset($report_json->steps->delivery->parameters->files)) {
+        foreach($report_json->steps->delivery->parameters->files as $file_descriptor => $file_name) {
+          $files[$file_descriptor] = $file_name;
+        }
+      }
+    }
+    return $files;
   }
 
   /**
