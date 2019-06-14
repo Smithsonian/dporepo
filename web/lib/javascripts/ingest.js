@@ -202,6 +202,12 @@ uploadsDropzone.on("success", function(file, responseText) {
         modelsCaptureDatasetsCheck(captureDatasetsCsv, modelsCsv);
       }
 
+      if (file.name === 'file_name_map.csv') fileNameMapCsv = JSON.parse(responseText.csv);
+      // Check that map only includes allowed fields
+      if (typeof fileNameMapCsv !== 'undefined') {
+        fileNameMapCheck(fileNameMapCsv);
+      }
+
       // Store the items CSVs if present.
       if (file.name === 'items.csv') itemsCsv = JSON.parse(responseText.csv);
       // Check for duplicate values in item_description per subject, and display a warning or error if/where applicable.
@@ -1157,6 +1163,28 @@ function modelsCaptureDatasetsCheck(captureDatasetsCsv, modelsCsv) {
     // Prepend the message to the panel-body container.
     $('.panel-validation-results').find('.panel-body').prepend(multipleMessage);
   }
+}
+
+function fileNameMapCheck(fileNameMapCsv) {
+  // Remove the first row containing the column names.
+  mapFieldNames = fileNameMapCsv[0];
+
+  var allowedMapFields = ["capture_device_configuration_field_id", "capture_device_configuration_id", "capture_sequence_number", "cluster_position_field_id", "sequence_in_cluster_field_id"];
+
+  for (var index = 0; index < mapFieldNames.length; index += 1) {
+
+    if(allowedMapFields.indexOf(mapFieldNames[index]) < 0) {
+      // The message.
+      let badMapFieldMessage = $('<div />')
+          .addClass('alert alert-danger cvs-validation-error')
+          .attr('role', 'alert')
+          .html('<strong>Error - file_name_map.csv</strong>: Unrecognized map field ' + mapFieldNames[index] + ' encountered.');
+      // Prepend the message to the panel-body container.
+      $('.panel-validation-results').find('.panel-body').prepend(badMapFieldMessage);
+    }
+
+  }
+
 }
 
 // Item Descriptions Check

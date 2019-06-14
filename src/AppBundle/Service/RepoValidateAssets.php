@@ -177,6 +177,18 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
       // Search for the data directory.
       $finder = new Finder();
       $finder->path('data/');
+
+      // Get file_name_map.csv if available.
+      $finder->files()->name('file_name_map.csv')->in($localpath);
+      $file_name_map_array = array();
+      if(count($finder)) {
+        $file_name_map_file = $finder[0];
+        $contents = $file_name_map_file->getContents();
+        // Remove spaces from the CSV if there are any.
+        $contents = preg_replace('/\s+/', '', $contents);
+        $file_name_map_array = explode(',', $contents);
+      }
+
       // For some reason, regex is not reliable. Commented-out for now.
       # $finder->path('data')->name('/\.jpg|\.tif|\.cr2|\.dng$/');
       $finder->in($localpath);
@@ -212,6 +224,23 @@ class RepoValidateAssets implements RepoValidateAssetsInterface
               $mime_type_for_extension = $this->valid_image_types[strtolower($file->getExtension())];
               if($mime_type_for_extension !== $mime_type) {
                 $data[$i]['errors'][] = 'File extension does not match the image type - ' . $file->getFilename();
+              }
+              else {
+                // File_name_map checks
+                $file_name_parts = explode('-', $file->getFilename);
+
+                // Check that the number of fields in the CSV matches the number of "-" separated fields in the uploaded files.
+                if(count($file_name_map_array) > 0 && count($file_name_parts) > 0) {
+                  if(count($file_name_map_array) <> count($file_name_parts)) {
+                    $data[$i]['errors'][] = 'Filename number of parts does not match expected number of parts identified in file_name_map.csv - ' . $file->getFilename();
+                  }
+                  foreach($file_name_parts as $part_name) {
+                    //  Check that the metadata in the file names for the accepted fields is valid.
+                    if(!is_numeric($part_name, $file_name_map_array)) {
+                      $data[$i]['errors'][] = 'Metadata in filename (' . $part_name . ') is not valid - ' . $file->getFilename();
+                    }
+                  }
+                }
               }
             } else {
               $data[$i]['errors'][] = 'File is not a valid image 2 - ' . $file->getFilename();

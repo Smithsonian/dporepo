@@ -171,10 +171,19 @@ class RepoImport implements RepoImportInterface {
     // Default image file name mapping.
     $this->default_image_file_name_map = array(
       'local_subject_id',
-      'capture_dataset_field_id',
-      'position_in_cluster_field_id',
+      'capture_sequence_number',
+      'item_position_field_id',
       'cluster_position_field_id',
     );
+
+    $this->default_capture_dataset_image_file_name_map_fields = array(
+      'capture_device_configuration_field_id',
+      'capture_device_configuration_id',
+      'capture_sequence_number',
+      'position_in_cluster_field_id',
+      'sequence_in_cluster_field_id'
+    );
+
   }
 
   /**
@@ -406,7 +415,7 @@ class RepoImport implements RepoImportInterface {
                 // If present, bring the project_id into the array.
                 // $json_array[$key][$field_name] = ($field_name === 'project_id') ? (int)$id : null;
 
-                // Set the value of the field name.
+                // Set the default value of the field name.
                 $json_array[$key][$field_name] = $v;
 
                 // ITEM LOOKUPS
@@ -1553,27 +1562,16 @@ class RepoImport implements RepoImportInterface {
                         $file_name_map = !empty($file_name_map) ? $file_name_map : $file_name_map_main;
                       }
 
+                      if(empty($file_name_map)) {
+                        $file_name_map = $this->default_capture_dataset_image_file_name_map_fields;
+                      }
+
                       // Establish the file name map keys so we know which slot in the file name to obtain the data from.
-                      // Default position_in_cluster_field_id key.
-                      $key1 = array_search('position_in_cluster_field_id', $this->default_image_file_name_map);
-                      // Default cluster_position_field_id key.
-                      $key2 = array_search('cluster_position_field_id', $this->default_image_file_name_map);
-                      // Default capture_dataset_field_id key.
-                      $key3 = array_search('capture_dataset_field_id', $this->default_image_file_name_map);
-                      // If the $file_name_map exists, then set the key using that.
-                      if (!empty($file_name_map)) {
-                        // User-supplied position_in_cluster_field_id key.
-                        $key1 = array_search('position_in_cluster_field_id', $file_name_map)
-                            ? array_search('position_in_cluster_field_id', $file_name_map)
-                            : null;
-                        // User-supplied cluster_position_field_id key.
-                        $key2 = array_search('cluster_position_field_id', $file_name_map)
-                            ? array_search('cluster_position_field_id', $file_name_map)
-                            : null;
-                        // User-supplied capture_dataset_field_id key.
-                        $key3 = array_search('capture_dataset_field_id', $file_name_map)
-                            ? array_search('capture_dataset_field_id', $file_name_map)
-                            : null;
+                      $keys = array();
+                      foreach($this->default_capture_dataset_image_file_name_map_fields as $map_field) {
+                        $keys[$map_field] = array_search($map_field, $file_name_map)
+                          ? array_search($map_field, $file_name_map)
+                          : null;
                       }
 
                       // Transform the file name to an array.
@@ -1585,12 +1583,14 @@ class RepoImport implements RepoImportInterface {
                 }
 
                 // Build-out the $capture_data_elements array, adding in this capture data element's $capture_data_files array.
-                $data->csv[$i]->capture_data_elements[] = array(
-                  'position_in_cluster_field_id' => (!empty($key1) && stristr($file_name_parts[ $key1 ], 'p')) ? (int)str_replace('p', '', $file_name_parts[ $key1 ]) : null,
-                  'cluster_position_field_id' => (!empty($key2) && isset($file_name_parts[ $key2 ])) ? (int)$file_name_parts[ $key2 ] : null,
-                  'capture_dataset_field_id' => (!empty($key3) && isset($file_name_parts[ $key3 ])) ? (int)$file_name_parts[ $key3 ] : null,
-                  'capture_data_files' => $final_files,
-                );
+                $this_filename_parts = array();
+                foreach($keys as $map_field => $map_key) {
+                  if(is_numeric($file_name_parts[$map_key])) {
+                    $this_filename_parts[$map_field] = $file_name_parts[$map_key];
+                  }
+                }
+                $this_filename_parts['capture_data_files'] = $final_files;
+                $data->csv[$i]->capture_data_elements[] = $this_filename_parts;
 
               }
             }
