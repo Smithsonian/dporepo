@@ -98,6 +98,52 @@ class BagitController extends Controller
     );
   }
 
+  public function bagitCreateAndZip($params = array()) {
+
+    $data = (object)[];
+    $return = array();
+    $manifest_contents = NULL;
+
+    $data->zip_name = isset($params['zip_name']) ? $params['zip_name'] : 'document.zip';
+    $data->localpath = !empty($params['localpath']) ? $params['localpath'] : false;
+    $data->overwrite_manifest = true;
+    $data->create_data_dir = true;
+    $data->flag_warnings_as_errors = false;
+
+    // If there is no directory path provided, return early.
+    if(!$data->localpath) {
+      $return['errors'][] = 'Error: Directory path not provided.';
+      return $return;
+    }
+
+    $return = $this->bagitCreate($data);
+    if(!isset($return['result']) || $return['result'] !== 'success') {
+      $return['errors'][] = 'Bagit not created. Aborting creation of zip file.';
+      return $return;
+    }
+
+    // Search for the data directory.
+    $finder = new Finder();
+    $finder->path($data->localpath);
+    $files = array();
+
+    foreach ($finder as $file) {
+      array_push($files, $file->getPathname());
+    }
+
+    // Create new Zip Archive.
+    $zip = new \ZipArchive();
+
+    // The name of the Zip documents.
+    $zipName = $data->zip_name;
+    $zip->open($zipName,  \ZipArchive::CREATE);
+    foreach ($files as $file) {
+      $zip->addFromString(basename($file),  file_get_contents($file));
+    }
+    $zip->close();
+
+  }
+
   /**
    * @param array $params Parameters sent to the function.
    * @return array Results from the BagIt creation process.
